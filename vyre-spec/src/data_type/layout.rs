@@ -169,7 +169,7 @@ impl DataType {
     ///
     /// Returns an error when bit or byte arithmetic overflows host `usize`.
     pub fn packed_size_bytes(&self, element_count: usize) -> Result<Option<usize>, String> {
-        if let Some(bits) = self.bit_width() {
+        if let Some(bits) = self.checked_bit_width_for_packed_size()? {
             let total_bits = bits.checked_mul(element_count).ok_or_else(|| {
                 format!(
                     "Fix: packed byte sizing overflowed bits for {self} with {element_count} logical element(s)."
@@ -184,7 +184,7 @@ impl DataType {
                     )
                 });
         }
-        if let Some(bytes) = self.size_bytes() {
+        if let Some(bytes) = self.checked_size_bytes_for_packed_size()? {
             return bytes
                 .checked_mul(element_count)
                 .map(Some)
@@ -195,5 +195,66 @@ impl DataType {
                 });
         }
         Ok(None)
+    }
+
+    fn checked_bit_width_for_packed_size(&self) -> Result<Option<usize>, String> {
+        match self {
+            Self::I4 | Self::FP4 | Self::NF4 => Ok(Some(4)),
+            Self::F8E4M3 | Self::F8E5M2 | Self::U8 | Self::I8 => Ok(Some(8)),
+            Self::U16 | Self::I16 | Self::F16 | Self::BF16 => Ok(Some(16)),
+            Self::Bool | Self::U32 | Self::I32 | Self::F32 | Self::Handle(_) => Ok(Some(32)),
+            Self::I64 | Self::U64 | Self::F64 | Self::Vec2U32 => Ok(Some(64)),
+            Self::Vec4U32 => Ok(Some(128)),
+            Self::DeviceMesh { .. } => Ok(Some(32)),
+            Self::Quantized { storage, .. } => storage.checked_bit_width_for_packed_size(),
+            Self::Bytes => Ok(Some(8)),
+            Self::Vec { element, count } => {
+                let Some(bits) = element.checked_bit_width_for_packed_size()? else {
+                    return Ok(None);
+                };
+                bits.checked_mul(*count as usize).map(Some).ok_or_else(|| {
+                    format!(
+                        "Fix: packed byte sizing overflowed nested bit width for {self}."
+                    )
+                })
+            }
+            Self::Array { .. }
+            | Self::Tensor
+            | Self::TensorShaped { .. }
+            | Self::SparseCsr { .. }
+            | Self::SparseCoo { .. }
+            | Self::SparseBsr { .. }
+            | Self::Opaque(_) => Ok(None),
+        }
+    }
+
+    fn checked_size_bytes_for_packed_size(&self) -> Result<Option<usize>, String> {
+        match self {
+            Self::U8 | Self::I8 => Ok(Some(1)),
+            Self::U16 | Self::I16 | Self::F16 | Self::BF16 => Ok(Some(2)),
+            Self::Bool | Self::U32 | Self::I32 | Self::F32 => Ok(Some(4)),
+            Self::I64 | Self::U64 | Self::Vec2U32 | Self::F64 => Ok(Some(8)),
+            Self::Vec4U32 => Ok(Some(16)),
+            Self::Handle(_) => Ok(Some(4)),
+            Self::Bytes => Ok(Some(1)),
+            Self::Array { element_size } => Ok(Some(*element_size)),
+            Self::Vec { element, count } => {
+                let Some(bytes) = element.checked_size_bytes_for_packed_size()? else {
+                    return Ok(None);
+                };
+                bytes.checked_mul(*count as usize).map(Some).ok_or_else(|| {
+                    format!(
+                        "Fix: packed byte sizing overflowed nested byte width for {self}."
+                    )
+                })
+            }
+            Self::Tensor | Self::TensorShaped { .. } => Ok(None),
+            Self::F8E4M3 | Self::F8E5M2 => Ok(Some(1)),
+            Self::I4 | Self::FP4 | Self::NF4 => Ok(Some(1)),
+            Self::SparseCsr { .. } | Self::SparseCoo { .. } | Self::SparseBsr { .. } => Ok(None),
+            Self::DeviceMesh { .. } => Ok(Some(4)),
+            Self::Quantized { storage, .. } => storage.checked_size_bytes_for_packed_size(),
+            Self::Opaque(_) => Ok(None),
+        }
     }
 }
