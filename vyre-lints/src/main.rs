@@ -10,7 +10,8 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::PathBuf;
 use vyre_lints::{
-    run_consumer_coupling, run_production_cpu_fallbacks, run_raw_ir_in_libs, Violation,
+    run_consumer_coupling, run_module_forks, run_production_cpu_fallbacks, run_raw_ir_in_libs,
+    Violation,
 };
 
 #[derive(Parser, Debug)]
@@ -68,6 +69,15 @@ struct Cli {
     /// Defaults to current docs plus platform source crates.
     #[arg(long)]
     consumer_root: Vec<PathBuf>,
+
+    /// Run the same-name module fork scanner over selected authority roots.
+    #[arg(long)]
+    check_module_forks: bool,
+
+    /// Override roots scanned by `--check-module-forks`.
+    /// Defaults to graph authority roots where fork drift has historically appeared.
+    #[arg(long)]
+    module_fork_root: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug, clap::ValueEnum)]
@@ -93,6 +103,10 @@ fn main() -> Result<()> {
 
     if cli.check_consumer_coupling {
         return run_consumer_coupling_cli(&cli);
+    }
+
+    if cli.check_module_forks {
+        return run_module_forks_cli(&cli);
     }
 
     let lib_root = cli
@@ -139,6 +153,33 @@ fn run_consumer_coupling_cli(cli: &Cli) -> Result<()> {
     let root_refs: Vec<&std::path::Path> = roots.iter().map(|root| root.as_path()).collect();
     let violations =
         run_consumer_coupling(&root_refs).context("running consumer-name coupling guard")?;
+    match cli.format {
+        Format::Text => emit_text(&violations),
+        Format::Json => emit_json(&violations)?,
+    }
+    if violations.is_empty() {
+        Ok(())
+    } else {
+        std::process::exit(1);
+    }
+}
+
+fn run_module_forks_cli(cli: &Cli) -> Result<()> {
+    let roots = if cli.module_fork_root.is_empty() {
+        default_module_fork_roots(&cli.workspace_root)
+    } else {
+        cli.module_fork_root.clone()
+    };
+    for root in &roots {
+        if !root.exists() {
+            anyhow::bail!(
+                "module fork root not found: {}. Fix: update the duplicate-module scan roots instead of silently shrinking scan coverage.",
+                root.display()
+            );
+        }
+    }
+    let root_refs: Vec<&std::path::Path> = roots.iter().map(|root| root.as_path()).collect();
+    let violations = run_module_forks(&root_refs).context("running same-name module fork scanner")?;
     match cli.format {
         Format::Text => emit_text(&violations),
         Format::Json => emit_json(&violations)?,
@@ -244,6 +285,17 @@ fn default_consumer_coupling_roots(workspace_root: &std::path::Path) -> Vec<Path
     .collect()
 }
 
+fn default_module_fork_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
+    [
+        "vyre-primitives/src/graph",
+        "vyre-self-substrate/src/graph",
+        "vyre-libs/src/graph",
+    ]
+    .into_iter()
+    .map(|root| workspace_root.join(root))
+    .collect()
+}
+
 fn current_iso_date() -> String {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -297,6 +349,7 @@ fn emit_json(violations: &[Violation]) -> Result<()> {
             vyre_lints::ViolationKind::RawExprConstruction => "raw_expr_construction",
             vyre_lints::ViolationKind::ProductionCpuFallback => "production_cpu_fallback",
             vyre_lints::ViolationKind::ConsumerCoupling => "consumer_coupling",
+            vyre_lints::ViolationKind::ModuleFork => "module_fork",
         };
         if i > 0 {
             out.push_str(",\n");

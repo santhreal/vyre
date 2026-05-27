@@ -5,7 +5,7 @@
 //! intentionally exempt because they may preserve migration context or consumer
 //! integration examples.
 
-use crate::{Violation, ViolationKind};
+use crate::{paths::workspace_relative, Violation, ViolationKind};
 use anyhow::{Context, Result};
 use std::path::Path;
 
@@ -118,45 +118,6 @@ fn is_end_boundary(bytes: &[u8], idx: usize) -> bool {
         return true;
     }
     !bytes[idx].is_ascii_alphanumeric() && bytes[idx] != b'_'
-}
-
-fn workspace_relative(path: &Path) -> String {
-    let s = path.to_string_lossy();
-    for marker in [
-        "docs/",
-        "vyre-aot/",
-        "vyre-bench/",
-        "vyre-core/",
-        "vyre-debug/",
-        "vyre-driver/",
-        "vyre-driver-cuda/",
-        "vyre-driver-reference/",
-        "vyre-driver-spirv/",
-        "vyre-driver-wgpu/",
-        "vyre-emit-naga/",
-        "vyre-emit-ptx/",
-        "vyre-emit-spirv/",
-        "vyre-foundation/",
-        "vyre-frontend-c/",
-        "vyre-harness/",
-        "vyre-intrinsics/",
-        "vyre-libs/",
-        "vyre-lints/",
-        "vyre-lower/",
-        "vyre-macros/",
-        "vyre-ops/",
-        "vyre-primitives/",
-        "vyre-runtime/",
-        "vyre-self-substrate/",
-        "vyre-spec/",
-        "vyre-std/",
-        "xtask/",
-    ] {
-        if let Some(idx) = s.find(marker) {
-            return s[idx..].to_string();
-        }
-    }
-    s.to_string()
 }
 
 #[cfg(test)]

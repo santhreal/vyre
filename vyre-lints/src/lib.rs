@@ -11,17 +11,14 @@
 //! - Egglog rule LHS patterns become brittle.
 //! - Tier-2.5 primitive bug fixes don't propagate.
 //!
-//! This crate ships one lint today: `raw_ir_in_libs`  -  flags raw
-//! `Node::*` and `Expr::*` *construction* sites in `vyre-libs/src/**`.
-//! Pattern matching against the same enums is fine; only construction
-//! is flagged. An allowlist (`vyre-lints/allowlist.toml`) lets the
-//! migration land incrementally  -  files in the allowlist are exempt
-//! during their lego-migration ticket and removed from the allowlist
-//! when the ticket lands.
+//! This crate ships focused lints for raw IR construction, production CPU
+//! fallbacks, consumer-name coupling, and same-name module forks.
 
 pub mod allowlist;
 pub mod consumer_coupling;
 pub mod drift;
+pub mod module_forks;
+mod paths;
 pub mod production_cpu_fallbacks;
 pub mod raw_ir_in_libs;
 
@@ -50,6 +47,8 @@ pub enum ViolationKind {
     ProductionCpuFallback,
     /// Platform docs/comments mention a downstream consumer by name.
     ConsumerCoupling,
+    /// Same Rust module basename appears in multiple scanned authority roots.
+    ModuleFork,
 }
 
 /// Run the `raw_ir_in_libs` lint over a directory tree.
@@ -100,4 +99,9 @@ pub fn run_consumer_coupling(roots: &[&Path]) -> Result<Vec<Violation>> {
     }
     all.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)));
     Ok(all)
+}
+
+/// Run the same-name module fork scanner over selected authority roots.
+pub fn run_module_forks(roots: &[&Path]) -> Result<Vec<Violation>> {
+    module_forks::scan_roots(roots)
 }
