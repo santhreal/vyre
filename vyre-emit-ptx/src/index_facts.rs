@@ -115,6 +115,15 @@ impl IndexFacts {
         self.index_mod(body, result_id, modulus, 0) == Some(0)
     }
 
+    pub(crate) fn index_modulo(
+        &self,
+        body: &KernelBody,
+        result_id: u32,
+        modulus: u32,
+    ) -> Option<u32> {
+        self.index_mod(body, result_id, modulus, 0)
+    }
+
     fn index_mod(
         &self,
         body: &KernelBody,

@@ -285,16 +285,30 @@ fn align_vector_chain(
     let Some(mut chain) = truncate_vector_chain(chain)? else {
         return Ok(None);
     };
-    if facts.index_is_multiple_of(body, base_idx_id, chain.len() as u32) {
+    if index_may_be_aligned_for_vector_width(body, facts, base_idx_id, chain.len() as u32) {
         return Ok(Some(chain));
     }
     if chain.len() >= PTX_VECTOR_WIDTH_V4 {
         chain.truncate(PTX_VECTOR_WIDTH_V2);
-        if facts.index_is_multiple_of(body, base_idx_id, PTX_VECTOR_WIDTH_V2 as u32) {
+        if index_may_be_aligned_for_vector_width(
+            body,
+            facts,
+            base_idx_id,
+            PTX_VECTOR_WIDTH_V2 as u32,
+        ) {
             return Ok(Some(chain));
         }
     }
     Ok(None)
+}
+
+fn index_may_be_aligned_for_vector_width(
+    body: &KernelBody,
+    facts: &EmitFacts,
+    base_idx_id: u32,
+    width: u32,
+) -> bool {
+    matches!(facts.index_modulo(body, base_idx_id, width), None | Some(0))
 }
 
 fn vector_load_mnemonic_parts(load_space: &str) -> Option<(&'static str, &'static str)> {
