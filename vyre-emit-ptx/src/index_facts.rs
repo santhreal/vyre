@@ -4,9 +4,7 @@ use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 pub(crate) struct IndexFacts {
     producer: FxHashMap<u32, usize>,
-    consumer_count: FxHashMap<u32, usize>,
-    #[cfg(test)]
-    consumer_idx: FxHashMap<u32, usize>,
+    consumer_indices: FxHashMap<u32, Vec<usize>>,
     lit_u32: FxHashMap<u32, u32>,
 }
 
@@ -19,10 +17,7 @@ struct NormalizedIndex {
 impl IndexFacts {
     pub(crate) fn new(body: &KernelBody) -> Self {
         let mut producer = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
-        let mut consumer_count =
-            FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
-        #[cfg(test)]
-        let mut consumer_idx =
+        let mut consumer_indices =
             FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
         let mut lit_u32 = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
         for (idx, op) in body.ops.iter().enumerate() {
@@ -56,25 +51,19 @@ impl IndexFacts {
             }
         }
         for (op_idx, op) in body.ops.iter().enumerate() {
-            #[cfg(not(test))]
-            let _ = op_idx;
             visit_value_operands(op, |operand| {
                 if !producer.contains_key(&operand) {
                     return;
                 }
-                let count = consumer_count.entry(operand).or_insert(0);
-                #[cfg(test)]
-                if *count == 0 {
-                    consumer_idx.insert(operand, op_idx);
-                }
-                *count += 1;
+                consumer_indices
+                    .entry(operand)
+                    .or_insert_with(Vec::new)
+                    .push(op_idx);
             });
         }
         Self {
             producer,
-            consumer_count,
-            #[cfg(test)]
-            consumer_idx,
+            consumer_indices,
             lit_u32,
         }
     }
@@ -246,14 +235,22 @@ impl IndexFacts {
     }
 
     pub(crate) fn result_use_count(&self, result_id: u32) -> usize {
-        self.consumer_count.get(&result_id).copied().unwrap_or(0)
+        self.consumer_indices
+            .get(&result_id)
+            .map(Vec::len)
+            .unwrap_or(0)
+    }
+
+    pub(crate) fn consumer_indices(&self, result_id: u32) -> Option<&[usize]> {
+        self.consumer_indices.get(&result_id).map(Vec::as_slice)
     }
 
     #[cfg(test)]
     pub(crate) fn single_consumer_idx(&self, result_id: u32) -> Option<usize> {
-        (self.result_use_count(result_id) == 1)
-            .then(|| self.consumer_idx.get(&result_id).copied())
-            .flatten()
+        match self.consumer_indices(result_id)? {
+            [index] => Some(*index),
+            _ => None,
+        }
     }
 }
 

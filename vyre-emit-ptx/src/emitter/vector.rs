@@ -1,6 +1,7 @@
 use std::fmt::Write as _;
 
 use smallvec::SmallVec;
+use vyre_foundation::ir::DataType;
 use vyre_lower::{KernelBody, KernelOpKind};
 
 use super::facts::EmitFacts;
@@ -140,12 +141,13 @@ impl BodyCtx<'_> {
         let element_type = self.binding_for_slot(binding_slot)?.element_type.clone();
         let memory_class = self.binding_for_slot(binding_slot)?.memory_class;
         let elem_ty = PtxType::from_dtype(&element_type)?;
+        let vector_ty = vector_memory_type(&element_type, elem_ty);
         let final_addr =
             self.emit_global_address_operand(binding_slot, index_op_id, &element_type)?;
         let load_space = self.load_space_for(binding_slot, memory_class);
         let mut regs: SmallVec<[crate::reg::Reg; 4]> = SmallVec::new();
         for &_op_idx in chain {
-            let reg = self.alloc(elem_ty);
+            let reg = self.alloc(vector_ty);
             regs.push(reg);
         }
         let (mnemonic_prefix, cache_suffix) =
@@ -158,14 +160,20 @@ impl BodyCtx<'_> {
             self.text,
             "    {mnemonic_prefix}{cache_suffix}.v{}.{}    ",
             chain.len(),
-            elem_ty.ptx_type_str()
+            vector_ty.ptx_type_str()
         );
         write_reg_tuple(&mut self.text, &regs);
         self.text.push_str(", ");
         self.write_mem_operand(final_addr)?;
         self.text.push_str(";\n");
         for (&op_idx, reg) in chain.iter().zip(regs.iter().copied()) {
-            let canonical = self.canonicalize_f32(reg);
+            let canonical = if matches!(element_type, DataType::Bool) {
+                let pred = self.alloc(PtxType::Bool);
+                let _ = writeln!(self.text, "    setp.ne.u32    {pred}, {reg}, 0;");
+                pred
+            } else {
+                self.canonicalize_f32(reg)
+            };
             self.bind_result(&body.ops[op_idx], canonical)?;
         }
         Ok(())
@@ -180,13 +188,19 @@ impl BodyCtx<'_> {
         let (binding_slot, index_op_id, _) = read_store_operands(first)?;
         let element_type = self.binding_for_slot(binding_slot)?.element_type.clone();
         let elem_ty = PtxType::from_dtype(&element_type)?;
+        let vector_ty = vector_memory_type(&element_type, elem_ty);
         let final_addr =
             self.emit_global_address_operand(binding_slot, index_op_id, &element_type)?;
         let mut regs: SmallVec<[crate::reg::Reg; 4]> = SmallVec::new();
         for &op_idx in chain {
             let (_, _, value_op_id) = read_store_operands(&body.ops[op_idx])?;
             let value = self.lookup_operand(value_op_id)?;
-            regs.push(if elem_ty == PtxType::F32 {
+            regs.push(if matches!(element_type, DataType::Bool) {
+                let pred = self.pred_from_boolish(value);
+                let word = self.alloc(PtxType::U32);
+                let _ = writeln!(self.text, "    selp.u32    {word}, 1, 0, {pred};");
+                word
+            } else if elem_ty == PtxType::F32 {
                 self.canonicalize_f32(value)
             } else {
                 value
@@ -196,7 +210,7 @@ impl BodyCtx<'_> {
             self.text,
             "    st.global.v{}.{}    ",
             chain.len(),
-            elem_ty.ptx_type_str()
+            vector_ty.ptx_type_str()
         );
         self.write_mem_operand(final_addr)?;
         self.text.push_str(", ");
@@ -212,7 +226,40 @@ impl BodyCtx<'_> {
         chain: &[usize],
         skip: &mut [bool],
     ) -> Result<(), EmitError> {
-        let _ = (body, facts, chain, skip);
+        let mut candidate_producers: SmallVec<[usize; 8]> = SmallVec::new();
+        for &op_idx in chain.iter().skip(1) {
+            let op = &body.ops[op_idx];
+            let index_id = match op.kind {
+                KernelOpKind::LoadGlobal | KernelOpKind::LoadShared | KernelOpKind::LoadConstant => {
+                    read_two_operands(op, "vector load")?.1
+                }
+                KernelOpKind::StoreGlobal => read_store_operands(op)?.1,
+                _ => continue,
+            };
+            let Some(producer_idx) = facts.producer_idx(index_id) else {
+                continue;
+            };
+            if producer_idx >= op_idx || !is_schedulable_pure_op(&body.ops[producer_idx]) {
+                continue;
+            }
+            if !candidate_producers.contains(&producer_idx) {
+                candidate_producers.push(producer_idx);
+            }
+        }
+
+        for &producer_idx in &candidate_producers {
+            let Some(result_id) = body.ops[producer_idx].result else {
+                continue;
+            };
+            let consumers = facts.consumer_indices(result_id).unwrap_or(&[]);
+            if consumers.iter().all(|consumer_idx| {
+                chain.contains(consumer_idx)
+                    || candidate_producers.contains(consumer_idx)
+                    || skip.get(*consumer_idx).copied().unwrap_or(false)
+            }) {
+                skip[producer_idx] = true;
+            }
+        }
         Ok(())
     }
 }
@@ -256,6 +303,14 @@ fn vector_load_mnemonic_parts(load_space: &str) -> Option<(&'static str, &'stati
         "global.nc" => Some((PTX_VECTOR_LOAD_GLOBAL_PREFIX, ".nc")),
         "shared" => Some((PTX_VECTOR_LOAD_SHARED_PREFIX, "")),
         _ => None,
+    }
+}
+
+fn vector_memory_type(element_type: &DataType, elem_ty: PtxType) -> PtxType {
+    if matches!(element_type, DataType::Bool) {
+        PtxType::U32
+    } else {
+        elem_ty
     }
 }
 
