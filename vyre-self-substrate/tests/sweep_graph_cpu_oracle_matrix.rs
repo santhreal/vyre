@@ -6,9 +6,14 @@
 
 #![forbid(unsafe_code)]
 
+use vyre_primitives::graph::exploded::build_cpu_reference;
+use vyre_self_substrate::exploded::{
+    build_ifds_csr_via, reference_build_ifds_csr, reference_canonicalize_csr_within_rows,
+};
 use vyre_self_substrate::graph::csr_bidirectional::reference_bidirectional_step;
 use vyre_self_substrate::graph::csr_forward_or_changed::reference_forward_step_with_change_flag;
 use vyre_self_substrate::graph::persistent_bfs::bfs_expand;
+use vyre_self_substrate::optimizer::dispatcher::oracle::CpuOracleDispatcher;
 
 const CASES_PER_FAMILY: u64 = 512;
 
@@ -220,6 +225,70 @@ fn oracle_persistent_bfs(
         }
     }
     (out, changed)
+}
+
+fn canonical_ifds_csr(
+    num_procs: u32,
+    blocks_per_proc: u32,
+    facts_per_proc: u32,
+    intra: &[(u32, u32, u32)],
+    inter: &[(u32, u32, u32, u32)],
+    gen: &[(u32, u32, u32)],
+    kill: &[(u32, u32, u32)],
+) -> (Vec<u32>, Vec<u32>) {
+    let (row_ptr, col_idx) = build_cpu_reference(
+        num_procs,
+        blocks_per_proc,
+        facts_per_proc,
+        intra,
+        inter,
+        gen,
+        kill,
+    );
+    reference_canonicalize_csr_within_rows(&row_ptr, &col_idx)
+}
+
+fn generated_ifds_rules(seed: u64) -> (u32, u32, u32, Vec<(u32, u32, u32)>, Vec<(u32, u32, u32, u32)>, Vec<(u32, u32, u32)>, Vec<(u32, u32, u32)>) {
+    let mut rng = Rng::new(seed);
+    let num_procs = 1 + rng.range(4);
+    let blocks_per_proc = 1 + rng.range(8);
+    let facts_per_proc = 1 + rng.range(8);
+    let mut intra_edges = Vec::new();
+    let mut inter_edges = Vec::new();
+    let mut flow_gen = Vec::new();
+    let mut flow_kill = Vec::new();
+
+    for p in 0..num_procs {
+        for b in 0..blocks_per_proc {
+            if blocks_per_proc > 1 && rng.next_u32() & 1 == 0 {
+                intra_edges.push((p, b, (b + 1) % blocks_per_proc));
+            }
+            let fact = rng.range(facts_per_proc);
+            if rng.next_u32() % 3 == 0 {
+                flow_gen.push((p, b, fact));
+            }
+            if rng.next_u32() % 5 == 0 && fact != 0 {
+                flow_kill.push((p, b, fact));
+            }
+        }
+    }
+    if num_procs > 1 {
+        for p in 0..num_procs - 1 {
+            if rng.next_u32() & 1 == 0 {
+                inter_edges.push((p, 0, p + 1, 0));
+            }
+        }
+    }
+
+    (
+        num_procs,
+        blocks_per_proc,
+        facts_per_proc,
+        intra_edges,
+        inter_edges,
+        flow_gen,
+        flow_kill,
+    )
 }
 
 #[test]

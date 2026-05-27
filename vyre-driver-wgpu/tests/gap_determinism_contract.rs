@@ -1,3 +1,2 @@
-mod gap_impl {
-    include!("determinism_contract.rs");
-}
+#[path = "determinism_contract.rs"]
+mod gap_impl;

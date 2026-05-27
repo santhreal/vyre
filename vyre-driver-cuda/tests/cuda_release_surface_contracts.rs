@@ -53,6 +53,10 @@ fn cuda_parity_perf_gate_runs_release_path_contracts() {
         script.contains("source scripts/lib/cargo_runner.sh") && script.contains("vyre_select_cargo_runner"),
         "Fix: CUDA parity/perf gate must fall back to cargo under CARGO_BUILD_JOBS=1 when the local cargo_full wrapper is absent."
     );
+    assert!(
+        script.contains("*gpu_parity*") && script.contains("int4_quantized_gpu_parity"),
+        "Fix: CUDA parity/perf gate must document and auto-discover INT4 gpu_parity coverage."
+    );
 }
 
 #[test]

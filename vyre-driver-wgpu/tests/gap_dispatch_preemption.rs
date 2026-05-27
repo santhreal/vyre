@@ -1,3 +1,2 @@
-mod gap_impl {
-    include!("dispatch_preemption.rs");
-}
+#[path = "dispatch_preemption.rs"]
+mod gap_impl;

@@ -1,3 +1,2 @@
-mod gap_impl {
-    include!("device_lost_recovery.rs");
-}
+#[path = "device_lost_recovery.rs"]
+mod gap_impl;
