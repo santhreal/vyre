@@ -11,7 +11,9 @@ use vyre_libs::parsing::c::lex::tokens::{
     TOK_ASSIGN, TOK_COLON, TOK_COMMA, TOK_IDENTIFIER, TOK_LBRACE, TOK_LBRACKET, TOK_LPAREN,
     TOK_RBRACE, TOK_RBRACKET, TOK_RPAREN, TOK_SEMICOLON, TOK_TYPEDEF,
 };
-use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, c_lower_ast_to_pg_semantic_graph};
+use vyre_libs::parsing::c::lower::{
+    c_lower_ast_to_pg_nodes, c_lower_ast_to_pg_semantic_graph, reference_ast_to_pg_nodes,
+};
 use vyre_libs::parsing::c::parse::vast::{
     c11_annotate_global_typedef_names_fast, c11_annotate_typedef_names,
     c11_annotate_typedef_names_precomputed_scope, c11_build_expression_shape_nodes,
@@ -67,6 +69,12 @@ pub(crate) fn assert_full_pipeline_parity(fix: &Fixture, label: &str) {
         &typed_cpu,
         &format!("{label}: typed VAST GPU/CPU parity"),
     );
+}
+
+pub(crate) fn classify(fix: &Fixture) -> Vec<u8> {
+    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
+    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
+    reference_c11_classify_vast_node_kinds(&annotated)
 }
 
 fn bytes(words: &[u32]) -> Vec<u8> {
@@ -137,7 +145,19 @@ pub(crate) fn assert_pg_preserves_row(
     );
 }
 
-fn node_count_from_vast(buf: &[u8]) -> u32 {
+pub(crate) fn assert_gpu_pg_parity(fix: &Fixture, typed_vast: &[u8], label: &str) {
+    let node_count = node_count_from_vast(typed_vast);
+    let cpu_pg = reference_ast_to_pg_nodes(typed_vast);
+    let gpu_pg = run_gpu_pg_lower_with_count(typed_vast, node_count);
+    assert_eq!(
+        gpu_pg,
+        cpu_pg,
+        "{label}: GPU PG lower output diverged from reference for {} bytes",
+        fix.source.len()
+    );
+}
+
+pub(crate) fn node_count_from_vast(buf: &[u8]) -> u32 {
     u32::try_from(buf.len() / VAST_STRIDE_BYTES).unwrap_or_default()
 }
 
@@ -279,6 +299,18 @@ pub(crate) fn dispatch_gpu_program(
     }
 }
 
+fn primary_output_with_optional_empty_scratch(outputs: Vec<Vec<u8>>, context: &str) -> Vec<u8> {
+    assert!(
+        !outputs.is_empty(),
+        "{context}: expected at least one primary GPU output"
+    );
+    assert!(
+        outputs.iter().skip(1).all(Vec::is_empty),
+        "{context}: only zero-byte scratch outputs may follow the primary output"
+    );
+    outputs[0].clone()
+}
+
 pub(crate) fn run_gpu_vast_builder_from_parts(
     tok_types: &[u32],
     tok_starts: &[u32],
@@ -331,7 +363,8 @@ pub(crate) fn run_gpu_full_typedef_annotation(source: &[u8], raw_vast: &[u8]) ->
 
 pub(crate) fn run_gpu_fast_typedef_annotation(source: &[u8], raw_vast: &[u8]) -> Vec<u8> {
     let haystack = haystack_words(source);
-    let node_count = Expr::u32(node_count_from_vast(raw_vast));
+    let node_count_value = node_count_from_vast(raw_vast);
+    let node_count = Expr::u32(node_count_value);
     let hashed_program = c11_prehash_vast_identifiers(
         "vast_nodes",
         "haystack",
@@ -348,14 +381,16 @@ pub(crate) fn run_gpu_fast_typedef_annotation(source: &[u8], raw_vast: &[u8]) ->
 
     let scoped_program =
         c11_precompute_vast_scopes("hashed_vast", node_count.clone(), "scoped_vast");
+    let scope_stack = vec![0u8; node_count_value.max(1) as usize * core::mem::size_of::<u32>()];
     let scoped = dispatch_gpu_program(
         "GPU typedef scope precompute",
         scoped_program,
-        vec![hashed[0].clone(), hashed[0].clone()],
+        vec![hashed[0].clone(), hashed[0].clone(), scope_stack],
     );
-    assert_eq!(scoped.len(), 1);
+    let scoped_vast =
+        primary_output_with_optional_empty_scratch(scoped, "GPU typedef scope precompute");
 
-    let typedef_hashes = global_typedef_hashes_from_hashed_vast(&scoped[0]);
+    let typedef_hashes = global_typedef_hashes_from_hashed_vast(&scoped_vast);
     let typedef_hash_bytes = bytes(&typedef_hashes);
     let program = c11_annotate_global_typedef_names_fast(
         "vast_nodes",
@@ -367,7 +402,7 @@ pub(crate) fn run_gpu_fast_typedef_annotation(source: &[u8], raw_vast: &[u8]) ->
     let outputs = dispatch_gpu_program(
         "GPU typedef annotation",
         program,
-        vec![scoped[0].clone(), typedef_hash_bytes, scoped[0].clone()],
+        vec![scoped_vast.clone(), typedef_hash_bytes, scoped_vast],
     );
     assert_eq!(outputs.len(), 1);
     outputs[0].clone()
@@ -393,12 +428,14 @@ pub(crate) fn run_gpu_scoped_typedef_annotation(source: &[u8], raw_vast: &[u8]) 
 
     let scoped_program =
         c11_precompute_vast_scopes("hashed_vast", node_count.clone(), "scoped_vast");
+    let scope_stack = vec![0u8; node_count_value.max(1) as usize * core::mem::size_of::<u32>()];
     let scoped = dispatch_gpu_program(
         "GPU scoped typedef scope precompute",
         scoped_program,
-        vec![hashed[0].clone(), hashed[0].clone()],
+        vec![hashed[0].clone(), hashed[0].clone(), scope_stack],
     );
-    assert_eq!(scoped.len(), 1);
+    let scoped_vast =
+        primary_output_with_optional_empty_scratch(scoped, "GPU scoped typedef scope precompute");
 
     let program = c11_annotate_typedef_names_precomputed_scope(
         "vast_nodes",
@@ -410,7 +447,7 @@ pub(crate) fn run_gpu_scoped_typedef_annotation(source: &[u8], raw_vast: &[u8]) 
     let outputs = dispatch_gpu_program(
         "GPU scoped typedef annotation",
         program,
-        vec![scoped[0].clone(), haystack],
+        vec![scoped_vast, haystack],
     );
     assert_eq!(outputs.len(), 1);
     outputs[0].clone()
@@ -448,6 +485,7 @@ pub(crate) fn run_gpu_expr_shape(raw_vast: &[u8], typed_vast: &[u8]) -> Vec<u8> 
         program,
         vec![raw_vast.to_vec(), typed_vast.to_vec()],
     );
+
     assert_eq!(outputs.len(), 1);
     outputs[0].clone()
 }
