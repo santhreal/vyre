@@ -175,17 +175,16 @@ fn byte_offset(index: u32, stride: usize) -> Option<usize> {
 fn write_element(element: IrDataType, target: &mut [u8], value: &Value) {
     match element {
         IrDataType::U32 => {
-            target.copy_from_slice(&value.to_bytes_width(4)[..4]);
+            value.write_bytes_width_into(target);
         }
         IrDataType::I32 => {
-            target.copy_from_slice(&value.to_bytes_width(4)[..4]);
+            value.write_bytes_width_into(target);
         }
         IrDataType::Bool => {
-            target.copy_from_slice(&value.to_bytes_width(4)[..4]);
+            value.write_bytes_width_into(target);
         }
         IrDataType::U64 => {
-            let bytes = value.to_bytes_width(8);
-            target.copy_from_slice(&bytes[..8]);
+            value.write_bytes_width_into(target);
         }
         IrDataType::F32 => {
             // Value::Float carries an f64; the GPU buffer is four bytes
@@ -201,16 +200,10 @@ fn write_element(element: IrDataType, target: &mut [u8], value: &Value) {
             target.copy_from_slice(&v.to_le_bytes());
         }
         IrDataType::Bytes | IrDataType::Vec2U32 | IrDataType::Vec4U32 => {
-            let bytes = value.to_bytes_width(target.len());
-            let len = target.len().min(bytes.len());
-            target[..len].copy_from_slice(&bytes[..len]);
-            target[len..].fill(0);
+            value.write_bytes_width_into(target);
         }
         _ => {
-            let bytes = value.to_bytes_width(target.len());
-            let len = target.len().min(bytes.len());
-            target[..len].copy_from_slice(&bytes[..len]);
-            target[len..].fill(0);
+            value.write_bytes_width_into(target);
         }
     }
 }
