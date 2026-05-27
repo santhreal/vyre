@@ -87,8 +87,8 @@ impl RingAtomics {
         crate::allocation::try_reserve_vec_to_capacity(&mut ready, capacity).map_err(|error| {
             format!("Fix: persistent ring could not reserve {capacity} ready marker(s): {error}.")
         })?;
-        for _ in 0..ring_size {
-            ready.push(AtomicU64::new(0));
+        for slot in 0..ring_size {
+            ready.push(AtomicU64::new(u64::from(slot)));
         }
 
         let mut done = Vec::new();
@@ -232,9 +232,18 @@ impl PersistentEngine {
     pub fn enqueue(&self, item: PersistentWorkItem) -> Result<u32, QueueFull> {
         loop {
             let head = self.atomics.head.load(Ordering::Acquire);
-            let tail = self.atomics.tail.load(Ordering::Acquire);
-            if head.wrapping_sub(tail) >= u64::from(self.ring_size) {
+            let slot_idx = (head as u32) & (self.ring_size - 1);
+            let slot_offset = slot_idx as usize;
+            let Some(ready) = self.atomics.ready.get(slot_offset) else {
                 return Err(QueueFull);
+            };
+            match ring_sequence_order(ready.load(Ordering::Acquire), head) {
+                RingSequenceOrder::Free => {}
+                RingSequenceOrder::Behind => return Err(QueueFull),
+                RingSequenceOrder::Ahead => {
+                    std::hint::spin_loop();
+                    continue;
+                }
             }
             match self.atomics.head.compare_exchange(
                 head,
@@ -243,8 +252,6 @@ impl PersistentEngine {
                 Ordering::Acquire,
             ) {
                 Ok(_) => {
-                    let slot_idx = (head as u32) & (self.ring_size - 1);
-                    let slot_offset = slot_idx as usize;
                     let Some(slot) = self.slots.get(slot_offset) else {
                         return Err(QueueFull);
                     };
@@ -263,10 +270,26 @@ impl PersistentEngine {
     /// consumers.
     pub fn claim(&self) -> Option<PersistentWorkItem> {
         loop {
-            let head = self.atomics.head.load(Ordering::Acquire);
             let tail = self.atomics.tail.load(Ordering::Acquire);
-            if tail >= head {
+            let slot_idx = (tail as u32) & (self.ring_size - 1);
+            let slot_offset = slot_idx as usize;
+            let published = tail.wrapping_add(1);
+            let Some(ready) = self.atomics.ready.get(slot_offset) else {
                 return None;
+            };
+            match ring_sequence_order(ready.load(Ordering::Acquire), published) {
+                RingSequenceOrder::Free => {}
+                RingSequenceOrder::Behind => {
+                    if tail >= self.atomics.head.load(Ordering::Acquire) {
+                        return None;
+                    }
+                    std::hint::spin_loop();
+                    continue;
+                }
+                RingSequenceOrder::Ahead => {
+                    std::hint::spin_loop();
+                    continue;
+                }
             }
             match self.atomics.tail.compare_exchange(
                 tail,
@@ -275,14 +298,11 @@ impl PersistentEngine {
                 Ordering::Acquire,
             ) {
                 Ok(_) => {
-                    let slot_idx = (tail as u32) & (self.ring_size - 1);
-                    let slot_offset = slot_idx as usize;
-                    let published = tail.wrapping_add(1);
-                    while self.atomics.ready[slot_offset].load(Ordering::Acquire) != published {
-                        std::hint::spin_loop();
-                    }
                     let slot = self.slots.get(slot_offset)?;
-                    return Some(slot.load());
+                    let item = slot.load();
+                    self.atomics.ready[slot_offset]
+                        .store(tail.wrapping_add(u64::from(self.ring_size)), Ordering::Release);
+                    return Some(item);
                 }
                 Err(_) => continue,
             }
@@ -367,6 +387,21 @@ fn persistent_ring_capacity(ring_size: u32) -> Result<usize, String> {
     usize::try_from(ring_size).map_err(|_| {
         format!("Fix: persistent ring_size {ring_size} does not fit this target's address space.")
     })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RingSequenceOrder {
+    Behind,
+    Free,
+    Ahead,
+}
+
+fn ring_sequence_order(sequence: u64, position: u64) -> RingSequenceOrder {
+    match (sequence.wrapping_sub(position) as i64).cmp(&0) {
+        std::cmp::Ordering::Less => RingSequenceOrder::Behind,
+        std::cmp::Ordering::Equal => RingSequenceOrder::Free,
+        std::cmp::Ordering::Greater => RingSequenceOrder::Ahead,
+    }
 }
 
 /// Enqueue attempted but the ring is full.
