@@ -6,9 +6,8 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::text::line_index::{line_index, reference_line_index};
 use vyre_primitives::text::utf8_validate::{reference_utf8_validate, utf8_validate};
 
@@ -16,15 +15,17 @@ fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
     source.iter().map(|&b| b as u32).collect()
 }
 
-fn run_line_index(backend: &CudaBackend, source: &[u8]) -> Vec<u32> {
+fn run_line_index(source: &[u8]) -> Vec<u32> {
     let n = source.len() as u32;
     let program = line_index("source", "lines", n);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(&bytes_to_u32_per_lane(source))];
     let mut config = DispatchConfig::default();
     config.grid_override = Some([1, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("line index primitive", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA line-index dispatch failed: {error}"))
+    });
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(n as usize);
     out
@@ -32,55 +33,50 @@ fn run_line_index(backend: &CudaBackend, source: &[u8]) -> Vec<u32> {
 
 #[test]
 fn cuda_line_index_no_newlines() {
-    let backend = live_dispatcher();
     let s = b"Hello";
     let cpu = reference_line_index(s);
-    let gpu = run_line_index(&backend, s);
+    let gpu = run_line_index(s);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0u32; 5]);
 }
 
 #[test]
 fn cuda_line_index_lf_only() {
-    let backend = live_dispatcher();
     let s = b"ab\ncd";
     let cpu = reference_line_index(s);
-    let gpu = run_line_index(&backend, s);
+    let gpu = run_line_index(s);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0, 0, 0, 1, 1]);
 }
 
 #[test]
 fn cuda_line_index_crlf() {
-    let backend = live_dispatcher();
     let s = b"ab\r\ncd";
     let cpu = reference_line_index(s);
-    let gpu = run_line_index(&backend, s);
+    let gpu = run_line_index(s);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0, 0, 0, 0, 1, 1]);
 }
 
 #[test]
 fn cuda_line_index_lone_cr() {
-    let backend = live_dispatcher();
     let s = b"ab\rcd";
     let cpu = reference_line_index(s);
-    let gpu = run_line_index(&backend, s);
+    let gpu = run_line_index(s);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0, 0, 0, 1, 1]);
 }
 
 #[test]
 fn cuda_line_index_back_to_back_lf() {
-    let backend = live_dispatcher();
     let s = b"a\n\nb";
     let cpu = reference_line_index(s);
-    let gpu = run_line_index(&backend, s);
+    let gpu = run_line_index(s);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0, 0, 1, 2]);
 }
 
-fn run_utf8_validate(backend: &CudaBackend, source: &[u8]) -> Vec<u32> {
+fn run_utf8_validate(source: &[u8]) -> Vec<u32> {
     let n = source.len() as u32;
     let program = utf8_validate("source", "classes", n);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(&bytes_to_u32_per_lane(source))];
@@ -88,9 +84,11 @@ fn run_utf8_validate(backend: &CudaBackend, source: &[u8]) -> Vec<u32> {
     let workgroup_x = 256u32;
     let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
     config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("UTF-8 validate primitive", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA UTF-8 validate dispatch failed: {error}"))
+    });
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(n as usize);
     out
@@ -98,47 +96,42 @@ fn run_utf8_validate(backend: &CudaBackend, source: &[u8]) -> Vec<u32> {
 
 #[test]
 fn cuda_utf8_validate_ascii() {
-    let backend = live_dispatcher();
     let s = b"Hello";
     let cpu = reference_utf8_validate(s);
-    let gpu = run_utf8_validate(&backend, s);
+    let gpu = run_utf8_validate(s);
     assert_eq!(gpu, cpu);
 }
 
 #[test]
 fn cuda_utf8_validate_two_byte_sequence() {
-    let backend = live_dispatcher();
     // U+00E9 = é = 0xC3 0xA9.
     let s = &[0xC3, 0xA9];
     let cpu = reference_utf8_validate(s);
-    let gpu = run_utf8_validate(&backend, s);
+    let gpu = run_utf8_validate(s);
     assert_eq!(gpu, cpu);
 }
 
 #[test]
 fn cuda_utf8_validate_four_byte_sequence() {
-    let backend = live_dispatcher();
     // U+1F600 = 😀 = 0xF0 0x9F 0x98 0x80.
     let s = &[0xF0, 0x9F, 0x98, 0x80];
     let cpu = reference_utf8_validate(s);
-    let gpu = run_utf8_validate(&backend, s);
+    let gpu = run_utf8_validate(s);
     assert_eq!(gpu, cpu);
 }
 
 #[test]
 fn cuda_utf8_validate_invalid_overlong_starts() {
-    let backend = live_dispatcher();
     let s = &[0xC0u8, 0xC1];
     let cpu = reference_utf8_validate(s);
-    let gpu = run_utf8_validate(&backend, s);
+    let gpu = run_utf8_validate(s);
     assert_eq!(gpu, cpu);
 }
 
 #[test]
 fn cuda_utf8_validate_lone_continuation() {
-    let backend = live_dispatcher();
     let s = &[0x80u8];
     let cpu = reference_utf8_validate(s);
-    let gpu = run_utf8_validate(&backend, s);
+    let gpu = run_utf8_validate(s);
     assert_eq!(gpu, cpu);
 }
