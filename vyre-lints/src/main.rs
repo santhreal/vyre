@@ -9,7 +9,9 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::PathBuf;
-use vyre_lints::{run_production_cpu_fallbacks, run_raw_ir_in_libs, Violation};
+use vyre_lints::{
+    run_consumer_coupling, run_production_cpu_fallbacks, run_raw_ir_in_libs, Violation,
+};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -57,6 +59,15 @@ struct Cli {
     /// External consumers can be scanned by passing this flag repeatedly.
     #[arg(long)]
     production_root: Vec<PathBuf>,
+
+    /// Run the consumer-name coupling guard over platform docs/comments.
+    #[arg(long)]
+    check_consumer_coupling: bool,
+
+    /// Override roots scanned by `--check-consumer-coupling`.
+    /// Defaults to current docs plus platform source crates.
+    #[arg(long)]
+    consumer_root: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug, clap::ValueEnum)]
@@ -80,6 +91,10 @@ fn main() -> Result<()> {
         return run_production_cpu_fallbacks_cli(&cli);
     }
 
+    if cli.check_consumer_coupling {
+        return run_consumer_coupling_cli(&cli);
+    }
+
     let lib_root = cli
         .lib_root
         .unwrap_or_else(|| cli.workspace_root.join("vyre-libs/src"));
@@ -100,6 +115,34 @@ fn main() -> Result<()> {
         Format::Json => emit_json(&violations)?,
     }
 
+    if violations.is_empty() {
+        Ok(())
+    } else {
+        std::process::exit(1);
+    }
+}
+
+fn run_consumer_coupling_cli(cli: &Cli) -> Result<()> {
+    let roots = if cli.consumer_root.is_empty() {
+        default_consumer_coupling_roots(&cli.workspace_root)
+    } else {
+        cli.consumer_root.clone()
+    };
+    for root in &roots {
+        if !root.exists() {
+            anyhow::bail!(
+                "consumer coupling root not found: {}. Fix: update the platform doc/comment guard roots instead of silently shrinking scan coverage.",
+                root.display()
+            );
+        }
+    }
+    let root_refs: Vec<&std::path::Path> = roots.iter().map(|root| root.as_path()).collect();
+    let violations =
+        run_consumer_coupling(&root_refs).context("running consumer-name coupling guard")?;
+    match cli.format {
+        Format::Text => emit_text(&violations),
+        Format::Json => emit_json(&violations)?,
+    }
     if violations.is_empty() {
         Ok(())
     } else {
@@ -182,6 +225,25 @@ fn default_production_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
     .collect()
 }
 
+fn default_consumer_coupling_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
+    [
+        "docs",
+        "vyre-core/src",
+        "vyre-driver/src",
+        "vyre-driver-cuda/src",
+        "vyre-driver-wgpu/src",
+        "vyre-foundation/src",
+        "vyre-libs/src",
+        "vyre-lower/src",
+        "vyre-primitives/src",
+        "vyre-runtime/src",
+        "vyre-self-substrate/src",
+    ]
+    .into_iter()
+    .map(|root| workspace_root.join(root))
+    .collect()
+}
+
 fn current_iso_date() -> String {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -234,6 +296,7 @@ fn emit_json(violations: &[Violation]) -> Result<()> {
             vyre_lints::ViolationKind::RawNodeConstruction => "raw_node_construction",
             vyre_lints::ViolationKind::RawExprConstruction => "raw_expr_construction",
             vyre_lints::ViolationKind::ProductionCpuFallback => "production_cpu_fallback",
+            vyre_lints::ViolationKind::ConsumerCoupling => "consumer_coupling",
         };
         if i > 0 {
             out.push_str(",\n");
