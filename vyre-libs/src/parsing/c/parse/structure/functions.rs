@@ -173,23 +173,13 @@ pub fn c11_extract_functions(
         4,
         false,
     );
-    let mut sparse_zero_pre_loop = vec![Node::if_then(
-        Expr::eq(t.clone(), Expr::u32(0)),
-        vec![Node::store(
-            out_counts,
-            Expr::u32(0),
-            Expr::mul(num_tokens.clone(), Expr::u32(3)),
-        )],
-    )];
-    sparse_zero_pre_loop.extend(emit_sparse_record_zero(
+    let sparse_zero_pre_loop = emit_sparse_record_output_init(
         out_functions,
+        out_counts,
         t.clone(),
         num_tokens.clone(),
         3,
-    ));
-    sparse_zero_pre_loop.push(Node::Barrier {
-        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-    });
+    );
     threaded_structure_program(
         "vyre-libs::parsing::c11_extract_functions",
         buffers,

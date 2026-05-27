@@ -241,6 +241,33 @@ pub(super) fn emit_sparse_record_zero(
     ]
 }
 
+pub(super) fn emit_sparse_record_output_init(
+    out_records: &str,
+    out_counts: &str,
+    t: Expr,
+    num_records: Expr,
+    record_words: u32,
+) -> Vec<Node> {
+    let mut nodes = vec![Node::if_then(
+        Expr::eq(t.clone(), Expr::u32(0)),
+        vec![Node::store(
+            out_counts,
+            Expr::u32(0),
+            Expr::mul(num_records.clone(), Expr::u32(record_words)),
+        )],
+    )];
+    nodes.extend(emit_sparse_record_zero(
+        out_records,
+        t,
+        num_records,
+        record_words,
+    ));
+    nodes.push(Node::Barrier {
+        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+    });
+    nodes
+}
+
 fn sparse_record_store_order(record_words: u32) -> Vec<u32> {
     if record_words <= 2 || record_words % 2 == 0 {
         return (0..record_words).collect();
