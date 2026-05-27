@@ -42,6 +42,17 @@ struct SimilarPair {
     right: usize,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct SourceSimilarityFinding {
+    pub(crate) score: f64,
+    pub(crate) left: String,
+    pub(crate) right: String,
+    pub(crate) left_tokens: usize,
+    pub(crate) right_tokens: usize,
+    pub(crate) left_bytes: u64,
+    pub(crate) right_bytes: u64,
+}
+
 pub(crate) fn run(args: &[String]) {
     let config = match parse_args(args) {
         Ok(config) => config,
@@ -52,58 +63,96 @@ pub(crate) fn run(args: &[String]) {
         }
     };
 
-    let files = match collect_rust_files(&config.roots, config.max_file_bytes) {
-        Ok(files) => files,
+    let report = match find_similar_sources(
+        &config.roots,
+        config.top_n,
+        config.min_score,
+        config.max_file_bytes,
+    ) {
+        Ok(report) => report,
         Err(error) => {
             eprintln!("Fix: source-similar scan failed: {error}");
             process::exit(1);
         }
     };
-    let fingerprints = fingerprint_files(&files);
-    let pairs = score_pairs(&fingerprints, config.top_n, config.min_score);
 
     println!(
         "source-similar: scanned {} Rust files under {} root(s) (min={:.2}, top={}, shingle_width={})",
-        fingerprints.len(),
+        report.scanned_files,
         config.roots.len(),
         config.min_score,
         config.top_n,
         SHINGLE_WIDTH
     );
-    if pairs.is_empty() {
+    if report.findings.is_empty() {
         println!("  no Rust source file pairs crossed the duplication floor.");
         return;
     }
-    for (index, pair) in pairs.iter().enumerate() {
-        let left = &fingerprints[pair.left];
-        let right = &fingerprints[pair.right];
+    for (index, finding) in report.findings.iter().enumerate() {
         println!(
             "  {:>2}. {:>5.1}%  {}",
             index + 1,
-            pair.score * 100.0,
-            pair_verdict(pair.score)
+            finding.score * 100.0,
+            pair_verdict(finding.score)
         );
         println!(
             "      A: {} tokens={} bytes={}",
-            display_path(&left.path),
-            left.tokens,
-            left.bytes
+            finding.left,
+            finding.left_tokens,
+            finding.left_bytes
         );
         println!(
             "      B: {} tokens={} bytes={}",
-            display_path(&right.path),
-            right.tokens,
-            right.bytes
+            finding.right,
+            finding.right_tokens,
+            finding.right_bytes
         );
     }
     if config.fail_on_findings {
         eprintln!(
             "Fix: source-similar found {} duplicate/similar Rust source pair(s) at score >= {:.2}. Extract a shared module or lower --min only for exploratory scans.",
-            pairs.len(),
+            report.findings.len(),
             config.min_score
         );
         process::exit(1);
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct SourceSimilarityReport {
+    pub(crate) scanned_files: usize,
+    pub(crate) findings: Vec<SourceSimilarityFinding>,
+}
+
+pub(crate) fn find_similar_sources(
+    roots: &[PathBuf],
+    top_n: usize,
+    min_score: f64,
+    max_file_bytes: u64,
+) -> Result<SourceSimilarityReport, String> {
+    let files = collect_rust_files(roots, max_file_bytes)?;
+    let fingerprints = fingerprint_files(&files);
+    let pairs = score_pairs(&fingerprints, top_n, min_score);
+    let findings = pairs
+        .into_iter()
+        .map(|pair| {
+            let left = &fingerprints[pair.left];
+            let right = &fingerprints[pair.right];
+            SourceSimilarityFinding {
+                score: pair.score,
+                left: display_path(&left.path),
+                right: display_path(&right.path),
+                left_tokens: left.tokens,
+                right_tokens: right.tokens,
+                left_bytes: left.bytes,
+                right_bytes: right.bytes,
+            }
+        })
+        .collect();
+    Ok(SourceSimilarityReport {
+        scanned_files: fingerprints.len(),
+        findings,
+    })
 }
 
 fn parse_args(args: &[String]) -> Result<Config, String> {

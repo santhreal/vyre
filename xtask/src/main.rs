@@ -104,9 +104,9 @@ fn print_help() {
            heuristic-audit [--strict]          Surface hand-rolled heuristics that should be self-consumer calls\n\
            hygiene-matrix [--output PATH]      Scan Vyre/Weir source hygiene release blockers\n\
            lego-audit                          Deeper LEGO-block enforcement (no-reinvention, depth-of-composition, primitive coverage, chain coverage)\n\
-           lego-quick [--all]                  Fast pre-commit gate (raw-IR + cross-dialect + god-file) over staged diff\n\
+           lego-quick [--all] [--source-similar] Fast pre-commit gate plus optional source-dedup scan\n\
            whats-similar (--op-id <id>|--all) Pre-write/all-pairs duplicate query by IR shape\n\
-           source-similar [--root PATH]        Repo-wide Rust source duplicate scanner\n\
+           source-similar [--root PATH] [--check] Repo-wide Rust source duplicate scanner\n\
            hot-path-scan [--strict]            Scan files in HOT_PATHS.toml for clone/alloc/lock patterns\n\
            test-matrix [--output PATH]         Generate Vyre/Weir test architecture evidence\n\
            lint-shape-tests [--strict]         Scan test modules for shape-only assertions\n\
