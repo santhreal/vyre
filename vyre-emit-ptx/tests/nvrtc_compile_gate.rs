@@ -422,7 +422,8 @@ mod nvrtc_real {
     use std::ffi::CString;
 
     use super::{ptx_for_op, ptx_for_vector_load_fusion, ptx_for_vector_store_fusion};
-    use cudarc::driver::{sys::CUresult, CudaContext};
+    use cudarc::driver::{sys::CUresult, CudaContext, LaunchConfig, PushKernelArg};
+    use cudarc::nvrtc::Ptx;
     use vyre_foundation::ir::BinOp;
     use vyre_lower::KernelOpKind;
 
@@ -447,6 +448,74 @@ mod nvrtc_real {
             }
         }
         Ok(())
+    }
+
+    fn launch_vector_load_fusion_ptx(ptx: &str) -> Result<Vec<u32>, String> {
+        let ctx = CudaContext::new(0)
+            .map_err(|error| format!("CUDA context creation failed: {error}"))?;
+        let stream = ctx.default_stream();
+        let module = ctx
+            .load_module(Ptx::from_src(ptx))
+            .map_err(|error| format!("CUDA module load failed: {error}"))?;
+        let kernel = module
+            .load_function("main")
+            .map_err(|error| format!("CUDA function lookup failed: {error}"))?;
+
+        let input = stream
+            .clone_htod(&[7_u32, 11, 13, 17])
+            .map_err(|error| format!("input HtoD copy failed: {error}"))?;
+        let mut output = stream
+            .alloc_zeros::<u32>(1)
+            .map_err(|error| format!("output allocation failed: {error}"))?;
+        let params = stream
+            .clone_htod(&[1_u32, 4, 1])
+            .map_err(|error| format!("params HtoD copy failed: {error}"))?;
+
+        unsafe {
+            stream
+                .launch_builder(&kernel)
+                .arg(&input)
+                .arg(&mut output)
+                .arg(&params)
+                .launch(LaunchConfig::for_num_elems(1))
+        }
+        .map_err(|error| format!("vector load kernel launch failed: {error}"))?;
+
+        stream
+            .clone_dtoh(&output)
+            .map_err(|error| format!("output DtoH copy failed: {error}"))
+    }
+
+    fn launch_vector_store_fusion_ptx(ptx: &str) -> Result<Vec<u32>, String> {
+        let ctx = CudaContext::new(0)
+            .map_err(|error| format!("CUDA context creation failed: {error}"))?;
+        let stream = ctx.default_stream();
+        let module = ctx
+            .load_module(Ptx::from_src(ptx))
+            .map_err(|error| format!("CUDA module load failed: {error}"))?;
+        let kernel = module
+            .load_function("main")
+            .map_err(|error| format!("CUDA function lookup failed: {error}"))?;
+
+        let mut output = stream
+            .alloc_zeros::<u32>(4)
+            .map_err(|error| format!("output allocation failed: {error}"))?;
+        let params = stream
+            .clone_htod(&[1_u32, 4])
+            .map_err(|error| format!("params HtoD copy failed: {error}"))?;
+
+        unsafe {
+            stream
+                .launch_builder(&kernel)
+                .arg(&mut output)
+                .arg(&params)
+                .launch(LaunchConfig::for_num_elems(1))
+        }
+        .map_err(|error| format!("vector store kernel launch failed: {error}"))?;
+
+        stream
+            .clone_dtoh(&output)
+            .map_err(|error| format!("output DtoH copy failed: {error}"))
     }
 
     #[test]
@@ -501,6 +570,28 @@ mod nvrtc_real {
             compiled.is_ok(),
             "CUDA driver failed to load vector-store fusion PTX: {:?}",
             compiled.err()
+        );
+    }
+
+    #[test]
+    fn nvrtc_executes_vector_load_fusion_ptx() {
+        let ptx = ptx_for_vector_load_fusion();
+        let output = launch_vector_load_fusion_ptx(&ptx);
+        assert_eq!(
+            output,
+            Ok(vec![48]),
+            "CUDA execution must match CPU sum of fused vector-loaded values"
+        );
+    }
+
+    #[test]
+    fn nvrtc_executes_vector_store_fusion_ptx() {
+        let ptx = ptx_for_vector_store_fusion();
+        let output = launch_vector_store_fusion_ptx(&ptx);
+        assert_eq!(
+            output,
+            Ok(vec![10, 11, 12, 13]),
+            "CUDA execution must materialize all lanes from fused vector store"
         );
     }
 }
