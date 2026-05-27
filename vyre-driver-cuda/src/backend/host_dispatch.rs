@@ -41,6 +41,7 @@ struct CudaReadyPending {
 
 const CUDA_HOST_TRANSFER_ACCOUNTING: TransferAccountingPolicy =
     TransferAccountingPolicy::new("CUDA", "split the dispatch into bounded chunks");
+const CUDA_ASYNC_COPY_ALIGNMENT: usize = 16;
 
 impl vyre_driver::backend::private::Sealed for CudaReadyPending {}
 
@@ -123,6 +124,20 @@ fn add_transfer_bytes(total: &mut u64, bytes: usize, label: &str) -> Result<(), 
 
 fn add_transfer_operation(total: &mut u64, label: &str) -> Result<(), BackendError> {
     CUDA_HOST_TRANSFER_ACCOUNTING.add_operation(total, label)
+}
+
+fn padded_async_copy_len(byte_len: usize) -> Result<usize, BackendError> {
+    if byte_len == 0 {
+        return Ok(0);
+    }
+    byte_len
+        .checked_add(CUDA_ASYNC_COPY_ALIGNMENT - 1)
+        .map(|len| len & !(CUDA_ASYNC_COPY_ALIGNMENT - 1))
+        .ok_or_else(|| BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA async transfer length {byte_len} cannot be rounded to {CUDA_ASYNC_COPY_ALIGNMENT}-byte alignment without overflowing usize."
+            ),
+        })
 }
 
 impl CudaBackend {
@@ -386,7 +401,8 @@ impl CudaBackend {
                 })?,
             };
 
-            let allocation = self.transient_pool.acquire(byte_len)?;
+            let allocation_byte_len = padded_async_copy_len(byte_len)?;
+            let allocation = self.transient_pool.acquire(allocation_byte_len)?;
             self.telemetry.record_transient_allocation_bytes(
                 CUDA_NUMERIC
                     .usize_to_u64(allocation.byte_len, "transient allocation byte count")?,
@@ -396,7 +412,8 @@ impl CudaBackend {
 
             if let Some(input_index) = binding.input_index {
                 let input = inputs[input_index];
-                let host_ptr = host_transfers.push_upload(input)?;
+                let copy_byte_len = padded_async_copy_len(input.len())?;
+                let host_ptr = host_transfers.push_upload_padded(input, copy_byte_len)?;
                 add_transfer_bytes(&mut upload_bytes, input.len(), "host upload")?;
                 if !input.is_empty() {
                     add_transfer_operation(&mut upload_operations, "host upload")?;
@@ -404,12 +421,12 @@ impl CudaBackend {
                 host_uploads.push(HostUpload {
                     dst: dev_ptr,
                     src: host_ptr,
-                    byte_len: input.len(),
+                    byte_len: copy_byte_len,
                 });
             } else if byte_len != 0 {
                 device_clears.push(DeviceClear {
                     dst: dev_ptr,
-                    byte_len,
+                    byte_len: allocation.byte_len,
                 });
             }
         }
@@ -418,18 +435,20 @@ impl CudaBackend {
         let params_buf_ptr = if param_bytes == 0 {
             0
         } else {
-            let params_allocation = self.transient_pool.acquire(param_bytes)?;
+            let param_copy_bytes = padded_async_copy_len(param_bytes)?;
+            let params_allocation = self.transient_pool.acquire(param_copy_bytes)?;
             self.telemetry
                 .record_transient_allocation_bytes(CUDA_NUMERIC.usize_to_u64(
                     params_allocation.byte_len,
                     "parameter allocation byte count",
                 )?);
             let params_buf_ptr = params_allocation.ptr;
-            let param_host_ptr = host_transfers.push_u32_words(&prepared.launch.param_words)?;
+            let param_host_ptr = host_transfers
+                .push_u32_words_padded(&prepared.launch.param_words, param_copy_bytes)?;
             host_uploads.push(HostUpload {
                 dst: params_buf_ptr,
                 src: param_host_ptr,
-                byte_len: param_bytes,
+                byte_len: param_copy_bytes,
             });
             add_transfer_bytes(&mut upload_bytes, param_bytes, "parameter upload")?;
             add_transfer_operation(&mut upload_operations, "parameter upload")?;
@@ -552,7 +571,18 @@ impl CudaBackend {
                 },
             };
             let readback = cuda_output_readback(&buffers[binding.buffer_index], full_byte_len)?;
-            let out_ptr = host_transfers.push_output(readback.byte_len)?;
+            let allocation_byte_len = allocations.byte_len(binding.buffer_index);
+            let padded_readback_len = padded_async_copy_len(readback.byte_len)?;
+            let readback_end = readback
+                .device_offset
+                .checked_add(padded_readback_len)
+                .unwrap_or(usize::MAX);
+            let copy_byte_len = if readback_end <= allocation_byte_len {
+                padded_readback_len
+            } else {
+                readback.byte_len
+            };
+            let out_ptr = host_transfers.push_output_padded(readback.byte_len, copy_byte_len)?;
             if readback.byte_len != 0 {
                 add_transfer_bytes(&mut readback_bytes, readback.byte_len, "output readback")?;
                 add_transfer_operation(&mut readback_operations, "output readback")?;
@@ -585,7 +615,7 @@ impl CudaBackend {
                     super::copy::d2h_async_checked(
                         out_ptr,
                         device_ptr,
-                        readback.byte_len,
+                        copy_byte_len,
                         stream_raw,
                     )?;
                 }
