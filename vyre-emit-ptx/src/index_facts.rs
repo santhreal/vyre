@@ -5,6 +5,8 @@ use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 pub(crate) struct IndexFacts {
     producer: FxHashMap<u32, usize>,
     consumer_count: FxHashMap<u32, usize>,
+    #[cfg(test)]
+    consumer_idx: FxHashMap<u32, usize>,
     lit_u32: FxHashMap<u32, u32>,
 }
 
@@ -18,6 +20,9 @@ impl IndexFacts {
     pub(crate) fn new(body: &KernelBody) -> Self {
         let mut producer = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
         let mut consumer_count =
+            FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
+        #[cfg(test)]
+        let mut consumer_idx =
             FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
         let mut lit_u32 = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
         for (idx, op) in body.ops.iter().enumerate() {
@@ -50,17 +55,26 @@ impl IndexFacts {
                 lit_u32.insert(result_id, value);
             }
         }
-        for op in &body.ops {
+        for (op_idx, op) in body.ops.iter().enumerate() {
+            #[cfg(not(test))]
+            let _ = op_idx;
             visit_value_operands(op, |operand| {
                 if !producer.contains_key(&operand) {
                     return;
                 }
-                *consumer_count.entry(operand).or_insert(0) += 1;
+                let count = consumer_count.entry(operand).or_insert(0);
+                #[cfg(test)]
+                if *count == 0 {
+                    consumer_idx.insert(operand, op_idx);
+                }
+                *count += 1;
             });
         }
         Self {
             producer,
             consumer_count,
+            #[cfg(test)]
+            consumer_idx,
             lit_u32,
         }
     }
@@ -150,6 +164,16 @@ impl IndexFacts {
                 let rhs_mod = self.index_mod(body, rhs, modulus, depth + 1)?;
                 Some((lhs_mod * rhs_mod) % modulus)
             }
+            KernelOpKind::BinOpKind(BinOp::Shl) => {
+                let shift = self.lit_u32.get(&rhs).copied()? & 31;
+                let factor = 1u32 << shift;
+                if factor % modulus == 0 {
+                    return Some(0);
+                }
+                let lhs_mod = self.index_mod(body, lhs, modulus, depth + 1)?;
+                Some(((u64::from(lhs_mod) * u64::from(factor % modulus)) % u64::from(modulus))
+                    as u32)
+            }
             _ => None,
         }
     }
@@ -225,6 +249,12 @@ impl IndexFacts {
         self.consumer_count.get(&result_id).copied().unwrap_or(0)
     }
 
+    #[cfg(test)]
+    pub(crate) fn single_consumer_idx(&self, result_id: u32) -> Option<usize> {
+        (self.result_use_count(result_id) == 1)
+            .then(|| self.consumer_idx.get(&result_id).copied())
+            .flatten()
+    }
 }
 
 fn visit_value_operands(op: &KernelOp, mut visit: impl FnMut(u32)) {
@@ -549,6 +579,55 @@ mod tests {
             literals: vec![
                 LiteralValue::U32(4),
                 LiteralValue::U32(10),
+                LiteralValue::U32(1),
+            ],
+        };
+        let facts = IndexFacts::new(&body);
+        assert!(facts.index_is_multiple_of(&body, 10, 4));
+        assert!(facts.index_is_multiple_of(&body, 11, 2));
+        assert!(!facts.index_is_multiple_of(&body, 11, 4));
+        assert!(!facts.index_is_multiple_of(&body, 12, 2));
+    }
+
+    #[test]
+    fn index_multiple_detects_strength_reduced_shift_alignment() {
+        let body = KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![2],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Shl),
+                    operands: vec![99, 1],
+                    result: Some(10),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Shl),
+                    operands: vec![99, 2],
+                    result: Some(11),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![10, 3],
+                    result: Some(12),
+                },
+            ],
+            child_bodies: Vec::new(),
+            literals: vec![
+                LiteralValue::U32(2),
+                LiteralValue::U32(1),
                 LiteralValue::U32(1),
             ],
         };
