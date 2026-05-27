@@ -280,7 +280,8 @@ fn cuda_resident_adaptive_sparse_dense_keeps_selector_on_device_sparse_branch() 
         &frontier_in,
         1,
         50,
-    );
+    )
+    .expect("Fix: CPU adaptive traversal oracle must accept the sparse-branch fixture.");
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut out = Vec::with_capacity(1);
     backend.reset_telemetry();
@@ -346,7 +347,8 @@ fn cuda_resident_adaptive_sparse_dense_keeps_selector_on_device_dense_branch() {
         &frontier_in,
         1,
         50,
-    );
+    )
+    .expect("Fix: CPU adaptive traversal oracle must accept the dense-branch fixture.");
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut out = Vec::with_capacity(1);
     backend.reset_telemetry();
