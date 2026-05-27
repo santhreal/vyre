@@ -1,14 +1,11 @@
 //! Structural contracts for C preprocessing replacement-token caching.
 
-use std::fs;
-use std::path::Path;
+mod support;
 
-fn crate_file(path: &str) -> String {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    fs::read_to_string(manifest.join(path)).unwrap_or_else(|error| {
-        panic!("failed to read {path}: {error}");
-    })
-}
+use support::{
+    assert_byte_lru_core_rejects_and_accounts, assert_byte_lru_core_tracks_resident_bytes,
+    crate_file,
+};
 
 #[test]
 fn replacement_token_cache_is_entry_and_byte_bounded() {
@@ -34,15 +31,6 @@ fn replacement_token_cache_is_entry_and_byte_bounded() {
         cache.contains("classified_tokens_bytes(&value)"),
         "Fix: replacement-token cache admission must size retained classified tokens before storing."
     );
-    let byte_lru_cache = crate_file("src/parsing/c/preprocess/gpu_pipeline/byte_lru_cache.rs");
-    assert!(
-        byte_lru_cache.contains("bytes: usize") && byte_lru_cache.contains("max_bytes: usize"),
-        "Fix: shared GPU preprocessor cache core must track resident bytes and byte limit."
-    );
-    assert!(
-        byte_lru_cache.contains("entry_bytes > self.max_bytes")
-            && byte_lru_cache.contains(".checked_add(entry_bytes)")
-            && byte_lru_cache.contains("checked_sub(entry.bytes)"),
-        "Fix: shared GPU preprocessor cache core must reject oversized entries, evict to byte budget, and update byte accounting."
-    );
+    assert_byte_lru_core_tracks_resident_bytes();
+    assert_byte_lru_core_rejects_and_accounts();
 }

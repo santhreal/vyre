@@ -1,14 +1,11 @@
 //! Structural contracts for classified-token preprocessing memory caching.
 
-use std::fs;
-use std::path::Path;
+mod support;
 
-fn crate_file(path: &str) -> String {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    fs::read_to_string(manifest.join(path)).unwrap_or_else(|error| {
-        panic!("failed to read {path}: {error}");
-    })
-}
+use support::{
+    assert_byte_lru_core_rejects_and_accounts, assert_byte_lru_core_tracks_resident_bytes,
+    crate_file,
+};
 
 #[test]
 fn classified_token_memory_cache_is_byte_bounded() {
@@ -26,16 +23,8 @@ fn classified_token_memory_cache_is_byte_bounded() {
         classified_memory.contains("classified_tokens_bytes(&value)"),
         "Fix: classified-token cache admission must size token columns and source bytes before storing."
     );
-    let byte_lru_cache = crate_file("src/parsing/c/preprocess/gpu_pipeline/byte_lru_cache.rs");
-    assert!(
-        byte_lru_cache.contains("bytes: usize") && byte_lru_cache.contains("max_bytes: usize"),
-        "Fix: shared GPU preprocessor cache core must track resident bytes and a byte limit."
-    );
-    assert!(
-        byte_lru_cache.contains("entry_bytes > self.max_bytes")
-            && byte_lru_cache.contains(".checked_add(entry_bytes)"),
-        "Fix: shared GPU preprocessor cache core must reject oversized entries and evict to byte budget."
-    );
+    assert_byte_lru_core_tracks_resident_bytes();
+    assert_byte_lru_core_rejects_and_accounts();
 
     let classified_size = crate_file("src/parsing/c/preprocess/gpu_pipeline/classified_size.rs");
     assert!(
