@@ -70,7 +70,7 @@ pub fn run_flat(program: &Program, input: &[u8], output: &mut Vec<u8>) -> Result
     let values = reference_eval(program, &values)?;
     output.clear();
     for value in values {
-        output.extend_from_slice(&value.to_bytes());
+        value.extend_bytes_width(0, output)?;
     }
     Ok(())
 }
