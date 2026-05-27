@@ -470,6 +470,7 @@ pub fn crc32_update_byte_nodes(crc_var: &str, bit_var: &str, byte: Expr) -> Vec<
 /// Final CRC expression for IR compositions that fuse CRC-32 with other
 /// one-pass byte walkers.
 #[must_use]
+
 pub fn crc32_finalize_expr(crc: Expr) -> Expr {
     Expr::bitxor(crc, Expr::u32(CRC32_INIT))
 }
@@ -912,6 +913,71 @@ mod tests {
             assert_eq!(left_grouped.len, len as u64);
             assert_eq!(left_grouped.crc, crc32(&bytes));
         }
+    }
+
+    #[test]
+    fn crc32_generated_map_reduce_partitions_match_direct_crc() {
+        let mut assertions = 0usize;
+        for seed in 0u32..8192 {
+            let len = (seed
+                .wrapping_mul(1_103_515_245)
+                .rotate_left(seed & 15)
+                ^ 0x9E37_79B9)
+                % 1537;
+            let chunk_size = (seed.wrapping_mul(37) ^ seed.rotate_left(5)) % 127 + 1;
+            let chunk_size =
+                NonZeroU32::new(chunk_size).expect("Fix: generated chunk size must be non-zero.");
+            let mut state = seed ^ 0xA5A5_5A5A;
+            let bytes = (0..len)
+                .map(|index| {
+                    state = state
+                        .wrapping_mul(1_664_525)
+                        .wrapping_add(1_013_904_223)
+                        .rotate_left(index & 17);
+                    (state ^ index.wrapping_mul(0x045D_9F3B)) as u8
+                })
+                .collect::<Vec<_>>();
+            let plan = crc32_map_reduce_plan(len, chunk_size)
+                .expect("Fix: generated CRC32 map-reduce plan must fit u32 accounting.");
+            let mut chunks = if bytes.is_empty() {
+                vec![crc32_chunk(&[])]
+            } else {
+                bytes
+                    .chunks(chunk_size.get() as usize)
+                    .map(crc32_chunk)
+                    .collect::<Vec<_>>()
+            };
+            assert_eq!(
+                chunks.len() as u32,
+                plan.steps[0].output_pairs,
+                "Fix: generated CRC32 chunk count drifted at seed {seed}."
+            );
+
+            let mut expected_pair_reduce_steps = 0usize;
+            while chunks.len() > 1 {
+                chunks = crc32_pair_reduce_chunks(&chunks)
+                    .expect("Fix: generated CRC32 chunk lengths must not overflow.");
+                expected_pair_reduce_steps += 1;
+            }
+
+            assert_eq!(
+                plan.steps.len(),
+                expected_pair_reduce_steps + 1,
+                "Fix: generated CRC32 dispatch plan must mirror pair-reduce depth at seed {seed}."
+            );
+            assert_eq!(
+                chunks[0].len,
+                u64::from(len),
+                "Fix: generated CRC32 reduction lost byte length at seed {seed}."
+            );
+            assert_eq!(
+                chunks[0].crc,
+                crc32(&bytes),
+                "Fix: generated CRC32 map-reduce result must equal direct serial CRC at seed {seed}."
+            );
+            assertions += 1;
+        }
+        assert_eq!(assertions, 8192);
     }
 
     #[test]
