@@ -17,9 +17,9 @@
 mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, assert_pg_preserves_row, build_fixture, kind_at, lexeme_indices,
+    assert_full_pipeline_parity, assert_pg_preserves_row, c_fixture, kind_at, lexeme_indices,
     node_count_from_vast, row_indices, run_gpu_pg_lower_with_count as run_gpu_pg_lower,
-    token_indices_containing, Fixture, FixtureToken,
+    token_indices_containing, Fixture,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
@@ -44,34 +44,34 @@ use vyre_primitives::predicate::node_kind;
 /// struct node *p = container_of(&n.member, struct node, member);
 /// ```
 fn fixture_container_of_macro_and_use() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new(
+    c_fixture![
+        (
             "#define container_of(ptr, type, member) ({ const typeof(((type *)0)->member) *__mptr = (ptr); (type *)((char *)__mptr - offsetof(type, member)); })\n",
             TOK_PREPROC,
         ),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("node", TOK_IDENTIFIER),
-        FixtureToken::new("n", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("node", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("container_of", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("&", TOK_AMP),
-        FixtureToken::new("n", TOK_IDENTIFIER),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("member", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("node", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("member", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+        ("struct", TOK_IDENTIFIER),
+        ("node", TOK_IDENTIFIER),
+        ("n", TOK_IDENTIFIER),
+        (";", TOK_SEMICOLON),
+        ("struct", TOK_IDENTIFIER),
+        ("node", TOK_IDENTIFIER),
+        ("*", TOK_STAR),
+        ("p", TOK_IDENTIFIER),
+        ("=", TOK_ASSIGN),
+        ("container_of", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("&", TOK_AMP),
+        ("n", TOK_IDENTIFIER),
+        (".", TOK_DOT),
+        ("member", TOK_IDENTIFIER),
+        (",", TOK_COMMA),
+        ("struct", TOK_IDENTIFIER),
+        ("node", TOK_IDENTIFIER),
+        (",", TOK_COMMA),
+        ("member", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// ```c
@@ -80,33 +80,33 @@ fn fixture_container_of_macro_and_use() -> Fixture {
 /// struct task_struct *t = list_entry(head.next, struct task_struct, tasks);
 /// ```
 fn fixture_list_entry_macro_and_use() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new(
+    c_fixture![
+        (
             "#define list_entry(ptr, type, member) container_of(ptr, type, member)\n",
             TOK_PREPROC,
         ),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("list_head", TOK_IDENTIFIER),
-        FixtureToken::new("head", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("task_struct", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("t", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("list_entry", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("head", TOK_IDENTIFIER),
-        FixtureToken::new(".", TOK_DOT),
-        FixtureToken::new("next", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("task_struct", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("tasks", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+        ("struct", TOK_IDENTIFIER),
+        ("list_head", TOK_IDENTIFIER),
+        ("head", TOK_IDENTIFIER),
+        (";", TOK_SEMICOLON),
+        ("struct", TOK_IDENTIFIER),
+        ("task_struct", TOK_IDENTIFIER),
+        ("*", TOK_STAR),
+        ("t", TOK_IDENTIFIER),
+        ("=", TOK_ASSIGN),
+        ("list_entry", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("head", TOK_IDENTIFIER),
+        (".", TOK_DOT),
+        ("next", TOK_IDENTIFIER),
+        (",", TOK_COMMA),
+        ("struct", TOK_IDENTIFIER),
+        ("task_struct", TOK_IDENTIFIER),
+        (",", TOK_COMMA),
+        ("tasks", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// ```c
@@ -114,36 +114,36 @@ fn fixture_list_entry_macro_and_use() -> Fixture {
 /// int s = __builtin_expect(!!(y), 0);
 /// ```
 fn fixture_builtin_expect_direct() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("r", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("__builtin_expect", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("!", TOK_BANG),
-        FixtureToken::new("!", TOK_BANG),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("s", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("__builtin_expect", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("!", TOK_BANG),
-        FixtureToken::new("!", TOK_BANG),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("y", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("int", TOK_IDENTIFIER),
+        ("r", TOK_IDENTIFIER),
+        ("=", TOK_ASSIGN),
+        ("__builtin_expect", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("!", TOK_BANG),
+        ("!", TOK_BANG),
+        ("(", TOK_LPAREN),
+        ("x", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (",", TOK_COMMA),
+        ("1", TOK_INTEGER),
+        (")", TOK_RPAREN),
+        (";", TOK_SEMICOLON),
+        ("int", TOK_IDENTIFIER),
+        ("s", TOK_IDENTIFIER),
+        ("=", TOK_ASSIGN),
+        ("__builtin_expect", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("!", TOK_BANG),
+        ("!", TOK_BANG),
+        ("(", TOK_LPAREN),
+        ("y", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (",", TOK_COMMA),
+        ("0", TOK_INTEGER),
+        (")", TOK_RPAREN),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// ```c
@@ -153,32 +153,32 @@ fn fixture_builtin_expect_direct() -> Fixture {
 /// int b = unlikely(cond);
 /// ```
 fn fixture_likely_unlikely_macro_shapes() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new(
+    c_fixture![
+        (
             "#define likely(x) __builtin_expect(!!(x), 1)\n",
             TOK_PREPROC,
         ),
-        FixtureToken::new(
+        (
             "#define unlikely(x) __builtin_expect(!!(x), 0)\n",
             TOK_PREPROC,
         ),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("a", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("likely", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("cond", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("b", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("unlikely", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("cond", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+        ("int", TOK_IDENTIFIER),
+        ("a", TOK_IDENTIFIER),
+        ("=", TOK_ASSIGN),
+        ("likely", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("cond", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (";", TOK_SEMICOLON),
+        ("int", TOK_IDENTIFIER),
+        ("b", TOK_IDENTIFIER),
+        ("=", TOK_ASSIGN),
+        ("unlikely", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("cond", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// ```c
@@ -186,81 +186,81 @@ fn fixture_likely_unlikely_macro_shapes() -> Fixture {
 /// static __attribute__((noinline)) void slow(void) { }
 /// ```
 fn fixture_static_inline_with_attributes() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("static", TOK_STATIC),
-        FixtureToken::new("inline", TOK_INLINE),
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("always_inline", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("dispatch", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("static", TOK_STATIC),
-        FixtureToken::new("__attribute__", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("noinline", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("slow", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_fixture![
+        ("static", TOK_STATIC),
+        ("inline", TOK_INLINE),
+        ("__attribute__", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("(", TOK_LPAREN),
+        ("always_inline", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (")", TOK_RPAREN),
+        ("int", TOK_IDENTIFIER),
+        ("dispatch", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("void", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        ("{", TOK_LBRACE),
+        ("return", TOK_RETURN),
+        ("0", TOK_INTEGER),
+        (";", TOK_SEMICOLON),
+        ("}", TOK_RBRACE),
+        ("static", TOK_STATIC),
+        ("__attribute__", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("(", TOK_LPAREN),
+        ("noinline", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (")", TOK_RPAREN),
+        ("void", TOK_IDENTIFIER),
+        ("slow", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("void", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        ("{", TOK_LBRACE),
+        ("}", TOK_RBRACE),
+    ]
 }
 
 /// ```c
 /// void probe(volatile unsigned long *flags, _Atomic unsigned long *state);
 /// ```
 fn fixture_volatile_atomic_parameters() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("probe", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("volatile", TOK_VOLATILE),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("long", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("flags", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("_Atomic", TOK_ATOMIC),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("long", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("state", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("void", TOK_IDENTIFIER),
+        ("probe", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("volatile", TOK_VOLATILE),
+        ("unsigned", TOK_IDENTIFIER),
+        ("long", TOK_IDENTIFIER),
+        ("*", TOK_STAR),
+        ("flags", TOK_IDENTIFIER),
+        (",", TOK_COMMA),
+        ("_Atomic", TOK_ATOMIC),
+        ("unsigned", TOK_IDENTIFIER),
+        ("long", TOK_IDENTIFIER),
+        ("*", TOK_STAR),
+        ("state", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// ```c
 /// int n = _Alignof(unsigned long);
 /// ```
 fn fixture_alignof_initializer_expression() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("n", TOK_IDENTIFIER),
-        FixtureToken::new("=", TOK_ASSIGN),
-        FixtureToken::new("_Alignof", TOK_ALIGNOF),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("unsigned", TOK_IDENTIFIER),
-        FixtureToken::new("long", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("int", TOK_IDENTIFIER),
+        ("n", TOK_IDENTIFIER),
+        ("=", TOK_ASSIGN),
+        ("_Alignof", TOK_ALIGNOF),
+        ("(", TOK_LPAREN),
+        ("unsigned", TOK_IDENTIFIER),
+        ("long", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// ```c
@@ -274,40 +274,40 @@ fn fixture_alignof_initializer_expression() -> Fixture {
 /// }
 /// ```
 fn fixture_linux_error_label_cleanup() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("alloc", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("device", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("dev", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("if", TOK_IF),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("!", TOK_BANG),
-        FixtureToken::new("dev", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("goto", TOK_GOTO),
-        FixtureToken::new("err_free", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new("0", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("err_free", TOK_IDENTIFIER),
-        FixtureToken::new(":", TOK_COLON),
-        FixtureToken::new("kfree", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("dev", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("return", TOK_RETURN),
-        FixtureToken::new("-", TOK_MINUS),
-        FixtureToken::new("1", TOK_INTEGER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-    ])
+    c_fixture![
+        ("int", TOK_IDENTIFIER),
+        ("alloc", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("struct", TOK_IDENTIFIER),
+        ("device", TOK_IDENTIFIER),
+        ("*", TOK_STAR),
+        ("dev", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        ("{", TOK_LBRACE),
+        ("if", TOK_IF),
+        ("(", TOK_LPAREN),
+        ("!", TOK_BANG),
+        ("dev", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        ("goto", TOK_GOTO),
+        ("err_free", TOK_IDENTIFIER),
+        (";", TOK_SEMICOLON),
+        ("return", TOK_RETURN),
+        ("0", TOK_INTEGER),
+        (";", TOK_SEMICOLON),
+        ("err_free", TOK_IDENTIFIER),
+        (":", TOK_COLON),
+        ("kfree", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("dev", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (";", TOK_SEMICOLON),
+        ("return", TOK_RETURN),
+        ("-", TOK_MINUS),
+        ("1", TOK_INTEGER),
+        (";", TOK_SEMICOLON),
+        ("}", TOK_RBRACE),
+    ]
 }
 
 // ---------------------------------------------------------------------------
