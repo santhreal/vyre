@@ -69,6 +69,12 @@ inventory::submit! {
         test_inputs: Some(test_inputs),
         expected_output: Some(expected_output),
         category: Some("hardware"),
+        shape: Some(crate::harness::OpShape::new(
+            2,
+            1,
+            4,
+            crate::harness::HardwareSemantic::SubgroupShuffleU32,
+        )),
     }
 }
 
