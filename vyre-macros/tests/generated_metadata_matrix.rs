@@ -31,7 +31,7 @@ impl GeneratedSelectivePass {
 
     fn transform(program: ir::Program) -> optimizer::PassResult {
         let changed = program.id.count_ones() % 2 == 0;
-        optimizer::PassResult { program, changed }
+        optimizer::pass_result(program, changed)
     }
 }
 
@@ -48,10 +48,7 @@ pub struct GeneratedAlwaysPass;
 
 impl GeneratedAlwaysPass {
     fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::PassResult {
-            program,
-            changed: false,
-        }
+        optimizer::unchanged(program)
     }
 }
 
@@ -92,10 +89,7 @@ pub struct GeneratedDenseMetadataPass;
 
 impl GeneratedDenseMetadataPass {
     fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::PassResult {
-            program,
-            changed: false,
-        }
+        optimizer::unchanged(program)
     }
 }
 

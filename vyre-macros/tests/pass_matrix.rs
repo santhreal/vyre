@@ -15,10 +15,7 @@ macro_rules! define_phase_pass {
 
         impl $ty {
             fn transform(program: crate::ir::Program) -> crate::optimizer::PassResult {
-                crate::optimizer::PassResult {
-                    program,
-                    changed: false,
-                }
+                crate::optimizer::unchanged(program)
             }
         }
     };
@@ -31,7 +28,7 @@ macro_rules! define_boundary_pass {
 
         impl $ty {
             fn transform(program: crate::ir::Program) -> crate::optimizer::PassResult {
-                crate::optimizer::PassResult { program, changed: false }
+                crate::optimizer::unchanged(program)
             }
         }
     };
@@ -44,7 +41,7 @@ macro_rules! define_cost_pass {
 
         impl $ty {
             fn transform(program: crate::ir::Program) -> crate::optimizer::PassResult {
-                crate::optimizer::PassResult { program, changed: false }
+                crate::optimizer::unchanged(program)
             }
         }
     };
