@@ -75,11 +75,18 @@ pub fn classify_op_id(id: &str) -> OpTier {
         OpTier::Libs
     } else if id.starts_with("core.") || id.starts_with("io.") || id.starts_with("mem.") {
         OpTier::Runtime
-    } else if id.starts_with("weir::") {
+    } else if is_external_crate_namespace(id) {
         OpTier::External
     } else {
         OpTier::Unknown
     }
+}
+
+fn is_external_crate_namespace(id: &str) -> bool {
+    let Some((crate_name, _)) = id.split_once("::") else {
+        return false;
+    };
+    !crate_name.is_empty() && !crate_name.starts_with("vyre-")
 }
 
 /// Deterministic fixture input cases.
