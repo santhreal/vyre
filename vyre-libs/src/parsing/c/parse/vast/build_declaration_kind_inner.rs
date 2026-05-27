@@ -21,8 +21,9 @@ use crate::parsing::c::lex::tokens::*;
 use vyre::ir::{Expr, Node};
 
 use super::build::{
-    emit_identifier_source_hash_for_index, emit_visible_typedef_name_for_index,
-    vast_bounded_row_kind_expr, vast_row_base_expr, vast_row_field_expr, vast_row_kind_expr,
+    emit_declaration_kind_result_assignment, emit_identifier_source_hash_for_index,
+    emit_visible_typedef_name_for_index, vast_bounded_row_kind_expr, vast_row_base_expr,
+    vast_row_field_expr, vast_row_kind_expr,
 };
 use super::helpers::*;
 use super::*;
@@ -380,39 +381,23 @@ pub(super) fn emit_declaration_kind_for_index_inner(
                 Expr::eq(Expr::var(&prev_prev_kind), Expr::u32(TOK_RPAREN)),
             ),
         ),
-        Node::if_then(
+        emit_declaration_kind_result_assignment(
+            out_name,
+            Expr::var(&is_identifier),
+            Expr::var(&declarator_follower),
+            Expr::not(is_declaration_previous_disqualifier_token(Expr::var(
+                &prev_kind,
+            ))),
+            Expr::ne(Expr::var(&next_kind), Expr::u32(TOK_COLON)),
             Expr::and(
-                Expr::var(&is_identifier),
+                Expr::not(Expr::var(&in_aggregate_body)),
                 Expr::and(
-                    Expr::and(
-                        Expr::not(is_declaration_previous_disqualifier_token(Expr::var(
-                            &prev_kind,
-                        ))),
-                        Expr::and(
-                            Expr::ne(Expr::var(&next_kind), Expr::u32(TOK_COLON)),
-                            Expr::and(
-                                Expr::not(Expr::var(&in_aggregate_body)),
-                                Expr::and(
-                                    Expr::not(Expr::var(&sizeof_type_operand)),
-                                    Expr::not(Expr::var(&cast_pointer_expr_operand)),
-                                ),
-                            ),
-                        ),
-                    ),
-                    Expr::and(
-                        Expr::var(&declarator_follower),
-                        Expr::or(
-                            Expr::eq(Expr::var(&prefix_has_typedef), Expr::u32(1)),
-                            Expr::eq(Expr::var(&prefix_has_type), Expr::u32(1)),
-                        ),
-                    ),
+                    Expr::not(Expr::var(&sizeof_type_operand)),
+                    Expr::not(Expr::var(&cast_pointer_expr_operand)),
                 ),
             ),
-            vec![Node::if_then_else(
-                Expr::eq(Expr::var(&prefix_has_typedef), Expr::u32(1)),
-                vec![Node::assign(out_name, Expr::u32(1))],
-                vec![Node::assign(out_name, Expr::u32(2))],
-            )],
+            Expr::eq(Expr::var(&prefix_has_typedef), Expr::u32(1)),
+            Expr::eq(Expr::var(&prefix_has_type), Expr::u32(1)),
         ),
     ]
 }

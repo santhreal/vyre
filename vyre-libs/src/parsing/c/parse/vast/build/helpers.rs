@@ -23,6 +23,40 @@ pub(crate) fn vast_bounded_row_kind_expr(vast_nodes: &str, idx: Expr, fallback: 
     )
 }
 
+pub(crate) fn emit_declaration_kind_result_assignment(
+    out_name: &str,
+    is_identifier: Expr,
+    declarator_follower: Expr,
+    previous_token_allows_declarator: Expr,
+    next_token_allows_declarator: Expr,
+    contextual_declarator_allowed: Expr,
+    has_typedef: Expr,
+    has_type: Expr,
+) -> Node {
+    Node::if_then(
+        Expr::and(
+            is_identifier,
+            Expr::and(
+                declarator_follower,
+                Expr::and(
+                    previous_token_allows_declarator,
+                    Expr::and(
+                        next_token_allows_declarator,
+                        Expr::and(
+                            contextual_declarator_allowed,
+                            Expr::or(has_typedef.clone(), has_type),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        vec![Node::assign(
+            out_name,
+            Expr::select(has_typedef, Expr::u32(1), Expr::u32(2)),
+        )],
+    )
+}
+
 pub(crate) fn emit_identifier_source_hash_for_index(
     vast_nodes: &str,
     haystack: &str,
