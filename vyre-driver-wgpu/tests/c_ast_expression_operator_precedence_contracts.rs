@@ -22,7 +22,8 @@ mod c_ast_expression_support;
 mod c_ast_gpu_parity_support;
 use c_ast_expression_support::{
     assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_row, bytes, row_indices,
-    run_pipeline, run_reference_pg_lower, starts_for_lens, SENTINEL, VAST_STRIDE_U32,
+    run_pipeline, run_reference_pg_lower, starts_for_lens, unit_lens_fixture, SENTINEL,
+    VAST_STRIDE_U32,
 };
 use c_ast_gpu_parity_support::{run_gpu_expr_shape, run_gpu_pg_lower};
 
@@ -40,8 +41,7 @@ fn shift_precedence_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn relational_precedence_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -54,8 +54,7 @@ fn relational_precedence_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn equality_precedence_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -68,8 +67,7 @@ fn equality_precedence_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn equality_left_assoc_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -82,8 +80,7 @@ fn equality_left_assoc_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn compound_assignment_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -96,8 +93,7 @@ fn compound_assignment_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn ternary_looser_than_assignment_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -112,8 +108,7 @@ fn ternary_looser_than_assignment_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn ternary_right_assoc_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -130,8 +125,7 @@ fn ternary_right_assoc_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn comma_boundary_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -146,8 +140,7 @@ fn comma_boundary_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn full_precedence_ladder_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -176,8 +169,7 @@ fn full_precedence_ladder_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER, // 20 k
         TOK_SEMICOLON,  // 21 ;
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 // ---------------------------------------------------------------------------
