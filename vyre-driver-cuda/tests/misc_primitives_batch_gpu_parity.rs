@@ -6,9 +6,8 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::bitset::popcount::{bitset_popcount, cpu_ref as popcount_cpu};
 use vyre_primitives::decode::rle_segment_lengths::{rle_segment_lengths, rle_segment_lengths_cpu};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
@@ -25,7 +24,7 @@ use vyre_primitives::predicate::edge_kind;
 // bitset_popcount: per-word popcount.
 // ---------------------------------------------------------------------
 
-fn run_popcount(backend: &CudaBackend, input: &[u32]) -> Vec<u32> {
+fn run_popcount(input: &[u32]) -> Vec<u32> {
     let words = input.len() as u32;
     let program = bitset_popcount("input", "count_words", words);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(input), vec![0u8; words as usize * 4]];
@@ -33,9 +32,11 @@ fn run_popcount(backend: &CudaBackend, input: &[u32]) -> Vec<u32> {
     let workgroup_x = 256u32;
     let grid_x = ((words + workgroup_x - 1) / workgroup_x).max(1);
     config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("bitset popcount batch", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA bitset-popcount dispatch failed: {error}"))
+    });
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(words as usize);
     out
@@ -43,20 +44,18 @@ fn run_popcount(backend: &CudaBackend, input: &[u32]) -> Vec<u32> {
 
 #[test]
 fn cuda_bitset_popcount_basic() {
-    let backend = live_dispatcher();
     let input = vec![0xFFFF_FFFFu32, 0u32, 0b1010_1010_u32, 0xAA55u32];
     let cpu = popcount_cpu(&input);
-    let gpu = run_popcount(&backend, &input);
+    let gpu = run_popcount(&input);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![32, 0, 4, 8]);
 }
 
 #[test]
 fn cuda_bitset_popcount_all_zero() {
-    let backend = live_dispatcher();
     let input = vec![0u32; 16];
     let cpu = popcount_cpu(&input);
-    let gpu = run_popcount(&backend, &input);
+    let gpu = run_popcount(&input);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0u32; 16]);
 }
@@ -66,7 +65,6 @@ fn cuda_bitset_popcount_all_zero() {
 // ---------------------------------------------------------------------
 
 fn run_edge(
-    backend: &CudaBackend,
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -94,12 +92,12 @@ fn run_edge(
         vec![0u8; words as usize * 4],
     ];
     let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((node_count + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    config.grid_override = Some([node_count.max(1), 1, 1]);
+    let outputs = with_live_backend("predicate edge batch", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA predicate-edge dispatch failed: {error}"))
+    });
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(words as usize);
     out
@@ -107,7 +105,6 @@ fn run_edge(
 
 #[test]
 fn cuda_predicate_edge_one_step() {
-    let backend = live_dispatcher();
     // 0 -> 1 via ASSIGNMENT.
     let edge_offsets = vec![0u32, 1, 1];
     let edge_targets = vec![1u32];
@@ -123,7 +120,6 @@ fn cuda_predicate_edge_one_step() {
         allow,
     );
     let gpu = run_edge(
-        &backend,
         2,
         &edge_offsets,
         &edge_targets,
@@ -137,7 +133,6 @@ fn cuda_predicate_edge_one_step() {
 
 #[test]
 fn cuda_predicate_edge_kind_mask_skips() {
-    let backend = live_dispatcher();
     let edge_offsets = vec![0u32, 1, 1];
     let edge_targets = vec![1u32];
     let edge_kind_mask = vec![edge_kind::ASSIGNMENT];
@@ -152,7 +147,6 @@ fn cuda_predicate_edge_kind_mask_skips() {
         allow,
     );
     let gpu = run_edge(
-        &backend,
         2,
         &edge_offsets,
         &edge_targets,
@@ -179,7 +173,7 @@ fn pack_bytes(bytes: &[u8]) -> Vec<u32> {
         .collect()
 }
 
-fn run_line_splice(backend: &CudaBackend, source: &[u8]) -> Vec<u32> {
+fn run_line_splice(source: &[u8]) -> Vec<u32> {
     let byte_count = source.len() as u32;
     let words = pack_bytes(source);
     let program = line_splice_classify(byte_count);
@@ -188,9 +182,13 @@ fn run_line_splice(backend: &CudaBackend, source: &[u8]) -> Vec<u32> {
     let workgroup_x = 256u32;
     let grid_x = ((byte_count + workgroup_x - 1) / workgroup_x).max(1);
     config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("line splice classify", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA line-splice classify dispatch failed: {error}")
+            })
+    });
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(byte_count as usize);
     out
@@ -198,21 +196,19 @@ fn run_line_splice(backend: &CudaBackend, source: &[u8]) -> Vec<u32> {
 
 #[test]
 fn cuda_line_splice_classify_keeps_plain_text() {
-    let backend = live_dispatcher();
     let source = b"abcd";
     let cpu = reference_line_splice_classify(source);
-    let gpu = run_line_splice(&backend, source);
+    let gpu = run_line_splice(source);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![1u32, 1, 1, 1]);
 }
 
 #[test]
 fn cuda_line_splice_classify_drops_backslash_lf() {
-    let backend = live_dispatcher();
     // "ab\\\ncd"  -  backslash + LF should be dropped (kept_mask = 0).
     let source = b"ab\\\ncd";
     let cpu = reference_line_splice_classify(source);
-    let gpu = run_line_splice(&backend, source);
+    let gpu = run_line_splice(source);
     assert_eq!(gpu, cpu);
 }
 
@@ -220,7 +216,7 @@ fn cuda_line_splice_classify_drops_backslash_lf() {
 // planar_rewrite_schedule
 // ---------------------------------------------------------------------
 
-fn run_planar(backend: &CudaBackend, candidates: &[u32], h: u32, w: u32, k: u32) -> Vec<u32> {
+fn run_planar(candidates: &[u32], h: u32, w: u32, k: u32) -> Vec<u32> {
     let cells = (h * w) as usize;
     let program = planar_rewrite_schedule("c", "ch", h, w, k);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(candidates), vec![0u8; cells * 4]];
@@ -228,9 +224,11 @@ fn run_planar(backend: &CudaBackend, candidates: &[u32], h: u32, w: u32, k: u32)
     let workgroup_x = 256u32;
     let grid_x = ((cells as u32 + workgroup_x - 1) / workgroup_x).max(1);
     config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("planar rewrite schedule", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA planar-rewrite dispatch failed: {error}"))
+    });
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(cells);
     out
@@ -238,20 +236,18 @@ fn run_planar(backend: &CudaBackend, candidates: &[u32], h: u32, w: u32, k: u32)
 
 #[test]
 fn cuda_planar_rewrite_schedule_no_candidates() {
-    let backend = live_dispatcher();
     let h = 3u32;
     let w = 3u32;
     let k = 1u32;
     let candidates = vec![0u32; (h * w) as usize];
     let cpu = reference_planar_rewrite_schedule(&candidates, h, w, k);
-    let gpu = run_planar(&backend, &candidates, h, w, k);
+    let gpu = run_planar(&candidates, h, w, k);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0u32; (h * w) as usize]);
 }
 
 #[test]
 fn cuda_planar_rewrite_schedule_isolated_candidates() {
-    let backend = live_dispatcher();
     let h = 4u32;
     let w = 4u32;
     let k = 1u32;
@@ -260,7 +256,7 @@ fn cuda_planar_rewrite_schedule_isolated_candidates() {
     candidates[0] = 1;
     candidates[10] = 1;
     let cpu = reference_planar_rewrite_schedule(&candidates, h, w, k);
-    let gpu = run_planar(&backend, &candidates, h, w, k);
+    let gpu = run_planar(&candidates, h, w, k);
     assert_eq!(gpu, cpu);
 }
 
@@ -268,7 +264,7 @@ fn cuda_planar_rewrite_schedule_isolated_candidates() {
 // rle_segment_lengths
 // ---------------------------------------------------------------------
 
-fn run_rle(backend: &CudaBackend, segments: &[u32]) -> (Vec<u32>, Vec<u32>) {
+fn run_rle(segments: &[u32]) -> (Vec<u32>, Vec<u32>) {
     let count = segments.len() as u32;
     let program = rle_segment_lengths(count);
     let inputs: Vec<Vec<u8>> = vec![
@@ -280,9 +276,11 @@ fn run_rle(backend: &CudaBackend, segments: &[u32]) -> (Vec<u32>, Vec<u32>) {
     let workgroup_x = 256u32;
     let grid_x = ((count + workgroup_x - 1) / workgroup_x).max(1);
     config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("RLE segment lengths", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA RLE segment-length dispatch failed: {error}"))
+    });
     let mut lengths = bytes_u32(&outputs[0]);
     let mut values = bytes_u32(&outputs[1]);
     lengths.truncate(count as usize);
@@ -292,11 +290,10 @@ fn run_rle(backend: &CudaBackend, segments: &[u32]) -> (Vec<u32>, Vec<u32>) {
 
 #[test]
 fn cuda_rle_segment_lengths_basic() {
-    let backend = live_dispatcher();
     // pack (length=5, value=0xAA) and (length=10, value=0x55).
     let segments = vec![(5u32 << 8) | 0xAA, (10u32 << 8) | 0x55];
     let (cpu_lengths, cpu_values) = rle_segment_lengths_cpu(&segments);
-    let (gpu_lengths, gpu_values) = run_rle(&backend, &segments);
+    let (gpu_lengths, gpu_values) = run_rle(&segments);
     assert_eq!(gpu_lengths, cpu_lengths);
     assert_eq!(gpu_values, cpu_values);
     assert_eq!(gpu_lengths, vec![5, 10]);
@@ -305,10 +302,9 @@ fn cuda_rle_segment_lengths_basic() {
 
 #[test]
 fn cuda_rle_segment_lengths_zero_length() {
-    let backend = live_dispatcher();
     let segments = vec![0u32, (1u32 << 8) | 0xFF];
     let (cpu_lengths, cpu_values) = rle_segment_lengths_cpu(&segments);
-    let (gpu_lengths, gpu_values) = run_rle(&backend, &segments);
+    let (gpu_lengths, gpu_values) = run_rle(&segments);
     assert_eq!(gpu_lengths, cpu_lengths);
     assert_eq!(gpu_values, cpu_values);
     assert_eq!(gpu_lengths, vec![0, 1]);
