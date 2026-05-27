@@ -4,16 +4,14 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 use vyre_primitives::predicate::node_kind;
 use vyre_primitives::predicate::size_argument_of::{cpu_ref as size_arg_cpu, size_argument_of};
 
 fn run(
-    backend: &CudaBackend,
     node_count: u32,
     nodes: &[u32],
     edge_offsets: &[u32],
@@ -40,12 +38,14 @@ fn run(
         vec![0u8; words as usize * 4],
     ];
     let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((node_count + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    config.grid_override = Some([node_count.max(1), 1, 1]);
+    let outputs = with_live_backend("predicate size argument", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA predicate size-argument dispatch failed: {error}")
+            })
+    });
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(words as usize);
     out
@@ -53,7 +53,6 @@ fn run(
 
 #[test]
 fn cuda_size_arg_marks_callers_of_callee_set() {
-    let backend = live_dispatcher();
     let nodes = vec![
         node_kind::LITERAL,
         node_kind::CALL,
@@ -73,7 +72,6 @@ fn cuda_size_arg_marks_callers_of_callee_set() {
         &frontier_in,
     );
     let gpu = run(
-        &backend,
         4,
         &nodes,
         &edge_offsets,
@@ -87,7 +85,6 @@ fn cuda_size_arg_marks_callers_of_callee_set() {
 
 #[test]
 fn cuda_size_arg_no_call_arg_edges_yields_zero() {
-    let backend = live_dispatcher();
     let nodes = vec![1u32, 2, 3];
     let edge_offsets = vec![0u32, 1, 2, 2];
     let edge_targets = vec![1u32, 2];
@@ -103,7 +100,6 @@ fn cuda_size_arg_no_call_arg_edges_yields_zero() {
         &frontier_in,
     );
     let gpu = run(
-        &backend,
         3,
         &nodes,
         &edge_offsets,
@@ -117,7 +113,6 @@ fn cuda_size_arg_no_call_arg_edges_yields_zero() {
 
 #[test]
 fn cuda_size_arg_empty_frontier_yields_zero() {
-    let backend = live_dispatcher();
     let nodes = vec![1u32, 2];
     let edge_offsets = vec![0u32, 1, 1];
     let edge_targets = vec![1u32];
@@ -132,7 +127,6 @@ fn cuda_size_arg_empty_frontier_yields_zero() {
         &frontier_in,
     );
     let gpu = run(
-        &backend,
         2,
         &nodes,
         &edge_offsets,
