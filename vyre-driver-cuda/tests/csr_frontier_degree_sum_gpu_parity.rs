@@ -4,17 +4,15 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::Program;
 use vyre::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::graph::csr_frontier_degree_sum::{
     csr_frontier_degree_sum, csr_frontier_degree_sum_cpu,
 };
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
 fn run(
-    backend: &CudaBackend,
     program: &Program,
     pg_nodes: &[u32],
     edge_offsets: &[u32],
@@ -36,15 +34,18 @@ fn run(
     ];
     let mut config = DispatchConfig::default();
     config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("CSR frontier degree sum", |backend| {
+        backend
+            .dispatch(program, &inputs, &config)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA CSR frontier degree-sum dispatch failed: {error}")
+            })
+    });
     bytes_u32(&outputs[0])[0]
 }
 
 #[test]
 fn cuda_csr_frontier_degree_sum_chain() {
-    let backend = live_dispatcher();
     // 0 -> 1 -> 2 -> 3, frontier = {0, 1, 2}.
     let n = 4u32;
     let edge_offsets = vec![0u32, 1, 2, 3, 3];
@@ -56,7 +57,6 @@ fn cuda_csr_frontier_degree_sum_chain() {
     let cpu = csr_frontier_degree_sum_cpu(&frontier, &edge_offsets, n);
     let program = csr_frontier_degree_sum(ProgramGraphShape::new(n, 3));
     let gpu = run(
-        &backend,
         &program,
         &pg_nodes,
         &edge_offsets,
@@ -72,7 +72,6 @@ fn cuda_csr_frontier_degree_sum_chain() {
 
 #[test]
 fn cuda_csr_frontier_degree_sum_diamond() {
-    let backend = live_dispatcher();
     // 0 -> {1, 2} -> 3, frontier = {0}.
     let n = 4u32;
     let edge_offsets = vec![0u32, 2, 3, 4, 4];
@@ -84,7 +83,6 @@ fn cuda_csr_frontier_degree_sum_diamond() {
     let cpu = csr_frontier_degree_sum_cpu(&frontier, &edge_offsets, n);
     let program = csr_frontier_degree_sum(ProgramGraphShape::new(n, 4));
     let gpu = run(
-        &backend,
         &program,
         &pg_nodes,
         &edge_offsets,
@@ -100,7 +98,6 @@ fn cuda_csr_frontier_degree_sum_diamond() {
 
 #[test]
 fn cuda_csr_frontier_degree_sum_empty_frontier() {
-    let backend = live_dispatcher();
     let n = 5u32;
     let edge_offsets = vec![0u32, 3, 7, 9, 9, 12];
     let edge_targets = vec![1u32; 12];
@@ -111,7 +108,6 @@ fn cuda_csr_frontier_degree_sum_empty_frontier() {
     let cpu = csr_frontier_degree_sum_cpu(&frontier, &edge_offsets, n);
     let program = csr_frontier_degree_sum(ProgramGraphShape::new(n, 12));
     let gpu = run(
-        &backend,
         &program,
         &pg_nodes,
         &edge_offsets,
@@ -127,7 +123,6 @@ fn cuda_csr_frontier_degree_sum_empty_frontier() {
 
 #[test]
 fn cuda_csr_frontier_degree_sum_full_frontier() {
-    let backend = live_dispatcher();
     let n = 5u32;
     let edge_offsets = vec![0u32, 3, 7, 9, 9, 12];
     let edge_targets = vec![1u32; 12];
@@ -138,7 +133,6 @@ fn cuda_csr_frontier_degree_sum_full_frontier() {
     let cpu = csr_frontier_degree_sum_cpu(&frontier, &edge_offsets, n);
     let program = csr_frontier_degree_sum(ProgramGraphShape::new(n, 12));
     let gpu = run(
-        &backend,
         &program,
         &pg_nodes,
         &edge_offsets,
