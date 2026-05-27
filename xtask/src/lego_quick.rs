@@ -4,7 +4,7 @@
 //! only. Target wall-clock ≤ 2s on a 10-file diff so it can sit in
 //! `.git/hooks/pre-commit` without writers reaching for `--no-verify`.
 //!
-//! Three checks, no inventory walk, no fingerprinting:
+//! Three default checks, no inventory walk, no fingerprinting:
 //!
 //! 1. **Raw IR construction** (delegates to `vyre_lints`): no
 //!    `Node::*` / `Expr::*` constructors in `vyre-libs/src/**`.
@@ -15,7 +15,9 @@
 //!
 //! The full op-fingerprint reinvention check (`lego-audit` check 1)
 //! requires loading every registered op via inventory and is too slow
-//! for a pre-commit hook  -  it stays in CI.
+//! for a default pre-commit hook  -  it stays in CI. Pass
+//! `--source-similar` to also run the repo-wide Rust source duplicate
+//! scanner as an explicit dedup gate.
 //!
 //! Exit code 0 on clean, 1 on any finding. Each finding prints
 //! `file:line | category | message | fix:` so writers can act on it
@@ -30,6 +32,7 @@ const MAX_LEGO_QUICK_SOURCE_BYTES: u64 = 2_097_152;
 
 pub(crate) fn run(args: &[String]) {
     let staged_only = !args.iter().any(|a| a == "--all");
+    let source_similar = args.iter().any(|a| a == "--source-similar");
     let root = match workspace_root() {
         Some(r) => r,
         None => {
@@ -63,12 +66,16 @@ pub(crate) fn run(args: &[String]) {
     findings.extend(check_raw_ir(&root, &files));
     findings.extend(check_cross_dialect(&root, &files));
     findings.extend(check_god_files(&root, &files));
+    if source_similar {
+        findings.extend(check_source_similarity(&root));
+    }
 
     if findings.is_empty() {
+        let check_count = 3 + usize::from(source_similar);
         println!(
             "lego-quick: ✓ {} staged Rust file(s) clean ({} checks).",
             files.len(),
-            3
+            check_count
         );
         return;
     }
@@ -317,6 +324,44 @@ fn check_god_files(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
     out
 }
 
+fn check_source_similarity(root: &Path) -> Vec<Finding> {
+    let roots = vec![root.to_path_buf()];
+    let report = match crate::source_similar::find_similar_sources(
+        &roots,
+        20,
+        0.97,
+        512 * 1024,
+    ) {
+        Ok(report) => report,
+        Err(error) => {
+            return vec![Finding {
+                file: ".".to_string(),
+                line: 0,
+                category: "source-similar".to_string(),
+                message: format!("source duplicate scan failed: {error}"),
+                fix: "fix unreadable source paths or run `cargo_full run --bin xtask -- source-similar` for the raw scanner error".to_string(),
+            }]
+        }
+    };
+    report
+        .findings
+        .into_iter()
+        .map(|finding| Finding {
+            file: finding.left.clone(),
+            line: 0,
+            category: "source-similar".to_string(),
+            message: format!(
+                "{:.1}% similar to {} ({} vs {} normalized tokens)",
+                finding.score * 100.0,
+                finding.right,
+                finding.left_tokens,
+                finding.right_tokens
+            ),
+            fix: "extract the shared implementation into one module or lower the threshold only for exploratory source-similar runs".to_string(),
+        })
+        .collect()
+}
+
 fn read_text_bounded(path: &Path) -> io::Result<String> {
     let mut reader = std::fs::File::open(path)?.take(MAX_LEGO_QUICK_SOURCE_BYTES.saturating_add(1));
     let mut text = String::new();
@@ -482,5 +527,23 @@ mod tests {
         );
         let findings = check_cross_dialect(dir.path(), &[p]);
         assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn source_similarity_check_reports_duplicate_source_pairs() {
+        let dir = TempDir::new().unwrap();
+        let body_a = "pub fn alpha(input: &[u32]) -> u32 {\n    let mut acc = 0;\n"
+            .to_string()
+            + &"    for value in input { acc = acc.wrapping_add(*value); }\n".repeat(24)
+            + "    acc\n}\n";
+        let body_b = body_a.replace("alpha", "beta").replace("acc", "sum");
+        write(dir.path(), "vyre-primitives/src/a.rs", &body_a);
+        write(dir.path(), "vyre-primitives/src/b.rs", &body_b);
+
+        let findings = check_source_similarity(dir.path());
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].category, "source-similar");
+        assert!(findings[0].message.contains("similar to"));
     }
 }
