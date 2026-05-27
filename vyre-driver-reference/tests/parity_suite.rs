@@ -10,21 +10,8 @@ use vyre_driver::VyreBackend;
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-/// Helper: dispatch a program with no inputs through cpu-ref.
-fn dispatch_no_input(program: &Program) -> Vec<Vec<u8>> {
-    let backend = CpuRefBackend;
-    backend
-        .dispatch(program, &[], &DispatchConfig::default())
-        .expect("Fix: cpu-ref dispatch must succeed for a valid Program.")
-}
-
-/// Helper: dispatch a program with given inputs through cpu-ref.
-fn dispatch_with_inputs(program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
-    let backend = CpuRefBackend;
-    backend
-        .dispatch(program, inputs, &DispatchConfig::default())
-        .expect("Fix: cpu-ref dispatch must succeed for valid inputs.")
-}
+mod support;
+use support::{dispatch_no_input, dispatch_with_inputs};
 
 // ---------------------------------------------------------------
 // Store literal

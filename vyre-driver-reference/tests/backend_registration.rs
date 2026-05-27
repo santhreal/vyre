@@ -1,7 +1,10 @@
 //! Registration contract for the pure Rust reference backend adapter.
 
 use vyre_driver::backend::{acquire, backend_dispatches};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
+
+mod support;
+use support::u32_out_buffer;
 
 #[test]
 fn cpu_ref_registers_as_dispatch_backend() {
@@ -13,7 +16,7 @@ fn cpu_ref_registers_as_dispatch_backend() {
     let backend = acquire(vyre_driver_reference::CPU_REF_BACKEND_ID)
         .expect("Fix: cpu-ref backend registration must construct without host hardware.");
     let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
+        vec![u32_out_buffer("out", 0)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
     );
