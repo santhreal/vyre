@@ -191,6 +191,33 @@ pub(super) fn emit_atomic_record_append(
     nodes
 }
 
+pub(super) fn emit_sparse_record_write(
+    out_records: &str,
+    t: Expr,
+    record_words: u32,
+    fields: Vec<Expr>,
+) -> Vec<Node> {
+    let base = "sparse_record_write_base";
+    let mut nodes = vec![Node::let_bind(
+        base,
+        Expr::mul(t, Expr::u32(record_words)),
+    )];
+
+    for field_idx in sparse_record_store_order(record_words) {
+        let Some(field) = fields.get(field_idx as usize).cloned() else {
+            continue;
+        };
+        let out_index = if field_idx == 0 {
+            Expr::var(base)
+        } else {
+            Expr::add(Expr::var(base), Expr::u32(field_idx))
+        };
+        nodes.push(Node::store(out_records, out_index, field));
+    }
+
+    nodes
+}
+
 pub(super) fn emit_sparse_record_zero(
     out_records: &str,
     t: Expr,
@@ -199,7 +226,7 @@ pub(super) fn emit_sparse_record_zero(
 ) -> Vec<Node> {
     let base = "sparse_record_zero_base";
     let mut stores = Vec::new();
-    for field_idx in 0..record_words {
+    for field_idx in sparse_record_store_order(record_words) {
         let out_index = if field_idx == 0 {
             Expr::var(base)
         } else {
@@ -212,6 +239,16 @@ pub(super) fn emit_sparse_record_zero(
         Node::let_bind(base, Expr::mul(t.clone(), Expr::u32(record_words))),
         Node::if_then(Expr::lt(t, num_records), stores),
     ]
+}
+
+fn sparse_record_store_order(record_words: u32) -> Vec<u32> {
+    if record_words <= 2 || record_words % 2 == 0 {
+        return (0..record_words).collect();
+    }
+    (0..record_words)
+        .step_by(2)
+        .chain((1..record_words).step_by(2))
+        .collect()
 }
 
 pub(super) fn threaded_structure_program(
@@ -243,4 +280,23 @@ pub(super) fn threaded_structure_program(
     )
     .with_entry_op_id(entry_op_id)
     .with_non_composable_with_self(true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sparse_record_store_order;
+
+    #[test]
+    fn odd_sparse_record_store_order_breaks_adjacent_store_fusion() {
+        assert_eq!(sparse_record_store_order(3), vec![0, 2, 1]);
+        assert_eq!(sparse_record_store_order(5), vec![0, 2, 4, 1, 3]);
+    }
+
+    #[test]
+    fn aligned_even_sparse_record_store_order_stays_contiguous() {
+        assert_eq!(sparse_record_store_order(0), Vec::<u32>::new());
+        assert_eq!(sparse_record_store_order(1), vec![0]);
+        assert_eq!(sparse_record_store_order(2), vec![0, 1]);
+        assert_eq!(sparse_record_store_order(4), vec![0, 1, 2, 3]);
+    }
 }
