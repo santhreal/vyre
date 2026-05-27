@@ -8,6 +8,37 @@ use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 // extract across vyre-libs.
 pub(super) use crate::scan::builders::load_packed_byte_expr as packed_byte_load;
 
+pub(super) const GPU_FILTER_WORKGROUP: [u32; 3] = [256, 1, 1];
+
+pub(super) fn packed_bytes_input_buffer(name: &str, binding: u32, n: u32) -> BufferDecl {
+    BufferDecl::storage(name, binding, BufferAccess::ReadOnly, DataType::U32)
+        .with_count(n.div_ceil(4).max(1))
+}
+
+pub(super) fn u32_read_buffer(name: &str, binding: u32, n: u32) -> BufferDecl {
+    u32_storage_buffer(name, binding, BufferAccess::ReadOnly, n.max(1))
+}
+
+pub(super) fn u32_rw_buffer(name: &str, binding: u32, n: u32) -> BufferDecl {
+    u32_storage_buffer(name, binding, BufferAccess::ReadWrite, n.max(1))
+}
+
+pub(super) fn singleton_u32_read_buffer(name: &str, binding: u32) -> BufferDecl {
+    u32_storage_buffer(name, binding, BufferAccess::ReadOnly, 1)
+}
+
+fn u32_storage_buffer(name: &str, binding: u32, access: BufferAccess, count: u32) -> BufferDecl {
+    BufferDecl::storage(name, binding, access, DataType::U32).with_count(count)
+}
+
+pub(super) fn wrap_gpu_filter_program(
+    entry_op_id: &'static str,
+    buffers: Vec<BufferDecl>,
+    body: Vec<Node>,
+) -> Program {
+    Program::wrapped(buffers, GPU_FILTER_WORKGROUP, body).with_entry_op_id(entry_op_id)
+}
+
 /// Element-wise keep-mask merge over line-splice and comment metadata.
 ///
 /// Input buffer names match the producing kernels' output names
