@@ -1,4 +1,4 @@
-use super::predicates::expr_is_any;
+use super::predicates::function_name_prefix;
 use super::scan::{
     emit_forward_matching_paren_scan, emit_post_paren_boundary_scan,
     emit_reverse_unmatched_lbrace_scan,
@@ -89,50 +89,6 @@ pub fn emit_brace_scope_resolution(
     ));
 
     nodes
-}
-
-fn function_name_prefix(token: Expr) -> Expr {
-    expr_is_any(
-        token,
-        &[
-            TOK_AUTO,
-            TOK_CHAR_KW,
-            TOK_CONST,
-            TOK_DOUBLE,
-            TOK_ENUM,
-            TOK_EXTERN,
-            TOK_FLOAT_KW,
-            TOK_IDENTIFIER,
-            TOK_INLINE,
-            TOK_INT,
-            TOK_LONG,
-            TOK_REGISTER,
-            TOK_RESTRICT,
-            TOK_SHORT,
-            TOK_SIGNED,
-            TOK_STATIC,
-            TOK_STRUCT,
-            TOK_THREAD_LOCAL,
-            TOK_TYPEDEF,
-            TOK_UNION,
-            TOK_UNSIGNED,
-            TOK_VOID,
-            TOK_VOLATILE,
-            // C23 / TS 18661-2 scalar types and clang/GCC half-precision.
-            TOK_BITINT_KW,
-            TOK_FLOAT16_KW,
-            TOK_FLOAT32_KW,
-            TOK_FLOAT64_KW,
-            TOK_FLOAT128_KW,
-            TOK_GNU_FLOAT128_KW,
-            TOK_GNU_BF16_KW,
-            TOK_GNU_FP16_KW,
-            TOK_DECIMAL32_KW,
-            TOK_DECIMAL64_KW,
-            TOK_DECIMAL128_KW,
-            TOK_FORCEINLINE_KW,
-        ],
-    )
 }
 
 /// Emits IR nodes for resolving scope boundaries of function parameters.
