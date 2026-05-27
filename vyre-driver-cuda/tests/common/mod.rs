@@ -50,6 +50,19 @@ pub(crate) fn live_backend() -> CudaBackend {
     live_dispatcher()
 }
 
+/// Run a closure with a live CUDA-backed optimizer dispatcher.
+///
+/// The backend must outlive the dispatcher, so this helper centralizes the
+/// acquisition/lifetime pattern used by CUDA self-substrate parity tests.
+pub(crate) fn with_cuda_optimizer_dispatcher<R>(
+    _test_name: &str,
+    run: impl FnOnce(&CudaOptimizerDispatcher<'_>) -> R,
+) -> R {
+    let backend = live_dispatcher();
+    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
+    run(&dispatcher)
+}
+
 /// Run the pure Rust reference interpreter for byte-buffer CUDA test inputs.
 pub(crate) fn reference_outputs(
     program: &Program,
