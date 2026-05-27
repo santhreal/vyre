@@ -6,7 +6,9 @@
 //! - The verified Vyre IR program
 //! - Borrow-check evidence
 //!
-//! Format is TBD; modelled after vyre-frontend-c's VYRECOB2 sections.
+//! The object writer is intentionally not exposed until the Rust frontend can
+//! emit verified IR and borrow-check evidence. Keeping the builder private to
+//! this crate prevents downstream users from depending on an empty artifact.
 
 /// Object artifact builder.
 pub struct RustObjectBuilder;
