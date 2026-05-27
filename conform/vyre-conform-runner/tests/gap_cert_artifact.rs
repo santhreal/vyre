@@ -1,3 +1,2 @@
-mod gap_impl {
-    include!("cert_artifact.rs");
-}
+#[path = "cert_artifact.rs"]
+mod gap_impl;
