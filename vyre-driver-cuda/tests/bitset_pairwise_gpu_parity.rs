@@ -5,7 +5,7 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::bitset::and::{bitset_and, cpu_ref as and_cpu};
@@ -35,34 +35,44 @@ where
     bytes_u32(&outputs[0])
 }
 
+fn assert_pairwise_matches<F, C>(
+    case_name: &str,
+    program_builder: F,
+    cpu_ref: C,
+    lhs: &[u32],
+    rhs: &[u32],
+) -> Vec<u32>
+where
+    F: FnOnce(&str, &str, &str, u32) -> vyre::Program,
+    C: FnOnce(&[u32], &[u32]) -> Vec<u32>,
+{
+    let cpu = cpu_ref(lhs, rhs);
+    with_live_backend(case_name, |backend| {
+        let gpu = run_pairwise(backend, program_builder, lhs, rhs);
+        assert_eq!(gpu, cpu, "{case_name}: bitset pairwise divergence");
+        gpu
+    })
+}
+
 #[test]
 fn cuda_bitset_and_parity() {
-    let backend = live_dispatcher();
     let lhs = vec![0xFF00FF00u32, 0xAAAA_AAAA, 0u32, 0xFFFF_FFFF];
     let rhs = vec![0x00FFFF00u32, 0x5555_5555, 0xFFFF_FFFF, 0xCAFEBABE];
-    let cpu = and_cpu(&lhs, &rhs);
-    let gpu = run_pairwise(&backend, bitset_and, &lhs, &rhs);
-    assert_eq!(gpu, cpu);
+    assert_pairwise_matches("bitset and", bitset_and, and_cpu, &lhs, &rhs);
 }
 
 #[test]
 fn cuda_bitset_and_not_parity() {
-    let backend = live_dispatcher();
     let lhs = vec![0xFFFF_FFFFu32, 0xCAFE_BABE, 0u32, 0xAAAA_AAAA];
     let rhs = vec![0x00FF_00FFu32, 0xFFFF_0000, 0xFFFF_FFFF, 0x5555_5555];
-    let cpu = and_not_cpu(&lhs, &rhs);
-    let gpu = run_pairwise(&backend, bitset_and_not, &lhs, &rhs);
-    assert_eq!(gpu, cpu);
+    assert_pairwise_matches("bitset and-not", bitset_and_not, and_not_cpu, &lhs, &rhs);
 }
 
 #[test]
 fn cuda_bitset_xor_parity() {
-    let backend = live_dispatcher();
     let lhs = vec![0xAAAA_AAAAu32, 0u32, 0xFFFF_FFFF, 0xDEAD_BEEF];
     let rhs = vec![0x5555_5555u32, 0xFFFF_FFFF, 0u32, 0xDEAD_BEEF];
-    let cpu = xor_cpu(&lhs, &rhs);
-    let gpu = run_pairwise(&backend, bitset_xor, &lhs, &rhs);
-    assert_eq!(gpu, cpu);
+    let gpu = assert_pairwise_matches("bitset xor", bitset_xor, xor_cpu, &lhs, &rhs);
     // Self-xor should be all zeros for the last lane.
     assert_eq!(gpu[3], 0);
 }
@@ -79,33 +89,33 @@ fn run_any(backend: &CudaBackend, input: &[u32]) -> u32 {
     bytes_u32(&outputs[0])[0]
 }
 
+fn assert_any_matches(case_name: &str, input: &[u32]) -> u32 {
+    let cpu = any_cpu(input);
+    with_live_backend(case_name, |backend| {
+        let gpu = run_any(backend, input);
+        assert_eq!(gpu, cpu, "{case_name}: bitset any divergence");
+        gpu
+    })
+}
+
 #[test]
 fn cuda_bitset_any_all_zero() {
-    let backend = live_dispatcher();
     let input = vec![0u32; 8];
-    let cpu = any_cpu(&input);
-    let gpu = run_any(&backend, &input);
-    assert_eq!(gpu, cpu);
+    let gpu = assert_any_matches("bitset any all zero", &input);
     assert_eq!(gpu, 0);
 }
 
 #[test]
 fn cuda_bitset_any_first_word_set() {
-    let backend = live_dispatcher();
     let input = vec![1u32, 0, 0, 0];
-    let cpu = any_cpu(&input);
-    let gpu = run_any(&backend, &input);
-    assert_eq!(gpu, cpu);
+    let gpu = assert_any_matches("bitset any first word", &input);
     assert_eq!(gpu, 1);
 }
 
 #[test]
 fn cuda_bitset_any_last_word_set() {
-    let backend = live_dispatcher();
     let input = vec![0u32, 0, 0, 0x8000_0000];
-    let cpu = any_cpu(&input);
-    let gpu = run_any(&backend, &input);
-    assert_eq!(gpu, cpu);
+    let gpu = assert_any_matches("bitset any last word", &input);
     assert_eq!(gpu, 1);
 }
 
@@ -121,36 +131,34 @@ fn run_set_bit(backend: &CudaBackend, target: &[u32], bit_idx: u32) -> Vec<u32> 
     bytes_u32(&outputs[0])
 }
 
+fn assert_set_bit_matches(case_name: &str, target: &[u32], bit_idx: u32) -> Vec<u32> {
+    let mut cpu = target.to_vec();
+    set_bit_cpu(&mut cpu, bit_idx);
+    with_live_backend(case_name, |backend| {
+        let gpu = run_set_bit(backend, target, bit_idx);
+        assert_eq!(gpu, cpu, "{case_name}: set-bit divergence");
+        gpu
+    })
+}
+
 #[test]
 fn cuda_bitset_set_bit_low() {
-    let backend = live_dispatcher();
     let target = vec![0u32, 0u32];
-    let mut cpu = target.clone();
-    set_bit_cpu(&mut cpu, 0);
-    let gpu = run_set_bit(&backend, &target, 0);
-    assert_eq!(gpu, cpu);
+    let gpu = assert_set_bit_matches("set bit low", &target, 0);
     assert_eq!(gpu, vec![1u32, 0u32]);
 }
 
 #[test]
 fn cuda_bitset_set_bit_second_word() {
-    let backend = live_dispatcher();
     let target = vec![0u32, 0u32];
-    let mut cpu = target.clone();
-    set_bit_cpu(&mut cpu, 33);
-    let gpu = run_set_bit(&backend, &target, 33);
-    assert_eq!(gpu, cpu);
+    let gpu = assert_set_bit_matches("set bit second word", &target, 33);
     assert_eq!(gpu, vec![0u32, 0b10u32]);
 }
 
 #[test]
 fn cuda_bitset_set_bit_preserves_other_bits() {
-    let backend = live_dispatcher();
     let target = vec![0xFF00u32, 0xAAAA_AAAA];
-    let mut cpu = target.clone();
-    set_bit_cpu(&mut cpu, 4);
-    let gpu = run_set_bit(&backend, &target, 4);
-    assert_eq!(gpu, cpu);
+    let gpu = assert_set_bit_matches("set bit preserves other bits", &target, 4);
     assert_eq!(gpu[0], 0xFF10);
     assert_eq!(gpu[1], 0xAAAA_AAAA);
 }
