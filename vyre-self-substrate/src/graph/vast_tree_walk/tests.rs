@@ -109,7 +109,7 @@ fn trusted_builders_fail_fast_instead_of_returning_inert_programs() {
 
 #[test]
 fn production_facade_does_not_import_primitive_builders_directly() {
-    let facade = include_str!("../vast_tree_walk.rs");
+    let facade = include_str!("mod.rs");
     assert!(!facade.contains("try_ast_walk_preorder"));
     assert!(!facade.contains("try_ast_walk_postorder"));
     assert!(!facade.contains("ast_walk_preorder"));
