@@ -4,14 +4,12 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::graph::csr_backward_traverse::{cpu_ref, csr_backward_traverse};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
 fn run(
-    backend: &CudaBackend,
     node_count: u32,
     edge_count: u32,
     edge_offsets: &[u32],
@@ -43,9 +41,13 @@ fn run(
     // cover one workgroup per source node.
     let mut config = DispatchConfig::default();
     config.grid_override = Some([node_count.max(1), 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("CSR backward traverse", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA CSR backward traverse dispatch failed: {error}")
+            })
+    });
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(words as usize);
     out
@@ -53,7 +55,6 @@ fn run(
 
 #[test]
 fn cuda_csr_backward_chain_one_step() {
-    let backend = live_dispatcher();
     // Forward CFG 0 -> 1 -> 2 -> 3.
     let edge_offsets = vec![0u32, 1, 2, 3, 3];
     let edge_targets = vec![1u32, 2, 3];
@@ -69,7 +70,6 @@ fn cuda_csr_backward_chain_one_step() {
         0xFFFF_FFFF,
     );
     let gpu = run(
-        &backend,
         4,
         3,
         &edge_offsets,
@@ -84,7 +84,6 @@ fn cuda_csr_backward_chain_one_step() {
 
 #[test]
 fn cuda_csr_backward_diamond_one_step() {
-    let backend = live_dispatcher();
     // Forward 0 -> {1, 2} -> 3.
     let edge_offsets = vec![0u32, 2, 3, 4, 4];
     let edge_targets = vec![1u32, 2, 3, 3];
@@ -100,7 +99,6 @@ fn cuda_csr_backward_diamond_one_step() {
         0xFFFF_FFFF,
     );
     let gpu = run(
-        &backend,
         4,
         4,
         &edge_offsets,
@@ -115,7 +113,6 @@ fn cuda_csr_backward_diamond_one_step() {
 
 #[test]
 fn cuda_csr_backward_kind_mask_filters() {
-    let backend = live_dispatcher();
     let edge_offsets = vec![0u32, 1, 1];
     let edge_targets = vec![1u32];
     let edge_kind_mask = vec![0b0010u32]; // kind bit 1
@@ -130,7 +127,6 @@ fn cuda_csr_backward_kind_mask_filters() {
         0b0001,
     );
     let gpu = run(
-        &backend,
         2,
         1,
         &edge_offsets,
@@ -145,7 +141,6 @@ fn cuda_csr_backward_kind_mask_filters() {
 
 #[test]
 fn cuda_csr_backward_empty_frontier() {
-    let backend = live_dispatcher();
     let edge_offsets = vec![0u32, 1, 2, 3, 3];
     let edge_targets = vec![1u32, 2, 3];
     let edge_kind_mask = vec![1u32; 3];
@@ -159,7 +154,6 @@ fn cuda_csr_backward_empty_frontier() {
         0xFFFF_FFFF,
     );
     let gpu = run(
-        &backend,
         4,
         3,
         &edge_offsets,
