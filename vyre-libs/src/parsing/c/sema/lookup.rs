@@ -2,6 +2,7 @@ use crate::parsing::c::lex::tokens::*;
 use vyre::ir::{Expr, Node};
 
 mod predicates;
+use super::scan::emit_forward_matching_paren_scan;
 use predicates::{declaration_context, tag_keyword};
 
 /// No declaration kind.
@@ -178,6 +179,88 @@ fn emit_declaration_flags(node_idx: &Expr) -> Vec<Node> {
     ]
 }
 
+fn emit_function_declarator_after_lparen(node_idx: &Expr, num_tokens: &Expr) -> Node {
+    let mut body = emit_forward_matching_paren_scan(
+        "tok_types",
+        "paren_idx",
+        Expr::add(node_idx.clone(), Expr::u32(2)),
+        num_tokens.clone(),
+        "paren_tok",
+        "paren_depth",
+        "matching_rparen",
+        Some(Expr::lt(
+            Expr::add(node_idx.clone(), Expr::u32(2)),
+            num_tokens.clone(),
+        )),
+    );
+    body.push(Node::if_then(
+        Expr::ne(Expr::var("matching_rparen"), Expr::u32(u32::MAX)),
+        vec![
+            Node::let_bind("after_matching_paren", Expr::u32(u32::MAX)),
+            Node::let_bind("after_scan_active", Expr::u32(1)),
+            Node::if_then(
+                Expr::lt(
+                    Expr::add(Expr::var("matching_rparen"), Expr::u32(1)),
+                    num_tokens.clone(),
+                ),
+                vec![Node::loop_for(
+                    "after_paren_scan",
+                    Expr::add(Expr::var("matching_rparen"), Expr::u32(1)),
+                    num_tokens.clone(),
+                    vec![
+                        Node::let_bind(
+                            "after_scan_tok",
+                            Expr::load("tok_types", Expr::var("after_paren_scan")),
+                        ),
+                        Node::if_then(
+                            Expr::and(
+                                Expr::eq(Expr::var("after_scan_active"), Expr::u32(1)),
+                                Expr::or(
+                                    Expr::eq(Expr::var("after_scan_tok"), Expr::u32(TOK_LBRACE)),
+                                    Expr::and(
+                                        Expr::eq(
+                                            Expr::var("after_scan_tok"),
+                                            Expr::u32(TOK_SEMICOLON),
+                                        ),
+                                        Expr::eq(
+                                            Expr::var("after_paren_scan"),
+                                            Expr::add(Expr::var("matching_rparen"), Expr::u32(1)),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                            vec![
+                                Node::assign("after_matching_paren", Expr::var("after_scan_tok")),
+                                Node::assign("after_scan_active", Expr::u32(0)),
+                            ],
+                        ),
+                    ],
+                )],
+            ),
+            Node::if_then_else(
+                Expr::eq(Expr::var("after_matching_paren"), Expr::u32(TOK_LBRACE)),
+                vec![Node::assign("decl_kind", Expr::u32(DECL_KIND_FUNCTION))],
+                vec![Node::if_then_else(
+                    declaration_context(Expr::var("prev_tok")),
+                    vec![Node::if_then_else(
+                        Expr::eq(Expr::var("prev_tok"), Expr::u32(TOK_TYPEDEF)),
+                        vec![Node::assign("decl_kind", Expr::u32(DECL_KIND_TYPEDEF))],
+                        vec![Node::assign(
+                            "decl_kind",
+                            Expr::u32(DECL_KIND_FUNCTION_DECL),
+                        )],
+                    )],
+                    vec![Node::if_then(
+                        Expr::eq(Expr::var("prev_tok"), Expr::u32(TOK_TYPEDEF)),
+                        vec![Node::assign("decl_kind", Expr::u32(DECL_KIND_TYPEDEF))],
+                    )],
+                )],
+            ),
+        ],
+    ));
+    Node::if_then(Expr::eq(Expr::var("next_tok"), Expr::u32(TOK_LPAREN)), body)
+}
+
 /// Emit IR that classifies the declaration kind around `node_idx`.
 pub fn emit_declaration_lookup(node_idx: Expr, num_tokens: &Expr) -> Vec<Node> {
     let mut nodes = vec![
@@ -266,169 +349,26 @@ pub fn emit_declaration_lookup(node_idx: Expr, num_tokens: &Expr) -> Vec<Node> {
                         ),
                         vec![Node::assign("decl_kind", Expr::u32(DECL_KIND_NONE))],
                         vec![
-                            Node::if_then(
-                    Expr::eq(Expr::var("next_tok"), Expr::u32(TOK_LPAREN)),
-                    vec![
-                        Node::let_bind("paren_depth", Expr::u32(1)),
-                        Node::let_bind("matching_rparen", Expr::u32(u32::MAX)),
-                        Node::if_then(
-                            Expr::lt(
-                                Expr::add(node_idx.clone(), Expr::u32(2)),
-                                num_tokens.clone(),
-                            ),
-                            vec![Node::loop_for(
-                                "paren_scan",
-                                Expr::u32(0),
-                                Expr::sub(
-                                    num_tokens.clone(),
-                                    Expr::add(node_idx.clone(), Expr::u32(2)),
-                                ),
-                                vec![
-                                    Node::let_bind(
-                                        "paren_idx",
-                                        Expr::add(
-                                            Expr::add(node_idx.clone(), Expr::u32(2)),
-                                            Expr::var("paren_scan"),
-                                        ),
+                            emit_function_declarator_after_lparen(&node_idx, num_tokens),
+                            Node::if_then_else(
+                                Expr::eq(Expr::var("decl_kind"), Expr::u32(DECL_KIND_NONE)),
+                                vec![Node::if_then_else(
+                                    Expr::or(
+                                        Expr::eq(Expr::var("prev_tok"), Expr::u32(TOK_TYPEDEF)),
+                                        Expr::eq(Expr::var("seen_typedef_in_decl"), Expr::u32(1)),
                                     ),
-                                    Node::let_bind(
-                                        "paren_tok",
-                                        Expr::load("tok_types", Expr::var("paren_idx")),
-                                    ),
-                                    Node::if_then(
-                                        Expr::eq(Expr::var("paren_tok"), Expr::u32(TOK_LPAREN)),
-                                        vec![Node::assign(
-                                            "paren_depth",
-                                            Expr::add(Expr::var("paren_depth"), Expr::u32(1)),
-                                        )],
-                                    ),
-                                    Node::if_then(
-                                        Expr::eq(Expr::var("paren_tok"), Expr::u32(TOK_RPAREN)),
-                                        vec![Node::if_then_else(
-                                            Expr::and(
-                                                Expr::eq(Expr::var("paren_depth"), Expr::u32(1)),
-                                                Expr::eq(
-                                                    Expr::var("matching_rparen"),
-                                                    Expr::u32(u32::MAX),
-                                                ),
-                                            ),
-                                            vec![Node::assign(
-                                                "matching_rparen",
-                                                Expr::var("paren_idx"),
-                                            )],
-                                            vec![Node::assign(
-                                                "paren_depth",
-                                                Expr::sub(Expr::var("paren_depth"), Expr::u32(1)),
-                                            )],
-                                        )],
-                                    ),
-                                ],
-                            )],
-                        ),
-                        Node::if_then(
-                            Expr::ne(Expr::var("matching_rparen"), Expr::u32(u32::MAX)),
-                            vec![
-                                Node::let_bind("after_matching_paren", Expr::u32(u32::MAX)),
-                                Node::let_bind("after_scan_active", Expr::u32(1)),
-                                Node::if_then(
-                                    Expr::lt(
-                                        Expr::add(Expr::var("matching_rparen"), Expr::u32(1)),
-                                        num_tokens.clone(),
-                                    ),
-                                    vec![Node::loop_for(
-                                        "after_paren_scan",
-                                        Expr::add(Expr::var("matching_rparen"), Expr::u32(1)),
-                                        num_tokens.clone(),
-                                        vec![
-                                            Node::let_bind(
-                                                "after_scan_tok",
-                                                Expr::load("tok_types", Expr::var("after_paren_scan")),
-                                            ),
-                                            Node::if_then(
-                                                Expr::and(
-                                                    Expr::eq(
-                                                        Expr::var("after_scan_active"),
-                                                        Expr::u32(1),
-                                                    ),
-                                                    Expr::or(
-                                                        Expr::eq(
-                                                            Expr::var("after_scan_tok"),
-                                                            Expr::u32(TOK_LBRACE),
-                                                        ),
-                                                        Expr::and(
-                                                            Expr::eq(
-                                                                Expr::var("after_scan_tok"),
-                                                                Expr::u32(TOK_SEMICOLON),
-                                                            ),
-                                                            Expr::eq(
-                                                                Expr::var("after_paren_scan"),
-                                                                Expr::add(
-                                                                    Expr::var("matching_rparen"),
-                                                                    Expr::u32(1),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                ),
-                                                vec![
-                                                    Node::assign(
-                                                        "after_matching_paren",
-                                                        Expr::var("after_scan_tok"),
-                                                    ),
-                                                    Node::assign("after_scan_active", Expr::u32(0)),
-                                                ],
-                                            ),
-                                        ],
-                                    )],
-                                ),
-                                Node::if_then_else(
-                                    Expr::eq(
-                                        Expr::var("after_matching_paren"),
-                                        Expr::u32(TOK_LBRACE),
-                                    ),
-                                    vec![Node::assign("decl_kind", Expr::u32(DECL_KIND_FUNCTION))],
-                                    vec![Node::if_then_else(
+                                    vec![Node::assign("decl_kind", Expr::u32(DECL_KIND_TYPEDEF))],
+                                    vec![Node::if_then(
                                         declaration_context(Expr::var("prev_tok")),
-                                        vec![Node::if_then_else(
-                                            Expr::eq(Expr::var("prev_tok"), Expr::u32(TOK_TYPEDEF)),
-                                            vec![Node::assign(
-                                                "decl_kind",
-                                                Expr::u32(DECL_KIND_TYPEDEF),
-                                            )],
-                                            vec![Node::assign(
-                                                "decl_kind",
-                                                Expr::u32(DECL_KIND_FUNCTION_DECL),
-                                            )],
-                                        )],
-                                        vec![Node::if_then(
-                                            Expr::eq(Expr::var("prev_tok"), Expr::u32(TOK_TYPEDEF)),
-                                            vec![Node::assign(
-                                                "decl_kind",
-                                                Expr::u32(DECL_KIND_TYPEDEF),
-                                            )],
+                                        vec![Node::assign(
+                                            "decl_kind",
+                                            Expr::u32(DECL_KIND_VARIABLE),
                                         )],
                                     )],
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
-                Node::if_then_else(
-                    Expr::eq(Expr::var("decl_kind"), Expr::u32(DECL_KIND_NONE)),
-                    vec![Node::if_then_else(
-                        Expr::or(
-                            Expr::eq(Expr::var("prev_tok"), Expr::u32(TOK_TYPEDEF)),
-                            Expr::eq(Expr::var("seen_typedef_in_decl"), Expr::u32(1)),
-                        ),
-                        vec![Node::assign("decl_kind", Expr::u32(DECL_KIND_TYPEDEF))],
-                        vec![Node::if_then(
-                            declaration_context(Expr::var("prev_tok")),
-                            vec![Node::assign("decl_kind", Expr::u32(DECL_KIND_VARIABLE))],
-                        )],
-                    )],
-                    vec![],
-                ),
-            ],
+                                )],
+                                vec![],
+                            ),
+                        ],
                     )],
                 )],
             )],
