@@ -5,9 +5,8 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::math::bigint_add_carry::{
     bigint_add_carry, bigint_add_carry_cpu, BINDING_A_IN, BINDING_B_IN, BINDING_CARRY_PARTIAL_OUT,
     BINDING_SUM_PARTIAL_OUT,
@@ -17,7 +16,7 @@ use vyre_primitives::math::submodular_greedy::{
     argmax_of_marginals, argmax_of_marginals_cpu, NO_WINNER,
 };
 
-fn run_bigint_add_carry(backend: &CudaBackend, a: &[u32], b: &[u32]) -> (Vec<u32>, Vec<u32>) {
+fn run_bigint_add_carry(a: &[u32], b: &[u32]) -> (Vec<u32>, Vec<u32>) {
     assert_eq!(a.len(), b.len());
     let limb_count = a.len() as u32;
     let program = bigint_add_carry(limb_count);
@@ -30,9 +29,11 @@ fn run_bigint_add_carry(backend: &CudaBackend, a: &[u32], b: &[u32]) -> (Vec<u32
     let workgroup_x = 256u32;
     let grid_x = ((limb_count + workgroup_x - 1) / workgroup_x).max(1);
     config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("bigint add carry", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA bigint add-carry dispatch failed: {error}"))
+    });
     // RW outputs are returned in declaration order; A and B are ReadOnly,
     // so outputs[0]=sum_partial, outputs[1]=carry_partial.
     let mut sum = bytes_u32(&outputs[0]);
@@ -44,11 +45,10 @@ fn run_bigint_add_carry(backend: &CudaBackend, a: &[u32], b: &[u32]) -> (Vec<u32
 
 #[test]
 fn cuda_bigint_add_carry_no_overflow() {
-    let backend = live_dispatcher();
     let a = vec![1u32, 2, 3, 4];
     let b = vec![10u32, 20, 30, 40];
     let (cpu_sum, cpu_carry) = bigint_add_carry_cpu(&a, &b).expect("ok");
-    let (gpu_sum, gpu_carry) = run_bigint_add_carry(&backend, &a, &b);
+    let (gpu_sum, gpu_carry) = run_bigint_add_carry(&a, &b);
     assert_eq!(gpu_sum, cpu_sum);
     assert_eq!(gpu_carry, cpu_carry);
     assert_eq!(gpu_carry, vec![0u32; 4]);
@@ -56,12 +56,11 @@ fn cuda_bigint_add_carry_no_overflow() {
 
 #[test]
 fn cuda_bigint_add_carry_with_overflow() {
-    let backend = live_dispatcher();
     // Each limb wraps: 0xFFFF_FFFF + 1 → carry.
     let a = vec![u32::MAX, u32::MAX, 0u32];
     let b = vec![1u32, 1u32, 1u32];
     let (cpu_sum, cpu_carry) = bigint_add_carry_cpu(&a, &b).expect("ok");
-    let (gpu_sum, gpu_carry) = run_bigint_add_carry(&backend, &a, &b);
+    let (gpu_sum, gpu_carry) = run_bigint_add_carry(&a, &b);
     assert_eq!(gpu_sum, cpu_sum);
     assert_eq!(gpu_carry, cpu_carry);
     assert_eq!(gpu_sum, vec![0, 0, 1]);
@@ -70,11 +69,10 @@ fn cuda_bigint_add_carry_with_overflow() {
 
 #[test]
 fn cuda_bigint_add_carry_zero_operands() {
-    let backend = live_dispatcher();
     let a = vec![0u32; 5];
     let b = vec![0u32; 5];
     let (cpu_sum, cpu_carry) = bigint_add_carry_cpu(&a, &b).expect("ok");
-    let (gpu_sum, gpu_carry) = run_bigint_add_carry(&backend, &a, &b);
+    let (gpu_sum, gpu_carry) = run_bigint_add_carry(&a, &b);
     assert_eq!(gpu_sum, cpu_sum);
     assert_eq!(gpu_carry, cpu_carry);
     assert_eq!(gpu_sum, vec![0u32; 5]);
@@ -85,7 +83,6 @@ fn cuda_bigint_add_carry_zero_operands() {
 // ---------------------------------------------------------------------
 
 fn run_interval_merge(
-    backend: &CudaBackend,
     mins_a: &[u32],
     maxs_a: &[u32],
     mins_b: &[u32],
@@ -107,9 +104,11 @@ fn run_interval_merge(
     let workgroup_x = 256u32;
     let grid_x = ((lane_count + workgroup_x - 1) / workgroup_x).max(1);
     config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("interval merge", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA interval merge dispatch failed: {error}"))
+    });
     let mut mins = bytes_u32(&outputs[0]);
     let mut maxs = bytes_u32(&outputs[1]);
     mins.truncate(lane_count as usize);
@@ -119,13 +118,12 @@ fn run_interval_merge(
 
 #[test]
 fn cuda_interval_merge_basic() {
-    let backend = live_dispatcher();
     let mins_a = vec![10u32, 0, 7];
     let maxs_a = vec![20u32, 3, 9];
     let mins_b = vec![4u32, 2, 8];
     let maxs_b = vec![18u32, 5, 12];
     let (cpu_mins, cpu_maxs) = cpu_interval_merge(&mins_a, &maxs_a, &mins_b, &maxs_b);
-    let (gpu_mins, gpu_maxs) = run_interval_merge(&backend, &mins_a, &maxs_a, &mins_b, &maxs_b);
+    let (gpu_mins, gpu_maxs) = run_interval_merge(&mins_a, &maxs_a, &mins_b, &maxs_b);
     assert_eq!(gpu_mins, cpu_mins);
     assert_eq!(gpu_maxs, cpu_maxs);
     assert_eq!(gpu_mins, vec![4, 0, 7]);
@@ -134,14 +132,13 @@ fn cuda_interval_merge_basic() {
 
 #[test]
 fn cuda_interval_merge_a_dominates() {
-    let backend = live_dispatcher();
     // a fully contains b on every lane.
     let mins_a = vec![0u32, 0, 0];
     let maxs_a = vec![100u32, 100, 100];
     let mins_b = vec![10u32, 20, 30];
     let maxs_b = vec![15u32, 25, 35];
     let (cpu_mins, cpu_maxs) = cpu_interval_merge(&mins_a, &maxs_a, &mins_b, &maxs_b);
-    let (gpu_mins, gpu_maxs) = run_interval_merge(&backend, &mins_a, &maxs_a, &mins_b, &maxs_b);
+    let (gpu_mins, gpu_maxs) = run_interval_merge(&mins_a, &maxs_a, &mins_b, &maxs_b);
     assert_eq!(gpu_mins, cpu_mins);
     assert_eq!(gpu_maxs, cpu_maxs);
     assert_eq!(gpu_mins, vec![0; 3]);
@@ -152,7 +149,7 @@ fn cuda_interval_merge_a_dominates() {
 // argmax_of_marginals
 // ---------------------------------------------------------------------
 
-fn run_argmax(backend: &CudaBackend, gains: &[u32], picked: &[u32]) -> (u32, u32) {
+fn run_argmax(gains: &[u32], picked: &[u32]) -> (u32, u32) {
     assert_eq!(gains.len(), picked.len());
     let n = gains.len() as u32;
     let program = argmax_of_marginals("gains", "picked", "winner_idx", "winner_gain", n);
@@ -168,9 +165,13 @@ fn run_argmax(backend: &CudaBackend, gains: &[u32], picked: &[u32]) -> (u32, u32
     let workgroup_x = 256u32;
     let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
     config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("argmax of marginals", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA argmax-of-marginals dispatch failed: {error}")
+            })
+    });
     let winner_idx = bytes_u32(&outputs[0])[0];
     let winner_gain = bytes_u32(&outputs[1])[0];
     (winner_idx, winner_gain)
@@ -178,11 +179,10 @@ fn run_argmax(backend: &CudaBackend, gains: &[u32], picked: &[u32]) -> (u32, u32
 
 #[test]
 fn cuda_argmax_of_marginals_picks_highest_unpicked() {
-    let backend = live_dispatcher();
     let gains = vec![10u32, 50, 20, 99, 5];
     let picked = vec![0u32, 0, 0, 0, 0];
     let (cpu_idx, cpu_gain) = argmax_of_marginals_cpu(&gains, &picked);
-    let (gpu_idx, gpu_gain) = run_argmax(&backend, &gains, &picked);
+    let (gpu_idx, gpu_gain) = run_argmax(&gains, &picked);
     assert_eq!((gpu_idx, gpu_gain), (cpu_idx, cpu_gain));
     assert_eq!(gpu_idx, 3);
     assert_eq!(gpu_gain, 99);
@@ -190,23 +190,21 @@ fn cuda_argmax_of_marginals_picks_highest_unpicked() {
 
 #[test]
 fn cuda_argmax_of_marginals_skips_picked() {
-    let backend = live_dispatcher();
     let gains = vec![10u32, 50, 20, 99, 5];
     // Index 3 is already picked  -  winner shifts to next-highest (50 @ 1).
     let picked = vec![0u32, 0, 0, 1, 0];
     let (cpu_idx, cpu_gain) = argmax_of_marginals_cpu(&gains, &picked);
-    let (gpu_idx, gpu_gain) = run_argmax(&backend, &gains, &picked);
+    let (gpu_idx, gpu_gain) = run_argmax(&gains, &picked);
     assert_eq!((gpu_idx, gpu_gain), (cpu_idx, cpu_gain));
     assert_eq!(gpu_gain, 50);
 }
 
 #[test]
 fn cuda_argmax_of_marginals_all_picked() {
-    let backend = live_dispatcher();
     let gains = vec![10u32, 50, 20];
     let picked = vec![1u32, 1, 1];
     let (cpu_idx, cpu_gain) = argmax_of_marginals_cpu(&gains, &picked);
-    let (gpu_idx, gpu_gain) = run_argmax(&backend, &gains, &picked);
+    let (gpu_idx, gpu_gain) = run_argmax(&gains, &picked);
     assert_eq!((gpu_idx, gpu_gain), (cpu_idx, cpu_gain));
     assert_eq!(gpu_idx, NO_WINNER);
     assert_eq!(gpu_gain, 0);
