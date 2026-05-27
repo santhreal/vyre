@@ -707,11 +707,7 @@ fn normalize_tokens(source: &str) -> Vec<String> {
                 index += 1;
             }
             let ident = &source[start..index];
-            if is_rust_keyword(ident) {
-                tokens.push(ident.to_string());
-            } else {
-                tokens.push("id".to_string());
-            }
+            tokens.push(normalize_identifier(ident));
             continue;
         }
         if b.is_ascii_digit() {
@@ -728,6 +724,33 @@ fn normalize_tokens(source: &str) -> Vec<String> {
         index += 1;
     }
     tokens
+}
+
+fn normalize_identifier(identifier: &str) -> String {
+    if is_rust_keyword(identifier) {
+        return identifier.to_string();
+    }
+    if is_semantic_constant_identifier(identifier) {
+        return format!("const:{identifier}");
+    }
+    "id".to_string()
+}
+
+fn is_semantic_constant_identifier(identifier: &str) -> bool {
+    let mut has_uppercase = false;
+    let mut has_separator_or_digit = false;
+    for byte in identifier.bytes() {
+        if byte.is_ascii_uppercase() {
+            has_uppercase = true;
+            continue;
+        }
+        if byte.is_ascii_digit() || byte == b'_' {
+            has_separator_or_digit = true;
+            continue;
+        }
+        return false;
+    }
+    has_uppercase && (has_separator_or_digit || identifier.len() >= 3)
 }
 
 fn is_rust_keyword(token: &str) -> bool {
@@ -883,6 +906,18 @@ mod tests {
         assert!(!tokens.iter().any(|token| token == "doc"));
         assert!(tokens.iter().any(|token| token == "str"));
         assert!(tokens.iter().any(|token| token == "num"));
+    }
+
+    #[test]
+    fn semantic_constants_remain_visible_in_similarity_tokens() {
+        let tokens = normalize_tokens(
+            "fn classify(kind: u32) -> bool { kind == TOK_IDENTIFIER || kind == VAST_DECL_CONTEXT_STRIDE_U32 }",
+        );
+        assert!(tokens.iter().any(|token| token == "const:TOK_IDENTIFIER"));
+        assert!(tokens
+            .iter()
+            .any(|token| token == "const:VAST_DECL_CONTEXT_STRIDE_U32"));
+        assert!(!tokens.iter().any(|token| token == "classify"));
     }
 
     #[test]
