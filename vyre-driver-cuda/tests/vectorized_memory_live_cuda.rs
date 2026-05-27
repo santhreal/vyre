@@ -11,6 +11,7 @@ use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 const VECTOR_LANE_COUNT: usize = 2048;
 const VECTOR_GROUP_COUNT: usize = VECTOR_LANE_COUNT / 4;
+const VECTOR_PAIR_GROUP_COUNT: usize = VECTOR_LANE_COUNT / 2;
 const WORKGROUP_SIZE_X: u32 = 128;
 const MAX_F32_ULP: u32 = 1;
 
@@ -57,6 +58,52 @@ fn vectorized_scalar_copy_emits_packed_ptx_and_matches_reference_on_live_cuda() 
         checked,
         vector_cases().len() * VECTOR_LANE_COUNT * 2,
         "Fix: live CUDA vectorized memory matrix must compare every lane on direct and compiled paths."
+    );
+}
+
+#[test]
+fn vectorized_scalar_pair_copy_emits_packed_v2_ptx_and_matches_reference_on_live_cuda() {
+    let backend = live_backend();
+    let mut checked = 0usize;
+
+    for case in vector_cases() {
+        let program = vectorized_pair_copy_program(case.ty.clone());
+        let ptx = vyre_driver_cuda::codegen::program_to_ptx(&program, &DispatchConfig::default())
+            .expect("Fix: CUDA PTX emission must support unit-stride v2 vectorized memory programs.");
+        let vector_load = format!("ld.global.v2.{}", case.ptx_suffix);
+        let vector_load_nc = format!("ld.global.nc.v2.{}", case.ptx_suffix);
+        let vector_store = format!("st.global.v2.{}", case.ptx_suffix);
+        assert!(
+            ptx.contains(&vector_load) || ptx.contains(&vector_load_nc),
+            "Fix: CUDA release PTX must fuse two adjacent {name} loads into a packed v2 global load.\n{ptx}",
+            name = case.name
+        );
+        assert!(
+            ptx.contains(&vector_store),
+            "Fix: CUDA release PTX must fuse two adjacent {name} stores into a packed v2 global store.\n{ptx}",
+            name = case.name
+        );
+
+        let input = generated_input_bytes(case.input);
+        let outputs = cuda_reference_outputs(&backend, &program, &[input], case.name);
+        checked += assert_case_outputs(
+            &case,
+            "direct-v2",
+            &outputs.direct_cuda,
+            &outputs.reference,
+        );
+        checked += assert_case_outputs(
+            &case,
+            "compiled-v2",
+            &outputs.compiled_cuda,
+            &outputs.reference,
+        );
+    }
+
+    assert_eq!(
+        checked,
+        vector_cases().len() * VECTOR_LANE_COUNT * 2,
+        "Fix: live CUDA v2 vectorized memory matrix must compare every lane on direct and compiled paths."
     );
 }
 
@@ -121,6 +168,28 @@ fn vectorized_copy_program(ty: DataType) -> Program {
                     Node::store("out", Expr::var("i1"), Expr::var("v1")),
                     Node::store("out", Expr::var("i2"), Expr::var("v2")),
                     Node::store("out", Expr::var("i3"), Expr::var("v3")),
+            ],
+        )],
+    )
+}
+
+fn vectorized_pair_copy_program(ty: DataType) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, ty.clone()).with_count(VECTOR_LANE_COUNT as u32),
+            BufferDecl::output("out", 1, ty).with_count(VECTOR_LANE_COUNT as u32),
+        ],
+        [WORKGROUP_SIZE_X, 1, 1],
+        vec![Node::if_then(
+            Expr::lt(Expr::gid_x(), Expr::u32(VECTOR_PAIR_GROUP_COUNT as u32)),
+            vec![
+                Node::let_bind("base", Expr::mul(Expr::gid_x(), Expr::u32(2))),
+                Node::let_bind("i0", Expr::var("base")),
+                Node::let_bind("i1", Expr::add(Expr::var("base"), Expr::u32(1))),
+                Node::let_bind("v0", Expr::load("input", Expr::var("i0"))),
+                Node::let_bind("v1", Expr::load("input", Expr::var("i1"))),
+                Node::store("out", Expr::var("i0"), Expr::var("v0")),
+                Node::store("out", Expr::var("i1"), Expr::var("v1")),
             ],
         )],
     )
