@@ -3,7 +3,7 @@
 mod common;
 
 use common::{
-    assert_f32_output_lanes, assert_u32_output_lanes, cuda_reference_outputs, f32_bytes,
+    assert_f32_output_lanes, assert_u32_output_lanes, bool_bytes, cuda_reference_outputs, f32_bytes,
     i32_bytes, live_backend, u32_bytes,
 };
 use vyre::DispatchConfig;
@@ -120,9 +120,10 @@ enum VectorInput {
     U32,
     I32,
     F32,
+    Bool,
 }
 
-fn vector_cases() -> [VectorCase; 3] {
+fn vector_cases() -> [VectorCase; 4] {
     [
         VectorCase {
             name: "vectorized_u32_copy",
@@ -141,6 +142,12 @@ fn vector_cases() -> [VectorCase; 3] {
             ty: DataType::F32,
             input: VectorInput::F32,
             ptx_suffix: "f32",
+        },
+        VectorCase {
+            name: "vectorized_bool_copy",
+            ty: DataType::Bool,
+            input: VectorInput::Bool,
+            ptx_suffix: "u32",
         },
     ]
 }
@@ -214,6 +221,7 @@ fn generated_input_bytes(kind: VectorInput) -> Vec<u8> {
         VectorInput::U32 => u32_bytes(&generated_u32_values()),
         VectorInput::I32 => i32_bytes(&generated_i32_values()),
         VectorInput::F32 => f32_bytes(&generated_f32_values()),
+        VectorInput::Bool => bool_bytes(&generated_bool_values()),
     }
 }
 
@@ -253,6 +261,17 @@ fn generated_f32_values() -> Vec<f32> {
             } else {
                 -magnitude
             }
+        })
+        .collect()
+}
+
+fn generated_bool_values() -> Vec<bool> {
+    (0..VECTOR_LANE_COUNT)
+        .map(|lane| {
+            let lane = lane as u32;
+            ((lane.wrapping_mul(0x45d9_f3b).rotate_left(lane & 7) ^ 0x1357_9bdf) & 0b1011)
+                == 0b0001
+                || lane % 17 == 0
         })
         .collect()
 }
