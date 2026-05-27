@@ -5,7 +5,7 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use std::num::NonZeroU32;
 use vyre::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
@@ -47,54 +47,58 @@ fn run_fnv1a32(backend: &CudaBackend, bytes: &[u8]) -> u32 {
 
 #[test]
 fn cuda_fnv1a32_empty_returns_offset_basis() {
-    let backend = live_dispatcher();
-    let bytes: &[u8] = &[];
-    // The kernel needs at least one input lane; pad with empty buffer.
-    // For empty input we must call fnv1a32_program with n=0 and at
-    // least 1 input word, so pass a 1-word input but n=0 in the
-    // program. fnv1a32_program above takes n; n=0 means the loop
-    // bound is 0, hash never updates, returns offset basis.
-    let cpu = fnv1a32(bytes);
-    let words = vec![0u32; 1];
-    let n = 0u32;
-    let program = fnv1a32_program("input", "out", n);
-    let inputs: Vec<Vec<u8>> = vec![u32_bytes(&words)];
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some([1, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
-    let gpu = bytes_u32(&outputs[0])[0];
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, 0x811c_9dc5);
+    with_live_backend("cuda_fnv1a32_empty_returns_offset_basis", |backend| {
+        let bytes: &[u8] = &[];
+        // The kernel needs at least one input lane; pad with empty buffer.
+        // For empty input we must call fnv1a32_program with n=0 and at
+        // least 1 input word, so pass a 1-word input but n=0 in the
+        // program. fnv1a32_program above takes n; n=0 means the loop
+        // bound is 0, hash never updates, returns offset basis.
+        let cpu = fnv1a32(bytes);
+        let words = vec![0u32; 1];
+        let n = 0u32;
+        let program = fnv1a32_program("input", "out", n);
+        let inputs: Vec<Vec<u8>> = vec![u32_bytes(&words)];
+        let mut config = DispatchConfig::default();
+        config.grid_override = Some([1, 1, 1]);
+        let outputs = backend
+            .dispatch(&program, &inputs, &config)
+            .expect("dispatch");
+        let gpu = bytes_u32(&outputs[0])[0];
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, 0x811c_9dc5);
+    });
 }
 
 #[test]
 fn cuda_fnv1a32_single_byte() {
-    let backend = live_dispatcher();
-    let bytes = b"a";
-    let cpu = fnv1a32(bytes);
-    let gpu = run_fnv1a32(&backend, bytes);
-    assert_eq!(gpu, cpu);
+    with_live_backend("cuda_fnv1a32_single_byte", |backend| {
+        let bytes = b"a";
+        let cpu = fnv1a32(bytes);
+        let gpu = run_fnv1a32(backend, bytes);
+        assert_eq!(gpu, cpu);
+    });
 }
 
 #[test]
 fn cuda_fnv1a32_long_string() {
-    let backend = live_dispatcher();
-    let bytes = b"the quick brown fox jumps over the lazy dog";
-    let cpu = fnv1a32(bytes);
-    let gpu = run_fnv1a32(&backend, bytes);
-    assert_eq!(gpu, cpu);
+    with_live_backend("cuda_fnv1a32_long_string", |backend| {
+        let bytes = b"the quick brown fox jumps over the lazy dog";
+        let cpu = fnv1a32(bytes);
+        let gpu = run_fnv1a32(backend, bytes);
+        assert_eq!(gpu, cpu);
+    });
 }
 
 #[test]
 fn cuda_fnv1a32_distinct_inputs_distinct_hashes() {
-    let backend = live_dispatcher();
-    let a = run_fnv1a32(&backend, b"abc");
-    let b = run_fnv1a32(&backend, b"abd");
-    assert_ne!(a, b);
-    assert_eq!(a, fnv1a32(b"abc"));
-    assert_eq!(b, fnv1a32(b"abd"));
+    with_live_backend("cuda_fnv1a32_distinct_inputs_distinct_hashes", |backend| {
+        let a = run_fnv1a32(backend, b"abc");
+        let b = run_fnv1a32(backend, b"abd");
+        assert_ne!(a, b);
+        assert_eq!(a, fnv1a32(b"abc"));
+        assert_eq!(b, fnv1a32(b"abd"));
+    });
 }
 
 // ---------------------------------------------------------------------
@@ -189,79 +193,92 @@ fn run_crc32_map_reduce_on_gpu(
 
 #[test]
 fn cuda_crc32_chunk_summaries_reduce_to_direct_crc() {
-    let backend = live_dispatcher();
-    let bytes = (0..1500)
-        .map(|index| (index as u8).wrapping_mul(29).wrapping_add(7))
-        .collect::<Vec<_>>();
-    let chunk_size = NonZeroU32::new(64).expect("Fix: chunk size must be non-zero.");
-    let plan = crc32_map_reduce_plan(bytes.len() as u32, chunk_size)
-        .expect("Fix: CUDA CRC32 chunk plan should fit u32 shape accounting.");
+    with_live_backend(
+        "cuda_crc32_chunk_summaries_reduce_to_direct_crc",
+        |backend| {
+            let bytes = (0..1500)
+                .map(|index| (index as u8).wrapping_mul(29).wrapping_add(7))
+                .collect::<Vec<_>>();
+            let chunk_size = NonZeroU32::new(64).expect("Fix: chunk size must be non-zero.");
+            let plan = crc32_map_reduce_plan(bytes.len() as u32, chunk_size)
+                .expect("Fix: CUDA CRC32 chunk plan should fit u32 shape accounting.");
 
-    let chunks = run_crc32_chunks(&backend, &bytes, chunk_size, plan.steps[0]);
-    let reduced = reduce_crc32_chunks(&chunks);
+            let chunks = run_crc32_chunks(backend, &bytes, chunk_size, plan.steps[0]);
+            let reduced = reduce_crc32_chunks(&chunks);
 
-    assert_eq!(reduced.len, bytes.len() as u64);
-    assert_eq!(reduced.crc, crc32(&bytes));
-    assert!(
-        chunks.iter().all(|chunk| chunk.len <= 64),
-        "Fix: CUDA CRC32 chunk summaries must not read past their assigned byte block."
+            assert_eq!(reduced.len, bytes.len() as u64);
+            assert_eq!(reduced.crc, crc32(&bytes));
+            assert!(
+                chunks.iter().all(|chunk| chunk.len <= 64),
+                "Fix: CUDA CRC32 chunk summaries must not read past their assigned byte block."
+            );
+        },
     );
 }
 
 #[test]
 fn cuda_crc32_chunk_summaries_reduce_on_gpu_to_direct_crc() {
-    let backend = live_dispatcher();
-    let bytes = (0..160)
-        .map(|index| (index as u8).wrapping_mul(17).wrapping_add(0x5B))
-        .collect::<Vec<_>>();
-    let chunk_size = NonZeroU32::new(96).expect("Fix: chunk size must be non-zero.");
-    let (summary, rounds) = run_crc32_map_reduce_on_gpu(&backend, &bytes, chunk_size);
+    with_live_backend(
+        "cuda_crc32_chunk_summaries_reduce_on_gpu_to_direct_crc",
+        |backend| {
+            let bytes = (0..160)
+                .map(|index| (index as u8).wrapping_mul(17).wrapping_add(0x5B))
+                .collect::<Vec<_>>();
+            let chunk_size = NonZeroU32::new(96).expect("Fix: chunk size must be non-zero.");
+            let (summary, rounds) = run_crc32_map_reduce_on_gpu(backend, &bytes, chunk_size);
 
-    assert!(
-        rounds > 0,
-        "Fix: CUDA CRC32 map-reduce test must exercise at least one GPU reduction round."
+            assert!(
+                rounds > 0,
+                "Fix: CUDA CRC32 map-reduce test must exercise at least one GPU reduction round."
+            );
+            assert_eq!(summary.len, bytes.len() as u64);
+            assert_eq!(summary.crc, crc32(&bytes));
+        },
     );
-    assert_eq!(summary.len, bytes.len() as u64);
-    assert_eq!(summary.crc, crc32(&bytes));
 }
 
 #[test]
 fn cuda_crc32_map_reduce_generated_live_matrix_matches_direct_crc() {
-    let backend = live_dispatcher();
-    let cases = [(0u32, 0usize, 64u32), (1, 1, 64), (2, 160, 31)];
-    let mut multi_round_cases = 0usize;
+    with_live_backend(
+        "cuda_crc32_map_reduce_generated_live_matrix_matches_direct_crc",
+        |backend| {
+            let cases = [(0u32, 0usize, 64u32), (1, 1, 64), (2, 160, 31)];
+            let mut multi_round_cases = 0usize;
 
-    for (seed, len, chunk_size) in cases {
-        let bytes = generated_crc32_bytes(seed, len);
-        let chunk_size =
-            NonZeroU32::new(chunk_size).expect("Fix: generated chunk sizes must be non-zero.");
-        let (summary, rounds) = run_crc32_map_reduce_on_gpu(&backend, &bytes, chunk_size);
+            for (seed, len, chunk_size) in cases {
+                let bytes = generated_crc32_bytes(seed, len);
+                let chunk_size = NonZeroU32::new(chunk_size)
+                    .expect("Fix: generated chunk sizes must be non-zero.");
+                let (summary, rounds) = run_crc32_map_reduce_on_gpu(backend, &bytes, chunk_size);
 
-        if rounds > 1 {
-            multi_round_cases += 1;
-        }
-        assert_eq!(summary.len, bytes.len() as u64, "seed {seed}");
-        assert_eq!(summary.crc, crc32(&bytes), "seed {seed}");
-    }
+                if rounds > 1 {
+                    multi_round_cases += 1;
+                }
+                assert_eq!(summary.len, bytes.len() as u64, "seed {seed}");
+                assert_eq!(summary.crc, crc32(&bytes), "seed {seed}");
+            }
 
-    assert!(
-        multi_round_cases >= 1,
-        "Fix: generated CUDA CRC32 matrix must exercise multiple GPU reduction rounds."
+            assert!(
+                multi_round_cases >= 1,
+                "Fix: generated CUDA CRC32 matrix must exercise multiple GPU reduction rounds."
+            );
+        },
     );
 }
 
 #[test]
 fn cuda_crc32_chunk_empty_input_stays_reducible() {
-    let backend = live_dispatcher();
-    let chunk_size = NonZeroU32::new(32).expect("Fix: chunk size must be non-zero.");
-    let plan = crc32_map_reduce_plan(0, chunk_size)
-        .expect("Fix: empty CUDA CRC32 map-reduce plan should be representable.");
+    with_live_backend("cuda_crc32_chunk_empty_input_stays_reducible", |backend| {
+        let chunk_size = NonZeroU32::new(32).expect("Fix: chunk size must be non-zero.");
+        let plan = crc32_map_reduce_plan(0, chunk_size)
+            .expect("Fix: empty CUDA CRC32 map-reduce plan should be representable.");
 
-    let chunks = run_crc32_chunks(&backend, b"", chunk_size, plan.steps[0]);
-    let reduced = reduce_crc32_chunks(&chunks);
+        let chunks = run_crc32_chunks(backend, b"", chunk_size, plan.steps[0]);
+        let reduced = reduce_crc32_chunks(&chunks);
 
-    assert_eq!(chunks.len(), 1);
-    assert_eq!(reduced, Crc32Chunk { len: 0, crc: 0 });
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(reduced, Crc32Chunk { len: 0, crc: 0 });
+    });
 }
 
 fn generated_crc32_bytes(seed: u32, len: usize) -> Vec<u8> {
@@ -309,35 +326,38 @@ fn pack_bytes(bytes: &[u8]) -> Vec<u32> {
 
 #[test]
 fn cuda_whitespace_classify_all_spaces() {
-    let backend = live_dispatcher();
-    let bytes = b"    ";
-    let words = pack_bytes(bytes);
-    let cpu = reference_whitespace_classify_word(&words);
-    let gpu = run_whitespace_classify(&backend, &words);
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu[0], 0xF); // all 4 byte lanes whitespace.
+    with_live_backend("cuda_whitespace_classify_all_spaces", |backend| {
+        let bytes = b"    ";
+        let words = pack_bytes(bytes);
+        let cpu = reference_whitespace_classify_word(&words);
+        let gpu = run_whitespace_classify(backend, &words);
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu[0], 0xF); // all 4 byte lanes whitespace.
+    });
 }
 
 #[test]
 fn cuda_whitespace_classify_mixed_text() {
-    let backend = live_dispatcher();
-    // "ab c\nx\ty "  -  8 bytes: 2 words.
-    let bytes = b"ab c\nx\ty ";
-    let words = pack_bytes(bytes);
-    let cpu = reference_whitespace_classify_word(&words);
-    let gpu = run_whitespace_classify(&backend, &words);
-    assert_eq!(gpu, cpu);
+    with_live_backend("cuda_whitespace_classify_mixed_text", |backend| {
+        // "ab c\nx\ty "  -  8 bytes: 2 words.
+        let bytes = b"ab c\nx\ty ";
+        let words = pack_bytes(bytes);
+        let cpu = reference_whitespace_classify_word(&words);
+        let gpu = run_whitespace_classify(backend, &words);
+        assert_eq!(gpu, cpu);
+    });
 }
 
 #[test]
 fn cuda_whitespace_classify_no_whitespace() {
-    let backend = live_dispatcher();
-    let bytes = b"abcd";
-    let words = pack_bytes(bytes);
-    let cpu = reference_whitespace_classify_word(&words);
-    let gpu = run_whitespace_classify(&backend, &words);
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu[0], 0);
+    with_live_backend("cuda_whitespace_classify_no_whitespace", |backend| {
+        let bytes = b"abcd";
+        let words = pack_bytes(bytes);
+        let cpu = reference_whitespace_classify_word(&words);
+        let gpu = run_whitespace_classify(backend, &words);
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu[0], 0);
+    });
 }
 
 // ---------------------------------------------------------------------
@@ -367,24 +387,29 @@ fn run_xor_bind(backend: &CudaBackend, a: &[u32], b: &[u32]) -> Vec<u32> {
 
 #[test]
 fn cuda_hypervector_xor_bind_basic() {
-    let backend = live_dispatcher();
-    let a = vec![0xAAAA_AAAAu32, 0u32, 0xFFFF_FFFFu32];
-    let b = vec![0x5555_5555u32, 0xAAAA_AAAAu32, 0xFFFF_FFFFu32];
-    let cpu: Vec<u32> = a.iter().zip(b.iter()).map(|(x, y)| x ^ y).collect();
-    let gpu = run_xor_bind(&backend, &a, &b);
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu[0], 0xFFFF_FFFF);
-    assert_eq!(gpu[1], 0xAAAA_AAAA);
-    assert_eq!(gpu[2], 0); // self-XOR is zero.
+    with_live_backend("cuda_hypervector_xor_bind_basic", |backend| {
+        let a = vec![0xAAAA_AAAAu32, 0u32, 0xFFFF_FFFFu32];
+        let b = vec![0x5555_5555u32, 0xAAAA_AAAAu32, 0xFFFF_FFFFu32];
+        let cpu: Vec<u32> = a.iter().zip(b.iter()).map(|(x, y)| x ^ y).collect();
+        let gpu = run_xor_bind(backend, &a, &b);
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu[0], 0xFFFF_FFFF);
+        assert_eq!(gpu[1], 0xAAAA_AAAA);
+        assert_eq!(gpu[2], 0); // self-XOR is zero.
+    });
 }
 
 #[test]
 fn cuda_hypervector_xor_bind_zero_lhs_returns_rhs() {
-    let backend = live_dispatcher();
-    let a = vec![0u32; 4];
-    let b = vec![0xDEAD_BEEFu32, 0xCAFE_BABE, 0xFEEDu32, 0x1234_5678];
-    let cpu: Vec<u32> = a.iter().zip(b.iter()).map(|(x, y)| x ^ y).collect();
-    let gpu = run_xor_bind(&backend, &a, &b);
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, b);
+    with_live_backend(
+        "cuda_hypervector_xor_bind_zero_lhs_returns_rhs",
+        |backend| {
+            let a = vec![0u32; 4];
+            let b = vec![0xDEAD_BEEFu32, 0xCAFE_BABE, 0xFEEDu32, 0x1234_5678];
+            let cpu: Vec<u32> = a.iter().zip(b.iter()).map(|(x, y)| x ^ y).collect();
+            let gpu = run_xor_bind(backend, &a, &b);
+            assert_eq!(gpu, cpu);
+            assert_eq!(gpu, b);
+        },
+    );
 }
