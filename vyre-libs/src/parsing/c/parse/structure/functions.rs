@@ -77,9 +77,19 @@ pub fn c11_extract_functions(
             )],
         ),
     ]);
+    loop_body.extend([
+        Node::let_bind("function_body_scan_start", num_tokens.clone()),
+        Node::if_then(
+            Expr::ne(Expr::var("matching_rparen"), Expr::u32(u32::MAX)),
+            vec![Node::assign(
+                "function_body_scan_start",
+                Expr::add(Expr::var("matching_rparen"), Expr::u32(1)),
+            )],
+        ),
+    ]);
     loop_body.extend(emit_body_open_scan(
         tok_types,
-        Expr::add(Expr::var("matching_rparen"), Expr::u32(1)),
+        Expr::var("function_body_scan_start"),
         num_tokens.clone(),
         "body_open",
     ));
@@ -134,10 +144,10 @@ pub fn c11_extract_functions(
         ),
         Node::if_then(
             Expr::var("is_match"),
-            emit_atomic_record_append(
+            emit_sparse_record_write(
                 out_functions,
-                out_counts,
-                "record_idx",
+                t.clone(),
+                3,
                 vec![
                     t.clone(),
                     Expr::var("body_open"),
@@ -163,8 +173,23 @@ pub fn c11_extract_functions(
         4,
         false,
     );
-    let sparse_zero_pre_loop =
-        emit_sparse_record_zero(out_functions, t.clone(), num_tokens.clone(), 3);
+    let mut sparse_zero_pre_loop = vec![Node::if_then(
+        Expr::eq(t.clone(), Expr::u32(0)),
+        vec![Node::store(
+            out_counts,
+            Expr::u32(0),
+            Expr::mul(num_tokens.clone(), Expr::u32(3)),
+        )],
+    )];
+    sparse_zero_pre_loop.extend(emit_sparse_record_zero(
+        out_functions,
+        t.clone(),
+        num_tokens.clone(),
+        3,
+    ));
+    sparse_zero_pre_loop.push(Node::Barrier {
+        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+    });
     threaded_structure_program(
         "vyre-libs::parsing::c11_extract_functions",
         buffers,
@@ -172,4 +197,20 @@ pub fn c11_extract_functions(
         Expr::lt(t, Expr::sub(num_tokens, Expr::u32(2))),
         loop_body,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn function_body_scan_does_not_add_one_to_match_none() {
+        let source = include_str!("functions.rs");
+        assert!(
+            source.contains("function_body_scan_start"),
+            "Fix: function extraction must route body scans through a guarded start variable."
+        );
+        assert!(
+            !source.contains("emit_body_open_scan(\n        tok_types,\n        Expr::add(Expr::var(\"matching_rparen\"), Expr::u32(1))"),
+            "Fix: function extraction must not add one to MATCH_NONE before guarding the body scan."
+        );
+    }
 }

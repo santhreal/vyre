@@ -5,7 +5,6 @@ use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 pub(crate) struct IndexFacts {
     producer: FxHashMap<u32, usize>,
     consumer_count: FxHashMap<u32, usize>,
-    single_consumer: FxHashMap<u32, usize>,
     lit_u32: FxHashMap<u32, u32>,
 }
 
@@ -19,8 +18,6 @@ impl IndexFacts {
     pub(crate) fn new(body: &KernelBody) -> Self {
         let mut producer = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
         let mut consumer_count =
-            FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
-        let mut single_consumer =
             FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
         let mut lit_u32 = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
         for (idx, op) in body.ops.iter().enumerate() {
@@ -53,22 +50,17 @@ impl IndexFacts {
                 lit_u32.insert(result_id, value);
             }
         }
-        for (idx, op) in body.ops.iter().enumerate() {
+        for op in &body.ops {
             visit_value_operands(op, |operand| {
                 if !producer.contains_key(&operand) {
                     return;
                 }
                 *consumer_count.entry(operand).or_insert(0) += 1;
-                single_consumer
-                    .entry(operand)
-                    .and_modify(|existing| *existing = usize::MAX)
-                    .or_insert(idx);
             });
         }
         Self {
             producer,
             consumer_count,
-            single_consumer,
             lit_u32,
         }
     }
@@ -106,6 +98,60 @@ impl IndexFacts {
         let rhs = op.operands[1];
         let is_one = |id: u32| self.lit_u32.get(&id) == Some(&1);
         (lhs == prev_id && is_one(rhs)) || (rhs == prev_id && is_one(lhs))
+    }
+
+    pub(crate) fn index_is_multiple_of(
+        &self,
+        body: &KernelBody,
+        result_id: u32,
+        modulus: u32,
+    ) -> bool {
+        if modulus <= 1 {
+            return true;
+        }
+        self.index_mod(body, result_id, modulus, 0) == Some(0)
+    }
+
+    fn index_mod(
+        &self,
+        body: &KernelBody,
+        result_id: u32,
+        modulus: u32,
+        depth: u8,
+    ) -> Option<u32> {
+        if modulus == 0 || depth > 8 {
+            return None;
+        }
+        if let Some(value) = self.lit_u32.get(&result_id).copied() {
+            return Some(value % modulus);
+        }
+        let Some(&op_idx) = self.producer.get(&result_id) else {
+            return None;
+        };
+        let op = &body.ops[op_idx];
+        if op.operands.len() != 2 {
+            return None;
+        }
+        let lhs = op.operands[0];
+        let rhs = op.operands[1];
+        match op.kind {
+            KernelOpKind::BinOpKind(BinOp::Add | BinOp::WrappingAdd) => {
+                let lhs_mod = self.index_mod(body, lhs, modulus, depth + 1)?;
+                let rhs_mod = self.index_mod(body, rhs, modulus, depth + 1)?;
+                Some((lhs_mod + rhs_mod) % modulus)
+            }
+            KernelOpKind::BinOpKind(BinOp::Mul) => {
+                if self.lit_u32.get(&lhs).is_some_and(|value| value % modulus == 0)
+                    || self.lit_u32.get(&rhs).is_some_and(|value| value % modulus == 0)
+                {
+                    return Some(0);
+                }
+                let lhs_mod = self.index_mod(body, lhs, modulus, depth + 1)?;
+                let rhs_mod = self.index_mod(body, rhs, modulus, depth + 1)?;
+                Some((lhs_mod * rhs_mod) % modulus)
+            }
+            _ => None,
+        }
     }
 
     fn normalized_index(&self, body: &KernelBody, result_id: u32) -> Option<NormalizedIndex> {
@@ -179,14 +225,6 @@ impl IndexFacts {
         self.consumer_count.get(&result_id).copied().unwrap_or(0)
     }
 
-    pub(crate) fn single_consumer_idx(&self, result_id: u32) -> Option<usize> {
-        if self.result_use_count(result_id) == 1 {
-            self.single_consumer.get(&result_id).copied()
-        } else {
-            None
-        }
-        .filter(|idx| *idx != usize::MAX)
-    }
 }
 
 fn visit_value_operands(op: &KernelOp, mut visit: impl FnMut(u32)) {
@@ -470,5 +508,54 @@ mod tests {
         assert_eq!(facts.producer_idx(12), Some(0));
         assert_eq!(facts.result_use_count(12), 1);
         assert_eq!(facts.single_consumer_idx(12), Some(1));
+    }
+
+    #[test]
+    fn index_multiple_detects_dynamic_constant_stride_alignment() {
+        let body = KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![2],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                    operands: vec![99, 1],
+                    result: Some(10),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                    operands: vec![99, 2],
+                    result: Some(11),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![10, 3],
+                    result: Some(12),
+                },
+            ],
+            child_bodies: Vec::new(),
+            literals: vec![
+                LiteralValue::U32(4),
+                LiteralValue::U32(10),
+                LiteralValue::U32(1),
+            ],
+        };
+        let facts = IndexFacts::new(&body);
+        assert!(facts.index_is_multiple_of(&body, 10, 4));
+        assert!(facts.index_is_multiple_of(&body, 11, 2));
+        assert!(!facts.index_is_multiple_of(&body, 11, 4));
+        assert!(!facts.index_is_multiple_of(&body, 12, 2));
     }
 }

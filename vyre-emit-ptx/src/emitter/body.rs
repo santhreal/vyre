@@ -152,41 +152,8 @@ impl BodyCtx<'_> {
         facts: &EmitFacts,
         op_idx: usize,
     ) -> bool {
-        let Some(op) = body.ops.get(op_idx) else {
-            return false;
-        };
-        if !matches!(op.kind, KernelOpKind::BinOpKind(BinOp::Mul)) || op.operands.len() != 2 {
-            return false;
-        }
-        let Some(result_id) = op.result else {
-            return false;
-        };
-        let Some(consumer_idx) = facts.single_consumer_idx(result_id) else {
-            return false;
-        };
-        if consumer_idx <= op_idx {
-            return false;
-        }
-        let Some(consumer) = body.ops.get(consumer_idx) else {
-            return false;
-        };
-        if !matches!(
-            consumer.kind,
-            KernelOpKind::BinOpKind(BinOp::Add | BinOp::WrappingAdd)
-        ) || consumer.operands.len() != 2
-        {
-            return false;
-        }
-        if !consumer.operands.contains(&result_id) {
-            return false;
-        }
-        let Some(a) = self.operand_to_reg.get(&op.operands[0]).copied() else {
-            return false;
-        };
-        let Some(b) = self.operand_to_reg.get(&op.operands[1]).copied() else {
-            return false;
-        };
-        matches!(a.0, PtxType::U32 | PtxType::I32) && b.0 == a.0
+        let _ = (body, facts, op_idx);
+        false
     }
 
     fn emit_integer_mad_from_add(

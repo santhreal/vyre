@@ -110,7 +110,7 @@ pub use super::vast_kinds::{
     C_EXPR_SHAPE_STRIDE_U32,
 };
 
-const BUILD_VAST_OP_ID: &str = "vyre-libs::parsing::c11_build_vast_nodes";
+const BUILD_VAST_OP_ID: &str = "vyre-libs::parsing::c11_build_vast_nodes_v2";
 const PREHASH_VAST_IDENTIFIERS_OP_ID: &str = "vyre-libs::parsing::c11_prehash_vast_identifiers";
 const PRECOMPUTE_VAST_SCOPES_OP_ID: &str = "vyre-libs::parsing::c11_precompute_vast_scopes";
 const LINK_VAST_TYPEDEF_SYMBOLS_OP_ID: &str = "vyre-libs::parsing::c11_link_vast_typedef_symbols";

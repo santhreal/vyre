@@ -133,11 +133,11 @@ fn classify_typedef_vast_unfused(
         }
         scoped_vast_blob.to_vec()
     } else {
-        let annotate_key = super::stage_pipeline_cache_key(
-            "c11_annotate_typedef_names",
-            &[
-                haystack_len.max(1) as u64,
-                vast_count.max(1) as u64,
+    let annotate_key = super::stage_pipeline_cache_key(
+        "c11_annotate_typedef_names",
+        &[
+            haystack_len.max(1) as u64,
+            vast_count.max(1) as u64,
                 packed_haystack as u64,
                 global_typedef_count as u64,
             ],
@@ -150,6 +150,7 @@ fn classify_typedef_vast_unfused(
         } else {
             &annotate_normal_inputs
         };
+        scratch.annotate_outputs.clear();
         super::dispatch_borrowed_stage_cached_into(
             backend,
             annotate_key,
@@ -190,6 +191,7 @@ fn classify_typedef_vast_unfused(
     super::validate_internal_stage(&classify_prog, "c11_classify_vast_node_kinds")?;
     let previous_workgroup_override = cfg.workgroup_override;
     cfg.workgroup_override = Some(classify_prog.workgroup_size());
+    scratch.classify_outputs.clear();
     let classify_dispatch = super::dispatch_borrowed_stage_cached_into(
         backend,
         classify_key,
@@ -254,6 +256,7 @@ fn classify_typedef_vast_fused_or_unfused(
             } else {
                 &fusion_normal_inputs
             };
+            scratch.fused_outputs.clear();
             match super::dispatch_borrowed_cached_into(
                 backend,
                 &fused,

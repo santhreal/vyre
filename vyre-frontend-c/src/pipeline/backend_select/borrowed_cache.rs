@@ -87,6 +87,14 @@ pub(crate) fn dispatch_borrowed_stage_cached_into<F>(
 where
     F: FnOnce() -> Result<Program, String>,
 {
+    if backend.id() == "cuda" {
+        let program = build_program().map_err(|message| vyre::BackendError::DispatchFailed {
+            code: None,
+            message,
+        })?;
+        return backend.dispatch_borrowed_into(&program, inputs, config, outputs);
+    }
+
     #[allow(clippy::type_complexity)]
     static PIPELINES: OnceLock<
         Mutex<BoundedPipelineCache<BackendStagePipelineCacheKey, Arc<dyn CompiledPipeline>>>,
@@ -165,20 +173,33 @@ fn should_retry_stage_as_direct_cuda_dispatch(
     backend: &dyn VyreBackend,
     error: &vyre::BackendError,
 ) -> bool {
+    backend.id() == "cuda" && cuda_stage_error_should_retry_direct_dispatch(error)
+}
+
+fn cuda_stage_error_should_retry_direct_dispatch(error: &vyre::BackendError) -> bool {
     matches!(
         error,
         vyre::BackendError::DispatchFailed {
             code: Some(701),
             message
-        } if backend.id() == "cuda"
-            && (message.contains("cuGraphInstantiate")
-                || message.contains("CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES"))
+        } if message.contains("cuGraphInstantiate")
+            || message.contains("CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES")
+    ) || matches!(
+        error,
+        vyre::BackendError::DispatchFailed {
+            code: Some(716),
+            message
+        } if message.contains("cuda_graph fallback")
+            && message.contains("CUDA_ERROR_MISALIGNED_ADDRESS")
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{backend_pipeline_cache_key, stage_pipeline_cache_key};
+    use super::{
+        backend_pipeline_cache_key, cuda_stage_error_should_retry_direct_dispatch,
+        stage_pipeline_cache_key,
+    };
 
     #[test]
     fn stage_pipeline_cache_key_uses_128_bit_stage_and_param_identity() {
@@ -195,5 +216,28 @@ mod tests {
         assert_eq!(cuda.len(), 16);
         assert_eq!(cuda, backend_pipeline_cache_key("cuda"));
         assert_ne!(cuda, wgpu);
+    }
+
+    #[test]
+    fn cuda_stage_dispatch_bypasses_graph_cache_before_launch() {
+        let source = include_str!("borrowed_cache.rs");
+        assert!(
+            source.contains("if backend.id() == \"cuda\""),
+            "Fix: C frontend CUDA stage dispatch must bypass cached CUDA graph launch before a graph fault can poison the CUDA context."
+        );
+        assert!(
+            source.contains("return backend.dispatch_borrowed_into(&program, inputs, config, outputs);"),
+            "Fix: CUDA stage bypass must execute direct borrowed dispatch."
+        );
+    }
+
+    #[test]
+    fn cuda_stage_retry_covers_graph_fallback_misaligned_address() {
+        let error = vyre::BackendError::DispatchFailed {
+            code: Some(716),
+            message: "cuStreamSynchronize (cuda_graph fallback) failed with CUDA_ERROR_MISALIGNED_ADDRESS".to_string(),
+        };
+
+        assert!(cuda_stage_error_should_retry_direct_dispatch(&error));
     }
 }

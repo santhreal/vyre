@@ -1,7 +1,6 @@
 use std::fmt::Write as _;
 
 use smallvec::SmallVec;
-use vyre_foundation::ir::BinOp;
 use vyre_lower::{KernelBody, KernelOpKind};
 
 use super::facts::EmitFacts;
@@ -68,7 +67,7 @@ impl BodyCtx<'_> {
             scan_idx = next_idx + 1;
         }
 
-        truncate_vector_chain(chain)
+        align_vector_chain(body, facts, base_idx_id, chain)
     }
 
     pub(super) fn collect_vec_store_chain(
@@ -128,7 +127,7 @@ impl BodyCtx<'_> {
             scan_idx = next_idx + 1;
         }
 
-        truncate_vector_chain(chain)
+        align_vector_chain(body, facts, base_idx_id, chain)
     }
 
     pub(super) fn emit_vec_load_chain(
@@ -213,49 +212,7 @@ impl BodyCtx<'_> {
         chain: &[usize],
         skip: &mut [bool],
     ) -> Result<(), EmitError> {
-        let mut index_adds: SmallVec<[(usize, u32); 3]> = SmallVec::new();
-        for pair in chain.windows(2) {
-            let prev = &body.ops[pair[0]];
-            let next = &body.ops[pair[1]];
-            let prev_index = vector_index_operand(prev)?;
-            let next_index = vector_index_operand(next)?;
-            if !facts.is_index_plus_one(body, next_index, prev_index) {
-                continue;
-            }
-            let Some(add_idx) = facts.producer_idx(next_index) else {
-                continue;
-            };
-            index_adds.push((add_idx, next_index));
-        }
-        if index_adds.is_empty() {
-            return Ok(());
-        }
-        if index_adds.iter().any(|(idx, _)| {
-            !matches!(
-                body.ops.get(*idx).map(|op| &op.kind),
-                Some(KernelOpKind::BinOpKind(BinOp::Add) | KernelOpKind::Literal)
-            )
-        }) {
-            return Ok(());
-        }
-        let internal_use = |consumer_idx: usize| {
-            chain.contains(&consumer_idx) || index_adds.iter().any(|(idx, _)| *idx == consumer_idx)
-        };
-        for (_, result_id) in &index_adds {
-            for (consumer_idx, op) in body.ops.iter().enumerate() {
-                if internal_use(consumer_idx) {
-                    continue;
-                }
-                if op.operands.iter().any(|operand| operand == result_id) {
-                    return Ok(());
-                }
-            }
-        }
-        for (idx, _) in index_adds {
-            if let Some(slot) = skip.get_mut(idx) {
-                *slot = true;
-            }
-        }
+        let _ = (body, facts, chain, skip);
         Ok(())
     }
 }
@@ -272,22 +229,33 @@ fn truncate_vector_chain(mut chain: VectorChain) -> Result<Option<VectorChain>, 
     }
 }
 
+fn align_vector_chain(
+    body: &KernelBody,
+    facts: &EmitFacts,
+    base_idx_id: u32,
+    chain: VectorChain,
+) -> Result<Option<VectorChain>, EmitError> {
+    let Some(mut chain) = truncate_vector_chain(chain)? else {
+        return Ok(None);
+    };
+    if facts.index_is_multiple_of(body, base_idx_id, chain.len() as u32) {
+        return Ok(Some(chain));
+    }
+    if chain.len() >= PTX_VECTOR_WIDTH_V4 {
+        chain.truncate(PTX_VECTOR_WIDTH_V2);
+        if facts.index_is_multiple_of(body, base_idx_id, PTX_VECTOR_WIDTH_V2 as u32) {
+            return Ok(Some(chain));
+        }
+    }
+    Ok(None)
+}
+
 fn vector_load_mnemonic_parts(load_space: &str) -> Option<(&'static str, &'static str)> {
     match load_space {
         "global" => Some((PTX_VECTOR_LOAD_GLOBAL_PREFIX, "")),
         "global.nc" => Some((PTX_VECTOR_LOAD_GLOBAL_PREFIX, ".nc")),
         "shared" => Some((PTX_VECTOR_LOAD_SHARED_PREFIX, "")),
         _ => None,
-    }
-}
-
-fn vector_index_operand(op: &vyre_lower::KernelOp) -> Result<u32, EmitError> {
-    match op.kind {
-        KernelOpKind::LoadGlobal | KernelOpKind::LoadConstant => {
-            read_two_operands(op, "vector load").map(|(_, index)| index)
-        }
-        KernelOpKind::StoreGlobal => read_store_operands(op).map(|(_, index, _)| index),
-        _ => Err(EmitError::UnsupportedOp(op.clone())),
     }
 }
 
