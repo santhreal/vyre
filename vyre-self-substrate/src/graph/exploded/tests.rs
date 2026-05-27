@@ -1,4 +1,5 @@
 use super::*;
+use vyre_primitives::graph::exploded::build_cpu_reference;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::optimizer::dispatcher::oracle::CpuOracleDispatcher;
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};

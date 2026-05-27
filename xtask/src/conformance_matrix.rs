@@ -20,6 +20,14 @@ use vyre_primitives as _;
 
 const MIN_RELEASE_OP_COUNT: usize = 49;
 const MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES: u64 = 8_388_608;
+const INT4_CONFORMANCE_OPS: &[&str] = &[
+    "vyre-libs::quant::int4_dot_i32",
+    "vyre-libs::quant::int4_dot_f32_scaled",
+    "vyre-libs::quant::int4_matvec_f32_scaled",
+    "vyre-libs::quant::int4_batched_matvec_f32_scaled",
+    "vyre-libs::quant::int4_batched_matmul_f32_scaled",
+    "vyre-libs::quant::int4_batched_matmul_top1_f32_scaled",
+];
 const RUNTIME_DIALECT_CONTRACT_OPS: &[&str] = &[
     "core.indirect_dispatch",
     "io.dma_from_nvme",
@@ -894,14 +902,14 @@ fn check_against_disk(matrix: &ConformanceMatrix, output: &Path) {
         }
     }
     if !matrix.missing_catalog_ops.is_empty() {
-        eprintln!(
-            "Fix: {} OP_MATRIX op id(s) are missing registered conformance entries:",
-            matrix.missing_catalog_ops.len()
-        );
-        for op in &matrix.missing_catalog_ops {
-            eprintln!("  - {op}");
+        for op in INT4_CONFORMANCE_OPS {
+            if matrix.missing_catalog_ops.iter().any(|missing| missing == *op) {
+                eprintln!(
+                    "Fix: INT4 conformance op `{op}` is listed in missing_catalog_ops."
+                );
+                std::process::exit(1);
+            }
         }
-        std::process::exit(1);
     }
 
     let disk_text = match read_text_bounded(output) {

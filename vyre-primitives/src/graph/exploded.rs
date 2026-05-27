@@ -1649,8 +1649,8 @@ pub fn ifds_program_cache_key_from_program(
 fn loop_upper_bound(program: &Program, var: &str) -> Option<u32> {
     use vyre_foundation::transform::visit::walk_nodes;
 
-    let mut found = None;
-    walk_nodes(program, &mut |node| {
+    let mut found: Option<u32> = None;
+    walk_nodes(program, |node| {
         if let Node::Loop {
             var: loop_var,
             to,
@@ -1672,8 +1672,8 @@ fn upper_limit_for_var(program: &Program, var: &str) -> Option<u32> {
     use vyre_foundation::ir::BinOp;
     use vyre_foundation::transform::visit::walk_exprs;
 
-    let mut found = None;
-    walk_exprs(program, &mut |expr| {
+    let mut found: Option<u32> = None;
+    walk_exprs(program, |expr| {
         if let Expr::BinOp {
             op: BinOp::Lt,
             left,
