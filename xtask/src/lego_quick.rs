@@ -331,6 +331,7 @@ fn check_source_similarity(root: &Path) -> Vec<Finding> {
         20,
         0.97,
         512 * 1024,
+        false,
     ) {
         Ok(report) => report,
         Err(error) => {
