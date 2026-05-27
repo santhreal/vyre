@@ -76,6 +76,19 @@ impl Value {
         bytes
     }
 
+    /// Write this value into an existing fixed-width byte slot.
+    ///
+    /// For non-empty targets, this is equivalent to
+    /// `target.copy_from_slice(&self.to_bytes_width(target.len()))` but avoids
+    /// allocating a temporary vector on store-heavy reference paths. Empty
+    /// targets are a no-op because they cannot carry the variable-width
+    /// `to_bytes_width(0)` payload.
+    pub fn write_bytes_width_into(&self, target: &mut [u8]) {
+        target.fill(0);
+        let mut cursor = 0usize;
+        self.copy_raw_bytes_prefix(target, &mut cursor);
+    }
+
     /// Append this value encoded at the declared input width without
     /// allocating a temporary byte vector for the caller.
     ///
@@ -120,6 +133,27 @@ impl Value {
             debug_assert_eq!(out.len(), next_len);
         }
         Ok(())
+    }
+
+    fn copy_raw_bytes_prefix(&self, target: &mut [u8], cursor: &mut usize) {
+        match self {
+            Self::U32(value) => copy_bytes_prefix(&value.to_le_bytes(), target, cursor),
+            Self::I32(value) => copy_bytes_prefix(&value.to_le_bytes(), target, cursor),
+            Self::U64(value) => copy_bytes_prefix(&value.to_le_bytes(), target, cursor),
+            Self::Bool(value) => {
+                copy_bytes_prefix(&u32::from(*value).to_le_bytes(), target, cursor);
+            }
+            Self::Bytes(bytes) => copy_bytes_prefix(bytes, target, cursor),
+            Self::Float(value) => copy_bytes_prefix(&value.to_le_bytes(), target, cursor),
+            Self::Array(values) => {
+                for value in values {
+                    if *cursor >= target.len() {
+                        break;
+                    }
+                    value.copy_raw_bytes_prefix(target, cursor);
+                }
+            }
+        }
     }
 
     /// Try to interpret the value as the IR's scalar `u32` word.
@@ -322,6 +356,15 @@ fn extend_fixed_width(bytes: &[u8], declared_width: usize, out: &mut Vec<u8>) {
     let copied = bytes.len().min(declared_width);
     out.extend_from_slice(&bytes[..copied]);
     out.resize(out.len() + (declared_width - copied), 0);
+}
+
+fn copy_bytes_prefix(bytes: &[u8], target: &mut [u8], cursor: &mut usize) {
+    if *cursor >= target.len() {
+        return;
+    }
+    let len = (target.len() - *cursor).min(bytes.len());
+    target[*cursor..*cursor + len].copy_from_slice(&bytes[..len]);
+    *cursor += len;
 }
 
 fn f64_to_u32(value: f64) -> Option<u32> {
