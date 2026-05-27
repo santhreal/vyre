@@ -7,6 +7,7 @@
 use vyre_driver::BackendError;
 
 use crate::backend::allocations::{DeviceAllocation, HostTransferAllocations};
+use crate::backend::copy::aligned_async_copy_len;
 use crate::backend::launch_params::launch_param_byte_len;
 use crate::backend::CudaBackend;
 use crate::numeric::CUDA_NUMERIC;
@@ -24,7 +25,8 @@ pub(crate) fn upload_static_launch_params(
         "CUDA compiled-pipeline static parameter bytes",
         "CUDA compiled-pipeline static parameter upload",
     )?;
-    let allocation = backend.transient_pool.acquire(param_bytes)?;
+    let transfer_bytes = aligned_async_copy_len(param_bytes)?;
+    let allocation = backend.transient_pool.acquire(transfer_bytes)?;
     backend
         .telemetry
         .record_transient_allocation_bytes(CUDA_NUMERIC.usize_to_u64(
@@ -36,7 +38,7 @@ pub(crate) fn upload_static_launch_params(
     let upload_result = (|| {
         let stream = backend.launch_resources.acquire_stream()?;
         let result = (|| {
-            let param_host_ptr = host_transfers.push_u32_words(param_words)?;
+            let param_host_ptr = host_transfers.push_u32_words_padded(param_words, transfer_bytes)?;
             // SAFETY: FFI to libcuda.so. Pointer args were validated by the matching
             // alloc / store API; lifetimes are documented in the surrounding function.
             // cuda_check propagates non-success codes as BackendError.
@@ -44,7 +46,7 @@ pub(crate) fn upload_static_launch_params(
                 crate::backend::copy::h2d_async_checked(
                     allocation.ptr,
                     param_host_ptr,
-                    param_bytes,
+                    transfer_bytes,
                     stream.raw(),
                 )?;
             }
