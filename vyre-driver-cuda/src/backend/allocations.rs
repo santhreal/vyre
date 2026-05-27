@@ -93,6 +93,10 @@ impl DispatchAllocations {
         self.ptrs[index].ptr
     }
 
+    pub(crate) fn byte_len(&self, index: usize) -> usize {
+        self.ptrs[index].byte_len
+    }
+
     pub(crate) fn set_params(&mut self, allocation: DeviceAllocation) {
         self.params = allocation;
     }
@@ -156,6 +160,39 @@ impl PinnedHostAllocation {
         // copy_nonoverlapping's non-aliasing precondition holds.
         unsafe {
             std::ptr::copy_nonoverlapping(bytes.as_ptr(), self.ptr, bytes.len());
+        }
+        Ok(())
+    }
+
+    pub(crate) fn zero_range(
+        &mut self,
+        byte_offset: usize,
+        byte_len: usize,
+    ) -> Result<(), BackendError> {
+        let end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+            byte_offset,
+            byte_len,
+            self.byte_len,
+            || BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA pinned-host zero-fill overflowed usize at offset {byte_offset} len {byte_len}."
+                ),
+            },
+            |end| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA pinned-host zero-fill requested byte range [{byte_offset}..{end}) from a {} byte allocation.",
+                    self.byte_len
+                ),
+            },
+        )?;
+        if end == byte_offset {
+            return Ok(());
+        }
+        // SAFETY: checked range validation proves byte_offset..end lies
+        // inside this pinned-host allocation; &mut self prevents
+        // concurrent readers while the DMA padding tail is initialised.
+        unsafe {
+            std::ptr::write_bytes(self.ptr.add(byte_offset), 0, byte_len);
         }
         Ok(())
     }
@@ -433,6 +470,30 @@ impl HostTransferAllocations {
         Ok(ptr)
     }
 
+    pub(crate) fn push_upload_padded(
+        &mut self,
+        bytes: &[u8],
+        transfer_byte_len: usize,
+    ) -> Result<*const c_void, BackendError> {
+        if bytes.is_empty() {
+            return Ok(std::ptr::null());
+        }
+        if transfer_byte_len < bytes.len() {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA padded upload length {transfer_byte_len} is smaller than logical upload length {}.",
+                    bytes.len()
+                ),
+            });
+        }
+        let mut allocation = self.pool.acquire(transfer_byte_len)?;
+        allocation.copy_from_slice(bytes)?;
+        allocation.zero_range(bytes.len(), transfer_byte_len - bytes.len())?;
+        let ptr = allocation.as_ptr();
+        self.allocations.push(allocation);
+        Ok(ptr)
+    }
+
     pub(crate) fn push_u32_words(&mut self, words: &[u32]) -> Result<*const c_void, BackendError> {
         let byte_len = std::mem::size_of_val(words);
         if byte_len == 0 {
@@ -440,6 +501,30 @@ impl HostTransferAllocations {
         }
         let mut allocation = self.pool.acquire(byte_len)?;
         allocation.copy_u32_le_words(words)?;
+        let ptr = allocation.as_ptr();
+        self.allocations.push(allocation);
+        Ok(ptr)
+    }
+
+    pub(crate) fn push_u32_words_padded(
+        &mut self,
+        words: &[u32],
+        transfer_byte_len: usize,
+    ) -> Result<*const c_void, BackendError> {
+        let byte_len = std::mem::size_of_val(words);
+        if byte_len == 0 {
+            return Ok(std::ptr::null());
+        }
+        if transfer_byte_len < byte_len {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA padded parameter upload length {transfer_byte_len} is smaller than logical parameter length {byte_len}."
+                ),
+            });
+        }
+        let mut allocation = self.pool.acquire(transfer_byte_len)?;
+        allocation.copy_u32_le_words(words)?;
+        allocation.zero_range(byte_len, transfer_byte_len - byte_len)?;
         let ptr = allocation.as_ptr();
         self.allocations.push(allocation);
         Ok(ptr)
@@ -454,6 +539,36 @@ impl HostTransferAllocations {
             return Ok(std::ptr::null_mut());
         }
         let mut allocation = self.pool.acquire(byte_len)?;
+        let ptr = allocation.as_mut_ptr();
+        let index = self.allocations.len();
+        self.allocations.push(allocation);
+        self.outputs.push(HostOutputTransfer {
+            allocation_index: Some(index),
+            byte_len,
+        });
+        Ok(ptr)
+    }
+
+    pub(crate) fn push_output_padded(
+        &mut self,
+        byte_len: usize,
+        transfer_byte_len: usize,
+    ) -> Result<*mut c_void, BackendError> {
+        if byte_len == 0 {
+            self.outputs.push(HostOutputTransfer {
+                allocation_index: None,
+                byte_len,
+            });
+            return Ok(std::ptr::null_mut());
+        }
+        if transfer_byte_len < byte_len {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA padded output readback length {transfer_byte_len} is smaller than logical output length {byte_len}."
+                ),
+            });
+        }
+        let mut allocation = self.pool.acquire(transfer_byte_len)?;
         let ptr = allocation.as_mut_ptr();
         let index = self.allocations.len();
         self.allocations.push(allocation);

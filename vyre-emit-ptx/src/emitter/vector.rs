@@ -128,7 +128,45 @@ impl BodyCtx<'_> {
             scan_idx = next_idx + 1;
         }
 
-        align_vector_chain(body, facts, base_idx_id, chain)
+        let Some(chain) = align_vector_chain(body, facts, base_idx_id, chain)? else {
+            return Ok(None);
+        };
+        if !self.store_chain_values_are_vector_safe(body, facts, &chain)? {
+            return Ok(None);
+        }
+        Ok(Some(chain))
+    }
+
+    fn store_chain_values_are_vector_safe(
+        &self,
+        body: &KernelBody,
+        facts: &EmitFacts,
+        chain: &[usize],
+    ) -> Result<bool, EmitError> {
+        let mut load_producers: SmallVec<[usize; 4]> = SmallVec::new();
+        for &op_idx in chain {
+            let (_, _, value_id) = read_store_operands(&body.ops[op_idx])?;
+            let Some(producer_idx) = facts.producer_idx(value_id) else {
+                continue;
+            };
+            if is_vector_load_op(&body.ops[producer_idx].kind) {
+                load_producers.push(producer_idx);
+            }
+        }
+        if load_producers.is_empty() {
+            return Ok(true);
+        }
+        if load_producers.len() != chain.len() {
+            return Ok(false);
+        }
+        let Some(load_chain) = self.collect_vec_load_chain(body, facts, load_producers[0])? else {
+            return Ok(false);
+        };
+        Ok(load_chain.len() >= load_producers.len()
+            && load_producers
+                .iter()
+                .zip(load_chain.iter())
+                .all(|(producer, fused)| producer == fused))
     }
 
     pub(super) fn emit_vec_load_chain(
@@ -308,7 +346,7 @@ fn index_may_be_aligned_for_vector_width(
     base_idx_id: u32,
     width: u32,
 ) -> bool {
-    matches!(facts.index_modulo(body, base_idx_id, width), None | Some(0))
+    matches!(facts.index_modulo(body, base_idx_id, width), Some(0))
 }
 
 fn vector_load_mnemonic_parts(load_space: &str) -> Option<(&'static str, &'static str)> {

@@ -14,6 +14,17 @@ struct NormalizedIndex {
     offset: u32,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct AffineModulo {
+    root: Option<u32>,
+    coeff: u32,
+    offset: u32,
+}
+
+const AFFINE_ROOT_GLOBAL_INVOCATION: u32 = u32::MAX - 2;
+const AFFINE_ROOT_LOCAL_INVOCATION: u32 = u32::MAX - 5;
+const AFFINE_ROOT_WORKGROUP: u32 = u32::MAX - 8;
+
 impl IndexFacts {
     pub(crate) fn new(body: &KernelBody) -> Self {
         let mut producer = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
@@ -135,45 +146,76 @@ impl IndexFacts {
         if modulus == 0 || depth > 8 {
             return None;
         }
+        let affine = self.affine_mod(body, result_id, modulus, depth)?;
+        return (affine.coeff == 0).then_some(affine.offset % modulus);
+    }
+
+    fn affine_mod(
+        &self,
+        body: &KernelBody,
+        result_id: u32,
+        modulus: u32,
+        depth: u8,
+    ) -> Option<AffineModulo> {
+        if modulus == 0 || depth > 8 {
+            return None;
+        }
         if let Some(value) = self.lit_u32.get(&result_id).copied() {
-            return Some(value % modulus);
+            return Some(AffineModulo {
+                root: None,
+                coeff: 0,
+                offset: value % modulus,
+            });
         }
         let Some(&op_idx) = self.producer.get(&result_id) else {
-            return None;
+            return Some(AffineModulo {
+                root: Some(result_id),
+                coeff: 1 % modulus,
+                offset: 0,
+            });
         };
         let op = &body.ops[op_idx];
         if op.operands.len() != 2 {
-            return None;
+            return Some(AffineModulo {
+                root: Some(symbolic_affine_root(op, result_id)),
+                coeff: 1 % modulus,
+                offset: 0,
+            });
         }
         let lhs = op.operands[0];
         let rhs = op.operands[1];
         match op.kind {
             KernelOpKind::BinOpKind(BinOp::Add | BinOp::WrappingAdd) => {
-                let lhs_mod = self.index_mod(body, lhs, modulus, depth + 1)?;
-                let rhs_mod = self.index_mod(body, rhs, modulus, depth + 1)?;
-                Some((lhs_mod + rhs_mod) % modulus)
+                let lhs_mod = self.affine_mod(body, lhs, modulus, depth + 1)?;
+                let rhs_mod = self.affine_mod(body, rhs, modulus, depth + 1)?;
+                combine_affine_add(lhs_mod, rhs_mod, modulus)
             }
             KernelOpKind::BinOpKind(BinOp::Mul) => {
-                if self.lit_u32.get(&lhs).is_some_and(|value| value % modulus == 0)
-                    || self.lit_u32.get(&rhs).is_some_and(|value| value % modulus == 0)
-                {
-                    return Some(0);
+                if let Some(value) = self.lit_u32.get(&lhs).copied() {
+                    let rhs_mod = self.affine_mod(body, rhs, modulus, depth + 1)?;
+                    return Some(scale_affine(rhs_mod, value, modulus));
                 }
-                let lhs_mod = self.index_mod(body, lhs, modulus, depth + 1)?;
-                let rhs_mod = self.index_mod(body, rhs, modulus, depth + 1)?;
-                Some((lhs_mod * rhs_mod) % modulus)
+                if let Some(value) = self.lit_u32.get(&rhs).copied() {
+                    let lhs_mod = self.affine_mod(body, lhs, modulus, depth + 1)?;
+                    return Some(scale_affine(lhs_mod, value, modulus));
+                }
+                Some(AffineModulo {
+                    root: Some(symbolic_affine_root(op, result_id)),
+                    coeff: 1 % modulus,
+                    offset: 0,
+                })
             }
             KernelOpKind::BinOpKind(BinOp::Shl) => {
                 let shift = self.lit_u32.get(&rhs).copied()? & 31;
                 let factor = 1u32 << shift;
-                if factor % modulus == 0 {
-                    return Some(0);
-                }
-                let lhs_mod = self.index_mod(body, lhs, modulus, depth + 1)?;
-                Some(((u64::from(lhs_mod) * u64::from(factor % modulus)) % u64::from(modulus))
-                    as u32)
+                let lhs_mod = self.affine_mod(body, lhs, modulus, depth + 1)?;
+                Some(scale_affine(lhs_mod, factor, modulus))
             }
-            _ => None,
+            _ => Some(AffineModulo {
+                root: Some(symbolic_affine_root(op, result_id)),
+                coeff: 1 % modulus,
+                offset: 0,
+            }),
         }
     }
 
@@ -327,6 +369,43 @@ fn visit_value_operands(op: &KernelOp, mut visit: impl FnMut(u32)) {
                 visit(operand);
             }
         }
+    }
+}
+
+fn combine_affine_add(
+    lhs: AffineModulo,
+    rhs: AffineModulo,
+    modulus: u32,
+) -> Option<AffineModulo> {
+    let root = match (lhs.root, rhs.root) {
+        (None, root) | (root, None) => root,
+        (Some(left), Some(right)) if left == right => Some(left),
+        _ => return None,
+    };
+    Some(AffineModulo {
+        root,
+        coeff: ((u64::from(lhs.coeff) + u64::from(rhs.coeff)) % u64::from(modulus)) as u32,
+        offset: ((u64::from(lhs.offset) + u64::from(rhs.offset)) % u64::from(modulus)) as u32,
+    })
+}
+
+fn scale_affine(value: AffineModulo, factor: u32, modulus: u32) -> AffineModulo {
+    AffineModulo {
+        root: value.root,
+        coeff: ((u64::from(value.coeff) * u64::from(factor % modulus)) % u64::from(modulus))
+            as u32,
+        offset: ((u64::from(value.offset) * u64::from(factor % modulus)) % u64::from(modulus))
+            as u32,
+    }
+}
+
+fn symbolic_affine_root(op: &KernelOp, result_id: u32) -> u32 {
+    let axis = op.operands.first().copied().unwrap_or(0).min(2);
+    match op.kind {
+        KernelOpKind::GlobalInvocationId => AFFINE_ROOT_GLOBAL_INVOCATION + axis,
+        KernelOpKind::LocalInvocationId => AFFINE_ROOT_LOCAL_INVOCATION + axis,
+        KernelOpKind::WorkgroupId => AFFINE_ROOT_WORKGROUP + axis,
+        _ => result_id,
     }
 }
 

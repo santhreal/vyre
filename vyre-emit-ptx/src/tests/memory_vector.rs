@@ -2,7 +2,7 @@
 use super::*;
 
 fn dynamic_reassociated_vector_load_kernel(seed: u32) -> KernelDescriptor {
-    let stride = seed.wrapping_mul(13).wrapping_add(4) | 1;
+    let stride = seed.wrapping_mul(13).wrapping_add(1) << 2;
     two_slot_u32_kernel(
         "dynamic_reassociated_vec_load",
         vec![
@@ -93,7 +93,7 @@ fn dynamic_reassociated_vector_load_kernel(seed: u32) -> KernelDescriptor {
 }
 
 fn dynamic_reassociated_vector_store_kernel(seed: u32) -> KernelDescriptor {
-    let stride = seed.wrapping_mul(17).wrapping_add(8) | 1;
+    let stride = seed.wrapping_mul(17).wrapping_add(2) << 2;
     let value_base = 0x1000_0000_u32.wrapping_add(seed.rotate_left(seed % 31));
     two_slot_u32_kernel(
         "dynamic_reassociated_vec_store",
@@ -217,6 +217,131 @@ fn dynamic_reassociated_vector_store_kernel(seed: u32) -> KernelDescriptor {
     )
 }
 
+fn dynamic_misaligned_gather_to_vector_store_kernel() -> KernelDescriptor {
+    two_slot_u32_kernel(
+        "dynamic_misaligned_gather_to_vec_store",
+        vec![
+            KernelOp {
+                kind: KernelOpKind::LocalInvocationId,
+                operands: vec![0],
+                result: Some(0),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![0],
+                result: Some(1),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![1],
+                result: Some(2),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                operands: vec![0, 1],
+                result: Some(3),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![2],
+                result: Some(4),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                operands: vec![0, 4],
+                result: Some(5),
+            },
+            KernelOp {
+                kind: KernelOpKind::LoadGlobal,
+                operands: vec![0, 3],
+                result: Some(6),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![3, 2],
+                result: Some(7),
+            },
+            KernelOp {
+                kind: KernelOpKind::LoadGlobal,
+                operands: vec![0, 7],
+                result: Some(8),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![3],
+                result: Some(9),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![3, 9],
+                result: Some(10),
+            },
+            KernelOp {
+                kind: KernelOpKind::LoadGlobal,
+                operands: vec![0, 10],
+                result: Some(11),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![4],
+                result: Some(12),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![3, 12],
+                result: Some(13),
+            },
+            KernelOp {
+                kind: KernelOpKind::LoadGlobal,
+                operands: vec![0, 13],
+                result: Some(14),
+            },
+            KernelOp {
+                kind: KernelOpKind::StoreGlobal,
+                operands: vec![1, 5, 6],
+                result: None,
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![5, 2],
+                result: Some(15),
+            },
+            KernelOp {
+                kind: KernelOpKind::StoreGlobal,
+                operands: vec![1, 15, 8],
+                result: None,
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![5, 9],
+                result: Some(16),
+            },
+            KernelOp {
+                kind: KernelOpKind::StoreGlobal,
+                operands: vec![1, 16, 11],
+                result: None,
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![5, 12],
+                result: Some(17),
+            },
+            KernelOp {
+                kind: KernelOpKind::StoreGlobal,
+                operands: vec![1, 17, 14],
+                result: None,
+            },
+        ],
+        vec![
+            LiteralValue::U32(5),
+            LiteralValue::U32(1),
+            LiteralValue::U32(4),
+            LiteralValue::U32(2),
+            LiteralValue::U32(3),
+        ],
+    )
+}
+
 #[test]
 fn emit_fuses_four_adjacent_u32_loads_to_ptx_vector_load() {
     let s = emit(&two_slot_u32_kernel(
@@ -299,6 +424,27 @@ fn generated_dynamic_reassociated_load_indices_fuse_to_v4() {
             "seed {seed} must not leave scalar data loads after v4 load fusion:\n{s}"
         );
     }
+}
+
+#[test]
+fn misaligned_scalar_gather_values_do_not_fuse_to_vector_store() {
+    let s = emit(&dynamic_misaligned_gather_to_vector_store_kernel()).unwrap();
+    assert!(
+        !s.contains("ld.global.nc.v4.u32") && !s.contains("ld.global.v4.u32"),
+        "Fix: misaligned dynamic gather must stay scalar on the load side.\n{s}"
+    );
+    assert!(
+        !s.contains("st.global.v2.u32") && !s.contains("st.global.v4.u32"),
+        "Fix: values produced by a scalarized misaligned gather must not be repacked into a vector store on live CUDA.\n{s}"
+    );
+    assert!(
+        s.matches("ld.global.u32").count() + s.matches("ld.global.nc.u32").count() >= 4,
+        "Fix: misaligned gather fixture must emit scalar loads.\n{s}"
+    );
+    assert!(
+        s.matches("st.global.u32").count() >= 4,
+        "Fix: misaligned gather fixture must emit scalar stores.\n{s}"
+    );
 }
 
 #[test]
