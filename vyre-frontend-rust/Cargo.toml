@@ -18,7 +18,7 @@ vyre = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-primitives = { workspace = true }
-vyre-libs = { workspace = true }
+vyre-libs = { workspace = true, features = ["rust-parser"] }
 vyre-runtime = { workspace = true }
 external-dataflow-engine = { workspace = true }
 

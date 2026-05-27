@@ -1,13 +1,12 @@
 //! GPU DFA lexer pipeline for Rust source text.
 //!
 //! Reuses `vyre-primitives::text` byte-classifiers and the sparse-dispatch
-//! pattern proven in the C11 lexer. Rust is simpler than C at the lexing
-//! layer: no preprocessor, no digraphs, no trigraphs, no line-continuation,
-//! but adds raw strings, nested block comments, and format-string literals.
+//! pattern proven in the C11 lexer.  The CPU reference (`core::lex`)
+//! is validated token-for-token against `rustc_lexer`.
 
-/// Token-id constants (`RUST_TOK_*`) shared by every Rust-parser stage.
+/// Token constants and predicates.
 pub mod tokens;
-/// Post-lex keyword promotion (identifier → keyword token id).
+/// Post-lex keyword promotion.
 pub mod keyword;
-/// Maximally-munching DFA-driven lexer kernel.
+/// Lexer kernels (CPU reference + GPU plan builder).
 pub mod lexer;

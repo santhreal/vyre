@@ -1,50 +1,37 @@
 //! Public API entry points.
 
-use vyre_libs::parsing::rust::lex::lexer::core::Token;
-use vyre_libs::parsing::rust::parse::{Module, ParseError};
+use vyre_libs::parsing::rust::lex::lexer::core::lex;
+use vyre_libs::parsing::rust::parse::Module;
 
-use crate::RustFrontendError;
+use crate::{RustFrontendError, Token};
 
 /// Result of parsing a Rust source file.
 #[derive(Debug, Clone)]
 pub struct ParseSummary {
     /// The parsed module AST.
     pub module: Module,
-    /// Number of tokens in the source.
+    /// Number of tokens.
     pub token_count: usize,
-    /// Whether the GPU fast-path was used for lexing.
+    /// Whether GPU fast-path was used for lexing.
     pub gpu_lex: bool,
 }
 
 /// Parse Rust source bytes into a `ParseSummary`.
 ///
-/// This is the primary entry point for v0.0.1.  It:
 /// 1. Lexes the source (GPU if available, CPU reference otherwise).
-/// 2. Validates the token stream against `rustc_lexer` in test builds.
-/// 3. Parses the token stream into the nano-subset AST.
-///
-/// TODO(v0.1.0): GPU parser path.
+/// 2. Parses the token stream into the nano-subset AST.
 pub fn parse_rust_bytes(source: &[u8]) -> Result<ParseSummary, RustFrontendError> {
-    // Step 1: lex
-    let tokens = lex_source(source)?;
-
-    // Step 2: parse
-    let module = parse_tokens(&tokens)?;
-
+    let tokens = lex(source).map_err(RustFrontendError::Lex)?;
+    let module = parse_tokens(source, &tokens)?;
     Ok(ParseSummary {
         token_count: tokens.len(),
         module,
-        gpu_lex: false, // TODO: probe GPU backend
+        gpu_lex: false,
     })
 }
 
-fn lex_source(source: &[u8]) -> Result<Vec<Token>, RustFrontendError> {
-    vyre_libs::parsing::rust::lex::lexer::core::lex(source)
-        .map_err(RustFrontendError::Lex)
-}
-
-fn parse_tokens(tokens: &[Token]) -> Result<Module, RustFrontendError> {
-    vyre_libs::parsing::rust::parse::parse(tokens)
+fn parse_tokens(source: &[u8], tokens: &[Token]) -> Result<Module, RustFrontendError> {
+    vyre_libs::parsing::rust::parse::parse(source, tokens)
         .map_err(|e| RustFrontendError::Parse {
             message: e.message,
             token_index: e.token_index,
