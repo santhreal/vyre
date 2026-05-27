@@ -24,6 +24,7 @@ struct Config {
     min_score: f64,
     max_file_bytes: u64,
     fail_on_findings: bool,
+    include_untracked: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -68,6 +69,7 @@ pub(crate) fn run(args: &[String]) {
         config.top_n,
         config.min_score,
         config.max_file_bytes,
+        config.include_untracked,
     ) {
         Ok(report) => report,
         Err(error) => {
@@ -129,8 +131,14 @@ pub(crate) fn find_similar_sources(
     top_n: usize,
     min_score: f64,
     max_file_bytes: u64,
+    include_untracked: bool,
 ) -> Result<SourceSimilarityReport, String> {
     let files = collect_rust_files(roots, max_file_bytes)?;
+    let files = if include_untracked {
+        files
+    } else {
+        filter_to_tracked_rust_files_if_git(roots, files)?
+    };
     let fingerprints = fingerprint_files(&files);
     let pairs = score_pairs(&fingerprints, top_n, min_score);
     let findings = pairs
@@ -161,6 +169,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut min_score = DEFAULT_MIN_SCORE;
     let mut max_file_bytes = DEFAULT_MAX_FILE_BYTES;
     let mut fail_on_findings = false;
+    let mut include_untracked = false;
     let mut index = 2usize;
     while index < args.len() {
         match args[index].as_str() {
@@ -210,6 +219,9 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
             "--fail-on-findings" | "--check" => {
                 fail_on_findings = true;
             }
+            "--include-untracked" => {
+                include_untracked = true;
+            }
             "--help" | "-h" => {
                 print_usage();
                 process::exit(0);
@@ -227,13 +239,14 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
         min_score,
         max_file_bytes,
         fail_on_findings,
+        include_untracked,
     })
 }
 
 fn print_usage() {
     eprintln!(
-        "USAGE:\n  cargo_full run --bin xtask -- source-similar [--root PATH] [--top N] [--min SCORE] [--max-file-bytes BYTES] [--fail-on-findings]\n\n\
-         Defaults scan Rust files under the Vyre workspace source roots and report high-confidence renamed/forked source skeletons."
+        "USAGE:\n  cargo_full run --bin xtask -- source-similar [--root PATH] [--top N] [--min SCORE] [--max-file-bytes BYTES] [--fail-on-findings] [--include-untracked]\n\n\
+         Defaults scan tracked Rust files under the Vyre workspace source roots and report high-confidence renamed/forked source skeletons."
     );
 }
 
@@ -276,6 +289,83 @@ fn collect_rust_files(roots: &[PathBuf], max_file_bytes: u64) -> Result<Vec<Path
     }
     files.sort();
     Ok(files)
+}
+
+fn filter_to_tracked_rust_files_if_git(
+    roots: &[PathBuf],
+    files: Vec<PathBuf>,
+) -> Result<Vec<PathBuf>, String> {
+    let git_roots = git_roots_for(roots);
+    if git_roots.is_empty() {
+        return Ok(files);
+    }
+    let mut tracked = HashSet::new();
+    for git_root in &git_roots {
+        tracked.extend(tracked_rust_files(git_root)?);
+    }
+    Ok(files
+        .into_iter()
+        .filter(|path| {
+            let normalized = normalize_existing_path(path);
+            !is_under_any(&normalized, &git_roots) || tracked.contains(&normalized)
+        })
+        .collect())
+}
+
+fn git_roots_for(roots: &[PathBuf]) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    let mut seen = HashSet::new();
+    for root in roots {
+        let output = process::Command::new("git")
+            .args(["-C", &root.to_string_lossy(), "rev-parse", "--show-toplevel"])
+            .output();
+        let Ok(output) = output else {
+            continue;
+        };
+        if !output.status.success() {
+            continue;
+        }
+        let text = String::from_utf8_lossy(&output.stdout);
+        let normalized = normalize_existing_path(Path::new(text.trim()));
+        if seen.insert(normalized.clone()) {
+            out.push(normalized);
+        }
+    }
+    out
+}
+
+fn tracked_rust_files(git_root: &Path) -> Result<HashSet<PathBuf>, String> {
+    let output = process::Command::new("git")
+        .args(["-C", &git_root.to_string_lossy(), "ls-files", "-z", "--", "*.rs"])
+        .output()
+        .map_err(|error| {
+            format!(
+                "could not list tracked Rust files under `{}`: {error}",
+                git_root.display()
+            )
+        })?;
+    if !output.status.success() {
+        return Err(format!(
+            "git ls-files failed under `{}`: {}",
+            git_root.display(),
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+    Ok(output
+        .stdout
+        .split(|byte| *byte == 0)
+        .filter(|entry| !entry.is_empty())
+        .map(|entry| git_root.join(String::from_utf8_lossy(entry).as_ref()))
+        .map(|path| normalize_existing_path(&path))
+        .collect())
+}
+
+fn is_under_any(path: &Path, roots: &[PathBuf]) -> bool {
+    roots.iter().any(|root| path.starts_with(root))
+}
+
+fn normalize_existing_path(path: &Path) -> PathBuf {
+    fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
 fn collect_rust_files_recursive(
@@ -689,7 +779,49 @@ mod tests {
         ];
         let config = parse_args(&args).expect("check args");
         assert!(config.fail_on_findings);
+        assert!(!config.include_untracked);
         assert_eq!(config.min_score, 0.95);
+    }
+
+    #[test]
+    fn parse_args_accepts_untracked_opt_in_for_exploratory_scans() {
+        let args = vec![
+            "xtask".to_string(),
+            "source-similar".to_string(),
+            "--include-untracked".to_string(),
+        ];
+        let config = parse_args(&args).expect("include untracked args");
+        assert!(config.include_untracked);
+    }
+
+    #[test]
+    fn git_repo_scans_tracked_files_by_default() {
+        let dir = tempfile::TempDir::new().expect("tempdir");
+        process::Command::new("git")
+            .args(["init"])
+            .current_dir(dir.path())
+            .output()
+            .expect("git init");
+        let body = "pub fn alpha(input: &[u32]) -> u32 {\n    let mut acc = 0;\n"
+            .to_string()
+            + &"    for value in input { acc = acc.wrapping_add(*value); }\n".repeat(24)
+            + "    acc\n}\n";
+        fs::write(dir.path().join("tracked.rs"), &body).expect("tracked fixture");
+        fs::write(dir.path().join("untracked.rs"), &body).expect("untracked fixture");
+        process::Command::new("git")
+            .args(["add", "tracked.rs"])
+            .current_dir(dir.path())
+            .output()
+            .expect("git add");
+
+        let roots = vec![dir.path().to_path_buf()];
+        let tracked_only = find_similar_sources(&roots, 10, 0.50, 64 * 1024, false)
+            .expect("tracked scan");
+        let with_untracked = find_similar_sources(&roots, 10, 0.50, 64 * 1024, true)
+            .expect("untracked scan");
+
+        assert_eq!(tracked_only.scanned_files, 1);
+        assert_eq!(with_untracked.scanned_files, 2);
     }
 
     #[test]

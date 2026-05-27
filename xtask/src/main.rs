@@ -106,7 +106,7 @@ fn print_help() {
            lego-audit                          Deeper LEGO-block enforcement (no-reinvention, depth-of-composition, primitive coverage, chain coverage)\n\
            lego-quick [--all] [--source-similar] Fast pre-commit gate plus optional source-dedup scan\n\
            whats-similar (--op-id <id>|--all) Pre-write/all-pairs duplicate query by IR shape\n\
-           source-similar [--root PATH] [--check] Repo-wide Rust source duplicate scanner\n\
+           source-similar [--root PATH] [--check] [--include-untracked] Repo-wide Rust source duplicate scanner\n\
            hot-path-scan [--strict]            Scan files in HOT_PATHS.toml for clone/alloc/lock patterns\n\
            test-matrix [--output PATH]         Generate Vyre/Weir test architecture evidence\n\
            lint-shape-tests [--strict]         Scan test modules for shape-only assertions\n\
