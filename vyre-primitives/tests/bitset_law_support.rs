@@ -1,3 +1,5 @@
+//! Shared property-test helpers for bitset law integration tests.
+
 #![allow(unused_macros)]
 
 pub(crate) fn manual_bitset_binary(
