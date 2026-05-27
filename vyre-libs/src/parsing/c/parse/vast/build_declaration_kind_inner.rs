@@ -23,7 +23,8 @@ use vyre::ir::{Expr, Node};
 use super::build::{
     emit_declaration_kind_result_assignment, emit_identifier_source_hash_for_index,
     emit_visible_typedef_name_for_index, vast_bounded_row_kind_expr, vast_row_base_expr,
-    vast_row_field_expr, vast_row_kind_expr,
+    vast_prior_row_kind_expr, vast_row_field_expr, vast_row_kind_from_base_expr,
+    vast_row_parent_from_base_expr,
 };
 use super::helpers::*;
 use super::*;
@@ -115,10 +116,13 @@ pub(super) fn emit_declaration_kind_for_index_inner(
     vec![
         Node::let_bind(out_name, Expr::u32(0)),
         Node::let_bind(&base, vast_row_base_expr(idx.clone())),
-        Node::let_bind(&kind, Expr::load(vast_nodes, Expr::var(&base))),
+        Node::let_bind(
+            &kind,
+            vast_row_kind_from_base_expr(vast_nodes, Expr::var(&base)),
+        ),
         Node::let_bind(
             &parent_idx,
-            Expr::load(vast_nodes, Expr::add(Expr::var(&base), Expr::u32(1))),
+            vast_row_parent_from_base_expr(vast_nodes, Expr::var(&base)),
         ),
         Node::let_bind(
             &parent_kind,
@@ -137,9 +141,9 @@ pub(super) fn emit_declaration_kind_for_index_inner(
             Expr::select(
                 Expr::and(
                     Expr::lt(Expr::var(&parent_idx), Expr::var("annot_num_nodes")),
-                    Expr::gt(Expr::var(&parent_idx), Expr::u32(0)),
+                    Expr::ge(Expr::var(&parent_idx), Expr::u32(1)),
                 ),
-                vast_row_kind_expr(vast_nodes, Expr::sub(Expr::var(&parent_idx), Expr::u32(1))),
+                vast_prior_row_kind_expr(vast_nodes, Expr::var(&parent_idx), 1),
                 Expr::u32(SENTINEL),
             ),
         ),
@@ -148,9 +152,9 @@ pub(super) fn emit_declaration_kind_for_index_inner(
             Expr::select(
                 Expr::and(
                     Expr::lt(Expr::var(&parent_idx), Expr::var("annot_num_nodes")),
-                    Expr::gt(Expr::var(&parent_idx), Expr::u32(1)),
+                    Expr::ge(Expr::var(&parent_idx), Expr::u32(2)),
                 ),
-                vast_row_kind_expr(vast_nodes, Expr::sub(Expr::var(&parent_idx), Expr::u32(2))),
+                vast_prior_row_kind_expr(vast_nodes, Expr::var(&parent_idx), 2),
                 Expr::u32(SENTINEL),
             ),
         ),
@@ -168,13 +172,16 @@ pub(super) fn emit_declaration_kind_for_index_inner(
                     ),
                     Node::let_bind(
                         &parent_aggregate_kind,
-                        Expr::load(vast_nodes, Expr::var(&parent_aggregate_base)),
+                        vast_row_kind_from_base_expr(
+                            vast_nodes,
+                            Expr::var(&parent_aggregate_base),
+                        ),
                     ),
                     Node::let_bind(
                         &parent_aggregate_parent,
-                        Expr::load(
+                        vast_row_parent_from_base_expr(
                             vast_nodes,
-                            Expr::add(Expr::var(&parent_aggregate_base), Expr::u32(1)),
+                            Expr::var(&parent_aggregate_base),
                         ),
                     ),
                     Node::if_then(
@@ -230,7 +237,7 @@ pub(super) fn emit_declaration_kind_for_index_inner(
             &prev_kind,
             Expr::select(
                 Expr::gt(idx.clone(), Expr::u32(0)),
-                Expr::load(vast_nodes, vast_row_base_expr(Expr::var(&prev_idx))),
+                vast_row_kind_from_base_expr(vast_nodes, vast_row_base_expr(Expr::var(&prev_idx))),
                 Expr::u32(SENTINEL),
             ),
         ),
@@ -238,7 +245,10 @@ pub(super) fn emit_declaration_kind_for_index_inner(
             &prev_prev_kind,
             Expr::select(
                 Expr::gt(idx.clone(), Expr::u32(1)),
-                Expr::load(vast_nodes, vast_row_base_expr(Expr::var(&prev_prev_idx))),
+                vast_row_kind_from_base_expr(
+                    vast_nodes,
+                    vast_row_base_expr(Expr::var(&prev_prev_idx)),
+                ),
                 Expr::u32(SENTINEL),
             ),
         ),
@@ -282,7 +292,7 @@ pub(super) fn emit_declaration_kind_for_index_inner(
                     Node::let_bind(&prefix_base, vast_row_base_expr(Expr::var(&prefix_idx))),
                     Node::let_bind(
                         &prefix_kind,
-                        Expr::load(vast_nodes, Expr::var(&prefix_base)),
+                        vast_row_kind_from_base_expr(vast_nodes, Expr::var(&prefix_base)),
                     ),
                     Node::let_bind(
                         &prefix_in_skipped_paren,
