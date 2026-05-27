@@ -43,6 +43,38 @@ fn cli_rejects_missing_production_root() {
 }
 
 #[test]
+fn cli_default_production_roots_are_vyre_owned_only() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    for root in [
+        "vyre-aot/src",
+        "vyre-core/src",
+        "vyre-driver/src",
+        "vyre-driver-cuda/src",
+        "vyre-driver-wgpu/src",
+        "vyre-frontend-c/src",
+        "vyre-libs/src",
+        "vyre-lower/src",
+        "vyre-runtime/src",
+        "vyre-self-substrate/src",
+    ] {
+        fs::create_dir_all(dir.path().join(root)).expect("create default production root");
+    }
+
+    let output = Command::new(env!("CARGO_BIN_EXE_vyre-lints"))
+        .arg("--check-production-cpu-fallbacks")
+        .arg("--workspace-root")
+        .arg(dir.path())
+        .output()
+        .expect("run vyre-lints");
+
+    assert!(
+        output.status.success(),
+        "Vyre default production roots must not require external consumer checkouts: stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn permits_reference_eval_inside_cfg_test_module() {
     let dir = tempfile::tempdir().expect("tempdir");
     let src = dir.path().join("vyre-frontend-c/src");
@@ -93,7 +125,7 @@ fn permits_reference_eval_under_tests_directory() {
 #[test]
 fn permits_explicit_cpu_oracle_files() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("weir/src/dominators");
+    let src = dir.path().join("external-consumer/src/dominators");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("cpu_oracle.rs"),
@@ -225,7 +257,7 @@ fn permits_pub_crate_test_module() {
 #[test]
 fn permits_file_level_cpu_parity_module() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("weir/src/oracle");
+    let src = dir.path().join("external-consumer/src/oracle");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("bitset.rs"),
@@ -255,9 +287,9 @@ fn ignores_reference_eval_in_doc_comments() {
 }
 
 #[test]
-fn reports_weir_production_cpu_reference_paths() {
+fn reports_external_consumer_production_cpu_reference_paths() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("weir/src");
+    let src = dir.path().join("external-consumer/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("dispatch.rs"),
@@ -268,14 +300,16 @@ fn reports_weir_production_cpu_reference_paths() {
     let violations =
         vyre_lints::run_production_cpu_fallbacks(&[src.as_path()]).expect("fallback scan");
     assert_eq!(violations.len(), 1);
-    assert!(violations[0].file.ends_with("weir/src/dispatch.rs"));
+    assert!(violations[0]
+        .file
+        .ends_with("external-consumer/src/dispatch.rs"));
     assert!(violations[0].message.contains("cpu_ref("));
 }
 
 #[test]
-fn allows_weir_cpu_reference_only_in_parity_tests() {
+fn allows_external_consumer_cpu_reference_only_in_parity_tests() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let tests = dir.path().join("weir/tests");
+    let tests = dir.path().join("external-consumer/tests");
     fs::create_dir_all(&tests).expect("create tests");
     fs::write(
         tests.join("dispatch_parity.rs"),

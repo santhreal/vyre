@@ -53,7 +53,8 @@ struct Cli {
     check_production_cpu_fallbacks: bool,
 
     /// Override production roots scanned by `--check-production-cpu-fallbacks`.
-    /// Defaults to the main production crates, excluding reference/conform crates.
+    /// Defaults to Vyre-owned production crates, excluding reference/conform crates.
+    /// External consumers can be scanned by passing this flag repeatedly.
     #[arg(long)]
     production_root: Vec<PathBuf>,
 }
@@ -175,8 +176,6 @@ fn default_production_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
         "vyre-lower/src",
         "vyre-runtime/src",
         "vyre-self-substrate/src",
-        "../../../dataflow/weir/src",
-        "../../../../tools/vyrec/src",
     ]
     .into_iter()
     .map(|root| workspace_root.join(root))
