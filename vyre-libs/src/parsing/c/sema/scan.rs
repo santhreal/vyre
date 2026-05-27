@@ -55,3 +55,57 @@ pub(super) fn emit_forward_matching_paren_scan(
     }
     nodes
 }
+
+pub(super) fn emit_reverse_unmatched_lbrace_scan(
+    tok_types: &str,
+    scan_name: &str,
+    scan_index_name: &str,
+    scan_token_name: &str,
+    depth_name: &str,
+    out_open_name: &str,
+    scan_limit: Expr,
+    guard: Option<Expr>,
+) -> Vec<Node> {
+    let loop_node = Node::loop_for(
+        scan_name,
+        Expr::u32(0),
+        scan_limit.clone(),
+        vec![
+            Node::let_bind(
+                scan_index_name,
+                Expr::sub(Expr::sub(scan_limit, Expr::u32(1)), Expr::var(scan_name)),
+            ),
+            Node::let_bind(
+                scan_token_name,
+                Expr::load(tok_types, Expr::var(scan_index_name)),
+            ),
+            Node::if_then(
+                Expr::eq(Expr::var(scan_token_name), Expr::u32(TOK_RBRACE)),
+                vec![Node::assign(
+                    depth_name,
+                    Expr::add(Expr::var(depth_name), Expr::u32(1)),
+                )],
+            ),
+            Node::if_then(
+                Expr::eq(Expr::var(out_open_name), Expr::u32(u32::MAX)),
+                vec![Node::if_then(
+                    Expr::eq(Expr::var(scan_token_name), Expr::u32(TOK_LBRACE)),
+                    vec![Node::if_then_else(
+                        Expr::eq(Expr::var(depth_name), Expr::u32(0)),
+                        vec![Node::assign(out_open_name, Expr::var(scan_index_name))],
+                        vec![Node::assign(
+                            depth_name,
+                            Expr::sub(Expr::var(depth_name), Expr::u32(1)),
+                        )],
+                    )],
+                )],
+            ),
+        ],
+    );
+
+    if let Some(guard) = guard {
+        vec![Node::if_then(guard, vec![loop_node])]
+    } else {
+        vec![loop_node]
+    }
+}
