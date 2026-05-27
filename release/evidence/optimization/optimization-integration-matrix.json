@@ -1,0 +1,529 @@
+{
+  "schema_version": 1,
+  "required_passes": [
+    {
+      "id": "dse",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/dead_store/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Dead-store elimination",
+      "source_bytes": 34114,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "store-to-load-forwarding",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/load_forwarding/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Store/load forwarding",
+      "source_bytes": 47869,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "licm",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/licm/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Loop-invariant code motion",
+      "source_bytes": 44199,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "loop-fusion",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_fusion/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Loop fusion legality and transform",
+      "source_bytes": 14033,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "loop-fission",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_fission/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Loop fission legality and transform",
+      "source_bytes": 12213,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "loop-unroll",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_unroll/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Loop transform substrate",
+      "source_bytes": 25769,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "descriptor-cse",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/descriptor_cse/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Common subexpression elimination",
+      "source_bytes": 16388,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "descriptor-dce",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/descriptor_dce/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Dead-code elimination",
+      "source_bytes": 19735,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "strength-reduce",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/strength_reduce/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Strength reduction",
+      "source_bytes": 13434,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "shared-mem-promote",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/shared_mem_promote/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Shared-memory promotion",
+      "source_bytes": 15985,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "bank-conflict-pad",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/bank_conflict_pad/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Bank-conflict padding",
+      "source_bytes": 15547,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "egraph-saturation",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/egraph_saturation/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Bounded e-graph saturation",
+      "source_bytes": 17240,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    }
+  ],
+  "required_analyses": [
+    {
+      "id": "def-use",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/def_use/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Definition/use facts",
+      "source_bytes": 15344,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "value-range",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/value_range/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Range facts",
+      "source_bytes": 27599,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "coalesce",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/coalesce/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Memory coalescing analysis",
+      "source_bytes": 36225,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "shared-mem-promote",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/shared_mem_promote/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Shared promotion analysis",
+      "source_bytes": 21901,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "bank-conflict",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/bank_conflict/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Bank-conflict analysis",
+      "source_bytes": 31826,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "vec-pack",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/vec_pack/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Vector packing analysis",
+      "source_bytes": 13509,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "weir-alias",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_alias/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Weir alias/points-to facts",
+      "source_bytes": 2630,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    },
+    {
+      "id": "weir-reaching-def",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_reaching_def/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "role": "Weir reaching-def facts",
+      "source_bytes": 7664,
+      "has_transform_entrypoint": true,
+      "has_local_tests": true,
+      "unresolved_markers": []
+    }
+  ],
+  "analysis_fixture_corpuses": [
+    {
+      "id": "a13-coalesce-corpus",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/analysis_fixture_corpuses.rs",
+      "marker": "a13_coalesce_corpus_classifies_unit_stride_strided_and_broadcast",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Hand-built coalesce KernelDescriptor corpus"
+    },
+    {
+      "id": "a14-shared-mem-promote-corpus",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/analysis_fixture_corpuses.rs",
+      "marker": "a14_shared_mem_promote_corpus_finds_reused_global_tile",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Hand-built shared-memory promotion KernelDescriptor corpus"
+    },
+    {
+      "id": "a15-bank-conflict-corpus",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/analysis_fixture_corpuses.rs",
+      "marker": "a15_bank_conflict_corpus_detects_full_warp_serialization",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Hand-built bank-conflict KernelDescriptor corpus"
+    },
+    {
+      "id": "a16-vec-pack-corpus",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/analysis_fixture_corpuses.rs",
+      "marker": "a16_vec_pack_corpus_detects_adjacent_load_chain",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Hand-built vector-pack KernelDescriptor corpus"
+    }
+  ],
+  "integration_markers": [
+    {
+      "id": "alias-aware-dse-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/dead_store/mod.rs",
+      "marker": "dead_store_with_weir_alias_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "DSE consumes Weir alias facts"
+    },
+    {
+      "id": "reaching-def-dse-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/dead_store/mod.rs",
+      "marker": "dead_store_with_weir_dataflow_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "DSE consumes Weir reaching-definition facts"
+    },
+    {
+      "id": "alias-aware-stlf-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/load_forwarding/mod.rs",
+      "marker": "load_forwarding_with_weir_alias_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Store/load forwarding consumes Weir alias facts"
+    },
+    {
+      "id": "reaching-def-stlf-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/load_forwarding/mod.rs",
+      "marker": "load_forwarding_with_weir_dataflow_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Store/load forwarding consumes Weir reaching-definition facts"
+    },
+    {
+      "id": "weir-dataflow-pipeline-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/mod.rs",
+      "marker": "run_all_with_weir_dataflow_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Canonical rewrite pipeline consumes Weir alias and reaching-definition facts"
+    },
+    {
+      "id": "alias-aware-licm-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/licm/mod.rs",
+      "marker": "licm_with_weir_alias_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "LICM consumes Weir alias facts"
+    },
+    {
+      "id": "reaching-def-licm-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/licm/mod.rs",
+      "marker": "licm_with_weir_dataflow_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "LICM consumes Weir reaching-definition facts"
+    },
+    {
+      "id": "alias-aware-loop-fusion-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_fusion/mod.rs",
+      "marker": "loop_fusion_with_weir_alias_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Loop fusion consumes Weir alias facts"
+    },
+    {
+      "id": "reaching-def-loop-fusion-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_fusion/mod.rs",
+      "marker": "loop_fusion_with_weir_dataflow_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Loop fusion consumes Weir reaching-definition facts"
+    },
+    {
+      "id": "alias-aware-loop-fission-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_fission/mod.rs",
+      "marker": "loop_fission_with_weir_alias_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Loop fission consumes Weir alias facts"
+    },
+    {
+      "id": "reaching-def-loop-fission-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/loop_fission/mod.rs",
+      "marker": "loop_fission_with_weir_dataflow_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Loop fission consumes Weir reaching-definition facts"
+    },
+    {
+      "id": "weir-alias-analysis-api",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_alias/mod.rs",
+      "marker": "AliasFactSet",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Vyre-lower imports Weir alias facts through an explicit API"
+    },
+    {
+      "id": "weir-reaching-def-analysis-api",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_reaching_def/mod.rs",
+      "marker": "import_descriptor_reaching_defs",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Vyre-lower imports Weir reaching-def facts through an explicit API"
+    },
+    {
+      "id": "weir-copy-chain-reaching-def-import",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_reaching_def/mod.rs",
+      "marker": "resolve_copy_alias",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Weir reaching-def import canonicalizes descriptor Copy chains before rewrite legality checks"
+    },
+    {
+      "id": "weir-dataflow-dse-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/dead_store_weir_dataflow.rs",
+      "marker": "weir_dataflow_pipeline_applies_reaching_def_memory_dse",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Integration test proves Weir reaching-def facts fire DSE in the canonical pipeline"
+    },
+    {
+      "id": "weir-dataflow-stlf-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/load_forwarding/mod.rs",
+      "marker": "load_forwarding_with_weir_dataflow_facts(&desc",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Local test proves Weir reaching-def facts fire store/load forwarding"
+    },
+    {
+      "id": "weir-dataflow-loop-fusion-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/weir_dataflow_loop_rewrites.rs",
+      "marker": "reaching_defs_unlock_alias_proven_loop_fusion",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Integration test proves Weir facts unlock loop fusion"
+    },
+    {
+      "id": "weir-dataflow-loop-fission-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/weir_dataflow_loop_rewrites.rs",
+      "marker": "reaching_defs_unlock_alias_proven_loop_fission",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Integration test proves Weir facts unlock loop fission"
+    },
+    {
+      "id": "weir-dataflow-licm-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/weir_dataflow_loop_rewrites.rs",
+      "marker": "reaching_defs_unlock_alias_proven_licm_load_hoist",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Integration test proves Weir facts unlock LICM load hoisting"
+    },
+    {
+      "id": "egraph-saturation",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/egraph_saturation/mod.rs",
+      "marker": "saturate_descriptor",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Bounded e-graph saturation entry point"
+    },
+    {
+      "id": "egraph-canonical-pipeline-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/mod.rs",
+      "marker": "saturate_algebraic_descriptor",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Canonical rewrite pipeline invokes non-recursive e-graph saturation"
+    },
+    {
+      "id": "egraph-algebraic-reassociation",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/egraph_saturation/mod.rs",
+      "marker": "reassociate_constant_chain",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "E-graph saturation performs algebraic reassociation before extraction"
+    },
+    {
+      "id": "egraph-bitwise-reassociation",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/egraph_saturation/mod.rs",
+      "marker": "BitXor",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "E-graph saturation reassociates bitwise condition chains before extraction"
+    }
+  ],
+  "blockers": []
+}

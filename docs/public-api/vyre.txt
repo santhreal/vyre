@@ -1,0 +1,5 @@
+pub const OPTIMIZE_CACHE_CAPACITY: usize = 256;
+pub fn optimize(program: Program) -> Result<Program, vyre_foundation::optimizer::OptimizerError> {
+pub fn optimize_for_backend(
+pub fn optimize_for_device(
+pub mod lower {

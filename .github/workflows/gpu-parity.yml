@@ -1,0 +1,364 @@
+name: GPU Parity + Determinism
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: libs/performance/matching/vyre
+
+env:
+  CARGO_TERM_COLOR: always
+  WGPU_BACKEND: vulkan
+  VYRE_CONFORM_REQUIRE_GPU: "1"
+
+jobs:
+  gpu-adapter-probe:
+    name: Probe real GPU adapter
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+      - name: Verify NVIDIA GPU
+        run: |
+          if ! command -v nvidia-smi >/dev/null 2>&1; then
+            echo "::error::nvidia-smi is missing on a GPU-required runner."
+            exit 1
+          fi
+          nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
+
+  driver-contracts:
+    name: WGPU backend contracts
+    needs: gpu-adapter-probe
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: capability + async dispatch contracts
+        run: cargo_full test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture
+
+  composition-parity-gpu:
+    name: Composition parity on real GPU
+    needs: gpu-adapter-probe
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run composition parity
+        run: cargo_full test -p vyre-libs --release --features vyre_wgpu --test op_pairwise pairwise_composition_parity -- --nocapture
+
+  determinism-stress-gpu:
+    name: Determinism stress on real GPU
+    needs: gpu-adapter-probe
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run determinism stress
+        run: cargo_full test -p vyre-driver-wgpu --release --test gap_determinism_contract -- --nocapture
+
+  mandatory-gpu-enforcer:
+    name: Mandatory GPU enforcement
+    needs: gpu-adapter-probe
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run GPU mandatory tests
+        run: cargo_full test -p vyre-conform-runner --release --features gpu --test parity_matrix --test ulp_audit -- --nocapture
+
+  cuda-conformance-all-ops:
+    name: CUDA conformance all ops
+    needs: gpu-adapter-probe
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run vyre-conform against CUDA for every registered op
+        run: cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all
+
+  wgpu-conformance-all-ops:
+    name: WGPU conformance all ops
+    needs: gpu-adapter-probe
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run vyre-conform against WGPU for every registered op
+        run: cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all
+
+  release-conformance-artifacts:
+    name: Release conformance artifacts
+    needs:
+      - cuda-conformance-all-ops
+      - wgpu-conformance-all-ops
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Generate release conformance evidence artifacts
+        run: cargo_full run --release --bin xtask -- release-conformance --backend all
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vyre-release-conformance-evidence
+          path: libs/performance/matching/vyre/release/evidence/conformance/*.json
+
+  weir-cuda-parity:
+    name: Weir CUDA parity
+    needs: gpu-adapter-probe
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run Weir CUDA parity inventory gate
+        run: cargo_full test -p weir every_weir_inventory_op_parity_holds -- --nocapture
+
+  cuda-release-bench-evidence:
+    name: CUDA release benchmark evidence
+    needs: gpu-adapter-probe
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Lower rewrite optimization evidence
+        run: cargo_full run -p vyre-bench --release -- run --suite release --case lower.rewrites.impact.corpus --format json --measured-samples 30
+      - name: CUDA PTX pattern evidence
+        run: cargo_full run -p vyre-bench --release -- run --suite release --case cuda.ptx.patterns.release.corpus --format json --measured-samples 30
+      - name: Megakernel condition evidence
+        run: cargo_full run -p vyre-bench --release -- run --suite release --case runtime.megakernel.condition.64k --format json --backend cuda --measured-samples 30
+      - name: CPU-favorable conditional eval evidence
+        run: cargo_full run -p vyre-bench --release -- run --suite release --case conditions.yara_like.eval.1m --format json --backend cuda --measured-samples 30
+      - name: Batched conditional eval evidence
+        run: cargo_full run -p vyre-bench --release -- run --suite release --case conditions.yara_like.batch.16x64k --format json --backend cuda --measured-samples 30
+      - name: Generate release benchmark evidence artifacts
+        run: cargo_full run --release --bin xtask -- release-benchmarks --backend cuda --measured-samples 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vyre-release-benchmark-evidence
+          path: |
+            libs/performance/matching/vyre/release/evidence/benchmarks/*.json
+            libs/performance/matching/vyre/release/evidence/optimization/*.json
+
+  gpu-release-gate:
+    name: GPU release gate
+    needs:
+      - driver-contracts
+      - composition-parity-gpu
+      - determinism-stress-gpu
+      - mandatory-gpu-enforcer
+      - cuda-conformance-all-ops
+      - wgpu-conformance-all-ops
+      - release-conformance-artifacts
+      - weir-cuda-parity
+      - cuda-release-bench-evidence
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: vyre-release-conformance-evidence
+          path: release-artifacts/conformance
+      - uses: actions/download-artifact@v4
+        with:
+          name: vyre-release-benchmark-evidence
+          path: release-artifacts/benchmarks
+      - name: Verify uploaded release evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          find release-artifacts/conformance -name cuda-conformance.json -size +0c | grep -q .
+          find release-artifacts/conformance -name wgpu-conformance.json -size +0c | grep -q .
+          find release-artifacts/conformance -name reference-conformance.json -size +0c | grep -q .
+          find release-artifacts/conformance -name release-gate-log.json -size +0c | grep -q .
+          find release-artifacts/benchmarks -name pass-family-benchmark-manifest.json -size +0c | grep -q .
+          find release-artifacts/benchmarks -name release-workload-matrix.json -size +0c | grep -q .
+          python3 -c '
+          import json
+          import pathlib
+          def one(root, name):
+              matches = list(pathlib.Path(root).rglob(name))
+              if len(matches) != 1:
+                  raise SystemExit(f"expected exactly one {name} under {root}, found {len(matches)}")
+              with matches[0].open() as handle:
+                  return json.load(handle)
+          for backend, filename in [("cuda", "cuda-conformance.json"), ("wgpu", "wgpu-conformance.json"), ("cpu-ref", "reference-conformance.json")]:
+              report = one("release-artifacts/conformance", filename)
+              if report.get("backend_id") != backend:
+                  raise SystemExit("{}: backend_id={!r}, expected {!r}".format(filename, report.get("backend_id"), backend))
+              if report.get("failed_pairs") != 0:
+                  raise SystemExit("{}: failed_pairs={!r}".format(filename, report.get("failed_pairs")))
+              if report.get("distinct_op_count", 0) < 49:
+                  raise SystemExit(f"{filename}: distinct_op_count below 49")
+              if report.get("duplicate_op_ids"):
+                  raise SystemExit(f"{filename}: duplicate_op_ids must be empty")
+              if report.get("blockers"):
+                  raise SystemExit(f"{filename}: blockers must be empty")
+          manifest = one("release-artifacts/benchmarks", "pass-family-benchmark-manifest.json")
+          if manifest.get("backend") != "cuda":
+              raise SystemExit("pass-family-benchmark-manifest.json: backend must be cuda")
+          if manifest.get("blockers"):
+              raise SystemExit("pass-family-benchmark-manifest.json: blockers must be empty")
+          if len(manifest.get("cases", [])) < 4:
+              raise SystemExit("pass-family-benchmark-manifest.json: expected at least 4 cases")
+          for case in manifest.get("cases", []):
+              case_id = case.get("case_id", "<unknown>")
+              for field in ("missing_custom_metrics", "non_positive_required_metrics", "non_winning_cases", "blockers"):
+                  if case.get(field):
+                      raise SystemExit(f"pass-family-benchmark-manifest.json: {case_id} has non-empty {field}")
+              if case.get("min_wall_speedup_x1000", 0) <= 1000:
+                  raise SystemExit(f"pass-family-benchmark-manifest.json: {case_id} does not prove optimized wall_ns p50 beats baseline_wall_ns p50")
+          workloads = one("release-artifacts/benchmarks", "release-workload-matrix.json")
+          if workloads.get("blockers"):
+              raise SystemExit("release-workload-matrix.json: blockers must be empty")
+          required = workloads.get("required_closed_families", 10)
+          if workloads.get("matched_required_families", 0) < required:
+              raise SystemExit("release-workload-matrix.json: matched_required_families below required_closed_families")
+          for suite_name, expected_backend in [("cuda-release-suite.json", "cuda"), ("wgpu-fallback-suite.json", "wgpu")]:
+              suite = one("release-artifacts/benchmarks", suite_name)
+              if suite.get("backend") != expected_backend:
+                  raise SystemExit(f"{suite_name}: backend must be {expected_backend}")
+              if suite.get("blockers"):
+                  raise SystemExit(f"{suite_name}: blockers must be empty")
+              statuses = suite.get("artifact_statuses") or []
+              if suite.get("family_count", 0) < required or len(statuses) < required:
+                  raise SystemExit(f"{suite_name}: expected at least {required} family statuses")
+              for status in statuses:
+                  path = status.get("path", "<unknown>")
+                  if status.get("blockers"):
+                      raise SystemExit(f"{suite_name}: {path} has blockers")
+                  if not status.get("family_id") or not status.get("requested_case_id"):
+                      raise SystemExit(f"{suite_name}: {path} lacks family/case provenance")
+                  if status.get("case_count", 0) == 0:
+                      raise SystemExit(f"{suite_name}: {path} has zero cases")
+                  if status.get("failed_count") != 0:
+                      raise SystemExit(f"{suite_name}: {path} failed_count must be zero")
+                  if status.get("nonmatching_case_backend_count") != 0:
+                      raise SystemExit(f"{suite_name}: {path} has backend mismatches")
+                  if status.get("min_wall_samples", 0) < 30:
+                      raise SystemExit(f"{suite_name}: {path} has fewer than 30 wall samples")
+                  if status.get("min_baseline_wall_samples", 0) < 30:
+                      raise SystemExit(f"{suite_name}: {path} has fewer than 30 baseline wall samples")
+                  if status.get("cpu_sota_100x_required") and status.get("cpu_sota_100x_passing_cases", 0) == 0:
+                      raise SystemExit(f"{suite_name}: {path} lacks passing CPU-SOTA 100x proof")
+          proof = one("release-artifacts/benchmarks", "cpu-only-100x-proof.json")
+          if proof.get("blockers"):
+              raise SystemExit("cpu-only-100x-proof.json: blockers must be empty")
+          if proof.get("cpu_sota_100x_contract_case_count", 0) < 10:
+              raise SystemExit("cpu-only-100x-proof.json: expected at least ten 100x contract cases")
+          if proof.get("cpu_sota_100x_passing_case_count", 0) < 10:
+              raise SystemExit("cpu-only-100x-proof.json: expected at least ten passing 100x cases")
+          if proof.get("min_wall_samples", 0) < 30 or proof.get("min_baseline_wall_samples", 0) < 30:
+              raise SystemExit("cpu-only-100x-proof.json: wall and baseline samples must both be at least 30")
+          '
+          echo "GPU release gate passed: CUDA/WGPU all-op conformance, Weir CUDA parity, backend contracts, determinism stress, and CUDA release benchmark evidence artifacts all exist."

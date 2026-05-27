@@ -1,0 +1,426 @@
+{
+  "schema_version": 1,
+  "components": [
+    {
+      "id": "vyre-frontend-c",
+      "role": "Core GPU-first C frontend pipeline, parser contracts, object container, C fixture tests",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c",
+      "exists": true,
+      "required_files": [
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/Cargo.toml",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 1796
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/lib.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 3167
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/README.md",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 5417
+        }
+      ],
+      "required_terms": [
+        "parser",
+        "compile",
+        "object"
+      ],
+      "missing_terms": [],
+      "required_contract_topics": [
+        "syntax",
+        "ast",
+        "diagnostic",
+        "span",
+        "preprocessor",
+        "gnu",
+        "unsupported"
+      ],
+      "missing_contract_topics": [],
+      "required_test_categories": [
+        "unit",
+        "integration",
+        "property",
+        "adversarial",
+        "corpus",
+        "benchmark",
+        "conformance",
+        "gap",
+        "fuzz"
+      ],
+      "missing_test_categories": [],
+      "required_evidence_trees": [
+        {
+          "tree": "tests",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests",
+          "exists": true,
+          "source_bytes": 873439,
+          "unreadable_file_count": 0
+        },
+        {
+          "tree": "benches",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/benches",
+          "exists": true,
+          "source_bytes": 4568,
+          "unreadable_file_count": 0
+        },
+        {
+          "tree": "fuzz",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/fuzz",
+          "exists": true,
+          "source_bytes": 275,
+          "unreadable_file_count": 0
+        }
+      ],
+      "unresolved_ownership_markers": []
+    },
+    {
+      "id": "vyrec",
+      "role": "CLI/compiler user workflow over vyre-frontend-c",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec",
+      "exists": true,
+      "required_files": [
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/Cargo.toml",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 1500
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/src/main.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 6233
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/README.md",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 1530
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/cli_contracts.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 1454
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/adversarial_cli_contracts.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 665
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/property_cli_contracts.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 604
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/corpus_linux_contracts.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 780
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/benchmark_cli_contracts.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 661
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/conformance_cli_contracts.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 629
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/gap_cli_contracts.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 968
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/fuzz_cli_contracts.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 1139
+        }
+      ],
+      "required_terms": [
+        "vyre",
+        "compile",
+        "cli",
+        "evidence"
+      ],
+      "missing_terms": [],
+      "required_contract_topics": [
+        "cli",
+        "diagnostic",
+        "include",
+        "macro",
+        "corpus",
+        "cuda",
+        "fuzz",
+        "gap",
+        "conformance",
+        "fix:"
+      ],
+      "missing_contract_topics": [],
+      "required_test_categories": [
+        "unit",
+        "integration",
+        "property",
+        "adversarial",
+        "corpus",
+        "benchmark",
+        "conformance",
+        "gap",
+        "fuzz"
+      ],
+      "missing_test_categories": [],
+      "required_evidence_trees": [
+        {
+          "tree": "tests",
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests",
+          "exists": true,
+          "source_bytes": 8810,
+          "unreadable_file_count": 0
+        },
+        {
+          "tree": "benches",
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/benches",
+          "exists": true,
+          "source_bytes": 285,
+          "unreadable_file_count": 0
+        },
+        {
+          "tree": "fuzz",
+          "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/fuzz",
+          "exists": true,
+          "source_bytes": 251,
+          "unreadable_file_count": 0
+        }
+      ],
+      "unresolved_ownership_markers": []
+    },
+    {
+      "id": "weir",
+      "role": "Dataflow facts consumed by parser/compiler optimization and downstream analysis",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir",
+      "exists": true,
+      "required_files": [
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 1672
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/lib.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 4508
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 6822
+        }
+      ],
+      "required_terms": [
+        "dataflow",
+        "analysis",
+        "program"
+      ],
+      "missing_terms": [],
+      "required_contract_topics": [
+        "parser",
+        "dataflow",
+        "alias",
+        "reaching",
+        "callgraph"
+      ],
+      "missing_contract_topics": [],
+      "required_test_categories": [
+        "unit",
+        "integration",
+        "property",
+        "adversarial",
+        "corpus",
+        "benchmark",
+        "conformance",
+        "gap",
+        "fuzz"
+      ],
+      "missing_test_categories": [],
+      "required_evidence_trees": [
+        {
+          "tree": "tests",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests",
+          "exists": true,
+          "source_bytes": 145592,
+          "unreadable_file_count": 0
+        },
+        {
+          "tree": "benches",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches",
+          "exists": true,
+          "source_bytes": 176,
+          "unreadable_file_count": 0
+        },
+        {
+          "tree": "fuzz",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/fuzz",
+          "exists": true,
+          "source_bytes": 248,
+          "unreadable_file_count": 0
+        }
+      ],
+      "unresolved_ownership_markers": []
+    },
+    {
+      "id": "surgec",
+      "role": "Security compiler consumer integration surface",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec",
+      "exists": true,
+      "required_files": [
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/Cargo.toml",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 3524
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lib.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 4311
+        }
+      ],
+      "required_terms": [
+        "surge",
+        "compile"
+      ],
+      "missing_terms": [],
+      "required_contract_topics": [
+        "consumer",
+        "surge",
+        "parser",
+        "condition"
+      ],
+      "missing_contract_topics": [],
+      "required_test_categories": [
+        "unit",
+        "integration",
+        "property",
+        "adversarial",
+        "corpus",
+        "benchmark",
+        "conformance",
+        "gap",
+        "fuzz"
+      ],
+      "missing_test_categories": [],
+      "required_evidence_trees": [
+        {
+          "tree": "tests",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests",
+          "exists": true,
+          "source_bytes": 1099765,
+          "unreadable_file_count": 0
+        },
+        {
+          "tree": "benches",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/benches",
+          "exists": true,
+          "source_bytes": 23380,
+          "unreadable_file_count": 0
+        },
+        {
+          "tree": "fuzz",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz",
+          "exists": true,
+          "source_bytes": 5379,
+          "unreadable_file_count": 0
+        }
+      ],
+      "unresolved_ownership_markers": []
+    },
+    {
+      "id": "surgec-grammar-gen",
+      "role": "Shared grammar generation substrate",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen",
+      "exists": true,
+      "required_files": [
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/Cargo.toml",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 1147
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/lib.rs",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 954
+        }
+      ],
+      "required_terms": [
+        "grammar",
+        "generate"
+      ],
+      "missing_terms": [],
+      "required_contract_topics": [
+        "grammar",
+        "generate",
+        "token",
+        "parser"
+      ],
+      "missing_contract_topics": [],
+      "required_test_categories": [
+        "unit",
+        "integration",
+        "property",
+        "adversarial",
+        "corpus",
+        "benchmark",
+        "conformance",
+        "gap",
+        "fuzz"
+      ],
+      "missing_test_categories": [],
+      "required_evidence_trees": [
+        {
+          "tree": "tests",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/tests",
+          "exists": true,
+          "source_bytes": 5552,
+          "unreadable_file_count": 0
+        },
+        {
+          "tree": "benches",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/benches",
+          "exists": true,
+          "source_bytes": 245,
+          "unreadable_file_count": 0
+        },
+        {
+          "tree": "fuzz",
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/fuzz",
+          "exists": true,
+          "source_bytes": 260,
+          "unreadable_file_count": 0
+        }
+      ],
+      "unresolved_ownership_markers": []
+    }
+  ],
+  "blockers": []
+}

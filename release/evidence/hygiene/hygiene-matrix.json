@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "scanned_roots": [
+    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre",
+    "/media/mukund-thiru/SanthData/Santh/libs/dataflow/consumer",
+    "/media/mukund-thiru/SanthData/Santh/tools/vyrec",
+    "/media/mukund-thiru/SanthData/Santh/libs/tools/downstream-analyzer",
+    "/media/mukund-thiru/SanthData/Santh/libs/shared/security-grammar-generator"
+  ],
+  "scanned_files": 3111,
+  "release_surface_coverage": {
+    "vyre_workspace": true,
+    "cuda_driver_crate": true,
+    "wgpu_driver_crate": true,
+    "dataflow_workspace": true,
+    "vyrec_tool": true,
+    "downstream_analyzer_tool": true,
+    "security_grammar_generator": true,
+    "release_scripts": true,
+    "github_workflows": true,
+    "branch_protection_controls": true,
+    "resource_bound_patterns": [
+      "std_thread_sleep",
+      "thread_sleep",
+      "tokio_sleep",
+      "unbounded_read"
+    ],
+    "hidden_fallback_patterns": [
+      "silent_gpu_skip",
+      "silent_gpu_skipped",
+      "gpu_unavailable_skip",
+      "cfg_not_gpu",
+      "cpu_demotion",
+      "cpu_fallback",
+      "software_fallback",
+      "fallback_dispatch",
+      "falling_back_to_cpu",
+      "fallback_to_cpu",
+      "synthetic_gpu_timing",
+      "fake_gpu_timing_formula"
+    ],
+    "release_tooling_patterns": [
+      "raw_workspace_cargo",
+      "invalid_cargo_full_xtask",
+      "heredoc",
+      "missing_cargo_wrapper"
+    ]
+  },
+  "finding_summary": [],
+  "findings": [],
+  "blockers": []
+}

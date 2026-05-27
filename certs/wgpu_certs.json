@@ -1,0 +1,15 @@
+{
+  "schema": "vyre.conformance.certificate.pointer.v1",
+  "status": "release_conformance_required",
+  "certificate_artifact": "release/evidence/conformance/wgpu-conformance.json",
+  "issuer": "vyre-conform prove --certificates certs --out certs/wgpu_certs.json",
+  "requirements": [
+    "Run release conformance on the release GPU host before tagging.",
+    "The emitted artifact must contain zero failed backend/op pairs.",
+    "Unsigned sentinel fields such as TBD are rejected by verify_cert_signature_hex."
+  ],
+  "blockers": [
+    "wgpu certificate bundle has not been regenerated in this workspace state"
+  ],
+  "cert_schema_reference": "conform/vyre-conform-runner/src/bundle_cert.rs"
+}

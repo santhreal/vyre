@@ -1,0 +1,23 @@
+[package]
+name = "vyre-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+repository = "https://github.com/santhsecurity/vyre"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+vyre = { path = "../vyre-core", default-features = false }
+vyre-foundation = { path = "../vyre-foundation" }
+vyre-driver-wgpu = { path = "../vyre-driver-wgpu" }
+
+[[bin]]
+name = "dispatch"
+path = "fuzz_targets/dispatch.rs"
+test = false
+doc = false
+
+[workspace]

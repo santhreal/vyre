@@ -1,0 +1,241 @@
+{
+  "schema_version": 1,
+  "test_files": 979,
+  "vyre_test_files": 914,
+  "weir_test_files": 56,
+  "vyrec_test_files": 9,
+  "layers": [
+    "adversarial",
+    "benchmark",
+    "conformance",
+    "corpus",
+    "fuzz",
+    "gap",
+    "integration",
+    "property",
+    "unit"
+  ],
+  "surface_coverages": [
+    {
+      "surface": "vyre",
+      "file_count": 914,
+      "assertion_count": 10448,
+      "entrypoint_count": 914,
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "corpus",
+        "fuzz",
+        "gap",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "required_layers": [
+        "unit",
+        "integration",
+        "property",
+        "adversarial",
+        "corpus",
+        "benchmark",
+        "conformance",
+        "gap",
+        "fuzz"
+      ],
+      "missing_layers": [],
+      "blockers": []
+    },
+    {
+      "surface": "weir",
+      "file_count": 56,
+      "assertion_count": 537,
+      "entrypoint_count": 55,
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "corpus",
+        "fuzz",
+        "gap",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "required_layers": [
+        "unit",
+        "integration",
+        "property",
+        "adversarial",
+        "corpus",
+        "benchmark",
+        "conformance",
+        "gap",
+        "fuzz"
+      ],
+      "missing_layers": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyrec",
+      "file_count": 9,
+      "assertion_count": 19,
+      "entrypoint_count": 9,
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "corpus",
+        "fuzz",
+        "gap",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "required_layers": [
+        "unit",
+        "integration",
+        "property",
+        "adversarial",
+        "corpus",
+        "benchmark",
+        "conformance",
+        "gap",
+        "fuzz"
+      ],
+      "missing_layers": [],
+      "blockers": []
+    }
+  ],
+  "modular_directories": [
+    {
+      "surface": "vyre",
+      "layer": "fixtures",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/fixtures",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "contracts",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/contracts",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "properties",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/properties",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "backends",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/backends",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "corpus",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/corpus",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/benches",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "regression",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/regression",
+      "exists": true
+    },
+    {
+      "surface": "weir",
+      "layer": "fixtures",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/fixtures",
+      "exists": true
+    },
+    {
+      "surface": "weir",
+      "layer": "contracts",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/contracts",
+      "exists": true
+    },
+    {
+      "surface": "weir",
+      "layer": "properties",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/properties",
+      "exists": true
+    },
+    {
+      "surface": "weir",
+      "layer": "backends",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/backends",
+      "exists": true
+    },
+    {
+      "surface": "weir",
+      "layer": "corpus",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/corpus",
+      "exists": true
+    },
+    {
+      "surface": "weir",
+      "layer": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches",
+      "exists": true
+    },
+    {
+      "surface": "weir",
+      "layer": "regression",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/regression",
+      "exists": true
+    },
+    {
+      "surface": "vyrec",
+      "layer": "fixtures",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/fixtures",
+      "exists": true
+    },
+    {
+      "surface": "vyrec",
+      "layer": "contracts",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/contracts",
+      "exists": true
+    },
+    {
+      "surface": "vyrec",
+      "layer": "properties",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/properties",
+      "exists": true
+    },
+    {
+      "surface": "vyrec",
+      "layer": "backends",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/backends",
+      "exists": true
+    },
+    {
+      "surface": "vyrec",
+      "layer": "corpus",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/corpus",
+      "exists": true
+    },
+    {
+      "surface": "vyrec",
+      "layer": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/benches",
+      "exists": true
+    },
+    {
+      "surface": "vyrec",
+      "layer": "regression",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/regression",
+      "exists": true
+    }
+  ],
+  "oversized_files": [],
+  "god_test_candidates": [],
+  "blockers": []
+}

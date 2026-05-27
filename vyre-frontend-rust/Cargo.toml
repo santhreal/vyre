@@ -1,0 +1,46 @@
+[package]
+name = "vyre-frontend-rust"
+version = "0.4.2"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+description = "GPU-first Rust parser and compile-evidence driver for Vyre."
+keywords = ["rust", "compiler", "gpu", "vyre", "parser"]
+categories = ["compilers", "development-tools"]
+
+[dependencies]
+vyre = { workspace = true }
+vyre-foundation = { workspace = true }
+vyre-driver = { workspace = true }
+vyre-primitives = { workspace = true }
+vyre-libs = { workspace = true }
+vyre-runtime = { workspace = true }
+external-dataflow-engine = { workspace = true }
+
+# CPU oracle: the official rustc lexer. We validate our GPU path
+# token-for-token against this.
+rustc_lexer = { workspace = true }
+
+thiserror = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true, optional = true }
+smallvec = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+vyre-driver-reference = { workspace = true }
+vyre-driver-cuda = { workspace = true }
+vyre-driver-wgpu = { workspace = true }
+
+[features]
+default = []
+# Enable serde for evidence serialization.
+serde = ["dep:serde"]
+
+[lints]
+workspace = true

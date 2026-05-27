@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "required_family_count": 14,
+  "required_families": [
+    "algebraic",
+    "predicate",
+    "egraph",
+    "memory-layout",
+    "control-flow",
+    "vector-layout",
+    "A13-coalesce-fixture",
+    "A14-shared-mem-promote-fixture",
+    "A15-bank-conflict-fixture",
+    "A16-vec-pack-fixture",
+    "dataflow-analysis-dse",
+    "dataflow-analysis-loop-fusion",
+    "dataflow-analysis-loop-fission",
+    "dataflow-analysis-licm"
+  ],
+  "missing_required_families": [],
+  "families": [
+    {
+      "family": "A13-coalesce-fixture",
+      "cases": 768
+    },
+    {
+      "family": "A14-shared-mem-promote-fixture",
+      "cases": 256
+    },
+    {
+      "family": "A15-bank-conflict-fixture",
+      "cases": 256
+    },
+    {
+      "family": "A16-vec-pack-fixture",
+      "cases": 256
+    },
+    {
+      "family": "algebraic",
+      "cases": 2304
+    },
+    {
+      "family": "control-flow",
+      "cases": 256
+    },
+    {
+      "family": "egraph",
+      "cases": 1792
+    },
+    {
+      "family": "memory-layout",
+      "cases": 2560
+    },
+    {
+      "family": "predicate",
+      "cases": 1792
+    },
+    {
+      "family": "vector-layout",
+      "cases": 1024
+    },
+    {
+      "family": "dataflow-analysis-dse",
+      "cases": 256
+    },
+    {
+      "family": "dataflow-analysis-licm",
+      "cases": 256
+    },
+    {
+      "family": "dataflow-analysis-loop-fission",
+      "cases": 256
+    },
+    {
+      "family": "dataflow-analysis-loop-fusion",
+      "cases": 256
+    }
+  ],
+  "blockers": []
+}

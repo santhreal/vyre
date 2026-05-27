@@ -1,0 +1,588 @@
+{
+  "schema_version": 1,
+  "required_release_packages": [
+    "vyre",
+    "weir",
+    "vyrec",
+    "vyre-driver-cuda",
+    "vyre-driver-wgpu",
+    "vyre-frontend-c"
+  ],
+  "missing_required_release_packages": [],
+  "packages": [
+    {
+      "name": "vyre",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-core/Cargo.toml",
+      "feature_count": 4,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "cpu-parity",
+        "cuda",
+        "default",
+        "wgpu"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "top-level crate exposes explicit cuda and wgpu feature switches with empty default"
+    },
+    {
+      "name": "vyre-aot",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-aot/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "default",
+        "ptx"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-bench",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "default",
+        "external-baselines"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-bench-competitors",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/competitors/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-conform",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-conform/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-conform-enforce",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-enforce/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-conform-generate",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-generate/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-conform-runner",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "gpu"
+      ],
+      "features": [
+        "default",
+        "gpu"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-conform-spec",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-spec/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-debug",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-driver",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "default",
+        "self-substrate-adapters"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-driver-cuda",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "cuda",
+        "default"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "CUDA backend crate keeps default empty and is selected explicitly by release tooling"
+    },
+    {
+      "name": "vyre-driver-reference",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-reference/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-driver-spirv",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-spirv/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-driver-wgpu",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/Cargo.toml",
+      "feature_count": 12,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "c-parser",
+        "default",
+        "matching-dfa",
+        "matching-nfa",
+        "matching-substring",
+        "math-linalg",
+        "math-scan",
+        "megakernel-batch",
+        "nn-attention",
+        "parity-testing",
+        "uring-cmd-nvme",
+        "wgpu"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "WGPU backend crate keeps default empty as fallback path"
+    },
+    {
+      "name": "vyre-emit-naga",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-emit-ptx",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "default",
+        "nvrtc"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-emit-spirv",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-foundation",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "default",
+        "serde"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-foundation-fuzz",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/fuzz/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-frontend-c",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "cpu-oracle",
+        "default"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-harness",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-harness/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "default",
+        "strict-fp"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-intrinsics",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/Cargo.toml",
+      "feature_count": 4,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "all",
+        "subgroup-ops"
+      ],
+      "features": [
+        "all",
+        "default",
+        "hardware",
+        "subgroup-ops"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/Cargo.toml",
+      "feature_count": 38,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "math-linalg",
+        "math-scan",
+        "math-broadcast",
+        "nn-activation",
+        "nn-linear",
+        "nn-norm",
+        "matching-substring",
+        "matching-dfa",
+        "decode"
+      ],
+      "features": [
+        "bench",
+        "c-parser",
+        "cpu-parity",
+        "crypto",
+        "crypto-blake3",
+        "crypto-fnv",
+        "decode",
+        "default",
+        "full",
+        "go-parser",
+        "intern",
+        "logical",
+        "matching",
+        "matching-dfa",
+        "matching-nfa",
+        "matching-regex",
+        "matching-substring",
+        "math",
+        "math-algebra",
+        "math-broadcast",
+        "math-linalg",
+        "math-scan",
+        "math-succinct",
+        "nn",
+        "nn-activation",
+        "nn-attention",
+        "nn-inference",
+        "nn-linear",
+        "nn-linear-4bit",
+        "nn-moe",
+        "nn-norm",
+        "parsing",
+        "python-parser",
+        "rule",
+        "security",
+        "self-substrate",
+        "test-fixtures",
+        "visual"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-lints",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-lower",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-macros",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-macros/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-ops",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-ops/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-primitives",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/Cargo.toml",
+      "feature_count": 29,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "all-lego",
+        "bitset",
+        "cat",
+        "cpu-parity",
+        "decode",
+        "default",
+        "dnnf",
+        "effects",
+        "fixpoint",
+        "geom",
+        "gpu",
+        "graph",
+        "hash",
+        "inventory-registry",
+        "label",
+        "matching",
+        "math",
+        "nfa",
+        "nn",
+        "opt",
+        "parsing",
+        "predicate",
+        "reduce",
+        "text",
+        "topology",
+        "types",
+        "visual",
+        "vyre-foundation",
+        "zx"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-reference",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "subgroup-ops"
+      ],
+      "features": [
+        "default",
+        "subgroup-ops"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-runtime",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/Cargo.toml",
+      "feature_count": 8,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "c-frontend-adapter",
+        "default",
+        "megakernel-batch",
+        "remote",
+        "remote-cache",
+        "self-substrate-adapters",
+        "subgroup-ops",
+        "uring-cmd-nvme"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-self-substrate",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "cpu-parity",
+        "default"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-spec",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-std",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-std/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-test-harness",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-test-harness/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyrec",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "weir",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
+      "feature_count": 3,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "cpu-parity",
+        "default",
+        "serde"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "xtask",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    }
+  ],
+  "blockers": []
+}

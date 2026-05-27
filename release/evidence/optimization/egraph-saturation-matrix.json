@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "egraph-saturation",
+  "source_matrix": "release/evidence/optimization/optimization-integration-matrix.json",
+  "markers": [
+    {
+      "id": "egraph-saturation",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/egraph_saturation/mod.rs",
+      "marker": "saturate_descriptor",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Bounded e-graph saturation entry point"
+    },
+    {
+      "id": "egraph-canonical-pipeline-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/mod.rs",
+      "marker": "saturate_algebraic_descriptor",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Canonical rewrite pipeline invokes non-recursive e-graph saturation"
+    },
+    {
+      "id": "egraph-algebraic-reassociation",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/egraph_saturation/mod.rs",
+      "marker": "reassociate_constant_chain",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "E-graph saturation performs algebraic reassociation before extraction"
+    },
+    {
+      "id": "egraph-bitwise-reassociation",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/egraph_saturation/mod.rs",
+      "marker": "BitXor",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "E-graph saturation reassociates bitwise condition chains before extraction"
+    }
+  ],
+  "blockers": []
+}

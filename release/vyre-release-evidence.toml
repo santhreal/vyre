@@ -1,0 +1,331 @@
+schema_version = 1
+plan_path = "../../../../../docs/vyre-weir-release-plan.md"
+
+[release]
+vyre = "0.4.2"
+weir = "0.1.0"
+
+[[requirements]]
+id = "version-story"
+title = "Manifest, tag, docs, and release-note version story is resolved"
+status = "closed"
+minimum_evidence = 4
+evidence = [
+  "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json",
+  "evidence/version/version-matrix.json",
+  "evidence/version/release-tag-plan.json",
+  "evidence/docs/release-notes-version-story.md",
+]
+
+[[requirements]]
+id = "cuda-first-path"
+title = "CUDA is the documented, tested, benchmarked fast release path"
+status = "closed"
+minimum_evidence = 5
+evidence = [
+  "evidence/backends/backend-matrix.json",
+  "evidence/benchmarks/release-workload-matrix.json",
+  "evidence/benchmarks/cuda-release-suite.json",
+  "evidence/benchmarks/cuda-ptx-patterns.json",
+  "evidence/benchmarks/bench-release-axes.json",
+  "evidence/docs/cuda-release-path.md",
+]
+
+[[requirements]]
+id = "wgpu-fallback"
+title = "WGPU fallback is semantically correct, tested, and benchmarked"
+status = "closed"
+minimum_evidence = 3
+evidence = [
+  "evidence/backends/backend-matrix.json",
+  "evidence/benchmarks/wgpu-fallback-suite.json",
+  "evidence/conformance/conformance-matrix.json",
+  "evidence/conformance/wgpu-conformance.json",
+  "evidence/docs/wgpu-fallback-proof.md",
+]
+
+[[requirements]]
+id = "megakernel-default"
+title = "Megakernel is the default high-throughput runtime path where legal"
+status = "closed"
+minimum_evidence = 5
+evidence = [
+  "evidence/backends/backend-matrix.json",
+  "evidence/benchmarks/release-workload-matrix.json",
+  "evidence/benchmarks/megakernel-condition-cuda.json",
+  "evidence/benchmarks/megakernel-latency-cuda.json",
+  "evidence/docs/megakernel-default-proof.md",
+]
+
+[[requirements]]
+id = "optimization-corpus-4096"
+title = "Optimization corpus contains at least 4096 distinct semantic-preserving cases"
+status = "closed"
+minimum_evidence = 5
+evidence = [
+  "evidence/optimization/optimization-corpus.json",
+  "evidence/optimization/optimization-corpus-contracts.json",
+  "evidence/optimization/optimization-family-manifest.json",
+  "evidence/optimization/optimization-analysis-fixtures.json",
+  "evidence/optimization/optimization-case-manifest.json",
+]
+
+[[requirements]]
+id = "optimization-benchmark-proof"
+title = "Optimization families have before/after benchmark evidence"
+status = "closed"
+minimum_evidence = 8
+evidence = [
+  "cargo_full run --bin xtask -- measurement-gate --strict",
+  "evidence/optimization/lower-rewrite-impact-before-after.json",
+  "evidence/optimization/optimization-integration-matrix.json",
+  "evidence/optimization/optimizer-impact-cuda.json",
+  "evidence/optimization/pass-family-benchmarks.json",
+  "evidence/optimization/pass-family-benchmark-manifest.json",
+  "evidence/benchmarks/release-workload-matrix.json",
+  "evidence/docs/optimization-proof.md",
+]
+
+[[requirements]]
+id = "weir-analysis-integration"
+title = "Weir reaching-def, points-to, alias, callgraph, and fixpoint facts integrate into Vyre optimization"
+status = "closed"
+minimum_evidence = 7
+evidence = [
+  "evidence/weir/weir-analysis-api-matrix.json",
+  "evidence/weir/weir-vyre-integration-tests.json",
+  "evidence/weir/weir-readme-contracts.json",
+  "../../../../dataflow/weir/Cargo.toml",
+  "evidence/optimization/weir-facts-pass-firing.json",
+  "evidence/benchmarks/weir-dataflow-release.json",
+  "evidence/docs/weir-integration.md",
+]
+
+[[requirements]]
+id = "alias-aware-upgrades"
+title = "Alias-aware DSE, store-to-load forwarding, LICM, fusion, and fission upgrades are implemented and proved"
+status = "closed"
+minimum_evidence = 5
+evidence = [
+  "evidence/optimization/alias-aware-dse.json",
+  "evidence/optimization/optimization-integration-matrix.json",
+  "evidence/optimization/alias-aware-stlf.json",
+  "evidence/optimization/alias-aware-licm.json",
+  "evidence/optimization/alias-aware-fusion-fission.json",
+  "evidence/benchmarks/alias-aware-before-after.json",
+]
+
+[[requirements]]
+id = "egraph-saturation"
+title = "Bounded e-graph or egglog-family saturation replaces hand rewrites where it wins"
+status = "closed"
+minimum_evidence = 4
+evidence = [
+  "evidence/optimization/egraph-saturation-matrix.json",
+  "evidence/optimization/optimization-integration-matrix.json",
+  "evidence/optimization/egraph-semantic-contracts.json",
+  "evidence/benchmarks/egraph-before-after.json",
+  "evidence/docs/egraph-saturation.md",
+]
+
+[[requirements]]
+id = "proof-workloads-12"
+title = "At least 12 proof workload families have reproducible CPU/GPU benchmark artifacts"
+status = "closed"
+minimum_evidence = 12
+evidence = [
+  "evidence/benchmarks/release-workload-matrix.json",
+  "../docs/optimization/BENCH_TARGETS.toml",
+  "evidence/benchmarks/workload-01-condition-eval.json",
+  "evidence/benchmarks/workload-02-string-bitmap-scatter.json",
+  "evidence/benchmarks/workload-03-offset-count-aggregation.json",
+  "evidence/benchmarks/workload-04-metadata-conditions.json",
+  "evidence/benchmarks/workload-05-entropy-window.json",
+  "evidence/benchmarks/workload-06-quantified-condition-loops.json",
+  "evidence/benchmarks/workload-07-alias-reaching-def.json",
+  "evidence/benchmarks/workload-08-ifds-witness.json",
+  "evidence/benchmarks/workload-09-c-ast-traversal.json",
+  "evidence/benchmarks/workload-10-megakernel-queued-batches.json",
+  "evidence/benchmarks/workload-11-egraph-saturation.json",
+  "evidence/benchmarks/workload-12-sparse-output-compaction.json",
+  "evidence/benchmarks/workload-13-callgraph-reachability.json",
+]
+
+[[requirements]]
+id = "cpu-only-100x-proof"
+title = "Ten release workloads prove 100x+ CUDA wins against CPU-SOTA baselines"
+status = "closed"
+minimum_evidence = 6
+evidence = [
+  "evidence/benchmarks/release-workload-matrix.json",
+  "evidence/benchmarks/cpu-only-100x-proof.json",
+  "evidence/benchmarks/megakernel-condition-100x-proof.json",
+  "evidence/benchmarks/workload-01-condition-eval.json",
+  "evidence/benchmarks/workload-02-string-bitmap-scatter.json",
+  "evidence/benchmarks/workload-03-offset-count-aggregation.json",
+  "evidence/benchmarks/workload-05-entropy-window.json",
+  "evidence/benchmarks/workload-06-quantified-condition-loops.json",
+  "evidence/benchmarks/workload-10-megakernel-queued-batches.json",
+  "evidence/benchmarks/workload-12-sparse-output-compaction.json",
+  "evidence/docs/cpu-only-100x-proof.md",
+]
+
+[[requirements]]
+id = "c-parser-linux-subsystem"
+title = "Distributed C parser parses a full selected Linux subsystem corpus"
+status = "closed"
+minimum_evidence = 6
+evidence = [
+  "cargo_full run --bin xtask -- c-parser-corpus --corpus DIR -I LINUX_INCLUDE_DIR -D CONFIG_SYMBOL=1 --output release/evidence/parser/c-parser-linux-subsystem.json",
+  "evidence/parser/c-parser-linux-subsystem.json",
+  "evidence/parser/linux-subsystem-corpus-manifest.json",
+  "evidence/parser/c-parser-diagnostics-summary.json",
+  "evidence/parser/c-parser-throughput.json",
+  "evidence/docs/c-parser-linux-proof.md",
+]
+
+[[requirements]]
+id = "distributed-parser-coherence"
+title = "vyre-frontend-c, vyrec, Weir, and Surge/SurgeC parser responsibilities are coherent"
+status = "closed"
+minimum_evidence = 10
+evidence = [
+  "cargo_full run --bin xtask -- parser-coherence --output release/evidence/parser/distributed-parser-map.json",
+  "evidence/parser/distributed-parser-map.json",
+  "evidence/parser/vyre-frontend-c-contracts.json",
+  "evidence/parser/vyrec-cli-contracts.json",
+  "evidence/parser/weir-contracts.json",
+  "evidence/parser/surgec-contracts.json",
+  "evidence/parser/surgec-grammar-gen-contracts.json",
+  "evidence/docs/distributed-parser-coherence.md",
+  "evidence/docs/parser-doc-proof.md",
+  "evidence/tests/corpus-suite.json",
+  "evidence/tests/release-surface-suite-coverage.json",
+]
+
+[[requirements]]
+id = "conformance-hard-gate"
+title = "Conformance is wired as a hard release-blocking gate for every claimed op/backend"
+status = "closed"
+minimum_evidence = 11
+evidence = [
+  "evidence/conformance/conformance-matrix.json",
+  "evidence/conformance/cuda-conformance.json",
+  "evidence/conformance/wgpu-conformance.json",
+  "evidence/conformance/reference-conformance.json",
+  "evidence/conformance/release-gate-log.json",
+  "../../../../../.github/workflows/conform.yml",
+  "../../../../../.github/workflows/gpu-parity.yml",
+  "../../../../../.github/workflows/santh-ci.yml",
+  "../../../../../.github/workflows/architectural-invariants.yml",
+  "../../../../../.github/CI_REQUIRED.md",
+  "../../../../../scripts/apply-branch-protection.sh",
+]
+
+[[requirements]]
+id = "modular-test-architecture"
+title = "Oversized tests are modularized into fixtures, contracts, properties, backends, corpus, bench, and regression layers"
+status = "closed"
+minimum_evidence = 6
+evidence = [
+  "cargo_full run --bin xtask -- lint-shape-tests --threshold 0",
+  "evidence/tests/test-matrix.json",
+  "evidence/tests/modularization-map.json",
+  "evidence/tests/oversized-test-closure.json",
+  "evidence/tests/release-surface-suite-coverage.json",
+  "evidence/docs/test-architecture.md",
+]
+
+[[requirements]]
+id = "exhaustive-verification"
+title = "Normal, adversarial, property, conformance, corpus, benchmark, gap, and fuzz verification are present"
+status = "closed"
+minimum_evidence = 10
+evidence = [
+  "evidence/tests/test-matrix.json",
+  "evidence/tests/release-surface-suite-coverage.json",
+  "evidence/tests/unit-suite.json",
+  "evidence/tests/adversarial-suite.json",
+  "evidence/tests/property-suite.json",
+  "evidence/tests/conformance-suite.json",
+  "evidence/tests/corpus-suite.json",
+  "evidence/tests/benchmark-suite.json",
+  "evidence/tests/gap-suite.json",
+  "evidence/tests/fuzz-suite.json",
+]
+
+[[requirements]]
+id = "docs-evidence-linked"
+title = "User, contributor, benchmark, conformance, parser, optimization, and release docs are tied to evidence"
+status = "closed"
+minimum_evidence = 8
+evidence = [
+  "evidence/docs/docs-matrix.json",
+  "evidence/docs/vyre-readme-contracts.json",
+  "evidence/docs/vyre-readme-proof.md",
+  "evidence/docs/weir-readme-proof.md",
+  "evidence/docs/parser-doc-proof.md",
+  "evidence/docs/benchmark-doc-proof.md",
+  "evidence/docs/wgpu-fallback-proof.md",
+  "evidence/docs/conformance-doc-proof.md",
+  "evidence/docs/release-notes.md",
+]
+
+[[requirements]]
+id = "crate-metadata"
+title = "Every release crate has coherent metadata, features, docs, readme, license, and version policy"
+status = "closed"
+minimum_evidence = 9
+evidence = [
+  "cargo_full run --bin xtask -- metadata-matrix --output release/evidence/metadata/metadata-matrix.json",
+  "cargo_full run --bin xtask -- feature-matrix --output release/evidence/metadata/feature-matrix.json",
+  "cargo_full run --bin xtask -- package-readiness --output release/evidence/package/publish-readiness.json",
+  "cargo_full run --bin xtask -- dep-drift",
+  "evidence/metadata/metadata-matrix.json",
+  "evidence/version/version-matrix.json",
+  "evidence/metadata/feature-matrix.json",
+  "evidence/package/publish-readiness.json",
+  "evidence/docs/crate-metadata-proof.md",
+]
+
+[[requirements]]
+id = "release-hygiene"
+title = "No shipped stubs, hidden fallbacks, unbounded resources, hot-path sleeps, unactionable errors, or stale docs"
+status = "closed"
+minimum_evidence = 16
+evidence = [
+  "cargo_full run --bin xtask -- recursion-gate --strict",
+  "cargo_full run --bin xtask -- heuristic-audit --strict",
+  "evidence/hygiene/hygiene-matrix.json",
+  "evidence/hygiene/no-stubs-scan.json",
+  "evidence/hygiene/no-hidden-fallback-scan.json",
+  "evidence/hygiene/resource-bound-scan.json",
+  "evidence/hygiene/error-surface-scan.json",
+  "evidence/hygiene/cargo-wrapper-scan.json",
+  "evidence/hygiene/audit-location-scan.json",
+  "evidence/hygiene/public-doc-scan.json",
+  "evidence/hygiene/test-hygiene-scan.json",
+  "evidence/docs/release-hygiene-proof.md",
+  "../../../../../.github/workflows/architectural-invariants.yml",
+  "../../../../../.github/CI_REQUIRED.md",
+  "../../../../../scripts/apply-branch-protection.sh",
+  "../../../../../scripts/architectural_invariants.sh",
+]
+
+[[requirements]]
+id = "final-completion-audit"
+title = "Prompt-to-artifact completion audit proves every objective requirement is satisfied"
+status = "closed"
+minimum_evidence = 10
+evidence = [
+  "cargo_full run --bin xtask -- release-evidence",
+  "cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json",
+  "cargo_full run --bin xtask -- vyre-release-gate",
+  "cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json",
+  "evidence/final/release-evidence-run.json",
+  "evidence/final/completion-audit.json",
+  "evidence/final/public-launch-state.json",
+  "../scripts/final-launch.sh",
+  "../scripts/publish-release.sh",
+  "vyre-release-evidence.toml",
+]

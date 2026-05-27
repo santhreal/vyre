@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "threshold_lines": 500,
+  "closed": true,
+  "total_oversized_files": 0,
+  "total_god_test_candidates": 0,
+  "oversized_files": [],
+  "god_test_candidates": [],
+  "required_split_count": 0,
+  "blockers": []
+}

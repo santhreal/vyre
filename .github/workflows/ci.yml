@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: libs/performance/matching/vyre
+
+jobs:
+  matrix:
+    name: ${{ matrix.os }} / ${{ matrix.rust-toolchain }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust-toolchain: [stable, nightly]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+
+      - name: Install Rust
+        shell: bash
+        run: |
+          rustup toolchain install "${{ matrix.rust-toolchain }}" \
+            --profile minimal \
+            --component clippy \
+            --component rustfmt
+          rustup default "${{ matrix.rust-toolchain }}"
+
+      - name: ./cargo_full fmt
+        shell: bash
+        run: cargo_full fmt --check
+
+      - name: abstraction gate
+        shell: bash
+        run: cargo_full run -p xtask -- abstraction-gate
+
+      - name: ./cargo_full clippy
+        shell: bash
+        run: cargo_full clippy --workspace -- -D warnings
+
+      - name: ./cargo_full test
+        shell: bash
+        run: cargo_full test --workspace
+
+      - name: ./cargo_full doc
+        shell: bash
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo_full doc --workspace
+
+  release-evidence-shape:
+    name: release evidence shape
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+
+      - name: Install Rust
+        shell: bash
+        run: |
+          MSRV="$(grep -E '^rust-version' Cargo.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
+          rustup toolchain install "$MSRV" --profile minimal
+          rustup default "$MSRV"
+
+      - name: Generate structural release evidence
+        shell: bash
+        run: cargo_full run --bin xtask -- release-evidence
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vyre-structural-release-evidence
+          path: libs/performance/matching/vyre/release/evidence/**/*.json

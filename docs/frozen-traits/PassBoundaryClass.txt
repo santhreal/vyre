@@ -1,0 +1,14 @@
+pub enum PassBoundaryClass {
+/// Temporary default for unclassified passes.
+Unknown,
+/// Preserves public program ABI and backend-neutral semantics.
+AbiPreserving,
+/// May change public buffer ABI and requires caller opt-in.
+AbiChanging,
+/// Requires backend capabilities but not backend identity checks.
+BackendAware,
+/// Owns runtime/megakernel/residency decisions.
+RuntimeAware,
+/// Belongs to a domain layer, not generic core IR.
+DomainSpecific,
+}

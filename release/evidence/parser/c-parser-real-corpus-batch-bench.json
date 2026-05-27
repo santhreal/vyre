@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "date": "2026-05-09",
+  "benchmark": "vyre-frontend-c real_corpus Criterion batch syntax parser",
+  "corpus": {
+    "path": "vyre-frontend-c/tests/corpus/r2_kernel_scripts",
+    "file_count": 44,
+    "source_bytes": 629576,
+    "unsafe_feature_profile": {
+      "directive_files": 43,
+      "line_comment_files": 37,
+      "block_comment_files": 41,
+      "string_files": 42,
+      "char_quote_files": 36,
+      "backslash_files": 38,
+      "nonascii_files": 1
+    }
+  },
+  "backend": {
+    "release_backend": "cuda",
+    "gpu_probe": "NVIDIA GeForce RTX 5090, 32607 MiB, driver 570.211.01",
+    "cpu_execution": "tree-sitter baseline and oracle/test infrastructure only"
+  },
+  "implementation": {
+    "entrypoint": "vyre_frontend_c::api::parse_syntax_batch_bytes",
+    "unsafe_batch_chunking": {
+      "max_files_per_chunk": 8,
+      "target_bytes_per_chunk": 114688,
+      "reason": "measured real-corpus lexer throughput improves when unsafe concatenated C batches stay near 112 KiB instead of one 629 KiB conservative lexer batch"
+    }
+  },
+  "commands": [
+    "env RUST_MIN_STACK=67108864 CARGO_BUILD_JOBS=1 cargo test -p vyre-frontend-c --test parse_syntax_bytes -- --nocapture",
+    "env RUST_MIN_STACK=67108864 CARGO_BUILD_JOBS=1 cargo test -p vyre-frontend-c -- --nocapture",
+    "env RUST_MIN_STACK=67108864 CARGO_BUILD_JOBS=1 VYRE_BACKEND=cuda cargo bench -p vyre-frontend-c --bench real_corpus -- --warm-up-time 1 --measurement-time 3 --sample-size 10"
+  ],
+  "test_results": {
+    "parse_syntax_bytes": "8 passed, 0 failed",
+    "vyre_frontend_c_full_package": "all tests passed",
+    "gnu_escape_e2e": "included in full package and focused run; passed"
+  },
+  "measurements": {
+    "before_chunking_vyre_parse_syntax_batch_bytes_44_median_ms": 49.497,
+    "byte_budget_chunked_vyre_parse_syntax_batch_bytes_44_median_ms": 36.610,
+    "tree_sitter_c_cold_batch_44_median_ms": 49.551,
+    "vyre_vs_tree_sitter_speedup_x": 1.353,
+    "vyre_improvement_vs_unchunked_x": 1.352
+  },
+  "notes": [
+    "This is a fair cold tree-sitter batch comparison from the same Criterion bench binary.",
+    "This is not a 10x result; it is the current audited real-corpus win after chunked CUDA raw syntax batching.",
+    "The larger release goal remains incomplete: clang-parity semantic analysis and full-kernel 10x speed targets are not yet proven."
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "component_id": "surgec-grammar-gen",
+  "role": "Shared grammar generation substrate",
+  "root": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen",
+  "required_files": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/Cargo.toml",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 1147
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/lib.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 954
+    }
+  ],
+  "required_terms": [
+    "grammar",
+    "generate"
+  ],
+  "missing_terms": [],
+  "required_contract_topics": [
+    "grammar",
+    "generate",
+    "token",
+    "parser"
+  ],
+  "missing_contract_topics": [],
+  "required_test_categories": [
+    "unit",
+    "integration",
+    "property",
+    "adversarial",
+    "corpus",
+    "benchmark",
+    "conformance",
+    "gap",
+    "fuzz"
+  ],
+  "missing_test_categories": [],
+  "required_evidence_trees": [
+    {
+      "tree": "tests",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/tests",
+      "exists": true,
+      "source_bytes": 5552,
+      "unreadable_file_count": 0
+    },
+    {
+      "tree": "benches",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/benches",
+      "exists": true,
+      "source_bytes": 245,
+      "unreadable_file_count": 0
+    },
+    {
+      "tree": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/fuzz",
+      "exists": true,
+      "source_bytes": 260,
+      "unreadable_file_count": 0
+    }
+  ],
+  "unresolved_ownership_markers": [],
+  "blockers": []
+}

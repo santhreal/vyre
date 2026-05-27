@@ -1,0 +1,301 @@
+use rustc_hash::FxHashMap;
+use vyre_foundation::ir::BinOp;
+use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
+
+pub(crate) struct IndexFacts {
+    producer: FxHashMap<u32, usize>,
+    consumer_count: FxHashMap<u32, usize>,
+    single_consumer: FxHashMap<u32, usize>,
+    lit_u32: FxHashMap<u32, u32>,
+}
+
+impl IndexFacts {
+    pub(crate) fn new(body: &KernelBody) -> Self {
+        let mut producer = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
+        let mut consumer_count =
+            FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
+        let mut single_consumer =
+            FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
+        let mut lit_u32 = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
+        for (idx, op) in body.ops.iter().enumerate() {
+            let Some(result_id) = op.result else {
+                continue;
+            };
+            producer.insert(result_id, idx);
+            if matches!(op.kind, KernelOpKind::MatrixMma { .. }) {
+                for offset in 1..4 {
+                    if let Some(fragment_id) = result_id.checked_add(offset) {
+                        producer.insert(fragment_id, idx);
+                    }
+                }
+            }
+            if !matches!(op.kind, KernelOpKind::Literal) {
+                continue;
+            }
+            let Some(&pool_idx) = op.operands.first() else {
+                continue;
+            };
+            let Some(literal) = body.literals.get(pool_idx as usize) else {
+                continue;
+            };
+            let value = match literal {
+                LiteralValue::U32(value) => Some(*value),
+                LiteralValue::I32(value) => Some(*value as u32),
+                _ => None,
+            };
+            if let Some(value) = value {
+                lit_u32.insert(result_id, value);
+            }
+        }
+        for (idx, op) in body.ops.iter().enumerate() {
+            visit_value_operands(op, |operand| {
+                if !producer.contains_key(&operand) {
+                    return;
+                }
+                *consumer_count.entry(operand).or_insert(0) += 1;
+                single_consumer
+                    .entry(operand)
+                    .and_modify(|existing| *existing = usize::MAX)
+                    .or_insert(idx);
+            });
+        }
+        Self {
+            producer,
+            consumer_count,
+            single_consumer,
+            lit_u32,
+        }
+    }
+
+    pub(crate) fn is_index_plus_one(
+        &self,
+        body: &KernelBody,
+        candidate_id: u32,
+        prev_id: u32,
+    ) -> bool {
+        let Some(&op_idx) = self.producer.get(&candidate_id) else {
+            return false;
+        };
+        let op = &body.ops[op_idx];
+        let KernelOpKind::BinOpKind(BinOp::Add) = op.kind else {
+            return false;
+        };
+        if op.operands.len() != 2 {
+            return false;
+        }
+        let lhs = op.operands[0];
+        let rhs = op.operands[1];
+        let is_one = |id: u32| self.lit_u32.get(&id) == Some(&1);
+        (lhs == prev_id && is_one(rhs)) || (rhs == prev_id && is_one(lhs))
+    }
+
+    pub(crate) fn producer_idx(&self, result_id: u32) -> Option<usize> {
+        self.producer.get(&result_id).copied()
+    }
+
+    pub(crate) fn result_use_count(&self, result_id: u32) -> usize {
+        self.consumer_count.get(&result_id).copied().unwrap_or(0)
+    }
+
+    pub(crate) fn single_consumer_idx(&self, result_id: u32) -> Option<usize> {
+        if self.result_use_count(result_id) == 1 {
+            self.single_consumer.get(&result_id).copied()
+        } else {
+            None
+        }
+        .filter(|idx| *idx != usize::MAX)
+    }
+}
+
+fn visit_value_operands(op: &KernelOp, mut visit: impl FnMut(u32)) {
+    match &op.kind {
+        KernelOpKind::Literal
+        | KernelOpKind::LocalInvocationId
+        | KernelOpKind::GlobalInvocationId
+        | KernelOpKind::WorkgroupId
+        | KernelOpKind::SubgroupLocalId
+        | KernelOpKind::SubgroupSize
+        | KernelOpKind::LoopIndex { .. }
+        | KernelOpKind::LoopCarrier { .. }
+        | KernelOpKind::BufferLength
+        | KernelOpKind::StructuredBlock
+        | KernelOpKind::Return
+        | KernelOpKind::Barrier { .. }
+        | KernelOpKind::Region { .. }
+        | KernelOpKind::AsyncWait { .. }
+        | KernelOpKind::Resume { .. }
+        | KernelOpKind::IndirectDispatch { .. } => {}
+        KernelOpKind::LoadGlobal | KernelOpKind::LoadShared | KernelOpKind::LoadConstant => {
+            if let Some(&index_id) = op.operands.get(1) {
+                visit(index_id);
+            }
+        }
+        KernelOpKind::StoreGlobal | KernelOpKind::StoreShared | KernelOpKind::Atomic { .. } => {
+            for &operand in op.operands.iter().skip(1) {
+                visit(operand);
+            }
+        }
+        KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => {
+            if let Some(&condition_id) = op.operands.first() {
+                visit(condition_id);
+            }
+        }
+        KernelOpKind::StructuredForLoop { .. } => {
+            for &operand in op.operands.iter().take(2) {
+                visit(operand);
+            }
+        }
+        KernelOpKind::AsyncLoad { .. } | KernelOpKind::AsyncStore { .. } => {
+            for &operand in op.operands.iter().skip(2) {
+                visit(operand);
+            }
+        }
+        KernelOpKind::Copy
+        | KernelOpKind::LoopCarrierInit { .. }
+        | KernelOpKind::LoopCarrierEnd { .. }
+        | KernelOpKind::BinOpKind(_)
+        | KernelOpKind::UnOpKind(_)
+        | KernelOpKind::Fma
+        | KernelOpKind::MatrixMma { .. }
+        | KernelOpKind::Select
+        | KernelOpKind::Cast { .. }
+        | KernelOpKind::SubgroupBallot
+        | KernelOpKind::SubgroupShuffle
+        | KernelOpKind::SubgroupAdd
+        | KernelOpKind::Trap { .. }
+        | KernelOpKind::Call { .. }
+        | KernelOpKind::OpaqueExpr(_)
+        | KernelOpKind::OpaqueNode(_) => {
+            for &operand in &op.operands {
+                visit(operand);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vyre_lower::{
+        KernelBody, KernelOp, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape,
+    };
+
+    fn body_with_add(operands: Vec<u32>, result: Option<u32>, literals: Vec<LiteralValue>) -> KernelBody {
+        KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands,
+                    result,
+                },
+            ],
+            child_bodies: Vec::new(),
+            literals,
+        }
+    }
+
+    #[test]
+    fn detects_unit_stride_add_in_either_operand_order() {
+        let body = body_with_add(vec![7, 1], Some(9), vec![LiteralValue::U32(1)]);
+        let facts = IndexFacts::new(&body);
+        assert!(facts.is_index_plus_one(&body, 9, 7));
+
+        let body = body_with_add(vec![1, 7], Some(9), vec![LiteralValue::I32(1)]);
+        let facts = IndexFacts::new(&body);
+        assert!(facts.is_index_plus_one(&body, 9, 7));
+    }
+
+    #[test]
+    fn rejects_missing_producer_non_add_and_non_one_literals() {
+        let body = body_with_add(vec![7, 1], Some(9), vec![LiteralValue::U32(2)]);
+        let facts = IndexFacts::new(&body);
+        assert!(!facts.is_index_plus_one(&body, 9, 7));
+        assert!(!facts.is_index_plus_one(&body, 99, 7));
+    }
+
+    #[test]
+    fn literal_pool_indices_do_not_count_as_result_consumers() {
+        let body = KernelBody {
+            ops: vec![KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![0],
+                result: Some(0),
+            }],
+            child_bodies: Vec::new(),
+            literals: vec![LiteralValue::U32(9)],
+        };
+        let facts = IndexFacts::new(&body);
+        assert_eq!(facts.result_use_count(0), 0);
+        assert_eq!(facts.single_consumer_idx(0), None);
+    }
+
+    #[test]
+    fn store_binding_slots_do_not_count_as_result_consumers() {
+        let body = KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![2],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 1, 2],
+                    result: None,
+                },
+            ],
+            child_bodies: Vec::new(),
+            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1), LiteralValue::U32(2)],
+        };
+        let facts = IndexFacts::new(&body);
+        assert_eq!(facts.result_use_count(0), 0);
+        assert_eq!(facts.result_use_count(1), 1);
+        assert_eq!(facts.result_use_count(2), 1);
+    }
+
+    #[test]
+    fn matrix_mma_consecutive_fragment_results_are_producers() {
+        let body = KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::MatrixMma {
+                        shape: MatrixMmaShape::M16N8K16,
+                        a_layout: MatrixMmaLayout::RowMajor,
+                        b_layout: MatrixMmaLayout::ColMajor,
+                        a_type: MatrixMmaElement::F16,
+                        b_type: MatrixMmaElement::F16,
+                        accum_type: MatrixMmaElement::F32,
+                    },
+                    operands: vec![0; 10],
+                    result: Some(10),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Copy,
+                    operands: vec![12],
+                    result: Some(20),
+                },
+            ],
+            child_bodies: Vec::new(),
+            literals: Vec::new(),
+        };
+        let facts = IndexFacts::new(&body);
+        assert_eq!(facts.producer_idx(12), Some(0));
+        assert_eq!(facts.result_use_count(12), 1);
+        assert_eq!(facts.single_consumer_idx(12), Some(1));
+    }
+}

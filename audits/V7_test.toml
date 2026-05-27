@@ -1,0 +1,523 @@
+schema_version = "1"
+# V7 Phase C2 audit #5  -  TESTING / HARNESS
+# Read-only audit of test coverage, harness completeness, adversarial design,
+# fuzz, proptest, #[ignore] discipline, benchmarks, and conform parity.
+# Prefix: V7-TEST-xxx
+# Minimum 20 findings  -  34 findings recorded.
+
+[[finding]]
+id = "V7-TEST-001"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-libs/src/math/linalg/matmul_tiled.rs"
+line = 244
+title = "matmul_tiled has no test_inputs and no execution tests"
+description = """
+The inventory::submit!(OpEntry { … }) for matmul_tiled sets
+test_inputs = None and expected_output = None. The universal harness
+skips it entirely. There are no CPU conform, differential fuzz, or GPU
+differential tests that execute this op. Only structural tests exist
+(overflow_guards, gap, integration, property, fingerprint_lock).
+"""
+fix = "Add test_inputs covering empty matrix, 1x1, non-square, MAX-dim overflow boundary, and tile-boundary sizes. Wire into cat_a_conform.rs and cat_a_gpu_differential.rs."
+
+[[finding]]
+id = "V7-TEST-002"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-libs/src/nn/attention/softmax.rs"
+line = 217
+title = "softmax has zero execution tests and no NaN/Inf coverage"
+description = """
+softmax registers with test_inputs = None. There are no conform,
+fuzz, differential, or GPU tests executing it. Inline #[cfg(test)]
+only validates builder rejects (dtype/shape mismatch, name collision).
+Because it is an F32 op, NaN and Inf propagation are completely
+unverified  -  a silent NaN fan-out would go undetected.
+"""
+fix = "Add test_inputs with canonical 1D/2D vectors, empty vector, single-element, and NaN/Inf witnesses. Execute through CPU reference and GPU differential."
+
+[[finding]]
+id = "V7-TEST-003"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-libs/src/nn/attention/attention.rs"
+line = 349
+title = "attention has no test_inputs and no execution tests"
+description = """
+attention registers with test_inputs = None. No harness, conform,
+or differential test executes it. Only overflow_guards.rs tests the
+panic path for s*d overflow, and name_collision.rs tests builder
+rejection. The op is entirely unverified at runtime.
+"""
+fix = "Add test_inputs covering minimal seq_len=1, d_head=1, empty context, and workgroup-size boundary. Add CPU conform and GPU differential tests."
+
+[[finding]]
+id = "V7-TEST-004"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-libs/src/nn/norm/layer_norm.rs"
+line = 215
+title = "layer_norm has no test_inputs and no execution tests"
+description = """
+layer_norm registers with test_inputs = None. No conform, fuzz,
+or GPU differential test executes it. Inline tests only validate
+builder rejection. As an F32 op, NaN/Inf and epsilon edge cases
+are untested.
+"""
+fix = "Add test_inputs covering single-element, small batch, NaN/Inf inputs, and epsilon=0 boundary. Add CPU conform and GPU differential tests."
+
+[[finding]]
+id = "V7-TEST-005"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-libs/src/nn/linear/linear.rs"
+line = 70
+title = "linear has no test_inputs and no execution tests"
+description = """
+linear registers with test_inputs = None. Only integration.rs
+checks Program validity and fingerprint_lock.rs checks determinism.
+No actual execution against reference or GPU occurs.
+"""
+fix = "Add test_inputs covering in_features=1/out_features=1, empty batch, and weight/bias shape mismatches. Add CPU conform and GPU differential tests."
+
+[[finding]]
+id = "V7-TEST-006"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-libs/src/crypto/blake3/blake3.rs"
+line = 236
+title = "blake3_compress has no test_inputs in OpEntry"
+description = """
+blake3_compress registers with test_inputs = None, so the universal
+harness skips it. blake3_kat.rs covers empty block, 'abc', 64-byte
+block, and structural rotate-right count, but there is no conform
+test against the CPU reference interpreter and no GPU differential.
+"""
+fix = "Add test_inputs to the OpEntry and wire into cat_a_conform.rs and cat_a_gpu_differential.rs."
+
+[[finding]]
+id = "V7-TEST-007"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-libs/src/matching/dfa/aho_corasick.rs"
+line = 91
+title = "aho_corasick has no test_inputs in OpEntry"
+description = """
+aho_corasick registers with test_inputs = None. Extensive KAT corpus
+exists (aho_corasick_kat.rs) and differential_fuzz.rs compares against
+a CPU oracle, but there is no cat_a_conform.rs witness and the universal
+harness skips it because test_inputs is None.
+"""
+fix = "Add test_inputs covering empty haystack, single-byte match, MAX-pattern count, and unicode bytes. Set expected_output so universal harness exercises it."
+
+[[finding]]
+id = "V7-TEST-008"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-libs/src/nn/attention/softmax.rs"
+line = 217
+title = "NaN/Inf completely uncovered for all F32 ops"
+description = """
+softmax, attention, and layer_norm accept F32 buffers but have zero
+execution tests. No NaN or Inf witnesses exist anywhere in the test
+suite for these ops. NaN propagation or Inf clamping bugs would not
+be caught.
+"""
+fix = "Add adversarial test file tests/adversarial_f32_edge_cases.rs that feeds NaN, Inf, -Inf, -0.0, and subnormal values to every F32 op and asserts defined behavior."
+
+[[finding]]
+id = "V7-TEST-009"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-libs/src/math/linalg/dot.rs"
+line = 65
+title = "Empty buffer and one-element execution gaps in test_inputs"
+description = """
+dot, scan_prefix_sum, broadcast, relu, and fnv1a32 have test_inputs
+but only with small canonical sizes. No empty-buffer (n=0), one-element,
+or large-boundary runs are provided. The universal harness therefore
+never exercises zero-length or single-element paths.
+"""
+fix = "Extend test_inputs for each op to include n=0, n=1, and n=MAX_WORKGROUP (64/256/1024) boundary vectors."
+
+[[finding]]
+id = "V7-TEST-010"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-libs/src/math/broadcast/broadcast.rs"
+line = 36
+title = "Workgroup-size boundary guards are untested"
+description = """
+broadcast, relu, substring_search, and aho_corasick launch [64,1,1]
+and guard with buf_len, but no test supplies a buffer smaller than
+the workgroup to verify the guard does not write out of bounds.
+matmul has a grid-overshoot guard (col < n && idx < buf_len) that
+is also untested with oversized workgroups.
+"""
+fix = "Add adversarial tests that dispatch with buf_len < workgroup_size_x and assert no out-of-bounds write (via poison-value padding or buffer bounds checking)."
+
+[[finding]]
+id = "V7-TEST-011"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-libs/src/crypto/blake3/blake3.rs"
+line = 236
+title = "Buffer-size mismatch negative tests missing for blake3_compress"
+description = """
+blake3_compress assumes exact 8/16/4-word buffer lengths. Passing
+wrong-sized buffers is not tested; the behavior is undefined and
+could cause panics or silent corruption.
+"""
+fix = "Add #[should_panic] tests (or error-return tests) that feed 0, 1, 7, 9, 15, and 17-word buffers to blake3_compress and assert clean rejection."
+
+[[finding]]
+id = "V7-TEST-012"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-ops/src/logical/nand/tests.rs"
+line = 1
+title = "Every vyre-ops dialect op has a stub tests.rs"
+description = """
+vyre-ops/src/logical/{and,nand,nor,or,xor}/tests.rs and
+vyre-ops/src/math/{avg_floor,wrapping_neg}/tests.rs each contain
+only 'fn test_op() {}'. These are stubs that provide zero value
+and violate LAW 1 (NO STUBS).
+"""
+fix = "Delete the stub files or replace with real property tests (proptest) covering zero, MAX, short-input, and commutativity/associativity invariants."
+
+[[finding]]
+id = "V7-TEST-013"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-ops/src/math/avg_floor/op.rs"
+line = 58
+title = "vyre-ops CPU refs have no panic/negative tests"
+description = """
+All CPU refs in vyre-ops return empty output on short input rather
+than panicking. There are no #[should_panic] tests for invalid input.
+Only 'and' tests short_input_produces_empty_output; nand, nor, or,
+xor, avg_floor, and wrapping_neg lack even this basic edge case.
+"""
+fix = "Add #[should_panic] or Result-return tests for every op that asserts clean failure on malformed input, short buffers, or type mismatches."
+
+[[finding]]
+id = "V7-TEST-014"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-libs/tests/universal_harness.rs"
+line = 1
+title = "Universal harness only runs CPU, never exercises GPU backends"
+description = """
+The canonical universal_harness.rs in vyre-libs calls
+vyre_reference::run (pure-Rust CPU interpreter). It never dispatches
+to WgpuBackend, SpirvBackend, or PhotonicBackend. The GPU differential
+exists in vyre-driver-wgpu/tests/cat_a_gpu_differential.rs, but that
+is a separate crate with its own manually written tests. There is no
+single harness iterating all registered OpEntry across all backends.
+"""
+fix = "Extend universal_harness.rs to acquire every registered backend (wgpu, spirv, photonic) and assert_diff(CPU, backend) for every OpEntry with test_inputs. Gate behind --ignored or CI feature if hardware is absent."
+
+[[finding]]
+id = "V7-TEST-015"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-libs-extern/tests/adversarial_registration_query.rs"
+line = 1
+title = "adversarial_registration_query passes vacuously on empty registry"
+description = """
+The injection corpus (null bytes, newlines, tabs, case-sensitivity)
+is genuine adversarial design, but because integration-test binaries
+see an empty registry (no inherited #[cfg(test)] registrations), the
+tests only verify ops_in_dialect('') does not panic. They never
+exercise the actual registry under attack.
+"""
+fix = "Move the adversarial query tests into the library crate as unit tests where registrations exist, or bootstrap a minimal registry inside the test setup."
+
+[[finding]]
+id = "V7-TEST-016"
+date_opened = "2026-04-20"
+severity = "MEDIUM"
+file = "vyre-driver-photonic/tests/adversarial_stub.rs"
+line = 1
+title = "adversarial_stub.rs is not adversarial  -  only API contract locks"
+description = """
+The tests in adversarial_stub.rs assert constant snapshots
+(backend_id_exact, op_ids_snapshot, error display format).
+They do NOT test failure modes, invalid inputs, or edge cases.
+They are regression guards, not break-it tests.
+"""
+fix = "Rename to contract_lock.rs and create real adversarial tests for photonic dispatch (malformed IR, oversized buffers, unsupported ops)."
+
+[[finding]]
+id = "V7-TEST-017"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-reference/tests/adversarial_empty.rs"
+line = 1
+title = "adversarial_empty.rs is a stub  -  no functional test"
+description = """
+The file contains only a comment '// adversarial dummy proptest'
+and #![allow(missing_docs)]. It is a placeholder with no tests,
+violating LAW 1 (NO STUBS).
+"""
+fix = "Delete the file or implement adversarial proptests for reference interpreter edge cases not covered by expr_adversarial_proptest.rs."
+
+[[finding]]
+id = "V7-TEST-018"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = ".github/workflows/fuzz.yml"
+line = 1
+title = "cargo-fuzz is documented in CI but no fuzz targets or corpora exist"
+description = """
+.github/workflows/fuzz.yml defines a CI matrix for cargo fuzz
+(ir_wire, ir_validate, lower_wgsl, decode_base64, decompress_lz4,
+decompress_zstd, dfa_scan). However, no fuzz/ directories exist,
+no libfuzzer-sys dependency is present, and no corpus/ directories
+exist. The workflow will fail on every run.
+"""
+fix = "Create vyre-core/fuzz/fuzz_targets/ for every op, seed with minimal corpora, and wire libfuzzer-sys in Cargo.toml. Archive or disable the workflow until targets ship."
+
+[[finding]]
+id = "V7-TEST-019"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-ops/src/math/avg_floor/op.rs"
+line = 58
+title = "vyre-ops arithmetic and logical ops lack proptest"
+description = """
+vyre-ops defines 7 dialect primitives (and, nand, nor, or, xor,
+avg_floor, wrapping_neg). Each has only 3-4 hard-coded unit tests
+in op.rs and empty stub tests.rs. There are no proptest invariants
+for commutativity, associativity, identity, overflow, or edge cases.
+"""
+fix = "Add proptest! macros to every op module covering adversarial u32 ranges (0, 1, MAX, MAX-1, rand) and assert against Rust-native semantics."
+
+[[finding]]
+id = "V7-TEST-020"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-foundation/tests/terminal_wire_round_trip.rs"
+line = 1
+title = "Fingerprint/wire round-trip lacks proptest with arbitrary programs"
+description = """
+terminal_wire_round_trip.rs exhaustively unit-tests every terminal
+variant, but there is no proptest that generates arbitrary recursive
+Programs and asserts to_wire -> from_wire byte identity. The same gap
+exists in opaque_wire_round_trip.rs and wire_v1_round_trip.rs.
+"""
+fix = "Add a proptest that generates arbitrary Program ASTs (depth <= 8) and asserts round-trip byte identity for wire v1 and fingerprint stability."
+
+[[finding]]
+id = "V7-TEST-021"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-pipeline/src/pipeline_cache.rs"
+line = 1
+title = "Cache I/O lacks proptest for eviction and layered fallthrough"
+description = """
+vyre-pipeline-cache/tests/adversarial_disk.rs has good proptest for
+corruption rejection, but vyre-pipeline/src/pipeline_cache.rs,
+vyre-driver-wgpu/src/runtime/cache/disk.rs, and
+vyre-driver-wgpu/src/pipeline_disk_cache.rs have only unit tests.
+There is no proptest for cache eviction policies, layered cache
+fallthrough with arbitrary payloads, or scheduler I/O patterns.
+"""
+fix = "Add proptest to pipeline_cache.rs and pipeline_disk_cache.rs that generates arbitrary put/get sequences and asserts LRU eviction correctness and layered fallthrough identity."
+
+[[finding]]
+id = "V7-TEST-022"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "tests/adversarial/test_fnv1a32_zero.rs"
+line = 8
+title = "FINDING-1000 has no entry in findings.toml"
+description = """
+The #[ignore] on fnv1a_handles_all_zero_buffer_without_panic cites
+FINDING-1000, but vyre-libs/findings.toml (the only findings.toml in
+the project) contains no entry for FINDING-1000. This violates the
+LAW 9 rule that every ignored test carries a finding entry with
+blocker and fix_plan.
+"""
+fix = "Add FINDING-1000 to findings.toml with blocker (reference emits 8 bytes vs spec 4) and fix_plan (align reference output size to spec)."
+
+[[finding]]
+id = "V7-TEST-023"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-driver-wgpu/tests/gap_determinism_contract.rs"
+line = 166
+title = "FINDING-BGL-1 has no entry in findings.toml"
+description = """
+The #[ignore] on dispatch_is_deterministic cites FINDING-BGL-1
+(bind-group-layout reflection mismatch), but no findings.toml entry
+exists for this ID.
+"""
+fix = "Add FINDING-BGL-1 to findings.toml (or create vyre-driver-wgpu/findings.toml) with blocker and fix_plan."
+
+[[finding]]
+id = "V7-TEST-024"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-reference/tests/expr_adversarial_proptest.rs"
+line = 1011
+title = "prop_call_primitive_select has bare #[ignore] with no finding ID"
+description = """
+The test prop_call_primitive_select is #[ignore]d with no explanation
+or finding ID. There is no corresponding findings.toml entry. This is
+an unanchored ignore that will be forgotten.
+"""
+fix = "Either remove the #[ignore] and fix the underlying failure, or assign a finding ID, add blocker + fix_plan to findings.toml, and document the reason in the ignore attribute."
+
+[[finding]]
+id = "V7-TEST-025"
+date_opened = "2026-04-20"
+severity = "MEDIUM"
+file = "vyre-driver-wgpu/tests/cat_a_gpu_differential.rs"
+line = 23
+title = "Stale doc comments claim #[ignore] on tests that are not ignored"
+description = """
+Lines 23-28 contain doc comments claiming diff_math_dot,
+diff_math_matmul_small, diff_nn_linear,
+diff_matching_substring_search, and diff_crypto_blake3_compress are
+individually #[ignore]d pending findings. The actual test functions
+do NOT have #[ignore] attributes. This stale documentation misleads
+auditors and maintainers.
+"""
+fix = "Synchronize comments with code: if the tests are meant to be ignored, add #[ignore] with finding IDs; if they pass now, remove the stale claims."
+
+[[finding]]
+id = "V7-TEST-026"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-ops/src/logical/and/op.rs"
+line = 66
+title = "Zero criterion benchmarks for all vyre-ops primitives"
+description = """
+None of the 7 vyre-ops primitives (and, nand, nor, or, xor,
+avg_floor, wrapping_neg) have criterion benchmarks. Performance
+regressions in the CPU reference paths would not be detected.
+"""
+fix = "Add vyre-ops/benches/primitive_throughput.rs with criterion groups for each op covering 1, 64, 4096, and 1M-element inputs."
+
+[[finding]]
+id = "V7-TEST-027"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-libs/benches/cat_a_bench.rs"
+line = 1
+title = "Seven Cat-A ops have no criterion benchmarks"
+description = """
+Out of ~15 Cat-A ops, matmul_tiled, broadcast, scan_prefix_sum,
+relu, linear, substring_search, and fnv1a32 have no benchmarks in
+cat_a_bench.rs. Of the 8 that do exist, most are 'build only' with
+no execution or wire-round-trip measurement.
+"""
+fix = "Extend cat_a_bench.rs to cover every OpEntry discovered via inventory::iter, measuring build, execute, and wire-round-trip latencies."
+
+[[finding]]
+id = "V7-TEST-028"
+date_opened = "2026-04-20"
+severity = "MEDIUM"
+file = "vyre-libs/benches/cat_a_bench.rs"
+line = 1
+title = "No central criterion harness auto-discovers ops"
+description = """
+cat_a_bench.rs uses a manually maintained criterion_group! macro.
+There is no code that constructs a Criterion benchmark group by
+walking the vyre-ops or vyre-libs registries at bench time. New ops
+are silently omitted from benchmarks unless a human remembers to add
+them.
+"""
+fix = "Implement an inventory-driven benchmark harness in vyre-libs/benches/ that iterates all_entries() and dynamically registers criterion benchmarks for build + execute + wire."
+
+[[finding]]
+id = "V7-TEST-029"
+date_opened = "2026-04-20"
+severity = "MEDIUM"
+file = "benches/registration_overhead.rs"
+line = 1
+title = "registration_overhead.rs is an empty orphan stub"
+description = """
+The workspace-root benches/registration_overhead.rs contains an
+empty bench function body and is not wired via [[bench]] in any
+Cargo.toml. It is dead code violating LAW 1.
+"""
+fix = "Delete benches/registration_overhead.rs or implement real registration overhead measurement and wire it via Cargo.toml [[bench]]."
+
+[[finding]]
+id = "V7-TEST-030"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-libs/src/math/linalg/matmul_tiled.rs"
+line = 244
+title = "Four ops have no conform, parity, or differential test of any kind"
+description = """
+matmul_tiled, softmax, layer_norm, and attention have zero
+byte-identity or oracle tests across all backends (CPU, wgpu, spirv,
+photonic). They are completely unverified at runtime.
+"""
+fix = "Add CPU conform tests and GPU differential tests for all four ops before they are promoted out of experimental status."
+
+[[finding]]
+id = "V7-TEST-031"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-driver-spirv/tests"
+line = 0
+title = "spirv backend has zero op-level parity execution tests"
+description = """
+vyre-driver-spirv/tests/ directory does not exist. There are no
+conform, differential, or parity tests dispatching any op through
+the SPIR-V backend. Every op is unverified on this backend.
+"""
+fix = "Create vyre-driver-spirv/tests/spirv_parity.rs with at least one witness per Cat-A op comparing CPU reference against SPIR-V dispatch output."
+
+[[finding]]
+id = "V7-TEST-032"
+date_opened = "2026-04-20"
+severity = "CRITICAL"
+file = "vyre-driver-photonic/tests/adversarial_stub.rs"
+line = 1
+title = "photonic backend has zero op-level parity execution tests"
+description = """
+vyre-driver-photonic only tests backend ID strings and error
+formatting. No op is dispatched through the photonic backend and
+compared against CPU reference output.
+"""
+fix = "Create vyre-driver-photonic/tests/photonic_parity.rs with witnesses for every supported op asserting byte-identity against CPU reference."
+
+[[finding]]
+id = "V7-TEST-033"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "vyre-libs/tests/cat_a_conform.rs"
+line = 1
+title = "Six ops have GPU differential but no CPU conform or fuzz"
+description = """
+matmul, broadcast, relu, linear, fnv1a32, and blake3_compress have
+GPU differential tests in cat_a_gpu_differential.rs, but no
+dedicated CPU reference witness in cat_a_conform.rs and no CPU
+differential fuzz coverage. A GPU-only diff means CPU bugs can be
+masked if both CPU and GPU share a common defect.
+"""
+fix = "Add cat_a_conform.rs witnesses for all six ops. Extend differential_fuzz.rs to cover them with proptest against CPU oracle."
+
+[[finding]]
+id = "V7-TEST-034"
+date_opened = "2026-04-20"
+severity = "HIGH"
+file = "conform/vyre-conform-runner/src/main.rs"
+line = 1
+title = "vyre-conform-runner does not assert byte-identity on dispatch"
+description = """
+The conform-runner CLI supports 'run --backend <id>' and
+'prove --out <cert.json>', but the implementation only checks
+backend acquisition and op advertisement in the registry. It does
+not run inputs through the backend and assert byte-identity against
+the CPU reference. The conform crates enforce wire format and
+validation invariants, but they do not serve as a load-bearing
+op-dispatch parity gate.
+"""
+fix = "Extend conform-runner to dispatch canonical witness inputs through the selected backend, compare against vyre_reference output, and emit cert.json only on byte-identity pass."

@@ -1,0 +1,105 @@
+//! Parity test: vyre-primitives label::resolve_family + predicate
+//! tag-family wrappers (in_function, in_file, in_package) match
+//! their CPU oracles.
+
+#![cfg(test)]
+
+mod common;
+
+use common::{bytes_u32, live_dispatcher, u32_bytes};
+use vyre::DispatchConfig;
+use vyre_driver_cuda::CudaBackend;
+use vyre_primitives::label::resolve_family::{cpu_ref as resolve_family_cpu, resolve_family};
+use vyre_primitives::predicate::in_file::{cpu_ref as in_file_cpu, in_file};
+use vyre_primitives::predicate::in_function::{cpu_ref as in_func_cpu, in_function};
+use vyre_primitives::predicate::in_package::{cpu_ref as in_pkg_cpu, in_package};
+
+fn run_resolve_family(backend: &CudaBackend, node_tags: &[u32], family: u32) -> Vec<u32> {
+    let n = node_tags.len() as u32;
+    let words = (n.div_ceil(32)).max(1);
+    let program = resolve_family("tags", "out", n, family);
+    let inputs: Vec<Vec<u8>> = vec![
+        u32_bytes(node_tags),
+        // out: zero-init.
+        vec![0u8; words as usize * 4],
+    ];
+    let mut config = DispatchConfig::default();
+    let workgroup_x = 256u32;
+    let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
+    config.grid_override = Some([grid_x, 1, 1]);
+    let outputs = backend
+        .dispatch(&program, &inputs, &config)
+        .expect("dispatch");
+    let mut out = bytes_u32(&outputs[0]);
+    out.truncate(words as usize);
+    out
+}
+
+#[test]
+fn cuda_resolve_family_matches_cpu() {
+    let backend = live_dispatcher();
+    let tags = vec![0x01u32, 0x02, 0x06, 0x04];
+    let family = 0x02u32;
+    let cpu = resolve_family_cpu(&tags, family);
+    let gpu = run_resolve_family(&backend, &tags, family);
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, vec![0b0110]);
+}
+
+#[test]
+fn cuda_resolve_family_zero_mask_yields_zero() {
+    let backend = live_dispatcher();
+    let tags = vec![0x01u32, 0x02];
+    let cpu = resolve_family_cpu(&tags, 0x00);
+    let gpu = run_resolve_family(&backend, &tags, 0x00);
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, vec![0u32]);
+}
+
+fn run_predicate<B>(backend: &CudaBackend, program_builder: B, node_tags: &[u32]) -> Vec<u32>
+where
+    B: FnOnce(&str, &str, u32) -> vyre::ir::Program,
+{
+    let n = node_tags.len() as u32;
+    let words = (n.div_ceil(32)).max(1);
+    let program = program_builder("tags", "out", n);
+    let inputs: Vec<Vec<u8>> = vec![u32_bytes(node_tags), vec![0u8; words as usize * 4]];
+    let mut config = DispatchConfig::default();
+    let workgroup_x = 256u32;
+    let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
+    config.grid_override = Some([grid_x, 1, 1]);
+    let outputs = backend
+        .dispatch(&program, &inputs, &config)
+        .expect("dispatch");
+    let mut out = bytes_u32(&outputs[0]);
+    out.truncate(words as usize);
+    out
+}
+
+#[test]
+fn cuda_in_function_matches_cpu() {
+    let backend = live_dispatcher();
+    // FUNCTION = tag_family value; cpu_ref uses it. Just compare GPU vs CPU.
+    let tags = vec![0x01u32, 0x02, 0x04, 0x08, 0x01, 0x10];
+    let cpu = in_func_cpu(&tags);
+    let gpu = run_predicate(&backend, in_function, &tags);
+    assert_eq!(gpu, cpu);
+}
+
+#[test]
+fn cuda_in_file_matches_cpu() {
+    let backend = live_dispatcher();
+    let tags = vec![0x01u32, 0x02, 0x04, 0x08, 0x10, 0x20];
+    let cpu = in_file_cpu(&tags);
+    let gpu = run_predicate(&backend, in_file, &tags);
+    assert_eq!(gpu, cpu);
+}
+
+#[test]
+fn cuda_in_package_matches_cpu() {
+    let backend = live_dispatcher();
+    let tags = vec![0x01u32, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40];
+    let cpu = in_pkg_cpu(&tags);
+    let gpu = run_predicate(&backend, in_package, &tags);
+    assert_eq!(gpu, cpu);
+}

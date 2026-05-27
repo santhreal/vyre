@@ -1,0 +1,153 @@
+# Canonical optimization ownership map.
+# Agents must choose one lane and stay inside its write set unless the main
+# integrator explicitly expands scope.
+
+[lane.coordination]
+purpose = "Canonical roadmap, active claims, lane boundaries, and structural enforcement."
+layer = "Coordination"
+write = [
+  "docs/optimization/**",
+]
+avoid = [
+  "vyre-driver-*",
+  "vyre-foundation/src/**",
+  "vyre-runtime/src/**",
+  "vyre-libs/src/**",
+  "vyre-primitives/src/**",
+]
+required_commands = [
+  "cargo_full check -p vyre-foundation -p vyre-driver",
+]
+
+[lane.foundation_optimizer]
+purpose = "IR-pure optimization, fact graph, pass scheduling, canonicalization, compile-time hot paths."
+layer = "Layer 1"
+write = [
+  "vyre-foundation/src/optimizer/**",
+  "vyre-foundation/src/transform/**",
+  "vyre-foundation/tests/*optimizer*",
+]
+avoid = [
+  "vyre-driver-*",
+  "vyre-runtime/src/megakernel/**",
+  "vyre-bench/**",
+]
+required_commands = [
+  "cargo_full test -p vyre-foundation optimizer",
+]
+
+[lane.foundation_wire]
+purpose = "Canonical wire bytes, fingerprints, serialization allocation behavior, cache-stable identity."
+layer = "Layer 1"
+write = [
+  "vyre-foundation/src/serial/**",
+  "vyre-foundation/src/ir_inner/**",
+  "vyre-foundation/tests/*wire*",
+  "vyre-foundation/tests/*fingerprint*",
+]
+required_commands = [
+  "cargo_full test -p vyre-foundation wire",
+]
+
+[lane.driver_shared]
+purpose = "Backend-neutral launch, binding, validation, cache, residency, capability records."
+layer = "Shared driver"
+write = [
+  "vyre-driver/src/**",
+  "vyre-driver/tests/**",
+  "docs/frozen-traits/VyreBackend.*",
+]
+avoid = [
+  "vyre-driver-cuda/src/**",
+  "vyre-driver-wgpu/src/**",
+  "vyre-driver-spirv/src/**",
+]
+required_commands = [
+  "cargo_full test -p vyre-driver",
+]
+
+[lane.driver_cuda]
+purpose = "CUDA-only PTX lowering, CUDA stream/event/residency behavior, module cache, target-aware emission."
+layer = "Layer 2"
+release_role = "NVIDIA fast path for Vyre 0.4.1 release workloads."
+write = [
+  "vyre-driver-cuda/src/**",
+  "vyre-driver-cuda/tests/**",
+]
+required_commands = [
+  "cargo_full check -p vyre-driver-cuda -p vyre-driver",
+  "cargo_full test -p vyre-driver-cuda",
+]
+required_evidence = [
+  "release/evidence/backends/backend-matrix.json",
+  "release/evidence/features/feature-matrix.json",
+  "release/evidence/metadata/crate-metadata.json",
+  "release/evidence/benchmarks/release-workload-matrix.json",
+  "release/evidence/conformance/conformance-matrix.json",
+]
+
+[lane.driver_wgpu]
+purpose = "wgpu-only device, queue, naga/WGSL lowering, buffer pool, readback, pipeline behavior."
+layer = "Layer 2"
+release_role = "Portable GPU fallback path for Vyre 0.4.1 release workloads."
+write = [
+  "vyre-driver-wgpu/src/**",
+  "vyre-driver-wgpu/tests/**",
+]
+required_commands = [
+  "cargo_full check -p vyre-driver-wgpu -p vyre-driver",
+]
+required_evidence = [
+  "release/evidence/backends/backend-matrix.json",
+  "release/evidence/features/feature-matrix.json",
+  "release/evidence/metadata/crate-metadata.json",
+  "release/evidence/conformance/conformance-matrix.json",
+]
+
+[lane.driver_spirv]
+purpose = "SPIR-V experimental backend boundaries, lowering, and parity experiments."
+layer = "Layer 2 experimental"
+write = [
+  "vyre-driver-spirv/src/**",
+  "vyre-driver-spirv/tests/**",
+]
+required_commands = [
+  "cargo_full check -p vyre-driver-spirv -p vyre-driver",
+]
+
+[lane.runtime_megakernel]
+purpose = "Persistent megakernel queue, scheduler, resident protocol, IO, recovery, runtime throughput."
+layer = "Runtime"
+write = [
+  "vyre-runtime/src/megakernel/**",
+  "vyre-runtime/tests/megakernel*",
+  "vyre-runtime/tests/*scheduler*",
+]
+required_commands = [
+  "cargo_full test -p vyre-runtime megakernel",
+]
+
+[lane.bench_harness]
+purpose = "Unified benchmark API, active-time measurement, baseline tracking, regression math."
+layer = "Benchmark"
+write = [
+  "vyre-bench/src/**",
+  "vyre-bench/tests/**",
+  "vyre-bench/baselines/**",
+  "docs/optimization/BENCH_TARGETS.toml",
+]
+required_commands = [
+  "cargo_full check -p vyre-bench",
+]
+
+[lane.op_matrix]
+purpose = "Op/backend coverage tracking, tier placement, parity status."
+layer = "Coordination"
+write = [
+  "docs/optimization/OP_MATRIX.toml",
+  "docs/catalog/**",
+  "docs/generated/**",
+]
+required_commands = [
+  "cargo_full check -p vyre-foundation -p vyre-primitives -p vyre-intrinsics -p vyre-libs",
+]

@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "backend": "cuda",
+  "required_case_count": 4,
+  "required_pass_families": [
+    "algebraic",
+    "predicate",
+    "egraph",
+    "memory-layout",
+    "control-flow",
+    "vector-layout",
+    "A13-coalesce-fixture",
+    "A14-shared-mem-promote-fixture",
+    "A15-bank-conflict-fixture",
+    "A16-vec-pack-fixture",
+    "weir-dataflow-dse",
+    "weir-dataflow-loop-fusion",
+    "weir-dataflow-loop-fission",
+    "weir-dataflow-licm"
+  ],
+  "covered_pass_families": [
+    "A13-coalesce-fixture",
+    "A14-shared-mem-promote-fixture",
+    "A15-bank-conflict-fixture",
+    "A16-vec-pack-fixture",
+    "algebraic",
+    "control-flow",
+    "egraph",
+    "memory-layout",
+    "predicate",
+    "vector-layout",
+    "weir-dataflow-dse",
+    "weir-dataflow-licm",
+    "weir-dataflow-loop-fission",
+    "weir-dataflow-loop-fusion"
+  ],
+  "uncovered_pass_families": [],
+  "cases": [
+    {
+      "case_id": "lower.rewrites.impact.corpus",
+      "artifact": "release/evidence/optimization/lower-rewrite-impact-before-after.json",
+      "covered_pass_families": [
+        "memory-layout",
+        "control-flow",
+        "vector-layout",
+        "A13-coalesce-fixture",
+        "A14-shared-mem-promote-fixture",
+        "A15-bank-conflict-fixture",
+        "A16-vec-pack-fixture"
+      ],
+      "required_custom_metrics": [
+        "lower_ops_before",
+        "lower_ops_after",
+        "lower_ops_eliminated",
+        "lower_coalesce_problematic_before",
+        "lower_shared_candidates_before",
+        "lower_bank_critical_before",
+        "lower_vec_pack_chains_before",
+        "lower_vec_pack_ops_eliminable_before"
+      ],
+      "required_positive_metrics": [
+        "lower_ops_before",
+        "lower_ops_eliminated",
+        "lower_coalesce_problematic_before",
+        "lower_shared_candidates_before",
+        "lower_bank_critical_before",
+        "lower_vec_pack_chains_before",
+        "lower_vec_pack_ops_eliminable_before"
+      ],
+      "exists": true,
+      "read_error": null,
+      "case_count": 1,
+      "min_wall_samples": 30,
+      "min_wall_p50": 2532833,
+      "min_wall_p95": 3040951,
+      "min_wall_p99": 3196935,
+      "min_baseline_wall_samples": 30,
+      "min_baseline_wall_p50": 29045,
+      "min_baseline_wall_p95": 44944,
+      "min_baseline_wall_p99": 45927,
+      "min_wall_speedup_x1000": null,
+      "missing_custom_metrics": [],
+      "non_positive_required_metrics": [],
+      "non_winning_cases": [],
+      "blockers": []
+    },
+    {
+      "case_id": "foundation.optimizer.impact",
+      "artifact": "release/evidence/optimization/optimizer-impact-cuda.json",
+      "covered_pass_families": [
+        "algebraic",
+        "predicate"
+      ],
+      "required_custom_metrics": [
+        "optimizer_input_nodes",
+        "optimizer_output_nodes",
+        "optimizer_nodes_eliminated"
+      ],
+      "required_positive_metrics": [
+        "optimizer_input_nodes",
+        "optimizer_output_nodes"
+      ],
+      "exists": true,
+      "read_error": null,
+      "case_count": 1,
+      "min_wall_samples": 30,
+      "min_wall_p50": 1531656,
+      "min_wall_p95": 2395795,
+      "min_wall_p99": 3469680,
+      "min_baseline_wall_samples": 30,
+      "min_baseline_wall_p50": 1428703,
+      "min_baseline_wall_p95": 2313530,
+      "min_baseline_wall_p99": 4054282,
+      "min_wall_speedup_x1000": null,
+      "missing_custom_metrics": [],
+      "non_positive_required_metrics": [],
+      "non_winning_cases": [],
+      "blockers": []
+    },
+    {
+      "case_id": "lower.egraph_saturation",
+      "artifact": "release/evidence/optimization/egraph-before-after.json",
+      "covered_pass_families": [
+        "egraph"
+      ],
+      "required_custom_metrics": [
+        "egraph_case_count",
+        "egraph_bitwise_case_count",
+        "egraph_boolean_case_count",
+        "egraph_equality_classes",
+        "egraph_applied_rewrites"
+      ],
+      "required_positive_metrics": [
+        "egraph_case_count",
+        "egraph_bitwise_case_count",
+        "egraph_boolean_case_count",
+        "egraph_equality_classes",
+        "egraph_applied_rewrites"
+      ],
+      "exists": true,
+      "read_error": null,
+      "case_count": 1,
+      "min_wall_samples": 30,
+      "min_wall_p50": 5813393197,
+      "min_wall_p95": 6278067249,
+      "min_wall_p99": 6279762673,
+      "min_baseline_wall_samples": 30,
+      "min_baseline_wall_p50": 4264732930,
+      "min_baseline_wall_p95": 4649892028,
+      "min_baseline_wall_p99": 4673908450,
+      "min_wall_speedup_x1000": null,
+      "missing_custom_metrics": [],
+      "non_positive_required_metrics": [],
+      "non_winning_cases": [],
+      "blockers": []
+    },
+    {
+      "case_id": "lower.alias_aware_optimizations",
+      "artifact": "release/evidence/benchmarks/alias-aware-before-after.json",
+      "covered_pass_families": [
+        "weir-dataflow-dse",
+        "weir-dataflow-loop-fusion",
+        "weir-dataflow-loop-fission",
+        "weir-dataflow-licm"
+      ],
+      "required_custom_metrics": [
+        "alias_pass_wins",
+        "alias_fact_count",
+        "alias_cross_binding_fact_count",
+        "reaching_def_fact_count",
+        "alias_total_ops_after",
+        "conservative_total_ops_after",
+        "alias_dse_store_count",
+        "conservative_dse_store_count",
+        "alias_stlf_final_value_id",
+        "conservative_stlf_final_value_id",
+        "alias_licm_loop_loads",
+        "conservative_licm_loop_loads",
+        "alias_fusion_loop_count",
+        "conservative_fusion_loop_count",
+        "alias_fission_loop_count",
+        "conservative_fission_loop_count",
+        "benchmark_repeats"
+      ],
+      "required_positive_metrics": [
+        "alias_pass_wins",
+        "alias_fact_count",
+        "alias_cross_binding_fact_count",
+        "reaching_def_fact_count",
+        "benchmark_repeats"
+      ],
+      "exists": true,
+      "read_error": null,
+      "case_count": 1,
+      "min_wall_samples": 30,
+      "min_wall_p50": 39820008,
+      "min_wall_p95": 44052870,
+      "min_wall_p99": 44404674,
+      "min_baseline_wall_samples": 30,
+      "min_baseline_wall_p50": 35871253,
+      "min_baseline_wall_p95": 38361084,
+      "min_baseline_wall_p99": 40489913,
+      "min_wall_speedup_x1000": null,
+      "missing_custom_metrics": [],
+      "non_positive_required_metrics": [],
+      "non_winning_cases": [],
+      "blockers": []
+    }
+  ],
+  "blockers": []
+}

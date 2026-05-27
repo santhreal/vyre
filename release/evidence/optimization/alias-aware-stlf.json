@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "alias-aware-stlf",
+  "source_matrix": "release/evidence/optimization/optimization-integration-matrix.json",
+  "markers": [
+    {
+      "id": "alias-aware-stlf-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/load_forwarding/mod.rs",
+      "marker": "load_forwarding_with_weir_alias_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Store/load forwarding consumes Weir alias facts"
+    },
+    {
+      "id": "reaching-def-stlf-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/load_forwarding/mod.rs",
+      "marker": "load_forwarding_with_weir_dataflow_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Store/load forwarding consumes Weir reaching-definition facts"
+    },
+    {
+      "id": "weir-alias-analysis-api",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_alias/mod.rs",
+      "marker": "AliasFactSet",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Vyre-lower imports Weir alias facts through an explicit API"
+    },
+    {
+      "id": "weir-reaching-def-analysis-api",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_reaching_def/mod.rs",
+      "marker": "import_descriptor_reaching_defs",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Vyre-lower imports Weir reaching-def facts through an explicit API"
+    },
+    {
+      "id": "weir-dataflow-pipeline-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/mod.rs",
+      "marker": "run_all_with_weir_dataflow_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Canonical rewrite pipeline consumes Weir alias and reaching-definition facts"
+    },
+    {
+      "id": "weir-dataflow-stlf-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/load_forwarding/mod.rs",
+      "marker": "load_forwarding_with_weir_dataflow_facts(&desc",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Local test proves Weir reaching-def facts fire store/load forwarding"
+    }
+  ],
+  "blockers": []
+}

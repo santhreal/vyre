@@ -1,0 +1,159 @@
+# Documentation Index
+
+Last verified: 2026-05-26
+
+This file is generated from the current `docs/` tree and is the routing table for contributors. Consumer-specific names inside archived documents are historical context only; current implementation guidance must come from rows marked `current` or `generated`.
+
+Status values:
+
+- `current`: active architecture, contract, release, or contributor guidance.
+- `generated`: produced from source/evidence; regenerate instead of hand-editing content.
+- `superseded`: retained for traceability; a newer document owns the active contract.
+- `archived`: historical context only; do not use as implementation guidance.
+
+| Status | Last verified | Modified | Document |
+|---|---:|---:|---|
+| `current` | 2026-05-26 | 2026-05-26 | [docs/ARCHITECTURE.md](ARCHITECTURE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/bitset.md](catalog/bitset.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/fixpoint.md](catalog/fixpoint.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/graph.md](catalog/graph.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/hash.md](catalog/hash.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/intrinsics.md](catalog/intrinsics.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/label.md](catalog/label.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/logical.md](catalog/logical.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/matching.md](catalog/matching.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/math.md](catalog/math.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/nn.md](catalog/nn.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/parsing.md](catalog/parsing.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/predicate.md](catalog/predicate.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/README.md](catalog/README.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/reduce.md](catalog/reduce.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/representation.md](catalog/representation.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/security.md](catalog/security.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/text.md](catalog/text.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalog/vfs.md](catalog/vfs.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalogs/coverage-matrix.md](catalogs/coverage-matrix.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/catalogs/op-id-catalog.md](catalogs/op-id-catalog.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/code-style.md](code-style.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/consumer-integration.md](consumer-integration.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/CONVENTIONS.md](CONVENTIONS.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/CPU_GPU_CONVERGENCE.md](CPU_GPU_CONVERGENCE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/CRATE_GRAPH.md](CRATE_GRAPH.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/dialect-cookbook.md](dialect-cookbook.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/DOCUMENTATION_COVERAGE.md](DOCUMENTATION_COVERAGE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/DOCUMENTATION_GOVERNANCE.md](DOCUMENTATION_GOVERNANCE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/DRIVER_UNIFICATION_AUDIT.md](DRIVER_UNIFICATION_AUDIT.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/error-codes.md](error-codes.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/ERROR_SURFACE.md](ERROR_SURFACE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/EXECUTION_STATUS.md](EXECUTION_STATUS.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/faq.md](faq.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/frozen-traits/AlgebraicLaw.md](frozen-traits/AlgebraicLaw.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/frozen-traits/EnforceGate.md](frozen-traits/EnforceGate.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/frozen-traits/ExprVisitor.md](frozen-traits/ExprVisitor.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/frozen-traits/Lowerable.md](frozen-traits/Lowerable.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/frozen-traits/MutationClass.md](frozen-traits/MutationClass.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/frozen-traits/README.md](frozen-traits/README.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/frozen-traits/VyreBackend.md](frozen-traits/VyreBackend.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/GATE_CLOSURE.md](GATE_CLOSURE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/HOT_PATH_PROOFS.md](HOT_PATH_PROOFS.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/inventory-contract.md](inventory-contract.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/ir-semantics.md](ir-semantics.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/LAW7_ORGANIZATION.md](LAW7_ORGANIZATION.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/lego-block-rule.md](lego-block-rule.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/library-tiers.md](library-tiers.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/lower-vs-emit.md](lower-vs-emit.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/MATH_FRONTIER.md](MATH_FRONTIER.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/MATH_PRIMITIVES_PLACEMENT.md](MATH_PRIMITIVES_PLACEMENT.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/megakernel-wiring.md](megakernel-wiring.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/memory-model.md](memory-model.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/migration-vyre-ops-to-intrinsics.md](migration-vyre-ops-to-intrinsics.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/MIGRATION.md](MIGRATION.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/observability.md](observability.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/occ.md](occ.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/op-naming.md](op-naming.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/ops-catalog.md](ops-catalog.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/OPS.md](OPS.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/optimization/AGENT_CONTRACT.md](optimization/AGENT_CONTRACT.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/optimization/README.md](optimization/README.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/optimization/ROADMAP.md](optimization/ROADMAP.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/optimization/START_HERE.md](optimization/START_HERE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/optimization/TAXONOMY.md](optimization/TAXONOMY.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/OPTIMIZATION_ARCHITECTURE.md](OPTIMIZATION_ARCHITECTURE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/OWNERSHIP.md](OWNERSHIP.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/PARADIGM_SHIFT_TRAJECTORY.md](PARADIGM_SHIFT_TRAJECTORY.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/parity/three_substrate.md](parity/three_substrate.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/parsing-and-frontends.md](parsing-and-frontends.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/PARSING_EXECUTION_PLAN.md](PARSING_EXECUTION_PLAN.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/PER_OP_SURFACE.md](PER_OP_SURFACE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/PERF.md](PERF.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/PREDICATE_EXPR_DUALITY.md](PREDICATE_EXPR_DUALITY.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/primitives-tier.md](primitives-tier.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/PRIMITIVES.md](PRIMITIVES.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/PUBLISH_GATE.md](PUBLISH_GATE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/README.md](README.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/RECURSION_THESIS.md](RECURSION_THESIS.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/region-chain.md](region-chain.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/RELEASE.md](RELEASE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/release/v0.4.2.md](release/v0.4.2.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/RELEASE_1_0_GATE.md](RELEASE_1_0_GATE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/RELEASE_ENGINEERING.md](RELEASE_ENGINEERING.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/rfcs/0001-region-inline-pass.md](rfcs/0001-region-inline-pass.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/rfcs/0002-autodiff-ir-transform.md](rfcs/0002-autodiff-ir-transform.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/rfcs/0003-datatype-quantized.md](rfcs/0003-datatype-quantized.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/rfcs/0004-collective-ops.md](rfcs/0004-collective-ops.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/rfcs/0005-persistent-megakernel.md](rfcs/0005-persistent-megakernel.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/ROADMAP.md](ROADMAP.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/RUNTIME_PIPELINE.md](RUNTIME_PIPELINE.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/santh-standard.md](santh-standard.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/semver-policy.md](semver-policy.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/stability.md](stability.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/SUBSTRATE_RFCS.md](SUBSTRATE_RFCS.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/support.md](support.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/targets.md](targets.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/test-layout.md](test-layout.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/TESTING_PROGRAM.md](TESTING_PROGRAM.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/THESIS.md](THESIS.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/threat-model.md](threat-model.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/trust-model.md](trust-model.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/VISION.md](VISION.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/vyre-libs-features.md](vyre-libs-features.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/VYRE_BENCH_META_HARNESS_PRD.md](VYRE_BENCH_META_HARNESS_PRD.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/wire-format-0.6-reservations.md](wire-format-0.6-reservations.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/wire-format-v1.md](wire-format-v1.md) |
+| `current` | 2026-05-26 | 2026-05-26 | [docs/wire-format.md](wire-format.md) |
+| `generated` | 2026-05-26 | 2026-05-26 | [docs/generated/OP_INVENTORY.md](generated/OP_INVENTORY.md) |
+| `generated` | 2026-05-26 | 2026-05-26 | [docs/generated/README.md](generated/README.md) |
+| `superseded` | 2026-05-26 | 2026-05-26 | [docs/optimization/GEMINI_HANDOFF_2026-05-02.md](optimization/GEMINI_HANDOFF_2026-05-02.md) |
+| `superseded` | 2026-05-26 | 2026-05-26 | [docs/optimization/GEMINI_HANDOFF_2026-05-02_BATCH2.md](optimization/GEMINI_HANDOFF_2026-05-02_BATCH2.md) |
+| `superseded` | 2026-05-26 | 2026-05-26 | [docs/optimization/LEGACY_DOCS.md](optimization/LEGACY_DOCS.md) |
+| `superseded` | 2026-05-26 | 2026-05-26 | [docs/release/v0.4.1.md](release/v0.4.1.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/COMPILER_E2E_PLAN.md](archive/COMPILER_E2E_PLAN.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/COMPILER_PRODUCT_BOUNDARY_PLAN.md](archive/COMPILER_PRODUCT_BOUNDARY_PLAN.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/CRATE_EXTRACTION_PLAN.md](archive/CRATE_EXTRACTION_PLAN.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/CUDA_BACKEND_EXECUTION_PLAN.md](archive/CUDA_BACKEND_EXECUTION_PLAN.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/HEURISTIC_TO_MATH_TRACKER.md](archive/HEURISTIC_TO_MATH_TRACKER.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/INNOVATION_SWEEP.md](archive/INNOVATION_SWEEP.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/JULES_PRIMITIVE_MANIFEST.md](archive/JULES_PRIMITIVE_MANIFEST.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/MICRO_FLAW_LOG.md](archive/MICRO_FLAW_LOG.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/MIGRATION_0.6_TO_0.7.md](archive/MIGRATION_0.6_TO_0.7.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/NAGA_CRITICAL_HOLES.md](archive/NAGA_CRITICAL_HOLES.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/NAGA_LOWERING_AUDIT.md](archive/NAGA_LOWERING_AUDIT.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/NAGA_LOWERING_STATUS.md](archive/NAGA_LOWERING_STATUS.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/OP_MASTER_PLAN_BUILDING_BLOCKS_AND_QA.md](archive/OP_MASTER_PLAN_BUILDING_BLOCKS_AND_QA.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/POST_LANDING_STATUS.md](archive/POST_LANDING_STATUS.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/ROADMAP_APPEND_ONLY_2026-05-22.md](archive/ROADMAP_APPEND_ONLY_2026-05-22.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/UX_SWEEP.md](archive/UX_SWEEP.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/V7_AGENT_A_PLAN.md](archive/V7_AGENT_A_PLAN.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/V7_RELEASE_PLAN.md](archive/V7_RELEASE_PLAN.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/vision-2026-04-27-essay.md](archive/vision-2026-04-27-essay.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/VYRE_CODEBASE_AUDIT.md](archive/VYRE_CODEBASE_AUDIT.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/VYRE_RELEASE_COMPLETION_PLAN.md](archive/VYRE_RELEASE_COMPLETION_PLAN.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/archive/VYRE_WEIR_RELEASE_RELEASE_PLAN_2026-05-05.md](archive/VYRE_WEIR_RELEASE_RELEASE_PLAN_2026-05-05.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/legacy/CC_OWNED_BACKLOG_2026-05-01.md](legacy/CC_OWNED_BACKLOG_2026-05-01.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/legacy/PERF_ROADMAP_2026-05-01.md](legacy/PERF_ROADMAP_2026-05-01.md) |
+| `archived` | 2026-05-26 | 2026-05-26 | [docs/legacy/SEPARATION_AUDIT_2026-05-01.md](legacy/SEPARATION_AUDIT_2026-05-01.md) |
+
+## Non-public internals
+
+`.internals/` contains working memory, historical coordination, benchmark notes, and skill material. It is not public-facing documentation. Active internal plans live under `.internals/plans/`; archived material under `.internals/archive/` and `.internals/archived-plans/` is historical only.

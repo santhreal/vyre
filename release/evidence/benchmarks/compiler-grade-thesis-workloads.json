@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "title": "Compiler-grade GPU thesis workload contract",
+  "contract": "The release benchmark suite must prove compound compiler/security workloads, not only primitive element-wise throughput.",
+  "required_suite": "release",
+  "required_backend": "cuda",
+  "required_workload_class": "macro",
+  "required_baseline_class": "cpu-sota",
+  "required_correctness": "exact-or-certificate",
+  "minimum_axes": 7,
+  "axes": [
+    {
+      "id": "parsing-throughput",
+      "title": "C parser / AST traversal throughput",
+      "terms": ["frontend.c.parser", "release.c_ast_traversal", "parser", "ast"],
+      "minimum_matching_cases": 1,
+      "minimum_input_bytes": 1048576,
+      "evidence_artifact": "release/evidence/benchmarks/workload-09-c-ast-traversal.json"
+    },
+    {
+      "id": "dataflow-convergence",
+      "title": "Dataflow convergence over reaching definitions and IFDS facts",
+      "terms": ["release.alias_reaching_def", "release.ifds_witness", "alias", "ifds"],
+      "minimum_matching_cases": 2,
+      "minimum_input_bytes": 1048576,
+      "evidence_artifact": "release/evidence/benchmarks/workload-07-alias-reaching-def.json"
+    },
+    {
+      "id": "graph-traversal",
+      "title": "Graph traversal over callgraph-scale CSR inputs",
+      "terms": ["callgraph.reachability", "graph", "reachability"],
+      "minimum_matching_cases": 1,
+      "minimum_input_bytes": 1048576,
+      "evidence_artifact": "release/evidence/benchmarks/workload-13-callgraph-reachability.json"
+    },
+    {
+      "id": "pattern-matching",
+      "title": "Pattern bitmap materialization against CPU scanner baselines",
+      "terms": ["release.string_bitmap_scatter", "string", "bitmap"],
+      "minimum_matching_cases": 1,
+      "minimum_input_bytes": 1048576,
+      "evidence_artifact": "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json"
+    },
+    {
+      "id": "fixpoint-witness",
+      "title": "Fixpoint-style witness extraction and propagation",
+      "terms": ["release.ifds_witness", "witness", "fixpoint"],
+      "minimum_matching_cases": 1,
+      "minimum_input_bytes": 1048576,
+      "evidence_artifact": "release/evidence/benchmarks/workload-08-ifds-witness.json"
+    },
+    {
+      "id": "persistent-megakernel",
+      "title": "Persistent megakernel queued batches",
+      "terms": ["release.megakernel_queue", "runtime.megakernel.condition", "megakernel", "queue"],
+      "minimum_matching_cases": 1,
+      "minimum_input_bytes": 1048576,
+      "evidence_artifact": "release/evidence/benchmarks/workload-10-megakernel-queued-batches.json"
+    },
+    {
+      "id": "optimizer-saturation",
+      "title": "E-graph rewrite saturation and optimization impact",
+      "terms": ["release.egraph_saturation", "egraph", "saturation"],
+      "minimum_matching_cases": 1,
+      "minimum_input_bytes": 1048576,
+      "evidence_artifact": "release/evidence/benchmarks/workload-11-egraph-saturation.json"
+    }
+  ]
+}

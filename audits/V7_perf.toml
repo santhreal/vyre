@@ -1,0 +1,256 @@
+schema_version = "1"
+audit = "V7_perf"
+date = "2026-04-20"
+auditor = "kimi"
+
+[[finding]]
+id = "V7-PERF-001"
+severity = "critical"
+file = "vyre-driver-wgpu/src/lib.rs"
+line = 465
+why = "dispatch() calls validate_with_cache(program), then delegates to dispatch_borrowed() which calls validate_with_cache(program) again  -  every dispatch pays validation twice."
+proposed_fix = "Remove the redundant validate_with_cache call from dispatch(); rely on the check inside dispatch_borrowed()."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-002"
+severity = "critical"
+file = "vyre-driver-wgpu/src/ext.rs"
+line = 42
+why = "dispatch_wgsl recompiles the WGSL compute pipeline from scratch on every call via runtime::compile_compute_pipeline, which is explicitly uncached. At internet scale shader compilation dominates dispatch time."
+proposed_fix = "Cache the compiled wgpu::ComputePipeline keyed by (blake3(wgsl), entry_point) inside WgpuBackend or use the existing pipeline cache."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-003"
+severity = "critical"
+file = "vyre-pipeline/src/pipeline_cache.rs"
+line = 29
+why = "PipelineFingerprint::of clones the entire Program, runs canonicalize::run (another clone of entry + region bodies), serializes to wire, and hashes the result  -  multiple full-tree traversals and allocations on every cache lookup."
+proposed_fix = "Add a OnceLock<PipelineFingerprint> field to Program and compute the canonical fingerprint lazily on first use; subsequent lookups return the cached value for free."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-004"
+severity = "critical"
+file = "vyre-pipeline-cache/src/lib.rs"
+line = 98
+why = "DiskCache::get reads the entire artifact file into RAM, then computes blake3::hash(payload) to verify the 32-byte footer. A 1 MB SPIR-V hit pays for 1 MB read + 1 MB hash."
+proposed_fix = "Drop read-time verification; trust the atomic write+rename integrity. Move checksum verification to a background scrubber or store it in a sidecar .chk file checked only on first load."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-005"
+severity = "critical"
+file = "vyre-driver-wgpu/src/engine/record_and_readback.rs"
+line = 199
+why = "The legacy record_and_readback path builds fresh wgpu::BindGroup objects from scratch on every dispatch with no bind-group cache."
+proposed_fix = "Add an LRU bind-group cache keyed by (pipeline, buffer_ids) inside record_and_readback, or route the call through the persistent cached_bind_groups path."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-006"
+severity = "critical"
+file = "vyre-driver-wgpu/src/pipeline.rs"
+line = 407
+why = "dispatch_borrowed calls readback_until for each output handle sequentially. Each call creates its own command encoder, submits a copy, and blocks on device.poll(Wait). For N outputs you get N extra submissions and N sequential blocking waits."
+proposed_fix = "Batch all output copies into a single command buffer, submit once, then map all readback slices concurrently."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-007"
+severity = "critical"
+file = "vyre-driver-wgpu/src/runtime/cache/buffer_pool.rs"
+line = 117
+why = "BufferPool::acquire linearly scans a single process-wide SegQueue to find a matching (device, size_class, usage) key. With thousands of retained buffers this is O(N) per buffer allocation."
+proposed_fix = "Shard the pool into FxHashMap<BufferKey, SegQueue<CachedBuffer>> so lookup is O(1)."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-008"
+severity = "critical"
+file = "vyre-driver-wgpu/src/lib.rs"
+line = 331
+why = "The validation_cache key only hashes entry_op_id, workgroup_size, and buffers().len(). Two programs with different node contents but identical surface metadata collide, so the backend skips validate_program for programs it has never seen."
+proposed_fix = "Hash the full program contents (or reuse program.hash if it covers the full IR) so the cache is sound."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-009"
+severity = "critical"
+file = "vyre-pipeline/src/pipeline_cache.rs"
+line = 90
+why = "InMemoryPipelineCache::get serializes all reads on a single Mutex, then dereferences the Arc<Vec<u8>> entry and clones it into a new Vec<u8>  -  copying the entire artifact."
+proposed_fix = "Change PipelineCacheStore::get to return Option<Arc<Vec<u8>>> (or Arc<[u8]>) so callers borrow the cached bytes. Replace the Mutex with RwLock or dashmap for lock-free concurrent reads."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-010"
+severity = "critical"
+file = "vyre-pipeline-cache/src/lib.rs"
+line = 119
+why = "DiskCache::put calls f.sync_all() which forces physical disk flush on every insertion. This turns concurrent writes into serialized disk I/O and destroys throughput."
+proposed_fix = "Remove sync_all and rely on rename for atomicity (acceptable for a best-effort cache). If durability is required, batch fsyncs in a background thread or use sync_data (metadata skip)."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-011"
+severity = "major"
+file = "vyre-driver-wgpu/src/lib.rs"
+line = 267
+why = "current_device_queue() acquires a std::sync::RwLock read lock on every dispatch to clone the inner Arc. Under high concurrency the lock serializes callers even though the data is immutable."
+proposed_fix = "Replace Arc<RwLock<Arc<(Device, Queue)>>> with arc_swap::ArcSwap (or an atomic Arc pointer) so the hot path is lock-free."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-012"
+severity = "major"
+file = "vyre-driver/src/backend/validation.rs"
+line = 101
+why = "node_op_id returns OpId (an Arc<str>) and calls Arc::from(...) for every node, even for static strings like 'vyre.node.let'. This forces a heap allocation + atomic refcount op per node."
+proposed_fix = "Return &'static str for the built-in variants and only allocate an Arc<str> for Node::Opaque / unknown variants."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-013"
+severity = "major"
+file = "vyre-driver-wgpu/src/pipeline.rs"
+line = 170
+why = "compile_with_device_queue computes output_layout_from_program(program), find_indirect_dispatch(program), and the full blake3 hash BEFORE the pipeline_cache.get(&fast_hash) fast-path. On a cache hit, this work is pure overhead."
+proposed_fix = "Move the cache check to the top of the function; compute the hash first, bail on hit, and only then compute output layout / indirect dispatch for the miss path."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-014"
+severity = "major"
+file = "vyre-driver-wgpu/src/engine/record_and_readback.rs"
+line = 99
+why = "For every non-output buffer binding, the code does input_bindings.iter().position(|b| b.binding == info.binding). If there are N bindings, this is N linear scans -> O(N^2) per dispatch."
+proposed_fix = "Build a FxHashMap<u32, usize> mapping binding -> input_index once before the loop."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-015"
+severity = "major"
+file = "vyre-foundation/src/transform/optimize/region_inline.rs"
+line = 82
+why = "count_nodes recursively traverses the entire subtree for every Region. In a deeply nested tree each level re-counts everything below it, and inline_nodes traverses again."
+proposed_fix = "Precompute node counts bottom-up in a single pass, or store body_len: usize directly on Node::Region so the check is O(1)."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-016"
+severity = "major"
+file = "vyre-foundation/src/transform/optimize/dce/eliminate_dead_lets.rs"
+line = 39
+why = "live.clone() clones the entire HashSet<String> at every If, Loop, and Block boundary. For deeply nested IR this is O(depth * live_set_size)."
+proposed_fix = "Use a persistent bit-set or im::HashSet (structural sharing) so clone is O(1)."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-017"
+severity = "major"
+file = "vyre-driver/src/backend.rs"
+line = 74
+why = "The default trait implementation of dispatch_borrowed does inputs.iter().map(|input| (*input).to_vec()).collect(), which allocates a new Vec<Vec<u8>> and clones every byte of every input. Backends that don't override this pay a full input copy per dispatch."
+proposed_fix = "Make dispatch_borrowed the required method and dispatch the defaulted one (or default dispatch to call dispatch_borrowed after borrowing), so backends are forced to implement the zero-copy path."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-018"
+severity = "major"
+file = "vyre-pipeline-cache/src/lib.rs"
+line = 179
+why = "RemoteCache::get does ureq::get(&url).call() which blocks the caller thread for full network RTT + transfer time."
+proposed_fix = "Make PipelineCacheStore async, or move RemoteCache to a background preload thread that populates a local DiskCache; the hot path should never block on the network."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-019"
+severity = "major"
+file = "vyre-driver-wgpu/src/pipeline.rs"
+line = 450
+why = "output_layout_from_program uses .find(|buffer| buffer.is_output()) to walk the entire buffer declaration list to find the single output buffer on every dispatch."
+proposed_fix = "Store the output buffer index (or a direct reference) on Program at construction time."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-020"
+severity = "major"
+file = "vyre-driver-wgpu/src/pipeline.rs"
+line = 322
+why = "find_indirect_dispatch scans every node (including nested If/Loop/Block bodies) on every dispatch to locate at most one IndirectDispatch node."
+proposed_fix = "Pre-compute a boolean/Option on Program at construction time (or cache it after the first walk) so the lookup is O(1)."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-021"
+severity = "major"
+file = "vyre-driver-wgpu/src/lowering/mod.rs"
+line = 169
+why = "binding_assignments(program) clones every buffer name into a String during pipeline compilation. Buffer names are already Arc<str> (or &str) in the IR."
+proposed_fix = "Store name: Arc<str> (or &'a str) in WgpuBindingAssignment to avoid per-buffer heap allocations during lowering."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-022"
+severity = "major"
+file = "vyre-foundation/src/transform/visit.rs"
+line = 285
+why = "referenced_buffers uses HashSet<String> and calls buffer.to_string() on every buffer reference encountered in the tree walk."
+proposed_fix = "Use HashSet<Ident> (or HashSet<Arc<str>>) to avoid repeated string allocations."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-023"
+severity = "major"
+file = "vyre-foundation/src/transform/optimize/canonicalize.rs"
+line = 204
+why = "expr_sort_key recomputes hash_str(name.as_str()) for every Var / Load / BufLen on every call."
+proposed_fix = "Cache the hash inside Ident (e.g. store u64 alongside Arc<str>) and return the cached value."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-024"
+severity = "major"
+file = "vyre-foundation/src/transform/compiler/string_interner.rs"
+line = 128
+why = "lookup does an O(n) linear scan over all slots (for entry in self.slots.iter().flatten())."
+proposed_fix = "Maintain a side-car FxHashMap<u32, usize> from id to slot index for O(1) reverse lookup."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-025"
+severity = "major"
+file = "vyre-driver/src/routing.rs"
+line = 133
+why = "RoutingTable serializes all dispatches on a single Mutex (profiles.lock()). Under concurrent load all routing decisions serialize on one lock."
+proposed_fix = "Replace with DashMap or shard the table by call-site hash so reads/writes are lock-free."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-026"
+severity = "major"
+file = "vyre-libs/src/tensor_ref.rs"
+line = 38
+why = "TensorRef::shape is Vec<u32>; #[derive(Clone)] on TensorRef clones the entire shape heap on every clone; builders clone TensorRef frequently during chaining."
+proposed_fix = "Change shape: Vec<u32> to shape: Arc<[u32]> so clones are O(1) pointer bumps."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-027"
+severity = "major"
+file = "vyre-libs/src/crypto/blake3/blake3.rs"
+line = 51
+why = "let mut body: Vec<Node> = Vec::new(); receives ~600 pushes across nested loops, causing ~10 reallocations per blake3_compress call."
+proposed_fix = "Add body.reserve(600) immediately after Vec::new() (exact count: 8 init + 4 IV + 4 params + 16 msg + 7*16 round renames + 56*8 G ops + 8 stores)."
+status = "open"
+
+[[finding]]
+id = "V7-PERF-028"
+severity = "major"
+file = "vyre-ops/src/rule/builder.rs"
+line = 23
+why = "build_rule_program reconstructs the canonical 6-buffer Vec<BufferDecl> and a HashSet<String> from scratch on every call."
+proposed_fix = "Cache the canonical Vec<BufferDecl> and a HashSet<Arc<str>> of its names in a std::sync::LazyLock; clone the cached values on entry."
+status = "open"

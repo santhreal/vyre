@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "date": "2026-05-09",
+  "area": "runtime-routing",
+  "requirement": "wire persistent megakernel execution by default while never implicitly selecting CPU/reference execution",
+  "implementation": {
+    "policy": "vyre_runtime::routing::standard_policy::StandardPolicy",
+    "policy_name": "standard-megakernel-first",
+    "default_decision": "RoutingDecision::PersistentMegakernel",
+    "cpu_simd_policy_route_mapping": "RoutingDecision::PersistentMegakernel",
+    "gpu_pipeline_policy_route_mapping": "RoutingDecision::PersistentMegakernel",
+    "persistent_megakernel_policy_route_mapping": "RoutingDecision::PersistentMegakernel"
+  },
+  "evidence": {
+    "changed_files": [
+      "vyre-runtime/src/routing/standard_policy.rs",
+      "vyre-runtime/tests/routing_policy.rs"
+    ],
+    "commands": [
+      "env RUST_MIN_STACK=67108864 CARGO_BUILD_JOBS=1 cargo test -p vyre-runtime --test routing_policy -- --nocapture",
+      "env RUST_MIN_STACK=67108864 CARGO_BUILD_JOBS=1 cargo test -p vyre-runtime -- --nocapture"
+    ],
+    "results": [
+      "routing_policy: 2 passed, 0 failed",
+      "vyre-runtime full package: all tests passed, including 229 lib tests, megakernel adversarial/protocol tests, routing_policy, and doctests"
+    ]
+  },
+  "notes": [
+    "This changes the standard runtime route selection policy only; explicit diagnostic/reference routes remain opt-in and are not selected automatically.",
+    "This does not by itself prove every frontend caller uses the runtime router; separate integration evidence is still required for complete release readiness."
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "date": "2026-05-09",
+  "area": "duplication-consolidation",
+  "requirement": "named duplicate compiler/runtime abstractions must be consolidated without old-path reexport stubs",
+  "scans": [
+    {
+      "command": "rg -n \"struct DispatchConfig|enum Target|struct WorkItem|enum WorkItem|struct BackendCapabilities|struct BufferPool|struct ReadbackRing\" vyre-aot/src vyre-driver/src vyre-driver-wgpu/src vyre-runtime/src vyre-foundation/src",
+      "findings": {
+        "DispatchConfig": ["vyre-driver/src/backend/dispatch_config.rs"],
+        "Target": ["vyre-driver/src/registry/registry.rs"],
+        "WorkItem": [],
+        "BackendCapabilities": ["vyre-foundation/src/validate/options.rs"],
+        "BufferPool": ["vyre-driver-wgpu/src/buffer/pool.rs"],
+        "ReadbackRing": ["vyre-driver-wgpu/src/runtime/readback_ring.rs"]
+      }
+    },
+    {
+      "command": "rg -n \"trait CpuOp|enum CategoryAOp|type CpuFn|enum Semiring|enum DeterminismClass|enum AccessKind|struct BindResultEntry\" vyre-foundation/src vyre-reference/src vyre-self-substrate/src vyre-primitives/src vyre-spec/src vyre-bench/src vyre-lower/src vyre-emit-naga/src",
+      "findings": {
+        "CpuOp": ["vyre-foundation/src/runtime/cpu_op.rs"],
+        "CategoryAOp": [],
+        "CpuFn": ["vyre-spec/src/intrinsic_descriptor.rs"],
+        "Semiring": ["vyre-spec/src/semiring.rs"],
+        "DeterminismClass": ["vyre-spec/src/op_contract.rs"],
+        "AccessKind": ["vyre-lower/src/analyses/access_kind.rs"],
+        "BindResultEntry": ["vyre-emit-naga/src/lib.rs"]
+      }
+    },
+    {
+      "command": "find ... excluding target/.cargo-target for scratch/deprecated/compat/old paths",
+      "findings": [
+        "vyre-driver-wgpu/tests/self_optimizer_const_fold_e2e.rs",
+        "vyre-lower/src/rewrites/descriptor_const_fold",
+        "vyre-self-substrate/src/optimizer/const_fold_via_encoded.rs"
+      ],
+      "interpretation": "No dead scratch.rs or old compatibility module was found in the scanned consolidation set; remaining matches are active optimizer/test names."
+    }
+  ],
+  "status": "current scan shows named duplications consolidated",
+  "caveat": "This is a targeted scan for user-surfaced duplicate symbols, not a whole-workspace semantic clone detector."
+}

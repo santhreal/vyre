@@ -1,0 +1,2033 @@
+   Compiling serde_core v1.0.228
+   Compiling serde v1.0.228
+   Compiling num-traits v0.2.19
+    Checking log v0.4.29
+    Checking tracing-core v0.1.36
+    Checking either v1.15.0
+   Compiling zerocopy v0.8.48
+   Compiling zerocopy-derive v0.8.48
+    Checking rayon v1.12.0
+    Checking regex-syntax v0.8.10
+    Checking tracing v0.1.44
+    Checking aho-corasick v1.1.4
+   Compiling getrandom v0.3.4
+   Compiling getrandom v0.4.2
+    Checking ordered-float v4.6.0
+   Compiling rustix v1.1.4
+    Checking rand_core v0.9.5
+    Checking linux-raw-sys v0.12.1
+    Checking fastrand v2.4.1
+    Checking wait-timeout v0.2.1
+    Checking quick-error v1.2.3
+    Checking fnv v1.0.7
+    Checking rand v0.9.4
+    Checking rand_xorshift v0.4.0
+    Checking ciborium-io v0.2.2
+    Checking unarray v0.1.4
+    Checking clap_lex v1.1.0
+    Checking anstyle v1.0.14
+    Checking plotters-backend v0.3.7
+    Checking clap_builder v4.6.0
+    Checking plotters-svg v0.3.7
+    Checking itertools v0.10.5
+    Checking cast v0.3.0
+    Checking regex-automata v0.4.14
+    Checking plotters v0.3.7
+    Checking is-terminal v0.4.17
+    Checking anes v0.1.6
+    Checking bitflags v2.11.1
+    Checking spirv v0.3.0+sdk-1.3.268.0
+    Checking serde_spanned v0.6.9
+    Checking toml_datetime v0.6.11
+    Checking toml_edit v0.22.27
+    Checking gpu-alloc-types v0.3.0
+    Checking gpu-descriptor-types v0.2.0
+    Checking wgpu-types v24.0.0
+    Checking gpu-descriptor v0.3.2
+    Checking gpu-alloc v0.6.0
+    Checking naga v24.0.0
+    Checking vyre-spec v0.1.0 (/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/spec)
+    Checking serde_json v1.0.149
+    Checking tinytemplate v1.2.1
+    Checking clap v4.6.1
+    Checking criterion-plot v0.5.0
+    Checking oorandom v11.1.5
+   Compiling generator v0.8.8
+    Checking lazy_static v1.5.0
+    Checking sharded-slab v0.1.7
+    Checking toml v0.8.23
+    Checking tracing-log v0.2.0
+    Checking regex v1.12.3
+    Checking matchers v0.2.0
+    Checking thread_local v1.1.9
+    Checking nu-ansi-term v0.50.3
+    Checking scoped-tls v1.0.1
+    Checking errno v0.3.14
+   Compiling tokio-macros v2.7.0
+    Checking tracing-subscriber v0.3.23
+    Checking mio v1.2.0
+    Checking signal-hook-registry v1.4.8
+    Checking tempfile v3.27.0
+    Checking rusty-fork v0.3.1
+    Checking socket2 v0.6.3
+    Checking bytes v1.11.1
+   Compiling vyre-conform-codegen v0.1.0 (/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/codegen)
+    Checking vyre-build-scan v0.1.0 (/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/build_scan)
+    Checking tokio v1.51.1
+    Checking ppv-lite86 v0.2.21
+    Checking half v2.7.1
+    Checking loom v0.7.2
+    Checking rand_chacha v0.9.0
+    Checking ciborium-ll v0.2.2
+    Checking ciborium v0.2.2
+    Checking proptest v1.9.0
+   Compiling vyre v0.4.0-alpha.1 (/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/core)
+conform/xtask/src/hash/tests.rs:10:5: warning: unused import: `super::sha256_hex`
+warning: `xtask` (bin "xtask") generated 1 warning (run `cargo fix --bin "xtask"` to apply 1 suggestion)
+   Compiling vyre-conform v0.1.0 (/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform)
+    Checking xtask v0.1.0 (/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/xtask)
+    Checking criterion v0.5.1
+    Checking wgpu-hal v24.0.4
+    Checking wgpu-core v24.0.5
+    Checking wgpu v24.0.5
+warning: unreachable pattern
+  --> core/src/ir/model/types.rs:63:13
+   |
+63 |             _ => self.min_bytes(),
+   |             ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/ir/model/types.rs:63:13
+   |
+59 |             Self::Bool | Self::U32 | Self::I32 | Self::F32 => 4,
+   |             ---------------------------------------------- matches some of the same values
+60 |             Self::U64 | Self::Vec2U32 => 8,
+   |             ------------------------- matches some of the same values
+61 |             Self::Vec4U32 => 16,
+   |             ------------- matches some of the same values
+62 |             Self::Bytes => 0,
+   |             ----------- matches some of the same values
+63 |             _ => self.min_bytes(),
+   |             ^ collectively making this unreachable
+   = note: `#[warn(unreachable_patterns)]` on by default
+
+warning: unreachable pattern
+  --> core/src/ir/serial/wire/tags/access_tag.rs:10:9
+   |
+10 | ...   _ => Err("buffer access mode has no stable IR wire-format tag. Fix: add a versioned tag registry entry before serializing this vari...
+   |       ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/ir/serial/wire/tags/access_tag.rs:10:9
+   |
+6  | ...   BufferAccess::ReadOnly => Ok(0),
+   |       ---------------------- matches some of the same values
+7  | ...   BufferAccess::ReadWrite => Ok(1),
+   |       ----------------------- matches some of the same values
+8  | ...   BufferAccess::Uniform => Ok(2),
+   |       --------------------- matches some of the same values
+9  | ...   BufferAccess::Workgroup => Ok(3),
+   |       ----------------------- matches some of the same values
+10 | ...   _ => Err("buffer access mode has no stable IR wire-format tag. Fix: add a versioned tag registry entry before serializing this vari...
+   |       ^ collectively making this unreachable
+
+warning: unreachable pattern
+  --> core/src/ir/serial/wire/tags/atomic_op_tag.rs:14:9
+   |
+14 |         _ => {
+   |         ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/ir/serial/wire/tags/atomic_op_tag.rs:14:9
+   |
+6  |         AtomicOp::Add => 0,
+   |         ------------- matches some of the same values
+7  |         AtomicOp::Or => 1,
+   |         ------------ matches some of the same values
+8  |         AtomicOp::And => 2,
+   |         ------------- matches some of the same values
+9  |         AtomicOp::Xor => 3,
+   |         ------------- matches some of the same values
+...
+14 |         _ => {
+   |         ^ ...and 4 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+  --> core/src/ir/serial/wire/tags/bin_op_tag.rs:30:9
+   |
+30 | ...   _ => Err("binary op has no stable IR wire-format tag. Fix: add a versioned tag registry entry before serializing this variant.".to_...
+   |       ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/ir/serial/wire/tags/bin_op_tag.rs:30:9
+   |
+6  | ...   BinOp::Add => Ok(0),
+   |       ---------- matches some of the same values
+7  | ...   BinOp::Sub => Ok(1),
+   |       ---------- matches some of the same values
+8  | ...   BinOp::Mul => Ok(2),
+   |       ---------- matches some of the same values
+9  | ...   BinOp::Div => Ok(3),
+   |       ---------- matches some of the same values
+...
+30 | ...   _ => Err("binary op has no stable IR wire-format tag. Fix: add a versioned tag registry entry before serializing this variant.".to_...
+   |       ^ ...and 17 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+  --> core/src/ir/serial/wire/tags/data_type_tag.rs:14:9
+   |
+14 | ...   _ => Err("data type has no stable IR wire-format tag. Fix: add a versioned tag registry entry before serializing this variant.".to_...
+   |       ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/ir/serial/wire/tags/data_type_tag.rs:14:9
+   |
+6  | ...   DataType::U32 => Ok(0),
+   |       ------------- matches some of the same values
+7  | ...   DataType::I32 => Ok(1),
+   |       ------------- matches some of the same values
+8  | ...   DataType::U64 => Ok(2),
+   |       ------------- matches some of the same values
+9  | ...   DataType::Vec2U32 => Ok(3),
+   |       ----------------- matches some of the same values
+...
+14 | ...   _ => Err("data type has no stable IR wire-format tag. Fix: add a versioned tag registry entry before serializing this variant.".to_...
+   |       ^ ...and 4 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+  --> core/src/ir/serial/wire/tags/un_op_tag.rs:28:9
+   |
+28 | ...   _ => Err("unary op has no stable IR wire-format tag. Fix: add a versioned tag registry entry before serializing this variant.".to_s...
+   |       ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/ir/serial/wire/tags/un_op_tag.rs:28:9
+   |
+6  | ...   UnOp::Negate => Ok(0),
+   |       ------------ matches some of the same values
+7  | ...   UnOp::BitNot => Ok(1),
+   |       ------------ matches some of the same values
+8  | ...   UnOp::LogicalNot => Ok(2),
+   |       ---------------- matches some of the same values
+9  | ...   UnOp::Popcount => Ok(3),
+   |       -------------- matches some of the same values
+...
+28 | ...   _ => Err("unary op has no stable IR wire-format tag. Fix: add a versioned tag registry entry before serializing this variant.".to_s...
+   |       ^ ...and 15 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+   --> core/src/ir/transform/inline/mod.rs:129:9
+    |
+129 |         _ => Expr::u32(0),
+    |         ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> core/src/ir/transform/inline/mod.rs:129:9
+    |
+123 |         DataType::I32 => Expr::i32(0),
+    |         ------------- matches some of the same values
+124 |         DataType::Bool => Expr::LitBool(false),
+    |         -------------- matches some of the same values
+125 |         DataType::F32 => Expr::f32(0.0),
+    |         ------------- matches some of the same values
+126 |         DataType::U32 | DataType::U64 | DataType::Vec2U32 | DataType::Vec4U32 | DataType::Bytes => {
+    |         --------------------------------------------------------------------------------------- matches some of the same values
+...
+129 |         _ => Expr::u32(0),
+    |         ^ collectively making this unreachable
+
+warning: unreachable pattern
+  --> core/src/ir/validate/typecheck.rs:87:13
+   |
+87 |             _ => errors.push(err(format!(
+   |             ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/ir/validate/typecheck.rs:87:13
+   |
+40 |               crate::ir::model::types::UnOp::Negate => {
+   |               ------------------------------------- matches some of the same values
+...
+51 |               crate::ir::model::types::UnOp::LogicalNot => {
+   |               ----------------------------------------- matches some of the same values
+...
+58 | /             crate::ir::model::types::UnOp::BitNot
+59 | |             | crate::ir::model::types::UnOp::Popcount
+60 | |             | crate::ir::model::types::UnOp::Clz
+61 | |             | crate::ir::model::types::UnOp::Ctz
+62 | |             | crate::ir::model::types::UnOp::ReverseBits => {
+   | |________________________________________________________- matches some of the same values
+...
+69 | /             crate::ir::model::types::UnOp::Sin
+70 | |             | crate::ir::model::types::UnOp::Cos
+71 | |             | crate::ir::model::types::UnOp::Abs
+72 | |             | crate::ir::model::types::UnOp::Sqrt
+...  |
+79 | |             | crate::ir::model::types::UnOp::IsInf
+80 | |             | crate::ir::model::types::UnOp::IsFinite => {
+   | |_____________________________________________________- matches some of the same values
+...
+87 |               _ => errors.push(err(format!(
+   |               ^ collectively making this unreachable
+
+warning: unreachable pattern
+   --> core/src/ir/validate/typecheck.rs:164:21
+    |
+164 |                     _ => values.push(None),
+    |                     ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> core/src/ir/validate/typecheck.rs:164:21
+    |
+142 | /                     crate::ir::model::types::UnOp::Negate
+143 | |                     | crate::ir::model::types::UnOp::BitNot
+144 | |                     | crate::ir::model::types::UnOp::Popcount
+145 | |                     | crate::ir::model::types::UnOp::Clz
+146 | |                     | crate::ir::model::types::UnOp::Ctz
+147 | |                     | crate::ir::model::types::UnOp::ReverseBits => {
+    | |________________________________________________________________- matches some of the same values
+...
+151 |                       crate::ir::model::types::UnOp::LogicalNot => values.push(Some(DataType::U32)),
+    |                       ----------------------------------------- matches some of the same values
+152 | /                     crate::ir::model::types::UnOp::Sin
+153 | |                     | crate::ir::model::types::UnOp::Cos
+154 | |                     | crate::ir::model::types::UnOp::Abs
+155 | |                     | crate::ir::model::types::UnOp::Sqrt
+...   |
+159 | |                     | crate::ir::model::types::UnOp::Trunc
+160 | |                     | crate::ir::model::types::UnOp::Sign => values.push(Some(DataType::F32)),
+    | |_________________________________________________________- matches some of the same values
+161 | /                     crate::ir::model::types::UnOp::IsNan
+162 | |                     | crate::ir::model::types::UnOp::IsInf
+163 | |                     | crate::ir::model::types::UnOp::IsFinite => values.push(Some(DataType::Bool)),
+    | |_____________________________________________________________- matches some of the same values
+164 |                       _ => values.push(None),
+    |                       ^ collectively making this unreachable
+
+warning: unreachable pattern
+  --> core/src/lower/wgsl/buffers.rs:82:9
+   |
+82 |         _ => {
+   |         ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/lower/wgsl/buffers.rs:82:9
+   |
+21 |         BufferAccess::ReadOnly => {
+   |         ---------------------- matches some of the same values
+...
+32 |         BufferAccess::ReadWrite => {
+   |         ----------------------- matches some of the same values
+...
+61 |         BufferAccess::Uniform => {
+   |         --------------------- matches some of the same values
+...
+72 |         BufferAccess::Workgroup => {
+   |         ----------------------- matches some of the same values
+...
+82 |         _ => {
+   |         ^ collectively making this unreachable
+
+warning: unreachable pattern
+  --> core/src/lower/wgsl/emit/emit_atomic_helpers.rs:23:13
+   |
+15 | /             AtomicOp::Add
+16 | |             | AtomicOp::Or
+17 | |             | AtomicOp::And
+18 | |             | AtomicOp::Xor
+...  |
+21 | |             | AtomicOp::Exchange
+22 | |             | AtomicOp::CompareExchange => {}
+   | |_______________________________________- matches all the relevant values
+23 |               _ => {
+   |               ^ no value can reach this
+
+warning: unreachable pattern
+  --> core/src/lower/wgsl/emit/emit_atomic_helpers.rs:95:9
+   |
+95 |         _ => {
+   |         ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/lower/wgsl/emit/emit_atomic_helpers.rs:95:9
+   |
+49 |         AtomicOp::Add => (
+   |         ------------- matches some of the same values
+...
+54 |         AtomicOp::Or => (
+   |         ------------ matches some of the same values
+...
+59 |         AtomicOp::And => (
+   |         ------------- matches some of the same values
+...
+64 |         AtomicOp::Xor => (
+   |         ------------- matches some of the same values
+...
+95 |         _ => {
+   |         ^ ...and 4 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+  --> core/src/lower/wgsl/emit/wgsl_element_type.rs:13:9
+   |
+13 |         _ => Err(Error::lowering(format!(
+   |         ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/lower/wgsl/emit/wgsl_element_type.rs:13:9
+   |
+7  |         DataType::U32 | DataType::Bool => Ok("u32"),
+   |         ------------------------------ matches some of the same values
+8  |         DataType::I32 => Ok("i32"),
+   |         ------------- matches some of the same values
+9  |         DataType::U64 | DataType::Vec2U32 => Ok("vec2<u32>"),
+   |         --------------------------------- matches some of the same values
+10 |         DataType::Vec4U32 => Ok("vec4<u32>"),
+   |         ----------------- matches some of the same values
+...
+13 |         _ => Err(Error::lowering(format!(
+   |         ^ ...and 2 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+  --> core/src/lower/wgsl/emit/wgsl_zero_value.rs:12:9
+   |
+12 |         _ => Err(Error::lowering(format!(
+   |         ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/lower/wgsl/emit/wgsl_zero_value.rs:12:9
+   |
+7  |         DataType::U32 | DataType::Bool | DataType::Bytes => Ok("0u"),
+   |         ------------------------------------------------ matches some of the same values
+8  |         DataType::I32 => Ok("0i"),
+   |         ------------- matches some of the same values
+9  |         DataType::F32 => Ok("0.0f"),
+   |         ------------- matches some of the same values
+10 |         DataType::U64 | DataType::Vec2U32 => Ok("vec2<u32>(0u, 0u)"),
+   |         --------------------------------- matches some of the same values
+11 |         DataType::Vec4U32 => Ok("vec4<u32>(0u, 0u, 0u, 0u)"),
+12 |         _ => Err(Error::lowering(format!(
+   |         ^ ...and 1 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+   --> core/src/lower/wgsl/expr/mod.rs:192:9
+    |
+192 |         _ => Err(lowering(format_args!(
+    |         ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> core/src/lower/wgsl/expr/mod.rs:192:9
+    |
+163 |         BinOp::Add => emit_infix(out, left, " + ", right, program, ctx),
+    |         ---------- matches some of the same values
+164 |         BinOp::Sub => emit_infix(out, left, " - ", right, program, ctx),
+    |         ---------- matches some of the same values
+165 |         BinOp::Mul => emit_infix(out, left, " * ", right, program, ctx),
+    |         ---------- matches some of the same values
+166 |         BinOp::Div => {
+    |         ---------- matches some of the same values
+...
+192 |         _ => Err(lowering(format_args!(
+    |         ^ ...and 17 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+   --> core/src/lower/wgsl/expr/mod.rs:239:9
+    |
+239 |         _ => Err(lowering(format_args!(
+    |         ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> core/src/lower/wgsl/expr/mod.rs:239:9
+    |
+207 |         UnOp::Negate => match ty {
+    |         ------------ matches some of the same values
+...
+216 |         UnOp::BitNot => emit_prefix(out, "~", operand, program, ctx),
+    |         ------------ matches some of the same values
+217 |         UnOp::LogicalNot => {
+    |         ---------------- matches some of the same values
+...
+223 |         UnOp::Popcount => emit_call1(out, "countOneBits", operand, program, ctx),
+    |         -------------- matches some of the same values
+...
+239 |         _ => Err(lowering(format_args!(
+    |         ^ ...and 15 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+   --> core/src/lower/wgsl/expr/mod.rs:702:9
+    |
+702 |         _ => {
+    |         ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> core/src/lower/wgsl/expr/mod.rs:702:9
+    |
+694 |         AtomicOp::Add => "add",
+    |         ------------- matches some of the same values
+695 |         AtomicOp::Or => "or",
+    |         ------------ matches some of the same values
+696 |         AtomicOp::And => "and",
+    |         ------------- matches some of the same values
+697 |         AtomicOp::Xor => "xor",
+    |         ------------- matches some of the same values
+...
+702 |         _ => {
+    |         ^ ...and 4 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+   --> core/src/reference/value/mod.rs:204:13
+    |
+204 |             _ => Ok(Self::Bytes(bytes.to_vec())),
+    |             ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> core/src/reference/value/mod.rs:204:13
+    |
+151 |             crate::ir::DataType::U32 => {
+    |             ------------------------ matches some of the same values
+...
+159 |             crate::ir::DataType::I32 => {
+    |             ------------------------ matches some of the same values
+...
+167 |             crate::ir::DataType::U64 => {
+    |             ------------------------ matches some of the same values
+...
+175 |             crate::ir::DataType::Bool => {
+    |             ------------------------- matches some of the same values
+...
+204 |             _ => Ok(Self::Bytes(bytes.to_vec())),
+    |             ^ ...and 4 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+  --> core/src/reference/atomics.rs:32:9
+   |
+32 |         _ => Err(Error::interp(format!(
+   |         ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/reference/atomics.rs:32:9
+   |
+24 |         AtomicOp::Add => Ok(atomic_add(old, value)),
+   |         ------------- matches some of the same values
+25 |         AtomicOp::Or => Ok(atomic_or(old, value)),
+   |         ------------ matches some of the same values
+26 |         AtomicOp::And => Ok(atomic_and(old, value)),
+   |         ------------- matches some of the same values
+27 |         AtomicOp::Xor => Ok(atomic_xor(old, value)),
+   |         ------------- matches some of the same values
+...
+32 |         _ => Err(Error::interp(format!(
+   |         ^ ...and 4 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+  --> core/src/reference/eval_expr.rs:94:9
+   |
+94 |         _ => Err(Error::interp(format!(
+   |         ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/reference/eval_expr.rs:94:9
+   |
+90 |         BufferAccess::ReadWrite | BufferAccess::Workgroup => resolve_buffer_mut(memory, decl),
+   |         ------------------------------------------------- matches some of the same values
+91 |         BufferAccess::ReadOnly | BufferAccess::Uniform => Err(Error::interp(format!(
+   |         ---------------------------------------------- matches some of the same values
+...
+94 |         _ => Err(Error::interp(format!(
+   |         ^ collectively making this unreachable
+
+warning: unreachable pattern
+   --> core/src/reference/eval_expr.rs:362:9
+    |
+362 |         _ => Err(Error::interp(format!(
+    |         ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> core/src/reference/eval_expr.rs:362:9
+    |
+355 |         BufferAccess::ReadWrite => resolve_buffer_mut(memory, decl),
+    |         ----------------------- matches some of the same values
+356 |         BufferAccess::Workgroup => Err(Error::interp(format!(
+    |         ----------------------- matches some of the same values
+...
+359 |         BufferAccess::ReadOnly | BufferAccess::Uniform => Err(Error::interp(format!(
+    |         ---------------------------------------------- matches some of the same values
+...
+362 |         _ => Err(Error::interp(format!(
+    |         ^ collectively making this unreachable
+
+warning: unreachable pattern
+   --> core/src/reference/eval_expr.rs:398:9
+    |
+398 |         _ => Value::Bytes(bytes.to_vec()),
+    |         ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> core/src/reference/eval_expr.rs:398:9
+    |
+390 |         DataType::U32 => Value::U32(read_u32_prefix(bytes)),
+    |         ------------- matches some of the same values
+391 |         DataType::I32 => Value::I32(read_u32_prefix(bytes) as i32),
+    |         ------------- matches some of the same values
+392 |         DataType::Bool => Value::Bool(read_u32_prefix(bytes) != 0),
+    |         -------------- matches some of the same values
+393 |         DataType::U64 => Value::U64(read_u64_prefix(bytes)),
+    |         ------------- matches some of the same values
+...
+398 |         _ => Value::Bytes(bytes.to_vec()),
+    |         ^ ...and 4 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+  --> core/src/reference/flat_cpu.rs:46:13
+   |
+46 |             _ => {}
+   |             ^ no value can reach this
+   |
+note: multiple earlier patterns match some of the same values
+  --> core/src/reference/flat_cpu.rs:46:13
+   |
+34 |             BufferAccess::ReadOnly | BufferAccess::Uniform => {
+   |             ---------------------------------------------- matches some of the same values
+...
+42 |             BufferAccess::ReadWrite => {
+   |             ----------------------- matches some of the same values
+...
+45 |             BufferAccess::Workgroup => {}
+   |             ----------------------- matches some of the same values
+46 |             _ => {}
+   |             ^ collectively making this unreachable
+
+warning: unreachable pattern
+   --> core/src/reference/oob.rs:150:9
+    |
+150 |         _ => {
+    |         ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> core/src/reference/oob.rs:150:9
+    |
+119 |         IrDataType::U32 => {
+    |         --------------- matches some of the same values
+...
+122 |         IrDataType::I32 => {
+    |         --------------- matches some of the same values
+...
+125 |         IrDataType::Bool => {
+    |         ---------------- matches some of the same values
+...
+128 |         IrDataType::U64 => {
+    |         --------------- matches some of the same values
+...
+150 |         _ => {
+    |         ^ ...and 2 other patterns collectively make this unreachable
+
+warning: unreachable pattern
+   --> core/src/reference/oob.rs:177:9
+    |
+177 |         _ => DataType::Bytes,
+    |         ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> core/src/reference/oob.rs:177:9
+    |
+169 |         IrDataType::U32 => DataType::U32,
+    |         --------------- matches some of the same values
+170 |         IrDataType::I32 => DataType::I32,
+    |         --------------- matches some of the same values
+171 |         IrDataType::U64 => DataType::U64,
+    |         --------------- matches some of the same values
+172 |         IrDataType::F32 => DataType::F32,
+    |         --------------- matches some of the same values
+...
+177 |         _ => DataType::Bytes,
+    |         ^ ...and 4 other patterns collectively make this unreachable
+
+warning: `vyre` (lib) generated 25 warnings
+    Checking vyre-std v0.1.0 (/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/std)
+    Checking rust_lexer_gpu v0.1.0 (/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/demos/rust_lexer_gpu)
+    Checking vyre-workspace v0.0.0 (/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre)
+warning: unused import: `vyre::lower::wgsl::lower`
+ --> core/tests/ops/test_xor.rs:5:5
+  |
+5 | use vyre::lower::wgsl::lower;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+error[E0583]: file not found for module `gpu_parity`
+   --> conform/src/backend/implementation.rs:379:1
+    |
+379 | mod gpu_parity;
+    | ^^^^^^^^^^^^^^^
+    |
+    = help: to create the module `gpu_parity`, create file "conform/src/backend/implementation/gpu_parity.rs" or "conform/src/backend/implementation/gpu_parity/mod.rs"
+    = note: if there is a `mod gpu_parity` elsewhere in the crate already, import it with `use crate::...` instead
+
+error[E0583]: file not found for module `tests`
+   --> conform/src/pipeline/certify/implementation.rs:449:1
+    |
+449 | mod tests;
+    | ^^^^^^^^^^
+    |
+    = help: to create the module `tests`, create file "conform/src/pipeline/certify/implementation/tests.rs" or "conform/src/pipeline/certify/implementation/tests/mod.rs"
+    = note: if there is a `mod tests` elsewhere in the crate already, import it with `use crate::...` instead
+
+    Checking rust_parser_gpu v0.1.0 (/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/demos/rust_parser_gpu)
+error[E0308]: mismatched types
+  --> core/tests/ops/primitive/bitwise/test_popcount.rs:88:9
+   |
+88 |     let Some((device, queue)) = cached_device() else {
+   |         ^^^^^^^^^^^^^^^^^^^^^   --------------- this expression has type `std::result::Result<&(wgpu::Device, wgpu::Queue), vyre::Error>`
+   |         |
+   |         expected `Result<&(Device, Queue), Error>`, found `Option<_>`
+   |
+   = note: expected enum `std::result::Result<&(wgpu::Device, wgpu::Queue), vyre::Error>`
+              found enum `Option<_>`
+
+error[E0308]: mismatched types
+   --> core/tests/ops/primitive/bitwise/test_popcount.rs:126:9
+    |
+126 |     let Some((device, queue)) = cached_device() else {
+    |         ^^^^^^^^^^^^^^^^^^^^^   --------------- this expression has type `std::result::Result<&(wgpu::Device, wgpu::Queue), vyre::Error>`
+    |         |
+    |         expected `Result<&(Device, Queue), Error>`, found `Option<_>`
+    |
+    = note: expected enum `std::result::Result<&(wgpu::Device, wgpu::Queue), vyre::Error>`
+               found enum `Option<_>`
+
+warning: unreachable expression
+  --> core/tests/ops/test_xor.rs:13:13
+   |
+12 | ...   panic!("GPU required on this machine (RTX 5090 / 4090 available per project invariant)  -  do not silently skip: gpu_dispatch: {error}...
+   |       -------------------------------------------------------------------------------------------------------------------------------------- any code following this expression is unreachable
+13 | ...   None
+   |       ^^^^ unreachable expression
+   |
+   = note: `#[warn(unreachable_code)]` on by default
+
+error[E0583]: file not found for module `composition_parity`
+   --> conform/src/lib.rs:192:1
+    |
+192 | mod composition_parity;
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: to create the module `composition_parity`, create file "conform/src/composition_parity.rs" or "conform/src/composition_parity/mod.rs"
+    = note: if there is a `mod composition_parity` elsewhere in the crate already, import it with `use crate::...` instead
+
+error[E0583]: file not found for module `determinism_stress`
+   --> conform/src/lib.rs:195:1
+    |
+195 | mod determinism_stress;
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: to create the module `determinism_stress`, create file "conform/src/determinism_stress.rs" or "conform/src/determinism_stress/mod.rs"
+    = note: if there is a `mod determinism_stress` elsewhere in the crate already, import it with `use crate::...` instead
+
+warning: missing documentation for a module
+ --> core/src/runtime/cache/tests/unit/mod.rs:3:1
+  |
+3 | explicit_mod_list!(pub "src/runtime/cache/tests/unit");
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+note: the lint level is defined here
+ --> core/src/lib.rs:2:9
+  |
+2 | #![warn(missing_docs)]
+  |         ^^^^^^^^^^^^
+  = note: this warning originates in the macro `explicit_mod_list` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: missing documentation for a function
+ --> core/src/runtime/cache/tests/unit/lru.rs:8:1
+  |
+8 | pub fn touch_present_and_missing_keys() {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a function
+  --> core/src/runtime/cache/tests/unit/lru.rs:24:1
+   |
+24 | pub fn capacity_evicts_coldest_without_growing_live_set() {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a function
+  --> std/src/arith/signed.rs:3:1
+   |
+3  | pub fn min_i8(a: i8, b: i8) -> i8 {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: the lint level is defined here
+  --> std/src/lib.rs:25:9
+   |
+25 | #![warn(missing_docs)]
+   |         ^^^^^^^^^^^^
+
+warning: `vyre-std` (lib) generated 1 warning
+For more information about this error, try `rustc --explain E0308`.
+warning: `vyre` (test "ops") generated 2 warnings
+error: could not compile `vyre` (test "ops") due to 2 previous errors; 2 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+error: format argument must be a string literal
+   --> conform/src/enforce/enforcers/layer6_stability.rs:117:29
+    |
+117 | ...                   item_enum.ident
+    |                       ^^^^^^^^^^^^^^^
+    |
+help: you might be missing a string literal to format with
+    |
+117 |                             "{}", item_enum.ident
+    |                             +++++
+
+error: format argument must be a string literal
+   --> conform/src/enforce/enforcers/layer6_stability.rs:128:29
+    |
+128 | ...                   item_struct.ident
+    |                       ^^^^^^^^^^^^^^^^^
+    |
+help: you might be missing a string literal to format with
+    |
+128 |                             "{}", item_struct.ident
+    |                             +++++
+
+error: no source files found
+ --> conform/src/proof/oracles/mod.rs:3:1
+  |
+3 | explicit_mod_list!(pub(crate) "src/proof/oracles");
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the macro `explicit_mod_list` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: `vyre` (lib test) generated 28 warnings (25 duplicates)
+error[E0423]: expected function, found module `vyre::runtime::shader::compile_compute_pipeline`
+   --> conform/src/backend/wgpu/dispatch.rs:170:24
+    |
+170 |         let pipeline = vyre::runtime::shader::compile_compute_pipeline(
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not a function
+    |
+help: consider importing this function instead
+    |
+7   + use vyre::runtime::compile_compute_pipeline;
+    |
+help: if you import `compile_compute_pipeline`, refer to it directly
+    |
+170 -         let pipeline = vyre::runtime::shader::compile_compute_pipeline(
+170 +         let pipeline = compile_compute_pipeline(
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/divergence.rs:323:24
+    |
+323 |         let findings = enforce(ctx.specs, backend);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+3   + use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/no_silent_wrong.rs:188:24
+    |
+188 |         let findings = enforce(ctx.specs);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+46  + use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/overflow_contract.rs:256:24
+    |
+256 |         let findings = enforce(ctx.specs);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+45  + use crate::enforce::enforce;
+    |
+
+error[E0405]: cannot find trait `Oracle` in module `crate::oracles`
+ --> /media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/target/debug/build/vyre-conform-6af81c9ee66307a8/out/oracles_registry.rs:6:56
+  |
+6 | pub static ALL_ORACLES: &[&'static dyn crate::oracles::Oracle] = &[
+  |                                                        ^^^^^^ not found in `crate::oracles`
+
+warning: unused imports: `CategoryFinding` and `FindingLocation`
+  --> conform/src/framework/categories.rs:11:17
+   |
+11 | pub use super::{CategoryFinding, FindingLocation};
+   |                 ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `IntrinsicTable`
+  --> conform/src/framework/categories.rs:12:31
+   |
+12 | pub use vyre_spec::{Category, IntrinsicTable};
+   |                               ^^^^^^^^^^^^^^
+
+warning: unused import: `crate::framework::declared_law::DeclaredLaw`
+  --> conform/src/framework/laws.rs:10:9
+   |
+10 | pub use crate::framework::declared_law::DeclaredLaw;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `AlgebraicLaw`, `LAW_CATALOG`, and `MonotonicDirection`
+  --> conform/src/framework/laws.rs:12:33
+   |
+12 | pub use crate::framework::law::{AlgebraicLaw, MonotonicDirection, LAW_CATALOG};
+   |                                 ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused import: `WgslSourceFn`
+  --> conform/src/framework/types/conform/mod.rs:25:86
+   |
+25 |     BufferInitPolicy, Convention, CpuReferenceFn, DataType, OpSignature, Strictness, WgslSourceFn,
+   |                                                                                      ^^^^^^^^^^^^
+
+warning: unused import: `ParityFailureInput`
+  --> conform/src/framework/types/conform/mod.rs:28:34
+   |
+28 | pub use failure::{ParityFailure, ParityFailureInput};
+   |                                  ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `OpSpecBuilder`
+  --> conform/src/framework/types/conform/mod.rs:30:38
+   |
+30 | pub use op_spec::{ChainSpec, OpSpec, OpSpecBuilder};
+   |                                      ^^^^^^^^^^^^^
+
+warning: unused import: `error::*`
+ --> conform/src/framework/value/mod.rs:3:9
+  |
+3 | pub use error::*;
+  |         ^^^^^^^^
+
+warning: unused import: `tensor::*`
+ --> conform/src/framework/value/mod.rs:5:9
+  |
+5 | pub use tensor::*;
+  |         ^^^^^^^^^
+
+warning: unused import: `V1_0`
+  --> conform/src/framework/versions.rs:15:63
+   |
+15 | pub use crate::framework::version::{Version, CURRENT_VERSION, V1_0};
+   |                                                               ^^^^
+
+warning: unused imports: `INVARIANTS`, `InvariantCategory`, `InvariantId`, `Invariant`, `TestDescriptor`, `by_category`, `by_id`, `catalog_is_complete`, and `empty_test_family`
+  --> conform/src/framework/mod.rs:75:5
+   |
+75 |     by_category, by_id, catalog_is_complete, empty_test_family, Invariant, InvariantCategory,
+   |     ^^^^^^^^^^^  ^^^^^  ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^  ^^^^^^^^^  ^^^^^^^^^^^^^^^^^
+76 |     InvariantId, TestDescriptor, INVARIANTS,
+   |     ^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^^^
+
+warning: unused imports: `LAW_CATALOG` and `MonotonicDirection`
+  --> conform/src/framework/mod.rs:78:29
+   |
+78 | pub use law::{AlgebraicLaw, MonotonicDirection, LAW_CATALOG};
+   |                             ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused imports: `BoundaryValue`, `EquivalenceClass`, and `OpSpec`
+  --> conform/src/framework/mod.rs:80:14
+   |
+80 | pub use op::{BoundaryValue, EquivalenceClass, OpSpec};
+   |              ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^
+
+warning: unused import: `property::resolve as resolve_oracle`
+  --> conform/src/framework/mod.rs:83:9
+   |
+83 | pub use property::resolve as resolve_oracle;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `OverflowDeclaration`
+  --> conform/src/framework/mod.rs:84:38
+   |
+84 | pub use overflow::{OverflowContract, OverflowDeclaration};
+   |                                      ^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `ConstructionTime`, `ProofTokenError`, and `ProofToken`
+  --> conform/src/framework/mod.rs:86:23
+   |
+86 | pub use proof_token::{ConstructionTime, ProofToken, ProofTokenError};
+   |                       ^^^^^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused import: `LawId`
+  --> conform/src/framework/mod.rs:88:18
+   |
+88 | pub use source::{LawId, SpecSource};
+   |                  ^^^^^
+
+warning: unused imports: `BufferAccess`, `Convention`, `DataType`, and `OpSignature`
+  --> conform/src/framework/mod.rs:89:17
+   |
+89 | pub use types::{BufferAccess, Convention, DataType, OpSignature};
+   |                 ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused import: `value::Value`
+  --> conform/src/framework/mod.rs:90:9
+   |
+90 | pub use value::Value;
+   |         ^^^^^^^^^^^^
+
+warning: unused import: `FloatType`
+  --> conform/src/framework/mod.rs:91:24
+   |
+91 | pub use verification::{FloatType, Verification};
+   |                        ^^^^^^^^^
+
+warning: unused imports: `CURRENT_VERSION` and `V1_0`
+  --> conform/src/framework/mod.rs:92:28
+   |
+92 | pub use version::{Version, CURRENT_VERSION, V1_0};
+   |                            ^^^^^^^^^^^^^^^  ^^^^
+
+warning: unused import: `schema_version::*`
+ --> conform/src/framework/loader/toml/mod.rs:3:9
+  |
+3 | pub use schema_version::*;
+  |         ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `document::*`
+ --> conform/src/framework/loader/toml/mod.rs:5:9
+  |
+5 | pub use document::*;
+  |         ^^^^^^^^^^^
+
+warning: unused import: `op_declaration::*`
+ --> conform/src/framework/loader/toml/mod.rs:7:9
+  |
+7 | pub use op_declaration::*;
+  |         ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `witness_set::*`
+ --> conform/src/framework/loader/toml/mod.rs:9:9
+  |
+9 | pub use witness_set::*;
+  |         ^^^^^^^^^^^^^^
+
+warning: unused import: `defendant_entry::*`
+  --> conform/src/framework/loader/toml/mod.rs:11:9
+   |
+11 | pub use defendant_entry::*;
+   |         ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `algebraic_law::*`
+  --> conform/src/framework/loader/toml/mod.rs:13:9
+   |
+13 | pub use algebraic_law::*;
+   |         ^^^^^^^^^^^^^^^^
+
+warning: unused import: `independence_rule::*`
+  --> conform/src/framework/loader/toml/mod.rs:15:9
+   |
+15 | pub use independence_rule::*;
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `registry::*`
+  --> conform/src/framework/loader/toml/mod.rs:17:9
+   |
+17 | pub use registry::*;
+   |         ^^^^^^^^^^^
+
+warning: unused import: `error::*`
+  --> conform/src/framework/loader/toml/mod.rs:19:9
+   |
+19 | pub use error::*;
+   |         ^^^^^^^^
+
+warning: unused import: `load::*`
+  --> conform/src/framework/loader/toml/mod.rs:22:9
+   |
+22 | pub use load::*;
+   |         ^^^^^^^
+
+warning: unused imports: `ADVERSARIAL`, `KAT`, `VYRE_OP_METADATA`, and `vyre_op`
+  --> conform/src/spec/workgroup.rs:14:17
+   |
+14 | pub use stack::{VYRE_OP_METADATA, KAT, ADVERSARIAL, vyre_op};
+   |                 ^^^^^^^^^^^^^^^^  ^^^  ^^^^^^^^^^^  ^^^^^^^
+
+warning: unused import: `crate::framework::law::AlgebraicLaw`
+  --> conform/src/spec/primitive/mod.rs:12:9
+   |
+12 | pub use crate::framework::law::AlgebraicLaw;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `vyre::ops::*`
+   --> conform/src/lib.rs:148:20
+    |
+148 |     pub(crate) use vyre::ops::*;
+    |                    ^^^^^^^^^^^^
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/algebra/checker/mod.rs:10:7
+   |
+10 | #[cfg(loom)]
+   |       ^^^^
+   |
+   = help: expected names are: `clippy`, `debug_assertions`, `doc`, `docsrs`, `doctest`, `feature`, `fmt_debug`, `miri`, `overflow_checks`, `panic`, `proc_macro`, `relocation_model`, `rustfmt`, `sanitize`, `sanitizer_cfi_generalize_pointers`, `sanitizer_cfi_normalize_integers`, `target_abi`, `target_arch`, `target_endian`, `target_env`, `target_family`, `target_feature`, `target_has_atomic`, `target_has_atomic_equal_alignment`, `target_has_atomic_load_store`, `target_os`, `target_pointer_width`, `target_thread_local`, `target_vendor`, `test`, `ub_checks`, `unix`, and `windows`
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/algebra/checker/mod.rs:12:11
+   |
+12 | #[cfg(not(loom))]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/algebra/checker/mod.rs:16:11
+   |
+16 | #[cfg(not(loom))]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+   --> conform/src/algebra/checker/mod.rs:114:7
+    |
+114 | #[cfg(loom)]
+    |       ^^^^
+    |
+    = help: consider using a Cargo feature instead
+    = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+             [lints.rust]
+             unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+    = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+   --> conform/src/algebra/checker/mod.rs:173:11
+    |
+173 | #[cfg(not(loom))]
+    |           ^^^^
+    |
+    = help: consider using a Cargo feature instead
+    = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+             [lints.rust]
+             unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+    = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+ --> conform/src/algebra/checker/support/rng.rs:4:7
+  |
+4 | #[cfg(loom)]
+  |       ^^^^
+  |
+  = help: consider using a Cargo feature instead
+  = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+           [lints.rust]
+           unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+  = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+  = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/algebra/checker/support/rng.rs:10:11
+   |
+10 | #[cfg(not(loom))]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/algebra/checker/support/rng.rs:40:7
+   |
+40 | #[cfg(loom)]
+   |       ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/algebra/checker/support/rng.rs:49:11
+   |
+49 | #[cfg(not(loom))]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/algebra/checker/support/rng.rs:16:11
+   |
+16 |     #[cfg(loom)]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/algebra/checker/support/rng.rs:23:15
+   |
+23 |     #[cfg(not(loom))]
+   |               ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unused imports: `FormalSpecError`, `FormalSpecFile`, and `load_catalog`
+  --> conform/src/algebra/formal/mod.rs:11:18
+   |
+11 | pub use loader::{load_catalog, FormalSpecError, FormalSpecFile};
+   |                  ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+
+warning: unused imports: `FormalLawSpec`, `FormalParameter`, and `FormalVariable`
+  --> conform/src/algebra/formal/mod.rs:13:16
+   |
+13 | pub use spec::{FormalLawSpec, FormalParameter, FormalVariable};
+   |                ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+
+warning: unused imports: `ConstructionTime`, `ProofTokenError`, and `ProofToken`
+  --> conform/src/algebra/mod.rs:38:24
+   |
+38 | pub use crate::types::{ConstructionTime, ProofToken, ProofTokenError};
+   |                        ^^^^^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused import: `verify_laws`
+  --> conform/src/algebra/mod.rs:40:19
+   |
+40 | pub use checker::{verify_laws, verify_laws_witnessed, LawResult, VerificationLevel};
+   |                   ^^^^^^^^^^^
+
+warning: unused imports: `CompositionTheorem`, `applicable_theorems`, and `theorems`
+  --> conform/src/algebra/mod.rs:42:23
+   |
+42 | pub use composition::{applicable_theorems, theorems, CompositionTheorem};
+   |                       ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `AlgebraicLawFormalSpec`, `Expr`, `FormalLaw`, and `Predicate`
+  --> conform/src/algebra/mod.rs:44:23
+   |
+44 | pub use formal_spec::{AlgebraicLawFormalSpec, Expr, FormalLaw, Predicate};
+   |                       ^^^^^^^^^^^^^^^^^^^^^^  ^^^^  ^^^^^^^^^  ^^^^^^^^^
+
+warning: unused import: `gpu_checker::verify_gpu_laws_witnessed`
+  --> conform/src/algebra/mod.rs:46:9
+   |
+46 | pub use gpu_checker::verify_gpu_laws_witnessed;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `InferenceReport`, `InferredLaw`, `find_missing_laws`, `infer_binary_laws`, and `infer_unary_laws`
+  --> conform/src/algebra/mod.rs:49:5
+   |
+49 |     find_missing_laws, infer_binary_laws, infer_unary_laws, InferenceReport, InferredLaw,
+   |     ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused import: `mandatory_inference::infer_cross_op_laws`
+  --> conform/src/algebra/mod.rs:52:9
+   |
+52 | pub use mandatory_inference::infer_cross_op_laws;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `validate::validate_comparator_for_type`
+  --> conform/src/comparator/mod.rs:12:9
+   |
+12 | pub use validate::validate_comparator_for_type;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `OneShotDispatch`
+ --> conform/src/backend/implementation.rs:9:5
+  |
+9 |     OneShotDispatch,
+  |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `run_with_all_init_policies`
+ --> conform/src/backend/mod.rs:9:27
+  |
+9 | pub use dispatch_config::{run_with_all_init_policies, DispatchConfig};
+  |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `backend::WgslBackend`
+   --> conform/src/lib.rs:156:16
+    |
+156 | pub(crate) use backend::WgslBackend;
+    |                ^^^^^^^^^^^^^^^^^^^^
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/pipeline/suite/implementation.rs:11:7
+   |
+11 | #[cfg(loom)]
+   |       ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/pipeline/suite/implementation.rs:13:11
+   |
+13 | #[cfg(not(loom))]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unused import: `hash::compute_registry_hash`
+  --> conform/src/pipeline/certify/mod.rs:14:9
+   |
+14 | pub use hash::compute_registry_hash;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `to_human` and `to_json`
+  --> conform/src/pipeline/certify/mod.rs:22:18
+   |
+22 | pub use report::{to_human, to_json};
+   |                  ^^^^^^^^  ^^^^^^^
+
+warning: unexpected `cfg` condition name: `loom`
+ --> conform/src/pipeline/notify.rs:9:7
+  |
+9 | #[cfg(loom)]
+  |       ^^^^
+  |
+  = help: consider using a Cargo feature instead
+  = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+           [lints.rust]
+           unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+  = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+  = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/pipeline/notify.rs:11:11
+   |
+11 | #[cfg(not(loom))]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unused imports: `FnProgress`, `NoProgress`, `StreamingProgress`, and `StreamingSummary`
+  --> conform/src/pipeline/streaming/mod.rs:22:5
+   |
+22 |     FnProgress, NoProgress, ProgressSink, StreamingProgress, StreamingSummary,
+   |     ^^^^^^^^^^  ^^^^^^^^^^                ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+
+warning: unused import: `suite::ConformanceSuite`
+  --> conform/src/pipeline/mod.rs:21:9
+   |
+21 | pub use suite::ConformanceSuite;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `s1_s10::*`
+ --> conform/src/generate/archetypes/structural/mod.rs:7:9
+  |
+7 | pub use s1_s10::*;
+  |         ^^^^^^^^^
+
+warning: unused imports: `OpSignature` and `OpSpec`
+ --> conform/src/generate/archetypes/test_input.rs:1:20
+  |
+1 | use crate::types::{OpSignature, OpSpec};
+  |                    ^^^^^^^^^^^  ^^^^^^
+
+warning: unused import: `EnforcerFinding`
+  --> conform/src/enforce/mod.rs:18:53
+   |
+18 |     aggregate_finding, finding_result, EnforceGate, EnforcerFinding, Finding, RegisteredEnforcer,
+   |                                                     ^^^^^^^^^^^^^^^
+
+warning: unused imports: `enforce` and `registered`
+  --> conform/src/enforce/mod.rs:21:5
+   |
+21 |     enforce, enforce_all, enforce_all_or_exit, registered, EnforcementReport, LayerCheck,
+   |     ^^^^^^^                                    ^^^^^^^^^^
+
+warning: unused imports: `DEFAULT_BEAM_WIDTH`, `DEFAULT_MAX_DEPTH`, and `DEFAULT_MAX_WITNESSES`
+  --> conform/src/enforce/enforcers/decomposition.rs:12:25
+   |
+12 |     DecompositionRules, DEFAULT_BEAM_WIDTH, DEFAULT_MAX_DEPTH, DEFAULT_MAX_WITNESSES,
+   |                         ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `error::DecompositionError`
+  --> conform/src/enforce/enforcers/decomposition.rs:14:9
+   |
+14 | pub use error::DecompositionError;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `PairOutcome`, `PairStatus`, and `run_pairwise_bridge_harness`
+  --> conform/src/enforce/enforcers/engine_composition.rs:11:19
+   |
+11 | pub use harness::{run_pairwise_bridge_harness, PairOutcome, PairStatus};
+   |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^  ^^^^^^^^^^
+
+warning: unused import: `framework::OracleKind`
+ --> conform/src/enforce/enforcers/layer1_executable_spec.rs:6:5
+  |
+6 |     framework::OracleKind,
+  |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `MutationResult`
+ --> conform/src/enforce/enforcers/layer4_mutation_gate.rs:7:67
+  |
+7 |     mutation_probe, AppliedMutation, GateReport, MutationOutcome, MutationResult,
+  |                                                                   ^^^^^^^^^^^^^^
+
+warning: unused imports: `DefendantCatalog`, `Defendant`, and `GauntletFinding`
+ --> conform/src/enforce/enforcers/layer5_adversarial.rs:4:33
+  |
+4 |     full_catalog, run_gauntlet, Defendant, DefendantCatalog, GauntletFinding, GauntletReport,
+  |                                 ^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::algebra::composition::applicable_theorems`
+ --> conform/src/enforce/enforcers/layer7_composition_proof.rs:3:9
+  |
+3 | pub use crate::algebra::composition::applicable_theorems;
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ConstructionTime`
+ --> conform/src/enforce/enforcers/layer7_composition_proof.rs:4:24
+  |
+4 | pub use crate::types::{ConstructionTime, ProofToken, ProofTokenError};
+  |                        ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `AdmissionFinding` and `check_admission`
+  --> conform/src/enforce/mod.rs:99:32
+   |
+99 | pub use enforcers::admission::{check_admission, AdmissionFinding};
+   |                                ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `AtomicFinding`, `AtomicsReport`, and `enforce_atomics`
+   --> conform/src/enforce/mod.rs:101:35
+    |
+101 | pub use enforcers::atomics_race::{enforce_atomics, AtomicFinding, AtomicsReport};
+    |                                   ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^
+
+warning: unused imports: `BarrierPassResult`, `BarrierReport`, `BarrierVerdict`, `BarrierViolation`, and `enforce_barrier`
+   --> conform/src/enforce/mod.rs:104:5
+    |
+104 |     enforce_barrier, BarrierPassResult, BarrierReport, BarrierVerdict, BarrierViolation,
+    |     ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `CharacterizationEntry`, `CharacterizationReport`, `Distinctiveness`, and `characterize`
+   --> conform/src/enforce/mod.rs:110:5
+    |
+110 |     characterize, CharacterizationEntry, CharacterizationReport, Distinctiveness,
+    |     ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused import: `enforcers::data_race`
+   --> conform/src/enforce/mod.rs:112:9
+    |
+112 | pub use enforcers::data_race;
+    |         ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `RaceFinding`, `RaceReport`, `detect_race`, and `verify_no_race`
+   --> conform/src/enforce/mod.rs:113:32
+    |
+113 | pub use enforcers::data_race::{detect_race, verify_no_race, RaceFinding, RaceReport};
+    |                                ^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^^^^  ^^^^^^^^^^
+
+warning: unused import: `enforcers::decomposition`
+   --> conform/src/enforce/mod.rs:114:9
+    |
+114 | pub use enforcers::decomposition;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `BeamSearch`, `DecompositionFinding`, `DecompositionReport`, `DecompositionRules`, and `enforce_registry as enforce_decomposition`
+   --> conform/src/enforce/mod.rs:116:5
+    |
+116 |     enforce_registry as enforce_decomposition, BeamSearch, DecompositionFinding,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+117 |     DecompositionReport, DecompositionRules,
+    |     ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `DeterminismReport`, `Divergence`, and `enforce_determinism`
+   --> conform/src/enforce/mod.rs:120:34
+    |
+120 | pub use enforcers::determinism::{enforce_determinism, DeterminismReport, Divergence};
+    |                                  ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^
+
+warning: unused imports: `FloatFinding`, `FloatGateStatus`, and `enforce_float_semantics`
+   --> conform/src/enforce/mod.rs:123:38
+    |
+123 | pub use enforcers::float_semantics::{enforce_float_semantics, FloatFinding, FloatGateStatus};
+    |                                      ^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused imports: `CoverageGap` and `Gate7Finding`
+   --> conform/src/enforce/mod.rs:124:66
+    |
+124 | pub use enforcers::gate_7_coverage::{enforce_gate_7_from_report, CoverageGap, Gate7Finding};
+    |                                                                  ^^^^^^^^^^^  ^^^^^^^^^^^^
+
+warning: unused import: `enforcers::oob_access as oob`
+   --> conform/src/enforce/mod.rs:125:9
+    |
+125 | pub use enforcers::oob_access as oob;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `OobReport`, `OobTest`, `OobViolation`, and `enforce_oob`
+   --> conform/src/enforce/mod.rs:126:33
+    |
+126 | pub use enforcers::oob_access::{enforce_oob, OobReport, OobTest, OobViolation};
+    |                                 ^^^^^^^^^^^  ^^^^^^^^^  ^^^^^^^  ^^^^^^^^^^^^
+
+warning: unused import: `enforcers::signature_match::enforce_signature`
+   --> conform/src/enforce/mod.rs:129:9
+    |
+129 | pub use enforcers::signature_match::enforce_signature;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `WireFormatEquivReport`, `WireFormatEquivViolation`, and `enforce_wire_format_equivalence`
+   --> conform/src/enforce/mod.rs:132:5
+    |
+132 |     enforce_wire_format_equivalence, WireFormatEquivReport, WireFormatEquivViolation,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `FindingLocation`
+   --> conform/src/enforce/mod.rs:141:36
+    |
+141 |         Category, CategoryFinding, FindingLocation, IntrinsicTable,
+    |                                    ^^^^^^^^^^^^^^^
+
+warning: unused import: `category::check_all_categories`
+   --> conform/src/enforce/mod.rs:160:9
+    |
+160 | pub use category::check_all_categories;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `layer1_executable_spec`, `layer2_law_inference`, `layer3_reference_interp`, `layer4_mutation_gate`, `layer5_adversarial`, `layer6_stability`, and `layer7_composition_proof`
+   --> conform/src/enforce/mod.rs:165:9
+    |
+165 |         layer1_executable_spec, layer2_law_inference, layer3_reference_interp,
+    |         ^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^
+166 |         layer4_mutation_gate, layer5_adversarial, layer6_stability, layer7_composition_proof,
+    |         ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `LayerCheck`, `LayerFinding`, `LayerStatus`, and `enforce_all_or_exit`
+   --> conform/src/enforce/mod.rs:170:22
+    |
+170 |         enforce_all, enforce_all_or_exit, EnforcementReport, LayerCheck, LayerFinding, LayerStatus,
+    |                      ^^^^^^^^^^^^^^^^^^^                     ^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused import: `meta::observe`
+   --> conform/src/lib.rs:172:16
+    |
+172 | pub(crate) use meta::observe;
+    |                ^^^^^^^^^^^^^
+
+warning: unused import: `mutations_for`
+  --> conform/src/adversarial/mutations/catalog/mod.rs:17:37
+   |
+17 | pub use mutation::{apply, class_of, mutations_for, Mutation};
+   |                                     ^^^^^^^^^^^^^
+
+warning: unused imports: `DefenderClass`, `MutationClass`, `corpus_catalogs`, `corpus_metadata`, and `defender_class_to_spec`
+  --> conform/src/adversarial/mod.rs:28:5
+   |
+28 |     corpus_catalogs, corpus_metadata, defender_class_to_spec, full_catalog, Defendant,
+   |     ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^
+29 |     DefendantCatalog, DefenderClass, MutationClass,
+   |                       ^^^^^^^^^^^^^  ^^^^^^^^^^^^^
+
+warning: unused imports: `GauntletStatus` and `run_defendant`
+  --> conform/src/adversarial/mod.rs:31:20
+   |
+31 | pub use gauntlet::{run_defendant, run_gauntlet, GauntletFinding, GauntletReport, GauntletStatus};
+   |                    ^^^^^^^^^^^^^                                                 ^^^^^^^^^^^^^^
+
+warning: unused import: `TraceRecord`
+ --> conform/src/meta/observe/mod.rs:8:30
+  |
+8 | pub use trace::{TraceFormat, TraceRecord, TraceSnapshot};
+  |                              ^^^^^^^^^^^
+
+warning: unused imports: `AdversaryRef` and `BrokenComponent`
+  --> conform/src/meta/mod.rs:46:21
+   |
+46 | pub use adversary::{AdversaryRef, BrokenComponent};
+   |                     ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused imports: `ComponentKind`, `ComponentSpec`, and `Contract`
+  --> conform/src/meta/mod.rs:47:21
+   |
+47 | pub use component::{ComponentKind, ComponentSpec, Contract};
+   |                     ^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^
+
+warning: unused imports: `MetaGateReport`, `MetaStructuredFeedback`, and `meta_mutation_probe`
+  --> conform/src/meta/mod.rs:48:19
+   |
+48 | pub use harness::{meta_mutation_probe, MetaGateReport, MetaStructuredFeedback};
+   |                   ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `META_MUTATION_CATALOG`, `MetaMutationClass`, and `MetaMutation`
+  --> conform/src/meta/mod.rs:49:20
+   |
+49 | pub use mutation::{MetaMutation, MetaMutationClass, META_MUTATION_CATALOG};
+   |                    ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `MetaOracleKind`, `MetaOracle`, and `MetaVerdict`
+  --> conform/src/meta/mod.rs:50:18
+   |
+50 | pub use oracle::{MetaOracle, MetaOracleKind, MetaVerdict};
+   |                  ^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused imports: `COMPONENT_REGISTRY` and `verify_meta_coverage`
+  --> conform/src/meta/mod.rs:51:20
+   |
+51 | pub use registry::{verify_meta_coverage, COMPONENT_REGISTRY};
+   |                    ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/verify/harnesses/backend/mod.rs:12:11
+   |
+12 | #[cfg(not(loom))]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/verify/harnesses/backend/mod.rs:13:7
+   |
+13 | #[cfg(loom)]
+   |       ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/verify/harnesses/backend/mod.rs:15:7
+   |
+15 | #[cfg(loom)]
+   |       ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/verify/harnesses/backend/mod.rs:17:11
+   |
+17 | #[cfg(not(loom))]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unused imports: `DeterminismReport` and `Divergence`
+  --> conform/src/verify/harnesses/determinism.rs:15:39
+   |
+15 | pub use crate::enforce::determinism::{DeterminismReport, Divergence};
+   |                                       ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^
+
+warning: unexpected `cfg` condition name: `loom`
+ --> conform/src/verify/harnesses/fault/mod.rs:8:7
+  |
+8 | #[cfg(loom)]
+  |       ^^^^
+  |
+  = help: consider using a Cargo feature instead
+  = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+           [lints.rust]
+           unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+  = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+  = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/verify/harnesses/fault/mod.rs:10:11
+   |
+10 | #[cfg(not(loom))]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unused import: `canary_plus_to_minus`
+   --> conform/src/verify/harnesses/mutation/mod.rs:281:17
+    |
+281 | pub use probe::{canary_plus_to_minus, mutation_probe};
+    |                 ^^^^^^^^^^^^^^^^^^^^
+
+warning: unexpected `cfg` condition name: `loom`
+ --> conform/src/verify/harnesses/swap/mod.rs:8:7
+  |
+8 | #[cfg(loom)]
+  |       ^^^^
+  |
+  = help: consider using a Cargo feature instead
+  = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+           [lints.rust]
+           unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+  = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+  = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/verify/harnesses/swap/mod.rs:10:11
+   |
+10 | #[cfg(not(loom))]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/verify/regression/mod.rs:10:7
+   |
+10 | #[cfg(loom)]
+   |       ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/verify/regression/mod.rs:13:7
+   |
+13 | #[cfg(loom)]
+   |       ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/verify/regression/mod.rs:67:11
+   |
+67 |     #[cfg(loom)]
+   |           ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+  --> conform/src/verify/regression/mod.rs:73:15
+   |
+73 |     #[cfg(not(loom))]
+   |               ^^^^
+   |
+   = help: consider using a Cargo feature instead
+   = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+   = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+   --> conform/src/verify/regression/mod.rs:139:11
+    |
+139 |     #[cfg(loom)]
+    |           ^^^^
+    |
+    = help: consider using a Cargo feature instead
+    = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+             [lints.rust]
+             unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+    = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition name: `loom`
+   --> conform/src/verify/regression/mod.rs:150:15
+    |
+150 |     #[cfg(not(loom))]
+    |               ^^^^
+    |
+    = help: consider using a Cargo feature instead
+    = help: or consider adding in `Cargo.toml` the `check-cfg` lint config for the lint:
+             [lints.rust]
+             unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+    = help: or consider adding `println!("cargo::rustc-check-cfg=cfg(loom)");` to the top of the `build.rs`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/cost_certificate.rs:345:24
+    |
+345 |         let findings = enforce(&ops, &[None]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+259 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/cost_certificate.rs:360:24
+    |
+360 |         let findings = enforce(&ops, &[Some((measured, budget))]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+259 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/no_silent_wrong.rs:293:24
+    |
+293 |         let findings = enforce(&[integer_op_without_contract()]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+206 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/no_silent_wrong.rs:302:24
+    |
+302 |         let findings = enforce(&[integer_op_with_contract()]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+206 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/no_silent_wrong.rs:311:24
+    |
+311 |         let findings = enforce(&[bytes_op_with_no_laws()]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+206 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/no_silent_wrong.rs:319:24
+    |
+319 |         let findings = enforce(&[op_with_bad_bound()]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+206 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/no_silent_wrong.rs:332:24
+    |
+332 |         let findings = enforce(&[integer_op_with_contract()]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+206 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/overflow_contract.rs:274:24
+    |
+274 |         let findings = enforce(&specs);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+270 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/overflow_contract.rs:346:24
+    |
+346 |         let findings = enforce(&[spec]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+270 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/overflow_contract.rs:363:24
+    |
+363 |         let findings = enforce(&[spec]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+270 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/overflow_contract.rs:388:24
+    |
+388 |         let findings = enforce(&[spec]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+270 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/overflow_contract.rs:416:24
+    |
+416 |         let findings = enforce(&[spec]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+270 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/overflow_contract.rs:444:24
+    |
+444 |         let findings = enforce(&[spec]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+270 +     use crate::enforce::enforce;
+    |
+
+error[E0425]: cannot find function `enforce` in this scope
+   --> conform/src/enforce/enforcers/overflow_contract.rs:481:24
+    |
+481 |         let findings = enforce(&[spec]);
+    |                        ^^^^^^^ not found in this scope
+    |
+help: consider importing this function through its public re-export
+    |
+270 +     use crate::enforce::enforce;
+    |
+
+warning: unused imports: `DeferredEngine`, `EngineMigrationReport`, `deferred_engine_specs`, `engine_op_specs`, and `migration_report`
+ --> conform/src/enforce/enforcers/engine_composition.rs:9:5
+  |
+9 |     deferred_engine_specs, engine_op_specs, migration_report, DeferredEngine, EngineMigrationReport,
+  |     ^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `verify::properties`
+   --> conform/src/lib.rs:198:16
+    |
+198 | pub(crate) use verify::properties;
+    |                ^^^^^^^^^^^^^^^^^^
+
+error[E0277]: the trait bound `&'static (dyn archetypes::Archetype + 'static): archetypes::Archetype` is not satisfied
+ --> /media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/target/debug/build/vyre-conform-6af81c9ee66307a8/out/archetypes_registry.rs:7:5
+  |
+7 |     &crate::generate::archetypes::a1_identity_pair::REGISTERED,
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `archetypes::Archetype` is not implemented for `&'static (dyn archetypes::Archetype + 'static)`
+  |
+  = note: required for the cast from `&&'static (dyn archetypes::Archetype + 'static)` to `&'static (dyn archetypes::Archetype + 'static)`
+help: consider removing the leading `&`-reference
+  |
+7 -     &crate::generate::archetypes::a1_identity_pair::REGISTERED,
+7 +     crate::generate::archetypes::a1_identity_pair::REGISTERED,
+  |
+
+error[E0277]: the trait bound `BeamSearch: EnforceGate` is not satisfied
+  --> /media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/target/debug/build/vyre-conform-6af81c9ee66307a8/out/gates_registry.rs:17:5
+   |
+17 |     &crate::enforce::gates::decomposition::REGISTERED,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `EnforceGate` is not implemented for `BeamSearch`
+   |
+   = help: the following other types implement trait `EnforceGate`:
+             AdmissionEnforcer
+             AtomicsRaceEnforcer
+             BarrierPlacementEnforcer
+             CategoryAEnforcer
+             CategoryBEnforcer
+             CategoryCEnforcer
+             CharacterizeEnforcer
+             CompositionClosureEnforcer
+           and 26 others
+   = note: required for the cast from `&BeamSearch` to `&dyn EnforceGate`
+
+error[E0277]: the trait bound `NullBackend: EnforceGate` is not satisfied
+  --> /media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/target/debug/build/vyre-conform-6af81c9ee66307a8/out/gates_registry.rs:19:5
+   |
+19 |     &crate::enforce::gates::divergence::REGISTERED,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `EnforceGate` is not implemented for `NullBackend`
+   |
+   = help: the following other types implement trait `EnforceGate`:
+             AdmissionEnforcer
+             AtomicsRaceEnforcer
+             BarrierPlacementEnforcer
+             CategoryAEnforcer
+             CategoryBEnforcer
+             CategoryCEnforcer
+             CharacterizeEnforcer
+             CompositionClosureEnforcer
+           and 26 others
+   = note: required for the cast from `&NullBackend` to `&dyn EnforceGate`
+
+Some errors have detailed explanations: E0277, E0405, E0423, E0425.
+For more information about an error, try `rustc --explain E0277`.
+warning: `vyre-conform` (lib) generated 124 warnings
+error: could not compile `vyre-conform` (lib) due to 11 previous errors; 124 warnings emitted
+Some errors have detailed explanations: E0277, E0405, E0423, E0425, E0583.
+warning: `vyre-conform` (lib test) generated 119 warnings (117 duplicates)
+error: could not compile `vyre-conform` (lib test) due to 29 previous errors; 119 warnings emitted

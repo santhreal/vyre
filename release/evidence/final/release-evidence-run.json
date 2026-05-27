@@ -1,0 +1,668 @@
+{
+  "schema_version": 2,
+  "total_commands": 13,
+  "successful_commands": 13,
+  "command_failures": 0,
+  "artifact_failures": 0,
+  "command_count": 13,
+  "required_command_count": 13,
+  "report_only_command_count": 0,
+  "commands": [
+    {
+      "args": [
+        "docs-matrix"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/docs/docs-matrix.json",
+        "release/evidence/docs/vyre-readme-contracts.json",
+        "release/evidence/docs/release-notes-version-story.md",
+        "release/evidence/docs/cuda-release-path.md",
+        "release/evidence/docs/wgpu-fallback-proof.md",
+        "release/evidence/docs/megakernel-default-proof.md",
+        "release/evidence/docs/optimization-proof.md",
+        "release/evidence/docs/egraph-saturation.md",
+        "release/evidence/docs/c-parser-linux-proof.md",
+        "release/evidence/docs/distributed-parser-coherence.md",
+        "release/evidence/docs/weir-integration.md",
+        "release/evidence/docs/test-architecture.md",
+        "release/evidence/docs/vyre-readme-proof.md",
+        "release/evidence/docs/weir-readme-proof.md",
+        "release/evidence/docs/parser-doc-proof.md",
+        "release/evidence/docs/benchmark-doc-proof.md",
+        "release/evidence/docs/conformance-doc-proof.md",
+        "release/evidence/docs/release-notes.md",
+        "release/evidence/docs/crate-metadata-proof.md",
+        "release/evidence/docs/release-hygiene-proof.md",
+        "release/evidence/docs/cpu-only-100x-proof.md"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/docs/docs-matrix.json",
+          "exists": true,
+          "bytes": 14065,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/vyre-readme-contracts.json",
+          "exists": true,
+          "bytes": 432,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/release-notes-version-story.md",
+          "exists": true,
+          "bytes": 2198,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/cuda-release-path.md",
+          "exists": true,
+          "bytes": 3197,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/wgpu-fallback-proof.md",
+          "exists": true,
+          "bytes": 1412,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/megakernel-default-proof.md",
+          "exists": true,
+          "bytes": 2173,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/optimization-proof.md",
+          "exists": true,
+          "bytes": 3851,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/egraph-saturation.md",
+          "exists": true,
+          "bytes": 969,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/c-parser-linux-proof.md",
+          "exists": true,
+          "bytes": 2788,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/distributed-parser-coherence.md",
+          "exists": true,
+          "bytes": 1881,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/weir-integration.md",
+          "exists": true,
+          "bytes": 1972,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/test-architecture.md",
+          "exists": true,
+          "bytes": 1432,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/vyre-readme-proof.md",
+          "exists": true,
+          "bytes": 896,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/weir-readme-proof.md",
+          "exists": true,
+          "bytes": 724,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/parser-doc-proof.md",
+          "exists": true,
+          "bytes": 934,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/benchmark-doc-proof.md",
+          "exists": true,
+          "bytes": 2539,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/conformance-doc-proof.md",
+          "exists": true,
+          "bytes": 4205,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/release-notes.md",
+          "exists": true,
+          "bytes": 1315,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/crate-metadata-proof.md",
+          "exists": true,
+          "bytes": 2111,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/release-hygiene-proof.md",
+          "exists": true,
+          "bytes": 3303,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/docs/cpu-only-100x-proof.md",
+          "exists": true,
+          "bytes": 3100,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "version-matrix"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/version/version-matrix.json",
+        "release/evidence/version/release-tag-plan.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/version/version-matrix.json",
+          "exists": true,
+          "bytes": 40779,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/version/release-tag-plan.json",
+          "exists": true,
+          "bytes": 1203,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "backend-matrix"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/backends/backend-matrix.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/backends/backend-matrix.json",
+          "exists": true,
+          "bytes": 13030,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "conformance-matrix"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/conformance/conformance-matrix.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/conformance/conformance-matrix.json",
+          "exists": true,
+          "bytes": 154214,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "release-workload-matrix",
+        "--enforce"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/benchmarks/release-workload-matrix.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/benchmarks/release-workload-matrix.json",
+          "exists": true,
+          "bytes": 24048,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "hygiene-matrix"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/hygiene/hygiene-matrix.json",
+        "release/evidence/hygiene/no-stubs-scan.json",
+        "release/evidence/hygiene/no-hidden-fallback-scan.json",
+        "release/evidence/hygiene/resource-bound-scan.json",
+        "release/evidence/hygiene/error-surface-scan.json",
+        "release/evidence/hygiene/cargo-wrapper-scan.json",
+        "release/evidence/hygiene/audit-location-scan.json",
+        "release/evidence/hygiene/public-doc-scan.json",
+        "release/evidence/hygiene/test-hygiene-scan.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/hygiene/hygiene-matrix.json",
+          "exists": true,
+          "bytes": 1413,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/hygiene/no-stubs-scan.json",
+          "exists": true,
+          "bytes": 84,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/hygiene/no-hidden-fallback-scan.json",
+          "exists": true,
+          "bytes": 94,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/hygiene/resource-bound-scan.json",
+          "exists": true,
+          "bytes": 90,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/hygiene/error-surface-scan.json",
+          "exists": true,
+          "bytes": 89,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/hygiene/cargo-wrapper-scan.json",
+          "exists": true,
+          "bytes": 89,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/hygiene/audit-location-scan.json",
+          "exists": true,
+          "bytes": 90,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/hygiene/public-doc-scan.json",
+          "exists": true,
+          "bytes": 87,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/hygiene/test-hygiene-scan.json",
+          "exists": true,
+          "bytes": 88,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "test-matrix"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/tests/test-matrix.json",
+        "release/evidence/tests/modularization-map.json",
+        "release/evidence/tests/oversized-test-closure.json",
+        "release/evidence/tests/release-surface-suite-coverage.json",
+        "release/evidence/tests/unit-suite.json",
+        "release/evidence/tests/adversarial-suite.json",
+        "release/evidence/tests/property-suite.json",
+        "release/evidence/tests/conformance-suite.json",
+        "release/evidence/tests/corpus-suite.json",
+        "release/evidence/tests/benchmark-suite.json",
+        "release/evidence/tests/gap-suite.json",
+        "release/evidence/tests/fuzz-suite.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/tests/test-matrix.json",
+          "exists": true,
+          "bytes": 5823,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/tests/modularization-map.json",
+          "exists": true,
+          "bytes": 3730,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/tests/oversized-test-closure.json",
+          "exists": true,
+          "bytes": 235,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/tests/release-surface-suite-coverage.json",
+          "exists": true,
+          "bytes": 1812,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/tests/unit-suite.json",
+          "exists": true,
+          "bytes": 418009,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/tests/adversarial-suite.json",
+          "exists": true,
+          "bytes": 66389,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/tests/property-suite.json",
+          "exists": true,
+          "bytes": 29541,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/tests/conformance-suite.json",
+          "exists": true,
+          "bytes": 101050,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/tests/corpus-suite.json",
+          "exists": true,
+          "bytes": 38861,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/tests/benchmark-suite.json",
+          "exists": true,
+          "bytes": 394887,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/tests/gap-suite.json",
+          "exists": true,
+          "bytes": 9912,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/tests/fuzz-suite.json",
+          "exists": true,
+          "bytes": 5940,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "metadata-matrix"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/metadata/metadata-matrix.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/metadata/metadata-matrix.json",
+          "exists": true,
+          "bytes": 34423,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "feature-matrix"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/metadata/feature-matrix.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/metadata/feature-matrix.json",
+          "exists": true,
+          "bytes": 18879,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "optimization-corpus"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/optimization/optimization-corpus.json",
+        "release/evidence/optimization/optimization-corpus-contracts.json",
+        "release/evidence/optimization/optimization-family-manifest.json",
+        "release/evidence/optimization/optimization-analysis-fixtures.json",
+        "release/evidence/optimization/optimization-case-manifest.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/optimization/optimization-corpus.json",
+          "exists": true,
+          "bytes": 1310,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/optimization/optimization-corpus-contracts.json",
+          "exists": true,
+          "bytes": 314,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/optimization/optimization-family-manifest.json",
+          "exists": true,
+          "bytes": 1490,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/optimization/optimization-analysis-fixtures.json",
+          "exists": true,
+          "bytes": 2116,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/optimization/optimization-case-manifest.json",
+          "exists": true,
+          "bytes": 2732784,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "optimization-matrix"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/optimization/optimization-integration-matrix.json",
+        "release/evidence/optimization/alias-aware-dse.json",
+        "release/evidence/optimization/alias-aware-stlf.json",
+        "release/evidence/optimization/alias-aware-licm.json",
+        "release/evidence/optimization/alias-aware-fusion-fission.json",
+        "release/evidence/optimization/weir-facts-pass-firing.json",
+        "release/evidence/optimization/egraph-saturation-matrix.json",
+        "release/evidence/optimization/egraph-semantic-contracts.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/optimization/optimization-integration-matrix.json",
+          "exists": true,
+          "bytes": 20390,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/optimization/alias-aware-dse.json",
+          "exists": true,
+          "bytes": 5402,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/optimization/alias-aware-stlf.json",
+          "exists": true,
+          "bytes": 5461,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/optimization/alias-aware-licm.json",
+          "exists": true,
+          "bytes": 2477,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/optimization/alias-aware-fusion-fission.json",
+          "exists": true,
+          "bytes": 3930,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/optimization/weir-facts-pass-firing.json",
+          "exists": true,
+          "bytes": 8991,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/optimization/egraph-saturation-matrix.json",
+          "exists": true,
+          "bytes": 2045,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/optimization/egraph-semantic-contracts.json",
+          "exists": true,
+          "bytes": 2053,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "parser-coherence"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/parser/distributed-parser-map.json",
+        "release/evidence/parser/vyre-frontend-c-contracts.json",
+        "release/evidence/parser/vyrec-cli-contracts.json",
+        "release/evidence/parser/weir-contracts.json",
+        "release/evidence/parser/surgec-contracts.json",
+        "release/evidence/parser/surgec-grammar-gen-contracts.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/parser/distributed-parser-map.json",
+          "exists": true,
+          "bytes": 12294,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/parser/vyre-frontend-c-contracts.json",
+          "exists": true,
+          "bytes": 2125,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/parser/vyrec-cli-contracts.json",
+          "exists": true,
+          "bytes": 3334,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/parser/weir-contracts.json",
+          "exists": true,
+          "bytes": 1884,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/parser/surgec-contracts.json",
+          "exists": true,
+          "bytes": 1646,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/parser/surgec-grammar-gen-contracts.json",
+          "exists": true,
+          "bytes": 1719,
+          "read_error": null
+        }
+      ]
+    },
+    {
+      "args": [
+        "weir-matrix"
+      ],
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/weir/weir-analysis-api-matrix.json",
+        "release/evidence/weir/weir-vyre-integration-tests.json",
+        "release/evidence/weir/weir-readme-contracts.json"
+      ],
+      "status": "success",
+      "exit_code": 0,
+      "artifact_statuses": [
+        {
+          "path": "release/evidence/weir/weir-analysis-api-matrix.json",
+          "exists": true,
+          "bytes": 31111,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/weir/weir-vyre-integration-tests.json",
+          "exists": true,
+          "bytes": 14086,
+          "read_error": null
+        },
+        {
+          "path": "release/evidence/weir/weir-readme-contracts.json",
+          "exists": true,
+          "bytes": 803,
+          "read_error": null
+        }
+      ]
+    }
+  ],
+  "blockers": [],
+  "reports": []
+}

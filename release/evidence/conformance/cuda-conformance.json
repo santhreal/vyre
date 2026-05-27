@@ -1,0 +1,3855 @@
+{
+  "schema_version": 2,
+  "backend_id": "cuda",
+  "command": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all",
+  "stdout_diagnostics": [],
+  "total_pairs": 436,
+  "distinct_op_count": 436,
+  "catalog_required_op_count": 405,
+  "catalog_covered_op_count": 405,
+  "missing_catalog_ops": [],
+  "release_backend_row_count": 1215,
+  "release_backend_rows": [
+    "weir::ifds:reference:supported",
+    "weir::ifds:cuda:supported",
+    "weir::ifds:wgpu:supported",
+    "weir::live:reference:supported",
+    "weir::live:cuda:supported",
+    "weir::live:wgpu:supported",
+    "weir::points_to:reference:supported",
+    "weir::points_to:cuda:supported",
+    "weir::points_to:wgpu:supported",
+    "weir::reaching:reference:supported",
+    "weir::reaching:cuda:supported",
+    "weir::reaching:wgpu:supported",
+    "weir::ssa:reference:supported",
+    "weir::ssa:cuda:supported",
+    "weir::ssa:wgpu:supported",
+    "vyre-intrinsics::hardware::bit_reverse_u32:reference:supported",
+    "vyre-intrinsics::hardware::bit_reverse_u32:cuda:supported",
+    "vyre-intrinsics::hardware::bit_reverse_u32:wgpu:supported",
+    "vyre-intrinsics::hardware::fma_f32:reference:supported",
+    "vyre-intrinsics::hardware::fma_f32:cuda:supported",
+    "vyre-intrinsics::hardware::fma_f32:wgpu:supported",
+    "vyre-intrinsics::hardware::inverse_sqrt_f32:reference:supported",
+    "vyre-intrinsics::hardware::inverse_sqrt_f32:cuda:supported",
+    "vyre-intrinsics::hardware::inverse_sqrt_f32:wgpu:supported",
+    "vyre-intrinsics::hardware::popcount_u32:reference:supported",
+    "vyre-intrinsics::hardware::popcount_u32:cuda:supported",
+    "vyre-intrinsics::hardware::popcount_u32:wgpu:supported",
+    "vyre-intrinsics::hardware::storage_barrier:reference:supported",
+    "vyre-intrinsics::hardware::storage_barrier:cuda:supported",
+    "vyre-intrinsics::hardware::storage_barrier:wgpu:supported",
+    "vyre-intrinsics::hardware::subgroup_add:reference:supported",
+    "vyre-intrinsics::hardware::subgroup_add:cuda:supported",
+    "vyre-intrinsics::hardware::subgroup_add:wgpu:supported",
+    "vyre-intrinsics::hardware::subgroup_ballot:reference:supported",
+    "vyre-intrinsics::hardware::subgroup_ballot:cuda:supported",
+    "vyre-intrinsics::hardware::subgroup_ballot:wgpu:supported",
+    "vyre-intrinsics::hardware::subgroup_shuffle:reference:supported",
+    "vyre-intrinsics::hardware::subgroup_shuffle:cuda:supported",
+    "vyre-intrinsics::hardware::subgroup_shuffle:wgpu:supported",
+    "vyre-intrinsics::hardware::workgroup_barrier:reference:supported",
+    "vyre-intrinsics::hardware::workgroup_barrier:cuda:supported",
+    "vyre-intrinsics::hardware::workgroup_barrier:wgpu:supported",
+    "vyre-libs::catalog::bitset::any::consumer_a:reference:supported",
+    "vyre-libs::catalog::bitset::any::consumer_a:cuda:supported",
+    "vyre-libs::catalog::bitset::any::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::bitset::any::consumer_b:reference:supported",
+    "vyre-libs::catalog::bitset::any::consumer_b:cuda:supported",
+    "vyre-libs::catalog::bitset::any::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::bitset::contains::consumer_a:reference:supported",
+    "vyre-libs::catalog::bitset::contains::consumer_a:cuda:supported",
+    "vyre-libs::catalog::bitset::contains::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::bitset::contains::consumer_b:reference:supported",
+    "vyre-libs::catalog::bitset::contains::consumer_b:cuda:supported",
+    "vyre-libs::catalog::bitset::contains::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::bitset::four_russians_apply_byte_lut::consumer_a:reference:supported",
+    "vyre-libs::catalog::bitset::four_russians_apply_byte_lut::consumer_a:cuda:supported",
+    "vyre-libs::catalog::bitset::four_russians_apply_byte_lut::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::bitset::four_russians_apply_byte_lut::consumer_b:reference:supported",
+    "vyre-libs::catalog::bitset::four_russians_apply_byte_lut::consumer_b:cuda:supported",
+    "vyre-libs::catalog::bitset::four_russians_apply_byte_lut::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::bitset::not::consumer_a:reference:supported",
+    "vyre-libs::catalog::bitset::not::consumer_a:cuda:supported",
+    "vyre-libs::catalog::bitset::not::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::bitset::not::consumer_b:reference:supported",
+    "vyre-libs::catalog::bitset::not::consumer_b:cuda:supported",
+    "vyre-libs::catalog::bitset::not::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::bitset::or::consumer_a:reference:supported",
+    "vyre-libs::catalog::bitset::or::consumer_a:cuda:supported",
+    "vyre-libs::catalog::bitset::or::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::bitset::or::consumer_b:reference:supported",
+    "vyre-libs::catalog::bitset::or::consumer_b:cuda:supported",
+    "vyre-libs::catalog::bitset::or::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::bitset::popcount::consumer_a:reference:supported",
+    "vyre-libs::catalog::bitset::popcount::consumer_a:cuda:supported",
+    "vyre-libs::catalog::bitset::popcount::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::bitset::popcount::consumer_b:reference:supported",
+    "vyre-libs::catalog::bitset::popcount::consumer_b:cuda:supported",
+    "vyre-libs::catalog::bitset::popcount::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::bitset::xor::consumer_a:reference:supported",
+    "vyre-libs::catalog::bitset::xor::consumer_a:cuda:supported",
+    "vyre-libs::catalog::bitset::xor::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::bitset::xor::consumer_b:reference:supported",
+    "vyre-libs::catalog::bitset::xor::consumer_b:cuda:supported",
+    "vyre-libs::catalog::bitset::xor::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::decode::base64_decode::consumer_a:reference:supported",
+    "vyre-libs::catalog::decode::base64_decode::consumer_a:cuda:supported",
+    "vyre-libs::catalog::decode::base64_decode::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::decode::base64_decode::consumer_b:reference:supported",
+    "vyre-libs::catalog::decode::base64_decode::consumer_b:cuda:supported",
+    "vyre-libs::catalog::decode::base64_decode::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::decode::inflate_stored::consumer_a:reference:supported",
+    "vyre-libs::catalog::decode::inflate_stored::consumer_a:cuda:supported",
+    "vyre-libs::catalog::decode::inflate_stored::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::decode::inflate_stored::consumer_b:reference:supported",
+    "vyre-libs::catalog::decode::inflate_stored::consumer_b:cuda:supported",
+    "vyre-libs::catalog::decode::inflate_stored::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::decode::rle_segment_lengths::consumer_a:reference:supported",
+    "vyre-libs::catalog::decode::rle_segment_lengths::consumer_a:cuda:supported",
+    "vyre-libs::catalog::decode::rle_segment_lengths::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::decode::rle_segment_lengths::consumer_b:reference:supported",
+    "vyre-libs::catalog::decode::rle_segment_lengths::consumer_b:cuda:supported",
+    "vyre-libs::catalog::decode::rle_segment_lengths::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::fixpoint::bitset_fixpoint::consumer_a:reference:supported",
+    "vyre-libs::catalog::fixpoint::bitset_fixpoint::consumer_a:cuda:supported",
+    "vyre-libs::catalog::fixpoint::bitset_fixpoint::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::fixpoint::bitset_fixpoint::consumer_b:reference:supported",
+    "vyre-libs::catalog::fixpoint::bitset_fixpoint::consumer_b:cuda:supported",
+    "vyre-libs::catalog::fixpoint::bitset_fixpoint::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::graph::persistent_bfs::consumer_a:reference:supported",
+    "vyre-libs::catalog::graph::persistent_bfs::consumer_a:cuda:supported",
+    "vyre-libs::catalog::graph::persistent_bfs::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::graph::persistent_bfs::consumer_b:reference:supported",
+    "vyre-libs::catalog::graph::persistent_bfs::consumer_b:cuda:supported",
+    "vyre-libs::catalog::graph::persistent_bfs::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::graph::persistent_bfs_step::consumer_a:reference:supported",
+    "vyre-libs::catalog::graph::persistent_bfs_step::consumer_a:cuda:supported",
+    "vyre-libs::catalog::graph::persistent_bfs_step::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::graph::persistent_bfs_step::consumer_b:reference:supported",
+    "vyre-libs::catalog::graph::persistent_bfs_step::consumer_b:cuda:supported",
+    "vyre-libs::catalog::graph::persistent_bfs_step::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::graph::scc_decompose::consumer_a:reference:supported",
+    "vyre-libs::catalog::graph::scc_decompose::consumer_a:cuda:supported",
+    "vyre-libs::catalog::graph::scc_decompose::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::graph::scc_decompose::consumer_b:reference:supported",
+    "vyre-libs::catalog::graph::scc_decompose::consumer_b:cuda:supported",
+    "vyre-libs::catalog::graph::scc_decompose::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::graph::tensor_flow_forward::consumer_a:reference:supported",
+    "vyre-libs::catalog::graph::tensor_flow_forward::consumer_a:cuda:supported",
+    "vyre-libs::catalog::graph::tensor_flow_forward::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::graph::tensor_flow_forward::consumer_b:reference:supported",
+    "vyre-libs::catalog::graph::tensor_flow_forward::consumer_b:cuda:supported",
+    "vyre-libs::catalog::graph::tensor_flow_forward::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::graph::vast_walk_postorder::consumer_a:reference:supported",
+    "vyre-libs::catalog::graph::vast_walk_postorder::consumer_a:cuda:supported",
+    "vyre-libs::catalog::graph::vast_walk_postorder::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::graph::vast_walk_postorder::consumer_b:reference:supported",
+    "vyre-libs::catalog::graph::vast_walk_postorder::consumer_b:cuda:supported",
+    "vyre-libs::catalog::graph::vast_walk_postorder::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::graph::vast_walk_preorder::consumer_a:reference:supported",
+    "vyre-libs::catalog::graph::vast_walk_preorder::consumer_a:cuda:supported",
+    "vyre-libs::catalog::graph::vast_walk_preorder::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::graph::vast_walk_preorder::consumer_b:reference:supported",
+    "vyre-libs::catalog::graph::vast_walk_preorder::consumer_b:cuda:supported",
+    "vyre-libs::catalog::graph::vast_walk_preorder::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::hash::blake3_round::consumer_a:reference:supported",
+    "vyre-libs::catalog::hash::blake3_round::consumer_a:cuda:supported",
+    "vyre-libs::catalog::hash::blake3_round::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::hash::blake3_round::consumer_b:reference:supported",
+    "vyre-libs::catalog::hash::blake3_round::consumer_b:cuda:supported",
+    "vyre-libs::catalog::hash::blake3_round::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::hash::fnv1a32::consumer_a:reference:supported",
+    "vyre-libs::catalog::hash::fnv1a32::consumer_a:cuda:supported",
+    "vyre-libs::catalog::hash::fnv1a32::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::hash::fnv1a32::consumer_b:reference:supported",
+    "vyre-libs::catalog::hash::fnv1a32::consumer_b:cuda:supported",
+    "vyre-libs::catalog::hash::fnv1a32::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::hash::fnv1a64::consumer_a:reference:supported",
+    "vyre-libs::catalog::hash::fnv1a64::consumer_a:cuda:supported",
+    "vyre-libs::catalog::hash::fnv1a64::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::hash::fnv1a64::consumer_b:reference:supported",
+    "vyre-libs::catalog::hash::fnv1a64::consumer_b:cuda:supported",
+    "vyre-libs::catalog::hash::fnv1a64::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::matching::bracket_match::consumer_a:reference:supported",
+    "vyre-libs::catalog::matching::bracket_match::consumer_a:cuda:supported",
+    "vyre-libs::catalog::matching::bracket_match::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::matching::bracket_match::consumer_b:reference:supported",
+    "vyre-libs::catalog::matching::bracket_match::consumer_b:cuda:supported",
+    "vyre-libs::catalog::matching::bracket_match::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::math::amg_v_cycle::consumer_a:reference:supported",
+    "vyre-libs::catalog::math::amg_v_cycle::consumer_a:cuda:supported",
+    "vyre-libs::catalog::math::amg_v_cycle::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::math::amg_v_cycle::consumer_b:reference:supported",
+    "vyre-libs::catalog::math::amg_v_cycle::consumer_b:cuda:supported",
+    "vyre-libs::catalog::math::amg_v_cycle::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::math::bellman_shortest_path::consumer_a:reference:supported",
+    "vyre-libs::catalog::math::bellman_shortest_path::consumer_a:cuda:supported",
+    "vyre-libs::catalog::math::bellman_shortest_path::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::math::bellman_shortest_path::consumer_b:reference:supported",
+    "vyre-libs::catalog::math::bellman_shortest_path::consumer_b:cuda:supported",
+    "vyre-libs::catalog::math::bellman_shortest_path::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_a:reference:supported",
+    "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_a:cuda:supported",
+    "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_b:reference:supported",
+    "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_b:cuda:supported",
+    "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::math::scallop_join::consumer_a:reference:supported",
+    "vyre-libs::catalog::math::scallop_join::consumer_a:cuda:supported",
+    "vyre-libs::catalog::math::scallop_join::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::math::scallop_join::consumer_b:reference:supported",
+    "vyre-libs::catalog::math::scallop_join::consumer_b:cuda:supported",
+    "vyre-libs::catalog::math::scallop_join::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::math::scallop_join_wide::consumer_a:reference:supported",
+    "vyre-libs::catalog::math::scallop_join_wide::consumer_a:cuda:supported",
+    "vyre-libs::catalog::math::scallop_join_wide::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::math::scallop_join_wide::consumer_b:reference:supported",
+    "vyre-libs::catalog::math::scallop_join_wide::consumer_b:cuda:supported",
+    "vyre-libs::catalog::math::scallop_join_wide::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::math::sheaf_laplacian_eigenvalue::consumer_a:reference:supported",
+    "vyre-libs::catalog::math::sheaf_laplacian_eigenvalue::consumer_a:cuda:supported",
+    "vyre-libs::catalog::math::sheaf_laplacian_eigenvalue::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::math::sheaf_laplacian_eigenvalue::consumer_b:reference:supported",
+    "vyre-libs::catalog::math::sheaf_laplacian_eigenvalue::consumer_b:cuda:supported",
+    "vyre-libs::catalog::math::sheaf_laplacian_eigenvalue::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::math::sinkhorn_iterate::consumer_a:reference:supported",
+    "vyre-libs::catalog::math::sinkhorn_iterate::consumer_a:cuda:supported",
+    "vyre-libs::catalog::math::sinkhorn_iterate::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::math::sinkhorn_iterate::consumer_b:reference:supported",
+    "vyre-libs::catalog::math::sinkhorn_iterate::consumer_b:cuda:supported",
+    "vyre-libs::catalog::math::sinkhorn_iterate::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::math::tensor_train_decompose::consumer_a:reference:supported",
+    "vyre-libs::catalog::math::tensor_train_decompose::consumer_a:cuda:supported",
+    "vyre-libs::catalog::math::tensor_train_decompose::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::math::tensor_train_decompose::consumer_b:reference:supported",
+    "vyre-libs::catalog::math::tensor_train_decompose::consumer_b:cuda:supported",
+    "vyre-libs::catalog::math::tensor_train_decompose::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::nn::quest_score_pages::consumer_a:reference:supported",
+    "vyre-libs::catalog::nn::quest_score_pages::consumer_a:cuda:supported",
+    "vyre-libs::catalog::nn::quest_score_pages::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::nn::quest_score_pages::consumer_b:reference:supported",
+    "vyre-libs::catalog::nn::quest_score_pages::consumer_b:cuda:supported",
+    "vyre-libs::catalog::nn::quest_score_pages::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::nn::quest_zero_fill::consumer_a:reference:supported",
+    "vyre-libs::catalog::nn::quest_zero_fill::consumer_a:cuda:supported",
+    "vyre-libs::catalog::nn::quest_zero_fill::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::nn::quest_zero_fill::consumer_b:reference:supported",
+    "vyre-libs::catalog::nn::quest_zero_fill::consumer_b:cuda:supported",
+    "vyre-libs::catalog::nn::quest_zero_fill::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::parsing::ast_cse_structural_hash::consumer_a:reference:supported",
+    "vyre-libs::catalog::parsing::ast_cse_structural_hash::consumer_a:cuda:supported",
+    "vyre-libs::catalog::parsing::ast_cse_structural_hash::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::parsing::ast_cse_structural_hash::consumer_b:reference:supported",
+    "vyre-libs::catalog::parsing::ast_cse_structural_hash::consumer_b:cuda:supported",
+    "vyre-libs::catalog::parsing::ast_cse_structural_hash::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::parsing::ssa_dominance_scan::consumer_a:reference:supported",
+    "vyre-libs::catalog::parsing::ssa_dominance_scan::consumer_a:cuda:supported",
+    "vyre-libs::catalog::parsing::ssa_dominance_scan::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::parsing::ssa_dominance_scan::consumer_b:reference:supported",
+    "vyre-libs::catalog::parsing::ssa_dominance_scan::consumer_b:cuda:supported",
+    "vyre-libs::catalog::parsing::ssa_dominance_scan::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::predicate::arg_of::consumer_a:reference:supported",
+    "vyre-libs::catalog::predicate::arg_of::consumer_a:cuda:supported",
+    "vyre-libs::catalog::predicate::arg_of::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::predicate::arg_of::consumer_b:reference:supported",
+    "vyre-libs::catalog::predicate::arg_of::consumer_b:cuda:supported",
+    "vyre-libs::catalog::predicate::arg_of::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::predicate::call_to::consumer_a:reference:supported",
+    "vyre-libs::catalog::predicate::call_to::consumer_a:cuda:supported",
+    "vyre-libs::catalog::predicate::call_to::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::predicate::call_to::consumer_b:reference:supported",
+    "vyre-libs::catalog::predicate::call_to::consumer_b:cuda:supported",
+    "vyre-libs::catalog::predicate::call_to::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::predicate::edge::consumer_a:reference:supported",
+    "vyre-libs::catalog::predicate::edge::consumer_a:cuda:supported",
+    "vyre-libs::catalog::predicate::edge::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::predicate::edge::consumer_b:reference:supported",
+    "vyre-libs::catalog::predicate::edge::consumer_b:cuda:supported",
+    "vyre-libs::catalog::predicate::edge::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::predicate::in_file::consumer_a:reference:supported",
+    "vyre-libs::catalog::predicate::in_file::consumer_a:cuda:supported",
+    "vyre-libs::catalog::predicate::in_file::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::predicate::in_file::consumer_b:reference:supported",
+    "vyre-libs::catalog::predicate::in_file::consumer_b:cuda:supported",
+    "vyre-libs::catalog::predicate::in_file::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::predicate::in_function::consumer_a:reference:supported",
+    "vyre-libs::catalog::predicate::in_function::consumer_a:cuda:supported",
+    "vyre-libs::catalog::predicate::in_function::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::predicate::in_function::consumer_b:reference:supported",
+    "vyre-libs::catalog::predicate::in_function::consumer_b:cuda:supported",
+    "vyre-libs::catalog::predicate::in_function::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::predicate::in_package::consumer_a:reference:supported",
+    "vyre-libs::catalog::predicate::in_package::consumer_a:cuda:supported",
+    "vyre-libs::catalog::predicate::in_package::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::predicate::in_package::consumer_b:reference:supported",
+    "vyre-libs::catalog::predicate::in_package::consumer_b:cuda:supported",
+    "vyre-libs::catalog::predicate::in_package::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::predicate::literal_of::consumer_a:reference:supported",
+    "vyre-libs::catalog::predicate::literal_of::consumer_a:cuda:supported",
+    "vyre-libs::catalog::predicate::literal_of::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::predicate::literal_of::consumer_b:reference:supported",
+    "vyre-libs::catalog::predicate::literal_of::consumer_b:cuda:supported",
+    "vyre-libs::catalog::predicate::literal_of::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::predicate::node_kind_eq::consumer_a:reference:supported",
+    "vyre-libs::catalog::predicate::node_kind_eq::consumer_a:cuda:supported",
+    "vyre-libs::catalog::predicate::node_kind_eq::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::predicate::node_kind_eq::consumer_b:reference:supported",
+    "vyre-libs::catalog::predicate::node_kind_eq::consumer_b:cuda:supported",
+    "vyre-libs::catalog::predicate::node_kind_eq::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::predicate::return_value_of::consumer_a:reference:supported",
+    "vyre-libs::catalog::predicate::return_value_of::consumer_a:cuda:supported",
+    "vyre-libs::catalog::predicate::return_value_of::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::predicate::return_value_of::consumer_b:reference:supported",
+    "vyre-libs::catalog::predicate::return_value_of::consumer_b:cuda:supported",
+    "vyre-libs::catalog::predicate::return_value_of::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::predicate::size_argument_of::consumer_a:reference:supported",
+    "vyre-libs::catalog::predicate::size_argument_of::consumer_a:cuda:supported",
+    "vyre-libs::catalog::predicate::size_argument_of::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::predicate::size_argument_of::consumer_b:reference:supported",
+    "vyre-libs::catalog::predicate::size_argument_of::consumer_b:cuda:supported",
+    "vyre-libs::catalog::predicate::size_argument_of::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::reduce::count::consumer_a:reference:supported",
+    "vyre-libs::catalog::reduce::count::consumer_a:cuda:supported",
+    "vyre-libs::catalog::reduce::count::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::reduce::count::consumer_b:reference:supported",
+    "vyre-libs::catalog::reduce::count::consumer_b:cuda:supported",
+    "vyre-libs::catalog::reduce::count::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::reduce::gather::consumer_a:reference:supported",
+    "vyre-libs::catalog::reduce::gather::consumer_a:cuda:supported",
+    "vyre-libs::catalog::reduce::gather::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::reduce::gather::consumer_b:reference:supported",
+    "vyre-libs::catalog::reduce::gather::consumer_b:cuda:supported",
+    "vyre-libs::catalog::reduce::gather::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::reduce::histogram::consumer_a:reference:supported",
+    "vyre-libs::catalog::reduce::histogram::consumer_a:cuda:supported",
+    "vyre-libs::catalog::reduce::histogram::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::reduce::histogram::consumer_b:reference:supported",
+    "vyre-libs::catalog::reduce::histogram::consumer_b:cuda:supported",
+    "vyre-libs::catalog::reduce::histogram::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::reduce::max::consumer_a:reference:supported",
+    "vyre-libs::catalog::reduce::max::consumer_a:cuda:supported",
+    "vyre-libs::catalog::reduce::max::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::reduce::max::consumer_b:reference:supported",
+    "vyre-libs::catalog::reduce::max::consumer_b:cuda:supported",
+    "vyre-libs::catalog::reduce::max::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::reduce::min::consumer_a:reference:supported",
+    "vyre-libs::catalog::reduce::min::consumer_a:cuda:supported",
+    "vyre-libs::catalog::reduce::min::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::reduce::min::consumer_b:reference:supported",
+    "vyre-libs::catalog::reduce::min::consumer_b:cuda:supported",
+    "vyre-libs::catalog::reduce::min::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::reduce::scatter::consumer_a:reference:supported",
+    "vyre-libs::catalog::reduce::scatter::consumer_a:cuda:supported",
+    "vyre-libs::catalog::reduce::scatter::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::reduce::scatter::consumer_b:reference:supported",
+    "vyre-libs::catalog::reduce::scatter::consumer_b:cuda:supported",
+    "vyre-libs::catalog::reduce::scatter::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::reduce::segment_reduce_sum::consumer_a:reference:supported",
+    "vyre-libs::catalog::reduce::segment_reduce_sum::consumer_a:cuda:supported",
+    "vyre-libs::catalog::reduce::segment_reduce_sum::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::reduce::segment_reduce_sum::consumer_b:reference:supported",
+    "vyre-libs::catalog::reduce::segment_reduce_sum::consumer_b:cuda:supported",
+    "vyre-libs::catalog::reduce::segment_reduce_sum::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::reduce::sum::consumer_a:reference:supported",
+    "vyre-libs::catalog::reduce::sum::consumer_a:cuda:supported",
+    "vyre-libs::catalog::reduce::sum::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::reduce::sum::consumer_b:reference:supported",
+    "vyre-libs::catalog::reduce::sum::consumer_b:cuda:supported",
+    "vyre-libs::catalog::reduce::sum::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::reduce::workgroup_sum_u32::consumer_a:reference:supported",
+    "vyre-libs::catalog::reduce::workgroup_sum_u32::consumer_a:cuda:supported",
+    "vyre-libs::catalog::reduce::workgroup_sum_u32::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::reduce::workgroup_sum_u32::consumer_b:reference:supported",
+    "vyre-libs::catalog::reduce::workgroup_sum_u32::consumer_b:cuda:supported",
+    "vyre-libs::catalog::reduce::workgroup_sum_u32::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::text::byte_histogram_256::consumer_a:reference:supported",
+    "vyre-libs::catalog::text::byte_histogram_256::consumer_a:cuda:supported",
+    "vyre-libs::catalog::text::byte_histogram_256::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::text::byte_histogram_256::consumer_b:reference:supported",
+    "vyre-libs::catalog::text::byte_histogram_256::consumer_b:cuda:supported",
+    "vyre-libs::catalog::text::byte_histogram_256::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::text::encoding_classify::consumer_a:reference:supported",
+    "vyre-libs::catalog::text::encoding_classify::consumer_a:cuda:supported",
+    "vyre-libs::catalog::text::encoding_classify::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::text::encoding_classify::consumer_b:reference:supported",
+    "vyre-libs::catalog::text::encoding_classify::consumer_b:cuda:supported",
+    "vyre-libs::catalog::text::encoding_classify::consumer_b:wgpu:supported",
+    "vyre-libs::catalog::vfs::resolve::consumer_a:reference:supported",
+    "vyre-libs::catalog::vfs::resolve::consumer_a:cuda:supported",
+    "vyre-libs::catalog::vfs::resolve::consumer_a:wgpu:supported",
+    "vyre-libs::catalog::vfs::resolve::consumer_b:reference:supported",
+    "vyre-libs::catalog::vfs::resolve::consumer_b:cuda:supported",
+    "vyre-libs::catalog::vfs::resolve::consumer_b:wgpu:supported",
+    "vyre-libs::dataflow::control_dependence:reference:supported",
+    "vyre-libs::dataflow::control_dependence:cuda:supported",
+    "vyre-libs::dataflow::control_dependence:wgpu:supported",
+    "vyre-libs::dataflow::escapes:reference:supported",
+    "vyre-libs::dataflow::escapes:cuda:supported",
+    "vyre-libs::dataflow::escapes:wgpu:supported",
+    "vyre-libs::dataflow::ifds:reference:supported",
+    "vyre-libs::dataflow::ifds:cuda:supported",
+    "vyre-libs::dataflow::ifds:wgpu:supported",
+    "vyre-libs::dataflow::live:reference:supported",
+    "vyre-libs::dataflow::live:cuda:supported",
+    "vyre-libs::dataflow::live:wgpu:supported",
+    "vyre-libs::dataflow::live_at:reference:supported",
+    "vyre-libs::dataflow::live_at:cuda:supported",
+    "vyre-libs::dataflow::live_at:wgpu:supported",
+    "vyre-libs::dataflow::may_alias:reference:supported",
+    "vyre-libs::dataflow::may_alias:cuda:supported",
+    "vyre-libs::dataflow::may_alias:wgpu:supported",
+    "vyre-libs::dataflow::must_init:reference:supported",
+    "vyre-libs::dataflow::must_init:cuda:supported",
+    "vyre-libs::dataflow::must_init:wgpu:supported",
+    "vyre-libs::dataflow::points_to:reference:supported",
+    "vyre-libs::dataflow::points_to:cuda:supported",
+    "vyre-libs::dataflow::points_to:wgpu:supported",
+    "vyre-libs::dataflow::post_dominates:reference:supported",
+    "vyre-libs::dataflow::post_dominates:cuda:supported",
+    "vyre-libs::dataflow::post_dominates:wgpu:supported",
+    "vyre-libs::dataflow::reaching:reference:supported",
+    "vyre-libs::dataflow::reaching:cuda:supported",
+    "vyre-libs::dataflow::reaching:wgpu:supported",
+    "vyre-libs::dataflow::reaching_def:reference:supported",
+    "vyre-libs::dataflow::reaching_def:cuda:supported",
+    "vyre-libs::dataflow::reaching_def:wgpu:supported",
+    "vyre-libs::dataflow::scc_query:reference:supported",
+    "vyre-libs::dataflow::scc_query:cuda:supported",
+    "vyre-libs::dataflow::scc_query:wgpu:supported",
+    "vyre-libs::dataflow::ssa:reference:supported",
+    "vyre-libs::dataflow::ssa:cuda:supported",
+    "vyre-libs::dataflow::ssa:wgpu:supported",
+    "vyre-libs::dataflow::value_set:reference:supported",
+    "vyre-libs::dataflow::value_set:cuda:supported",
+    "vyre-libs::dataflow::value_set:wgpu:supported",
+    "vyre-libs::decode::base64:reference:supported",
+    "vyre-libs::decode::base64:cuda:supported",
+    "vyre-libs::decode::base64:wgpu:supported",
+    "vyre-libs::decode::encodex:reference:supported",
+    "vyre-libs::decode::encodex:cuda:supported",
+    "vyre-libs::decode::encodex:wgpu:supported",
+    "vyre-libs::decode::hex:reference:supported",
+    "vyre-libs::decode::hex:cuda:supported",
+    "vyre-libs::decode::hex:wgpu:supported",
+    "vyre-libs::decode::inflate_stored_block:reference:supported",
+    "vyre-libs::decode::inflate_stored_block:cuda:supported",
+    "vyre-libs::decode::inflate_stored_block:wgpu:supported",
+    "vyre-libs::decode::ziftsieve:reference:supported",
+    "vyre-libs::decode::ziftsieve:cuda:supported",
+    "vyre-libs::decode::ziftsieve:wgpu:supported",
+    "vyre-libs::graph::ast_walk_postorder:reference:supported",
+    "vyre-libs::graph::ast_walk_postorder:cuda:supported",
+    "vyre-libs::graph::ast_walk_postorder:wgpu:supported",
+    "vyre-libs::graph::ast_walk_preorder:reference:supported",
+    "vyre-libs::graph::ast_walk_preorder:cuda:supported",
+    "vyre-libs::graph::ast_walk_preorder:wgpu:supported",
+    "vyre-libs::hash::adler32:reference:supported",
+    "vyre-libs::hash::adler32:cuda:supported",
+    "vyre-libs::hash::adler32:wgpu:supported",
+    "vyre-libs::hash::blake3_compress:reference:supported",
+    "vyre-libs::hash::blake3_compress:cuda:supported",
+    "vyre-libs::hash::blake3_compress:wgpu:supported",
+    "vyre-libs::hash::crc32:reference:supported",
+    "vyre-libs::hash::crc32:cuda:supported",
+    "vyre-libs::hash::crc32:wgpu:supported",
+    "vyre-libs::hash::fnv1a32:reference:supported",
+    "vyre-libs::hash::fnv1a32:cuda:supported",
+    "vyre-libs::hash::fnv1a32:wgpu:supported",
+    "vyre-libs::hash::fnv1a64:reference:supported",
+    "vyre-libs::hash::fnv1a64:cuda:supported",
+    "vyre-libs::hash::fnv1a64:wgpu:supported",
+    "vyre-libs::hash::multi_hash:reference:supported",
+    "vyre-libs::hash::multi_hash:cuda:supported",
+    "vyre-libs::hash::multi_hash:wgpu:supported",
+    "vyre-libs::logical::and:reference:supported",
+    "vyre-libs::logical::and:cuda:supported",
+    "vyre-libs::logical::and:wgpu:supported",
+    "vyre-libs::logical::nand:reference:supported",
+    "vyre-libs::logical::nand:cuda:supported",
+    "vyre-libs::logical::nand:wgpu:supported",
+    "vyre-libs::logical::nor:reference:supported",
+    "vyre-libs::logical::nor:cuda:supported",
+    "vyre-libs::logical::nor:wgpu:supported",
+    "vyre-libs::logical::or:reference:supported",
+    "vyre-libs::logical::or:cuda:supported",
+    "vyre-libs::logical::or:wgpu:supported",
+    "vyre-libs::logical::xor:reference:supported",
+    "vyre-libs::logical::xor:cuda:supported",
+    "vyre-libs::logical::xor:wgpu:supported",
+    "vyre-libs::matching::aho_corasick:reference:supported",
+    "vyre-libs::matching::aho_corasick:cuda:supported",
+    "vyre-libs::matching::aho_corasick:wgpu:supported",
+    "vyre-libs::matching::compact_hits:reference:supported",
+    "vyre-libs::matching::compact_hits:cuda:supported",
+    "vyre-libs::matching::compact_hits:wgpu:supported",
+    "vyre-libs::matching::cooperative_dfa:reference:supported",
+    "vyre-libs::matching::cooperative_dfa:cuda:supported",
+    "vyre-libs::matching::cooperative_dfa:wgpu:supported",
+    "vyre-libs::matching::emit_hit:reference:supported",
+    "vyre-libs::matching::emit_hit:cuda:supported",
+    "vyre-libs::matching::emit_hit:wgpu:supported",
+    "vyre-libs::matching::substring_search:reference:supported",
+    "vyre-libs::matching::substring_search:cuda:supported",
+    "vyre-libs::matching::substring_search:wgpu:supported",
+    "vyre-libs::math::algebra::bool_semiring_matmul:reference:supported",
+    "vyre-libs::math::algebra::bool_semiring_matmul:cuda:supported",
+    "vyre-libs::math::algebra::bool_semiring_matmul:wgpu:supported",
+    "vyre-libs::math::algebra::join:reference:supported",
+    "vyre-libs::math::algebra::join:cuda:supported",
+    "vyre-libs::math::algebra::join:wgpu:supported",
+    "vyre-libs::math::algebra::meet:reference:supported",
+    "vyre-libs::math::algebra::meet:cuda:supported",
+    "vyre-libs::math::algebra::meet:wgpu:supported",
+    "vyre-libs::math::algebra::minplus_mul:reference:supported",
+    "vyre-libs::math::algebra::minplus_mul:cuda:supported",
+    "vyre-libs::math::algebra::minplus_mul:wgpu:supported",
+    "vyre-libs::math::algebra::sketch_mix:reference:supported",
+    "vyre-libs::math::algebra::sketch_mix:cuda:supported",
+    "vyre-libs::math::algebra::sketch_mix:wgpu:supported",
+    "vyre-libs::math::atomic::atomic_add_u32:reference:supported",
+    "vyre-libs::math::atomic::atomic_add_u32:cuda:supported",
+    "vyre-libs::math::atomic::atomic_add_u32:wgpu:supported",
+    "vyre-libs::math::atomic::atomic_and_u32:reference:supported",
+    "vyre-libs::math::atomic::atomic_and_u32:cuda:supported",
+    "vyre-libs::math::atomic::atomic_and_u32:wgpu:supported",
+    "vyre-libs::math::atomic::atomic_compare_exchange_u32:reference:supported",
+    "vyre-libs::math::atomic::atomic_compare_exchange_u32:cuda:supported",
+    "vyre-libs::math::atomic::atomic_compare_exchange_u32:wgpu:supported",
+    "vyre-libs::math::atomic::atomic_exchange_u32:reference:supported",
+    "vyre-libs::math::atomic::atomic_exchange_u32:cuda:supported",
+    "vyre-libs::math::atomic::atomic_exchange_u32:wgpu:supported",
+    "vyre-libs::math::atomic::atomic_max_u32:reference:supported",
+    "vyre-libs::math::atomic::atomic_max_u32:cuda:supported",
+    "vyre-libs::math::atomic::atomic_max_u32:wgpu:supported",
+    "vyre-libs::math::atomic::atomic_min_u32:reference:supported",
+    "vyre-libs::math::atomic::atomic_min_u32:cuda:supported",
+    "vyre-libs::math::atomic::atomic_min_u32:wgpu:supported",
+    "vyre-libs::math::atomic::atomic_or_u32:reference:supported",
+    "vyre-libs::math::atomic::atomic_or_u32:cuda:supported",
+    "vyre-libs::math::atomic::atomic_or_u32:wgpu:supported",
+    "vyre-libs::math::atomic::atomic_xor_u32:reference:supported",
+    "vyre-libs::math::atomic::atomic_xor_u32:cuda:supported",
+    "vyre-libs::math::atomic::atomic_xor_u32:wgpu:supported",
+    "vyre-libs::math::atomic::lru_update_u32:reference:supported",
+    "vyre-libs::math::atomic::lru_update_u32:cuda:supported",
+    "vyre-libs::math::atomic::lru_update_u32:wgpu:supported",
+    "vyre-libs::math::avg_floor:reference:supported",
+    "vyre-libs::math::avg_floor:cuda:supported",
+    "vyre-libs::math::avg_floor:wgpu:supported",
+    "vyre-libs::math::broadcast:reference:supported",
+    "vyre-libs::math::broadcast:cuda:supported",
+    "vyre-libs::math::broadcast:wgpu:supported",
+    "vyre-libs::math::clamp_u32:reference:supported",
+    "vyre-libs::math::clamp_u32:cuda:supported",
+    "vyre-libs::math::clamp_u32:wgpu:supported",
+    "vyre-libs::math::conv::conv2d_3x3_direct:reference:supported",
+    "vyre-libs::math::conv::conv2d_3x3_direct:cuda:supported",
+    "vyre-libs::math::conv::conv2d_3x3_direct:wgpu:supported",
+    "vyre-libs::math::conv::im2col_3x3:reference:supported",
+    "vyre-libs::math::conv::im2col_3x3:cuda:supported",
+    "vyre-libs::math::conv::im2col_3x3:wgpu:supported",
+    "vyre-libs::math::dot:reference:supported",
+    "vyre-libs::math::dot:cuda:supported",
+    "vyre-libs::math::dot:wgpu:supported",
+    "vyre-libs::math::fft::fft4_complex:reference:supported",
+    "vyre-libs::math::fft::fft4_complex:cuda:supported",
+    "vyre-libs::math::fft::fft4_complex:wgpu:supported",
+    "vyre-libs::math::fft::fft_convolve_circular_complex:reference:supported",
+    "vyre-libs::math::fft::fft_convolve_circular_complex:cuda:supported",
+    "vyre-libs::math::fft::fft_convolve_circular_complex:wgpu:supported",
+    "vyre-libs::math::linalg::matmul_strassen_2x2:reference:supported",
+    "vyre-libs::math::linalg::matmul_strassen_2x2:cuda:supported",
+    "vyre-libs::math::linalg::matmul_strassen_2x2:wgpu:supported",
+    "vyre-libs::math::lzcnt_u32:reference:supported",
+    "vyre-libs::math::lzcnt_u32:cuda:supported",
+    "vyre-libs::math::lzcnt_u32:wgpu:supported",
+    "vyre-libs::math::matmul:reference:supported",
+    "vyre-libs::math::matmul:cuda:supported",
+    "vyre-libs::math::matmul:wgpu:supported",
+    "vyre-libs::math::matmul_bias:reference:supported",
+    "vyre-libs::math::matmul_bias:cuda:supported",
+    "vyre-libs::math::matmul_bias:wgpu:supported",
+    "vyre-libs::math::matmul_bias_tiled:reference:supported",
+    "vyre-libs::math::matmul_bias_tiled:cuda:supported",
+    "vyre-libs::math::matmul_bias_tiled:wgpu:supported",
+    "vyre-libs::math::matmul_tiled:reference:supported",
+    "vyre-libs::math::matmul_tiled:cuda:supported",
+    "vyre-libs::math::matmul_tiled:wgpu:supported",
+    "vyre-libs::math::reduce_mean:reference:supported",
+    "vyre-libs::math::reduce_mean:cuda:supported",
+    "vyre-libs::math::reduce_mean:wgpu:supported",
+    "vyre-libs::math::reduce_variance:reference:supported",
+    "vyre-libs::math::reduce_variance:cuda:supported",
+    "vyre-libs::math::reduce_variance:wgpu:supported",
+    "vyre-libs::math::scan_prefix_sum:reference:supported",
+    "vyre-libs::math::scan_prefix_sum:cuda:supported",
+    "vyre-libs::math::scan_prefix_sum:wgpu:supported",
+    "vyre-libs::math::square:reference:supported",
+    "vyre-libs::math::square:cuda:supported",
+    "vyre-libs::math::square:wgpu:supported",
+    "vyre-libs::math::succinct::rank1_query:reference:supported",
+    "vyre-libs::math::succinct::rank1_query:cuda:supported",
+    "vyre-libs::math::succinct::rank1_query:wgpu:supported",
+    "vyre-libs::math::succinct::rank1_superblocks:reference:supported",
+    "vyre-libs::math::succinct::rank1_superblocks:cuda:supported",
+    "vyre-libs::math::succinct::rank1_superblocks:wgpu:supported",
+    "vyre-libs::math::succinct::select1_query:reference:supported",
+    "vyre-libs::math::succinct::select1_query:cuda:supported",
+    "vyre-libs::math::succinct::select1_query:wgpu:supported",
+    "vyre-libs::math::tzcnt_u32:reference:supported",
+    "vyre-libs::math::tzcnt_u32:cuda:supported",
+    "vyre-libs::math::tzcnt_u32:wgpu:supported",
+    "vyre-libs::math::weighted_sum_fma_f32:reference:supported",
+    "vyre-libs::math::weighted_sum_fma_f32:cuda:supported",
+    "vyre-libs::math::weighted_sum_fma_f32:wgpu:supported",
+    "vyre-libs::math::wrapping_neg:reference:supported",
+    "vyre-libs::math::wrapping_neg:cuda:supported",
+    "vyre-libs::math::wrapping_neg:wgpu:supported",
+    "vyre-libs::nn::attention:reference:supported",
+    "vyre-libs::nn::attention:cuda:supported",
+    "vyre-libs::nn::attention:wgpu:supported",
+    "vyre-libs::nn::attention::quest_paging:reference:supported",
+    "vyre-libs::nn::attention::quest_paging:cuda:supported",
+    "vyre-libs::nn::attention::quest_paging:wgpu:supported",
+    "vyre-libs::nn::attention::turboquant:reference:supported",
+    "vyre-libs::nn::attention::turboquant:cuda:supported",
+    "vyre-libs::nn::attention::turboquant:wgpu:supported",
+    "vyre-libs::nn::cross_entropy:reference:supported",
+    "vyre-libs::nn::cross_entropy:cuda:supported",
+    "vyre-libs::nn::cross_entropy:wgpu:supported",
+    "vyre-libs::nn::embedding:reference:supported",
+    "vyre-libs::nn::embedding:cuda:supported",
+    "vyre-libs::nn::embedding:wgpu:supported",
+    "vyre-libs::nn::flash_attention:reference:supported",
+    "vyre-libs::nn::flash_attention:cuda:supported",
+    "vyre-libs::nn::flash_attention:wgpu:supported",
+    "vyre-libs::nn::gqa_attention:reference:supported",
+    "vyre-libs::nn::gqa_attention:cuda:supported",
+    "vyre-libs::nn::gqa_attention:wgpu:supported",
+    "vyre-libs::nn::layer_norm:reference:supported",
+    "vyre-libs::nn::layer_norm:cuda:supported",
+    "vyre-libs::nn::layer_norm:wgpu:supported",
+    "vyre-libs::nn::layerwise_ln_scale:reference:supported",
+    "vyre-libs::nn::layerwise_ln_scale:cuda:supported",
+    "vyre-libs::nn::layerwise_ln_scale:wgpu:supported",
+    "vyre-libs::nn::leaky_relu_sq:reference:supported",
+    "vyre-libs::nn::leaky_relu_sq:cuda:supported",
+    "vyre-libs::nn::leaky_relu_sq:wgpu:supported",
+    "vyre-libs::nn::linear:reference:supported",
+    "vyre-libs::nn::linear:cuda:supported",
+    "vyre-libs::nn::linear:wgpu:supported",
+    "vyre-libs::nn::linear_relu:reference:supported",
+    "vyre-libs::nn::linear_relu:cuda:supported",
+    "vyre-libs::nn::linear_relu:wgpu:supported",
+    "vyre-libs::nn::linear_silu:reference:supported",
+    "vyre-libs::nn::linear_silu:cuda:supported",
+    "vyre-libs::nn::linear_silu:wgpu:supported",
+    "vyre-libs::nn::linear_tiled:reference:supported",
+    "vyre-libs::nn::linear_tiled:cuda:supported",
+    "vyre-libs::nn::linear_tiled:wgpu:supported",
+    "vyre-libs::nn::logit_softcap:reference:supported",
+    "vyre-libs::nn::logit_softcap:cuda:supported",
+    "vyre-libs::nn::logit_softcap:wgpu:supported",
+    "vyre-libs::nn::mlp_4x_leaky_sq:reference:supported",
+    "vyre-libs::nn::mlp_4x_leaky_sq:cuda:supported",
+    "vyre-libs::nn::mlp_4x_leaky_sq:wgpu:supported",
+    "vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection:reference:supported",
+    "vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection:cuda:supported",
+    "vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection:wgpu:supported",
+    "vyre-libs::nn::mlp_4x_leaky_sq::output_projection:reference:supported",
+    "vyre-libs::nn::mlp_4x_leaky_sq::output_projection:cuda:supported",
+    "vyre-libs::nn::mlp_4x_leaky_sq::output_projection:wgpu:supported",
+    "vyre-libs::nn::moe_gate:reference:supported",
+    "vyre-libs::nn::moe_gate:cuda:supported",
+    "vyre-libs::nn::moe_gate:wgpu:supported",
+    "vyre-libs::nn::moe_gate::softmax_stats:reference:supported",
+    "vyre-libs::nn::moe_gate::softmax_stats:cuda:supported",
+    "vyre-libs::nn::moe_gate::softmax_stats:wgpu:supported",
+    "vyre-libs::nn::moe_gate::weight_write:reference:supported",
+    "vyre-libs::nn::moe_gate::weight_write:cuda:supported",
+    "vyre-libs::nn::moe_gate::weight_write:wgpu:supported",
+    "vyre-libs::nn::parallel_residual_block:reference:supported",
+    "vyre-libs::nn::parallel_residual_block:cuda:supported",
+    "vyre-libs::nn::parallel_residual_block:wgpu:supported",
+    "vyre-libs::nn::partial_rope:reference:supported",
+    "vyre-libs::nn::partial_rope:cuda:supported",
+    "vyre-libs::nn::partial_rope:wgpu:supported",
+    "vyre-libs::nn::qk_gain:reference:supported",
+    "vyre-libs::nn::qk_gain:cuda:supported",
+    "vyre-libs::nn::qk_gain:wgpu:supported",
+    "vyre-libs::nn::relu:reference:supported",
+    "vyre-libs::nn::relu:cuda:supported",
+    "vyre-libs::nn::relu:wgpu:supported",
+    "vyre-libs::nn::rms_norm:reference:supported",
+    "vyre-libs::nn::rms_norm:cuda:supported",
+    "vyre-libs::nn::rms_norm:wgpu:supported",
+    "vyre-libs::nn::rms_norm_linear:reference:supported",
+    "vyre-libs::nn::rms_norm_linear:cuda:supported",
+    "vyre-libs::nn::rms_norm_linear:wgpu:supported",
+    "vyre-libs::nn::silu:reference:supported",
+    "vyre-libs::nn::silu:cuda:supported",
+    "vyre-libs::nn::silu:wgpu:supported",
+    "vyre-libs::nn::skip_gate:reference:supported",
+    "vyre-libs::nn::skip_gate:cuda:supported",
+    "vyre-libs::nn::skip_gate:wgpu:supported",
+    "vyre-libs::nn::softmax:reference:supported",
+    "vyre-libs::nn::softmax:cuda:supported",
+    "vyre-libs::nn::softmax:wgpu:supported",
+    "vyre-libs::nn::top_k:reference:supported",
+    "vyre-libs::nn::top_k:cuda:supported",
+    "vyre-libs::nn::top_k:wgpu:supported",
+    "vyre-libs::optim::adamw_step:reference:supported",
+    "vyre-libs::optim::adamw_step:cuda:supported",
+    "vyre-libs::optim::adamw_step:wgpu:supported",
+    "vyre-libs::optim::ema_apply:reference:supported",
+    "vyre-libs::optim::ema_apply:cuda:supported",
+    "vyre-libs::optim::ema_apply:wgpu:supported",
+    "vyre-libs::optim::muon_update:reference:supported",
+    "vyre-libs::optim::muon_update:cuda:supported",
+    "vyre-libs::optim::muon_update:wgpu:supported",
+    "vyre-libs::optim::muoneq_r:reference:supported",
+    "vyre-libs::optim::muoneq_r:cuda:supported",
+    "vyre-libs::optim::muoneq_r:wgpu:supported",
+    "vyre-libs::optim::newton_schulz_5step:reference:supported",
+    "vyre-libs::optim::newton_schulz_5step:cuda:supported",
+    "vyre-libs::optim::newton_schulz_5step:wgpu:supported",
+    "vyre-libs::parsing::ast_binding_strength:reference:supported",
+    "vyre-libs::parsing::ast_binding_strength:cuda:supported",
+    "vyre-libs::parsing::ast_binding_strength:wgpu:supported",
+    "vyre-libs::parsing::ast_cfg_blocks:reference:supported",
+    "vyre-libs::parsing::ast_cfg_blocks:cuda:supported",
+    "vyre-libs::parsing::ast_cfg_blocks:wgpu:supported",
+    "vyre-libs::parsing::ast_shunting_yard:reference:supported",
+    "vyre-libs::parsing::ast_shunting_yard:cuda:supported",
+    "vyre-libs::parsing::ast_shunting_yard:wgpu:supported",
+    "vyre-libs::parsing::ast_shunting_yard::statement_pass:reference:supported",
+    "vyre-libs::parsing::ast_shunting_yard::statement_pass:cuda:supported",
+    "vyre-libs::parsing::ast_shunting_yard::statement_pass:wgpu:supported",
+    "vyre-libs::parsing::bracket_match:reference:supported",
+    "vyre-libs::parsing::bracket_match:cuda:supported",
+    "vyre-libs::parsing::bracket_match:wgpu:supported",
+    "vyre-libs::parsing::c11_build_call_graph:reference:supported",
+    "vyre-libs::parsing::c11_build_call_graph:cuda:supported",
+    "vyre-libs::parsing::c11_build_call_graph:wgpu:supported",
+    "vyre-libs::parsing::c11_build_cfg_and_gotos:reference:supported",
+    "vyre-libs::parsing::c11_build_cfg_and_gotos:cuda:supported",
+    "vyre-libs::parsing::c11_build_cfg_and_gotos:wgpu:supported",
+    "vyre-libs::parsing::c11_build_expression_shape_nodes:reference:supported",
+    "vyre-libs::parsing::c11_build_expression_shape_nodes:cuda:supported",
+    "vyre-libs::parsing::c11_build_expression_shape_nodes:wgpu:supported",
+    "vyre-libs::parsing::c11_build_expression_shape_nodes::node_shape_pass:reference:supported",
+    "vyre-libs::parsing::c11_build_expression_shape_nodes::node_shape_pass:cuda:supported",
+    "vyre-libs::parsing::c11_build_expression_shape_nodes::node_shape_pass:wgpu:supported",
+    "vyre-libs::parsing::c11_build_vast_nodes:reference:supported",
+    "vyre-libs::parsing::c11_build_vast_nodes:cuda:supported",
+    "vyre-libs::parsing::c11_build_vast_nodes:wgpu:supported",
+    "vyre-libs::parsing::c11_classify_vast_node_kinds:reference:supported",
+    "vyre-libs::parsing::c11_classify_vast_node_kinds:cuda:supported",
+    "vyre-libs::parsing::c11_classify_vast_node_kinds:wgpu:supported",
+    "vyre-libs::parsing::c11_classify_vast_node_kinds::node_classification_pass:reference:supported",
+    "vyre-libs::parsing::c11_classify_vast_node_kinds::node_classification_pass:cuda:supported",
+    "vyre-libs::parsing::c11_classify_vast_node_kinds::node_classification_pass:wgpu:supported",
+    "vyre-libs::parsing::c11_compute_alignments:reference:supported",
+    "vyre-libs::parsing::c11_compute_alignments:cuda:supported",
+    "vyre-libs::parsing::c11_compute_alignments:wgpu:supported",
+    "vyre-libs::parsing::c11_extract_calls:reference:supported",
+    "vyre-libs::parsing::c11_extract_calls:cuda:supported",
+    "vyre-libs::parsing::c11_extract_calls:wgpu:supported",
+    "vyre-libs::parsing::c11_extract_functions:reference:supported",
+    "vyre-libs::parsing::c11_extract_functions:cuda:supported",
+    "vyre-libs::parsing::c11_extract_functions:wgpu:supported",
+    "vyre-libs::parsing::c11_gnu_builtins_pass:reference:supported",
+    "vyre-libs::parsing::c11_gnu_builtins_pass:cuda:supported",
+    "vyre-libs::parsing::c11_gnu_builtins_pass:wgpu:supported",
+    "vyre-libs::parsing::c11_gnu_inline_asm_pass:reference:supported",
+    "vyre-libs::parsing::c11_gnu_inline_asm_pass:cuda:supported",
+    "vyre-libs::parsing::c11_gnu_inline_asm_pass:wgpu:supported",
+    "vyre-libs::parsing::c11_lex_digraphs:reference:supported",
+    "vyre-libs::parsing::c11_lex_digraphs:cuda:supported",
+    "vyre-libs::parsing::c11_lex_digraphs:wgpu:supported",
+    "vyre-libs::parsing::c11_lex_single_pass:reference:supported",
+    "vyre-libs::parsing::c11_lex_single_pass:cuda:supported",
+    "vyre-libs::parsing::c11_lex_single_pass:wgpu:supported",
+    "vyre-libs::parsing::c::lower::ast_to_pg_nodes:reference:supported",
+    "vyre-libs::parsing::c::lower::ast_to_pg_nodes:cuda:supported",
+    "vyre-libs::parsing::c::lower::ast_to_pg_nodes:wgpu:supported",
+    "vyre-libs::parsing::c::lower::ast_to_pg_semantic_graph:reference:supported",
+    "vyre-libs::parsing::c::lower::ast_to_pg_semantic_graph:cuda:supported",
+    "vyre-libs::parsing::c::lower::ast_to_pg_semantic_graph:wgpu:supported",
+    "vyre-libs::parsing::c::lower::ast_to_pg_semantic_graph::node_edge_pass:reference:supported",
+    "vyre-libs::parsing::c::lower::ast_to_pg_semantic_graph::node_edge_pass:cuda:supported",
+    "vyre-libs::parsing::c::lower::ast_to_pg_semantic_graph::node_edge_pass:wgpu:supported",
+    "vyre-libs::parsing::c_keyword:reference:supported",
+    "vyre-libs::parsing::c_keyword:cuda:supported",
+    "vyre-libs::parsing::c_keyword:wgpu:supported",
+    "vyre-libs::parsing::c_lexer:reference:supported",
+    "vyre-libs::parsing::c_lexer:cuda:supported",
+    "vyre-libs::parsing::c_lexer:wgpu:supported",
+    "vyre-libs::parsing::c_lexer::classify_at_pos:reference:supported",
+    "vyre-libs::parsing::c_lexer::classify_at_pos:cuda:supported",
+    "vyre-libs::parsing::c_lexer::classify_at_pos:wgpu:supported",
+    "vyre-libs::parsing::c_sema_scope:reference:supported",
+    "vyre-libs::parsing::c_sema_scope:cuda:supported",
+    "vyre-libs::parsing::c_sema_scope:wgpu:supported",
+    "vyre-libs::parsing::c_sema_scope.decl:reference:supported",
+    "vyre-libs::parsing::c_sema_scope.decl:cuda:supported",
+    "vyre-libs::parsing::c_sema_scope.decl:wgpu:supported",
+    "vyre-libs::parsing::c_sema_scope.identifier_intern:reference:supported",
+    "vyre-libs::parsing::c_sema_scope.identifier_intern:cuda:supported",
+    "vyre-libs::parsing::c_sema_scope.identifier_intern:wgpu:supported",
+    "vyre-libs::parsing::c_sema_scope.scope:reference:supported",
+    "vyre-libs::parsing::c_sema_scope.scope:cuda:supported",
+    "vyre-libs::parsing::c_sema_scope.scope:wgpu:supported",
+    "vyre-libs::parsing::c_sema_scope.scope.brace:reference:supported",
+    "vyre-libs::parsing::c_sema_scope.scope.brace:cuda:supported",
+    "vyre-libs::parsing::c_sema_scope.scope.brace:wgpu:supported",
+    "vyre-libs::parsing::c_sema_scope.scope.function_parameters:reference:supported",
+    "vyre-libs::parsing::c_sema_scope.scope.function_parameters:cuda:supported",
+    "vyre-libs::parsing::c_sema_scope.scope.function_parameters:wgpu:supported",
+    "vyre-libs::parsing::core_delimiter_match:reference:supported",
+    "vyre-libs::parsing::core_delimiter_match:cuda:supported",
+    "vyre-libs::parsing::core_delimiter_match:wgpu:supported",
+    "vyre-libs::parsing::opt_conditional_mask_with_directives:reference:supported",
+    "vyre-libs::parsing::opt_conditional_mask_with_directives:cuda:supported",
+    "vyre-libs::parsing::opt_conditional_mask_with_directives:wgpu:supported",
+    "vyre-libs::parsing::opt_dynamic_macro_expansion:reference:supported",
+    "vyre-libs::parsing::opt_dynamic_macro_expansion:cuda:supported",
+    "vyre-libs::parsing::opt_dynamic_macro_expansion:wgpu:supported",
+    "vyre-libs::parsing::opt_lower_elf:reference:supported",
+    "vyre-libs::parsing::opt_lower_elf:cuda:supported",
+    "vyre-libs::parsing::opt_lower_elf:wgpu:supported",
+    "vyre-libs::parsing::opt_propagate_type_specifiers:reference:supported",
+    "vyre-libs::parsing::opt_propagate_type_specifiers:cuda:supported",
+    "vyre-libs::parsing::opt_propagate_type_specifiers:wgpu:supported",
+    "vyre-libs::parsing::opt_stack_layout_generation:reference:supported",
+    "vyre-libs::parsing::opt_stack_layout_generation:cuda:supported",
+    "vyre-libs::parsing::opt_stack_layout_generation:wgpu:supported",
+    "vyre-libs::parsing::opt_x86_64_register_allocation:reference:supported",
+    "vyre-libs::parsing::opt_x86_64_register_allocation:cuda:supported",
+    "vyre-libs::parsing::opt_x86_64_register_allocation:wgpu:supported",
+    "vyre-libs::parsing::python312_extract_calls:reference:supported",
+    "vyre-libs::parsing::python312_extract_calls:cuda:supported",
+    "vyre-libs::parsing::python312_extract_calls:wgpu:supported",
+    "vyre-libs::parsing::python312_extract_decorators:reference:supported",
+    "vyre-libs::parsing::python312_extract_decorators:cuda:supported",
+    "vyre-libs::parsing::python312_extract_decorators:wgpu:supported",
+    "vyre-libs::parsing::python312_extract_imports:reference:supported",
+    "vyre-libs::parsing::python312_extract_imports:cuda:supported",
+    "vyre-libs::parsing::python312_extract_imports:wgpu:supported",
+    "vyre-libs::parsing::python312_extract_structure:reference:supported",
+    "vyre-libs::parsing::python312_extract_structure:cuda:supported",
+    "vyre-libs::parsing::python312_extract_structure:wgpu:supported",
+    "vyre-libs::parsing::python312_extract_with_blocks:reference:supported",
+    "vyre-libs::parsing::python312_extract_with_blocks:cuda:supported",
+    "vyre-libs::parsing::python312_extract_with_blocks:wgpu:supported",
+    "vyre-libs::parsing::python312_lexer:reference:supported",
+    "vyre-libs::parsing::python312_lexer:cuda:supported",
+    "vyre-libs::parsing::python312_lexer:wgpu:supported",
+    "vyre-libs::quant::byte_shuffle:reference:supported",
+    "vyre-libs::quant::byte_shuffle:cuda:supported",
+    "vyre-libs::quant::byte_shuffle:wgpu:supported",
+    "vyre-libs::quant::gptq_round:reference:supported",
+    "vyre-libs::quant::gptq_round:cuda:supported",
+    "vyre-libs::quant::gptq_round:wgpu:supported",
+    "vyre-libs::quant::gptq_sdclip:reference:supported",
+    "vyre-libs::quant::gptq_sdclip:cuda:supported",
+    "vyre-libs::quant::gptq_sdclip:wgpu:supported",
+    "vyre-libs::quant::int6_pack:reference:supported",
+    "vyre-libs::quant::int6_pack:cuda:supported",
+    "vyre-libs::quant::int6_pack:wgpu:supported",
+    "vyre-libs::quant::int6_unpack:reference:supported",
+    "vyre-libs::quant::int6_unpack:cuda:supported",
+    "vyre-libs::quant::int6_unpack:wgpu:supported",
+    "vyre-libs::quant::int8_pack:reference:supported",
+    "vyre-libs::quant::int8_pack:cuda:supported",
+    "vyre-libs::quant::int8_pack:wgpu:supported",
+    "vyre-libs::quant::int8_unpack:reference:supported",
+    "vyre-libs::quant::int8_unpack:cuda:supported",
+    "vyre-libs::quant::int8_unpack:wgpu:supported",
+    "vyre-libs::representation::unpack_4bit_f32:reference:supported",
+    "vyre-libs::representation::unpack_4bit_f32:cuda:supported",
+    "vyre-libs::representation::unpack_4bit_f32:wgpu:supported",
+    "vyre-libs::security::auth_check_dominates:reference:supported",
+    "vyre-libs::security::auth_check_dominates:cuda:supported",
+    "vyre-libs::security::auth_check_dominates:wgpu:supported",
+    "vyre-libs::security::bounded_by_comparison:reference:supported",
+    "vyre-libs::security::bounded_by_comparison:cuda:supported",
+    "vyre-libs::security::bounded_by_comparison:wgpu:supported",
+    "vyre-libs::security::buffer_size_check:reference:supported",
+    "vyre-libs::security::buffer_size_check:cuda:supported",
+    "vyre-libs::security::buffer_size_check:wgpu:supported",
+    "vyre-libs::security::dominator_tree:reference:supported",
+    "vyre-libs::security::dominator_tree:cuda:supported",
+    "vyre-libs::security::dominator_tree:wgpu:supported",
+    "vyre-libs::security::flows_to:reference:supported",
+    "vyre-libs::security::flows_to:cuda:supported",
+    "vyre-libs::security::flows_to:wgpu:supported",
+    "vyre-libs::security::format_string_check:reference:supported",
+    "vyre-libs::security::format_string_check:cuda:supported",
+    "vyre-libs::security::format_string_check:wgpu:supported",
+    "vyre-libs::security::integer_overflow_arith:reference:supported",
+    "vyre-libs::security::integer_overflow_arith:cuda:supported",
+    "vyre-libs::security::integer_overflow_arith:wgpu:supported",
+    "vyre-libs::security::label_by_family:reference:supported",
+    "vyre-libs::security::label_by_family:cuda:supported",
+    "vyre-libs::security::label_by_family:wgpu:supported",
+    "vyre-libs::security::lock_dominates:reference:supported",
+    "vyre-libs::security::lock_dominates:cuda:supported",
+    "vyre-libs::security::lock_dominates:wgpu:supported",
+    "vyre-libs::security::path_canonical:reference:supported",
+    "vyre-libs::security::path_canonical:cuda:supported",
+    "vyre-libs::security::path_canonical:wgpu:supported",
+    "vyre-libs::security::path_reconstruct:reference:supported",
+    "vyre-libs::security::path_reconstruct:cuda:supported",
+    "vyre-libs::security::path_reconstruct:wgpu:supported",
+    "vyre-libs::security::sanitized_by:reference:supported",
+    "vyre-libs::security::sanitized_by:cuda:supported",
+    "vyre-libs::security::sanitized_by:wgpu:supported",
+    "vyre-libs::security::sanitizer_dominates:reference:supported",
+    "vyre-libs::security::sanitizer_dominates:cuda:supported",
+    "vyre-libs::security::sanitizer_dominates:wgpu:supported",
+    "vyre-libs::security::sink_intersection:reference:supported",
+    "vyre-libs::security::sink_intersection:cuda:supported",
+    "vyre-libs::security::sink_intersection:wgpu:supported",
+    "vyre-libs::security::sql_param_bound:reference:supported",
+    "vyre-libs::security::sql_param_bound:cuda:supported",
+    "vyre-libs::security::sql_param_bound:wgpu:supported",
+    "vyre-libs::security::taint_flow:reference:supported",
+    "vyre-libs::security::taint_flow:cuda:supported",
+    "vyre-libs::security::taint_flow:wgpu:supported",
+    "vyre-libs::security::taint_kill:reference:supported",
+    "vyre-libs::security::taint_kill:cuda:supported",
+    "vyre-libs::security::taint_kill:wgpu:supported",
+    "vyre-libs::security::unchecked_return:reference:supported",
+    "vyre-libs::security::unchecked_return:cuda:supported",
+    "vyre-libs::security::unchecked_return:wgpu:supported",
+    "vyre-libs::security::xss_escape:reference:supported",
+    "vyre-libs::security::xss_escape:cuda:supported",
+    "vyre-libs::security::xss_escape:wgpu:supported",
+    "vyre-libs::substrate::indexed_map:reference:supported",
+    "vyre-libs::substrate::indexed_map:cuda:supported",
+    "vyre-libs::substrate::indexed_map:wgpu:supported",
+    "vyre-libs::substrate::strided_accumulate:reference:supported",
+    "vyre-libs::substrate::strided_accumulate:cuda:supported",
+    "vyre-libs::substrate::strided_accumulate:wgpu:supported",
+    "vyre-libs::text::char_class:reference:supported",
+    "vyre-libs::text::char_class:cuda:supported",
+    "vyre-libs::text::char_class:wgpu:supported",
+    "vyre-libs::visual::blur:reference:supported",
+    "vyre-libs::visual::blur:cuda:supported",
+    "vyre-libs::visual::blur:wgpu:supported",
+    "vyre-libs::visual::box_shadow:reference:supported",
+    "vyre-libs::visual::box_shadow:cuda:supported",
+    "vyre-libs::visual::box_shadow:wgpu:supported",
+    "vyre-libs::visual::composite:reference:supported",
+    "vyre-libs::visual::composite:cuda:supported",
+    "vyre-libs::visual::composite:wgpu:supported",
+    "vyre-libs::visual::downsample:reference:supported",
+    "vyre-libs::visual::downsample:cuda:supported",
+    "vyre-libs::visual::downsample:wgpu:supported",
+    "vyre-libs::visual::filter_chain:reference:supported",
+    "vyre-libs::visual::filter_chain:cuda:supported",
+    "vyre-libs::visual::filter_chain:wgpu:supported",
+    "vyre-libs::visual::glass:reference:supported",
+    "vyre-libs::visual::glass:cuda:supported",
+    "vyre-libs::visual::glass:wgpu:supported",
+    "vyre-libs::visual::gradient:reference:supported",
+    "vyre-libs::visual::gradient:cuda:supported",
+    "vyre-libs::visual::gradient:wgpu:supported",
+    "vyre-libs::visual::upsample:reference:supported",
+    "vyre-libs::visual::upsample:cuda:supported",
+    "vyre-libs::visual::upsample:wgpu:supported",
+    "vyre-primitives::bitset::and:reference:supported",
+    "vyre-primitives::bitset::and:cuda:supported",
+    "vyre-primitives::bitset::and:wgpu:supported",
+    "vyre-primitives::bitset::and_not:reference:supported",
+    "vyre-primitives::bitset::and_not:cuda:supported",
+    "vyre-primitives::bitset::and_not:wgpu:supported",
+    "vyre-primitives::bitset::any:reference:supported",
+    "vyre-primitives::bitset::any:cuda:supported",
+    "vyre-primitives::bitset::any:wgpu:supported",
+    "vyre-primitives::bitset::contains:reference:supported",
+    "vyre-primitives::bitset::contains:cuda:supported",
+    "vyre-primitives::bitset::contains:wgpu:supported",
+    "vyre-primitives::bitset::four_russians_apply_byte_lut:reference:supported",
+    "vyre-primitives::bitset::four_russians_apply_byte_lut:cuda:supported",
+    "vyre-primitives::bitset::four_russians_apply_byte_lut:wgpu:supported",
+    "vyre-primitives::bitset::not:reference:supported",
+    "vyre-primitives::bitset::not:cuda:supported",
+    "vyre-primitives::bitset::not:wgpu:supported",
+    "vyre-primitives::bitset::or:reference:supported",
+    "vyre-primitives::bitset::or:cuda:supported",
+    "vyre-primitives::bitset::or:wgpu:supported",
+    "vyre-primitives::bitset::popcount:reference:supported",
+    "vyre-primitives::bitset::popcount:cuda:supported",
+    "vyre-primitives::bitset::popcount:wgpu:supported",
+    "vyre-primitives::bitset::select1_query:reference:supported",
+    "vyre-primitives::bitset::select1_query:cuda:supported",
+    "vyre-primitives::bitset::select1_query:wgpu:supported",
+    "vyre-primitives::bitset::xor:reference:supported",
+    "vyre-primitives::bitset::xor:cuda:supported",
+    "vyre-primitives::bitset::xor:wgpu:supported",
+    "vyre-primitives::decode::base64_decode:reference:supported",
+    "vyre-primitives::decode::base64_decode:cuda:supported",
+    "vyre-primitives::decode::base64_decode:wgpu:supported",
+    "vyre-primitives::decode::inflate_stored:reference:supported",
+    "vyre-primitives::decode::inflate_stored:cuda:supported",
+    "vyre-primitives::decode::inflate_stored:wgpu:supported",
+    "vyre-primitives::decode::rle_segment_lengths:reference:supported",
+    "vyre-primitives::decode::rle_segment_lengths:cuda:supported",
+    "vyre-primitives::decode::rle_segment_lengths:wgpu:supported",
+    "vyre-primitives::fixpoint::bitset_fixpoint:reference:supported",
+    "vyre-primitives::fixpoint::bitset_fixpoint:cuda:supported",
+    "vyre-primitives::fixpoint::bitset_fixpoint:wgpu:supported",
+    "vyre-primitives::graph::csr_backward_traverse:reference:supported",
+    "vyre-primitives::graph::csr_backward_traverse:cuda:supported",
+    "vyre-primitives::graph::csr_backward_traverse:wgpu:supported",
+    "vyre-primitives::graph::csr_forward_or_changed:reference:supported",
+    "vyre-primitives::graph::csr_forward_or_changed:cuda:supported",
+    "vyre-primitives::graph::csr_forward_or_changed:wgpu:supported",
+    "vyre-primitives::graph::csr_forward_traverse:reference:supported",
+    "vyre-primitives::graph::csr_forward_traverse:cuda:supported",
+    "vyre-primitives::graph::csr_forward_traverse:wgpu:supported",
+    "vyre-primitives::graph::path_reconstruct:reference:supported",
+    "vyre-primitives::graph::path_reconstruct:cuda:supported",
+    "vyre-primitives::graph::path_reconstruct:wgpu:supported",
+    "vyre-primitives::graph::persistent_bfs:reference:supported",
+    "vyre-primitives::graph::persistent_bfs:cuda:supported",
+    "vyre-primitives::graph::persistent_bfs:wgpu:supported",
+    "vyre-primitives::graph::persistent_bfs_step:reference:supported",
+    "vyre-primitives::graph::persistent_bfs_step:cuda:supported",
+    "vyre-primitives::graph::persistent_bfs_step:wgpu:supported",
+    "vyre-primitives::graph::scc_decompose:reference:supported",
+    "vyre-primitives::graph::scc_decompose:cuda:supported",
+    "vyre-primitives::graph::scc_decompose:wgpu:supported",
+    "vyre-primitives::graph::tensor_flow_forward:reference:supported",
+    "vyre-primitives::graph::tensor_flow_forward:cuda:supported",
+    "vyre-primitives::graph::tensor_flow_forward:wgpu:supported",
+    "vyre-primitives::graph::vast_walk_postorder:reference:supported",
+    "vyre-primitives::graph::vast_walk_postorder:cuda:supported",
+    "vyre-primitives::graph::vast_walk_postorder:wgpu:supported",
+    "vyre-primitives::graph::vast_walk_preorder:reference:supported",
+    "vyre-primitives::graph::vast_walk_preorder:cuda:supported",
+    "vyre-primitives::graph::vast_walk_preorder:wgpu:supported",
+    "vyre-primitives::hash::blake3_g:reference:supported",
+    "vyre-primitives::hash::blake3_g:cuda:supported",
+    "vyre-primitives::hash::blake3_g:wgpu:supported",
+    "vyre-primitives::hash::blake3_round:reference:supported",
+    "vyre-primitives::hash::blake3_round:cuda:supported",
+    "vyre-primitives::hash::blake3_round:wgpu:supported",
+    "vyre-primitives::hash::fnv1a32:reference:supported",
+    "vyre-primitives::hash::fnv1a32:cuda:supported",
+    "vyre-primitives::hash::fnv1a32:wgpu:supported",
+    "vyre-primitives::hash::fnv1a64:reference:supported",
+    "vyre-primitives::hash::fnv1a64:cuda:supported",
+    "vyre-primitives::hash::fnv1a64:wgpu:supported",
+    "vyre-primitives::label::resolve_family:reference:supported",
+    "vyre-primitives::label::resolve_family:cuda:supported",
+    "vyre-primitives::label::resolve_family:wgpu:supported",
+    "vyre-primitives::matching::bracket_match:reference:supported",
+    "vyre-primitives::matching::bracket_match:cuda:supported",
+    "vyre-primitives::matching::bracket_match:wgpu:supported",
+    "vyre-primitives::math::amg_v_cycle:reference:supported",
+    "vyre-primitives::math::amg_v_cycle:cuda:supported",
+    "vyre-primitives::math::amg_v_cycle:wgpu:supported",
+    "vyre-primitives::math::amg_v_cycle::v_cycle_phase:reference:supported",
+    "vyre-primitives::math::amg_v_cycle::v_cycle_phase:cuda:supported",
+    "vyre-primitives::math::amg_v_cycle::v_cycle_phase:wgpu:supported",
+    "vyre-primitives::math::bellman_shortest_path:reference:supported",
+    "vyre-primitives::math::bellman_shortest_path:cuda:supported",
+    "vyre-primitives::math::bellman_shortest_path:wgpu:supported",
+    "vyre-primitives::math::conv1d:reference:supported",
+    "vyre-primitives::math::conv1d:cuda:supported",
+    "vyre-primitives::math::conv1d:wgpu:supported",
+    "vyre-primitives::math::dot_partial:reference:supported",
+    "vyre-primitives::math::dot_partial:cuda:supported",
+    "vyre-primitives::math::dot_partial:wgpu:supported",
+    "vyre-primitives::math::newton_schulz_poly5_f32:reference:supported",
+    "vyre-primitives::math::newton_schulz_poly5_f32:cuda:supported",
+    "vyre-primitives::math::newton_schulz_poly5_f32:wgpu:supported",
+    "vyre-primitives::math::scallop_join:reference:supported",
+    "vyre-primitives::math::scallop_join:cuda:supported",
+    "vyre-primitives::math::scallop_join:wgpu:supported",
+    "vyre-primitives::math::scallop_join_wide:reference:supported",
+    "vyre-primitives::math::scallop_join_wide:cuda:supported",
+    "vyre-primitives::math::scallop_join_wide:wgpu:supported",
+    "vyre-primitives::math::semiring_gemm:reference:supported",
+    "vyre-primitives::math::semiring_gemm:cuda:supported",
+    "vyre-primitives::math::semiring_gemm:wgpu:supported",
+    "vyre-primitives::math::sheaf_laplacian_eigenvalue:reference:supported",
+    "vyre-primitives::math::sheaf_laplacian_eigenvalue:cuda:supported",
+    "vyre-primitives::math::sheaf_laplacian_eigenvalue:wgpu:supported",
+    "vyre-primitives::math::sheaf_laplacian_eigenvalue::power_iteration_phase:reference:supported",
+    "vyre-primitives::math::sheaf_laplacian_eigenvalue::power_iteration_phase:cuda:supported",
+    "vyre-primitives::math::sheaf_laplacian_eigenvalue::power_iteration_phase:wgpu:supported",
+    "vyre-primitives::math::sinkhorn_iterate:reference:supported",
+    "vyre-primitives::math::sinkhorn_iterate:cuda:supported",
+    "vyre-primitives::math::sinkhorn_iterate:wgpu:supported",
+    "vyre-primitives::math::tensor_train_decompose:reference:supported",
+    "vyre-primitives::math::tensor_train_decompose:cuda:supported",
+    "vyre-primitives::math::tensor_train_decompose:wgpu:supported",
+    "vyre-primitives::nn::attention_max_pass:reference:supported",
+    "vyre-primitives::nn::attention_max_pass:cuda:supported",
+    "vyre-primitives::nn::attention_max_pass:wgpu:supported",
+    "vyre-primitives::nn::attention_sum_pass:reference:supported",
+    "vyre-primitives::nn::attention_sum_pass:cuda:supported",
+    "vyre-primitives::nn::attention_sum_pass:wgpu:supported",
+    "vyre-primitives::nn::attention_write_pass:reference:supported",
+    "vyre-primitives::nn::attention_write_pass:cuda:supported",
+    "vyre-primitives::nn::attention_write_pass:wgpu:supported",
+    "vyre-primitives::nn::quest_score_pages:reference:supported",
+    "vyre-primitives::nn::quest_score_pages:cuda:supported",
+    "vyre-primitives::nn::quest_score_pages:wgpu:supported",
+    "vyre-primitives::nn::quest_select_top_k:reference:supported",
+    "vyre-primitives::nn::quest_select_top_k:cuda:supported",
+    "vyre-primitives::nn::quest_select_top_k:wgpu:supported",
+    "vyre-primitives::nn::quest_zero_fill:reference:supported",
+    "vyre-primitives::nn::quest_zero_fill:cuda:supported",
+    "vyre-primitives::nn::quest_zero_fill:wgpu:supported",
+    "vyre-primitives::parsing::ast_cse_structural_hash:reference:supported",
+    "vyre-primitives::parsing::ast_cse_structural_hash:cuda:supported",
+    "vyre-primitives::parsing::ast_cse_structural_hash:wgpu:supported",
+    "vyre-primitives::parsing::core_delimiter_match:reference:supported",
+    "vyre-primitives::parsing::core_delimiter_match:cuda:supported",
+    "vyre-primitives::parsing::core_delimiter_match:wgpu:supported",
+    "vyre-primitives::parsing::ssa_dominance_scan:reference:supported",
+    "vyre-primitives::parsing::ssa_dominance_scan:cuda:supported",
+    "vyre-primitives::parsing::ssa_dominance_scan:wgpu:supported",
+    "vyre-primitives::predicate::arg_of:reference:supported",
+    "vyre-primitives::predicate::arg_of:cuda:supported",
+    "vyre-primitives::predicate::arg_of:wgpu:supported",
+    "vyre-primitives::predicate::call_to:reference:supported",
+    "vyre-primitives::predicate::call_to:cuda:supported",
+    "vyre-primitives::predicate::call_to:wgpu:supported",
+    "vyre-primitives::predicate::edge:reference:supported",
+    "vyre-primitives::predicate::edge:cuda:supported",
+    "vyre-primitives::predicate::edge:wgpu:supported",
+    "vyre-primitives::predicate::in_file:reference:supported",
+    "vyre-primitives::predicate::in_file:cuda:supported",
+    "vyre-primitives::predicate::in_file:wgpu:supported",
+    "vyre-primitives::predicate::in_function:reference:supported",
+    "vyre-primitives::predicate::in_function:cuda:supported",
+    "vyre-primitives::predicate::in_function:wgpu:supported",
+    "vyre-primitives::predicate::in_package:reference:supported",
+    "vyre-primitives::predicate::in_package:cuda:supported",
+    "vyre-primitives::predicate::in_package:wgpu:supported",
+    "vyre-primitives::predicate::literal_of:reference:supported",
+    "vyre-primitives::predicate::literal_of:cuda:supported",
+    "vyre-primitives::predicate::literal_of:wgpu:supported",
+    "vyre-primitives::predicate::node_kind_eq:reference:supported",
+    "vyre-primitives::predicate::node_kind_eq:cuda:supported",
+    "vyre-primitives::predicate::node_kind_eq:wgpu:supported",
+    "vyre-primitives::predicate::return_value_of:reference:supported",
+    "vyre-primitives::predicate::return_value_of:cuda:supported",
+    "vyre-primitives::predicate::return_value_of:wgpu:supported",
+    "vyre-primitives::predicate::size_argument_of:reference:supported",
+    "vyre-primitives::predicate::size_argument_of:cuda:supported",
+    "vyre-primitives::predicate::size_argument_of:wgpu:supported",
+    "vyre-primitives::reduce::count:reference:supported",
+    "vyre-primitives::reduce::count:cuda:supported",
+    "vyre-primitives::reduce::count:wgpu:supported",
+    "vyre-primitives::reduce::gather:reference:supported",
+    "vyre-primitives::reduce::gather:cuda:supported",
+    "vyre-primitives::reduce::gather:wgpu:supported",
+    "vyre-primitives::reduce::histogram:reference:supported",
+    "vyre-primitives::reduce::histogram:cuda:supported",
+    "vyre-primitives::reduce::histogram:wgpu:supported",
+    "vyre-primitives::reduce::max:reference:supported",
+    "vyre-primitives::reduce::max:cuda:supported",
+    "vyre-primitives::reduce::max:wgpu:supported",
+    "vyre-primitives::reduce::min:reference:supported",
+    "vyre-primitives::reduce::min:cuda:supported",
+    "vyre-primitives::reduce::min:wgpu:supported",
+    "vyre-primitives::reduce::range_counts_u32:reference:supported",
+    "vyre-primitives::reduce::range_counts_u32:cuda:supported",
+    "vyre-primitives::reduce::range_counts_u32:wgpu:supported",
+    "vyre-primitives::reduce::scatter:reference:supported",
+    "vyre-primitives::reduce::scatter:cuda:supported",
+    "vyre-primitives::reduce::scatter:wgpu:supported",
+    "vyre-primitives::reduce::segment_reduce_sum:reference:supported",
+    "vyre-primitives::reduce::segment_reduce_sum:cuda:supported",
+    "vyre-primitives::reduce::segment_reduce_sum:wgpu:supported",
+    "vyre-primitives::reduce::sum:reference:supported",
+    "vyre-primitives::reduce::sum:cuda:supported",
+    "vyre-primitives::reduce::sum:wgpu:supported",
+    "vyre-primitives::reduce::workgroup_any_u32:reference:supported",
+    "vyre-primitives::reduce::workgroup_any_u32:cuda:supported",
+    "vyre-primitives::reduce::workgroup_any_u32:wgpu:supported",
+    "vyre-primitives::reduce::workgroup_max_f32:reference:supported",
+    "vyre-primitives::reduce::workgroup_max_f32:cuda:supported",
+    "vyre-primitives::reduce::workgroup_max_f32:wgpu:supported",
+    "vyre-primitives::reduce::workgroup_sum_f32:reference:supported",
+    "vyre-primitives::reduce::workgroup_sum_f32:cuda:supported",
+    "vyre-primitives::reduce::workgroup_sum_f32:wgpu:supported",
+    "vyre-primitives::reduce::workgroup_sum_u32:reference:supported",
+    "vyre-primitives::reduce::workgroup_sum_u32:cuda:supported",
+    "vyre-primitives::reduce::workgroup_sum_u32:wgpu:supported",
+    "vyre-primitives::text::byte_histogram_256:reference:supported",
+    "vyre-primitives::text::byte_histogram_256:cuda:supported",
+    "vyre-primitives::text::byte_histogram_256:wgpu:supported",
+    "vyre-primitives::text::char_class:reference:supported",
+    "vyre-primitives::text::char_class:cuda:supported",
+    "vyre-primitives::text::char_class:wgpu:supported",
+    "vyre-primitives::text::encoding_classify:reference:supported",
+    "vyre-primitives::text::encoding_classify:cuda:supported",
+    "vyre-primitives::text::encoding_classify:wgpu:supported",
+    "vyre-primitives::text::line_index:reference:supported",
+    "vyre-primitives::text::line_index:cuda:supported",
+    "vyre-primitives::text::line_index:wgpu:supported",
+    "vyre-primitives::text::utf8_shape_counts:reference:supported",
+    "vyre-primitives::text::utf8_shape_counts:cuda:supported",
+    "vyre-primitives::text::utf8_shape_counts:wgpu:supported",
+    "vyre-primitives::text::utf8_validate:reference:supported",
+    "vyre-primitives::text::utf8_validate:cuda:supported",
+    "vyre-primitives::text::utf8_validate:wgpu:supported",
+    "vyre-primitives::vfs::resolve:reference:supported",
+    "vyre-primitives::vfs::resolve:cuda:supported",
+    "vyre-primitives::vfs::resolve:wgpu:supported",
+    "vyre-primitives::visual::packed_rgba_map:reference:supported",
+    "vyre-primitives::visual::packed_rgba_map:cuda:supported",
+    "vyre-primitives::visual::packed_rgba_map:wgpu:supported",
+    "core.indirect_dispatch:reference:not_applicable",
+    "core.indirect_dispatch:cuda:experimental",
+    "core.indirect_dispatch:wgpu:experimental",
+    "io.dma_from_nvme:reference:not_applicable",
+    "io.dma_from_nvme:cuda:experimental",
+    "io.dma_from_nvme:wgpu:experimental",
+    "io.write_back_to_nvme:reference:not_applicable",
+    "io.write_back_to_nvme:cuda:experimental",
+    "io.write_back_to_nvme:wgpu:experimental",
+    "mem.unmap:reference:not_applicable",
+    "mem.unmap:cuda:experimental",
+    "mem.unmap:wgpu:experimental",
+    "mem.zerocopy_map:reference:not_applicable",
+    "mem.zerocopy_map:cuda:experimental",
+    "mem.zerocopy_map:wgpu:experimental"
+  ],
+  "missing_release_backend_rows": [],
+  "op_matrix_blocked_release_count": 0,
+  "op_matrix_blocked_release_rows": [],
+  "op_matrix_errors": [],
+  "passed_pairs": 436,
+  "failed_pairs": 0,
+  "duplicate_op_ids": [],
+  "pairs": [
+    {
+      "op_id": "core.indirect_dispatch",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "runtime dialect contract verified for `core.indirect_dispatch` on `cuda`: dialect=core, indirect_dispatch_capability=false; no CPU fallback dispatch was invoked"
+    },
+    {
+      "op_id": "io.dma_from_nvme",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "runtime dialect contract verified for `io.dma_from_nvme` on `cuda`: dialect=io, zero_copy_io_lowering=not_registered; no CPU fallback dispatch was invoked"
+    },
+    {
+      "op_id": "io.write_back_to_nvme",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "runtime dialect contract verified for `io.write_back_to_nvme` on `cuda`: dialect=io, zero_copy_io_lowering=not_registered; no CPU fallback dispatch was invoked"
+    },
+    {
+      "op_id": "mem.unmap",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "runtime dialect contract verified for `mem.unmap` on `cuda`: dialect=io, zero_copy_io_lowering=not_registered; no CPU fallback dispatch was invoked"
+    },
+    {
+      "op_id": "mem.zerocopy_map",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "runtime dialect contract verified for `mem.zerocopy_map` on `cuda`: dialect=io, zero_copy_io_lowering=not_registered; no CPU fallback dispatch was invoked"
+    },
+    {
+      "op_id": "vyre-intrinsics::hardware::bit_reverse_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-intrinsics::hardware::fma_f32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-intrinsics::hardware::inverse_sqrt_f32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-intrinsics::hardware::popcount_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-intrinsics::hardware::storage_barrier",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-intrinsics::hardware::subgroup_add",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-intrinsics::hardware::subgroup_ballot",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-intrinsics::hardware::subgroup_shuffle",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-intrinsics::hardware::workgroup_barrier",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::any::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::any::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::contains::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::contains::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::four_russians_apply_byte_lut::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::four_russians_apply_byte_lut::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::not::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::not::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::or::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::or::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::popcount::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::popcount::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::xor::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::bitset::xor::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::decode::base64_decode::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::decode::base64_decode::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::decode::inflate_stored::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::decode::inflate_stored::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::decode::rle_segment_lengths::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::decode::rle_segment_lengths::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::fixpoint::bitset_fixpoint::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::fixpoint::bitset_fixpoint::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::persistent_bfs::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::persistent_bfs::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::persistent_bfs_step::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::persistent_bfs_step::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::scc_decompose::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::scc_decompose::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::tensor_flow_forward::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::tensor_flow_forward::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::vast_walk_postorder::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::vast_walk_postorder::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::vast_walk_preorder::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::graph::vast_walk_preorder::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::hash::blake3_round::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::hash::blake3_round::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::hash::fnv1a32::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::hash::fnv1a32::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::hash::fnv1a64::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::hash::fnv1a64::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::matching::bracket_match::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::matching::bracket_match::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::amg_v_cycle::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::amg_v_cycle::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::bellman_shortest_path::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::bellman_shortest_path::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::scallop_join::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::scallop_join::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::scallop_join_wide::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::scallop_join_wide::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::sheaf_laplacian_eigenvalue::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::sheaf_laplacian_eigenvalue::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::sinkhorn_iterate::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::sinkhorn_iterate::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::tensor_train_decompose::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::math::tensor_train_decompose::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::nn::quest_score_pages::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::nn::quest_score_pages::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::nn::quest_zero_fill::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::nn::quest_zero_fill::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::parsing::ast_cse_structural_hash::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::parsing::ast_cse_structural_hash::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::parsing::ssa_dominance_scan::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::parsing::ssa_dominance_scan::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::arg_of::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::arg_of::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::call_to::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::call_to::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::edge::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::edge::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::in_file::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::in_file::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::in_function::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::in_function::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::in_package::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::in_package::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::literal_of::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::literal_of::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::node_kind_eq::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::node_kind_eq::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::return_value_of::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::return_value_of::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::size_argument_of::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::predicate::size_argument_of::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::count::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::count::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::gather::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::gather::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::histogram::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::histogram::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::max::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::max::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::min::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::min::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::scatter::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::scatter::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::segment_reduce_sum::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::segment_reduce_sum::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::sum::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::sum::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::workgroup_sum_u32::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::reduce::workgroup_sum_u32::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::text::byte_histogram_256::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::text::byte_histogram_256::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::text::encoding_classify::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::text::encoding_classify::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::vfs::resolve::consumer_a",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::catalog::vfs::resolve::consumer_b",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::callgraph",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::control_dependence",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::escape",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::escapes",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::ifds",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::live",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::live_at",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::loop_sum",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::may_alias",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::must_init",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::points_to",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::post_dominates",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::range",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::reaching",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::reaching_def",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::scc_query",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::slice",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::ssa",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::summary",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::dataflow::value_set",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::decode::base64",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "3 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::decode::encodex",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "4 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::decode::hex",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "3 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::decode::inflate_stored_block",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::decode::ziftsieve",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::graph::ast_walk_postorder",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::graph::ast_walk_preorder",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::hash::adler32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::hash::blake3_compress",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::hash::crc32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::hash::fnv1a32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::hash::fnv1a64",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::hash::multi_hash",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::logical::and",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::logical::nand",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::logical::nor",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::logical::or",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::logical::xor",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::matching::aho_corasick",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::matching::compact_hits",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::matching::cooperative_dfa",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::matching::emit_hit",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::matching::substring_search",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "2 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::algebra::bool_semiring_matmul",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::algebra::join",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::algebra::meet",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::algebra::minplus_mul",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::algebra::sketch_mix",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::atomic::atomic_add_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::atomic::atomic_and_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::atomic::atomic_compare_exchange_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::atomic::atomic_exchange_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::atomic::atomic_max_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::atomic::atomic_min_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::atomic::atomic_or_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::atomic::atomic_xor_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::atomic::lru_update_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::avg_floor",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::broadcast",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::clamp_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::conv::conv2d_3x3_direct",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::conv::im2col_3x3",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::dot",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::fft::fft4_complex",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::fft::fft_convolve_circular_complex",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::linalg::matmul_strassen_2x2",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::lzcnt_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::matmul",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::matmul_bias",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::matmul_bias::scalar",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::matmul_bias_tiled",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::matmul_tiled",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::reduce_mean",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::reduce_variance",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::scan_prefix_sum",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::square",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::succinct::rank1_query",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::succinct::rank1_superblocks",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::succinct::select1_query",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::tzcnt_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::weighted_sum_fma_f32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::math::wrapping_neg",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::attention",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::attention::quest_paging",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::attention::turboquant",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::cross_entropy",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::embedding",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::flash_attention",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::gqa_attention",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::layer_norm",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::layerwise_ln_scale",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::leaky_relu_sq",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::linear",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::linear_relu",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::linear_silu",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::linear_tiled",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::logit_softcap",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::mlp_4x_leaky_sq",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::mlp_4x_leaky_sq::output_projection",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::moe_gate",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::moe_gate::softmax_stats",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::moe_gate::weight_write",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::parallel_residual_block",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::partial_rope",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::qk_gain",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::relu",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::rms_norm",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::rms_norm_linear",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::silu",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::skip_gate",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::softmax",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::nn::top_k",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::optim::adamw_step",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::optim::ema_apply",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::optim::muon_update",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::optim::muoneq_r",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::optim::newton_schulz_5step",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::ast_binding_strength",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::ast_cfg_blocks",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::ast_shunting_yard",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::ast_shunting_yard::statement_pass",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::bracket_match",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_build_call_graph",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_build_cfg_and_gotos",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_build_expression_shape_nodes",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_build_expression_shape_nodes::node_shape_pass",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_build_vast_nodes",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_classify_vast_node_kinds",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_classify_vast_node_kinds::node_classification_pass",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_compute_alignments",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_extract_calls",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_extract_functions",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_gnu_builtins_pass",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_gnu_inline_asm_pass",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_lex_digraphs",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c11_lex_single_pass",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c::lower::ast_to_pg_nodes",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c::lower::ast_to_pg_semantic_graph",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c::lower::ast_to_pg_semantic_graph::node_edge_pass",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c_keyword",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c_lexer",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c_lexer::classify_at_pos",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c_sema_scope",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c_sema_scope.decl",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c_sema_scope.identifier_intern",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c_sema_scope.scope",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c_sema_scope.scope.brace",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::c_sema_scope.scope.function_parameters",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::core_delimiter_match",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::opt_conditional_mask_with_directives",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::opt_dynamic_macro_expansion",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::opt_lower_elf",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::opt_propagate_type_specifiers",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::opt_stack_layout_generation",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::opt_x86_64_register_allocation",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::python312_extract_calls",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::python312_extract_decorators",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::python312_extract_imports",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::python312_extract_structure",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::python312_extract_with_blocks",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::parsing::python312_lexer",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::quant::byte_shuffle",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::quant::gptq_round",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::quant::gptq_sdclip",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::quant::int6_pack",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::quant::int6_unpack",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::quant::int8_pack",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::quant::int8_unpack",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::representation::unpack_4bit_f32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::aliases_dataflow",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::auth_check_dominates",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::bounded_by_comparison",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::buffer_size_check",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::dominator_tree",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::flows_to",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::flows_to_to_sink",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::flows_to_with_sanitizer",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::format_string_check",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::integer_overflow_arith",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::label_by_family",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::lock_dominates",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::path_canonical",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::path_reconstruct",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::sanitized_by",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::sanitizer_dominates",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::sink_intersection",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::sql_param_bound",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::taint_flow",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::taint_kill",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::taint_pollution",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::unchecked_return",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::security::xss_escape",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::substrate::indexed_map",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::substrate::strided_accumulate",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::text::char_class",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::visual::blur",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::visual::box_shadow",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::visual::composite",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::visual::downsample",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::visual::filter_chain",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::visual::glass",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::visual::gradient",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-libs::visual::upsample",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::bitset::and",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::bitset::and_not",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::bitset::any",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::bitset::contains",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::bitset::four_russians_apply_byte_lut",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::bitset::not",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::bitset::or",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::bitset::popcount",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::bitset::select1_query",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::bitset::xor",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::decode::base64_decode",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::decode::inflate_stored",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::decode::rle_segment_lengths",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::fixpoint::bitset_fixpoint",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::graph::csr_backward_traverse",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::graph::csr_forward_or_changed",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::graph::csr_forward_traverse",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::graph::path_reconstruct",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::graph::persistent_bfs",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::graph::persistent_bfs_step",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::graph::scc_decompose",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::graph::tensor_flow_forward",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::graph::vast_walk_postorder",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::graph::vast_walk_preorder",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::hash::blake3_g",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::hash::blake3_round",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::hash::fnv1a32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::hash::fnv1a64",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::label::resolve_family",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::matching::bracket_match",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::amg_v_cycle",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::amg_v_cycle::v_cycle_phase",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::bellman_shortest_path",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::conv1d",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::dot_partial",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::newton_schulz_poly5_f32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::scallop_join",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::scallop_join_wide",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::semiring_gemm",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::sheaf_laplacian_eigenvalue",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::sheaf_laplacian_eigenvalue::power_iteration_phase",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::sinkhorn_iterate",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::tensor_train_decompose",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::nn::attention_max_pass",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::nn::attention_sum_pass",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::nn::attention_write_pass",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::nn::quest_score_pages",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::nn::quest_select_top_k",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::nn::quest_zero_fill",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::parsing::ast_cse_structural_hash",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::parsing::core_delimiter_match",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::parsing::ssa_dominance_scan",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::predicate::arg_of",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::predicate::call_to",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::predicate::edge",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::predicate::in_file",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::predicate::in_function",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::predicate::in_package",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::predicate::literal_of",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::predicate::node_kind_eq",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::predicate::return_value_of",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::predicate::size_argument_of",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::count",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::gather",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::histogram",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::max",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::min",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::range_counts_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::scatter",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::segment_reduce_sum",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::sum",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::workgroup_any_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::workgroup_max_f32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::workgroup_sum_f32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::reduce::workgroup_sum_u32",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::text::byte_histogram_256",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::text::char_class",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::text::encoding_classify",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::text::line_index",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::text::utf8_shape_counts",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::text::utf8_validate",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::vfs::resolve",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::visual::packed_rgba_map",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::callgraph",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::control_dependence",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::cross_language",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::def_use",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::dominators",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::escape",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::escapes",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::ifds",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::live",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::live_at",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::loop_sum",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::may_alias",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::must_init",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::points_to",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::post_dominates",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::range",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::range_check",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::reaching",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::reaching_def",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::reaching_def_summary",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::scc_query",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::slice",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::ssa",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::summary",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "weir::value_set",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    }
+  ],
+  "blockers": []
+}

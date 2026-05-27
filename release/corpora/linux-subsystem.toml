@@ -1,0 +1,44 @@
+# Frozen Linux subsystem corpus for Vyre 0.4.1 C parser release proof.
+schema_version = 1
+name = "linux-lib"
+description = "Linux kernel lib subsystem: broad C utility code without driver-specific extension bias."
+linux_root = "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux"
+subsystem = "lib"
+corpus_root = "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/lib"
+file_list = "release/corpora/linux-subsystem-files.txt"
+c_file_count = 490
+source_bytes = 7394810
+deterministic_file_list_sha256 = "9d03bfc59ade78a2a448b39de8456fc1da4af769eddbddd87eb870c5d7115fec"
+file_list_raw_sha256 = "a3396d2d2aa844d73842bf037baf0a3ee77b23dd1ea29c170b56e8eea8742ea2"
+selection_reason = "Clears the 250-file and 4MiB release floors while avoiding the highest-variance driver trees."
+
+[parser_contract]
+input_mode = "raw_bytes_gpu_syntax"
+resident_arena = true
+tree_sitter_baseline = true
+min_vyre_vs_tree_sitter_speedup_x1000 = 100000
+min_samples = 5
+require_no_tree_sitter_error = true
+require_full_file_span_coverage = true
+
+[linux_context]
+kbuild_file = "lib/Kbuild"
+kconfig_file = "lib/Kconfig"
+
+include_dirs = [
+  "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/include",
+  "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/arch/x86/include",
+  "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/arch/x86/include/generated",
+  "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/include/generated",
+  "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/lib",
+]
+
+defines = [
+  "__KERNEL__=1",
+  "CONFIG_X86_64=1",
+  "CONFIG_64BIT=1",
+]
+
+[exclusions]
+generated_files = []
+ignored_reason = "No generated files are excluded in the frozen lib corpus."

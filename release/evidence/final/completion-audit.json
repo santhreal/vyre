@@ -1,0 +1,541 @@
+{
+  "schema_version": 1,
+  "objective": "Make Vyre 0.4.2 and Weir 0.1.0 release-ready end to end",
+  "success_criteria": [
+    "1. CUDA-first execution path is documented, benchmarked, and selected as the fast release substrate.",
+    "2. WGPU fallback is functional, tested, benchmarked, and never hides a CUDA or CPU downgrade.",
+    "3. Megakernel is the default high-throughput runtime path where legal, including paired speculation evidence.",
+    "4. Non-megakernel dispatch is retained only with measured or architectural justification.",
+    "5. Optimization infrastructure proves at least 4096 concrete rewrite/pass opportunities across families.",
+    "6. Optimization passes have correctness tests and before/after benchmark evidence.",
+    "7. Weir alias, reaching-def, points-to, callgraph, slicing, summary, loop, and fixpoint facts integrate into Vyre optimization.",
+    "8. The distributed C parser parses a full selected Linux subsystem corpus with AST/semantic contract evidence.",
+    "9. At least 12 proof workload families compare CUDA against serious CPU baselines with reproducible artifacts; the current matrix carries 13 required rows.",
+    "10. At least ten formerly CPU-only workload families prove 100x+ wins or block release.",
+    "11. Conformance gates block release for every claimed op/backend path with zero blocked_release OP_MATRIX rows.",
+    "12. Test organization is modular, including distributed parser CLI evidence for tools/vyrec.",
+    "13. Documentation is coherent and every release claim links to concrete evidence.",
+    "14. Crate metadata, feature surfaces, readmes, examples, license, and version policy are consistent for Vyre 0.4.2 / Weir 0.1.0.",
+    "15. Final hygiene review finds no unbounded caches, hidden fallbacks, placeholders, library panics, unactionable errors, or undocumented public API."
+  ],
+  "prompt_to_artifact_checklist": [
+    {
+      "requirement_id": "version-story",
+      "explicit_requirement": "Vyre manifests, dependency hints, lockfile path packages, docs, release notes, packaging, and product-scoped tags use the selected Vyre 0.4.2 / Weir 0.1.0 version story.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json",
+        "release/evidence/version/version-matrix.json",
+        "release/evidence/version/release-tag-plan.json",
+        "release/evidence/docs/release-notes-version-story.md"
+      ]
+    },
+    {
+      "requirement_id": "cuda-first-path",
+      "explicit_requirement": "CUDA is the documented, benchmarked, optimized primary release substrate.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- backend-matrix --output release/evidence/backends/backend-matrix.json",
+        "cargo_full run --bin xtask -- release-benchmarks --backend cuda",
+        "release/evidence/benchmarks/cuda-release-suite.json",
+        "release/evidence/benchmarks/cuda-ptx-patterns.json",
+        "release/evidence/benchmarks/bench-release-axes.json"
+      ]
+    },
+    {
+      "requirement_id": "wgpu-fallback",
+      "explicit_requirement": "WGPU remains a real fallback path with conformance and benchmark evidence, not an untested branch.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- release-benchmarks --backend wgpu",
+        "release/evidence/backends/backend-matrix.json",
+        "release/evidence/benchmarks/wgpu-fallback-suite.json",
+        "release/evidence/conformance/wgpu-conformance.json",
+        "release/evidence/docs/wgpu-fallback-proof.md"
+      ]
+    },
+    {
+      "requirement_id": "megakernel-default",
+      "explicit_requirement": "Megakernel is the default high-throughput path where legal and has latency/condition workload evidence.",
+      "required_artifacts_or_commands": [
+        "release/evidence/backends/backend-matrix.json",
+        "release/evidence/benchmarks/release-workload-matrix.json",
+        "release/evidence/benchmarks/megakernel-condition-cuda.json",
+        "release/evidence/benchmarks/megakernel-latency-cuda.json",
+        "release/evidence/docs/megakernel-default-proof.md"
+      ]
+    },
+    {
+      "requirement_id": "optimization-corpus-4096",
+      "explicit_requirement": "Optimization scale is proved by at least 4096 verified semantic-preserving generated cases.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- optimization-corpus --output release/evidence/optimization/optimization-corpus.json",
+        "release/evidence/optimization/optimization-corpus.json",
+        "release/evidence/optimization/optimization-corpus-contracts.json",
+        "release/evidence/optimization/optimization-family-manifest.json",
+        "release/evidence/optimization/optimization-analysis-fixtures.json",
+        "release/evidence/optimization/optimization-case-manifest.json"
+      ]
+    },
+    {
+      "requirement_id": "optimization-benchmark-proof",
+      "explicit_requirement": "Optimization families have before/after benchmark evidence and pass-family attribution.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- optimization-matrix --output release/evidence/optimization/optimization-integration-matrix.json",
+        "release/evidence/optimization/lower-rewrite-impact-before-after.json",
+        "release/evidence/optimization/optimizer-impact-cuda.json",
+        "release/evidence/optimization/pass-family-benchmarks.json",
+        "release/evidence/optimization/pass-family-benchmark-manifest.json"
+      ]
+    },
+    {
+      "requirement_id": "alias-aware-upgrades",
+      "explicit_requirement": "DSE, store-to-load forwarding, LICM, loop fusion, and loop fission consume Weir alias facts and prove before/after impact.",
+      "required_artifacts_or_commands": [
+        "release/evidence/optimization/alias-aware-dse.json",
+        "release/evidence/optimization/alias-aware-stlf.json",
+        "release/evidence/optimization/alias-aware-licm.json",
+        "release/evidence/optimization/alias-aware-fusion-fission.json",
+        "release/evidence/benchmarks/alias-aware-before-after.json"
+      ]
+    },
+    {
+      "requirement_id": "egraph-saturation",
+      "explicit_requirement": "Bounded e-graph or egglog-family saturation is present where it beats hand rewrites and has semantic plus benchmark evidence.",
+      "required_artifacts_or_commands": [
+        "release/evidence/optimization/egraph-saturation-matrix.json",
+        "release/evidence/optimization/egraph-semantic-contracts.json",
+        "release/evidence/benchmarks/egraph-before-after.json",
+        "release/evidence/docs/egraph-saturation.md"
+      ]
+    },
+    {
+      "requirement_id": "weir-analysis-integration",
+      "explicit_requirement": "Weir exposes SSA, IFDS, reaching defs, points-to, alias, callgraph, slicing, summaries, loops, and fixpoint facts, and Vyre consumes those facts where they unlock safer optimization.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- weir-matrix --output release/evidence/weir/weir-analysis-api-matrix.json",
+        "release/evidence/weir/weir-analysis-api-matrix.json",
+        "release/evidence/weir/weir-vyre-integration-tests.json",
+        "release/evidence/weir/weir-readme-contracts.json",
+        "../../../../dataflow/weir/Cargo.toml",
+        "release/evidence/optimization/weir-facts-pass-firing.json",
+        "release/evidence/benchmarks/weir-dataflow-release.json",
+        "release/evidence/docs/weir-integration.md"
+      ]
+    },
+    {
+      "requirement_id": "proof-workloads-12",
+      "explicit_requirement": "At least 12 proof workload families have reproducible CPU/GPU benchmark artifacts.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- release-workload-matrix --output release/evidence/benchmarks/release-workload-matrix.json --enforce",
+        "release/evidence/benchmarks/release-workload-matrix.json",
+        "../docs/optimization/BENCH_TARGETS.toml",
+        "release/evidence/benchmarks/workload-01-condition-eval.json",
+        "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
+        "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
+        "release/evidence/benchmarks/workload-04-metadata-conditions.json",
+        "release/evidence/benchmarks/workload-05-entropy-window.json",
+        "release/evidence/benchmarks/workload-06-quantified-condition-loops.json",
+        "release/evidence/benchmarks/workload-07-alias-reaching-def.json",
+        "release/evidence/benchmarks/workload-08-ifds-witness.json",
+        "release/evidence/benchmarks/workload-09-c-ast-traversal.json",
+        "release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
+        "release/evidence/benchmarks/workload-11-egraph-saturation.json",
+        "release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
+        "release/evidence/benchmarks/workload-13-callgraph-reachability.json"
+      ]
+    },
+    {
+      "requirement_id": "cpu-only-100x-proof",
+      "explicit_requirement": "At least ten release workloads prove 100x+ CUDA wins against CPU-SOTA baselines.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- release-workload-matrix --output release/evidence/benchmarks/release-workload-matrix.json --enforce",
+        "release/evidence/benchmarks/release-workload-matrix.json",
+        "release/evidence/benchmarks/cpu-only-100x-proof.json",
+        "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
+        "release/evidence/benchmarks/workload-01-condition-eval.json",
+        "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
+        "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
+        "release/evidence/benchmarks/workload-05-entropy-window.json",
+        "release/evidence/benchmarks/workload-06-quantified-condition-loops.json",
+        "release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
+        "release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
+        "release/evidence/docs/cpu-only-100x-proof.md"
+      ]
+    },
+    {
+      "requirement_id": "c-parser-linux-subsystem",
+      "explicit_requirement": "The distributed C parser parses the selected full Linux subsystem corpus with AST, diagnostic, and throughput evidence.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- c-parser-corpus --corpus DIR -I LINUX_INCLUDE_DIR -D CONFIG_SYMBOL=1 --output release/evidence/parser/c-parser-linux-subsystem.json",
+        "release/evidence/parser/c-parser-linux-subsystem.json",
+        "release/evidence/parser/linux-subsystem-corpus-manifest.json",
+        "release/evidence/parser/c-parser-diagnostics-summary.json",
+        "release/evidence/parser/c-parser-throughput.json"
+      ]
+    },
+    {
+      "requirement_id": "distributed-parser-coherence",
+      "explicit_requirement": "vyre-frontend-c, tools/vyrec, Weir, and Surge/SurgeC parser ownership boundaries are coherent and documented.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- parser-coherence --output release/evidence/parser/distributed-parser-map.json",
+        "release/evidence/parser/distributed-parser-map.json",
+        "release/evidence/parser/vyre-frontend-c-contracts.json",
+        "release/evidence/parser/vyrec-cli-contracts.json",
+        "release/evidence/parser/weir-contracts.json",
+        "release/evidence/parser/surgec-contracts.json",
+        "release/evidence/parser/surgec-grammar-gen-contracts.json",
+        "release/evidence/docs/distributed-parser-coherence.md"
+      ]
+    },
+    {
+      "requirement_id": "conformance-hard-gate",
+      "explicit_requirement": "Conformance blocks release for every claimed op/backend pair.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- conformance-matrix --output release/evidence/conformance/conformance-matrix.json",
+        "cargo_full run --bin xtask -- release-conformance --backend all",
+        "release/evidence/conformance/cuda-conformance.json",
+        "release/evidence/conformance/wgpu-conformance.json",
+        "release/evidence/conformance/reference-conformance.json",
+        "release/evidence/conformance/release-gate-log.json",
+        "../../../../../.github/workflows/conform.yml",
+        "../../../../../.github/workflows/gpu-parity.yml",
+        "../../../../../.github/workflows/santh-ci.yml",
+        "../../../../../.github/workflows/architectural-invariants.yml",
+        "../../../../../.github/CI_REQUIRED.md",
+        "../../../../../scripts/apply-branch-protection.sh"
+      ]
+    },
+    {
+      "requirement_id": "modular-test-architecture",
+      "explicit_requirement": "Massive tests are split into fixtures, contracts, properties, backend tests, corpus tests, benchmarks, and regressions.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- test-matrix --output release/evidence/tests/test-matrix.json",
+        "release/evidence/tests/test-matrix.json",
+        "release/evidence/tests/modularization-map.json",
+        "release/evidence/tests/oversized-test-closure.json",
+        "release/evidence/tests/release-surface-suite-coverage.json",
+        "release/evidence/docs/test-architecture.md"
+      ]
+    },
+    {
+      "requirement_id": "exhaustive-verification",
+      "explicit_requirement": "Normal, adversarial, property, conformance, corpus, benchmark, gap, and fuzz verification are present.",
+      "required_artifacts_or_commands": [
+        "release/evidence/tests/unit-suite.json",
+        "release/evidence/tests/adversarial-suite.json",
+        "release/evidence/tests/property-suite.json",
+        "release/evidence/tests/conformance-suite.json",
+        "release/evidence/tests/corpus-suite.json",
+        "release/evidence/tests/benchmark-suite.json",
+        "release/evidence/tests/gap-suite.json",
+        "release/evidence/tests/fuzz-suite.json",
+        "release/evidence/tests/release-surface-suite-coverage.json"
+      ]
+    },
+    {
+      "requirement_id": "docs-evidence-linked",
+      "explicit_requirement": "User, contributor, benchmark, conformance, parser, optimization, and release docs link to concrete evidence.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- docs-matrix --output release/evidence/docs/docs-matrix.json",
+        "release/evidence/docs/docs-matrix.json",
+        "release/evidence/docs/vyre-readme-contracts.json",
+        "release/evidence/docs/vyre-readme-proof.md",
+        "release/evidence/docs/weir-readme-proof.md",
+        "release/evidence/docs/parser-doc-proof.md",
+        "release/evidence/docs/benchmark-doc-proof.md",
+        "release/evidence/docs/conformance-doc-proof.md",
+        "release/evidence/docs/release-notes.md"
+      ]
+    },
+    {
+      "requirement_id": "crate-metadata",
+      "explicit_requirement": "Every release crate has coherent metadata, features, docs, readme, license, and version policy.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- metadata-matrix --output release/evidence/metadata/metadata-matrix.json",
+        "cargo_full run --bin xtask -- feature-matrix --output release/evidence/metadata/feature-matrix.json",
+        "cargo_full run --bin xtask -- package-readiness --output release/evidence/package/publish-readiness.json",
+        "release/evidence/metadata/metadata-matrix.json",
+        "release/evidence/metadata/feature-matrix.json",
+        "release/evidence/package/publish-readiness.json",
+        "release/evidence/docs/crate-metadata-proof.md"
+      ]
+    },
+    {
+      "requirement_id": "release-hygiene",
+      "explicit_requirement": "No shipped stubs, hidden fallbacks, unbounded resources, hot-path sleeps, unactionable errors, or stale docs remain.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- hygiene-matrix --output release/evidence/hygiene/hygiene-matrix.json",
+        "release/evidence/hygiene/hygiene-matrix.json",
+        "release/evidence/hygiene/no-stubs-scan.json",
+        "release/evidence/hygiene/no-hidden-fallback-scan.json",
+        "release/evidence/hygiene/resource-bound-scan.json",
+        "release/evidence/hygiene/error-surface-scan.json",
+        "release/evidence/hygiene/cargo-wrapper-scan.json",
+        "release/evidence/hygiene/audit-location-scan.json",
+        "release/evidence/hygiene/public-doc-scan.json",
+        "release/evidence/hygiene/test-hygiene-scan.json",
+        "release/evidence/docs/release-hygiene-proof.md",
+        "../../../../../.github/workflows/architectural-invariants.yml",
+        "../../../../../.github/CI_REQUIRED.md",
+        "../../../../../scripts/apply-branch-protection.sh",
+        "../../../../../scripts/architectural_invariants.sh"
+      ]
+    },
+    {
+      "requirement_id": "final-completion-audit",
+      "explicit_requirement": "The final audit maps every explicit requirement, named artifact, generator command, and gate to evidence and refuses completion while any requirement is open, blocked, missing, empty, or semantically weak.",
+      "required_artifacts_or_commands": [
+        "cargo_full run --bin xtask -- release-evidence",
+        "release/evidence/final/release-evidence-run.json",
+        "cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json",
+        "cargo_full run --bin xtask -- vyre-weir-release-gate",
+        "cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json",
+        "release/evidence/final/completion-audit.json",
+        "release/evidence/final/public-launch-state.json",
+        "release/../scripts/final-launch.sh",
+        "release/../scripts/publish-release.sh",
+        "release/vyre-weir-evidence.toml"
+      ]
+    }
+  ],
+  "plan_path": "../../../../../docs/vyre-weir-release-plan.md",
+  "total_requirements": 20,
+  "closed_requirements": 19,
+  "blocked_or_open_requirements": 1,
+  "requirements": [
+    {
+      "id": "version-story",
+      "title": "Manifest, tag, docs, and release-note version story is resolved",
+      "status": "closed",
+      "minimum_evidence": 4,
+      "evidence_count": 4,
+      "existing_evidence_count": 4,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "cuda-first-path",
+      "title": "CUDA is the documented, tested, benchmarked fast release path",
+      "status": "closed",
+      "minimum_evidence": 5,
+      "evidence_count": 6,
+      "existing_evidence_count": 6,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "wgpu-fallback",
+      "title": "WGPU fallback is semantically correct, tested, and benchmarked",
+      "status": "closed",
+      "minimum_evidence": 3,
+      "evidence_count": 5,
+      "existing_evidence_count": 5,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "megakernel-default",
+      "title": "Megakernel is the default high-throughput runtime path where legal",
+      "status": "closed",
+      "minimum_evidence": 5,
+      "evidence_count": 5,
+      "existing_evidence_count": 5,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "optimization-corpus-4096",
+      "title": "Optimization corpus contains at least 4096 distinct semantic-preserving cases",
+      "status": "closed",
+      "minimum_evidence": 5,
+      "evidence_count": 5,
+      "existing_evidence_count": 5,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "optimization-benchmark-proof",
+      "title": "Optimization families have before/after benchmark evidence",
+      "status": "closed",
+      "minimum_evidence": 8,
+      "evidence_count": 8,
+      "existing_evidence_count": 8,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "weir-analysis-integration",
+      "title": "Weir reaching-def, points-to, alias, callgraph, and fixpoint facts integrate into Vyre optimization",
+      "status": "closed",
+      "minimum_evidence": 7,
+      "evidence_count": 7,
+      "existing_evidence_count": 7,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "alias-aware-upgrades",
+      "title": "Alias-aware DSE, store-to-load forwarding, LICM, fusion, and fission upgrades are implemented and proved",
+      "status": "closed",
+      "minimum_evidence": 5,
+      "evidence_count": 6,
+      "existing_evidence_count": 6,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "egraph-saturation",
+      "title": "Bounded e-graph or egglog-family saturation replaces hand rewrites where it wins",
+      "status": "closed",
+      "minimum_evidence": 4,
+      "evidence_count": 5,
+      "existing_evidence_count": 5,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "proof-workloads-12",
+      "title": "At least 12 proof workload families have reproducible CPU/GPU benchmark artifacts",
+      "status": "closed",
+      "minimum_evidence": 12,
+      "evidence_count": 15,
+      "existing_evidence_count": 15,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "cpu-only-100x-proof",
+      "title": "Ten release workloads prove 100x+ CUDA wins against CPU-SOTA baselines",
+      "status": "closed",
+      "minimum_evidence": 6,
+      "evidence_count": 11,
+      "existing_evidence_count": 11,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "c-parser-linux-subsystem",
+      "title": "Distributed C parser parses a full selected Linux subsystem corpus",
+      "status": "closed",
+      "minimum_evidence": 6,
+      "evidence_count": 6,
+      "existing_evidence_count": 6,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "distributed-parser-coherence",
+      "title": "vyre-frontend-c, vyrec, Weir, and Surge/SurgeC parser responsibilities are coherent",
+      "status": "closed",
+      "minimum_evidence": 10,
+      "evidence_count": 11,
+      "existing_evidence_count": 11,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "conformance-hard-gate",
+      "title": "Conformance is wired as a hard release-blocking gate for every claimed op/backend",
+      "status": "closed",
+      "minimum_evidence": 11,
+      "evidence_count": 11,
+      "existing_evidence_count": 11,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "modular-test-architecture",
+      "title": "Oversized tests are modularized into fixtures, contracts, properties, backends, corpus, bench, and regression layers",
+      "status": "closed",
+      "minimum_evidence": 6,
+      "evidence_count": 6,
+      "existing_evidence_count": 6,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "exhaustive-verification",
+      "title": "Normal, adversarial, property, conformance, corpus, benchmark, gap, and fuzz verification are present",
+      "status": "closed",
+      "minimum_evidence": 10,
+      "evidence_count": 10,
+      "existing_evidence_count": 10,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "docs-evidence-linked",
+      "title": "User, contributor, benchmark, conformance, parser, optimization, and release docs are tied to evidence",
+      "status": "closed",
+      "minimum_evidence": 8,
+      "evidence_count": 9,
+      "existing_evidence_count": 9,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "crate-metadata",
+      "title": "Every release crate has coherent metadata, features, docs, readme, license, and version policy",
+      "status": "closed",
+      "minimum_evidence": 9,
+      "evidence_count": 9,
+      "existing_evidence_count": 9,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "release-hygiene",
+      "title": "No shipped stubs, hidden fallbacks, unbounded resources, hot-path sleeps, unactionable errors, or stale docs",
+      "status": "closed",
+      "minimum_evidence": 16,
+      "evidence_count": 16,
+      "existing_evidence_count": 16,
+      "missing_evidence": [],
+      "semantic_blockers": [],
+      "complete": true
+    },
+    {
+      "id": "final-completion-audit",
+      "title": "Prompt-to-artifact completion audit proves every objective requirement is satisfied",
+      "status": "closed",
+      "minimum_evidence": 10,
+      "evidence_count": 10,
+      "existing_evidence_count": 10,
+      "missing_evidence": [],
+      "semantic_blockers": [
+        "evidence/final/public-launch-state.json: reports 3 blocker(s)",
+        "evidence/final/public-launch-state.json: public launch is incomplete with 3 blocker(s)",
+        "evidence/final/public-launch-state.json: completion_status is not `complete`",
+        "evidence/final/public-launch-state.json: external action `cargo publish approved crates in dependency order` is not complete",
+        "evidence/final/public-launch-state.json: external action `make repositories public` is not complete",
+        "evidence/final/public-launch-state.json: external action `git push release branch and tags` is not complete"
+      ],
+      "complete": false
+    }
+  ],
+  "blockers": [
+    "final-completion-audit is status `closed` with 10/10 evidence files present and 6 semantic blocker(s)",
+    "release/evidence/final/public-launch-state.json: reports 3 blocker(s)",
+    "release/evidence/final/public-launch-state.json: public launch is incomplete with 3 blocker(s)",
+    "release/evidence/final/public-launch-state.json: completion_status is not `complete`",
+    "release/evidence/final/public-launch-state.json: external action `cargo publish approved crates in dependency order` is not complete",
+    "release/evidence/final/public-launch-state.json: external action `make repositories public` is not complete",
+    "release/evidence/final/public-launch-state.json: external action `git push release branch and tags` is not complete"
+  ]
+}
