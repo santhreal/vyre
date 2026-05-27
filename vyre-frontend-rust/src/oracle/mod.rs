@@ -1,4 +1,8 @@
 //! Differential testing oracle framework.
+//!
+//! The oracle compares the reusable Rust lexer substrate against
+//! `rustc_lexer` so frontend changes can be checked against the upstream token
+//! contract before parser or lowering work depends on them.
 
 use rustc_lexer::TokenKind;
 use vyre_libs::parsing::rust::lex::lexer::core::lex;
@@ -68,7 +72,7 @@ pub fn lexer_parity(source: &[u8]) -> OracleResult {
 fn map_rustc_kind(kind: TokenKind) -> u16 {
     use rustc_lexer::TokenKind::*;
     match kind {
-        LineComment { .. } | BlockComment { .. } | Whitespace => tok::EOF,
+        LineComment | BlockComment { .. } | Whitespace => tok::EOF,
         Ident | RawIdent => tok::IDENT,
         Literal { kind: rustc_lexer::LiteralKind::Int { .. }, .. } => tok::LITERAL_INT,
         Literal { .. } | Lifetime { .. } => tok::UNSUPPORTED,

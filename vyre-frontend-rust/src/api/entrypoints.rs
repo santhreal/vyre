@@ -1,24 +1,14 @@
-//! Public API entry points.
+//! Public entry points for the Rust frontend.
 
 use vyre_libs::parsing::rust::lex::lexer::core::lex;
 use vyre_libs::parsing::rust::parse::Module;
 
-use crate::{RustFrontendError, Token};
-
-/// Result of parsing a Rust source file.
-#[derive(Debug, Clone)]
-pub struct ParseSummary {
-    /// The parsed module AST.
-    pub module: Module,
-    /// Number of tokens.
-    pub token_count: usize,
-    /// Whether GPU fast-path was used for lexing.
-    pub gpu_lex: bool,
-}
+use crate::api::parse_summary::ParseSummary;
+use crate::RustFrontendError;
 
 /// Parse Rust source bytes into a `ParseSummary`.
 ///
-/// 1. Lexes the source (GPU if available, CPU reference otherwise).
+/// 1. Lexes the source through the reusable Rust lexer substrate.
 /// 2. Parses the token stream into the nano-subset AST.
 pub fn parse_rust_bytes(source: &[u8]) -> Result<ParseSummary, RustFrontendError> {
     let tokens = lex(source).map_err(RustFrontendError::Lex)?;
@@ -30,7 +20,7 @@ pub fn parse_rust_bytes(source: &[u8]) -> Result<ParseSummary, RustFrontendError
     })
 }
 
-fn parse_tokens(source: &[u8], tokens: &[Token]) -> Result<Module, RustFrontendError> {
+fn parse_tokens(source: &[u8], tokens: &[crate::Token]) -> Result<Module, RustFrontendError> {
     vyre_libs::parsing::rust::parse::parse(source, tokens)
         .map_err(|e| RustFrontendError::Parse {
             message: e.message,
