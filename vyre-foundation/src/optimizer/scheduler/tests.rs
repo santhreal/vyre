@@ -521,6 +521,104 @@ fn repeated_store_program(count: usize) -> Program {
     )
 }
 
+struct SchedulerGateContract {
+    build_breaking_pass: fn(PassMetadata) -> ProgramPassKind,
+    build_preserving_pass: fn(PassMetadata) -> ProgramPassKind,
+    program: fn() -> Program,
+    enable: fn(PassScheduler) -> PassScheduler,
+    is_enabled: fn(&PassScheduler) -> bool,
+    check_violations: fn(&Program) -> usize,
+    reverted_decision: PassRunDecision,
+    violation_counts: fn(&PassRunMetric) -> (usize, usize),
+}
+
+fn assert_gate_disabled_by_default_keeps_breaking_rewrite(
+    gate: &SchedulerGateContract,
+    pass_id: &'static str,
+    default_message: &str,
+    run_message: &str,
+    violation_message: &str,
+) {
+    let scheduler = PassScheduler::with_passes(vec![(gate.build_breaking_pass)(
+        PassMetadata::new(pass_id, &[], &[]),
+    )]);
+    assert!(!(gate.is_enabled)(&scheduler), "{default_message}");
+
+    let post = scheduler.run((gate.program)()).expect(run_message);
+    assert!((gate.check_violations)(&post) > 0, "{violation_message}");
+}
+
+fn assert_gate_reverts_new_violations(
+    gate: &SchedulerGateContract,
+    pass_id: &'static str,
+    run_message: &str,
+    revert_message: &str,
+) {
+    let scheduler = (gate.enable)(PassScheduler::with_passes(vec![
+        (gate.build_breaking_pass)(PassMetadata::new(pass_id, &[], &[])),
+    ]));
+
+    let post = scheduler.run((gate.program)()).expect(run_message);
+    assert_eq!((gate.check_violations)(&post), 0, "{revert_message}");
+}
+
+fn assert_gate_revert_metrics_reflect_post_revert_state(
+    gate: &SchedulerGateContract,
+    pass_id: &'static str,
+    run_message: &str,
+    ran_message: &str,
+    changed_message: &str,
+) {
+    let scheduler = (gate.enable)(PassScheduler::with_passes(vec![
+        (gate.build_breaking_pass)(PassMetadata::new(pass_id, &[], &[])),
+    ]));
+
+    let report = scheduler
+        .run_with_metrics((gate.program)())
+        .expect(run_message);
+    assert_eq!(report.passes.len(), 1);
+    let metric = &report.passes[0];
+
+    assert!(metric.ran, "{ran_message}");
+    assert!(!metric.changed, "{changed_message}");
+    assert_eq!(metric.decision, gate.reverted_decision);
+    let (violations_before, violations_after) = (gate.violation_counts)(metric);
+    assert_eq!(violations_before, 0);
+    assert_eq!(violations_after, 0);
+    assert_eq!(metric.refusal_kind, None);
+}
+
+fn assert_gate_allows_preserving_rewrites(
+    gate: &SchedulerGateContract,
+    pass_id: &'static str,
+    run_message: &str,
+    changed_message: &str,
+) {
+    let scheduler = (gate.enable)(PassScheduler::with_passes(vec![(gate
+        .build_preserving_pass)(
+        PassMetadata::new(pass_id, &[], &[]),
+    )]));
+
+    let report = scheduler
+        .run_with_metrics((gate.program)())
+        .expect(run_message);
+    let metric = first_ran_metric(&report);
+
+    assert!(metric.changed, "{changed_message}");
+    assert_eq!(metric.decision, PassRunDecision::Changed);
+    let (violations_before, violations_after) = (gate.violation_counts)(metric);
+    assert_eq!(violations_before, 0);
+    assert_eq!(violations_after, 0);
+}
+
+fn first_ran_metric(report: &OptimizerRunReport) -> &PassRunMetric {
+    report
+        .passes
+        .iter()
+        .find(|metric| metric.ran)
+        .expect("Fix: preserving rewrite should produce one ran metric row")
+}
+
 mod basic_execution;
 mod batching;
 mod cost_monotone;
