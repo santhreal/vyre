@@ -156,9 +156,9 @@ pub(crate) fn decode_f32_input_aligned(
     Ok(vyre_primitives::wire::decode_f32_le_bytes_all(bytes))
 }
 
-/// Decode a u32 byte buffer for tests that intentionally validate through the
-/// same lenient scalar oracle used before centralization.
-#[cfg(test)]
+/// Decode a u32 byte buffer for tests and explicit CPU-parity dispatchers that
+/// intentionally validate through the same lenient scalar oracle used before centralization.
+#[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub(crate) fn read_u32s(bytes: &[u8]) -> Vec<u32> {
     vyre_primitives::wire::decode_u32_le_bytes_all(bytes)

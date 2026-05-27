@@ -250,6 +250,7 @@ fn multi_binding_mixed() -> EmitAdversarialCase {
 }
 
 fn shared_global_tile() -> EmitAdversarialCase {
+    let shared_slot = crate::lower::WORKGROUP_SLOT_BASE;
     EmitAdversarialCase {
         id: "adv_shared_global_tile",
         family: EmitAdversarialFamily::SharedGlobalTile,
@@ -271,11 +272,11 @@ fn shared_global_tile() -> EmitAdversarialCase {
                         "global_out",
                         DataType::U32,
                         MemoryClass::Global,
-                        BindingVisibility::WriteOnly,
+                        BindingVisibility::ReadWrite,
                         Some(256),
                     ),
                     slot(
-                        2,
+                        shared_slot,
                         "tile",
                         DataType::U32,
                         MemoryClass::Shared,
@@ -289,7 +290,7 @@ fn shared_global_tile() -> EmitAdversarialCase {
                 ops: vec![
                     local_x(0),
                     op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                    op(KernelOpKind::StoreShared, vec![2, 0, 1], None),
+                    op(KernelOpKind::StoreShared, vec![shared_slot, 0, 1], None),
                     op(
                         KernelOpKind::Barrier {
                             ordering: MemoryOrdering::SeqCst,
@@ -297,7 +298,7 @@ fn shared_global_tile() -> EmitAdversarialCase {
                         vec![],
                         None,
                     ),
-                    op(KernelOpKind::LoadShared, vec![2, 0], Some(2)),
+                    op(KernelOpKind::LoadShared, vec![shared_slot, 0], Some(2)),
                     op(
                         KernelOpKind::BinOpKind(BinOp::Add),
                         vec![2, 1],
@@ -322,11 +323,12 @@ fn loop_with_barrier() -> EmitAdversarialCase {
                 vec![],
                 None,
             ),
-            lit(0, 10),
-            op(KernelOpKind::StoreGlobal, vec![0, 10, 10], None),
+            local_x(10),
+            lit(0, 11),
+            op(KernelOpKind::StoreGlobal, vec![0, 10, 11], None),
         ],
         child_bodies: vec![],
-        literals: vec![LiteralValue::U32(0)],
+        literals: vec![LiteralValue::U32(7)],
     };
     EmitAdversarialCase {
         id: "adv_loop_barrier",
@@ -475,7 +477,7 @@ fn vec_load_fusion() -> EmitAdversarialCase {
                         "output",
                         DataType::U32,
                         MemoryClass::Global,
-                        BindingVisibility::WriteOnly,
+                        BindingVisibility::ReadWrite,
                         Some(16),
                     ),
                 ],
