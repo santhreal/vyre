@@ -1880,6 +1880,7 @@ pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::hot_set(&self, n: u
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::new() -> Self
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::record(&mut self, key: u64)
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::stats(&self, key: u64) -> core::option::Option<vyre_driver_wgpu::runtime::cache::tiered_cache::AccessStats>
+pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::try_new() -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 impl core::default::Default for vyre_driver_wgpu::runtime::cache::lru::AccessTracker
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::default() -> Self
 impl core::marker::Freeze for vyre_driver_wgpu::runtime::cache::lru::AccessTracker
@@ -1927,6 +1928,7 @@ pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::iter_hottest(&
 pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::new() -> Self
 pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::remove(&mut self, key: &K)
 pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::touch(&mut self, key: K)
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::try_new() -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::try_with_capacity(capacity: usize) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::try_with_reserved_capacity(capacity: usize) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::with_capacity(capacity: usize) -> Self
@@ -2136,6 +2138,7 @@ pub vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier::name: alloc::stri
 pub vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier::used: u64
 impl vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier::new(name: impl core::convert::Into<alloc::string::String>, capacity: u64) -> Self
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier::try_new(name: impl core::convert::Into<alloc::string::String>, capacity: u64) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 impl core::marker::Freeze for vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier
 impl core::marker::Send for vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier
 impl core::marker::Sync for vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier
@@ -2175,8 +2178,17 @@ pub vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::promote_threshold
 impl vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 pub const vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::DEFAULT_THRESHOLD: u32
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::new(promote_threshold: u32) -> Self
+impl core::clone::Clone for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::clone(&self) -> vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl core::cmp::Eq for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl core::cmp::PartialEq for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::eq(&self, other: &vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy) -> bool
 impl core::default::Default for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::default() -> Self
+impl core::fmt::Debug for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl core::marker::StructuralPartialEq for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::marker::Freeze for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::marker::Send for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::marker::Sync for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
@@ -2184,6 +2196,12 @@ impl core::marker::Unpin for vyre_driver_wgpu::runtime::cache::tiered_cache::Lru
 impl core::marker::UnsafeUnpin for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::panic::unwind_safe::UnwindSafe for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::equivalent(&self, key: &K) -> bool
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::equivalent(&self, key: &K) -> bool
 impl<T, U> core::convert::Into<U> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where U: core::convert::From<T>
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where U: core::convert::Into<T>
@@ -2192,12 +2210,18 @@ pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::try_from(value
 impl<T, U> core::convert::TryInto<U> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where U: core::convert::TryFrom<T>
 pub type vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: core::clone::Clone
+pub type vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::Owned = T
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::clone_into(&self, target: &mut T)
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::to_owned(&self) -> T
 impl<T> core::any::Any for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: 'static + ?core::marker::Sized
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::type_id(&self) -> core::any::TypeId
 impl<T> core::borrow::Borrow<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: ?core::marker::Sized
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: ?core::marker::Sized
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: core::clone::Clone
+pub unsafe fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::from(t: T) -> T
 impl<T> khronos_egl::Downcast<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
@@ -2219,9 +2243,11 @@ pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::get(&self, k
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::insert(&mut self, key: u64, size: u64) -> core::result::Result<(), vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError>
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::promote(&mut self, key: u64) -> core::result::Result<(), vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError>
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::record_access(&mut self, key: u64)
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::try_with_policy(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>, policy: vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::with_policy(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>, policy: vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy) -> Self
 impl vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::new(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>) -> Self
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::try_new(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 impl core::marker::Freeze for vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache
 impl core::marker::Send for vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache
 impl core::marker::Sync for vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache
@@ -2364,6 +2390,7 @@ pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::hot_set(&self, n: u
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::new() -> Self
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::record(&mut self, key: u64)
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::stats(&self, key: u64) -> core::option::Option<vyre_driver_wgpu::runtime::cache::tiered_cache::AccessStats>
+pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::try_new() -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 impl core::default::Default for vyre_driver_wgpu::runtime::cache::lru::AccessTracker
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::default() -> Self
 impl core::marker::Freeze for vyre_driver_wgpu::runtime::cache::lru::AccessTracker
@@ -2465,6 +2492,7 @@ pub vyre_driver_wgpu::runtime::cache::CacheTier::name: alloc::string::String
 pub vyre_driver_wgpu::runtime::cache::CacheTier::used: u64
 impl vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier::new(name: impl core::convert::Into<alloc::string::String>, capacity: u64) -> Self
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier::try_new(name: impl core::convert::Into<alloc::string::String>, capacity: u64) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 impl core::marker::Freeze for vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier
 impl core::marker::Send for vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier
 impl core::marker::Sync for vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier
@@ -2504,8 +2532,17 @@ pub vyre_driver_wgpu::runtime::cache::LruPolicy::promote_threshold: u32
 impl vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 pub const vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::DEFAULT_THRESHOLD: u32
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::new(promote_threshold: u32) -> Self
+impl core::clone::Clone for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::clone(&self) -> vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl core::cmp::Eq for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl core::cmp::PartialEq for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::eq(&self, other: &vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy) -> bool
 impl core::default::Default for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::default() -> Self
+impl core::fmt::Debug for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl core::marker::StructuralPartialEq for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::marker::Freeze for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::marker::Send for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::marker::Sync for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
@@ -2513,6 +2550,12 @@ impl core::marker::Unpin for vyre_driver_wgpu::runtime::cache::tiered_cache::Lru
 impl core::marker::UnsafeUnpin for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::panic::unwind_safe::UnwindSafe for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::equivalent(&self, key: &K) -> bool
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::equivalent(&self, key: &K) -> bool
 impl<T, U> core::convert::Into<U> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where U: core::convert::From<T>
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where U: core::convert::Into<T>
@@ -2521,12 +2564,18 @@ pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::try_from(value
 impl<T, U> core::convert::TryInto<U> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where U: core::convert::TryFrom<T>
 pub type vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: core::clone::Clone
+pub type vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::Owned = T
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::clone_into(&self, target: &mut T)
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::to_owned(&self) -> T
 impl<T> core::any::Any for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: 'static + ?core::marker::Sized
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::type_id(&self) -> core::any::TypeId
 impl<T> core::borrow::Borrow<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: ?core::marker::Sized
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: ?core::marker::Sized
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: core::clone::Clone
+pub unsafe fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::from(t: T) -> T
 impl<T> khronos_egl::Downcast<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
@@ -2548,9 +2597,11 @@ pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::get(&self, k
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::insert(&mut self, key: u64, size: u64) -> core::result::Result<(), vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError>
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::promote(&mut self, key: u64) -> core::result::Result<(), vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError>
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::record_access(&mut self, key: u64)
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::try_with_policy(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>, policy: vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::with_policy(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>, policy: vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy) -> Self
 impl vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::new(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>) -> Self
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::try_new(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 impl core::marker::Freeze for vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache
 impl core::marker::Send for vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache
 impl core::marker::Sync for vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache
@@ -3453,6 +3504,7 @@ pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::hot_set(&self, n: u
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::new() -> Self
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::record(&mut self, key: u64)
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::stats(&self, key: u64) -> core::option::Option<vyre_driver_wgpu::runtime::cache::tiered_cache::AccessStats>
+pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::try_new() -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
 impl core::default::Default for vyre_driver_wgpu::runtime::cache::lru::AccessTracker
 pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::default() -> Self
 impl core::marker::Freeze for vyre_driver_wgpu::runtime::cache::lru::AccessTracker
@@ -3494,8 +3546,17 @@ pub vyre_driver_wgpu::runtime::LruPolicy::promote_threshold: u32
 impl vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 pub const vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::DEFAULT_THRESHOLD: u32
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::new(promote_threshold: u32) -> Self
+impl core::clone::Clone for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::clone(&self) -> vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl core::cmp::Eq for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl core::cmp::PartialEq for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::eq(&self, other: &vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy) -> bool
 impl core::default::Default for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::default() -> Self
+impl core::fmt::Debug for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl core::marker::StructuralPartialEq for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::marker::Freeze for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::marker::Send for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::marker::Sync for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
@@ -3503,6 +3564,12 @@ impl core::marker::Unpin for vyre_driver_wgpu::runtime::cache::tiered_cache::Lru
 impl core::marker::UnsafeUnpin for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 impl core::panic::unwind_safe::UnwindSafe for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::equivalent(&self, key: &K) -> bool
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::equivalent(&self, key: &K) -> bool
 impl<T, U> core::convert::Into<U> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where U: core::convert::From<T>
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where U: core::convert::Into<T>
@@ -3511,12 +3578,18 @@ pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::try_from(value
 impl<T, U> core::convert::TryInto<U> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where U: core::convert::TryFrom<T>
 pub type vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: core::clone::Clone
+pub type vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::Owned = T
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::clone_into(&self, target: &mut T)
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::to_owned(&self) -> T
 impl<T> core::any::Any for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: 'static + ?core::marker::Sized
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::type_id(&self) -> core::any::TypeId
 impl<T> core::borrow::Borrow<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: ?core::marker::Sized
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: ?core::marker::Sized
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy where T: core::clone::Clone
+pub unsafe fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
 pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::from(t: T) -> T
 impl<T> khronos_egl::Downcast<T> for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
