@@ -10,8 +10,8 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::PathBuf;
 use vyre_lints::{
-    run_consumer_coupling, run_module_forks, run_production_cpu_fallbacks, run_raw_ir_in_libs,
-    Violation,
+    run_consumer_coupling, run_gpu_skip_guards, run_module_forks, run_production_cpu_fallbacks,
+    run_raw_ir_in_libs, Violation,
 };
 
 #[derive(Parser, Debug)]
@@ -78,6 +78,14 @@ struct Cli {
     /// Defaults to graph authority roots where fork drift has historically appeared.
     #[arg(long)]
     module_fork_root: Vec<PathBuf>,
+
+    /// Run the GPU skip guard over CUDA/WGPU/runtime validation paths.
+    #[arg(long)]
+    check_gpu_skip_guards: bool,
+
+    /// Override roots scanned by `--check-gpu-skip-guards`.
+    #[arg(long)]
+    gpu_skip_root: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug, clap::ValueEnum)]
@@ -107,6 +115,10 @@ fn main() -> Result<()> {
 
     if cli.check_module_forks {
         return run_module_forks_cli(&cli);
+    }
+
+    if cli.check_gpu_skip_guards {
+        return run_gpu_skip_guards_cli(&cli);
     }
 
     let lib_root = cli
@@ -180,6 +192,33 @@ fn run_module_forks_cli(cli: &Cli) -> Result<()> {
     }
     let root_refs: Vec<&std::path::Path> = roots.iter().map(|root| root.as_path()).collect();
     let violations = run_module_forks(&root_refs).context("running same-name module fork scanner")?;
+    match cli.format {
+        Format::Text => emit_text(&violations),
+        Format::Json => emit_json(&violations)?,
+    }
+    if violations.is_empty() {
+        Ok(())
+    } else {
+        std::process::exit(1);
+    }
+}
+
+fn run_gpu_skip_guards_cli(cli: &Cli) -> Result<()> {
+    let roots = if cli.gpu_skip_root.is_empty() {
+        default_gpu_skip_roots(&cli.workspace_root)
+    } else {
+        cli.gpu_skip_root.clone()
+    };
+    for root in &roots {
+        if !root.exists() {
+            anyhow::bail!(
+                "GPU skip guard root not found: {}. Fix: update CUDA/WGPU validation roots instead of silently shrinking scan coverage.",
+                root.display()
+            );
+        }
+    }
+    let root_refs: Vec<&std::path::Path> = roots.iter().map(|root| root.as_path()).collect();
+    let violations = run_gpu_skip_guards(&root_refs).context("running GPU skip guard")?;
     match cli.format {
         Format::Text => emit_text(&violations),
         Format::Json => emit_json(&violations)?,
@@ -296,6 +335,19 @@ fn default_module_fork_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
     .collect()
 }
 
+fn default_gpu_skip_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
+    [
+        "vyre-driver-cuda/src",
+        "vyre-driver-cuda/tests",
+        "vyre-driver-wgpu/src",
+        "vyre-driver-wgpu/tests",
+        "vyre-runtime/src",
+    ]
+    .into_iter()
+    .map(|root| workspace_root.join(root))
+    .collect()
+}
+
 fn current_iso_date() -> String {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -350,6 +402,7 @@ fn emit_json(violations: &[Violation]) -> Result<()> {
             vyre_lints::ViolationKind::ProductionCpuFallback => "production_cpu_fallback",
             vyre_lints::ViolationKind::ConsumerCoupling => "consumer_coupling",
             vyre_lints::ViolationKind::ModuleFork => "module_fork",
+            vyre_lints::ViolationKind::GpuSkipGuard => "gpu_skip_guard",
         };
         if i > 0 {
             out.push_str(",\n");

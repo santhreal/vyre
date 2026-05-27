@@ -12,11 +12,13 @@
 //! - Tier-2.5 primitive bug fixes don't propagate.
 //!
 //! This crate ships focused lints for raw IR construction, production CPU
-//! fallbacks, consumer-name coupling, and same-name module forks.
+//! fallbacks, consumer-name coupling, same-name module forks, and silent GPU
+//! validation skips.
 
 pub mod allowlist;
 pub mod consumer_coupling;
 pub mod drift;
+pub mod gpu_skip_guards;
 pub mod module_forks;
 mod paths;
 pub mod production_cpu_fallbacks;
@@ -49,6 +51,8 @@ pub enum ViolationKind {
     ConsumerCoupling,
     /// Same Rust module basename appears in multiple scanned authority roots.
     ModuleFork,
+    /// GPU/CUDA validation path silently skipped instead of failing loudly.
+    GpuSkipGuard,
 }
 
 /// Run the `raw_ir_in_libs` lint over a directory tree.
@@ -104,4 +108,14 @@ pub fn run_consumer_coupling(roots: &[&Path]) -> Result<Vec<Violation>> {
 /// Run the same-name module fork scanner over selected authority roots.
 pub fn run_module_forks(roots: &[&Path]) -> Result<Vec<Violation>> {
     module_forks::scan_roots(roots)
+}
+
+/// Run the GPU skip guard over CUDA/WGPU/runtime source and test roots.
+pub fn run_gpu_skip_guards(roots: &[&Path]) -> Result<Vec<Violation>> {
+    let mut all = Vec::new();
+    for root in roots {
+        all.extend(gpu_skip_guards::scan_tree(root)?);
+    }
+    all.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)));
+    Ok(all)
 }
