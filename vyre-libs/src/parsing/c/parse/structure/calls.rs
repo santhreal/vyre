@@ -178,10 +178,10 @@ pub fn c11_extract_calls(
         // target-native subgroup allocation without changing library IR.
         Node::if_then(
             Expr::var("is_direct_call"),
-            emit_atomic_record_append(
+            emit_sparse_record_write(
                 out_calls,
-                out_counts,
-                "direct_record_idx",
+                t.clone(),
+                4,
                 vec![
                     Expr::var("caller_id"),
                     t.clone(),
@@ -192,10 +192,10 @@ pub fn c11_extract_calls(
         ),
         Node::if_then(
             Expr::var("is_ptr_call"),
-            emit_atomic_record_append(
+            emit_sparse_record_write(
                 out_calls,
-                out_counts,
-                "ptr_record_idx",
+                t.clone(),
+                4,
                 vec![
                     Expr::var("caller_id"),
                     t.clone(),
@@ -222,12 +222,34 @@ pub fn c11_extract_calls(
         tok_count,
         out_counts,
         4,
-        true,
+        false,
     );
+    let mut pre_loop_nodes = vec![
+        Node::if_then(
+            Expr::eq(Expr::var("t"), Expr::u32(0)),
+            vec![Node::store(
+                out_counts,
+                Expr::u32(0),
+                Expr::mul(num_tokens.clone(), Expr::u32(4)),
+            )],
+        ),
+    ];
+    pre_loop_nodes.extend(emit_sparse_record_zero(
+        out_calls,
+        t.clone(),
+        num_tokens.clone(),
+        4,
+    ));
+    pre_loop_nodes.push(
+        Node::Barrier {
+            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
+        },
+    );
+
     threaded_structure_program(
         "vyre-libs::parsing::c11_extract_calls",
         buffers,
-        vec![],
+        pre_loop_nodes,
         Expr::lt(t, Expr::sub(num_tokens, Expr::u32(1))),
         loop_body,
     )
