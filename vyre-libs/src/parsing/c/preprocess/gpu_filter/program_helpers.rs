@@ -10,6 +10,45 @@ pub(super) use crate::scan::builders::load_packed_byte_expr as packed_byte_load;
 
 pub(super) const GPU_FILTER_WORKGROUP: [u32; 3] = [256, 1, 1];
 
+pub(super) fn packed_byte_load_or_zero(
+    buffer: &'static str,
+    addr: Expr,
+    real_len_buffer: &'static str,
+) -> Expr {
+    Expr::select(
+        Expr::lt(addr.clone(), Expr::load(real_len_buffer, Expr::u32(0))),
+        packed_byte_load(buffer, addr),
+        Expr::u32(0),
+    )
+}
+
+pub(super) fn byte_eq(byte: Expr, expected: u8) -> Expr {
+    Expr::eq(byte, Expr::u32(expected as u32))
+}
+
+pub(super) fn store_comment_mask(i: Expr, comment_mask: Expr) -> Node {
+    Node::store("comment_mask_out", i, comment_mask)
+}
+
+pub(super) fn store_final_keep_from_comment_mask(i: Expr, comment_mask: Expr) -> Node {
+    Node::store(
+        "final_keep",
+        i,
+        Expr::select(
+            Expr::ne(comment_mask, Expr::u32(1)),
+            Expr::u32(1),
+            Expr::u32(0),
+        ),
+    )
+}
+
+pub(super) fn clear_comment_mask_and_final_keep(i: Expr) -> Vec<Node> {
+    vec![
+        store_comment_mask(i.clone(), Expr::u32(0)),
+        Node::store("final_keep", i, Expr::u32(0)),
+    ]
+}
+
 pub(super) fn packed_bytes_input_buffer(name: &str, binding: u32, n: u32) -> BufferDecl {
     BufferDecl::storage(name, binding, BufferAccess::ReadOnly, DataType::U32)
         .with_count(n.div_ceil(4).max(1))
