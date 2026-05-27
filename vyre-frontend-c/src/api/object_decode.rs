@@ -53,21 +53,5 @@ use vyre_libs::parsing::c::sema::lookup::{
     DECL_KIND_NONE, DECL_KIND_TYPEDEF, DECL_KIND_VARIABLE,
 };
 
-use crate::object_format::{parse_embedded_vyrecob2, SectionTag, Vyrecob2};
-
-fn decode_embedded_object<T, F>(object_bytes: &[u8], decode: F) -> Result<T, String>
-where
-    F: for<'container> FnOnce(&Vyrecob2<'container>) -> Result<T, String>,
-{
-    let container = parse_embedded_vyrecob2(object_bytes)?;
-    decode(&container)
-}
-
-fn read_object_file<T, F>(path: &Path, decode: F) -> Result<T, String>
-where
-    F: FnOnce(&[u8]) -> Result<T, String>,
-{
-    let bytes = std::fs::read(path)
-        .map_err(|error| format!("vyre-frontend-c: read object {}: {error}", path.display()))?;
-    decode(&bytes)
-}
+use crate::api::object_io::{decode_embedded_object, read_object_file};
+use crate::object_format::{SectionTag, Vyrecob2};

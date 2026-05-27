@@ -1,7 +1,8 @@
 use std::path::Path;
 
+use super::object_io::{decode_embedded_object, read_object_file};
 use super::word_decode::decode_u32_words_for_section;
-use crate::object_format::{parse_embedded_vyrecob2, SectionTag, Vyrecob2};
+use crate::object_format::{SectionTag, Vyrecob2};
 
 /// Decoded function and call-site records from a `vyre-frontend-c` object.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,8 +41,7 @@ pub struct CObjectCallRecord {
 
 /// Decode function and call-site records from object bytes.
 pub fn decode_object_structure_index(object_bytes: &[u8]) -> Result<CObjectStructureIndex, String> {
-    let container = parse_embedded_vyrecob2(object_bytes)?;
-    decode_object_structure_index_from_container(&container)
+    decode_embedded_object(object_bytes, decode_object_structure_index_from_container)
 }
 
 pub(crate) fn decode_object_structure_index_from_container(
@@ -67,9 +67,7 @@ pub(crate) fn decode_object_structure_index_from_container(
 
 /// Read and decode function/call records from an object path.
 pub fn decode_object_structure_index_file(path: &Path) -> Result<CObjectStructureIndex, String> {
-    let bytes = std::fs::read(path)
-        .map_err(|error| format!("vyre-frontend-c: read object {}: {error}", path.display()))?;
-    decode_object_structure_index(&bytes)
+    read_object_file(path, decode_object_structure_index)
 }
 
 fn decode_function_records(section: &[u8]) -> Result<Vec<CObjectFunctionRecord>, String> {

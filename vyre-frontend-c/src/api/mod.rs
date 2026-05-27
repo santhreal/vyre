@@ -11,6 +11,7 @@ pub mod include_graph;
 pub mod lex_index;
 /// Decoders for semantic, syntax, ABI, and scope sections embedded in frontend objects.
 pub mod object_decode;
+mod object_io;
 /// clang/vyrec parity report and release-gate types.
 pub mod parity;
 /// Normalized source-location and provenance model for parity comparison.
