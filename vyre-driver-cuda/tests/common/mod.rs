@@ -237,6 +237,36 @@ pub(crate) fn bool_bytes(values: &[bool]) -> Vec<u8> {
 /// Decode CUDA output bytes into little-endian `u32` lanes.
 pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as bytes_u32;
 
+/// Dispatch a one-input u32 program whose single output is a packed bitset.
+///
+/// This is the canonical CUDA predicate-parity shape: one u32 input buffer,
+/// one zero-initialized bitset output buffer, and a grid sized directly from
+/// the logical lane count. Keeping it here prevents predicate tests from
+/// drifting on grid math or output truncation.
+pub(crate) fn cuda_u32_bitset_output(
+    backend: &CudaBackend,
+    program: &Program,
+    lanes: u32,
+    input_words: &[u32],
+    case_name: &str,
+) -> Vec<u32> {
+    let output_words = lanes.div_ceil(32).max(1);
+    let inputs = vec![
+        u32_bytes(input_words),
+        vec![0u8; output_words as usize * std::mem::size_of::<u32>()],
+    ];
+    let mut config = DispatchConfig::default();
+    let workgroup_x = 256u32;
+    let grid_x = lanes.div_ceil(workgroup_x).max(1);
+    config.grid_override = Some([grid_x, 1, 1]);
+    let outputs = backend
+        .dispatch(program, &inputs, &config)
+        .unwrap_or_else(|error| panic!("Fix: CUDA predicate case `{case_name}` failed: {error}"));
+    let mut out = bytes_u32(&outputs[0]);
+    out.truncate(output_words as usize);
+    out
+}
+
 /// Materialize a Bool expression into the stable generated-test u32 oracle word.
 pub(crate) fn bool_word(value: Expr) -> Expr {
     Expr::select(value, Expr::u32(1), Expr::u32(0))
