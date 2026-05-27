@@ -422,6 +422,7 @@ fn should_skip_path(path: &Path) -> bool {
                 | ".cursor"
                 | ".internals"
                 | "jules_tickets"
+                | "__split"
                 | "__law7_split"
         )
     })
@@ -1109,6 +1110,9 @@ mod tests {
     fn skips_generated_split_scratch_and_internal_planning_trees() {
         assert!(should_skip_path(Path::new(
             "vyre-macros/src/__law7_split/lib_part1.rs"
+        )));
+        assert!(should_skip_path(Path::new(
+            "vyre-driver-wgpu/tests/__split/generated_chunk.rs"
         )));
         assert!(should_skip_path(Path::new(
             ".internals/audits/notes/generated.rs"
