@@ -79,7 +79,7 @@ pub fn run_raw_ir_in_libs(
 ///
 /// This is intentionally separate from `raw_ir_in_libs`: CPU/reference
 /// execution is allowed in explicit oracle crates and tests, but not in
-/// production Vyre, Weir, or Vyrec dispatch paths.
+/// production dispatch paths.
 pub fn run_production_cpu_fallbacks(roots: &[&Path]) -> Result<Vec<Violation>> {
     let mut all = Vec::new();
     for root in roots {
