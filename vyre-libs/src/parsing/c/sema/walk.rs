@@ -1,5 +1,8 @@
 use super::predicates::expr_is_any;
-use super::scan::{emit_forward_matching_paren_scan, emit_reverse_unmatched_lbrace_scan};
+use super::scan::{
+    emit_forward_matching_paren_scan, emit_post_paren_boundary_scan,
+    emit_reverse_unmatched_lbrace_scan,
+};
 use crate::parsing::c::lex::tokens::*;
 use vyre::ir::{Expr, Node};
 
@@ -247,51 +250,37 @@ fn emit_parameter_scope_from_lparen(
 }
 
 fn emit_parameter_scope_boundary(tok_types: &str, node_idx: Expr, num_tokens: &Expr) -> Vec<Node> {
-    vec![
-        Node::let_bind("fn_param_scope_open", Expr::u32(u32::MAX)),
-        Node::let_bind("fn_param_boundary_active", Expr::u32(1)),
-        Node::loop_for(
-            "fn_param_boundary_scan",
-            Expr::add(Expr::var("fn_param_rparen"), Expr::u32(1)),
-            num_tokens.clone(),
-            vec![
-                Node::let_bind(
-                    "fn_param_boundary_tok",
-                    Expr::load(tok_types, Expr::var("fn_param_boundary_scan")),
+    let mut nodes = vec![Node::let_bind("fn_param_scope_open", Expr::u32(u32::MAX))];
+    nodes.extend(emit_post_paren_boundary_scan(
+        tok_types,
+        "fn_param_boundary_scan",
+        "fn_param_boundary_tok",
+        "fn_param_boundary_active",
+        Expr::var("fn_param_rparen"),
+        num_tokens.clone(),
+        "fn_param_boundary_found_tok",
+        "fn_param_boundary_found_idx",
+    ));
+    nodes.extend([
+        Node::if_then(
+            Expr::ne(
+                Expr::var("fn_param_boundary_found_tok"),
+                Expr::u32(u32::MAX),
+            ),
+            vec![Node::if_then_else(
+                Expr::eq(
+                    Expr::var("fn_param_boundary_found_tok"),
+                    Expr::u32(TOK_LBRACE),
                 ),
-                Node::if_then(
-                    Expr::and(
-                        Expr::eq(Expr::var("fn_param_boundary_active"), Expr::u32(1)),
-                        Expr::or(
-                            Expr::eq(Expr::var("fn_param_boundary_tok"), Expr::u32(TOK_LBRACE)),
-                            Expr::and(
-                                Expr::eq(
-                                    Expr::var("fn_param_boundary_tok"),
-                                    Expr::u32(TOK_SEMICOLON),
-                                ),
-                                Expr::eq(
-                                    Expr::var("fn_param_boundary_scan"),
-                                    Expr::add(Expr::var("fn_param_rparen"), Expr::u32(1)),
-                                ),
-                            ),
-                        ),
-                    ),
-                    vec![
-                        Node::if_then_else(
-                            Expr::eq(Expr::var("fn_param_boundary_tok"), Expr::u32(TOK_LBRACE)),
-                            vec![Node::assign(
-                                "fn_param_scope_open",
-                                Expr::var("fn_param_boundary_scan"),
-                            )],
-                            vec![Node::assign(
-                                "fn_param_scope_open",
-                                Expr::var("fn_param_lparen"),
-                            )],
-                        ),
-                        Node::assign("fn_param_boundary_active", Expr::u32(0)),
-                    ],
-                ),
-            ],
+                vec![Node::assign(
+                    "fn_param_scope_open",
+                    Expr::var("fn_param_boundary_found_idx"),
+                )],
+                vec![Node::assign(
+                    "fn_param_scope_open",
+                    Expr::var("fn_param_lparen"),
+                )],
+            )],
         ),
         Node::if_then(
             Expr::ne(Expr::var("fn_param_scope_open"), Expr::u32(u32::MAX)),
@@ -354,5 +343,6 @@ fn emit_parameter_scope_boundary(tok_types: &str, node_idx: Expr, num_tokens: &E
                 Node::assign("scope_parent_id", Expr::var("fn_param_parent_scope_id")),
             ],
         ),
-    ]
+    ]);
+    nodes
 }

@@ -109,3 +109,55 @@ pub(super) fn emit_reverse_unmatched_lbrace_scan(
         vec![loop_node]
     }
 }
+
+pub(super) fn emit_post_paren_boundary_scan(
+    tok_types: &str,
+    scan_name: &str,
+    scan_token_name: &str,
+    active_name: &str,
+    matched_rparen: Expr,
+    scan_end: Expr,
+    out_token_name: &str,
+    out_index_name: &str,
+) -> Vec<Node> {
+    let scan_start = Expr::add(matched_rparen.clone(), Expr::u32(1));
+    vec![
+        Node::let_bind(out_token_name, Expr::u32(u32::MAX)),
+        Node::let_bind(out_index_name, Expr::u32(u32::MAX)),
+        Node::let_bind(active_name, Expr::u32(1)),
+        Node::if_then(
+            Expr::lt(scan_start.clone(), scan_end.clone()),
+            vec![Node::loop_for(
+                scan_name,
+                scan_start,
+                scan_end,
+                vec![
+                    Node::let_bind(scan_token_name, Expr::load(tok_types, Expr::var(scan_name))),
+                    Node::if_then(
+                        Expr::and(
+                            Expr::eq(Expr::var(active_name), Expr::u32(1)),
+                            Expr::or(
+                                Expr::eq(Expr::var(scan_token_name), Expr::u32(TOK_LBRACE)),
+                                Expr::and(
+                                    Expr::eq(
+                                        Expr::var(scan_token_name),
+                                        Expr::u32(TOK_SEMICOLON),
+                                    ),
+                                    Expr::eq(
+                                        Expr::var(scan_name),
+                                        Expr::add(matched_rparen.clone(), Expr::u32(1)),
+                                    ),
+                                ),
+                            ),
+                        ),
+                        vec![
+                            Node::assign(out_token_name, Expr::var(scan_token_name)),
+                            Node::assign(out_index_name, Expr::var(scan_name)),
+                            Node::assign(active_name, Expr::u32(0)),
+                        ],
+                    ),
+                ],
+            )],
+        ),
+    ]
+}
