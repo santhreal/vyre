@@ -93,25 +93,33 @@ impl BodyCtx<'_> {
         let mut scan_idx = start_idx + 1;
         while scan_idx < body.ops.len() && chain.len() < PTX_VECTOR_WIDTH_V4 {
             let mut next_idx = scan_idx;
-            let next = &body.ops[next_idx];
-            if matches!(next.kind, KernelOpKind::BinOpKind(BinOp::Add)) {
-                let Some(result_id) = next.result else {
-                    break;
-                };
-                if !facts.is_index_plus_one(body, result_id, prev_idx_id) {
+            let mut skipped_pure_ops: SmallVec<[usize; 4]> = SmallVec::new();
+            while next_idx < body.ops.len() {
+                let next = &body.ops[next_idx];
+                if matches!(next.kind, KernelOpKind::StoreGlobal) {
                     break;
                 }
+                if is_scheduling_fence(next) || !is_schedulable_pure_op(next) {
+                    break;
+                }
+                skipped_pure_ops.push(next_idx);
                 next_idx += 1;
-                if next_idx >= body.ops.len() {
-                    break;
-                }
             }
 
+            if next_idx >= body.ops.len() {
+                break;
+            }
             let next = &body.ops[next_idx];
             if !matches!(next.kind, KernelOpKind::StoreGlobal) {
                 break;
             }
-            let (next_slot, next_index_id, _) = read_store_operands(next)?;
+            let (next_slot, next_index_id, next_value_id) = read_store_operands(next)?;
+            if skipped_pure_ops
+                .iter()
+                .any(|op_idx| body.ops[*op_idx].result == Some(next_value_id))
+            {
+                break;
+            }
             if next_slot != slot || !facts.is_index_plus_one(body, next_index_id, prev_idx_id) {
                 break;
             }
