@@ -8,11 +8,13 @@ fn proc_macro_ui_contracts() {
     cases.compile_fail("tests/ui/bad_ast_duplicate_enum.rs");
     cases.compile_fail("tests/ui/bad_ast_duplicate_variant.rs");
     cases.compile_fail("tests/ui/bad_define_op_input_type.rs");
+    cases.compile_fail("tests/ui/bad_define_op_duplicate_argument.rs");
     cases.compile_fail("tests/ui/bad_define_op_unknown_argument.rs");
     cases.compile_fail("tests/ui/bad_pass_analyze_mode.rs");
     cases.compile_fail("tests/ui/bad_pass_boundary_class.rs");
     cases.compile_fail("tests/ui/bad_pass_cost_model_family.rs");
     cases.compile_fail("tests/ui/bad_pass_duplicate_invalidates.rs");
+    cases.compile_fail("tests/ui/bad_pass_duplicate_argument.rs");
     cases.compile_fail("tests/ui/bad_pass_duplicate_requires.rs");
     cases.compile_fail("tests/ui/bad_pass_duplicate_requires_caps.rs");
     cases.compile_fail("tests/ui/bad_pass_missing_name.rs");

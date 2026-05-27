@@ -1,6 +1,6 @@
+use crate::parse_helpers;
 use proc_macro::TokenStream;
 use quote::quote;
-use crate::parse_helpers;
 use syn::parse::{Parse, ParseStream};
 use syn::{parse_macro_input, Fields, ItemStruct, LitBool, LitStr, Token};
 
@@ -27,11 +27,13 @@ impl Parse for PassArgs {
         let mut preserves_abi = None;
         let mut cost_model_family = None;
         let mut analyze_always = false;
+        let mut seen_keys = std::collections::BTreeSet::new();
 
         while !input.is_empty() {
             let key: syn::Ident = input.parse()?;
+            let key_name = parse_helpers::reject_duplicate_key(&mut seen_keys, &key)?;
             input.parse::<Token![=]>()?;
-            match key.to_string().as_str() {
+            match key_name.as_str() {
                 "name" => name = Some(input.parse()?),
                 "requires" => {
                     requires = parse_helpers::parse_litstr_array(
@@ -125,7 +127,9 @@ pub(crate) fn pass_phase_tokens(value: Option<&LitStr>) -> syn::Result<proc_macr
     Ok(quote! { ::vyre::optimizer::PassPhase::#variant })
 }
 
-pub(crate) fn boundary_class_tokens(value: Option<&LitStr>) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn boundary_class_tokens(
+    value: Option<&LitStr>,
+) -> syn::Result<proc_macro2::TokenStream> {
     let variant = match value.map(LitStr::value).as_deref() {
         None | Some("unknown") => quote! { Unknown },
         Some("abi_preserving") => quote! { AbiPreserving },
@@ -149,7 +153,9 @@ pub(crate) fn boundary_class_tokens(value: Option<&LitStr>) -> syn::Result<proc_
     Ok(quote! { ::vyre::optimizer::PassBoundaryClass::#variant })
 }
 
-pub(crate) fn cost_model_family_tokens(value: Option<&LitStr>) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn cost_model_family_tokens(
+    value: Option<&LitStr>,
+) -> syn::Result<proc_macro2::TokenStream> {
     let variant = match value.map(LitStr::value).as_deref() {
         None | Some("unknown") => quote! { Unknown },
         Some("scalar") => quote! { Scalar },
@@ -332,4 +338,3 @@ pub(crate) fn vyre_pass_impl(args: TokenStream, item: TokenStream) -> TokenStrea
     }
     .into()
 }
-
