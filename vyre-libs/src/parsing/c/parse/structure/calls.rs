@@ -224,26 +224,12 @@ pub fn c11_extract_calls(
         4,
         false,
     );
-    let mut pre_loop_nodes = vec![
-        Node::if_then(
-            Expr::eq(Expr::var("t"), Expr::u32(0)),
-            vec![Node::store(
-                out_counts,
-                Expr::u32(0),
-                Expr::mul(num_tokens.clone(), Expr::u32(4)),
-            )],
-        ),
-    ];
-    pre_loop_nodes.extend(emit_sparse_record_zero(
+    let pre_loop_nodes = emit_sparse_record_output_init(
         out_calls,
+        out_counts,
         t.clone(),
         num_tokens.clone(),
         4,
-    ));
-    pre_loop_nodes.push(
-        Node::Barrier {
-            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-        },
     );
 
     threaded_structure_program(
