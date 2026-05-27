@@ -4,14 +4,12 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::graph::persistent_bfs::{cpu_ref, persistent_bfs};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
 fn run(
-    backend: &CudaBackend,
     node_count: u32,
     edge_count: u32,
     edge_offsets: &[u32],
@@ -45,9 +43,13 @@ fn run(
     ];
     let mut config = DispatchConfig::default();
     config.grid_override = Some([1, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("persistent BFS primitive", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA persistent BFS primitive dispatch failed: {error}")
+            })
+    });
     let mut frontier_out = bytes_u32(&outputs[0]);
     frontier_out.truncate(words as usize);
     let changed = bytes_u32(&outputs[1])[0];
@@ -56,7 +58,6 @@ fn run(
 
 #[test]
 fn cuda_persistent_bfs_chain_converges_changed_set() {
-    let backend = live_dispatcher();
     let n = 4u32;
     let edge_offsets = vec![0u32, 1, 2, 3, 3];
     let edge_targets = vec![1u32, 2, 3];
@@ -72,7 +73,6 @@ fn cuda_persistent_bfs_chain_converges_changed_set() {
         8,
     );
     let gpu = run(
-        &backend,
         n,
         3,
         &edge_offsets,
@@ -89,7 +89,6 @@ fn cuda_persistent_bfs_chain_converges_changed_set() {
 
 #[test]
 fn cuda_persistent_bfs_diamond_converges() {
-    let backend = live_dispatcher();
     let n = 4u32;
     let edge_offsets = vec![0u32, 2, 3, 4, 4];
     let edge_targets = vec![1u32, 2, 3, 3];
@@ -105,7 +104,6 @@ fn cuda_persistent_bfs_diamond_converges() {
         8,
     );
     let gpu = run(
-        &backend,
         n,
         4,
         &edge_offsets,
@@ -121,7 +119,6 @@ fn cuda_persistent_bfs_diamond_converges() {
 
 #[test]
 fn cuda_persistent_bfs_isolated_seed_unchanged() {
-    let backend = live_dispatcher();
     let n = 3u32;
     let edge_offsets = vec![0u32, 0, 0, 0];
     let edge_targets: Vec<u32> = Vec::new();
@@ -139,7 +136,6 @@ fn cuda_persistent_bfs_isolated_seed_unchanged() {
         8,
     );
     let gpu = run(
-        &backend,
         n,
         0,
         &edge_offsets,
