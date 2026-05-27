@@ -49,11 +49,13 @@ impl Parse for DefineOpArgs {
         let mut outputs: Vec<LitStr> = Vec::new();
         let mut laws: Vec<Expr> = Vec::new();
         let mut program: Option<Expr> = None;
+        let mut seen_keys = std::collections::BTreeSet::new();
 
         while !input.is_empty() {
             let key: syn::Ident = input.parse()?;
+            let key_name = crate::parse_helpers::reject_duplicate_key(&mut seen_keys, &key)?;
             input.parse::<Token![=]>()?;
-            match key.to_string().as_str() {
+            match key_name.as_str() {
                 "id" => id = Some(input.parse()?),
                 "dialect" => dialect = Some(input.parse()?),
                 "category" => category = Some(input.parse()?),
@@ -197,6 +199,25 @@ mod tests {
     }
 
     #[test]
+    fn define_op_args_reject_duplicate_top_level_argument() {
+        let err = syn::parse2::<DefineOpArgs>(quote! {
+            id = "x",
+            id = "y",
+            dialect = "d",
+            category = A,
+            inputs = [],
+            outputs = [],
+            laws = [],
+            program = || ::vyre::ir::Program::empty(),
+        })
+        .err()
+        .expect("Fix: define_op! must reject duplicate top-level arguments");
+
+        assert!(err.to_string().contains("duplicate macro argument `id`"));
+        assert!(err.to_string().contains("Fix:"));
+    }
+
+    #[test]
     fn define_op_args_reject_non_string_signature_entries() {
         let err = syn::parse2::<DefineOpArgs>(quote! {
             id = "x",
@@ -256,11 +277,9 @@ mod tests {
         })
         .err()
         .expect("Fix: define_op! must require a dialect.");
-        assert!(
-            missing_dialect
-                .to_string()
-                .contains("missing `dialect = \"...\"`")
-        );
+        assert!(missing_dialect
+            .to_string()
+            .contains("missing `dialect = \"...\"`"));
         assert!(missing_dialect.to_string().contains("Fix:"));
 
         let missing_category = syn::parse2::<DefineOpArgs>(quote! {
@@ -273,11 +292,9 @@ mod tests {
         })
         .err()
         .expect("Fix: define_op! must require a category.");
-        assert!(
-            missing_category
-                .to_string()
-                .contains("missing `category = A|B|C`")
-        );
+        assert!(missing_category
+            .to_string()
+            .contains("missing `category = A|B|C`"));
         assert!(missing_category.to_string().contains("Fix:"));
     }
 }

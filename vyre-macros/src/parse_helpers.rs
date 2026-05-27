@@ -1,7 +1,7 @@
 //! Shared parsers for proc-macro argument surfaces.
 
 use syn::parse::ParseStream;
-use syn::{Expr, ExprArray, LitStr};
+use syn::{Expr, ExprArray, Ident, LitStr};
 
 /// Parse a bracketed array whose entries must all be string literals.
 pub(crate) fn parse_litstr_array(
@@ -22,3 +22,20 @@ pub(crate) fn parse_litstr_array(
         .collect()
 }
 
+/// Reject repeated top-level macro arguments before a later value can silently
+/// override an earlier value.
+pub(crate) fn reject_duplicate_key(
+    seen: &mut std::collections::BTreeSet<String>,
+    key: &Ident,
+) -> syn::Result<String> {
+    let key_name = key.to_string();
+    if !seen.insert(key_name.clone()) {
+        return Err(syn::Error::new(
+            key.span(),
+            format!(
+                "duplicate macro argument `{key_name}`. Fix: keep exactly one `{key_name}` entry."
+            ),
+        ));
+    }
+    Ok(key_name)
+}
