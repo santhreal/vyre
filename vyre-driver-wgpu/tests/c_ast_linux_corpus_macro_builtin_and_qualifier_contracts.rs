@@ -17,8 +17,9 @@
 mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, assert_pg_preserves_row, build_fixture, kind_at, row_indices,
-    run_gpu_pg_lower_with_count as run_gpu_pg_lower, Fixture, FixtureToken, VAST_STRIDE_U32,
+    assert_full_pipeline_parity, assert_pg_preserves_row, build_fixture, kind_at, lexeme_indices,
+    node_count_from_vast, row_indices, run_gpu_pg_lower_with_count as run_gpu_pg_lower,
+    token_indices_containing, Fixture, FixtureToken,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
@@ -30,40 +31,6 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_POINTER_DECL, C_AST_KIND_RETURN_STMT,
 };
 use vyre_primitives::predicate::node_kind;
-
-fn node_count_from_vast(vast: &[u8]) -> u32 {
-    (vast.len() / (VAST_STRIDE_U32 * 4)) as u32
-}
-
-fn lexeme_indices(fix: &Fixture, lexeme: &str) -> Vec<usize> {
-    fix.tok_starts
-        .iter()
-        .zip(&fix.tok_lens)
-        .enumerate()
-        .filter_map(|(idx, (start, len))| {
-            let s = *start as usize;
-            let e = s.saturating_add(*len as usize);
-            (fix.source.as_bytes().get(s..e) == Some(lexeme.as_bytes())).then_some(idx)
-        })
-        .collect()
-}
-
-fn token_indices_containing(fix: &Fixture, needle: &str) -> Vec<usize> {
-    fix.tok_starts
-        .iter()
-        .zip(&fix.tok_lens)
-        .enumerate()
-        .filter_map(|(idx, (start, len))| {
-            let s = *start as usize;
-            let e = s.saturating_add(*len as usize);
-            let slice = fix.source.as_bytes().get(s..e)?;
-            slice
-                .windows(needle.len())
-                .any(|w| w == needle.as_bytes())
-                .then_some(idx)
-        })
-        .collect()
-}
 
 // ---------------------------------------------------------------------------
 // Fixtures
