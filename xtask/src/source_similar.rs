@@ -99,15 +99,11 @@ pub(crate) fn run(args: &[String]) {
         );
         println!(
             "      A: {} tokens={} bytes={}",
-            finding.left,
-            finding.left_tokens,
-            finding.left_bytes
+            finding.left, finding.left_tokens, finding.left_bytes
         );
         println!(
             "      B: {} tokens={} bytes={}",
-            finding.right,
-            finding.right_tokens,
-            finding.right_bytes
+            finding.right, finding.right_tokens, finding.right_bytes
         );
     }
     if config.fail_on_findings {
@@ -317,7 +313,12 @@ fn git_roots_for(roots: &[PathBuf]) -> Vec<PathBuf> {
     let mut seen = HashSet::new();
     for root in roots {
         let output = process::Command::new("git")
-            .args(["-C", &root.to_string_lossy(), "rev-parse", "--show-toplevel"])
+            .args([
+                "-C",
+                &root.to_string_lossy(),
+                "rev-parse",
+                "--show-toplevel",
+            ])
             .output();
         let Ok(output) = output else {
             continue;
@@ -336,7 +337,14 @@ fn git_roots_for(roots: &[PathBuf]) -> Vec<PathBuf> {
 
 fn tracked_rust_files(git_root: &Path) -> Result<HashSet<PathBuf>, String> {
     let output = process::Command::new("git")
-        .args(["-C", &git_root.to_string_lossy(), "ls-files", "-z", "--", "*.rs"])
+        .args([
+            "-C",
+            &git_root.to_string_lossy(),
+            "ls-files",
+            "-z",
+            "--",
+            "*.rs",
+        ])
         .output()
         .map_err(|error| {
             format!(
@@ -380,11 +388,12 @@ fn collect_rust_files_recursive(
     let meta = fs::metadata(path)
         .map_err(|error| format!("could not stat `{}`: {error}", path.display()))?;
     if meta.is_dir() {
-        for entry in
-            fs::read_dir(path).map_err(|error| format!("could not read `{}`: {error}", path.display()))?
+        for entry in fs::read_dir(path)
+            .map_err(|error| format!("could not read `{}`: {error}", path.display()))?
         {
-            let entry =
-                entry.map_err(|error| format!("could not read entry in `{}`: {error}", path.display()))?;
+            let entry = entry.map_err(|error| {
+                format!("could not read entry in `{}`: {error}", path.display())
+            })?;
             collect_rust_files_recursive(&entry.path(), max_file_bytes, files, seen)?;
         }
         return Ok(());
@@ -423,6 +432,9 @@ fn fingerprint_files(files: &[PathBuf]) -> Vec<SourceFingerprint> {
         let Ok(source) = fs::read_to_string(path) else {
             continue;
         };
+        if is_declarative_catalog_source(&source) {
+            continue;
+        }
         let tokens = normalize_tokens(&source);
         if tokens.len() < SHINGLE_WIDTH * 2 {
             continue;
@@ -441,6 +453,128 @@ fn fingerprint_files(files: &[PathBuf]) -> Vec<SourceFingerprint> {
         });
     }
     out
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DeclarationBlock {
+    ConstCatalog,
+    ModuleIndex,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct SourceShape {
+    meaningful_lines: usize,
+    declaration_lines: usize,
+    const_catalog_lines: usize,
+    module_index_lines: usize,
+    function_lines: usize,
+    control_flow_lines: usize,
+}
+
+fn is_declarative_catalog_source(source: &str) -> bool {
+    let shape = source_shape(source);
+    if shape.meaningful_lines < 6 {
+        return false;
+    }
+
+    let declaration_ratio = shape.declaration_lines * 100 / shape.meaningful_lines;
+    let const_ratio = shape.const_catalog_lines * 100 / shape.meaningful_lines;
+    let module_ratio = shape.module_index_lines * 100 / shape.meaningful_lines;
+
+    let module_index = shape.module_index_lines >= 4
+        && module_ratio >= 60
+        && declaration_ratio >= 70
+        && shape.function_lines == 0
+        && shape.control_flow_lines == 0;
+    let const_catalog = shape.const_catalog_lines >= 8
+        && const_ratio >= 35
+        && declaration_ratio >= 55
+        && shape.function_lines <= 4;
+
+    module_index || const_catalog
+}
+
+fn source_shape(source: &str) -> SourceShape {
+    let mut shape = SourceShape::default();
+    let mut block = None;
+    for raw in source.lines() {
+        let line = raw.trim();
+        if line.is_empty()
+            || line.starts_with("//")
+            || line.starts_with("#![")
+            || line.starts_with("#[")
+        {
+            continue;
+        }
+        shape.meaningful_lines += 1;
+
+        if let Some(kind) = block {
+            count_declaration_line(&mut shape, kind);
+            if line.ends_with(';') {
+                block = None;
+            }
+            continue;
+        }
+
+        if let Some(kind) = declaration_block_start(line) {
+            count_declaration_line(&mut shape, kind);
+            if !line.ends_with(';') {
+                block = Some(kind);
+            }
+            continue;
+        }
+
+        if line.contains("fn ") {
+            shape.function_lines += 1;
+        }
+        if has_control_flow_keyword(line) {
+            shape.control_flow_lines += 1;
+        }
+    }
+    shape
+}
+
+fn count_declaration_line(shape: &mut SourceShape, kind: DeclarationBlock) {
+    shape.declaration_lines += 1;
+    match kind {
+        DeclarationBlock::ConstCatalog => shape.const_catalog_lines += 1,
+        DeclarationBlock::ModuleIndex => shape.module_index_lines += 1,
+    }
+}
+
+fn declaration_block_start(line: &str) -> Option<DeclarationBlock> {
+    if line.starts_with("pub const ")
+        || line.starts_with("pub(crate) const ")
+        || line.starts_with("const ")
+        || line.starts_with("pub static ")
+        || line.starts_with("pub(crate) static ")
+        || line.starts_with("static ")
+    {
+        return Some(DeclarationBlock::ConstCatalog);
+    }
+    if line.starts_with("pub mod ")
+        || line.starts_with("pub(crate) mod ")
+        || line.starts_with("mod ")
+        || line.starts_with("pub use ")
+        || line.starts_with("pub(crate) use ")
+        || line.starts_with("use ")
+    {
+        return Some(DeclarationBlock::ModuleIndex);
+    }
+    None
+}
+
+fn has_control_flow_keyword(line: &str) -> bool {
+    line.starts_with("if ")
+        || line.starts_with("for ")
+        || line.starts_with("while ")
+        || line.starts_with("loop ")
+        || line.starts_with("match ")
+        || line.contains(" if ")
+        || line.contains(" for ")
+        || line.contains(" while ")
+        || line.contains(" loop ")
+        || line.contains(" match ")
 }
 
 fn score_pairs(
@@ -567,7 +701,9 @@ fn normalize_tokens(source: &str) -> Vec<String> {
         if b.is_ascii_alphabetic() || b == b'_' {
             let start = index;
             index += 1;
-            while index < bytes.len() && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_') {
+            while index < bytes.len()
+                && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_')
+            {
                 index += 1;
             }
             let ident = &source[start..index];
@@ -582,8 +718,7 @@ fn normalize_tokens(source: &str) -> Vec<String> {
             tokens.push("num".to_string());
             index += 1;
             while index < bytes.len()
-                && (bytes[index].is_ascii_alphanumeric()
-                    || matches!(bytes[index], b'_' | b'.'))
+                && (bytes[index].is_ascii_alphanumeric() || matches!(bytes[index], b'_' | b'.'))
             {
                 index += 1;
             }
@@ -598,8 +733,7 @@ fn normalize_tokens(source: &str) -> Vec<String> {
 fn is_rust_keyword(token: &str) -> bool {
     matches!(
         token,
-        "as"
-            | "async"
+        "as" | "async"
             | "await"
             | "break"
             | "const"
@@ -684,7 +818,11 @@ fn cosine(left: &SourceFingerprint, right: &SourceFingerprint) -> f64 {
     };
     let dot = small
         .iter()
-        .filter_map(|(key, left_count)| large.get(key).map(|right_count| (*left_count, *right_count)))
+        .filter_map(|(key, left_count)| {
+            large
+                .get(key)
+                .map(|right_count| (*left_count, *right_count))
+        })
         .map(|(left_count, right_count)| f64::from(left_count) * f64::from(right_count))
         .sum::<f64>();
     dot / (left.magnitude * right.magnitude)
@@ -713,9 +851,8 @@ mod tests {
         let left = normalize_tokens(
             "pub fn alpha(input: u32) -> u32 { let value = input + 1; value * 2 }",
         );
-        let right = normalize_tokens(
-            "pub fn beta(other: u32) -> u32 { let tmp = other + 9; tmp * 7 }",
-        );
+        let right =
+            normalize_tokens("pub fn beta(other: u32) -> u32 { let tmp = other + 9; tmp * 7 }");
         let left_counts = shingle_counts(&left, 4);
         let right_counts = shingle_counts(&right, 4);
         let left_fp = SourceFingerprint {
@@ -746,6 +883,79 @@ mod tests {
         assert!(!tokens.iter().any(|token| token == "doc"));
         assert!(tokens.iter().any(|token| token == "str"));
         assert!(tokens.iter().any(|token| token == "num"));
+    }
+
+    #[test]
+    fn declarative_catalog_sources_do_not_enter_similarity_scan() {
+        let constants = (0..32)
+            .map(|idx| format!("pub const TOK_{idx}: u32 = {idx};\n"))
+            .collect::<String>();
+        assert!(is_declarative_catalog_source(&constants));
+
+        let multiline_constants = [
+            "pub const TOKEN_SPECS: &[TokenSpec] = &[",
+            "    TokenSpec { id: 1, width: 2 },",
+            "    TokenSpec { id: 2, width: 4 },",
+            "    TokenSpec { id: 3, width: 8 },",
+            "    TokenSpec { id: 4, width: 16 },",
+            "    TokenSpec { id: 5, width: 32 },",
+            "    TokenSpec { id: 6, width: 64 },",
+            "    TokenSpec { id: 7, width: 128 },",
+            "];",
+            "pub fn token_width(token: u32) -> Option<u16> { TOKEN_SPECS.iter().find(|spec| spec.id == token).map(|spec| spec.width) }",
+        ]
+        .join("\n");
+        assert!(is_declarative_catalog_source(&multiline_constants));
+
+        let module_index = [
+            "pub mod alpha;",
+            "pub mod beta;",
+            "pub mod gamma;",
+            "pub mod delta;",
+            "pub use alpha::alpha;",
+            "pub use beta::beta;",
+            "pub use gamma::gamma;",
+            "pub use delta::delta;",
+        ]
+        .join("\n");
+        assert!(is_declarative_catalog_source(&module_index));
+
+        let multiline_module_index = [
+            "pub mod alpha;",
+            "pub mod beta;",
+            "pub use alpha::{",
+            "    alpha_one,",
+            "    alpha_two,",
+            "    alpha_three,",
+            "};",
+            "pub use beta::{",
+            "    beta_one,",
+            "    beta_two,",
+            "};",
+        ]
+        .join("\n");
+        assert!(is_declarative_catalog_source(&multiline_module_index));
+
+        let implementation =
+            "pub fn alpha(input: &[u32]) -> u32 {\n    input.iter().copied().sum()\n}\n";
+        assert!(!is_declarative_catalog_source(implementation));
+
+        let real_code_with_constants = [
+            "const MASK: u32 = 7;",
+            "const LIMIT: u32 = 11;",
+            "const SHIFT: u32 = 2;",
+            "pub fn classify(input: &[u32]) -> u32 {",
+            "    let mut acc = 0;",
+            "    for value in input {",
+            "        if value & MASK != 0 {",
+            "            acc ^= value.wrapping_shl(SHIFT);",
+            "        }",
+            "    }",
+            "    acc.min(LIMIT)",
+            "}",
+        ]
+        .join("\n");
+        assert!(!is_declarative_catalog_source(&real_code_with_constants));
     }
 
     #[test]
@@ -802,8 +1012,7 @@ mod tests {
             .current_dir(dir.path())
             .output()
             .expect("git init");
-        let body = "pub fn alpha(input: &[u32]) -> u32 {\n    let mut acc = 0;\n"
-            .to_string()
+        let body = "pub fn alpha(input: &[u32]) -> u32 {\n    let mut acc = 0;\n".to_string()
             + &"    for value in input { acc = acc.wrapping_add(*value); }\n".repeat(24)
             + "    acc\n}\n";
         fs::write(dir.path().join("tracked.rs"), &body).expect("tracked fixture");
@@ -815,10 +1024,10 @@ mod tests {
             .expect("git add");
 
         let roots = vec![dir.path().to_path_buf()];
-        let tracked_only = find_similar_sources(&roots, 10, 0.50, 64 * 1024, false)
-            .expect("tracked scan");
-        let with_untracked = find_similar_sources(&roots, 10, 0.50, 64 * 1024, true)
-            .expect("untracked scan");
+        let tracked_only =
+            find_similar_sources(&roots, 10, 0.50, 64 * 1024, false).expect("tracked scan");
+        let with_untracked =
+            find_similar_sources(&roots, 10, 0.50, 64 * 1024, true).expect("untracked scan");
 
         assert_eq!(tracked_only.scanned_files, 1);
         assert_eq!(with_untracked.scanned_files, 2);
@@ -833,7 +1042,9 @@ mod tests {
             ".internals/audits/notes/generated.rs"
         )));
         assert!(should_skip_path(Path::new("jules_tickets/ticket.rs")));
-        assert!(!should_skip_path(Path::new("vyre-primitives/src/graph/toposort.rs")));
+        assert!(!should_skip_path(Path::new(
+            "vyre-primitives/src/graph/toposort.rs"
+        )));
     }
 
     #[test]
