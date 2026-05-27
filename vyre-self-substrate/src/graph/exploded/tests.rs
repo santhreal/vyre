@@ -361,7 +361,7 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 fn production_source_uses_primitive_rule_column_scratch_not_local_splitters() {
     let source = format!(
         "{}\n{}",
-        include_str!("../exploded.rs"),
+        include_str!("mod.rs"),
         include_str!("dispatch.rs")
     );
 
@@ -378,7 +378,7 @@ fn production_source_uses_primitive_rule_column_scratch_not_local_splitters() {
 fn production_source_uses_primitive_static_key_and_readback_validation() {
     let source = format!(
         "{}\n{}",
-        include_str!("../exploded.rs"),
+        include_str!("mod.rs"),
         include_str!("dispatch.rs")
     );
 
