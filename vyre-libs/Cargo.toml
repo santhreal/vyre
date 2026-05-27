@@ -1,0 +1,143 @@
+[package]
+name = "vyre-libs"
+version = "0.4.2"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "vyre Category A library ecosystem  -  pure-IR compositions over vyre-ops hardware primitives"
+readme = "README.md"
+keywords = ["gpu", "ml", "linear-algebra", "cryptography", "vyre"]
+categories = ["algorithms", "science"]
+documentation = "https://docs.rs/vyre-libs"
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+# Default: ML / linear-algebra / matching / decode core. Crypto + the
+# heavy nn-attention surface ride opt-in. Keeps `cargo add vyre-libs`
+# from compiling blake3/fnv for consumers that only need matmul +
+# substring scanning. Audit item #63  -  reduced default blast radius.
+default = [
+    "math-linalg", "math-scan", "math-broadcast",
+    "nn-activation", "nn-linear", "nn-norm",
+    "matching-substring", "matching-dfa",
+    "hash",
+    "decode",
+]
+# `full` aggregates everything that used to be in default + crypto +
+# the algebra/succinct/attention extras. Consumers that previously
+# relied on the wide default flip to `full` (no behavior change).
+full = [
+    "math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct",
+    "nn-activation", "nn-linear", "nn-linear-4bit", "nn-norm", "nn-attention", "nn-moe", "nn-inference",
+    "matching-substring", "matching-dfa",
+    "hash",
+    "decode",
+    "crypto-fnv", "crypto-blake3",
+]
+bench = []
+cpu-parity = ["vyre-primitives/cpu-parity"]
+hash = []
+math = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
+nn = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
+matching = ["matching-substring", "matching-dfa"]
+crypto = ["crypto-fnv", "crypto-blake3"]
+decode = []
+text = []
+logical = []
+rule = ["dep:regex"]
+
+"math-linalg" = []
+"math-scan" = []
+"math-broadcast" = []
+"math-algebra" = []
+"math-succinct" = []
+"nn-activation" = []
+"nn-linear" = ["math-linalg"]
+"nn-linear-4bit" = ["nn-linear"]
+"nn-norm" = []
+"nn-attention" = ["nn-norm", "math-linalg"]
+"nn-moe" = ["nn-attention"]
+"nn-inference" = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-moe"]
+"matching-substring" = ["cpu-parity"]
+"matching-dfa" = ["cpu-parity"]
+"matching-nfa" = ["matching-dfa"]
+"matching-regex" = ["matching-nfa", "dep:regex-syntax"]
+"intern" = []
+"crypto-fnv" = ["hash"]
+"crypto-blake3" = ["hash"]
+"visual" = []
+# rust-parser excluded until lex/parse WIP is green (see ROADMAP rust frontend)
+"parsing" = ["c-parser", "go-parser", "python-parser"]
+# `parsing::c` modules import from `crate::scan::dispatch_io` for u32
+# packing helpers; the `scan` module itself is gated on the matching
+# triple, so `c-parser` MUST pull the same triple or the parsing source
+# fails to resolve `crate::scan` at consumer build time. (Reproduced
+# 2026-05-23 when vyre-frontend-c built with just `c-parser` and 17
+# unresolved-import errors landed in vyre-libs.)
+"c-parser" = ["matching-substring", "matching-dfa", "matching-nfa"]
+"rust-parser" = ["matching-substring", "matching-dfa"]
+"go-parser" = []
+"python-parser" = []
+"test-fixtures" = []
+security = []
+"self-substrate" = []
+
+[dependencies]
+vyre.workspace = true
+vyre-foundation.workspace = true
+vyre-harness.workspace = true
+vyre-spec.workspace = true
+vyre-driver.workspace = true
+vyre-self-substrate = { workspace = true }
+vyre-primitives = { workspace = true, features = ["text", "matching", "decode", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "nfa", "inventory-registry", "geom", "opt", "topology", "visual"] }
+smallvec.workspace = true
+inventory.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+regex-syntax = { workspace = true, optional = true }
+regex = { workspace = true, optional = true }
+libm.workspace = true
+rustc-hash.workspace = true
+blake3.workspace = true
+rayon.workspace = true
+bytemuck.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
+vyre-reference = { workspace = true, features = ["subgroup-ops"] }
+vyre-primitives = { workspace = true, features = ["text", "matching", "decode", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "nfa", "inventory-registry", "geom", "opt", "topology", "visual", "cpu-parity"] }
+criterion.workspace = true
+vyre-driver.workspace = true
+vyre-lower.workspace = true
+vyre-emit-naga.workspace = true
+vyre-emit-ptx.workspace = true
+naga.workspace = true
+vyre-self-substrate = { workspace = true }
+vyre-intrinsics.workspace = true
+c-grammar-gen.workspace = true
+tree-sitter = { workspace = true }
+tree-sitter-go = { workspace = true }
+
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[[test]]
+name = "sweep_text_utf8_oracle_matrix"
+path = "tests/sweep_text_utf8_oracle_matrix.rs"
+required-features = ["text"]
+
+[[test]]
+name = "sweep_decode_hex_oracle_matrix"
+path = "tests/sweep_decode_hex_oracle_matrix.rs"
+required-features = ["decode"]

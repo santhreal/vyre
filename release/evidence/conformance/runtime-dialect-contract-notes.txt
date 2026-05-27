@@ -1,0 +1,3 @@
+[package-check]
+parser_call_graph_abi = "token-table count is explicit; CUDA fixture keeps full token table"
+runtime_dialect_conformance = "core/io/mem OP_MATRIX rows are sourced from vyre-driver registry and verified as capability contracts without CPU fallback dispatch"

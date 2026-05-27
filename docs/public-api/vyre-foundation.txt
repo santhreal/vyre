@@ -1,0 +1,1386 @@
+pub const ALLOC_OVERFLOW_SENTINEL: u32 = u32::MAX;
+pub const ANALYSIS_KEY: &str = "program_shape_facts";
+pub const ASYNC_LOAD: Self = Self(1 << 5);
+pub const ATOMIC: Self = Self(1 << 1);
+pub const BARRIER: Self = Self(1 << 4);
+pub const BUFFER_WRITE: Self = Self(1 << 0);
+pub const BUMP_CURSOR_WORD_OFFSET: u32 = 1;
+pub const CAPACITY_WORD_OFFSET: u32 = 0;
+pub const DEFAULT_INLINE_THRESHOLD: usize = 64;
+pub const DEFAULT_MAX_CALL_DEPTH: usize = 32;
+pub const DEFAULT_MAX_EXPR_DEPTH: usize = 128;
+pub const DEFAULT_MAX_NESTING_DEPTH: usize = 64;
+pub const DEFAULT_MAX_NODE_COUNT: usize = 8_192;
+pub const DEFAULT_STRIP_MINE_TILE: u32 = 8;
+pub const EMPTY_STRING_ID: u32 = 0;
+pub const GPU_DISPATCH: Self = Self(1 << 3);
+pub const HEADER_LEN: usize = 24;
+pub const HOST_IO: Self = Self(1 << 2);
+pub const IDOM_UNDEFINED: u32 = u32::MAX;
+pub const INPUTS: &[DataType] = &[DataType::U32, DataType::U32];
+pub const LAWS: &[AlgebraicLaw] = &[AlgebraicLaw::Bounded {
+pub const MAGIC: &[u8; 4] = b"VYRE";
+pub const MAX_ARGS: usize = 4_096;
+pub const MAX_BFS_QUEUE: u32 = 65_536;
+pub const MAX_BUFFERS: usize = 16_384;
+pub const MAX_DECODE_DEPTH: u32 = 64;
+pub const MAX_DFA_STATES: u32 = 1_000_000;
+pub const MAX_GRAPH_EDGES: usize = 64_000_000;
+pub const MAX_GRAPH_NODES: usize = 16_000_000;
+pub const MAX_NODES: usize = 1_000_000;
+pub const MAX_OPAQUE_PAYLOAD_LEN: usize = MAX_ARGS * 1024;
+pub const MAX_PREFIX_INPUT_BYTES: usize = 64 * 1024 * 1024;
+pub const MAX_PROGRAM_BYTES: usize = 64 * 1024 * 1024;
+pub const MAX_STRING_LEN: usize = 1 << 20;
+pub const MAX_TEXT_WIRE_BYTES: usize = 64 * 1024 * 1024;
+pub const NODE_KIND_ALL_GATHER: u32 = 1 << 16;
+pub const NODE_KIND_ALL_REDUCE: u32 = 1 << 15;
+pub const NODE_KIND_ASSIGN: u32 = 1 << 1;
+pub const NODE_KIND_ASYNC_LOAD: u32 = 1 << 6;
+pub const NODE_KIND_ASYNC_STORE: u32 = 1 << 7;
+pub const NODE_KIND_ASYNC_WAIT: u32 = 1 << 8;
+pub const NODE_KIND_BARRIER: u32 = 1 << 12;
+pub const NODE_KIND_BLOCK: u32 = 1 << 13;
+pub const NODE_KIND_BROADCAST: u32 = 1 << 18;
+pub const NODE_KIND_EXPRESSION_BEARING_MASK: u32 = NODE_KIND_LET
+pub const NODE_KIND_IF: u32 = 1 << 3;
+pub const NODE_KIND_INDIRECT_DISPATCH: u32 = 1 << 5;
+pub const NODE_KIND_LET: u32 = 1 << 0;
+pub const NODE_KIND_LOOP: u32 = 1 << 4;
+pub const NODE_KIND_OPAQUE: u32 = 1 << 19;
+pub const NODE_KIND_REDUCE_SCATTER: u32 = 1 << 17;
+pub const NODE_KIND_REGION: u32 = 1 << 14;
+pub const NODE_KIND_RESUME: u32 = 1 << 10;
+pub const NODE_KIND_RETURN: u32 = 1 << 11;
+pub const NODE_KIND_STORE: u32 = 1 << 2;
+pub const NODE_KIND_TRAP: u32 = 1 << 9;
+pub const NODE_STRIDE_U32: usize = 10;
+pub const ROOT_REGION_GENERATOR: &'static str = "vyre.program.root";
+pub const RUN: Self = Self { should_run: true };
+pub const SELF_EXCLUSIVE_REGION_SUFFIX: &str = "#self-exclusive";
+pub const SENTINEL: u32 = u32::MAX;
+pub const SKIP: Self = Self { should_run: false };
+pub const TEXT_FORMAT_HEADER: &str = "vyre_ir v0.1";
+pub const TRAP: Self = Self(1 << 6);
+pub const UNREACHABLE: u32 = u32::MAX;
+pub const VAST_MAGIC: [u8; 4] = *b"VAST";
+pub const VAST_VERSION: u16 = 0;
+pub const VISIT_STACK_EMPTY: u32 = u32::MAX;
+pub const WIRE_BYTES_PER_LINE: usize = 32;
+pub const WIRE_FORMAT_VERSION: u16 = 4;
+pub const WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
+pub const fn allow_fused_threads(&self, fused_threads: u64, max_arm_threads: u64) -> bool {
+pub const fn barrier() -> Self {
+pub const fn barrier_with_ordering(ordering: MemoryOrdering) -> Self {
+pub const fn bits(self) -> u32 {
+pub const fn bool(value: bool) -> Self {
+pub const fn bv(value: u64, bits: u32) -> Self {
+pub const fn bytes_extractor(
+pub const fn conservative() -> Self {
+pub const fn contains(&self, other: &ByteRange) -> bool {
+pub const fn contains(self, other: Self) -> bool {
+pub const fn default_worker_count(&self) -> u32 {
+pub const fn default_worker_groups_from_limits(
+pub const fn dispatch_grid_for(
+pub const fn empty() -> Self {
+pub const fn empty(candidate_count: usize, threshold: usize) -> Self {
+pub const fn ends_before(&self, other: &ByteRange) -> bool {
+pub const fn forbids_drop(self) -> bool {
+pub const fn forbids_reuse(self) -> bool {
+pub const fn fused_over_dispatch_multiplier(&self) -> u64 {
+pub const fn high_end() -> Self {
+pub const fn id(&self) -> &'static str {
+pub const fn introduced_since(self, previous: Self) -> Self {
+pub const fn is_empty(&self) -> bool {
+pub const fn is_empty(self) -> bool {
+pub const fn is_subset_of(self, other: Self) -> bool {
+pub const fn is_valid_for_atomic_rmw(self) -> bool {
+pub const fn is_valid_for_barrier(self) -> bool {
+pub const fn join(self, other: Soundness) -> Soundness {
+pub const fn kind_bit(kind: NodeKind) -> u32 {
+pub const fn kind_mask(kind: NodeKind) -> u32 {
+pub const fn legal_workgroup_x_ceiling(&self, caps: &AdapterCaps) -> u32 {
+pub const fn len(&self) -> u32 {
+pub const fn new(
+pub const fn new(capacity_bytes: u32) -> Self {
+pub const fn new(dialect: &'static str, op_id: &'static str) -> Self {
+pub const fn new(name: &'static str, version: &'static str, crate_repo: &'static str) -> Self {
+pub const fn new(op_id: &'static str, law: AlgebraicLaw) -> Self {
+pub const fn new(op_id: &'static str, soundness: Soundness) -> Self {
+pub const fn new(pattern_id: u32, start: u32, end: u32) -> Self {
+pub const fn new(row: u32, col: u32) -> Self {
+pub const fn new(tag: u32, start: u32, end: u32) -> Self {
+pub const fn padded_slot_count(&self, slot_count: u32, workgroup_size_x: u32) -> u32 {
+pub const fn recommend_autotune(&self, node_count: usize) -> bool {
+pub const fn requires_grid_sync(self) -> bool {
+pub const fn reset(&mut self) {
+pub const fn return_() -> Self {
+pub const fn route(&self, node_count: usize, static_bytes: u64) -> PolicyRoute {
+pub const fn select_unroll_depth(
+pub const fn select_vector_pack_bits(&self, element_bits: u32, caps: &AdapterCaps) -> u32 {
+pub const fn sort(&self) -> ProofSort {
+pub const fn standard() -> Self {
+pub const fn static_msg(msg: &'static str) -> Self {
+pub const fn use_cpu_fast_path(&self, _node_count: usize, _static_bytes: u64) -> bool {
+pub const fn use_persistent_megakernel(&self, _node_count: usize) -> bool {
+pub const fn use_persistent_runtime(&self, _node_count: usize) -> bool {
+pub const fn used_bytes(&self) -> u32 {
+pub const fn wire_tag(self) -> u8 {
+pub const fn with_sanitizer_filter(mut self) -> Self {
+pub const fn worker_workgroup_size(&self, worker_count: u32, max_workgroup_size_x: u32) -> u32 {
+pub enum AccuracyStrategy {
+pub enum AtomicOrdering {
+pub enum AttrType {
+pub enum AutodiffError {
+pub enum AutotuneStrategy {
+pub enum BufferRefKind {
+pub enum CacheLocality {
+pub enum CatalogLookupStatus {
+pub enum Category {
+pub enum CollectiveTransportKind {
+pub enum CostModelFamily {
+pub enum DataflowFixpointError {
+pub enum DataflowKind {
+pub enum DerivedPassEdgeKind {
+pub enum Diff {
+pub enum DispatchGroup {
+pub enum DispatchStrategy {
+pub enum DominatorTreeError {
+pub enum EdgeKind {
+pub enum EffectLevel {
+pub enum EnvelopeError {
+pub enum Error {
+pub enum ExpectedEnvelopeError {
+pub enum ExtensionKind {
+pub enum ExternVerifyError {
+pub enum FlatExpr {
+pub enum FusionError {
+pub enum FusionStrategy {
+pub enum GraphValidateError {
+pub enum IdentityReplacement {
+pub enum InnovationTrack {
+pub enum LayoutStrategy {
+pub enum LinearType {
+pub enum MemoryKind {
+pub enum MemoryOrdering {
+pub enum NodeKind {
+pub enum NodeStorage {
+pub enum OptimizationCatalogEntryKind {
+pub enum OptimizerError {
+pub enum OptimizerProfile {
+pub enum PassBoundaryClass {
+pub enum PassInvariantFinding {
+pub enum PassPhase {
+pub enum PassRunDecision {
+pub enum PassSchedulingError {
+pub enum PassSelectionReason {
+pub enum PlanError {
+pub enum PolicyRoute {
+pub enum PrecisionContract {
+pub enum PrecisionHint {
+pub enum ProofSort {
+pub enum ProvenanceStrategy {
+pub enum ReadbackStrategy {
+pub enum RecursiveDescentError {
+pub enum RefusalReason {
+pub enum ScalarLiteral {
+pub enum ShapePredicate {
+pub enum Soundness {
+pub enum StringInternerError {
+pub enum SyncScope {
+pub enum TextParseError {
+pub enum TranscendentalOp {
+pub enum TypedArenaError {
+pub enum Value {
+pub enum VastError {
+pub enum VisitOrder {
+pub enum VisitorWalkError {
+pub enum WireEncodeErr {
+pub fn $push(buf: &mut Vec<u8>, value: $ty) {
+pub fn $read(bytes: &[u8]) -> Result<($ty, &[u8]), OpaquePayloadTruncated> {
+pub fn abs(operand: Expr) -> Expr {
+pub fn abs_diff(left: Expr, right: Expr) -> Expr {
+pub fn accepts(self, metadata: PassMetadata) -> bool {
+pub fn access(&self) -> BufferAccess {
+pub fn access_count(&self, buffer: &Ident) -> usize {
+pub fn add(&mut self, node: L) -> EClassId {
+pub fn add(left: Expr, right: Expr) -> Expr {
+pub fn align_words(size_bytes: u32) -> Result<u32, TypedArenaError> {
+pub fn all_ops() -> Vec<&'static ExternOp> {
+pub fn alloc(&mut self, size_bytes: u32) -> Result<u32, TypedArenaError> {
+pub fn alloc(&self, expr: Expr) -> ExprRef {
+pub fn alloc_program(arena: &str, out_offset: &str, size_words: u32) -> Program {
+pub fn allowed_effect_additions(&self) -> crate::lower::effects::ProgramEffects {
+pub fn analyse_precision(program: &Program, hints: &PrecisionHints) -> usize {
+pub fn analyze(&self, program: &Program) -> PassAnalysis {
+pub fn analyze_program_expr_arena(program: &Program) -> ExprArenaStats {
+pub fn and(left: Expr, right: Expr) -> Expr {
+pub fn and(values: impl IntoIterator<Item = Self>) -> Self {
+pub fn any_descendant<P>(node: &Node, pred: &mut P) -> bool
+pub fn append_data_type_fingerprint(buf: &mut Vec<u8>, value: &DataType) -> Result<(), String> {
+pub fn append_node_list_fingerprint(buf: &mut Vec<u8>, nodes: &[Node]) -> Result<(), String> {
+pub fn apply_equivalences<F>(equivalences: &[Equivalence], mut merger: F) -> usize
+pub fn apply_equivalences_to_egraph<L>(
+pub fn apply_pass_functor(values: &[u32], mapping: &[u32], target_size: u32) -> Vec<u32> {
+pub fn as_bytes(&self) -> &[u8] {
+pub fn as_str(&self) -> &str {
+pub fn assert_envelope_error_kind(err: &EnvelopeError, kind: ExpectedEnvelopeError) {
+pub fn assert_envelope_roundtrip<T>(sample: &T)
+pub fn assign(name: impl Into<Ident>, value: Expr) -> Self {
+pub fn assign_sites_of(&self, name: &str) -> &[NodeIndex] {
+pub fn assigns(&self) -> &[(NodeIndex, Ident)] {
+pub fn async_dispatch(&self) -> bool {
+pub fn async_load(tag: impl Into<Ident>) -> Self {
+pub fn async_load_ext(
+pub fn async_store(
+pub fn async_wait(tag: impl Into<Ident>) -> Self {
+pub fn atomic_add(buffer: &str, index: Expr, value: Expr) -> Expr {
+pub fn atomic_add_ordered(
+pub fn atomic_and(buffer: &str, index: Expr, value: Expr) -> Expr {
+pub fn atomic_compare_exchange(
+pub fn atomic_compare_exchange_ordered(
+pub fn atomic_exchange(buffer: &str, index: Expr, value: Expr) -> Expr {
+pub fn atomic_max(buffer: &str, index: Expr, value: Expr) -> Expr {
+pub fn atomic_min(buffer: &str, index: Expr, value: Expr) -> Expr {
+pub fn atomic_or(buffer: &str, index: Expr, value: Expr) -> Expr {
+pub fn atomic_xor(buffer: &str, index: Expr, value: Expr) -> Expr {
+pub fn audit_registered_passes() -> Vec<PassInvariantFinding> {
+pub fn backend_name(&self) -> &'static str {
+pub fn batch_apply(&self, program: Program) -> PassResult {
+pub fn batch_count(&self) -> usize {
+pub fn batches(&self) -> &[RewriteBatch] {
+pub fn bf16(&self) -> bool {
+pub fn binding(&self) -> u32 {
+pub fn binop_adjoints(
+pub fn binop_identity_replacement(
+pub fn bitand(left: Expr, right: Expr) -> Expr {
+pub fn bitnot(operand: Expr) -> Expr {
+pub fn bitor(left: Expr, right: Expr) -> Expr {
+pub fn bitxor(left: Expr, right: Expr) -> Expr {
+pub fn block(nodes: Vec<Self>) -> Self {
+pub fn bool(value: bool) -> Self {
+pub fn brace_depth_prefix(bytes: &[u8]) -> Result<Vec<u32>> {
+pub fn buf_len(buffer: impl Into<Ident>) -> Self {
+pub fn buffer(&self, name: &str) -> Option<&BufferDecl> {
+pub fn buffer(&self, name: &str) -> Option<&super::BufferDecl> {
+pub fn buffer_count(&self) -> usize {
+pub fn buffer_escapes(&self, name: &str) -> bool {
+pub fn buffer_refs(&self) -> &[(NodeIndex, Ident, BufferRefKind)] {
+pub fn buffer_refs_of(&self, name: &str) -> &[(NodeIndex, BufferRefKind)] {
+pub fn buffers(&self) -> &[BufferDecl] {
+pub fn buffers(&self) -> &[super::BufferDecl] {
+pub fn buffers_provably_distinct(&self, buf_a: &str, buf_b: &str) -> bool {
+pub fn build(program: &Program) -> Self {
+pub fn build<'a, I>(rows: I) -> Self
+pub fn build_cached(program: &Program) -> std::rc::Rc<ProgramFacts> {
+pub fn bvadd(left: Self, right: Self) -> Self {
+pub fn bvmul(left: Self, right: Self) -> Self {
+pub fn bvsub(left: Self, right: Self) -> Self {
+pub fn cached_hash(&self) -> u64 {
+pub fn call(op_id: impl Into<Ident>, args: Vec<Expr>) -> Self {
+pub fn call(op_id: impl Into<Ident>, args: Vec<Self>) -> Self {
+pub fn candidate_count(&self) -> usize {
+pub fn candidate_handoffs(program: &Program) -> FxHashMap<Ident, u32> {
+pub fn canonical_f32_zero(value: f32) -> f32 {
+pub fn canonical_f64_zero(value: f64) -> f64 {
+pub fn canonical_regex_flags(flags: &str) -> String {
+pub fn canonical_wire_bytes(&self) -> Result<Vec<u8>, crate::error::Error> {
+pub fn canonical_wire_hash(&self) -> Result<blake3::Hash, crate::error::Error> {
+pub fn canonicalized(&self) -> Self {
+pub fn cast(target: DataType, value: Self) -> Self {
+pub fn causal_adjacency(&self) -> &[u32] {
+pub fn causal_edges(&self) -> &[DerivedPassEdge] {
+pub fn causal_safe_pair_checks(&self) -> usize {
+pub fn ceil(operand: Expr) -> Expr {
+pub fn check_backend_capabilities(
+pub fn check_expr_depth(depth: usize, errors: &mut Vec<ValidationError>) -> bool {
+pub fn check_limits(limits: &mut LimitState, depth: usize, errors: &mut Vec<ValidationError>) {
+pub fn check_linear_types(program: &Program) -> Vec<ValidationError> {
+pub fn check_shape_predicates(program: &Program) -> Vec<ValidationError> {
+pub fn child(&self) -> Self {
+pub fn child_count(&self) -> usize {
+pub fn children_of(&self, row_idx: usize) -> Option<&[u32]> {
+pub fn class(&self, id: EClassId) -> Option<&EClass<L>> {
+pub fn class_count(&self) -> usize {
+pub fn clear(&mut self) {
+pub fn clz(operand: Expr) -> Expr {
+pub fn collect_call_op_ids(program: &Program) -> Vec<Arc<str>> {
+pub fn collective_transport_plan(program: &Program) -> CollectiveTransportPlan {
+pub fn compose(producer: EffectLevel, consumer: EffectLevel) -> Result<EffectLevel, RefusalReason> {
+pub fn compose_ir_arrows(
+pub fn compose_passes(
+pub fn composition_associates(
+pub fn compute_fixpoint(
+pub fn compute_program_effects(program: &Program) -> ProgramEffects {
+pub fn conflict_starts_next_parallel_run() {
+pub fn consume_step_program(
+pub fn contains_key<Q>(&self, key: &Q) -> bool
+pub fn content_hash(&self) -> [u8; 32] {
+pub fn cos(operand: Expr) -> Expr {
+pub fn cost_monotone_enforcement(&self) -> bool {
+pub fn count(&self) -> u32 {
+pub fn count_opportunities(program: &Program) -> usize {
+pub fn cse(program: Program) -> Program {
+pub fn cse_into(program: Program, ctx: &mut CseCtx) -> Program {
+pub fn cse_savings(before: &[Program], after: &Program) -> usize {
+pub fn ctz(operand: Expr) -> Expr {
+pub fn dce(program: Program) -> Program {
+pub fn declared_edges(&self) -> &[DerivedPassEdge] {
+pub fn decode(bytes: &[u8]) -> Result<Self, VastError> {
+pub fn decode_opaque_expr(kind: &str, payload: &[u8]) -> Result<crate::ir::Expr, String> {
+pub fn decode_opaque_node(kind: &str, payload: &[u8]) -> Result<crate::ir::Node, String> {
+pub fn dedup_ratio(&self) -> f64 {
+pub fn default_planar_rewrite_batch_threshold() -> usize {
+pub fn default_resolver(_op_id: &str) -> Option<Program> {
+pub fn derive(program: &Program) -> Self {
+pub fn derive_cached(program: &Program) -> Self {
+pub fn derive_into_cache(program: &Program, cache: &mut crate::optimizer::AnalysisCache) {
+pub fn derive_pass_order(
+pub fn derive_registered_pass_order() -> Result<DerivedPassOrder, OptimizerError> {
+pub fn derive_shape_and_use(program: &Program) -> Self {
+pub fn derive_shape_and_use_cached(program: &Program) -> Self {
+pub fn derive_use_only(program: &Program) -> Self {
+pub fn derive_use_only_cached(program: &Program) -> Self {
+pub fn describe(&self) -> String {
+pub fn detect_parallelism(nodes: &[Node]) -> Vec<DispatchGroup> {
+pub fn dialect_lookup() -> Option<&'static dyn DialectLookup> {
+pub fn dialects() -> Vec<&'static ExternDialect> {
+pub fn dimensions_increased_over(&self, other: &Self) -> Vec<&'static str> {
+pub fn dispatch_count(&self, region_generator: &str) -> u64 {
+pub fn distributed_collectives(&self) -> bool {
+pub fn div(left: Expr, right: Expr) -> Expr {
+pub fn dominant_index_axis(&self, buffer: &Ident) -> Option<u8> {
+pub fn dominates_or_equal(&self, other: &Self) -> bool {
+pub fn duplicate_self_exclusive_regions(nodes: &[Node]) -> Vec<String> {
+pub fn edge_count(&self) -> usize {
+pub fn effect_handler_enforcement(&self) -> bool {
+pub fn element(&self) -> DataType {
+pub fn empty() -> Self {
+pub fn encode_from_buffers_into(
+pub fn encode_into(&self, dst: &mut Vec<u8>) -> Result<(), String> {
+pub fn entry(&self) -> &[ExprRef] {
+pub fn entry(&self) -> &[Node] {
+pub fn entry_arc(&self) -> &Arc<Vec<Node>> {
+pub fn entry_mut(&mut self) -> &mut Vec<Node> {
+pub fn entry_op_id(&self) -> Option<&str> {
+pub fn eq(left: Expr, right: Expr) -> Expr {
+pub fn eq(left: Self, right: Self) -> Self {
+pub fn equivalence(
+pub fn error(msg: impl Into<String>) -> Self {
+pub fn escaping_buffers(&self) -> FxHashSet<Ident> {
+pub fn estimate_for_adapter(&self, caps: &AdapterCaps) -> DeviceCostEstimate {
+pub fn estimate_peak_vram_bytes(&self) -> u64 {
+pub fn explain_optimizer_report(
+pub fn explain_optimizer_report_with_catalog(
+pub fn explanations(&self) -> Result<Vec<PassExplanation>, OptimizerError> {
+pub fn expr(&self, expr_ref: ExprRef) -> Option<&Expr> {
+pub fn expr_has_effect(expr: &Expr) -> bool {
+pub fn extension(&self, backend_id: &str) -> Option<ExtensionLoweringFn> {
+pub fn extract_best<L: ENodeLang>(
+pub fn f16(&self) -> bool {
+pub fn f32(value: f32) -> Self {
+pub fn f64(&self) -> bool {
+pub fn f64(value: f64) -> Expr {
+pub fn find(&mut self, id: EClassId) -> EClassId {
+pub fn find_extension(id: ExtensionId) -> Option<&'static ExtensionRegistration> {
+pub fn find_immut(&self, id: EClassId) -> EClassId {
+pub fn fingerprint(&self) -> [u8; 32] {
+pub fn fingerprint_program(program: &Program) -> u64 {
+pub fn finish(self) -> PerfMeasurement {
+pub fn fix_hint(&self) -> &'static str {
+pub fn floor(operand: Expr) -> Expr {
+pub fn fma(a: Self, b: Self, c: Self) -> Self {
+pub fn fma_adjoints(a: &Expr, b: &Expr, c: &Expr, adjoint: &Expr) -> Vec<AdjointContrib> {
+pub fn fmt_u64(prefix: &str, value: u64, suffix: &str) -> Self {
+pub fn fmt_usize(prefix: &str, value: usize, suffix: &str) -> Self {
+pub fn fmt_usize2(prefix: &str, v1: usize, mid: &str, v2: usize, suffix: &str) -> Self {
+pub fn fnv1a32(bytes: &[u8]) -> u32 {
+pub fn fnv1a_program(input: &str, out: &str, len: u32) -> Program {
+pub fn fold_binary_literal(op: &BinOp, left: &Expr, right: &Expr) -> Option<Expr> {
+pub fn fold_cast_literal(target: &DataType, value: &Expr) -> Option<Expr> {
+pub fn fold_const_buffer(program: &Program, constant: &ConstBuffer) -> PassResult {
+pub fn fold_fma_literal(a: &Expr, b: &Expr, c: &Expr) -> Option<Expr> {
+pub fn fold_literal_tree(expr: &Expr) -> Option<Cow<'_, Expr>> {
+pub fn fold_unary_literal(op: &UnOp, operand: &Expr) -> Option<Expr> {
+pub fn for_fusion(
+pub fn for_program(program: &Program) -> Self {
+pub fn for_program_on_adapter(program: &Program, caps: &AdapterCaps) -> DeviceCostEstimate {
+pub fn forever(body: Vec<Self>) -> Self {
+pub fn from_adapter(caps: &AdapterCaps) -> Self {
+pub fn from_boxed(pass: Box<dyn ProgramPass>) -> Self {
+pub fn from_buffers(buffers: &[BufferDecl]) -> Self {
+pub fn from_bytes(bytes: &[u8]) -> Result<Self, crate::error::Error> {
+pub fn from_cache(cache: &crate::optimizer::AnalysisCache) -> Option<&Self> {
+pub fn from_class(class: SideEffectClass) -> Self {
+pub fn from_egraph_with<L, F, S>(egraph: &EGraph<L>, mut op_name: F) -> Self
+pub fn from_graph(graph: NodeGraph) -> Result<Program, GraphValidateError> {
+pub fn from_map(bindings: HashMap<K, V>) -> Self {
+pub fn from_metadata(metadata: PassMetadata) -> Self {
+pub fn from_metric(
+pub fn from_name(name: &str) -> Self {
+pub fn from_program(program: &Program) -> Self {
+pub fn from_program_owned(program: Program) -> Self {
+pub fn from_programs(before: &Program, program: Program) -> Self {
+pub fn from_text(input: &str) -> Result<Self, TextParseError> {
+pub fn from_toml_str(name: &'static str, text: &str) -> std::io::Result<Self> {
+pub fn from_vec(indices: Vec<u32>) -> Self {
+pub fn from_wire(bytes: &[u8]) -> Result<Program, String> {
+pub fn from_wire(bytes: &[u8]) -> Result<Self, crate::error::Error> {
+pub fn from_wire_tag(tag: u8) -> Result<Self, String> {
+pub fn functor_apply_cpu(source_row: &[u32], mapping: &[u32], target_size: u32) -> Vec<u32> {
+pub fn fusable_pairs(adj: &[u32], n: u32, max_iters: u32) -> Vec<u32> {
+pub fn fusable_pass_pairs(&self) -> Vec<(&'static str, &'static str)> {
+pub fn fusable_subset(&self, seed: &[u32], max_iters: u32) -> Vec<u32> {
+pub fn fuse_cse(mut programs: Vec<Program>) -> Option<Program> {
+pub fn fuse_programs(programs: &[Program]) -> Result<Program, FusionError> {
+pub fn fuse_programs_vec(mut programs: Vec<Program>) -> Result<Program, FusionError> {
+pub fn fusion_friendly_order(passes: &[&'static ProgramPassRegistration]) -> Vec<usize> {
+pub fn fusion_order_cost(dimensions: &[u32], order: &[usize]) -> u64 {
+pub fn fusion_pressure(&self, costs: &[f64], steps: u32, dt: f64) -> Vec<f64> {
+pub fn ge(left: Expr, right: Expr) -> Expr {
+pub fn get(&self, expr_ref: ExprRef) -> Option<&Expr> {
+pub fn get(&self, id: ExprId) -> &FlatExpr {
+pub fn get(&self, id: NodeId) -> Result<Value, EvalError> {
+pub fn get(&self, name: &Ident) -> Option<&BufferShapeFacts> {
+pub fn get<Q>(&self, key: &Q) -> Option<&V>
+pub fn get<T: std::any::Any>(&self, key: &'static str) -> Option<&T> {
+pub fn get_metrics() -> HashMap<&'static str, u64> {
+pub fn gid_x() -> Self {
+pub fn gid_y() -> Self {
+pub fn gid_z() -> Self {
+pub fn grad(
+pub fn grad_with_pullback(
+pub fn gt(left: Expr, right: Expr) -> Expr {
+pub fn has_any_kind_in_mask(&self, mask: u32) -> bool {
+pub fn has_any_node_kind(&self, mask: u32) -> bool {
+pub fn has_batches(&self) -> bool {
+pub fn has_buffer(&self, name: &str) -> bool {
+pub fn has_fresh_shape_and_use_for(&self, program: &Program) -> bool {
+pub fn has_fresh_use_facts_for(&self, program: &Program) -> bool {
+pub fn has_indirect_dispatch(&self) -> bool {
+pub fn has_kind(&self, kind: NodeKind) -> bool {
+pub fn has_law<F>(op_id: &str, predicate: F) -> bool
+pub fn has_node_assign(&self) -> bool {
+pub fn has_node_barrier(&self) -> bool {
+pub fn has_node_if(&self) -> bool {
+pub fn has_node_let(&self) -> bool {
+pub fn has_node_loop(&self) -> bool {
+pub fn has_node_region(&self) -> bool {
+pub fn has_node_store(&self) -> bool {
+pub fn header_only(magic: &[u8; 4], version: u32) -> Vec<u8> {
+pub fn hints(&self) -> MemoryHints {
+pub fn holds(&self, count: u32) -> bool {
+pub fn homotopy_euler_predictor_cpu(x_curr: &[f64], v: &[f64], dt: f64) -> Vec<f64> {
+pub fn i32(value: i32) -> Self {
+pub fn i64(value: i64) -> Expr {
+pub fn identity_arrow(n: u32) -> Vec<f64> {
+pub fn identity_functor(n: u32) -> Vec<u32> {
+pub fn if_then(cond: Expr, then: Vec<Self>) -> Self {
+pub fn if_then_else(cond: Expr, then: Vec<Self>, otherwise: Vec<Self>) -> Self {
+pub fn immediate_dominators(
+pub fn independent_writes_parallelised() {
+pub fn index(self) -> usize {
+pub fn index(value: u32) -> Result<usize, DominatorTreeError> {
+pub fn index(value: u32) -> Result<usize, VisitorWalkError> {
+pub fn indices(&self) -> &[u32] {
+pub fn indirect_dispatch(&self) -> bool {
+pub fn indirect_dispatch(count_buffer: impl Into<Ident>, count_offset: u64) -> Self {
+pub fn inline_calls(program: &Program) -> Result<Program> {
+pub fn inline_calls_with_resolver(program: &Program, resolver: OpResolver) -> Result<Program> {
+pub fn input_ids(&self) -> Vec<NodeId> {
+pub fn insert(&mut self, key: K, value: V) -> Option<V> {
+pub fn insert<T: std::any::Any + Send + Sync>(&mut self, key: &'static str, value: T) {
+pub fn install_dialect_lookup(lookup: Arc<dyn DialectLookup>) -> Result<(), String> {
+pub fn intern(&mut self, expr: &Expr) -> ExprId {
+pub fn intern(&mut self, input: &[u8]) -> Result<u32, StringInternerError> {
+pub fn intern(&mut self, name: &str) -> u32 {
+pub fn intern_all(inputs: &[&[u8]], slot_capacity: usize) -> Result<Vec<u32>, StringInternerError> {
+pub fn intern_string(s: &str) -> InternedOpId {
+pub fn interp(message: impl Into<String>) -> Self {
+pub fn interpret(&self, ctx: &mut InterpCtx) -> Result<Value, EvalError> {
+pub fn intersect(
+pub fn into_bytes(self) -> Vec<u8> {
+pub fn into_entry_vec(self) -> Vec<Node> {
+pub fn into_inner(self) -> Vec<u8> {
+pub fn into_vec(self) -> Vec<u32> {
+pub fn invalid(message: impl Into<String>) -> Self {
+pub fn invalidate(&mut self) {
+pub fn invalidate_shape(&mut self) {
+pub fn invalidate_type_map(&mut self) {
+pub fn invalidate_use_facts(&mut self) {
+pub fn invalidation_closure(&self) -> Vec<u32> {
+pub fn inverse_sqrt(operand: Expr) -> Expr {
+pub fn invocation_local_x() -> Self {
+pub fn invocation_local_y() -> Self {
+pub fn invocation_local_z() -> Self {
+pub fn is_associative(op_id: &str) -> bool {
+pub fn is_bit_all_ones(self) -> bool {
+pub fn is_commutative(op: &BinOp) -> bool {
+pub fn is_commutative(op_id: &str) -> bool {
+pub fn is_cpu_reference_sentinel(f: CpuFn) -> bool {
+pub fn is_descendant_of(&self, node: NodeIndex, ancestor: NodeIndex) -> bool {
+pub fn is_empty(&self) -> bool {
+pub fn is_explicit_noop(&self) -> bool {
+pub fn is_fallback_cpu_ref(f: CpuFn) -> bool {
+pub fn is_false(self) -> bool {
+pub fn is_finite(operand: Expr) -> Expr {
+pub fn is_fixed_at(predicate: &ShapePredicate, n: u32) -> bool {
+pub fn is_fresh_for(&self, program: &Program) -> bool {
+pub fn is_hot(&self, region_generator: &str) -> bool {
+pub fn is_inf(operand: Expr) -> Expr {
+pub fn is_integer_zero(self) -> bool {
+pub fn is_multiple_of(predicate: &ShapePredicate, factor: u32) -> bool {
+pub fn is_name_rebound(&self, name: &str) -> bool {
+pub fn is_nan(operand: Expr) -> Expr {
+pub fn is_non_composable_with_self(&self) -> bool {
+pub fn is_non_empty(&self) -> bool {
+pub fn is_numeric_one(self) -> bool {
+pub fn is_numeric_zero(self) -> bool {
+pub fn is_ok(&self) -> bool {
+pub fn is_output(&self) -> bool {
+pub fn is_pipeline_live_out(&self) -> bool {
+pub fn is_recyclable(&self, name: &str) -> bool {
+pub fn is_sound(&self) -> bool {
+pub fn is_structurally_validated(&self) -> bool {
+pub fn is_top_level_region_wrapped(&self) -> bool {
+pub fn is_true(self) -> bool {
+pub fn is_validated(&self) -> bool {
+pub fn is_validated_on(&self, backend_id: &str) -> bool {
+pub fn items(&self) -> &[RewriteBatchItem] {
+pub fn iter(&self) -> impl Iterator<Item = &EquivalenceRule> {
+pub fn iter(&self) -> impl Iterator<Item = (&Ident, &BufferShapeFacts)> {
+pub fn iter_nodes(&self) -> impl Iterator<Item = (EClassId, &L)> {
+pub fn iter_nodes(&self) -> impl Iterator<Item = (NodeIndex, NodeKind)> + '_ {
+pub fn iter_regionless_nodes(&self) -> impl Iterator<Item = (NodeIndex, NodeKind)> + '_ {
+pub fn jacobi_smooth_step_cpu(
+pub fn join(self, other: Self) -> Self {
+pub fn kind(&self) -> &'static str {
+pub fn kind(&self) -> MemoryKind {
+pub fn kind_at(&self, idx: NodeIndex) -> NodeKind {
+pub fn kinds_present(&self) -> u32 {
+pub fn lattice_join(a: EffectLevel, b: EffectLevel) -> EffectLevel {
+pub fn laws_for_op(op_id: &str) -> &'static [&'static AlgebraicLaw] {
+pub fn le(left: Expr, right: Expr) -> Expr {
+pub fn len(&self) -> usize {
+pub fn let_bind(name: impl Into<Ident>, value: Expr) -> Self {
+pub fn let_sites_of(&self, name: &str) -> &[NodeIndex] {
+pub fn lets(&self) -> &[(NodeIndex, Ident)] {
+pub fn lineage_closure(adj: &[u32], n: u32, max_iters: u32) -> Vec<u32> {
+pub fn linear_homotopy_cpu(g_x: &[f64], f_x: &[f64], t: f64) -> Vec<f64> {
+pub fn linear_type(&self) -> LinearType {
+pub fn linear_type_enforcement(&self) -> bool {
+pub fn load(buffer: impl Into<Ident>, index: Self) -> Self {
+pub fn load(name: &'static str, path: &Path) -> std::io::Result<Self> {
+pub fn local_single_rank_collectives(&self) -> usize {
+pub fn local_x() -> Self {
+pub fn local_y() -> Self {
+pub fn local_z() -> Self {
+pub fn lookup(&self, digest: ExprDigest) -> Option<PrecisionHint> {
+pub fn lookup(&self, id: u32) -> Option<&[u8]> {
+pub fn loop_(var: impl Into<Ident>, from: Expr, to: Expr, body: Vec<Self>) -> Self {
+pub fn loop_for(var: impl Into<Ident>, from: Expr, to: Expr, body: Vec<Self>) -> Self {
+pub fn loop_vars(&self) -> &[(NodeIndex, Ident)] {
+pub fn lower_single_rank_collectives(
+pub fn lower_subgroup_reductions(program: Program, caps: &AdapterCaps) -> Program {
+pub fn lowering(message: impl Into<String>) -> Self {
+pub fn lt(left: Expr, right: Expr) -> Expr {
+pub fn map_body<F>(node: Node, f: &mut F) -> Node
+pub fn map_children<F>(node: Node, f: &mut F) -> Node
+pub fn map_entry<F: FnOnce(Vec<Node>) -> Vec<Node>>(self, f: F) -> Self {
+pub fn mark_self_exclusive_region(generator: &str) -> String {
+pub fn mark_structurally_validated(&self) {
+pub fn mark_validated(&self) {
+pub fn mark_validated_on(&self, backend_id: &str) {
+pub fn matroid_exchange_bfs_step_cpu(
+pub fn matroid_solve_step(a: &[f64], b: &[f64], x: &[f64], weight: f64, n: u32) -> Vec<f64> {
+pub fn max(left: Expr, right: Expr) -> Expr {
+pub fn max_call_depth(_op_id: &str, depth: usize) -> Result<usize, usize> {
+pub fn max_count(predicate: &ShapePredicate) -> Option<u32> {
+pub fn max_fusion_subset(seed: &[u32], exchange_adj: &[u32], n: usize, max_items: u32) -> Vec<u32> {
+pub fn mean_bytes(&self) -> u64 {
+pub fn mean_kernel_ns(&self) -> u64 {
+pub fn mean_kernel_ns(&self, region_generator: &str) -> u64 {
+pub fn message(&self) -> &str {
+pub fn message(&self) -> String {
+pub fn metadata(&self) -> &[PassMetadata] {
+pub fn metadata(&self) -> PassMetadata {
+pub fn min(left: Expr, right: Expr) -> Expr {
+pub fn min_bytes_at_least(&self, bytes: u64) -> bool {
+pub fn min_count(predicate: &ShapePredicate) -> u32 {
+pub fn monoidal_compose_cpu(
+pub fn mul(left: Expr, right: Expr) -> Expr {
+pub fn mulhi(left: Expr, right: Expr) -> Expr {
+pub fn name(&self) -> &str {
+pub fn name_of(&self, id: u32) -> Option<&str> {
+pub fn ne(left: Expr, right: Expr) -> Expr {
+pub fn negate(operand: Expr) -> Expr {
+pub fn nested_depth_prefix(bytes: &[u8]) -> Result<Vec<u32>> {
+pub fn new(
+pub fn new() -> Self {
+pub fn new(buffers: Vec<BufferDecl>, workgroup_size: [u32; 3], entry: Vec<Node>) -> Self {
+pub fn new(candidates: Vec<RewriteCandidate>, height: u32, width: u32, footprint: u32) -> Self {
+pub fn new(cpu_ref: ReferenceKind) -> Self {
+pub fn new(from: u32, to: u32, kind: EdgeKind) -> Self {
+pub fn new(id: u32, kind: DataflowKind) -> Self {
+pub fn new(inner: Box<dyn Rule<L>>, predicate: F) -> Self {
+pub fn new(magic: &[u8; 4], version: u32) -> Self {
+pub fn new(message: impl Into<String>) -> Self {
+pub fn new(name: &'static str) -> Self {
+pub fn new(nodes: Vec<GraphNode>, edges: Vec<DataEdge>) -> Self {
+pub fn new(slot_capacity: usize, byte_capacity: usize) -> Self {
+pub fn new(text: Arc<str>) -> Self {
+pub fn new<P: ProgramPass + 'static>(pass: P) -> Self {
+pub fn newline_prefix_sum(bytes: &[u8]) -> Result<Vec<u32>> {
+pub fn node_count(&self) -> usize {
+pub fn node_effect_level(node: &Node) -> EffectLevel {
+pub fn node_op_id(node: &Node) -> &'static str {
+pub fn node_subtree_hash(node: &Node) -> Result<[u8; 32], String> {
+pub fn nodes(&self) -> &[DerivedPassNode] {
+pub fn nodes_subtree_hash(body: &[Node]) -> Result<[u8; 32], String> {
+pub fn non_escaping(&self) -> &FxHashSet<Ident> {
+pub fn none() -> Self {
+pub fn not(operand: Expr) -> Expr {
+pub fn not_(value: Self) -> Self {
+pub fn op(op_id: impl Into<String>) -> Self {
+pub fn opaque(node: impl ExprNode) -> Self {
+pub fn opaque(node: impl NodeExtension) -> Self {
+pub fn opaque_arc(node: Arc<dyn ExprNode>) -> Self {
+pub fn opaque_arc(node: Arc<dyn NodeExtension>) -> Self {
+pub fn operand(&self, index: usize) -> Result<Value, EvalError> {
+pub fn operands(&self) -> &[NodeId] {
+pub fn ops_in_dialect(dialect: &str) -> Vec<&'static ExternOp> {
+pub fn optimal_fusion_order(dimensions: &[u32]) -> Vec<usize> {
+pub fn optimization_catalog() -> Result<Vec<OptimizationCatalogEntry>, OptimizerError> {
+pub fn optimization_catalog_for_profile(
+pub fn optimize(program: Program) -> Program {
+pub fn optimize(program: Program) -> Result<Program, OptimizerError> {
+pub fn optimize_with_hot_path_hints(
+pub fn or(left: Expr, right: Expr) -> Expr {
+pub fn or(values: impl IntoIterator<Item = Self>) -> Self {
+pub fn ordering_cost(passes: &[&'static ProgramPassRegistration], order: &[usize]) -> u64 {
+pub fn ordering_is_safe(adj: &[u32], treatment: u32, outcome: u32, n: u32) -> bool {
+pub fn output(name: &str, binding: u32, element: DataType) -> Self {
+pub fn output_buffer<'a>(op_id: &str, program: &'a Program) -> Result<&'a BufferDecl> {
+pub fn output_buffer_indices(&self) -> &[u32] {
+pub fn output_byte_range(&self) -> Option<Range<usize>> {
+pub fn pack_spine_vast(node_kinds: &[u32]) -> Vec<u8> {
+pub fn pair_commutes(&self, pass_a: &str, pass_b: &str) -> bool {
+pub fn pair_count(&self) -> usize {
+pub fn parallel_region_size(&self) -> [u32; 3] {
+pub fn parallel_region_x() -> Self {
+pub fn parallel_region_y() -> Self {
+pub fn parallel_region_z() -> Self {
+pub fn parent_of(&self, idx: NodeIndex) -> Option<NodeIndex> {
+pub fn parse(
+pub fn pass_count(&self) -> usize {
+pub fn pass_descendants(adj: &[u32], n: u32) -> Vec<Vec<u32>> {
+pub fn pass_id(&self) -> &'static str {
+pub fn passes_commute_on(
+pub fn peak_intensity(&self) -> OpIntensity {
+pub fn pipeline_fingerprint_bytes(program: &Program) -> [u8; 32] {
+pub fn plan(&self) -> RewriteBatchPlan {
+pub fn plan(program: &Program) -> Result<ExecutionPlan, PlanError> {
+pub fn plan_for_adapter(
+pub fn plan_with_options(
+pub fn plan_with_options_for_adapter(
+pub fn planar_rewrite_schedule_mask(
+pub fn popcount(operand: Expr) -> Expr {
+pub fn postorder(
+pub fn predecessors(
+pub fn preserves(&self) -> &'static [&'static str] {
+pub fn program(&self) -> Option<Program> {
+pub fn program_diff(before: &Program, after: &Program) -> Result<Vec<Diff>, String> {
+pub fn program_effect_level(program: &Program) -> EffectLevel {
+pub fn program_subtree_hashes(program: &Program) -> Result<Vec<(usize, [u8; 32])>, String> {
+pub fn proves_non_empty(predicate: &ShapePredicate) -> bool {
+pub fn push_expr(&mut self, expr: Expr) -> ExprRef {
+pub fn push_f32(&mut self, value: f32) {
+pub fn push_f64(&mut self, value: f64) {
+pub fn push_i16(&mut self, value: i16) {
+pub fn push_i32(&mut self, value: i32) {
+pub fn push_i64(&mut self, value: i64) {
+pub fn push_slice(&mut self, slice: &[u8]) {
+pub fn push_u16(&mut self, value: u16) {
+pub fn push_u32(&mut self, value: u32) {
+pub fn push_u64(&mut self, value: u64) {
+pub fn put_expr(out: &mut Vec<u8>, expr: &Expr) -> Result<(), WireEncodeErr> {
+pub fn put_len_u32(out: &mut Vec<u8>, value: usize, label: &str) -> Result<(), WireEncodeErr> {
+pub fn put_node(out: &mut Vec<u8>, node: &Node) -> Result<(), WireEncodeErr> {
+pub fn put_nodes(out: &mut Vec<u8>, nodes: &[Node]) -> Result<(), WireEncodeErr> {
+pub fn put_string(out: &mut Vec<u8>, value: &str) -> Result<(), WireEncodeErr> {
+pub fn put_u32(out: &mut Vec<u8>, value: u32) {
+pub fn put_u8(out: &mut Vec<u8>, value: u8) {
+pub fn raw(self) -> u32 {
+pub fn reachability_closure(adj: &[u32], n: u32, max_iters: u32) -> Vec<u32> {
+pub fn reaches(&self, from: &str, to: &str) -> bool {
+pub fn read(name: &str, binding: u32, element: DataType) -> Self {
+pub fn read_after_write_serialised() {
+pub fn read_row_bytes(file_bytes: &[u8], file_index: u32) -> Option<Self> {
+pub fn read_row_bytes(node_bytes: &[u8], node_index: u32) -> Option<Self> {
+pub fn read_section(&mut self) -> Result<&'a [u8], EnvelopeError> {
+pub fn read_u32(&mut self) -> Result<u32, EnvelopeError> {
+pub fn read_words(&mut self) -> Result<Vec<u32>, EnvelopeError> {
+pub fn read_write(name: &str, binding: u32, element: DataType) -> Self {
+pub fn rebuild(&mut self) -> usize {
+pub fn rebuild(&self, id: ExprId) -> Expr {
+pub fn reciprocal(operand: Expr) -> Expr {
+pub fn reconcile_runnable_top_level(self) -> Self {
+pub fn record(&self, digest: ExprDigest, hint: PrecisionHint) {
+pub fn record(&self, region_generator: &str, kernel_ns: u64, bytes_touched: u64) {
+pub fn record_for(&self, region_generator: &str) -> Option<RegionRecord> {
+pub fn recyclable_for(&self, arm_generator: &str) -> &FxHashSet<Ident> {
+pub fn referenced_buffers(program: &Program) -> HashSet<Ident> {
+pub fn region(&self, id: RegionId) -> Result<&[u8], EvalError> {
+pub fn region_at(&self, idx: NodeIndex) -> Option<&RegionMeta> {
+pub fn region_mut(&mut self, id: RegionId) -> Result<&mut Vec<u8>, EvalError> {
+pub fn regionless_parent_of(&self, idx: NodeIndex) -> Option<NodeIndex> {
+pub fn regions(&self) -> &[RegionMeta] {
+pub fn regions_by_generator(&self, generator: &str) -> impl Iterator<Item = &RegionMeta> + '_ {
+pub fn registered_extensions() -> Vec<&'static ExtensionRegistration> {
+pub fn registered_pass_metadata_for_profile(
+pub fn registered_pass_registrations(
+pub fn registered_passes() -> Result<Vec<ProgramPassKind>, OptimizerError> {
+pub fn registered_passes_for_profile(
+pub fn registered_passes_for_profile_and_program(
+pub fn relax_step_program(
+pub fn rem(left: Expr, right: Expr) -> Expr {
+pub fn requires_collective_transport(program: &Program) -> bool {
+pub fn requires_subgroup_ops(&self) -> bool {
+pub fn requires_transport(&self) -> bool {
+pub fn reset(&mut self) {
+pub fn reset_metrics() {
+pub fn resolve_atomic_op(id: ExtensionAtomicOpId) -> Option<&'static dyn ExtensionAtomicOp> {
+pub fn resolve_bin_op(id: ExtensionBinOpId) -> Option<&'static dyn ExtensionBinOp> {
+pub fn resolve_data_type(id: ExtensionDataTypeId) -> Option<&'static dyn ExtensionDataType> {
+pub fn resolve_un_op(id: ExtensionUnOpId) -> Option<&'static dyn ExtensionUnOp> {
+pub fn resume(tag: impl Into<Ident>) -> Self {
+pub fn reverse_bits(operand: Expr) -> Expr {
+pub fn reverse_postorder(
+pub fn round(operand: Expr) -> Expr {
+pub fn rows_by_eclass(&self) -> FxHashMap<u32, Vec<usize>> {
+pub fn run(&self, program: Program) -> Result<Program, OptimizerError> {
+pub fn run(program: Program) -> Program {
+pub fn run_borrowed(program: &Program) -> Program {
+pub fn run_with_metrics(&self, program: Program) -> Result<OptimizerRunReport, OptimizerError> {
+pub fn run_with_threshold(program: Program, threshold: usize) -> Program {
+pub fn saturate<L: ENodeLang>(
+pub fn saturate_per_family<L: ENodeLang>(
+pub fn saturating_sub(left: Expr, right: Expr) -> Expr {
+pub fn scan(program: &Program) -> RequiredCapabilities {
+pub fn schedule_passes(
+pub fn schedule_via_homotopy(costs: &[f64], n: u32, steps: u32, dt: f64) -> Vec<f64> {
+pub fn scheduling_error_to_diagnostic(err: &crate::optimizer::PassSchedulingError) -> Diagnostic {
+pub fn select(cond: Self, true_val: Self, false_val: Self) -> Self {
+pub fn select_pass_metadata_for_program(
+pub fn select_workgroup_tile(
+pub fn select_workgroup_x(
+pub fn self_exclusive_region_key(generator: &str) -> Option<&str> {
+pub fn semiring_gemm_cpu(
+pub fn set(&mut self, id: NodeId, value: Value) {
+pub fn set_operands<I>(&mut self, operands: I)
+pub fn set_parallel_region_size(&mut self, parallel_region_size: [u32; 3]) {
+pub fn set_region(&mut self, id: RegionId, bytes: Vec<u8>) {
+pub fn set_workgroup_size(&mut self, workgroup_size: [u32; 3]) {
+pub fn shape_predicate(&self) -> Option<&ShapePredicate> {
+pub fn shape_predicate_enforcement(&self) -> bool {
+pub fn shared_text(&self) -> Arc<str> {
+pub fn shipped_obligations() -> Vec<RewriteProofObligation> {
+pub fn shl(left: Expr, right: Expr) -> Expr {
+pub fn shortest_path_closure(adj: &[u32], n: u32, max_iters: u32) -> Vec<u32> {
+pub fn should_batch(&self) -> bool {
+pub fn shr(left: Expr, right: Expr) -> Expr {
+pub fn sign(operand: Expr) -> Expr {
+pub fn sin(operand: Expr) -> Expr {
+pub fn smooth_pass_system(&self, b: &[f64], x_in: &[f64], weight: f64) -> Vec<f64> {
+pub fn source() -> Option<&'static str> {
+pub fn source(op: &str) -> Option<&'static str> {
+pub fn span(name: &'static str) -> SpanGuard {
+pub fn sqrt(operand: Expr) -> Expr {
+pub fn start(_crate_name: &'static str, name: &'static str) -> Self {
+pub fn stats(&self) -> &ProgramStats {
+pub fn storage(name: &str, binding: u32, access: BufferAccess, element: DataType) -> Self {
+pub fn store(buffer: impl Into<Ident>, index: Expr, value: Expr) -> Self {
+pub fn strength_reduce_power_of_two_shift(value: u32) -> Option<u32> {
+pub fn structural_eq(&self, other: &Self) -> bool {
+pub fn structured_intrinsic_cpu(input: &[u8], output: &mut Vec<u8>) {
+pub fn sub(left: Expr, right: Expr) -> Expr {
+pub fn subgroup_add(value: Self) -> Self {
+pub fn subgroup_ballot(cond: Self) -> Self {
+pub fn subgroup_local_id() -> Self {
+pub fn subgroup_ops(&self) -> bool {
+pub fn subgroup_shuffle(value: Self, lane: Self) -> Self {
+pub fn subgroup_size() -> Self {
+pub fn supports_cast_target(&self, target: &DataType) -> bool {
+pub fn supports_distributed_collectives(&self) -> bool {
+pub fn tensor_ops(&self) -> bool {
+pub fn threshold(&self) -> usize {
+pub fn to_bytes(&self) -> Vec<u8> {
+pub fn to_bytes(self) -> [u8; NODE_STRIDE_U32 * 4] {
+pub fn to_graph(program: &Program) -> NodeGraph {
+pub fn to_smt2(&self) -> String {
+pub fn to_text(&self) -> Result<String, TextParseError> {
+pub fn to_wire(&self) -> Result<Vec<u8>, crate::error::Error> {
+pub fn to_wire(program: &Program) -> Result<Vec<u8>, String> {
+pub fn to_wire_into(&self, dst: &mut Vec<u8>) -> Result<(), crate::error::Error> {
+pub fn to_wire_into(program: &Program, dst: &mut Vec<u8>) -> Result<(), String> {
+pub fn to_wire_with_buffer_order_into(
+pub fn top_level_region_violation(&self) -> Option<String> {
+pub fn total_byte_len(self) -> Option<usize> {
+pub fn track_active(&self, track: InnovationTrack) -> bool {
+pub fn transform(&self, program: Program) -> PassResult {
+pub fn transform(mut program: Program) -> PassResult {
+pub fn transform(program: Program) -> PassResult {
+pub fn transform_for_adapter(program: Program, caps: &AdapterCaps) -> PassResult {
+pub fn transitive_dependents(&self, pass_name: &str) -> Vec<&'static str> {
+pub fn transport_collectives(&self) -> usize {
+pub fn trap(&self) -> bool {
+pub fn trap(address: Expr, tag: impl Into<Ident>) -> Self {
+pub fn triple_associates(&self, pass_a: &str, pass_b: &str, pass_c: &str) -> Option<bool> {
+pub fn trunc(operand: Expr) -> Expr {
+pub fn try_batch_apply(&self, program: Program) -> Result<PassResult, RefusalReason> {
+pub fn try_default() -> Result<Self, OptimizerError> {
+pub fn try_find_extension(
+pub fn try_into_program(self) -> Result<Program, GraphValidateError> {
+pub fn try_registered_extensions() -> Result<Vec<&'static ExtensionRegistration>, String> {
+pub fn try_resolve_atomic_op(
+pub fn try_resolve_bin_op(
+pub fn try_resolve_data_type(
+pub fn try_resolve_un_op(
+pub fn try_transform(&self, program: Program) -> Result<PassResult, RefusalReason> {
+pub fn u32(value: u32) -> Self {
+pub fn u64(value: u64) -> Expr {
+pub fn unchanged(program: Program) -> Self {
+pub fn uniform(name: &str, binding: u32, element: DataType) -> Self {
+pub fn union(&mut self, a: EClassId, b: EClassId) -> EClassId {
+pub fn union(mut self, other: RequiredCapabilities) -> Self {
+pub fn unique_buffer_count(after: &Program) -> usize {
+pub fn universal() -> Self {
+pub fn unop_adjoint(
+pub fn unsupported_op(backend: &'static str, op_id: &Arc<str>, node_index: usize) -> Self {
+pub fn unsupported_op(op: impl fmt::Debug) -> Self {
+pub fn unsupported_type(data_type: &DataType) -> Self {
+pub fn use_count_of(&self, name: &Ident) -> usize {
+pub fn use_counts(&self) -> Option<&FxHashMap<Ident, usize>> {
+pub fn use_facts(&self) -> Option<&UseFacts> {
+pub fn validate(&self) -> crate::error::Result<()> {
+pub fn validate(&self, plan: &MemoryPlan) -> Result<MemoryBudgetReport, PlanError> {
+pub fn validate(program: &Program) -> Vec<ValidationError> {
+pub fn validate_graph(
+pub fn validate_pipeline(
+pub fn validate_prefix_input(byte_len: usize) -> Result<()> {
+pub fn validate_primitive(
+pub fn validate_registered_pass_order() -> Result<PassOrderValidation, OptimizerError> {
+pub fn validate_scheduled_pass_order(
+pub fn validate_tree(
+pub fn validate_vast(bytes: &[u8]) -> Result<VastHeader, VastError> {
+pub fn validate_with_options(
+pub fn validation(error: impl std::error::Error) -> Self {
+pub fn var(name: impl Into<Arc<str>>, sort: ProofSort) -> Self {
+pub fn var(name: impl Into<Ident>) -> Self {
+pub fn var_read_sites_of(&self, name: &str) -> &[NodeIndex] {
+pub fn var_reads(&self) -> &[(NodeIndex, Ident)] {
+pub fn vectorizable_at(&self, lane_count: u32) -> bool {
+pub fn verify() -> Result<(), Vec<ExternVerifyError>> {
+pub fn visible_bytes(&self) -> u64 {
+pub fn visit_expr<V: ExprVisitor>(visitor: &mut V, expr: &Expr) -> ControlFlow<V::Break> {
+pub fn visit_node<V: NodeVisitor>(visitor: &mut V, node: &Node) -> ControlFlow<V::Break> {
+pub fn visit_node_postorder<V: NodeVisitor>(visitor: &mut V, node: &Node) -> ControlFlow<V::Break> {
+pub fn visit_node_preorder<V: NodeVisitor>(visitor: &mut V, node: &Node) -> ControlFlow<V::Break> {
+pub fn visit_postorder<V: ExprVisitor>(visitor: &mut V, expr: &Expr) -> ControlFlow<V::Break> {
+pub fn visit_preorder<V: ExprVisitor>(visitor: &mut V, expr: &Expr) -> ControlFlow<V::Break> {
+pub fn visit_step_program(
+pub fn vsa_fingerprint(&self) -> Vec<u32> {
+pub fn walk_expr_children_default<V: ExprVisitor>(
+pub fn walk_exprs(program: &Program, mut f: impl FnMut(&Expr)) {
+pub fn walk_node_children_default<V: NodeVisitor>(
+pub fn walk_nodes(program: &Program, mut f: impl FnMut(&Node)) {
+pub fn walk_nodes_and_exprs<V: NodeVisitor + ExprVisitor>(program: &Program, visitor: &mut V) {
+pub fn walk_nodes_mut(program: &mut Program, mut f: impl FnMut(&mut Node)) {
+pub fn walk_postorder_indices(
+pub fn walk_preorder_indices(
+pub fn with_arena(
+pub fn with_backend(mut self, backend: &'a dyn BackendValidationCapabilities) -> Self {
+pub fn with_backend_capabilities(mut self, backend_capabilities: BackendCapabilities) -> Self {
+pub fn with_bytes_extraction(mut self, flag: bool) -> Self {
+pub fn with_capacity(capacity: usize) -> Self {
+pub fn with_capacity(class_capacity: usize) -> Self {
+pub fn with_cost_monotone_enforcement(mut self, enforce: bool) -> Self {
+pub fn with_count(mut self, count: u32) -> Self {
+pub fn with_dialect_lookup(mut self, lookup: &'a dyn DialectLookup) -> Self {
+pub fn with_effect_handler_enforcement(mut self, enforce: bool) -> Self {
+pub fn with_entry_op_id(mut self, op_id: impl Into<String>) -> Self {
+pub fn with_extension(
+pub fn with_hints(mut self, hints: MemoryHints) -> Self {
+pub fn with_hot_threshold_ns(self, threshold_ns: u64) -> Self {
+pub fn with_kind(mut self, kind: MemoryKind) -> Self {
+pub fn with_linear_type(mut self, linear_type: LinearType) -> Self {
+pub fn with_linear_type_enforcement(mut self, enforce: bool) -> Self {
+pub fn with_location(mut self, loc: OpLocation) -> Self {
+pub fn with_max_iterations(mut self, max_iterations: usize) -> Self {
+pub fn with_non_composable_with_self(mut self, flag: bool) -> Self {
+pub fn with_output_byte_range(mut self, range: Range<usize>) -> Self {
+pub fn with_passes(passes: Vec<ProgramPassKind>) -> Self {
+pub fn with_pipeline_live_out(mut self, flag: bool) -> Self {
+pub fn with_rewritten_buffers(&self, buffers: Vec<BufferDecl>) -> Self {
+pub fn with_rewritten_entry(&self, entry: Vec<Node>) -> Self {
+pub fn with_rewritten_workgroup_size_and_entry(
+pub fn with_rewritten_wrapped_entry(&self, entry: Vec<Node>) -> Self {
+pub fn with_shadowing(mut self, allow_shadowing: bool) -> Self {
+pub fn with_shape_predicate(mut self, predicate: ShapePredicate) -> Self {
+pub fn with_shape_predicate_enforcement(mut self, enforce: bool) -> Self {
+pub fn with_threshold(mut self, threshold: usize) -> Self {
+pub fn workgroup(name: &str, count: u32, element: DataType) -> Self {
+pub fn workgroup_size(&self) -> [u32; 3] {
+pub fn workgroup_x() -> Self {
+pub fn workgroup_y() -> Self {
+pub fn workgroup_z() -> Self {
+pub fn wrapped(buffers: Vec<BufferDecl>, workgroup_size: [u32; 3], entry: Vec<Node>) -> Self {
+pub fn wrapping_add(self, other: impl Into<Expr>) -> Self {
+pub fn wrapping_sub(self, other: impl Into<Expr>) -> Self {
+pub fn write_after_write_serialised() {
+pub fn write_section(&mut self, bytes: &[u8]) -> Result<(), EnvelopeError> {
+pub fn write_u32(&mut self, value: u32) {
+pub fn write_words(&mut self, words: &[u32]) -> Result<(), EnvelopeError> {
+pub fn writer(error: impl fmt::Display) -> Self {
+pub fn zero_value(ty: &DataType) -> Expr {
+pub mod access_from_tag;
+pub mod access_tag;
+pub mod adjustment_set_pass_dependency;
+pub mod algebra;
+pub mod algebraic;
+pub mod algebraic_law_registry;
+pub mod algebraic_rules;
+pub mod analysis;
+pub mod arena;
+pub mod atomic_minimize;
+pub mod atomic_op_from_tag;
+pub mod atomic_op_tag;
+pub mod autodiff;
+pub mod autotune;
+pub mod barrier_coalesce;
+pub mod bin_op_from_tag;
+pub mod bin_op_tag;
+pub mod binding;
+pub mod branch_coalesce;
+pub mod branch_value_hoist;
+pub mod buffer_decl_sort;
+pub mod buffer_layouts;
+pub mod canonicalize;
+pub mod canonicalize_engine;
+pub mod cleanup;
+pub mod collect_expr_refs;
+pub mod collectives;
+pub mod compiler;
+pub mod composition;
+pub mod const_buffer_fold;
+pub mod const_fold;
+pub mod const_loop_empty;
+pub mod const_truth;
+pub mod cost;
+pub mod cpu_op;
+pub mod cpu_references;
+pub mod cse;
+pub mod cse_ctx;
+pub mod ctx;
+pub mod data_type_from_tag;
+pub mod data_type_tag;
+pub mod dataflow_fixpoint;
+pub mod dce;
+pub mod dead_buffer_elim;
+pub mod dead_store_elim;
+pub mod decode;
+pub mod decode_scan_fuse;
+pub mod depth;
+pub mod derived_order;
+pub mod diagnostics {
+pub mod dialect_lookup;
+pub mod diff_compile;
+pub mod dispatch;
+pub mod dominator_tree;
+pub mod dsl;
+pub mod effect_lattice;
+pub mod effects;
+pub mod eliminate_dead_lets;
+pub mod eliminate_unreachable;
+pub mod empty_block_collapse;
+pub mod encode;
+pub mod endian;
+pub mod engine;
+pub mod envelope;
+pub mod eqsat;
+pub mod eqsat_gpu;
+pub mod eqsat_toml;
+pub mod err;
+pub mod error;
+pub mod eval {
+pub mod execution_plan;
+pub mod expr;
+pub mod expr_arena;
+pub mod expr_arena_analysis;
+pub mod expr_has_effect;
+pub mod expr_key;
+pub mod extension;
+pub mod extern_registry;
+pub mod fact_substrate;
+pub mod framing;
+pub mod from_wire;
+pub mod functorial_pass_composition;
+pub mod fuse_cse;
+pub mod fusion;
+pub mod fusion_cert;
+pub mod fusion_cse;
+pub mod generated;
+pub mod grad;
+pub mod graph_view;
+pub mod hot_path_hints;
+pub mod if_constant_branch_eliminate;
+pub mod impl_csectx;
+pub mod impl_exprkey;
+pub mod impl_reader;
+pub mod impl_typekey_from;
+pub mod inline;
+pub mod ir {
+pub mod ir_eval;
+pub mod is_commutative;
+pub mod limits;
+pub mod linear_type;
+pub mod live_result;
+pub mod loop_bound_tighten;
+pub mod loop_fission;
+pub mod loop_fusion;
+pub mod loop_licm;
+pub mod loop_lower_bound_normalize;
+pub mod loop_peel;
+pub mod loop_redundant_bound_check_elide;
+pub mod loop_software_pipeline;
+pub mod loop_strip_mine;
+pub mod loop_trip_zero_eliminate;
+pub mod loop_unroll;
+pub mod loop_var_range_fold;
+pub mod loops;
+pub mod lower;
+pub mod magic;
+pub mod match_result;
+pub mod matroid_subset;
+pub mod megakernel;
+pub mod memory;
+pub mod memory_budget;
+pub mod memory_model;
+pub mod model;
+pub mod multigrid_matroid_solver;
+pub mod node;
+pub mod node_kind;
+pub mod node_map;
+pub mod noop_assign_eliminate;
+pub mod normalize_atomics;
+pub mod opaque_payload;
+pub mod optimizer;
+pub mod options;
+pub mod output_set;
+pub mod parallelism;
+pub mod pass_catalog;
+pub mod pass_explain;
+pub mod pass_invariants;
+pub mod pass_order;
+pub mod pass_selection;
+pub mod pass_substrate;
+pub mod passes;
+pub mod perf;
+pub mod planar_batch;
+pub mod polyhedral_fusion;
+pub mod pre_lowering;
+pub mod precision_hint;
+pub mod prefix;
+pub mod private {
+pub mod program;
+pub mod program_caps;
+pub mod program_pass;
+pub mod program_shape_facts;
+pub mod program_soa;
+pub mod put_len_u32;
+pub mod put_nodes;
+pub mod put_string;
+pub mod put_u32;
+pub mod put_u8;
+pub mod reachable_prefix;
+pub mod reaching_def_propagate;
+pub mod read_only_load_hoist;
+pub mod recursive_descent;
+pub mod region_fusion_hint;
+pub mod region_inline;
+pub mod region_inline_engine;
+pub mod region_promote_singleton_block;
+pub mod rematerialize_cheap_let;
+pub mod report;
+pub mod rewrite_proof;
+pub mod rewrite_proof_registry;
+pub mod rules;
+pub mod runtime;
+pub mod schedule_oracle;
+pub mod scratch_reuse;
+pub mod serial;
+pub mod shader_provider;
+pub mod shape_facts;
+pub mod shape_predicate;
+pub mod soundness;
+pub mod specialization;
+pub mod stats {
+pub mod stats;
+pub mod store_to_load_forward;
+pub mod strength_reduce;
+pub mod string_diagram_ir_rewrite;
+pub mod string_interner;
+pub mod subgroup_lowering;
+pub mod sync;
+pub mod tags;
+pub mod tail_duplication;
+pub mod tensor_network_fusion_order;
+pub mod test_helpers {
+pub mod tests {
+pub mod text;
+pub mod to_wire;
+pub mod traits;
+pub mod transform;
+pub mod type_key;
+pub mod typed_arena;
+pub mod types;
+pub mod un_op_from_tag;
+pub mod un_op_tag;
+pub mod validate;
+pub mod validation_error;
+pub mod vast;
+pub mod vectorization;
+pub mod visit;
+pub mod visitor_walk;
+pub mod wire;
+pub struct AccuracyPlan {
+pub struct AdapterCaps {
+pub struct AdjointContrib {
+pub struct AlgebraicLawRegistration {
+pub struct AnalysisCache {
+pub struct ApplyEquivalencesReport {
+pub struct ArenaProgram<'a> {
+pub struct AtomicMinimizePass;
+pub struct AttrSchema {
+pub struct Autotune;
+pub struct AutotunePlan {
+pub struct BackendCapabilities {
+pub struct BarrierCoalescePass;
+pub struct BranchCoalesce;
+pub struct BranchValueHoistPass;
+pub struct BufferDecl {
+pub struct BufferDeclSortPass;
+pub struct BufferPlan {
+pub struct BufferShapeFacts {
+pub struct ByteRange {
+pub struct Canonicalize;
+pub struct CollectiveTransportPlan {
+pub struct CompilerPrimitiveShader {
+pub struct ConstBuffer {
+pub struct ConstFold;
+pub struct CostCertificate {
+pub struct CseCtx {
+pub struct CsePass;
+pub struct DataEdge {
+pub struct DataflowFixpointOp;
+pub struct DcePass;
+pub struct DeadBufferElim;
+pub struct DeadStoreElim;
+pub struct DecodeScanFuse;
+pub struct DerivedPassEdge {
+pub struct DerivedPassNode {
+pub struct DerivedPassOrder {
+pub struct DeviceAwareRule<L: ENodeLang, F: Fn() -> bool> {
+pub struct DeviceCostEstimate {
+pub struct DeviceMemoryBudget {
+pub struct Diagnostic {
+pub struct DominatorTreeOp;
+pub struct EClass<L: ENodeLang> {
+pub struct EClassId(pub u32);
+pub struct EGraph<L: ENodeLang> {
+pub struct EmptyBlockCollapsePass;
+pub struct Entry {
+pub struct Equivalence {
+pub struct EquivalenceRule {
+pub struct EvalError {
+pub struct ExecutionPlan {
+pub struct ExprArena {
+pub struct ExprArenaStats {
+pub struct ExprDigest(pub [u8; 32]);
+pub struct ExprId(pub u32);
+pub struct ExprRef {
+pub struct ExtensionAtomicOpRegistration {
+pub struct ExtensionBinOpRegistration {
+pub struct ExtensionDataTypeRegistration {
+pub struct ExtensionId(pub u32);
+pub struct ExtensionRegistration {
+pub struct ExtensionUnOpRegistration {
+pub struct ExternDialect {
+pub struct ExternOp {
+pub struct FactSubstrate {
+pub struct FamilySaturationReport {
+pub struct FixpointResult {
+pub struct Fusion;
+pub struct FusionAliasingError {
+pub struct FusionCertificate {
+pub struct FusionOverDispatchError {
+pub struct FusionPlan {
+pub struct FusionSelfAliasingError {
+pub struct GeneratorRef {
+pub struct GpuEGraphSnapshot {
+pub struct GraphNode {
+pub struct HotPathHints {
+pub struct Ident {
+pub struct IfConstantBranchEliminatePass;
+pub struct InlineCtx {
+pub struct InternedOpId(pub u32);
+pub struct InterpCtx {
+pub struct InventoryShaderProvider;
+pub struct LeBytesWriter {
+pub struct LimitState {
+pub struct LoopBoundTighten;
+pub struct LoopFission;
+pub struct LoopFusion;
+pub struct LoopLicm;
+pub struct LoopLowerBoundNormalize;
+pub struct LoopPeelPass;
+pub struct LoopRedundantBoundCheckElidePass;
+pub struct LoopSoftwarePipeline;
+pub struct LoopStripMine;
+pub struct LoopTripZeroEliminatePass;
+pub struct LoopUnroll;
+pub struct LoopVarRangeFoldPass;
+pub struct LoweringCtx<'a> {
+pub struct LoweringError {
+pub struct LoweringTable {
+pub struct Match {
+pub struct MemoryBudgetReport {
+pub struct MemoryHints {
+pub struct MemoryPlan {
+pub struct MissingCapability {
+pub struct NativeModule {
+pub struct NodeGraph {
+pub struct NodeId(pub u32);
+pub struct NodeIndex(pub u32);
+pub struct NoopAssignEliminatePass;
+pub struct NormalizeAtomicsPass;
+pub struct OpDef {
+pub struct OpIdRegistry {
+pub struct OpLocation {
+pub struct OpaqueExprResolver {
+pub struct OpaqueId(usize);
+pub struct OpaqueNodeResolver {
+pub struct OpaquePayloadTruncated {
+pub struct OptimizationCatalogEntry {
+pub struct OptimizerRunReport {
+pub struct OutputSet(Vec<u32>);
+pub struct ParseResult {
+pub struct PassAnalysis {
+pub struct PassCtx<'a> {
+pub struct PassExplanation {
+pub struct PassMetadata {
+pub struct PassMetricDelta {
+pub struct PassOrderValidation {
+pub struct PassResult {
+pub struct PassRunMetric {
+pub struct PassScheduler {
+pub struct PassSelectionDecision {
+pub struct PerfMeasurement {
+pub struct PerfScope {
+pub struct PrecisionHints {
+pub struct PrimitiveSoundness {
+pub struct Program {
+pub struct ProgramEffects(u32);
+pub struct ProgramFacts {
+pub struct ProgramPassKind(Box<dyn ProgramPass>);
+pub struct ProgramPassRegistration {
+pub struct ProgramShapeFacts {
+pub struct ProgramStats {
+pub struct ProofExpr {
+pub struct ProvenancePlan {
+pub struct ReachingDefPropagatePass;
+pub struct ReadOnlyLoadHoistPass;
+pub struct RecursiveDescentOp;
+pub struct RegionFusionHintPass;
+pub struct RegionId(pub u32);
+pub struct RegionInlinePass;
+pub struct RegionMeta {
+pub struct RegionPromoteSingletonBlockPass;
+pub struct RegionRecord {
+pub struct RematerializeCheapLetPass;
+pub struct RequiredCapabilities {
+pub struct RewriteBatch {
+pub struct RewriteBatchCandidates {
+pub struct RewriteBatchItem {
+pub struct RewriteBatchPlan {
+pub struct RewriteCandidate {
+pub struct RewriteProofObligation {
+pub struct SchedulingPolicy {
+pub struct Scope<K, V> {
+pub struct ScratchReusePlan {
+pub struct Signature {
+pub struct SingleRankCollectiveError {
+pub struct SnapshotRow {
+pub struct SoundnessViolation {
+pub struct SpanGuard {
+pub struct StoreToLoadForward;
+pub struct StrategyPlan {
+pub struct StrengthReduce;
+pub struct StringInterner {
+pub struct StringInternerOp;
+pub struct TailDuplicationPass;
+pub struct TextModule {
+pub struct TomlEquivalenceRules {
+pub struct TrackDecision {
+pub struct Transition {
+pub struct TypeFacts {
+pub struct TypedArena {
+pub struct TypedArenaOp;
+pub struct TypedParam {
+pub struct UseFacts {
+pub struct ValidationError {
+pub struct ValidationOptions<'a> {
+pub struct ValidationReport {
+pub struct ValidationWarning {
+pub struct VarId(pub u32);
+pub struct VastFile {
+pub struct VastHeader {
+pub struct VastNode {
+pub struct Vectorization;
+pub struct VisitorWalkOp;
+pub struct WireReader<'a> {
+pub struct WireWriter {
+pub trait BackendValidationCapabilities {
+pub trait CategoryAOp {
+pub trait CpuOp {
+pub trait DialectLookup: private::Sealed + Send + Sync {
+pub trait ENodeLang: Clone + Eq + Hash {
+pub trait Evaluatable<Env: ?Sized> {
+pub trait ExprExtensionNode: Debug + Send + Sync + 'static {
+pub trait ExprNode: fmt::Debug + Send + Sync + 'static {
+pub trait ExprVisitor {
+pub trait Family<L: ENodeLang> {
+pub trait Lowerable<Ctx: ?Sized> {
+pub trait NodeExtension: fmt::Debug + Send + Sync + 'static {
+pub trait NodeNode: Debug + Send + Sync + 'static {
+pub trait NodeVisitor {
+pub trait OpIdNode {
+pub trait ProgramPass: private::Sealed + Send + Sync {
+pub trait Rule<L: ENodeLang> {
+pub trait RuleConditionExt: Debug + Send + Sync + 'static {
+pub trait Sealed {}
+pub trait SoundnessTagged {
+pub trait WireRoundTrip: Sized {
+pub type EChildren = SmallVec<[EClassId; 4]>;
+pub type ExprExtensionDeserializer =
+pub type ExtensionLoweringFn =
+pub type NativeModuleBuilder = fn(&LoweringCtx<'_>) -> NativeModule;
+pub type NodeExtensionDeserializer =
+pub type OpId = Arc<str>;
+pub type OpResolver = fn(&str) -> Option<Program>;
+pub type PrimaryBinaryBuilder = fn(&LoweringCtx<'_>) -> Vec<u32>;
+pub type PrimaryTextBuilder = fn(&LoweringCtx<'_>) -> Result<(), String>;
+pub type PullbackMap = FxHashMap<usize, Expr>;
+pub type ReferenceKind = CpuFn;
+pub type Result<T> = std::result::Result<T, Error>;
+pub type SecondaryTextBuilder = fn(&LoweringCtx<'_>) -> TextModule;

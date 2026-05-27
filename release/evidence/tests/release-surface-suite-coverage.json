@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "surfaces": [
+    {
+      "surface": "vyre",
+      "file_count": 914,
+      "assertion_count": 10448,
+      "entrypoint_count": 914,
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "corpus",
+        "fuzz",
+        "gap",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "required_layers": [
+        "unit",
+        "integration",
+        "property",
+        "adversarial",
+        "corpus",
+        "benchmark",
+        "conformance",
+        "gap",
+        "fuzz"
+      ],
+      "missing_layers": [],
+      "blockers": []
+    },
+    {
+      "surface": "weir",
+      "file_count": 56,
+      "assertion_count": 537,
+      "entrypoint_count": 55,
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "corpus",
+        "fuzz",
+        "gap",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "required_layers": [
+        "unit",
+        "integration",
+        "property",
+        "adversarial",
+        "corpus",
+        "benchmark",
+        "conformance",
+        "gap",
+        "fuzz"
+      ],
+      "missing_layers": [],
+      "blockers": []
+    },
+    {
+      "surface": "vyrec",
+      "file_count": 9,
+      "assertion_count": 19,
+      "entrypoint_count": 9,
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "corpus",
+        "fuzz",
+        "gap",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "required_layers": [
+        "unit",
+        "integration",
+        "property",
+        "adversarial",
+        "corpus",
+        "benchmark",
+        "conformance",
+        "gap",
+        "fuzz"
+      ],
+      "missing_layers": [],
+      "blockers": []
+    }
+  ],
+  "blockers": []
+}

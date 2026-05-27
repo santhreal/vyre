@@ -1,0 +1,334 @@
+pub const DEFAULT_INTRUSIVE_LRU_CAPACITY: usize = 65_536;
+pub const DEFAULT_THRESHOLD: u32 = 3;
+pub const DONE_COUNT: usize = 4;
+pub const FILE_METADATA_WORDS: usize = 4;
+pub const HEAD: usize = 0;
+pub const HIT_CAPACITY: usize = 3;
+pub const HIT_HEAD: usize = 2;
+pub const HIT_RECORD_WORDS: usize = 4;
+pub const INDIRECT_ARGS_BYTES: u64 = 12;
+pub const MAX_BATCH_HIT_CAPACITY: u32 = 16 * 1024 * 1024;
+pub const MAX_BATCH_WORK_ITEMS: usize = u32::MAX as usize;
+pub const MAX_SERIALIZED_PART_BYTES: usize = 256 * 1024 * 1024;
+pub const QUEUE_LEN: usize = 1;
+pub const QUEUE_STATE_WORDS: usize = 6;
+pub const RULE_COUNT: usize = 5;
+pub const SPIRV_BACKEND_ID: &str = "spirv";
+pub const WGPU_BACKEND_ID: &str = "wgpu";
+pub const WORK_TRIPLE_WORDS: usize = 3;
+pub const fn haystack(&self) -> &GpuBufferHandle {
+pub const fn hit_capacity(&self) -> u32 {
+pub const fn hit_ring(&self) -> &GpuBufferHandle {
+pub const fn metadata(&self) -> &GpuBufferHandle {
+pub const fn new(file_idx: u32, rule_idx: u32, layer_idx: u32) -> Self {
+pub const fn offsets(&self) -> &GpuBufferHandle {
+pub const fn queue_len(&self) -> u32 {
+pub const fn queue_state(&self) -> &GpuBufferHandle {
+pub const fn with_device_memory_budget(
+pub const fn with_execution_hints(
+pub const fn with_graph_hints(
+pub enum BatchHitWriter {
+pub enum CacheError {
+pub enum GpuResource {
+pub enum Override<'a> {
+pub enum Reason {
+pub enum SlotState {
+pub enum StreamShardError {
+pub fn acquire(
+pub fn acquire() -> Result<Self, vyre_driver::BackendError> {
+pub fn acquire_adapter(index: usize) -> Result<Self, vyre_driver::BackendError> {
+pub fn acquire_all() -> Result<Self, vyre_driver::BackendError> {
+pub fn acquire_indices(indices: &[usize]) -> Result<Self, vyre_driver::BackendError> {
+pub fn adapter_caps(&self) -> vyre_foundation::optimizer::AdapterCaps {
+pub fn adapter_for_info(expected: &wgpu::AdapterInfo) -> Result<wgpu::Adapter> {
+pub fn adapter_index_from_env() -> Result<Option<usize>> {
+pub fn adapter_indices(&self) -> Vec<usize> {
+pub fn adapter_info(&self) -> &wgpu::AdapterInfo {
+pub fn adapter_probe_report() -> AdapterProbeReport {
+pub fn alloc(
+pub fn allocate_wgpu_device_buffer(
+pub fn allocation_len(&self) -> u64 {
+pub fn arm_ticket(
+pub fn assign(&mut self, key: &[u8], cost: u64) -> Result<Option<u32>, StreamShardError> {
+pub fn async_load<F>(&mut self, tag: impl Into<String>, copy: F) -> Result<(), BackendError>
+pub fn async_wait(&mut self, tag: &str) -> Result<(), BackendError> {
+pub fn backend_fingerprint() -> String {
+pub fn bg_entry(binding: u32, buffer: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
+pub fn bind_group_cache_stats(&self) -> BindGroupCacheStats {
+pub fn buffer(&self) -> &wgpu::Buffer {
+pub fn buffer_arc(&self) -> Arc<wgpu::Buffer> {
+pub fn byte_len(&self) -> u64 {
+pub fn cache_dir() -> PathBuf {
+pub fn cache_key(spec_hash: &str, backend_fingerprint: &str) -> String {
+pub fn cached_adapter_info() -> Result<&'static wgpu::AdapterInfo> {
+pub fn cached_device() -> Result<Arc<(wgpu::Device, wgpu::Queue)>> {
+pub fn collect_slot(
+pub fn collect_slot_into(
+pub fn compile(
+pub fn compile(program: &Program) -> Result<Arc<Self>, BackendError> {
+pub fn compile_compute_pipeline(
+pub fn compile_compute_pipeline_with_layout(
+pub fn compile_persistent(
+pub fn compile_streaming(
+pub fn compile_with_config(
+pub fn decode_parts(mut bytes: &[u8]) -> Result<Vec<&[u8]>> {
+pub fn default_flags() -> WriterFlags {
+pub fn demote(&mut self, key: u64) -> Result<(), CacheError> {
+pub fn device(&self) -> &wgpu::Device {
+pub fn device_limits(&self) -> &wgpu::Limits {
+pub fn device_profile(&self) -> vyre_driver::DeviceProfile {
+pub fn device_queue(&self) -> Arc<(wgpu::Device, wgpu::Queue)> {
+pub fn dispatch(
+pub fn dispatch(&self, config: &DispatchConfig) -> Result<Vec<Vec<Vec<u8>>>, BackendError> {
+pub fn dispatch_batch(
+pub fn dispatch_borrowed_batch(
+pub fn dispatch_borrowed_batch_into(
+pub fn dispatch_borrowed_for_each_mapped_output<F>(
+pub fn dispatch_borrowed_for_each_pod_output<T, F>(
+pub fn dispatch_coalesced(
+pub fn dispatch_coalesced_borrowed(
+pub fn dispatch_compiled(
+pub fn dispatch_compound_v2(
+pub fn dispatch_indirect<'a>(pass: &mut wgpu::ComputePass<'a>, args: &'a IndirectArgs) {
+pub fn dispatch_into(
+pub fn dispatch_megakernel(
+pub fn dispatch_megakernel_bytes(
+pub fn dispatch_megakernel_with_io_queue(
+pub fn dispatch_persistent(
+pub fn dispatch_persistent_batched(
+pub fn dispatch_persistent_borrowed(
+pub fn dispatch_speculative_prefilter_confirm<F>(
+pub fn dispatch_wgsl(
+pub fn download_wgpu_device_buffer(
+pub fn element_count(&self) -> usize {
+pub fn emit(module: &naga::Module, entry: &str) -> Result<Vec<u32>, String> {
+pub fn encode_parts(parts: &[&[u8]]) -> Result<Vec<u8>> {
+pub fn ensure(&mut self, key: K) -> &mut V {
+pub fn ensure_front(&mut self, key: K) -> &mut V {
+pub fn enumerate_adapters() -> Vec<wgpu::AdapterInfo> {
+pub fn enumerate_by_precedence() -> Vec<&'static BackendRegistration> {
+pub fn enumerate_live_gpus() -> Vec<LiveGpu> {
+pub fn evict_coldest(&mut self) -> Option<u64> {
+pub fn execution_plan(&self) -> &ExecutionPlan {
+pub fn existing_ring_for(
+pub fn file_count(&self) -> usize {
+pub fn finish(&mut self) -> Result<Option<Vec<Vec<u8>>>, BackendError> {
+pub fn force_device_lost(&self) -> Result<(), vyre_driver::BackendError> {
+pub fn free_wgpu_device_buffer(
+pub fn from_backend(
+pub fn from_backend_profile(
+pub fn from_handle(handle: &GpuBufferHandle, offset: u64) -> Result<Self, BackendError> {
+pub fn from_program(
+pub fn from_resident_id(id: u64) -> Option<Self> {
+pub fn from_runner<F>(runner: F, config: DispatchConfig) -> Self
+pub fn get(&self, key: &K) -> Option<&V> {
+pub fn get(&self, key: u64) -> Option<&CacheEntry> {
+pub fn get_or_create(
+pub fn handle(&self) -> &GpuBufferHandle {
+pub fn has_real_gpu_adapter() -> bool {
+pub fn high_performance() -> Self {
+pub fn host_metadata(&self) -> &[FileMetadata] {
+pub fn host_offsets(&self) -> &[u32] {
+pub fn host_work_items(&self) -> &[WorkTriple] {
+pub fn hot_set(&self, n: usize) -> Vec<u64> {
+pub fn hottest(&self, n: usize) -> Vec<K> {
+pub fn id(&self) -> u64 {
+pub fn init_device() -> Result<(
+pub fn init_device_for_adapter(
+pub fn insert(&mut self, key: u64, size: u64) -> Result<(), CacheError> {
+pub fn invalidate_impacted_disk_cache(
+pub fn invalidate_impacted_pipeline_cache(
+pub fn invalidate_pipeline_cache_for_changed_op(
+pub fn is_empty(&self) -> bool {
+pub fn iter_coldest(&self) -> impl Iterator<Item = (&K, &V)> + '_ {
+pub fn iter_hottest(&self) -> impl Iterator<Item = (&K, &V)> + '_ {
+pub fn launch_accounting(op_count: usize) -> LaunchAccounting {
+pub fn launch_recommendation(
+pub fn len(&self) -> usize {
+pub fn live_gpu_loads() -> Result<Vec<DeviceLoad>, String> {
+pub fn load(&self) -> &[u64] {
+pub fn load_or_compile(program: &Program, fingerprint: &str) -> Result<AotArtifact, BackendError> {
+pub fn load_or_compile_with_config(
+pub fn low_power() -> Self {
+pub fn lower(program: &vyre_foundation::ir::Program) -> Result<String, LoweringError> {
+pub fn lower_to_backend_ir(
+pub fn lower_to_target<'a>(&self, bir: &'a WgpuProgram) -> &'a naga::Module {
+pub fn lower_with_config(
+pub fn new() -> Result<Self, vyre_driver::BackendError> {
+pub fn new() -> Self {
+pub fn new(backend: &'a dyn VyreBackend) -> Self {
+pub fn new(backend: WgpuBackend, config: BatchDispatchConfig) -> Result<Self, PipelineError> {
+pub fn new(device: &wgpu::Device, size: usize, buffer_size: u64) -> Result<Self, BackendError> {
+pub fn new(device: wgpu::Device, queue: wgpu::Queue, config: &DispatchConfig) -> Self {
+pub fn new(n_gpus: u32, spill_threshold: u64) -> Result<Self, StreamShardError> {
+pub fn new(name: impl Into<String>, capacity: u64) -> Self {
+pub fn new(path_hash: u64, decoded_layer_index: u32, bytes: Vec<u8>) -> Self {
+pub fn new(pipeline: WgpuPipeline, config: DispatchConfig) -> Self {
+pub fn new(promote_threshold: u32) -> Self {
+pub fn new(tiers: Vec<CacheTier>) -> Self {
+pub fn new_with_hit_writer(
+pub fn overlap_copy_compute<C, G>(
+pub fn partition_work_stealing(
+pub fn pick(&self, program: &Program) -> Result<RouterDecision, BackendError> {
+pub fn pick_with_override(
+pub fn prerecord_borrowed_dispatch(
+pub fn prerecord_persistent_dispatch(
+pub fn probe(adapter: &wgpu::Adapter) -> AdapterCaps {
+pub fn probe_op(
+pub fn probe_op_many(
+pub fn probe_profile(adapter: &wgpu::Adapter) -> DeviceProfile {
+pub fn promote(&mut self, key: u64) -> Result<(), CacheError> {
+pub fn push(&mut self, item: PersistentPayloadWorkItem) {
+pub fn push(&mut self, pipeline: WgpuPipeline, input: impl Into<GpuResource>) {
+pub fn push_chunk(
+pub fn push_chunk(&mut self, bytes: Vec<u8>) -> Result<Option<Vec<Vec<u8>>>, BackendError> {
+pub fn queue(&self) -> &wgpu::Queue {
+pub fn read_output(&self, index: usize) -> Result<Vec<u8>, BackendError> {
+pub fn read_output_into(&self, index: usize, out: &mut Vec<u8>) -> Result<(), BackendError> {
+pub fn readback(
+pub fn readback_prefix(
+pub fn readback_range(
+pub fn record(&mut self, key: u64) {
+pub fn record_access(&mut self, key: u64) {
+pub fn record_copy(
+pub fn record_dispatch(&self) -> u64 {
+pub fn record_stall(&self) {
+pub fn reduction_factor(self) -> usize {
+pub fn refresh(
+pub fn refresh_with_report(
+pub fn release(&self, buffer: wgpu::Buffer, size: u64, usage: wgpu::BufferUsages) {
+pub fn release(&self, handle: GpuBufferHandle) {
+pub fn remove(&mut self, key: &K) {
+pub fn replay(&self, queue: &wgpu::Queue) -> Result<wgpu::SubmissionIndex, BackendError> {
+pub fn reserved_capacity_for_diagnostics(&self) -> (usize, usize, usize) {
+pub fn reset_queue_state(&self) -> Result<(), PipelineError> {
+pub fn resolve_for_backend(self, subgroup_supported: bool) -> Result<Self, PipelineError> {
+pub fn ring_for(
+pub fn run_persistent_kernel(
+pub fn seed_load(&mut self, device: u32, cost: u64) -> Result<(), StreamShardError> {
+pub fn select_adapter(criteria: &AdapterCriteria) -> Result<(usize, wgpu::AdapterInfo)> {
+pub fn shard_by_blake3(key: &[u8], n_gpus: u32) -> Result<u32, StreamShardError> {
+pub fn shared() -> Result<Arc<Self>, vyre_driver::BackendError> {
+pub fn slots_per_ring(&self) -> usize {
+pub fn stats(&self) -> BindGroupCacheStats {
+pub fn stats(&self) -> BufferPoolStats {
+pub fn stats(&self) -> StagingBufferPoolStats {
+pub fn stats(&self) -> WgpuBackendStats {
+pub fn stats(&self, key: u64) -> Option<crate::runtime::cache::AccessStats> {
+pub fn submit_readback(
+pub fn touch(&mut self, key: K) {
+pub fn update_peak(&self, current: u64) {
+pub fn upload(
+pub fn upload_wgpu_device_buffer(
+pub fn usage(&self) -> wgpu::BufferUsages {
+pub fn with_cap(cap: usize) -> Self {
+pub fn with_capacity(capacity: usize) -> Self {
+pub fn with_mapped_ticket<R>(
+pub fn with_policy(tiers: Vec<CacheTier>, policy: LruPolicy) -> Self {
+pub fn with_reserved_capacity(capacity: usize) -> Self {
+pub fn with_tiering(
+pub mod adapter_caps_probe;
+pub mod aot;
+pub mod async_copy;
+pub mod batch;
+pub mod buffer;
+pub mod cache;
+pub mod compile_compute_pipeline;
+pub mod decode_parts;
+pub mod device;
+pub mod dispatch_plan;
+pub mod dispatcher;
+pub mod emit;
+pub mod encode_parts;
+pub mod engine;
+pub mod ext;
+pub mod graph;
+pub mod indirect;
+pub mod lru;
+pub mod megakernel;
+pub mod multi_gpu;
+pub mod persistent;
+pub mod pipeline;
+pub mod prerecorded;
+pub mod queue_state_word {
+pub mod readback_ring;
+pub mod router;
+pub mod runtime;
+pub mod serializer;
+pub mod shader;
+pub mod spirv_backend;
+pub mod streaming;
+pub mod tests;
+pub mod tiered_cache;
+pub mod unit;
+pub struct AccessMeta {
+pub struct AccessStats {
+pub struct AccessTracker {
+pub struct AdapterCriteria {
+pub struct AdapterProbeReport {
+pub struct AotArtifact {
+pub struct AsyncCopyStreams {
+pub struct BackendRouter;
+pub struct BatchDispatchConfig {
+pub struct BatchDispatchPlan {
+pub struct BatchDispatchReport {
+pub struct BatchDispatchSummary {
+pub struct BatchDispatchTelemetry {
+pub struct BatchDispatcher {
+pub struct BatchFile {
+pub struct BindGroupCache {
+pub struct BindGroupCacheStats {
+pub struct BorrowedGpuWorkItem<'a> {
+pub struct BufferPool {
+pub struct BufferPoolStats {
+pub struct CacheEntry {
+pub struct CacheTier {
+pub struct DeviceLoad {
+pub struct DispatchArena {
+pub struct DispatchItem<'a> {
+pub struct EnabledFeatures {
+pub struct FileBatch {
+pub struct FileBatchRefreshReport {
+pub struct FileMetadata {
+pub struct GpuBufferHandle {
+pub struct GpuDispatchGraph {
+pub struct GpuSlot {
+pub struct GpuWorkItem {
+pub struct GpuWorkOutput {
+pub struct HitRecord {
+pub struct HostIngressStream {
+pub struct IndirectArgs {
+pub struct IntrusiveLru<K, V> {
+pub struct LaunchAccounting {
+pub struct LiveGpu {
+pub struct LruPolicy {
+pub struct MultiGpuExecutor {
+pub struct Partition {
+pub struct PersistentKernelReport {
+pub struct PersistentPayloadWorkItem {
+pub struct PersistentQueue {
+pub struct PrerecordedDispatch {
+pub struct ReadbackRing {
+pub struct ReadbackRingSet {
+pub struct ReadbackTicket {
+pub struct RingStats {
+pub struct RouterDecision {
+pub struct SpirvEmitter;
+pub struct StagingBufferPool {
+pub struct StagingBufferPoolStats {
+pub struct StreamShardAllocator {
+pub struct TieredCache {
+pub struct WeightedWorkItem {
+pub struct WgpuBackend {
+pub struct WgpuBackendConfig {
+pub struct WgpuBackendStats {
+pub struct WgpuBindingAssignment {
+pub struct WgpuDeviceBuffer {
+pub struct WgpuDispatchGeometry {
+pub struct WgpuIR {
+pub struct WgpuMegakernelDispatcher<'a> {
+pub struct WgpuPipeline {
+pub struct WgpuProgram {
+pub struct WorkResult {
+pub struct WorkTriple {
+pub type MapResult = Result<(), wgpu::BufferAsyncError>;

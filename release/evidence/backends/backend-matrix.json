@@ -1,0 +1,424 @@
+{
+  "schema_version": 2,
+  "cuda_first": true,
+  "wgpu_fallback_present": true,
+  "preferred_backend_id": "cuda",
+  "preferred_backend_gpu_only": true,
+  "gpu_probe": {
+    "nvidia_smi_ok": true,
+    "nvidia_smi_devices": [
+      "GPU 0: NVIDIA GeForce RTX 5090 (UUID: GPU-2b1cf7db-1c55-23e8-5324-5342631e4ef5)"
+    ],
+    "nvidia_smi_device_details": [
+      {
+        "name": "NVIDIA GeForce RTX 5090",
+        "driver_version": "570.211.01",
+        "memory_total_mib": 32607,
+        "compute_capability_major": 12,
+        "compute_capability_minor": 0
+      }
+    ],
+    "nvidia_driver_version": "570.211.01",
+    "nvidia_cuda_version": "12.8",
+    "nvidia_smi_error": null
+  },
+  "cuda_feature_markers": [
+    {
+      "id": "tensor-core-fragment",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 9232,
+      "implementation_tokens": [
+        "mma",
+        "fragment"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "Tensor-core/MMA lowering pattern"
+    },
+    {
+      "id": "ldmatrix-cp-async",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 10995,
+      "implementation_tokens": [
+        "ldmatrix",
+        "cp.async"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "Ampere+ async global-to-shared staging pattern"
+    },
+    {
+      "id": "predicated-execution",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 18241,
+      "implementation_tokens": [
+        "predicate",
+        "predicated"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "Predicated execution pattern"
+    },
+    {
+      "id": "instruction-scheduling",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 7931,
+      "implementation_tokens": [
+        "schedule",
+        "latency"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "PTX instruction scheduling pattern"
+    },
+    {
+      "id": "ptx-vector-load-gap-scheduling",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/emitter/body.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 4598,
+      "implementation_tokens": [
+        "vector-load gap",
+        "find_latency_filler_avoiding_results"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "PTX fused vector-load latency-gap scheduling"
+    },
+    {
+      "id": "ptx-compute-load-gap-scheduling",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/emitter/schedule.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 4023,
+      "implementation_tokens": [
+        "KernelOpKind::Fma",
+        "KernelOpKind::MatrixMma",
+        "KernelOpKind::SubgroupAdd"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "PTX load-use latency-gap scheduling with independent compute fillers"
+    },
+    {
+      "id": "ptx-vector-load-fusion",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/emitter/vector.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 9900,
+      "implementation_tokens": [
+        "ld.global",
+        "v4"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "PTX vector load fusion pattern"
+    },
+    {
+      "id": "ptx-vector-store-fusion",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/emitter/vector.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 9900,
+      "implementation_tokens": [
+        "st.global",
+        "v4"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "PTX vector store fusion pattern"
+    },
+    {
+      "id": "async-copy-emitter",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/emitter/async_copy.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 11310,
+      "implementation_tokens": [
+        "cp.async",
+        "commit_group"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "PTX async copy emitter"
+    },
+    {
+      "id": "mma-emitter",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/emitter/mma.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 3470,
+      "implementation_tokens": [
+        "mma",
+        "sync"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "PTX MMA emitter"
+    },
+    {
+      "id": "cuda-resident-dispatch",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/resident_dispatch.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 50086,
+      "implementation_tokens": [
+        "dispatch_resident",
+        "ptx"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "CUDA resident dispatch release path"
+    },
+    {
+      "id": "cuda-resident-io",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/resident_io.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 40237,
+      "implementation_tokens": [
+        "download_resident_readbacks_many",
+        "upload_resident_at_many",
+        "resident_device_ptr"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "CUDA resident input/output buffers and sparse readback batching"
+    },
+    {
+      "id": "cuda-graph-launch",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/cuda_graph.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 42388,
+      "implementation_tokens": [
+        "record_cuda_graph",
+        "cugraph"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "CUDA graph launch path"
+    },
+    {
+      "id": "cuda-module-cache",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/module_cache.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 32989,
+      "implementation_tokens": [
+        "function_for_ptx",
+        "ptx_target_sm"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "CUDA PTX module cache"
+    },
+    {
+      "id": "cuda-ptx-source-cache",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/module_cache.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 32989,
+      "implementation_tokens": [
+        "CudaPtxSourceCache",
+        "CudaPtxSourceCacheSnapshot",
+        "get_or_lower",
+        "snapshot",
+        "PTX_SOURCE_CACHE_SOFT_CAP",
+        "evict_submodular"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "CUDA PTX source cache before module load"
+    },
+    {
+      "id": "cuda-ptx-target-probe",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/ptx_target.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 5646,
+      "implementation_tokens": [
+        "select_loadable_ptx_target_sm",
+        "cumoduleloaddata"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "CUDA loadable PTX target probing"
+    },
+    {
+      "id": "megakernel-paired-speculation",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/speculation.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 9336,
+      "implementation_tokens": [
+        "PairedSpeculationWindow",
+        "record_sample",
+        "side_compile_cost_ns",
+        "decide_speculation"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "Megakernel paired speculative execution adoption policy"
+    }
+  ],
+  "wgpu_feature_markers": [
+    {
+      "id": "wgpu-persistent-engine",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/engine/persistent.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 9047,
+      "implementation_tokens": [
+        "persistent",
+        "dispatch"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "WGPU persistent execution engine"
+    },
+    {
+      "id": "wgpu-megakernel-dispatcher",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/dispatcher.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 50353,
+      "implementation_tokens": [
+        "megakernel",
+        "dispatch"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "WGPU megakernel dispatcher"
+    },
+    {
+      "id": "wgpu-readback-ring",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/runtime/readback_ring.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 22088,
+      "implementation_tokens": [
+        "ring",
+        "readback"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "WGPU sparse/readback ring"
+    },
+    {
+      "id": "wgpu-async-dispatch-prefetch",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/async_dispatch.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 12653,
+      "implementation_tokens": [
+        "dispatch_borrowed_async",
+        "PipelinePrefetch"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "WGPU non-blocking dispatch with predicted pipeline prefetch"
+    },
+    {
+      "id": "wgpu-dispatch-scratch-reuse",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/engine/dispatch_scratch.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 6177,
+      "implementation_tokens": [
+        "thread_local",
+        "reset"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "WGPU dispatch hot-path scratch arena reuse"
+    },
+    {
+      "id": "wgpu-disk-cache",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/pipeline/disk_cache.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 21337,
+      "implementation_tokens": [
+        "cache",
+        "pipeline",
+        "MAX_PENDING_DURABLE_CACHE_FILES"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "WGPU pipeline disk cache"
+    },
+    {
+      "id": "wgpu-no-cpu-fallback-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/dispatch_never_cpu_fallback.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 5526,
+      "implementation_tokens": [
+        "never",
+        "cpu",
+        "fallback"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "WGPU no-hidden-CPU-fallback contract"
+    },
+    {
+      "id": "megakernel-paired-speculation",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/speculation.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 9336,
+      "implementation_tokens": [
+        "PairedSpeculationWindow",
+        "record_sample",
+        "side_compile_cost_ns",
+        "decide_speculation"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "Megakernel paired speculative execution adoption policy"
+    }
+  ],
+  "hidden_fallback_findings": [],
+  "hidden_fallback_scan_errors": [],
+  "backends": [
+    {
+      "id": "cuda",
+      "precedence": 5,
+      "dispatches": true,
+      "acquire_ok": true,
+      "acquire_error": null
+    },
+    {
+      "id": "spirv",
+      "precedence": 30,
+      "dispatches": false,
+      "acquire_ok": true,
+      "acquire_error": null
+    },
+    {
+      "id": "wgpu",
+      "precedence": 30,
+      "dispatches": true,
+      "acquire_ok": true,
+      "acquire_error": null
+    },
+    {
+      "id": "cpu-ref",
+      "precedence": 900,
+      "dispatches": true,
+      "acquire_ok": true,
+      "acquire_error": null
+    }
+  ],
+  "blockers": []
+}

@@ -1,0 +1,16 @@
+[package]
+name = "public_facade_smoke"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# Consumers depend on `vyre`, NOT `vyre_core`. The point of this example
+# is that everything a downstream user needs is accessible through the
+# `vyre` re-export surface  -  no internal crate imports.
+vyre = "0.4.2"
+
+[workspace]
+
+[patch.crates-io]
+vyre = { path = "../../vyre-core" }

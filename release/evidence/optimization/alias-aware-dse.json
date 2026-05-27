@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "id": "alias-aware-dse",
+  "source_matrix": "release/evidence/optimization/optimization-integration-matrix.json",
+  "markers": [
+    {
+      "id": "alias-aware-dse-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/dead_store/mod.rs",
+      "marker": "dead_store_with_weir_alias_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "DSE consumes Weir alias facts"
+    },
+    {
+      "id": "reaching-def-dse-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/dead_store/mod.rs",
+      "marker": "dead_store_with_weir_dataflow_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "DSE consumes Weir reaching-definition facts"
+    },
+    {
+      "id": "weir-alias-analysis-api",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_alias/mod.rs",
+      "marker": "AliasFactSet",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Vyre-lower imports Weir alias facts through an explicit API"
+    },
+    {
+      "id": "weir-reaching-def-analysis-api",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_reaching_def/mod.rs",
+      "marker": "import_descriptor_reaching_defs",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Vyre-lower imports Weir reaching-def facts through an explicit API"
+    },
+    {
+      "id": "weir-copy-chain-reaching-def-import",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_reaching_def/mod.rs",
+      "marker": "resolve_copy_alias",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Weir reaching-def import canonicalizes descriptor Copy chains before rewrite legality checks"
+    },
+    {
+      "id": "weir-dataflow-pipeline-entrypoint",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/mod.rs",
+      "marker": "run_all_with_weir_dataflow_facts",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Canonical rewrite pipeline consumes Weir alias and reaching-definition facts"
+    },
+    {
+      "id": "weir-dataflow-dse-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/dead_store_weir_dataflow.rs",
+      "marker": "weir_dataflow_pipeline_applies_reaching_def_memory_dse",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Integration test proves Weir reaching-def facts fire DSE in the canonical pipeline"
+    },
+    {
+      "id": "weir-dataflow-stlf-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/load_forwarding/mod.rs",
+      "marker": "load_forwarding_with_weir_dataflow_facts(&desc",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Local test proves Weir reaching-def facts fire store/load forwarding"
+    },
+    {
+      "id": "weir-dataflow-loop-fusion-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/weir_dataflow_loop_rewrites.rs",
+      "marker": "reaching_defs_unlock_alias_proven_loop_fusion",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Integration test proves Weir facts unlock loop fusion"
+    },
+    {
+      "id": "weir-dataflow-loop-fission-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/weir_dataflow_loop_rewrites.rs",
+      "marker": "reaching_defs_unlock_alias_proven_loop_fission",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Integration test proves Weir facts unlock loop fission"
+    },
+    {
+      "id": "weir-dataflow-licm-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/weir_dataflow_loop_rewrites.rs",
+      "marker": "reaching_defs_unlock_alias_proven_licm_load_hoist",
+      "exists": true,
+      "read_error": null,
+      "marker_present": true,
+      "marker_on_code_line": true,
+      "unresolved_markers": [],
+      "role": "Integration test proves Weir facts unlock LICM load hoisting"
+    }
+  ],
+  "blockers": []
+}

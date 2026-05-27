@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "directories": [
+    {
+      "surface": "vyre",
+      "layer": "fixtures",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/fixtures",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "contracts",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/contracts",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "properties",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/properties",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "backends",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/backends",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "corpus",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/corpus",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/benches",
+      "exists": true
+    },
+    {
+      "surface": "vyre",
+      "layer": "regression",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/regression",
+      "exists": true
+    },
+    {
+      "surface": "dataflow-analysis",
+      "layer": "fixtures",
+      "path": "external:dataflow-analysis/tests/fixtures",
+      "exists": true
+    },
+    {
+      "surface": "dataflow-analysis",
+      "layer": "contracts",
+      "path": "external:dataflow-analysis/tests/contracts",
+      "exists": true
+    },
+    {
+      "surface": "dataflow-analysis",
+      "layer": "properties",
+      "path": "external:dataflow-analysis/tests/properties",
+      "exists": true
+    },
+    {
+      "surface": "dataflow-analysis",
+      "layer": "backends",
+      "path": "external:dataflow-analysis/tests/backends",
+      "exists": true
+    },
+    {
+      "surface": "dataflow-analysis",
+      "layer": "corpus",
+      "path": "external:dataflow-analysis/tests/corpus",
+      "exists": true
+    },
+    {
+      "surface": "dataflow-analysis",
+      "layer": "bench",
+      "path": "external:dataflow-analysis/benches",
+      "exists": true
+    },
+    {
+      "surface": "dataflow-analysis",
+      "layer": "regression",
+      "path": "external:dataflow-analysis/tests/regression",
+      "exists": true
+    },
+    {
+      "surface": "parser-cli",
+      "layer": "fixtures",
+      "path": "external:parser-cli/tests/fixtures",
+      "exists": true
+    },
+    {
+      "surface": "parser-cli",
+      "layer": "contracts",
+      "path": "external:parser-cli/tests/contracts",
+      "exists": true
+    },
+    {
+      "surface": "parser-cli",
+      "layer": "properties",
+      "path": "external:parser-cli/tests/properties",
+      "exists": true
+    },
+    {
+      "surface": "parser-cli",
+      "layer": "backends",
+      "path": "external:parser-cli/tests/backends",
+      "exists": true
+    },
+    {
+      "surface": "parser-cli",
+      "layer": "corpus",
+      "path": "external:parser-cli/tests/corpus",
+      "exists": true
+    },
+    {
+      "surface": "parser-cli",
+      "layer": "bench",
+      "path": "external:parser-cli/benches",
+      "exists": true
+    },
+    {
+      "surface": "parser-cli",
+      "layer": "regression",
+      "path": "external:parser-cli/tests/regression",
+      "exists": true
+    }
+  ],
+  "blockers": []
+}

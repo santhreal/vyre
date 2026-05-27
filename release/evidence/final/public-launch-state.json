@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "objective": "complete release/plans/paradigm-shift-100-concrete.md",
+  "current_state": "prepublish_release_ready",
+  "prepublish_gates": {
+    "version_matrix": "pass",
+    "metadata_matrix": "pass",
+    "feature_matrix": "pass",
+    "package_readiness": "pass",
+    "release_completion_audit": "prepublish-pass",
+    "vyre_weir_release_gate": "prepublish-pass"
+  },
+  "external_actions": [
+    {
+      "action": "cargo publish approved crates in dependency order",
+      "status": "blocked_pending_user_approval",
+      "evidence": "scripts/final-launch.sh + scripts/publish-release.sh + release/evidence/package/publish-readiness.json"
+    },
+    {
+      "action": "make repositories public",
+      "status": "blocked_pending_user_approval",
+      "evidence": "scripts/final-launch.sh"
+    },
+    {
+      "action": "git push release branch and tags",
+      "status": "blocked_pending_user_approval",
+      "evidence": "scripts/final-launch.sh"
+    }
+  ],
+  "blockers": [
+    "cargo publish is not approved or completed",
+    "repository public launch is not approved or completed",
+    "git push release branch and tags is not approved or completed"
+  ],
+  "completion_status": "not_complete_until_external_actions_are_approved_and_done"
+}

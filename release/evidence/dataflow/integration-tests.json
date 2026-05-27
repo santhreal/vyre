@@ -1,0 +1,429 @@
+{
+  "schema_version": 2,
+  "tests": [
+    {
+      "id": "adversarial_oracles",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_adversarial_oracles.rs",
+      "exists": true,
+      "source_bytes": 3254,
+      "has_test_entrypoint": true,
+      "assertion_count": 20,
+      "unresolved_markers": []
+    },
+    {
+      "id": "anchor_bit_codegen",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_anchor_bit_codegen.rs",
+      "exists": true,
+      "source_bytes": 5136,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "unresolved_markers": []
+    },
+    {
+      "id": "cross_arm_raw_atomic",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_cross_arm_raw_atomic.rs",
+      "exists": true,
+      "source_bytes": 6635,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "unresolved_markers": []
+    },
+    {
+      "id": "construction_def_use",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_def_use.rs",
+      "exists": true,
+      "source_bytes": 2285,
+      "has_test_entrypoint": true,
+      "assertion_count": 9,
+      "unresolved_markers": []
+    },
+    {
+      "id": "construction_dominators",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_dominators_construction.rs",
+      "exists": true,
+      "source_bytes": 2650,
+      "has_test_entrypoint": true,
+      "assertion_count": 9,
+      "unresolved_markers": []
+    },
+    {
+      "id": "construction_ifds",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_ifds_construction.rs",
+      "exists": true,
+      "source_bytes": 2088,
+      "has_test_entrypoint": true,
+      "assertion_count": 9,
+      "unresolved_markers": []
+    },
+    {
+      "id": "construction_live",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_live_construction.rs",
+      "exists": true,
+      "source_bytes": 1956,
+      "has_test_entrypoint": true,
+      "assertion_count": 7,
+      "unresolved_markers": []
+    },
+    {
+      "id": "construction_may_alias",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_may_alias_construction.rs",
+      "exists": true,
+      "source_bytes": 2274,
+      "has_test_entrypoint": true,
+      "assertion_count": 13,
+      "unresolved_markers": []
+    },
+    {
+      "id": "construction_reaching",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_reaching_construction.rs",
+      "exists": true,
+      "source_bytes": 3801,
+      "has_test_entrypoint": true,
+      "assertion_count": 11,
+      "unresolved_markers": []
+    },
+    {
+      "id": "construction_range_check",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_range_check_construction.rs",
+      "exists": true,
+      "source_bytes": 1535,
+      "has_test_entrypoint": true,
+      "assertion_count": 9,
+      "unresolved_markers": []
+    },
+    {
+      "id": "cross_language",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_cross_language.rs",
+      "exists": true,
+      "source_bytes": 2272,
+      "has_test_entrypoint": true,
+      "assertion_count": 5,
+      "unresolved_markers": []
+    },
+    {
+      "id": "cross_primitive_composition",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_cross_primitive_composition.rs",
+      "exists": true,
+      "source_bytes": 2951,
+      "has_test_entrypoint": true,
+      "assertion_count": 7,
+      "unresolved_markers": []
+    },
+    {
+      "id": "escape_callgraph_range",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_escape_callgraph_range.rs",
+      "exists": true,
+      "source_bytes": 2656,
+      "has_test_entrypoint": true,
+      "assertion_count": 17,
+      "unresolved_markers": []
+    },
+    {
+      "id": "live_at_escapes",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_live_at_escapes.rs",
+      "exists": true,
+      "source_bytes": 1719,
+      "has_test_entrypoint": true,
+      "assertion_count": 7,
+      "unresolved_markers": []
+    },
+    {
+      "id": "must_init_scc_query",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_must_init_scc_query.rs",
+      "exists": true,
+      "source_bytes": 1972,
+      "has_test_entrypoint": true,
+      "assertion_count": 13,
+      "unresolved_markers": []
+    },
+    {
+      "id": "parity_exact_primitives",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_parity_exact_primitives.rs",
+      "exists": true,
+      "source_bytes": 6662,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "unresolved_markers": []
+    },
+    {
+      "id": "parity_dominators",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_parity_dominators.rs",
+      "exists": true,
+      "source_bytes": 3478,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "unresolved_markers": []
+    },
+    {
+      "id": "parity_inventory_sweep",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_parity_inventory_sweep.rs",
+      "exists": true,
+      "source_bytes": 4253,
+      "has_test_entrypoint": true,
+      "assertion_count": 4,
+      "unresolved_markers": []
+    },
+    {
+      "id": "parity_may_alias",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_parity_may_alias.rs",
+      "exists": true,
+      "source_bytes": 2841,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "unresolved_markers": []
+    },
+    {
+      "id": "reachability_witness",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_reachability_witness.rs",
+      "exists": true,
+      "source_bytes": 6635,
+      "has_test_entrypoint": true,
+      "assertion_count": 11,
+      "unresolved_markers": []
+    },
+    {
+      "id": "slice_reaching_def_control_dep",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_slice_reaching_def_control_dep.rs",
+      "exists": true,
+      "source_bytes": 3259,
+      "has_test_entrypoint": true,
+      "assertion_count": 12,
+      "unresolved_markers": []
+    },
+    {
+      "id": "soundness_tags",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_soundness_tags.rs",
+      "exists": true,
+      "source_bytes": 3721,
+      "has_test_entrypoint": true,
+      "assertion_count": 30,
+      "unresolved_markers": []
+    },
+    {
+      "id": "ssa_dominators",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_ssa_dominators.rs",
+      "exists": true,
+      "source_bytes": 2600,
+      "has_test_entrypoint": true,
+      "assertion_count": 10,
+      "unresolved_markers": []
+    },
+    {
+      "id": "value_set_post_dominates",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_value_set_post_dominates.rs",
+      "exists": true,
+      "source_bytes": 1789,
+      "has_test_entrypoint": true,
+      "assertion_count": 7,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_points_to",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_points_to.rs",
+      "exists": true,
+      "source_bytes": 1951,
+      "has_test_entrypoint": true,
+      "assertion_count": 8,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_may_alias",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_may_alias.rs",
+      "exists": true,
+      "source_bytes": 1632,
+      "has_test_entrypoint": true,
+      "assertion_count": 8,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_ifds",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_ifds.rs",
+      "exists": true,
+      "source_bytes": 1849,
+      "has_test_entrypoint": true,
+      "assertion_count": 12,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_control_dependence",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_control_dependence.rs",
+      "exists": true,
+      "source_bytes": 2193,
+      "has_test_entrypoint": true,
+      "assertion_count": 10,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_cross_language",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_cross_language.rs",
+      "exists": true,
+      "source_bytes": 2809,
+      "has_test_entrypoint": true,
+      "assertion_count": 6,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_def_use",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_def_use.rs",
+      "exists": true,
+      "source_bytes": 2476,
+      "has_test_entrypoint": true,
+      "assertion_count": 8,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_dominators",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_dominators.rs",
+      "exists": true,
+      "source_bytes": 2573,
+      "has_test_entrypoint": true,
+      "assertion_count": 14,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_range_check",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_range_check.rs",
+      "exists": true,
+      "source_bytes": 2545,
+      "has_test_entrypoint": true,
+      "assertion_count": 16,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_range_escape",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_range_escape.rs",
+      "exists": true,
+      "source_bytes": 2239,
+      "has_test_entrypoint": true,
+      "assertion_count": 20,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_reachability_witness",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_reachability_witness.rs",
+      "exists": true,
+      "source_bytes": 3746,
+      "has_test_entrypoint": true,
+      "assertion_count": 8,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_reaching_def_escapes",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_reaching_def_escapes.rs",
+      "exists": true,
+      "source_bytes": 2354,
+      "has_test_entrypoint": true,
+      "assertion_count": 14,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_slice",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_slice_construction.rs",
+      "exists": true,
+      "source_bytes": 2950,
+      "has_test_entrypoint": true,
+      "assertion_count": 10,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_ssa",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_ssa_dominators.rs",
+      "exists": true,
+      "source_bytes": 2232,
+      "has_test_entrypoint": true,
+      "assertion_count": 8,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_summary_callgraph",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_summary_callgraph.rs",
+      "exists": true,
+      "source_bytes": 2642,
+      "has_test_entrypoint": true,
+      "assertion_count": 30,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_value_set",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_value_set.rs",
+      "exists": true,
+      "source_bytes": 1966,
+      "has_test_entrypoint": true,
+      "assertion_count": 12,
+      "unresolved_markers": []
+    },
+    {
+      "id": "property_bitset_oracles",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_property_bitset_oracles.rs",
+      "exists": true,
+      "source_bytes": 2358,
+      "has_test_entrypoint": true,
+      "assertion_count": 12,
+      "unresolved_markers": []
+    },
+    {
+      "id": "fuzz_bitset_oracles",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_fuzz_bitset_oracles.rs",
+      "exists": true,
+      "source_bytes": 1766,
+      "has_test_entrypoint": true,
+      "assertion_count": 8,
+      "unresolved_markers": []
+    },
+    {
+      "id": "gap_bitset_oracle_edges",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_gap_bitset_oracle_edges.rs",
+      "exists": true,
+      "source_bytes": 1135,
+      "has_test_entrypoint": true,
+      "assertion_count": 8,
+      "unresolved_markers": []
+    },
+    {
+      "id": "resolve_family_node39",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_resolve_family_node39.rs",
+      "exists": true,
+      "source_bytes": 3437,
+      "has_test_entrypoint": true,
+      "assertion_count": 1,
+      "unresolved_markers": []
+    },
+    {
+      "id": "summary_loop_points",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_summary_loop_points.rs",
+      "exists": true,
+      "source_bytes": 2804,
+      "has_test_entrypoint": true,
+      "assertion_count": 19,
+      "unresolved_markers": []
+    },
+    {
+      "id": "three_arm_fusion",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_three_arm_fusion.rs",
+      "exists": true,
+      "source_bytes": 9508,
+      "has_test_entrypoint": true,
+      "assertion_count": 3,
+      "unresolved_markers": []
+    },
+    {
+      "id": "perf_oracle",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_perf_oracle_throughput.rs",
+      "exists": true,
+      "source_bytes": 2670,
+      "has_test_entrypoint": true,
+      "assertion_count": 1,
+      "unresolved_markers": []
+    },
+    {
+      "id": "scale_oracle",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests/df_scale_oracle_no_oom.rs",
+      "exists": true,
+      "source_bytes": 2788,
+      "has_test_entrypoint": true,
+      "assertion_count": 9,
+      "unresolved_markers": []
+    }
+  ],
+  "blockers": []
+}

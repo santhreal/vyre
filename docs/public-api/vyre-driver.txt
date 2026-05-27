@@ -1,0 +1,633 @@
+pub const ASYNC_COMPUTE: Self = Self(1 << 4);
+pub const BF16: Self = Self(1 << 2);
+pub const BINDLESS_RESOURCE_COUNT_THRESHOLD: u32 = 24;
+pub const BUILTIN_BLACKWELL_120: &'static str =
+pub const CODE_PARSE: DiagnosticCode = DiagnosticCode(std::borrow::Cow::Borrowed("E-TOML-PARSE"));
+pub const COLD_PATH_COST_SCALE: f32 = 1.5;
+pub const COLD_PATH_COST_SCALE_BPS: u32 = 15_000;
+pub const COUNTER_TAIL_BYTES: usize = 8;
+pub const CURRENT_PIPELINE_CACHE_KEY_VERSION: u32 = 1;
+pub const DECAY_HALF_LIFE_S: f64 = 300.0;
+pub const DEFAULT_1D_WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
+pub const DEFAULT_PIPELINE_CACHE_BYTES: usize = 256 * 1024 * 1024;
+pub const DEFAULT_PIPELINE_CACHE_ENTRIES: usize = 256;
+pub const DEFAULT_THRESHOLD_PCT: u32 = 15;
+pub const DEFAULT_VALIDATION_HASH_ENTRIES: usize = 8192;
+pub const DEFAULT_VALIDATION_VSA_ENTRIES: usize = 2048;
+pub const DEFAULT_VALIDATION_VSA_SHARDS: usize = 64;
+pub const DEVICE_BUFFER_FEATURE: &str = "DeviceBuffer";
+pub const F16: Self = Self(1 << 1);
+pub const HOT_PATH_COST_SCALE: f32 = 0.5;
+pub const HOT_PATH_COST_SCALE_BPS: u32 = 5_000;
+pub const INDIRECT_DISPATCH: Self = Self(1 << 6);
+pub const INDIRECT_DISPATCH_OP_ID: &str = OP_ID;
+pub const MAX_DISK_PIPELINE_BLOB_BYTES: u64 = 64 * 1024 * 1024;
+pub const MAX_HISTORY: usize = 16;
+pub const MIN_ADOPT_SAVINGS_BPS: u64 = 1500;
+pub const MIN_DISPATCHES_FOR_VERDICT: u32 = 8;
+pub const PERSISTENT_THREAD: Self = Self(1 << 8);
+pub const PUSH_CONSTANTS: Self = Self(1 << 5);
+pub const Q16_ONE: u32 = 1 << 16;
+pub const SCHEMA: u32 = 1;
+pub const SPECULATIVE: Self = Self(1 << 7);
+pub const SUBGROUP_OPS: Self = Self(1 << 0);
+pub const TENSOR_CORES: Self = Self(1 << 3);
+pub const TENSOR_CORE_COST_SCALE: f32 = 0.25;
+pub const TENSOR_CORE_COST_SCALE_BPS: u32 = 2_500;
+pub const TRACE_JIT_HOT_SHAPE_THRESHOLD: u32 = 8;
+pub const TRACE_JIT_MIN_CONFIDENCE_BPS: u32 = 6_000; // 60%
+pub const WORKGROUP_CANDIDATES: &[u32] = &[32, 64, 128, 256, 512, 1024];
+pub const fn adapter_caps(self) -> AdapterCaps {
+pub const fn all() -> &'static [SubgroupOp] {
+pub const fn bits(self) -> u32 {
+pub const fn cold_upload(upload_bytes: u64) -> Self {
+pub const fn conservative(backend: &'static str) -> Self {
+pub const fn contains(self, other: Self) -> bool {
+pub const fn default_workgroup_size() -> [u32; 3] {
+pub const fn disabled() -> Self {
+pub const fn empty() -> Self {
+pub const fn first_registrant(&self) -> &'static str {
+pub const fn from_counters(
+pub const fn from_feature_range(
+pub const fn high_end() -> Self {
+pub const fn is_empty(self) -> bool {
+pub const fn is_usable(self) -> bool {
+pub const fn label(self) -> &'static str {
+pub const fn large_inline_default() -> Self {
+pub const fn mode(&self) -> Mode {
+pub const fn native(subgroup_size: u32) -> Self {
+pub const fn new(
+pub const fn new(code: &'static str) -> Self {
+pub const fn new(major: u32, minor: u32, patch: u32) -> Self {
+pub const fn new(op: fn() -> OpDef) -> Self {
+pub const fn new(op_id: &'static str, deprecated_since: Semver, note: &'static str) -> Self {
+pub const fn new(profile: &'a DeviceProfile, hot_path: bool) -> Self {
+pub const fn op_id(&self) -> &'static str {
+pub const fn production_default() -> Self {
+pub const fn requires_byte_parity(self) -> bool {
+pub const fn second_registrant(&self) -> &'static str {
+pub const fn small_inline_default() -> Self {
+pub const fn stable_id(self) -> u32 {
+pub const fn strategy_capabilities(self) -> validate::BackendCapabilities {
+pub const fn union(self, other: Self) -> Self {
+pub const fn uses_law_proof(self) -> bool {
+pub const fn validation_capabilities(self) -> validate::BackendCapabilities {
+pub const fn warm_reuse(avoided_upload_bytes: u64) -> Self {
+pub const fn with_autotune_record(mut self, record: &'a AutotuneRecord) -> Self {
+pub const fn with_trace_jit(mut self, counters: TraceJitInputs) -> Self {
+pub enum ArmConflict {
+pub enum ArmIndependenceVerdict {
+pub enum AttrValue {
+pub enum BackendError {
+pub enum BackendLayoutClass {
+pub enum BindingRole {
+pub enum BindlessDecision {
+pub enum BindlessSupport {
+pub enum CommandReuseDecision {
+pub enum ConformanceError {
+pub enum CopyOverlapDecision {
+pub enum CrossPipelineConflict {
+pub enum CrossPipelineFusionDecision {
+pub enum DispatchExecutionMode {
+pub enum EnforceVerdict {
+pub enum ErrorCode {
+pub enum FusionDecision {
+pub enum LoweredExpr {
+pub enum MigrationError {
+pub enum Mode {
+pub enum MutationClass {
+pub enum NaturalGradientTuningError {
+pub enum ParamInliningDecision {
+pub enum PersistentKernelDecision {
+pub enum PersistentThreadMode {
+pub enum PrecisionLoweringPlan {
+pub enum ResidentGraphReuseTelemetryError {
+pub enum Resource {
+pub enum Severity {
+pub enum SortBackend {
+pub enum SpecValue {
+pub enum SpeculationMode {
+pub enum SpeculationVerdict {
+pub enum SpeculativeVariantKind {
+pub enum SubgroupOp {
+pub enum Target {
+pub enum TraceJitDecision {
+pub fn acquire(&self) -> Result<Box<dyn VyreBackend>, BackendError> {
+pub fn acquire(id: &str) -> Result<Box<dyn VyreBackend>, BackendError> {
+pub fn acquire_preferred_dispatch_backend() -> Result<Box<dyn VyreBackend>, BackendError> {
+pub fn allocate(backend_id: &'static str, byte_len: usize) -> Box<dyn DeviceBuffer> {
+pub fn aot_target_id(self) -> &'static str {
+pub fn apply_chain(
+pub fn apply_device_name_to_profile(
+pub fn apply_generation_to_profile(
+pub fn apply_to_profile(&self, mut profile: DeviceProfile) -> DeviceProfile {
+pub fn as_mut_slice(&mut self) -> &mut [u8] {
+pub fn as_pipeline_f64(&self) -> f64 {
+pub fn as_slice(&self) -> &[u8] {
+pub fn as_str(&self) -> &str {
+pub fn assert_exhaustive_byte_identity(
+pub fn attempted_tiles(&self) -> u64 {
+pub fn auto_grid(
+pub fn backend_dispatches(id: &str) -> bool {
+pub fn backend_precedence(id: &str) -> u32 {
+pub fn best_of<T: BackendTimer>(
+pub fn best_of_natural_gradient<T: BackendTimer>(
+pub fn binding_plans_share_layout(a: &BindingPlan, b: &BindingPlan) -> bool {
+pub fn build(program: &Program) -> Result<Self, BackendError> {
+pub fn builtins() -> Result<Self, String> {
+pub fn cache_hash(&self) -> u64 {
+pub fn cache_key(self, program_digest: [u8; 32]) -> [u8; 32] {
+pub fn cache_path_for_adapter(adapter_fp: &str) -> PathBuf {
+pub fn can_dispatch_concurrently(
+pub fn can_overlap_copy_with_kernel(
+pub fn candidates_for(&self, max_invocations: u32) -> Vec<u32> {
+pub fn cases(&self) -> &[ConformanceCase] {
+pub fn certify_op(
+pub fn certify_op_borrowed(
+pub fn checked_add(self, rhs: Self) -> Result<Self, ResidentGraphReuseTelemetryError> {
+pub fn checked_delta_since(
+pub fn claim(&self) -> Option<PersistentWorkItem> {
+pub fn clear(&self) -> Result<(), BackendError> {
+pub fn code(&self) -> ErrorCode {
+pub fn coerce_to_pow2_with_tail_mask(element_count: u32) -> TailMaskPolicy {
+pub fn commit_rate_pct(&self) -> u32 {
+pub fn commit_rate_ppm(&self) -> u32 {
+pub fn compile(
+pub fn compile_owned(
+pub fn compile_owned_with_telemetry(
+pub fn compile_shared(
+pub fn compile_shared_with_telemetry(
+pub fn compile_with_telemetry(
+pub fn conservative_total_ns(&self) -> u128 {
+pub fn contains(&self, fingerprint: &ShapeFingerprint) -> bool {
+pub fn contains(&self, slot: &u32) -> bool {
+pub fn contains_grid_sync(program: &Program) -> bool {
+pub fn contains_hash(&self, hash: &blake3::Hash) -> bool {
+pub fn contains_op(&self, op_id: &str) -> bool {
+pub fn core_supported_ops() -> &'static HashSet<OpId> {
+pub fn decide(
+pub fn decide_bindless(inputs: BindlessInputs) -> BindlessDecision {
+pub fn decide_command_reuse(inputs: CommandReuseInputs) -> CommandReuseDecision {
+pub fn decide_cross_pipeline_fusion(
+pub fn decide_param_inlining(bytes_len: u32, policy: ParamInliningPolicy) -> ParamInliningDecision {
+pub fn decide_persistent_kernel(inputs: PersistentKernelInputs) -> PersistentKernelDecision {
+pub fn decide_speculation(obs: SpeculationObservation) -> SpeculationVerdict {
+pub fn decide_trace_jit_speculation(inputs: TraceJitInputs) -> TraceJitDecision {
+pub fn default_dispatch_with_device_buffers(
+pub fn default_pgo_path() -> PathBuf {
+pub fn default_root() -> std::path::PathBuf {
+pub fn default_supported_ops() -> &'static std::collections::HashSet<OpId> {
+pub fn default_supported_ops_with_trap() -> &'static std::collections::HashSet<OpId> {
+pub fn default_threshold() -> Self {
+pub fn default_validator() -> bool {
+pub fn deprecation(&self, op_id: &str) -> Option<&'static Deprecation> {
+pub fn deprecation_diagnostic(dep: &Deprecation) -> Diagnostic {
+pub fn device_aware_cost<L, B, H>(
+pub fn diagnostics(&self) -> &[Diagnostic] {
+pub fn dialect(&self, id: &str) -> Option<&DialectManifest> {
+pub fn dialect_and_language_supported_ops() -> &'static HashSet<OpId> {
+pub fn dialect_only_supported_ops() -> &'static HashSet<OpId> {
+pub fn dispatch_element_count(bindings: &[Binding]) -> u32 {
+pub fn dispatch_element_count_for_program(program: &Program, bindings: &[Binding]) -> u32 {
+pub fn dispatch_param_words(bindings: &[Binding], element_count: u32) -> Vec<u32> {
+pub fn dispatch_param_words_into(bindings: &[Binding], element_count: u32, words: &mut Vec<u32>) {
+pub fn dispatch_policy_cache_string(config: &DispatchConfig) -> String {
+pub fn dispatch_prefilter_confirm<B, F>(
+pub fn dispatch_resident_with_grid_sync_split_timed(
+pub fn dispatch_with_grid_sync_split(
+pub fn dispatch_with_grid_sync_split_into(
+pub fn dispatch_with_grid_sync_split_timed(
+pub fn distribution(&self, call_site: &str) -> Option<Distribution> {
+pub fn element_size_bytes(data_type: &DataType) -> Result<usize, BackendError> {
+pub fn emit_aot_launcher_target(
+pub fn emit_aot_target(
+pub fn empty() -> Self {
+pub fn encode_counter_tail(report: SpeculationReport) -> [u8; COUNTER_TAIL_BYTES] {
+pub fn enforce_actual_output_budget(
+pub fn enqueue(&self, item: PersistentWorkItem) -> Result<u32, QueueFull> {
+pub fn entries_to_evict(
+pub fn error(code: &'static str, message: impl Into<Cow<'static, str>>) -> Self {
+pub fn evaluate_dispatch_policy(inputs: &DispatchPolicyInputs) -> DispatchPolicyVerdict {
+pub fn eviction_basis_points(dropped_entries: usize, total_entries: usize) -> u32 {
+pub fn extension(self) -> &'static str {
+pub fn extract_best_for_device<L, B, H>(
+pub fn extract_best_for_devices<'a, L, B, H>(
+pub fn fastest_backend(&self, op_id: &str) -> Option<&str> {
+pub fn find_architecture_generation(&self, generation: u32) -> Option<&DeviceSignature> {
+pub fn find_device_name(&self, device_name: &str) -> Option<&DeviceSignature> {
+pub fn find_indirect_dispatch(program: &Program) -> Result<Option<IndirectDispatch>, BackendError> {
+pub fn flush(&self) -> std::io::Result<()> {
+pub fn forget(&mut self, key: &AutotuneKey) -> bool {
+pub fn from_backend(backend: &dyn VyreBackend) -> Self {
+pub fn from_backend(backend: &dyn crate::backend::VyreBackend) -> Self {
+pub fn from_bindings(
+pub fn from_borrowed_inputs(program: &Program, inputs: &[&[u8]]) -> Result<Self, BackendError> {
+pub fn from_bytes(backend_id: &'static str, bytes: Vec<u8>) -> Box<dyn DeviceBuffer> {
+pub fn from_counts(committed: u32, rolled: u32) -> Self {
+pub fn from_env() -> Self {
+pub fn from_input_lengths(
+pub fn from_parts(vendor: u32, device: u32, revision: &str, revision_extra: &str) -> Self {
+pub fn from_plan(plan: &BindingPlan) -> Self {
+pub fn from_program(program: &Program, inputs: &[Vec<u8>]) -> Result<Self, BackendError> {
+pub fn from_program(program: &Program, shape: StaticProgramShape) -> Self {
+pub fn from_toml_str(source: &str) -> Result<Self, String> {
+pub fn get(&self, id: &str) -> Option<&DeviceSignature> {
+pub fn get(&self, key: &AutotuneKey) -> Option<&AutotuneRecord> {
+pub fn get(&self, key: &str) -> Option<&AttrValue> {
+pub fn get(&self, program_fp: &str) -> Option<[u32; 3]> {
+pub fn get_key(&self, key: &TunerProgramKey) -> Option<[u32; 3]> {
+pub fn get_lowering(&self, id: InternedOpId, target: Target) -> Option<ReferenceKind> {
+pub fn get_or_validate(
+pub fn get_or_validate_backend<B>(
+pub fn global() -> &'static MigrationRegistry {
+pub fn global() -> Guard<Arc<Self>> {
+pub fn head(&self) -> u32 {
+pub fn head_counter(&self) -> u64 {
+pub fn heat(&self, current_time_s: f64) -> f64 {
+pub fn hex_encode(bytes: &[u8]) -> String {
+pub fn hex_short(bytes: &[u8; 32]) -> String {
+pub fn identity_fisher_q16(candidate_count: usize) -> Vec<u32> {
+pub fn identity_fisher_q16_into(candidate_count: usize, out: &mut Vec<u32>) {
+pub fn impacted_entries(
+pub fn impacted_entries_into(
+pub fn in_flight(&self) -> u32 {
+pub fn infer_dispatch_grid(
+pub fn infer_dispatch_grid_for_count(
+pub fn inputs(&self) -> &[Vec<u8>] {
+pub fn insert(&mut self, key: impl Into<String>, value: AttrValue) -> Option<AttrValue> {
+pub fn insert(&mut self, name: impl Into<String>, value: SpecValue) {
+pub fn insert(&mut self, slot: u32) -> bool {
+pub fn install(new: Self) {
+pub fn intern_op(&self, name: &str) -> InternedOpId {
+pub fn intersects(&self, other: &Self) -> bool {
+pub fn into_message(self) -> String {
+pub fn invalidate_impacted(
+pub fn is_aligned(&self) -> bool {
+pub fn is_dirty(&self) -> bool {
+pub fn is_done(&self, slot_idx: u32) -> Result<bool, String> {
+pub fn is_empty(&self) -> bool {
+pub fn is_inline(&self) -> bool {
+pub fn iter(&self) -> impl Iterator<Item = &'static OpDef> + '_ {
+pub fn iter(&self) -> impl Iterator<Item = (&str, &AttrValue)> {
+pub fn iter(&self) -> impl Iterator<Item = (&str, &SpecValue)> {
+pub fn label(&self) -> &str {
+pub fn latest(&self) -> Option<&ShapeFingerprint> {
+pub fn len(&self) -> usize {
+pub fn load(path: &Path) -> Result<Self, String> {
+pub fn load(path: &Path) -> std::io::Result<Self> {
+pub fn load_dir(dir: impl AsRef<Path>) -> Result<Self, String> {
+pub fn load_file(&mut self, path: &Path) {
+pub fn lookup(&self, id: InternedOpId) -> Option<&'static OpDef> {
+pub fn lookup(&self, op_id: &str, from: Semver) -> Option<&'static Migration> {
+pub fn manifests(&self) -> Vec<&DialectManifest> {
+pub fn mark_done(&self, slot_idx: u32) -> Result<(), String> {
+pub fn matches_architecture_generation(&self, generation: u32) -> bool {
+pub fn matches_device_name(&self, device_name: &str) -> bool {
+pub fn message(&self) -> String {
+pub fn natural_gradient_step(
+pub fn new(
+pub fn new() -> Self {
+pub fn new(adapter_fp: &str, mode: Mode) -> Self {
+pub fn new(cases: Vec<ConformanceCase>) -> Self {
+pub fn new(first: A, second: B) -> Self {
+pub fn new(label: impl Into<String>, inputs: Vec<Vec<u8>>) -> Self {
+pub fn new(max_hash_entries: usize, max_vsa_entries: usize, vsa_shards: usize) -> Self {
+pub fn new(message: impl Into<String>) -> Self {
+pub fn new(mut slots: Vec<BackendLayoutSlot>) -> Self {
+pub fn new(program: &Program, workgroup_count: Option<[u32; 3]>, output_bytes: u64) -> Self {
+pub fn new(ring_size: u32) -> Self {
+pub fn new(spec: &SpecCacheKey, adapter_id: impl Into<String>) -> Self {
+pub fn new(threshold_pct: u32) -> Self {
+pub fn new<F>(run: F) -> Self
+pub fn node_op_id(node: &Node) -> &'static str {
+pub fn normalized_program_cache_digest(program: &Program) -> [u8; 32] {
+pub fn note(code: &'static str, message: impl Into<Cow<'static, str>>) -> Self {
+pub fn observe(&mut self, cache_hit: Option<bool>) {
+pub fn observe(values: &[u32]) -> Self {
+pub fn observe_sort_u32(
+pub fn op(op_id: impl Into<Cow<'static, str>>) -> Self {
+pub fn open(root: impl Into<std::path::PathBuf>) -> std::io::Result<Self> {
+pub fn ops_in(&self, dialect: &str) -> &[OpManifest] {
+pub fn output_binding_layout(output: &BufferDecl) -> Result<OutputBindingLayout, BackendError> {
+pub fn output_binding_layouts(program: &Program) -> Result<Vec<OutputBindingLayout>, BackendError> {
+pub fn output_binding_layouts_into(
+pub fn output_layout_from_program(program: &Program) -> Result<OutputLayout, BackendError> {
+pub fn parse_counter_tail(output_bytes: &[u8]) -> Option<SpeculationReport> {
+pub fn path_for(
+pub fn persist(&self) -> Result<(), String> {
+pub fn pipeline_cache_limits_from_env() -> (u32, usize) {
+pub fn poisoned_lock<T>(error: std::sync::PoisonError<T>) -> Self {
+pub fn predict_next(&self) -> Option<ShapeFingerprint> {
+pub fn prepare_into(
+pub fn prewarm(
+pub fn prewarm_owned(
+pub fn prewarm_shared(
+pub fn primary_execution_mode(&self) -> DispatchExecutionMode {
+pub fn program_hash(program: &Program) -> blake3::Hash {
+pub fn program_vsa_fingerprint(program: &Program) -> Vec<u32> {
+pub fn program_vsa_fingerprint_words(program: &Program) -> [u32; 8] {
+pub fn push(&mut self, case: ConformanceCase) {
+pub fn put(&mut self, key: AutotuneKey, record: AutotuneRecord) {
+pub fn read(
+pub fn record(&mut self, fingerprint: ShapeFingerprint) {
+pub fn record(&self, report: SpeculationReport) {
+pub fn record_cold_upload(
+pub fn record_cold_uploads(
+pub fn record_decision(&mut self, program_fp: impl Into<String>, size: [u32; 3]) {
+pub fn record_dispatch_io(inputs: &[&[u8]], outputs: &[Vec<u8>]) {
+pub fn record_eviction(dropped_fraction: f64) {
+pub fn record_eviction_counts(dropped_entries: usize, total_entries: usize) {
+pub fn record_grid_sync_split(segment_count: usize) {
+pub fn record_key_decision(&mut self, key: TunerProgramKey, size: [u32; 3]) {
+pub fn record_launch_measurement(
+pub fn record_output_replacement_stats(stats: crate::backend::OutputReplacementStats) {
+pub fn record_output_slot_byte_stats(stats: crate::backend::OutputSlotByteStats) {
+pub fn record_output_slot_stats(stats: crate::backend::OutputSlotStats) {
+pub fn record_speculative_variant_race(
+pub fn record_substrate_audit_event(event: SubstrateAuditEvent) {
+pub fn record_warm_reuse(
+pub fn record_warm_reuses(
+pub fn reduction_offsets(subgroup_size: u32) -> Vec<u32> {
+pub fn reduction_offsets_into(subgroup_size: u32, offsets: &mut Vec<u32>) {
+pub fn registered_aot_emitters() -> Vec<&'static AotEmitter> {
+pub fn registered_aot_launcher_emitters() -> Vec<&'static AotLauncherEmitter> {
+pub fn registered_backends() -> &'static [&'static BackendRegistration] {
+pub fn registered_backends_by_precedence() -> Vec<&'static BackendRegistration> {
+pub fn registered_backends_by_precedence_slice() -> &'static [&'static BackendRegistration] {
+pub fn remember_hash(&self, hash: blake3::Hash) {
+pub fn remember_success(&self, hash: blake3::Hash, vsa: &[u32]) -> Result<(), BackendError> {
+pub fn remove(&mut self, key: &str) -> Option<AttrValue> {
+pub fn rename(&mut self, from: &str, to: impl Into<String>) -> bool {
+pub fn render_human(&self) -> String {
+pub fn replace_output_buffers_preserving_slots(
+pub fn replace_output_buffers_preserving_slots_with_memory_stats(
+pub fn replace_output_buffers_preserving_slots_with_stats(
+pub fn resolve(&self, program_fp: &str) -> [u32; 3] {
+pub fn resolve_key(&self, key: &TunerProgramKey) -> [u32; 3] {
+pub fn resolve_launch_workgroup(
+pub fn resolve_launch_workgroup_for_mode(
+pub fn ring_size(&self) -> u32 {
+pub fn root(&self) -> &std::path::Path {
+pub fn run(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, BackendError> {
+pub fn samples(&self) -> u32 {
+pub fn save(&self, path: &Path) -> Result<(), String> {
+pub fn save_if_dirty(&mut self, path: &Path) -> std::io::Result<bool> {
+pub fn scan_dir(&mut self, dir: &Path) {
+pub fn select_precision_lowering(
+pub fn select_primary_execution_mode(
+pub fn select_retention_set(gains: &mut [u32], n: u32, k: u32) -> Vec<u32> {
+pub fn select_retention_set_into(gains: &mut [u32], n: u32, k: u32, picked: &mut Vec<u32>) {
+pub fn select_sort_backend(distribution: Distribution) -> SortBackend {
+pub fn select_strategy<'a>(
+pub fn set(&mut self, program_fp: impl Into<String>, size: [u32; 3]) {
+pub fn set_key(&mut self, key: TunerProgramKey, size: [u32; 3]) {
+pub fn set_label(&mut self, label: impl Into<String>) {
+pub fn should_speculate(&self) -> bool {
+pub fn signatures(&self) -> &[DeviceSignature] {
+pub fn snapshot(&self, alarm_threshold_bps: u32) -> PipelineCacheAuditReport {
+pub fn snapshot() -> Self {
+pub fn snapshot_dispatch_telemetry() -> DispatchTelemetry {
+pub fn speculative_total_ns(&self) -> u128 {
+pub fn split_on_grid_sync(program: &Program) -> Vec<Program> {
+pub fn suggest(
+pub fn suggest_resize(&self, feedback: &TunerFeedback) -> Option<u32> {
+pub fn tail(&self) -> u32 {
+pub fn tail_counter(&self) -> u64 {
+pub fn threshold_ppm(&self) -> u64 {
+pub fn to_audit_log(&self) -> String {
+pub fn to_json(&self) -> Result<String, serde_json::Error> {
+pub fn to_json(&self) -> String {
+pub fn to_numeric_constants(&self) -> std::collections::HashMap<String, f64> {
+pub fn to_prometheus(&self) -> String {
+pub fn try_coerce_to_pow2_with_tail_mask(
+pub fn try_dispatch_param_words(
+pub fn try_dispatch_param_words_into(
+pub fn try_entries_to_evict(
+pub fn try_global() -> Result<Guard<Arc<Self>>, String> {
+pub fn try_in_flight(&self) -> Result<u32, String> {
+pub fn try_new(ring_size: u32) -> Result<Self, String> {
+pub fn try_normalized_program_cache_digest(program: &Program) -> Result<[u8; 32], String> {
+pub fn try_reduction_offsets(subgroup_size: u32) -> Result<Vec<u32>, String> {
+pub fn try_reduction_offsets_into(
+pub fn try_select_retention_set(
+pub fn try_select_retention_set_into(
+pub fn try_split_on_grid_sync(program: &Program) -> Result<Vec<Program>, BackendError> {
+pub fn unsupported_extension(
+pub fn update_dispatch_policy_cache_hash(hasher: &mut blake3::Hasher, config: &DispatchConfig) {
+pub fn validate(&self) -> Result<(), String> {
+pub fn validate_borrowed_inputs(&self, inputs: &[&[u8]]) -> Result<(), BackendError> {
+pub fn validate_buffer_ownership<'a>(
+pub fn validate_input_byte_lengths(&self, input_lengths: &[usize]) -> Result<(), BackendError> {
+pub fn validate_inputs(&self, inputs: &[Vec<u8>]) -> Result<(), BackendError> {
+pub fn validate_launch_geometry(
+pub fn validate_no_duplicates<'a>(
+pub fn validate_program(program: &Program, backend: &dyn Backend) -> Result<(), ValidationError> {
+pub fn validate_program_contract(
+pub fn validate_program_for_backend(
+pub fn versioned_specialization_artifact_key(
+pub fn vsa_specialization_key(program: &Program, spec_hash: u64) -> u128 {
+pub fn warning(code: &'static str, message: impl Into<Cow<'static, str>>) -> Self {
+pub fn winner(&self) -> SpeculativeVariantKind {
+pub fn with_attr(mut self, name: impl Into<Cow<'static, str>>) -> Self {
+pub fn with_doc_url(mut self, url: impl Into<Cow<'static, str>>) -> Self {
+pub fn with_fix(mut self, fix: impl Into<Cow<'static, str>>) -> Self {
+pub fn with_location(mut self, loc: OpLocation) -> Self {
+pub fn with_operand(mut self, idx: u32) -> Self {
+pub fn workspace_dialect_fixture_path() -> PathBuf {
+pub fn worthwhile(&self, threshold_pct: u32) -> bool {
+pub fn write(
+pub mod aot;
+pub mod arm_independence;
+pub mod async_copy_overlap;
+pub mod autotune_store;
+pub mod backend;
+pub mod binding;
+pub mod bindless_policy;
+pub mod cache;
+pub mod cache_eviction;
+pub mod cache_eviction_heat;
+pub mod cache_invalidation;
+pub mod command_reuse_policy;
+pub mod compiler;
+pub mod core_indirect;
+pub mod device_extraction;
+pub mod device_profile;
+pub mod device_signature;
+pub mod diagnostics;
+pub mod dialect;
+pub mod dispatch_policy;
+pub mod enforce;
+pub mod extraction_cost;
+pub mod fusion;
+pub mod grid_sync;
+pub mod hashing;
+pub mod interner;
+pub mod io;
+pub mod launch;
+pub mod lowering;
+pub mod migration;
+pub mod mutation;
+pub mod observability;
+pub mod op_def;
+pub mod param_inlining;
+pub mod persistent;
+pub mod persistent_kernel_policy;
+pub mod pgo;
+pub mod pipeline;
+pub mod pipeline_fusion;
+pub mod private {
+pub mod program_walks;
+pub mod registry;
+pub mod residency;
+pub mod routing;
+pub mod shadow;
+pub mod shape_prediction;
+pub mod specialization;
+pub mod speculate;
+pub mod speculation_substrate;
+pub mod strategy;
+pub mod subgroup;
+pub mod toml_loader;
+pub mod trace_jit_policy;
+pub mod tuner;
+pub mod validation;
+pub struct AdaptiveSpeculator {
+pub struct AotEmitter {
+pub struct AotLauncherEmitter {
+pub struct AotLauncherFiles {
+pub struct AotLauncherRequest<'a> {
+pub struct ArmBindingSummary {
+pub struct AttrMap {
+pub struct AutotuneKey {
+pub struct AutotuneRecord {
+pub struct AutotuneStore {
+pub struct BackendCapability {
+pub struct BackendLatency {
+pub struct BackendLayoutFingerprint {
+pub struct BackendLayoutSlot {
+pub struct BackendPrecedence {
+pub struct BackendRegistration {
+pub struct Binding {
+pub struct BindingPlan {
+pub struct BindingSetFingerprint {
+pub struct BindingSlotSet {
+pub struct BindlessInputs {
+pub struct CacheEntryStats {
+pub struct CacheEvictionAllocationError {
+pub struct CacheInvalidationError {
+pub struct CacheInvalidationScratch {
+pub struct Chain<A, B> {
+pub struct CommandReuseInputs {
+pub struct CompiledPipelineBuild {
+pub struct ConformanceCase {
+pub struct ConformanceMatrix {
+pub struct DefaultPolicy {
+pub struct Deprecation {
+pub struct DeviceExtraction<L> {
+pub struct DeviceProfile {
+pub struct DeviceSignature {
+pub struct DeviceSignatureTable {
+pub struct Diagnostic {
+pub struct DiagnosticCode(#[serde(deserialize_with = "de_cow_static")] pub Cow<'static, str>);
+pub struct Dialect {
+pub struct DialectManifest {
+pub struct DialectRegistration {
+pub struct DialectRegistry {
+pub struct DiskPipelineCache {
+pub struct DispatchConfig {
+pub struct DispatchPolicyInputs {
+pub struct DispatchPolicyVerdict {
+pub struct DispatchShape {
+pub struct DispatchTelemetry {
+pub struct Distribution {
+pub struct DivergenceEvent {
+pub struct DriverObservability {
+pub struct DuplicateOpIdError {
+pub struct ExtractionDevice<'a> {
+pub struct FusionCaps {
+pub struct FusionPass;
+pub struct HostShimBuffer {
+pub struct IndirectDispatch {
+pub struct LaunchGeometryLimits {
+pub struct LaunchPlan {
+pub struct LauncherDependency {
+pub struct Migration {
+pub struct MigrationRegistry {
+pub struct NaturalGradientPolicy {
+pub struct NaturalGradientTuningStep {
+pub struct NodeHints {
+pub struct OpBackendTarget {
+pub struct OpDefRegistration {
+pub struct OpLocation {
+pub struct OpManifest {
+pub struct OutputBindingLayout {
+pub struct OutputLayout {
+pub struct OutputReplacementStats {
+pub struct OutputSlotByteStats {
+pub struct OutputSlotStats {
+pub struct ParamInliningPolicy {
+pub struct PersistentEngine {
+pub struct PersistentKernelInputs {
+pub struct PersistentWorkItem {
+pub struct PgoTable {
+pub struct PipelineCacheAudit {
+pub struct PipelineCacheAuditReport {
+pub struct PipelineCacheKey {
+pub struct PipelineCacheSnapshot {
+pub struct PipelineDeviceFingerprint {
+pub struct PipelineFeatureFlags(pub u32);
+pub struct PipelinePrewarmReport {
+pub struct PipelineReproManifest {
+pub struct ProgramValidationCaps {
+pub struct QueueFull;
+pub struct ReferenceExecutor {
+pub struct ResidentDispatchStep<'a> {
+pub struct ResidentGraphReuseTelemetry {
+pub struct ResidentReadRange<'a> {
+pub struct RingAtomics {
+pub struct RouteDecision {
+pub struct RoutingTable {
+pub struct Semver {
+pub struct ShapeHistory {
+pub struct SpecCacheKey {
+pub struct SpecMap {
+pub struct SpeculationObservation {
+pub struct SpeculationReport {
+pub struct SpeculativeDispatchOutcome {
+pub struct SpeculativeDispatchPlan<'a> {
+pub struct SpeculativeVariantDecision {
+pub struct SpeculativeVariantKeys<'a> {
+pub struct SpeculativeVariantRace {
+pub struct StaticProgramShape {
+pub struct SubgroupCaps {
+pub struct SubstrateAuditEvent {
+pub struct TailMaskPolicy {
+pub struct TimedDispatchResult {
+pub struct TomlDialectStore {
+pub struct TraceJitInputs {
+pub struct Tuner {
+pub struct TunerCache {
+pub struct TunerFeedback {
+pub struct TunerProgramKey(String);
+pub struct TuningMeasurement {
+pub struct ValidationCache {
+pub trait Backend: Send + Sync {
+pub trait BackendObservabilityProvider {
+pub trait BackendTimer {
+pub trait CompiledPipeline: private::Sealed + Send + Sync {
+pub trait DeviceBuffer: std::any::Any + Send + Sync + std::fmt::Debug {
+pub trait EnforceGate: private::Sealed + Send + Sync {
+pub trait Executable: Backend {
+pub trait LowerableOp: Send + Sync + 'static {
+pub trait LoweringStrategy: Send + Sync + std::fmt::Debug {
+pub trait PendingDispatch: private::Sealed + Send + Sync {
+pub trait Sealed {}
+pub trait Streamable: Backend {
+pub trait TargetGenCtx {
+pub trait TypedDispatchExt: VyreBackend {
+pub trait VyreBackend: private::Sealed + Send + Sync {
+pub type AotTargetId = &'static str;
+pub type Memory = Vec<u8>;
+pub type MemoryRef<'a> = &'a [u8];
+pub type OutputBuffers = Vec<Vec<u8>>;
+pub type ShapeFingerprint = [u32; 8];

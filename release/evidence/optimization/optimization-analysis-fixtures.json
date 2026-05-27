@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "required_min_cases_per_family": 128,
+  "required_families": [
+    "A13-coalesce-fixture",
+    "A14-shared-mem-promote-fixture",
+    "A15-bank-conflict-fixture",
+    "A16-vec-pack-fixture"
+  ],
+  "missing_required_families": [],
+  "total_fixture_cases": 1536,
+  "total_triggered_cases": 1536,
+  "families": [
+    {
+      "family": "A13-coalesce-fixture",
+      "cases": 768,
+      "analysis_sites": 1536,
+      "triggered_cases": 768,
+      "coalesced_unit_stride_sites": 1024,
+      "strided_sites": 256,
+      "broadcast_sites": 256,
+      "shared_mem_candidates": 0,
+      "shared_mem_tile_bytes": 0,
+      "bank_conflict_sites": 0,
+      "bank_conflict_critical_sites": 0,
+      "vec_pack_chains": 0,
+      "vec_pack_ops_eliminated": 0
+    },
+    {
+      "family": "A14-shared-mem-promote-fixture",
+      "cases": 256,
+      "analysis_sites": 256,
+      "triggered_cases": 256,
+      "coalesced_unit_stride_sites": 0,
+      "strided_sites": 0,
+      "broadcast_sites": 0,
+      "shared_mem_candidates": 256,
+      "shared_mem_tile_bytes": 65536,
+      "bank_conflict_sites": 0,
+      "bank_conflict_critical_sites": 0,
+      "vec_pack_chains": 0,
+      "vec_pack_ops_eliminated": 0
+    },
+    {
+      "family": "A15-bank-conflict-fixture",
+      "cases": 256,
+      "analysis_sites": 256,
+      "triggered_cases": 256,
+      "coalesced_unit_stride_sites": 0,
+      "strided_sites": 0,
+      "broadcast_sites": 0,
+      "shared_mem_candidates": 0,
+      "shared_mem_tile_bytes": 0,
+      "bank_conflict_sites": 256,
+      "bank_conflict_critical_sites": 256,
+      "vec_pack_chains": 0,
+      "vec_pack_ops_eliminated": 0
+    },
+    {
+      "family": "A16-vec-pack-fixture",
+      "cases": 256,
+      "analysis_sites": 256,
+      "triggered_cases": 256,
+      "coalesced_unit_stride_sites": 0,
+      "strided_sites": 0,
+      "broadcast_sites": 0,
+      "shared_mem_candidates": 0,
+      "shared_mem_tile_bytes": 0,
+      "bank_conflict_sites": 0,
+      "bank_conflict_critical_sites": 0,
+      "vec_pack_chains": 256,
+      "vec_pack_ops_eliminated": 768
+    }
+  ],
+  "blockers": []
+}

@@ -1,0 +1,222 @@
+# Canonical benchmark targets.
+# Benchmark files may expose metadata, but target thresholds and baseline
+# classes belong here.
+
+schema = 1
+
+baseline_class_values = [
+  "cpu_sota",
+  "gpu_sota",
+  "reference_correctness",
+]
+
+[[target]]
+id = "foundation.elementwise.add.1m"
+primitive = "f32 elementwise add"
+suite = "smoke"
+backend_focus = "cuda"
+metric = "dispatch_ns_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "wide/rayon-class SIMD CPU vector baseline"
+gpu_competitor = "none_recorded"
+notes = "Use active backend time when available; wall_ns remains recorded separately."
+
+[[target]]
+id = "integer_arithmetic_micro"
+primitive = "integer strength-reduced arithmetic"
+suite = "micro"
+backend_focus = "all"
+metric = "dispatch_ns_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "best available scalar/SIMD Rust-native arithmetic baseline for the primitive"
+gpu_competitor = "none_recorded"
+notes = "Layer-1 rewrite target: backend should not see reducible div/mod/mul patterns."
+
+[[target]]
+id = "runtime.megakernel.latency"
+primitive = "persistent megakernel dispatch"
+suite = "runtime"
+backend_focus = "cuda"
+metric = "dispatch_ns_p50"
+min_speedup_over_cpu_sota = 1.0
+cpu_baseline = "not applicable; compare against non-persistent GPU redispatch"
+gpu_competitor = "non_megakernel_vyre_dispatch"
+notes = "Primary target is launch amortization and queue throughput, not CPU comparison."
+
+[[target]]
+id = "release.workload.condition_eval"
+primitive = "bytecode-compatible conditional evaluation"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "items_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "optimized CPU rule-condition evaluator with branch prediction and SIMD-friendly bitmap inputs"
+gpu_competitor = "wgpu_vyre_condition_eval"
+notes = "Core Vyre proof: conventional CPU rule condition evaluation must be beaten by the CUDA path."
+
+[[target]]
+id = "release.workload.string_bitmap_scatter"
+primitive = "pattern-match bitmap scatter"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "items_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "Hyperscan/ripgrep-class CPU pattern match bitmap materialization"
+gpu_competitor = "wgpu_vyre_scatter"
+notes = "Measures the scatter stage feeding condition evaluation; host copies are tracked separately."
+
+[[target]]
+id = "release.workload.offset_count_aggregation"
+primitive = "count/offset/length aggregation"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "items_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "SIMD CPU aggregation over sorted match streams"
+gpu_competitor = "wgpu_vyre_aggregation"
+notes = "Must prove string metadata operators do not force CPU-side post-processing."
+
+[[target]]
+id = "release.workload.pe_metadata"
+primitive = "PE metadata condition evaluation"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "items_per_second_p50"
+min_speedup_over_cpu_sota = 50.0
+cpu_baseline = "optimized CPU PE-header predicate evaluator"
+gpu_competitor = "wgpu_vyre_pe_metadata"
+notes = "Metadata predicates must remain GPU-resident after the parse/extract stage."
+
+[[target]]
+id = "release.workload.entropy_window"
+primitive = "rolling entropy/window predicates"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "bytes_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "SIMD CPU rolling histogram entropy implementation"
+gpu_competitor = "wgpu_vyre_entropy"
+notes = "Conventional CPU-heavy byte statistics workload."
+
+[[target]]
+id = "release.workload.for_any_all_n"
+primitive = "bounded quantified condition loops"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "items_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "optimized CPU short-circuit quantified-condition evaluator"
+gpu_competitor = "wgpu_vyre_quantifiers"
+notes = "Captures divergence and predication quality for FOR-ANY, FOR-ALL, and FOR-N."
+
+[[target]]
+id = "release.workload.quantized_linear"
+primitive = "fused grouped INT4 linear inference"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "items_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "Rayon-parallel packed INT4 affine dequantization and dot-product oracle"
+gpu_competitor = "none_recorded"
+notes = "Measures packed 4-bit weights with per-group scale/zero-point applied inside the accumulation loop; separate dequantize materialization must not be required."
+
+[[target]]
+id = "release.workload.alias_reaching_def"
+primitive = "alias-aware reaching-definition optimization"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "programs_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "LLVM-style sparse dataflow and alias analysis baseline"
+gpu_competitor = "wgpu_vyre_dataflow_reaching_def"
+notes = "Links consumer dataflow analysis to more aggressive Vyre lowering passes."
+
+[[target]]
+id = "release.workload.ifds_witness"
+primitive = "IFDS reachability and witness extraction"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "edges_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "optimized CPU graph reachability and witness extraction"
+gpu_competitor = "wgpu_dataflow_ifds"
+notes = "Consumer release workload for IFDS proof extraction."
+
+[[target]]
+id = "release.workload.callgraph_reachability"
+primitive = "callgraph reachability CSR traversal"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "edges_per_second_p50"
+min_speedup_over_cpu_sota = 25.0
+cpu_baseline = "optimized CPU graph reachability and callgraph traversal baseline"
+gpu_competitor = "wgpu_dataflow_callgraph"
+notes = "Graph traversal proof workload; sparse frontier behavior must remain GPU-resident."
+
+[[target]]
+id = "release.workload.c_ast_traversal"
+primitive = "C AST traversal and motif predicates"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "nodes_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "tree-sitter/libclang-class CPU AST traversal baseline"
+gpu_competitor = "wgpu_vyre_ast_traversal"
+notes = "Parser may remain incomplete, but parsed AST buffers must feed a measurable GPU traversal path."
+
+[[target]]
+id = "release.workload.megakernel_stream"
+primitive = "persistent megakernel queued condition batches"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "batches_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "optimized CPU batched condition evaluator"
+gpu_competitor = "non_persistent_cuda_dispatch"
+notes = "Primary release-speed differentiator: amortized dispatch under repeated workloads."
+
+[[target]]
+id = "release.workload.egraph_saturation"
+primitive = "optimization rewrite saturation"
+suite = "release-workload"
+backend_focus = "all"
+metric = "programs_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "egg/egraph CPU saturation baseline with equivalent rewrite set"
+gpu_competitor = "none_recorded"
+notes = "Tracks whether optimization infrastructure scales beyond hand-written rewrites."
+
+[[target]]
+id = "release.workload.conformance_sparse_readback"
+primitive = "sparse fired-rule readback"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "items_per_second_p50"
+min_speedup_over_cpu_sota = 100.0
+cpu_baseline = "optimized CPU fired-rule collection over predicate masks"
+gpu_competitor = "wgpu_vyre_sparse_readback"
+notes = "Readback must stay sparse; dense host transfers are release blockers."
+
+[[target]]
+id = "release.optimization.lower_rewrite_impact"
+primitive = "substrate-neutral KernelDescriptor rewrite impact corpus"
+suite = "release"
+backend_focus = "all"
+metric = "issue_score_delta_p50"
+min_speedup_over_cpu_sota = 1.0
+cpu_baseline = "baseline descriptor analysis-only pass"
+gpu_competitor = "none_substrate_neutral"
+bench_case_id = "lower.rewrites.impact.corpus"
+notes = "Release evidence for A-series lower analyses and rewrites; proves optimization passes reduce descriptor issue score without backend coupling."
+
+[[target]]
+id = "release.optimization.foundation_optimizer_impact"
+primitive = "foundation IR optimizer dispatch impact"
+suite = "release"
+backend_focus = "cuda"
+metric = "dispatch_ns_p50"
+min_speedup_over_cpu_sota = 1.0
+cpu_baseline = "unoptimized vyre foundation IR dispatch"
+gpu_competitor = "wgpu_optimizer_impact"
+bench_case_id = "foundation.optimizer.impact"
+notes = "Release evidence that CSE, constant folding, strength reduction, and DCE improve real dispatch, not only structural correctness."

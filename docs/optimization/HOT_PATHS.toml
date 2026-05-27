@@ -1,0 +1,67 @@
+# Hot-path file list. Paths listed here are scanned by
+# `cargo xtask hot-path-scan` for allocations, clones, and locks.
+# A path on this list is a contract: the module's per-call cost is on
+# the critical path of one of vyre's headline benchmarks (kernel
+# dispatch, optimizer pass scheduler, megakernel planner, validator
+# skip cache, naga emit, parsed-source cache).
+#
+# Adding a path here forces the audit to keep running; removing one is
+# an opt-out and must be justified in the commit message.
+#
+# Source-of-truth: ROADMAP.md S11.
+
+schema = 1
+
+# Optimizer pass scheduler  -  runs every fixed-point iteration.
+[[hot_path]]
+file = "vyre-foundation/src/optimizer/scheduler/mod.rs"
+reason = "Pass-scheduler iteration loop; runs once per fixpoint round per Program."
+
+# ProgramFacts SoA  -  built once per Program but every pass queries it.
+[[hot_path]]
+file = "vyre-foundation/src/optimizer/program_soa.rs"
+reason = "SoA fact view; queried per-Node by every alias/range/escape pass."
+
+# Validator skip cache  -  the K1 short-circuit.
+[[hot_path]]
+file = "vyre-foundation/src/ir_inner/model/program/meta.rs"
+reason = "Validator skip-cache; called on every Program::validate()."
+
+# Hot-path hints LRU  -  recorded after every dispatch.
+[[hot_path]]
+file = "vyre-foundation/src/optimizer/hot_path_hints.rs"
+reason = "I1 LRU; written after every kernel dispatch on the runtime hot path."
+
+# Naga emit module cache  -  B2.
+[[hot_path]]
+file = "vyre-emit-naga/src/lib.rs"
+reason = "Per-dispatch shader emission; B2 module cache lookup must stay allocation-free."
+
+# Specialization cache key.
+[[hot_path]]
+file = "vyre-driver/src/specialization.rs"
+reason = "F1 cache key; computed for every dispatch."
+
+# Wire encode/decode  -  per Program serialisation.
+[[hot_path]]
+file = "vyre-foundation/src/serial/wire/encode.rs"
+reason = "Wire encode; runs whenever a Program crosses the inter-process boundary."
+
+# Reaching-def propagate  -  runs per pass round.
+[[hot_path]]
+file = "vyre-foundation/src/optimizer/passes/algebraic/const_fold/reaching_def_propagate.rs"
+reason = "A11 cross-CFG const fold; one pass call per Program per round."
+
+# Loop fission/fusion  -  A26/A27.
+[[hot_path]]
+file = "vyre-foundation/src/optimizer/passes/loops/loop_fusion.rs"
+reason = "A26; bodies scanned per loop pair per pass round."
+
+[[hot_path]]
+file = "vyre-foundation/src/optimizer/passes/loops/loop_fission.rs"
+reason = "A27; bodies scanned per loop per pass round."
+
+# CUDA resident dispatch  -  long-lived buffer launch + sequence replay.
+[[hot_path]]
+file = "vyre-driver-cuda/src/backend/resident_dispatch.rs"
+reason = "S4 CUDA resident launch; every fixed-graph replay and resident-sequence step."

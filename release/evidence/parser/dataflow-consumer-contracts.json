@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "component_id": "dataflow-consumer",
+  "role": "Dataflow facts consumed by parser/compiler optimization and downstream analysis",
+  "root": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer",
+  "required_files": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/Cargo.toml",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 1672
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/src/lib.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 4508
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/README.md",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 6822
+    }
+  ],
+  "required_terms": [
+    "dataflow",
+    "analysis",
+    "program"
+  ],
+  "missing_terms": [],
+  "required_contract_topics": [
+    "parser",
+    "dataflow",
+    "alias",
+    "reaching",
+    "callgraph"
+  ],
+  "missing_contract_topics": [],
+  "required_test_categories": [
+    "unit",
+    "integration",
+    "property",
+    "adversarial",
+    "corpus",
+    "benchmark",
+    "conformance",
+    "gap",
+    "fuzz"
+  ],
+  "missing_test_categories": [],
+  "required_evidence_trees": [
+    {
+      "tree": "tests",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/tests",
+      "exists": true,
+      "source_bytes": 145592,
+      "unreadable_file_count": 0
+    },
+    {
+      "tree": "benches",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/benches",
+      "exists": true,
+      "source_bytes": 176,
+      "unreadable_file_count": 0
+    },
+    {
+      "tree": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/fuzz",
+      "exists": true,
+      "source_bytes": 248,
+      "unreadable_file_count": 0
+    }
+  ],
+  "unresolved_ownership_markers": [],
+  "blockers": []
+}

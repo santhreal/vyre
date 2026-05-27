@@ -1,0 +1,140 @@
+name: Conformance
+
+# Runs the conform/* substrate as a first-class CI job so the
+# witness-pair / law-prover / certificate-emit pipeline does not slip
+# through `./cargo_full test --workspace`.
+#
+# The GPU-required parity matrix lives in `gpu-parity.yml` (self-hosted
+# runner). This workflow runs the CPU-side conformance: spec types,
+# witness generation, law enforcement, and the runner without `--features gpu`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: libs/performance/matching/vyre
+
+jobs:
+  op-matrix-release-gate:
+    name: Operation matrix release gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+
+      - name: Install Rust (workspace MSRV)
+        shell: bash
+        run: |
+          MSRV="$(grep -E '^rust-version' Cargo.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
+          rustup toolchain install "$MSRV" --profile minimal
+          rustup default "$MSRV"
+
+      - name: every registered op has a source-backed OP_MATRIX row
+        shell: bash
+        run: cargo_full test -p vyre-conform-enforce --test op_matrix_truth -- --nocapture
+
+      - name: runner release-gate contracts
+        shell: bash
+        run: cargo_full test -p vyre-conform-runner --test release_gate_contracts -- --nocapture
+
+  conform-cpu:
+    name: conform/* CPU substrate
+    needs: op-matrix-release-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+
+      - name: Install Rust (workspace MSRV)
+        shell: bash
+        run: |
+          MSRV="$(grep -E '^rust-version' Cargo.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
+          rustup toolchain install "$MSRV" --profile minimal
+          rustup default "$MSRV"
+
+      - name: vyre-conform-spec test
+        shell: bash
+        run: cargo_full test -p vyre-conform-spec
+
+      - name: vyre-conform-generate test
+        shell: bash
+        run: cargo_full test -p vyre-conform-generate
+
+      - name: vyre-conform-enforce test
+        shell: bash
+        run: cargo_full test -p vyre-conform-enforce
+
+      - name: vyre-test-harness test
+        shell: bash
+        run: cargo_full test -p vyre-test-harness
+
+      - name: vyre-conform-runner test (CPU)
+        shell: bash
+        run: cargo_full test -p vyre-conform-runner
+
+      - name: gap-cert artifact + cert-regression pins
+        shell: bash
+        run: |
+          cargo_full test -p vyre-conform-runner --test cert_regression_pin
+          cargo_full test -p vyre-conform-runner --test cert_artifact
+
+      - name: lens parity (CPU)
+        shell: bash
+        run: cargo_full test -p vyre-conform-runner --test lens_parity
+
+      - name: dispatch grid contracts
+        shell: bash
+        run: cargo_full test -p vyre-conform-runner --test dispatch_grid_contracts
+
+      - name: conformance matrix evidence
+        shell: bash
+        run: cargo_full run --bin xtask -- conformance-matrix --output release/evidence/conformance/conformance-matrix.json
+
+  conform-release-gate:
+    name: Conform release gate
+    needs:
+      - op-matrix-release-gate
+      - conform-cpu
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add cargo_full wrapper to PATH
+        shell: bash
+        run: |
+          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
+            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
+          else
+            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+          fi
+
+      - name: Install Rust (workspace MSRV)
+        shell: bash
+        run: |
+          MSRV="$(grep -E '^rust-version' Cargo.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
+          rustup toolchain install "$MSRV" --profile minimal
+          rustup default "$MSRV"
+
+      - name: conformance matrix release blocker
+        shell: bash
+        run: cargo_full run --bin xtask -- conformance-matrix --output release/evidence/conformance/conformance-matrix.json
+
+      - name: conform gate passed
+        shell: bash
+        run: echo "Conform release gate passed: OP_MATRIX, law enforcement, witness generation, runner contracts, certificates, lens parity, dispatch-grid contracts, and conformance matrix all succeeded."

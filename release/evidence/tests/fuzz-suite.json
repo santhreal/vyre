@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "suite": "fuzz",
+  "file_count": 14,
+  "vyre_file_count": 8,
+  "dataflow_consumer_file_count": 5,
+  "vyrec_file_count": 1,
+  "files": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/wire_format_fuzz.rs",
+      "layers": [
+        "benchmark",
+        "fuzz",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 103,
+      "has_test_entrypoint": true,
+      "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/fuzz/fuzz_targets/decoder.rs",
+      "layers": [
+        "benchmark",
+        "fuzz",
+        "unit"
+      ],
+      "lines": 7,
+      "has_test_entrypoint": true,
+      "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/fuzz/fuzz_targets/registry_toml.rs",
+      "layers": [
+        "benchmark",
+        "fuzz",
+        "unit"
+      ],
+      "lines": 23,
+      "has_test_entrypoint": true,
+      "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/fuzz/fuzz_targets/program_wire.rs",
+      "layers": [
+        "benchmark",
+        "fuzz",
+        "unit"
+      ],
+      "lines": 32,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/wire_decode_oom_guard.rs",
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "fuzz",
+        "integration",
+        "unit"
+      ],
+      "lines": 50,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/differential_fuzz.rs",
+      "layers": [
+        "benchmark",
+        "corpus",
+        "fuzz",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 211,
+      "has_test_entrypoint": true,
+      "assertion_count": 8,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/tests/cross_emitter_parity.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "corpus",
+        "fuzz",
+        "integration",
+        "unit"
+      ],
+      "lines": 396,
+      "has_test_entrypoint": true,
+      "assertion_count": 24,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/rewrite_soundness_fuzz.rs",
+      "layers": [
+        "benchmark",
+        "corpus",
+        "fuzz",
+        "integration",
+        "unit"
+      ],
+      "lines": 475,
+      "has_test_entrypoint": true,
+      "assertion_count": 8,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_may_alias.rs",
+      "layers": [
+        "conformance",
+        "fuzz",
+        "integration",
+        "unit"
+      ],
+      "lines": 74,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_reaching_construction.rs",
+      "layers": [
+        "conformance",
+        "fuzz",
+        "integration",
+        "unit"
+      ],
+      "lines": 110,
+      "has_test_entrypoint": true,
+      "assertion_count": 11,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_exact_primitives.rs",
+      "layers": [
+        "conformance",
+        "fuzz",
+        "integration",
+        "unit"
+      ],
+      "lines": 236,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_fuzz_bitset_oracles.rs",
+      "layers": [
+        "fuzz",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 51,
+      "has_test_entrypoint": true,
+      "assertion_count": 8,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_dominators.rs",
+      "layers": [
+        "conformance",
+        "fuzz",
+        "integration",
+        "unit"
+      ],
+      "lines": 96,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/fuzz_cli_contracts.rs",
+      "layers": [
+        "adversarial",
+        "fuzz",
+        "integration",
+        "unit"
+      ],
+      "lines": 38,
+      "has_test_entrypoint": true,
+      "assertion_count": 3,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    }
+  ],
+  "blockers": []
+}

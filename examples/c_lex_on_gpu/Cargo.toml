@@ -1,0 +1,24 @@
+[package]
+name = "c_lex_on_gpu"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Real C → vyre IR → GPU lex/parse demo. Uses a real Linux kernel
+# script source as the input so the timing reflects "actually parses
+# C in the wild," not "parses a 12-byte synthetic snippet."
+#
+# CPU comparison is intentional: the same source goes through tree-sitter-c
+# on the host. tree-sitter-c is the fastest known production C parser for
+# tooling use (zed, neovim, github code search). The vyre numbers are a
+# direct contrast against that bar  -  not a synthetic CPU strawman.
+
+[dependencies]
+vyre-frontend-c = { path = "../../vyre-frontend-c" }
+# Link a GPU backend so vyre's runtime probe can find one. CUDA is the
+# release fast path; WGPU is the portable GPU path for non-CUDA
+# adapters. There is no CPU fallback by design.
+vyre-driver-cuda = { path = "../../vyre-driver-cuda" }
+vyre-driver-wgpu = { path = "../../vyre-driver-wgpu", features = ["c-parser"] }
+
+[workspace]

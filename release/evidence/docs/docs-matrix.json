@@ -1,0 +1,409 @@
+{
+  "schema_version": 2,
+  "curated_proof_docs_preserved": true,
+  "docs": [
+    {
+      "id": "release-plan",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/../../../../docs/vyre-weir-release-plan.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "libs/performance/matching/vyre/release/evidence/benchmarks/cuda-ptx-patterns.json",
+        "libs/performance/matching/vyre/release/evidence/benchmarks/release-workload-matrix.json",
+        "libs/performance/matching/vyre/release/evidence/version/release-tag-plan.json",
+        "release/evidence/",
+        "release/evidence/backends/backend-matrix.json",
+        "release/evidence/benchmarks/bench-release-axes.json",
+        "release/evidence/benchmarks/release-workload-matrix.json",
+        "release/evidence/conformance/conformance-matrix.json",
+        "release/evidence/conformance/cuda-conformance.json",
+        "release/evidence/conformance/reference-conformance.json",
+        "release/evidence/conformance/release-gate-log.json",
+        "release/evidence/conformance/wgpu-conformance.json",
+        "release/evidence/docs/docs-matrix.json",
+        "release/evidence/final/completion-audit.json",
+        "release/evidence/final/release-evidence-run.json",
+        "release/evidence/hygiene/hygiene-matrix.json",
+        "release/evidence/metadata/feature-matrix.json",
+        "release/evidence/metadata/metadata-matrix.json",
+        "release/evidence/optimization/optimization-corpus.json",
+        "release/evidence/optimization/optimization-integration-matrix.json",
+        "release/evidence/optimization/pass-family-benchmark-manifest.json",
+        "release/evidence/parser/c-parser-linux-subsystem.json",
+        "release/evidence/parser/distributed-parser-map.json",
+        "release/evidence/tests/test-matrix.json",
+        "release/evidence/version/version-matrix.json",
+        "release/evidence/weir/weir-analysis-api-matrix.json",
+        "release/evidence/weir/weir-readme-contracts.json",
+        "release/evidence/weir/weir-vyre-integration-tests.json"
+      ],
+      "evidence_artifact_ref_count": 28,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "vyre",
+        "weir",
+        "release",
+        "evidence",
+        "benchmark",
+        "conformance"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "vyre-readme",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/README.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/",
+        "release/evidence/backends/backend-matrix.json",
+        "release/evidence/benchmarks/release-workload-matrix.json",
+        "release/evidence/conformance/conformance-matrix.json",
+        "release/evidence/final/completion-audit.json",
+        "release/evidence/tests/test-matrix.json",
+        "release/evidence/version/version-matrix.json"
+      ],
+      "evidence_artifact_ref_count": 7,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "vyre",
+        "gpu",
+        "bytecode",
+        "condition",
+        "cuda",
+        "wgpu",
+        "backend",
+        "fallback",
+        "quickstart",
+        "release/evidence"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "vyre-release",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/RELEASE.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/"
+      ],
+      "evidence_artifact_ref_count": 1,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "release",
+        "version",
+        "evidence",
+        "gate"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "vyre-release-engineering",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/RELEASE_ENGINEERING.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/",
+        "release/evidence/benchmarks/cpu-only-100x-proof.json",
+        "release/evidence/benchmarks/release-workload-matrix.json",
+        "release/evidence/conformance/conformance-matrix.json",
+        "release/evidence/docs/docs-matrix.json",
+        "release/evidence/final/completion-audit.json",
+        "release/evidence/metadata/metadata-matrix.json",
+        "release/evidence/tests/release-surface-suite-coverage.json"
+      ],
+      "evidence_artifact_ref_count": 8,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "release",
+        "evidence",
+        "cargo_full",
+        "tag"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "vyre-release-checklist",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/RELEASE_CHECKLIST.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/",
+        "release/evidence/final/completion-audit.json"
+      ],
+      "evidence_artifact_ref_count": 2,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "release",
+        "evidence",
+        "cuda",
+        "weir"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "vyre-publish-gate",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/PUBLISH_GATE.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/docs/crate-metadata-proof.md",
+        "release/evidence/metadata/metadata-matrix.json"
+      ],
+      "evidence_artifact_ref_count": 2,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "publish",
+        "metadata",
+        "cargo_full",
+        "evidence"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "vyre-testing",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/TESTING_PROGRAM.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/",
+        "release/evidence/tests/adversarial-suite.json",
+        "release/evidence/tests/fuzz-suite.json",
+        "release/evidence/tests/test-matrix.json",
+        "release/evidence/tests/unit-suite.json"
+      ],
+      "evidence_artifact_ref_count": 5,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "test",
+        "conformance",
+        "property",
+        "benchmark"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "vyre-optimization",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/docs/optimization/AGENT_CONTRACT.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/backends/backend-matrix.json",
+        "release/evidence/benchmarks/release-workload-matrix.json",
+        "release/evidence/conformance/conformance-matrix.json",
+        "release/evidence/final/completion-audit.json",
+        "release/evidence/metadata/feature-matrix.json",
+        "release/evidence/metadata/metadata-matrix.json",
+        "release/evidence/tests/test-matrix.json",
+        "release/evidence/version/version-matrix.json"
+      ],
+      "evidence_artifact_ref_count": 8,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "optimization",
+        "gpu",
+        "pass",
+        "evidence"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "vyre-conformance",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/README.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/",
+        "release/evidence/conformance/conformance-matrix.json",
+        "release/evidence/conformance/cuda-conformance.json",
+        "release/evidence/conformance/release-gate-log.json",
+        "release/evidence/conformance/wgpu-conformance.json"
+      ],
+      "evidence_artifact_ref_count": 5,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "conformance",
+        "op",
+        "semantic",
+        "evidence"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "vyre-bench",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/README.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/",
+        "release/evidence/benchmarks/bench-release-axes.json",
+        "release/evidence/benchmarks/cuda-release-suite.json",
+        "release/evidence/benchmarks/release-workload-matrix.json",
+        "release/evidence/benchmarks/wgpu-fallback-suite.json"
+      ],
+      "evidence_artifact_ref_count": 5,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "benchmark",
+        "cuda",
+        "wgpu",
+        "evidence"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "vyre-frontend-c",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/README.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/"
+      ],
+      "evidence_artifact_ref_count": 1,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "c",
+        "parser",
+        "linux",
+        "evidence"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "vyrec-readme",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/../../../../tools/vyrec/README.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/parser/",
+        "release/evidence/parser/c-parser-linux-subsystem.json",
+        "release/evidence/parser/distributed-parser-map.json",
+        "release/evidence/parser/vyrec-cli-contracts.json"
+      ],
+      "evidence_artifact_ref_count": 4,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "vyrec",
+        "parser",
+        "cuda",
+        "evidence"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "weir-readme",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/../../../../libs/dataflow/weir/README.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/",
+        "release/evidence/benchmarks/weir-dataflow-release.json",
+        "release/evidence/docs/weir-integration.md",
+        "release/evidence/weir/weir-analysis-api-matrix.json",
+        "release/evidence/weir/weir-vyre-integration-tests.json"
+      ],
+      "evidence_artifact_ref_count": 5,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "weir",
+        "dataflow",
+        "analysis",
+        "evidence",
+        "ssa",
+        "def-use",
+        "reaching-definition",
+        "points-to",
+        "ifds",
+        "callgraph",
+        "control-dependence",
+        "cross-language",
+        "dominators",
+        "escape",
+        "live",
+        "must-initialize",
+        "post-dominator",
+        "range-check",
+        "scc",
+        "summary",
+        "value-set",
+        "witness"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "weir-vision",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/../../../../libs/dataflow/weir/VISION.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/",
+        "release/evidence/benchmarks/weir-dataflow-release.json",
+        "release/evidence/optimization/weir-facts-pass-firing.json",
+        "release/evidence/weir/weir-analysis-api-matrix.json",
+        "release/evidence/weir/weir-vyre-integration-tests.json"
+      ],
+      "evidence_artifact_ref_count": 5,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "weir",
+        "dataflow",
+        "analysis",
+        "release"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    },
+    {
+      "id": "wgpu-fallback-proof",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/release/evidence/docs/wgpu-fallback-proof.md",
+      "exists": true,
+      "read_error": null,
+      "contains_release_evidence_rule": true,
+      "evidence_artifact_refs": [
+        "release/evidence/backends/backend-matrix.json",
+        "release/evidence/benchmarks/wgpu-fallback-suite.json",
+        "release/evidence/conformance/conformance-matrix.json",
+        "release/evidence/conformance/wgpu-conformance.json"
+      ],
+      "evidence_artifact_ref_count": 4,
+      "missing_evidence_artifact_refs": [],
+      "required_topics": [
+        "wgpu",
+        "fallback",
+        "conformance",
+        "evidence"
+      ],
+      "missing_topics": [],
+      "unresolved_markers": []
+    }
+  ],
+  "limitation_findings": [],
+  "blockers": []
+}

@@ -1,0 +1,209 @@
+# V7 Phase C2 audit #4  -  API SURFACE
+# Scope: vyre, vyre-core, vyre-foundation, vyre-spec, vyre-intrinsics, vyre-libs,
+#         vyre-libs-extern, vyre-driver, vyre-driver-wgpu, vyre-driver-spirv,
+#         vyre-driver-photonic, vyre-pipeline, vyre-pipeline-cache, vyre-macros,
+#         vyre-primitives, vyre-reference
+# Checks: doc comments, non_exhaustive, public paths, redundant re-exports,
+#         feature consistency, sealed traits, internal type leakage.
+# Date: 2026-04-20
+# Auditor: automated + manual review
+
+[[finding]]
+id = "V7-API-001"
+severity = "HIGH"
+file = "vyre-core/src/lib.rs"
+line = 96
+description = "Root re-export `pub use vyre_foundation::ir;` lacks a `///` doc comment. The crate root exposes ~14 `pub use` items and only a minority carry docs."
+suggested_fix = "Add a `///` doc comment above every `pub use` and `pub` re-export block at the crate root, describing what the consumer gets and when they need it."
+
+[[finding]]
+id = "V7-API-002"
+severity = "HIGH"
+file = "vyre-intrinsics/src/lib.rs"
+line = 31
+description = "The legacy `vyre-ops` root was renamed and narrowed to `vyre-intrinsics`. Current root modules and re-exports have explicit rustdoc comments (`region`, `harness`, `cpu_op`, `vyre_spec`, `category_check`, `hardware`)."
+suggested_fix = "Keep future `vyre-intrinsics` root modules explicitly documented and scoped to Cat-C hardware intrinsics only."
+
+[[finding]]
+id = "V7-API-003"
+severity = "HIGH"
+file = "vyre-libs/src/lib.rs"
+line = 67
+description = "Twelve root-level public items (`pub mod region`, `pub mod tensor_ref`, `pub use tensor_ref::{...}`, `pub mod builder`, `pub use builder::{...}`, `pub mod descriptor`, `pub use descriptor::{...}`, `pub mod harness`, `pub mod math`, `pub mod nn`, `pub mod matching`, `pub mod crypto`) lack `///` doc comments."
+suggested_fix = "Add `///` docs to every `pub mod` and `pub use` at the crate root. The `harness` module is `#[doc(hidden)]` but still `pub`; either document it or make it `pub(crate)`."
+
+[[finding]]
+id = "V7-API-004"
+severity = "MEDIUM"
+file = "vyre-spec/src/lib.rs"
+line = 22
+description = "All 32 `pub mod` declarations and ~25 `pub use` re-exports at the crate root lack `///` doc comments. The crate enables `#![deny(missing_docs)]` but `pub mod` lines at the root are not exempt."
+suggested_fix = "Add a one-line `///` doc comment to every `pub mod` and `pub use` in `src/lib.rs`."
+
+[[finding]]
+id = "V7-API-005"
+severity = "HIGH"
+file = "vyre-driver/src/lib.rs"
+line = 33
+description = "Wildcard re-exports `pub use diagnostics::*;`, `pub use pipeline::*;`, and `pub use routing::*;` flatten submodule namespaces into the crate root without enumeration or doc comments. This creates churn: adding any item to those submodules becomes a public-API change."
+suggested_fix = "Replace wildcard re-exports with explicit enumerated lists so additions are opt-in and documented."
+
+[[finding]]
+id = "V7-API-006"
+severity = "HIGH"
+file = "vyre-driver/src/registry/mod.rs"
+line = 13
+description = "Ten wildcard re-exports (`pub use core_indirect::*;` through `pub use toml_loader::*;`) flatten the entire registry submodule tree into a single namespace. Any new item in any submodule is automatically public."
+suggested_fix = "Replace all 10 wildcard re-exports with explicit enumerated re-exports, or at minimum document why each wildcard is intentional and stable."
+
+[[finding]]
+id = "V7-API-007"
+severity = "MEDIUM"
+file = "vyre-core/src/lib.rs"
+line = 101
+description = "Redundant re-exports: `pub use vyre_ops as ops;` (line 101) and `pub use vyre_ops as dialect;` (line 135) alias the same crate. Additionally, `pub use vyre_foundation::match_result;` (line 139) and `pub use vyre_foundation::match_result::Match;` (line 165) expose both the module and the type."
+suggested_fix = "Deprecate or remove the `dialect` back-compat alias; consolidate by re-exporting `Match` directly and dropping the `match_result` module re-export, or vice versa."
+
+[[finding]]
+id = "V7-API-008"
+severity = "MEDIUM"
+file = "vyre-intrinsics/Cargo.toml"
+line = 37
+description = "The legacy `vyre-ops` feature surface was replaced by the narrow `vyre-intrinsics` feature surface: `all`, `hardware`, and `subgroup-ops`. The old coarse `math`, `rule`, `logical`, and `primitive` feature names no longer exist in this crate."
+suggested_fix = "Keep `vyre-intrinsics` features tied to Cat-C hardware capability groups; pure library domains belong in `vyre-libs` or `vyre-primitives` feature surfaces."
+
+[[finding]]
+id = "V7-API-009"
+severity = "HIGH"
+file = "vyre-pipeline/src/lib.rs"
+line = 31
+description = "`pub enum PipelineError` is not marked `#[non_exhaustive]`. This is a public error enum that will grow variants as new io_uring opcodes, backend errors, and pipeline states are added."
+suggested_fix = "Add `#[non_exhaustive]` to `PipelineError` so downstream `match` arms keep compiling when new variants land."
+
+[[finding]]
+id = "V7-API-010"
+severity = "MEDIUM"
+file = "vyre-primitives/src/lib.rs"
+line = 20
+description = "`pub enum CombineOp` lacks `#[non_exhaustive]`. Future associative reduction operators (e.g. floating-point add, `MinMax`) would require a semver-major bump."
+suggested_fix = "Add `#[non_exhaustive]` to `CombineOp`."
+
+[[finding]]
+id = "V7-API-011"
+severity = "MEDIUM"
+file = "vyre-foundation/src/extension.rs"
+line = 146
+description = "`pub enum ExtensionKind` lacks `#[non_exhaustive]`. New extension kinds (e.g. extension passes, extension types) are expected in 0.7."
+suggested_fix = "Add `#[non_exhaustive]` to `ExtensionKind`."
+
+[[finding]]
+id = "V7-API-012"
+severity = "MEDIUM"
+file = "vyre-driver/src/registry/enforce.rs"
+line = 18
+description = "`pub enum EnforceVerdict` lacks `#[non_exhaustive]`. The registry enforcement layer will add new verdict states (e.g. conditional allow with warnings)."
+suggested_fix = "Add `#[non_exhaustive]` to `EnforceVerdict`."
+
+[[finding]]
+id = "V7-API-013"
+severity = "MEDIUM"
+file = "vyre-foundation/src/optimizer.rs"
+line = 100
+description = "`pub enum PassKind` (line 100) and `pub enum OptimizerError` (line 166) both lack `#[non_exhaustive]`. The optimizer framework is still expanding; new pass kinds and error variants are planned."
+suggested_fix = "Add `#[non_exhaustive]` to both `PassKind` and `OptimizerError`."
+
+[[finding]]
+id = "V7-API-014"
+severity = "CRITICAL"
+file = "vyre-driver/src/backend.rs"
+line = 421
+description = "`VyreBackend` seal is ineffective. The `#[doc(hidden)] fn __vyre_backend_sealed(&self) {}` method does NOT prevent external crates from implementing the trait: Rust trait impls can provide non-public methods of a public trait. The comment at line 773 claims the seal works, but it does not."
+suggested_fix = "Use a proper sealed-trait pattern: introduce a `pub(crate) mod private { pub trait Sealed {} }` and make `VyreBackend: private::Sealed`. Internal backends implement `private::Sealed` in-crate; external crates cannot name the private module and thus cannot implement `VyreBackend`."
+
+[[finding]]
+id = "V7-API-015"
+severity = "HIGH"
+file = "vyre-driver/src/registry/enforce.rs"
+line = 36
+description = "`pub trait EnforceGate` is unsealed. Third-party crates can implement this trait and register a gate that returns `Allow` for every program, bypassing conformance enforcement entirely."
+suggested_fix = "Seal `EnforceGate` with a private supertrait (same pattern as V7-API-014) so only the in-tree registry can provide implementations."
+
+[[finding]]
+id = "V7-API-016"
+severity = "MEDIUM"
+file = "vyre-driver/src/backend.rs"
+line = 39
+description = "`pub trait CompiledPipeline` and `pub trait PendingDispatch` (line 101) are unsealed. These are backend-internal contracts; if external crates implement them, invariants around dispatch bit-identicality and lifecycle can be violated."
+suggested_fix = "Either seal both traits with a private supertrait, or add explicit documentation stating that third-party implementation is allowed and supported."
+
+[[finding]]
+id = "V7-API-017"
+severity = "MEDIUM"
+file = "vyre-foundation/src/lib.rs"
+line = 84
+description = "`pub mod ir` re-exports types via `pub use crate::ir_inner::model::*`. The `ir_inner` module name appears in the public re-export chain (lines 86-98). While consumers see the items through `vyre_foundation::ir`, the internal `ir_inner` module is an awkward indirection and complicates module-graph reasoning."
+suggested_fix = "Flatten `ir_inner` into `ir` (make `ir_inner` private and move its children under `ir/`) so the public path matches the physical layout."
+
+[[finding]]
+id = "V7-API-018"
+severity = "MEDIUM"
+file = "vyre-pipeline-cache/src/lib.rs"
+line = 161
+description = "`pub struct RemoteCache` (gated on `feature = \"remote\"`) lacks a `///` doc comment. The `#[cfg(feature = \"remote")]` attribute is present, but no docs explain the struct's purpose or usage."
+suggested_fix = "Add a `///` doc comment above `RemoteCache` describing that it is a read-through HTTPS cache layer."
+
+[[finding]]
+id = "V7-API-019"
+severity = "MEDIUM"
+file = "vyre-reference/src/lib.rs"
+line = 15
+description = "Sixteen root-level `pub mod` declarations (`dual`, `primitive`, `primitives`, `value`, `atomics`, `cpu_op`, `dialect_dispatch`, `eval_expr`, `eval_node`, `flat_cpu`, `ieee754`, `interp`, `sequential`, `workgroup`) and two `pub use` items (`eval_hashmap_reference`, `run`) lack `///` doc comments."
+suggested_fix = "Add `///` doc comments to every `pub mod` and `pub use` at the crate root so docs.rs shows module intent."
+
+[[finding]]
+id = "V7-API-020"
+severity = "MEDIUM"
+file = "vyre-driver-spirv/src/lib.rs"
+line = 21
+description = "`pub mod backend;` and `pub use backend::SpirvBackend;` (line 22) lack `///` doc comments. The crate root docs are good, but the two exported items are undocumented at the re-export site."
+suggested_fix = "Add `///` docs above `pub mod backend;` and `pub use backend::SpirvBackend;`."
+
+[[finding]]
+id = "V7-API-021"
+severity = "MEDIUM"
+file = "vyre-pipeline/src/lib.rs"
+line = 80
+description = "`pub use pipeline_cache::{InMemoryPipelineCache, LayeredPipelineCache, PipelineCacheStore, PipelineFingerprint};` and `pub use megakernel::Megakernel;` (line 84) and `pub use uring::GpuMappedBuffer;` (line 259) lack `///` doc comments."
+suggested_fix = "Add `///` doc comments to each `pub use` re-export block."
+
+[[finding]]
+id = "V7-API-022"
+severity = "MEDIUM"
+file = "vyre-foundation/src/dialect_lookup.rs"
+line = 329
+description = "`pub trait DialectLookup: Send + Sync` is unsealed. This is a low-level dialect-registration contract. If external crates implement it, they can inject arbitrary lowering tables and bypass validation."
+suggested_fix = "Seal `DialectLookup` with a private supertrait, or document explicitly that third-party implementation is supported and describe the safety invariants."
+
+[[finding]]
+id = "V7-API-023"
+severity = "MEDIUM"
+file = "vyre-foundation/src/optimizer.rs"
+line = 85
+description = "`pub trait Pass: Send + Sync` is unsealed. While the `vyre_pass` macro is the intended registration path, nothing stops an external crate from implementing `Pass` manually and violating the `inventory::submit!` contract or providing inconsistent `requires`/`invalidates` metadata."
+suggested_fix = "Seal `Pass` with a private supertrait so that the only valid impl path is through the `#[vyre_pass]` macro, which can auto-emit the seal impl."
+
+[[finding]]
+id = "V7-API-024"
+severity = "LOW"
+file = "vyre-core/src/lib.rs"
+line = 135
+description = "Back-compat alias `pub use vyre_ops as dialect;` exposes a second path for the same crate. The alias is undocumented (no `///` explaining the deprecation or migration path)."
+suggested_fix = "Mark the alias with `#[doc(hidden)]` and a `#[deprecated]` attribute, or remove it in the next semver-major."
+
+[[finding]]
+id = "V7-API-025"
+severity = "LOW"
+file = "vyre-libs/src/lib.rs"
+line = 99
+description = "`pub mod harness;` is `#[doc(hidden)]` but remains `pub`. The module exists solely so `inventory::submit!` can reference `OpEntry` from per-op source files. Keeping it `pub` leaks an internal test-infrastructure module into the public API surface."
+suggested_fix = "Make `harness` `pub(crate)` and use `pub use harness::OpEntry;` at the crate root if external op files truly need it. Better: refactor so op files reference `vyre_libs::OpEntry` directly."

@@ -1,0 +1,7 @@
+pub trait LowerableOp: Send + Sync + 'static {
+/// Lower the operation into the target expression context.
+fn lower_expression(&self, ctx: &mut dyn TargetGenCtx, program: &Program)
+-> Result<(), String>;
+/// Lower the operation into a target binary context.
+fn lower_binary(&self, ctx: &mut (), program: &Program) -> Result<(), String>;
+}

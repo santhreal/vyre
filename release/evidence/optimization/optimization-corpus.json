@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "required_min_cases": 4096,
+  "generated_cases": 12288,
+  "verified_cases": 12288,
+  "optimized_cases": 10780,
+  "dataflow_analysis_cases": 1024,
+  "dataflow_analysis_optimized_cases": 1024,
+  "non_converged_cases": 0,
+  "total_ops_before": 48640,
+  "total_ops_after": 23337,
+  "families": [
+    {
+      "family": "A13-coalesce-fixture",
+      "cases": 768
+    },
+    {
+      "family": "A14-shared-mem-promote-fixture",
+      "cases": 256
+    },
+    {
+      "family": "A15-bank-conflict-fixture",
+      "cases": 256
+    },
+    {
+      "family": "A16-vec-pack-fixture",
+      "cases": 256
+    },
+    {
+      "family": "algebraic",
+      "cases": 2304
+    },
+    {
+      "family": "control-flow",
+      "cases": 256
+    },
+    {
+      "family": "egraph",
+      "cases": 1792
+    },
+    {
+      "family": "memory-layout",
+      "cases": 2560
+    },
+    {
+      "family": "predicate",
+      "cases": 1792
+    },
+    {
+      "family": "vector-layout",
+      "cases": 1024
+    },
+    {
+      "family": "dataflow-analysis-dse",
+      "cases": 256
+    },
+    {
+      "family": "dataflow-analysis-licm",
+      "cases": 256
+    },
+    {
+      "family": "dataflow-analysis-loop-fission",
+      "cases": 256
+    },
+    {
+      "family": "dataflow-analysis-loop-fusion",
+      "cases": 256
+    }
+  ],
+  "blockers": []
+}

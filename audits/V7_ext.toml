@@ -1,0 +1,538 @@
+schema_version = "1"
+audit = "V7_ext"
+date = "2026-04-20"
+auditor = "kimi"
+
+# =============================================================================
+# CRITICAL  -  External crate extensibility is blocked or misrepresented
+# =============================================================================
+
+[[finding]]
+id = "V7-EXT-001"
+severity = "critical"
+file = "vyre-libs-extern/src/lib.rs"
+line = 34
+why = "ExternDialect inventory is never consumed by DialectRegistry; downstream crates can submit but ops are invisible to driver, reference interpreter, and dispatch paths."
+proposed_fix = "Add a bridge in vyre-driver/src/registry/registry.rs::from_inventory() that walks inventory::iter::<ExternOp>, constructs OpDef values, and injects them into the registry freeze path."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-002"
+severity = "critical"
+file = "vyre-libs-extern/src/lib.rs"
+line = 56
+why = "ExternOp inventory is never consumed by DialectRegistry::from_inventory(); external ops cannot be looked up or dispatched."
+proposed_fix = "Same bridge as V7-EXT-001: ingest ExternOp entries into DialectRegistry alongside OpDefRegistration, or document that ExternOp is purely advisory and require community packs to also submit OpDefRegistration."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-003"
+severity = "critical"
+file = "vyre-ops/src/harness.rs"
+line = 18
+why = "OpEntry is #[non_exhaustive] but has no public constructor; downstream crates cannot inventory::submit! harness entries."
+proposed_fix = "Add pub const fn new(id: &'static str, build: fn() -> Program, test_inputs: Option<InputsFn>, expected_output: Option<ExpectedFn>) -> Self to OpEntry."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-004"
+severity = "critical"
+file = "vyre-libs/src/harness.rs"
+line = 18
+why = "OpEntry is #[non_exhaustive] but has no public constructor; downstream Cat-A packs cannot register harness fixtures."
+proposed_fix = "Add pub const fn new(id: &'static str, build: fn() -> Program, test_inputs: Option<fn() -> Vec<Vec<Vec<u8>>>>, expected_output: Option<fn() -> Vec<Vec<Vec<u8>>>>) -> Self to OpEntry."
+status = "open"
+
+# =============================================================================
+# HIGH  -  Forward compatibility, object safety, or architectural gaps
+# =============================================================================
+
+[[finding]]
+id = "V7-EXT-005"
+severity = "high"
+file = "vyre-spec/src/algebraic_law.rs"
+line = 19
+why = "AlgebraicLaw is pub but not #[non_exhaustive]; adding a new in-tree law variant is a semver-major breaking change for downstream matches."
+proposed_fix = "Add #[non_exhaustive] to AlgebraicLaw. The Custom variant already covers external predicates, so this only affects forward-compatibility of in-tree additions."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-006"
+severity = "high"
+file = "vyre-driver/src/backend/capability.rs"
+line = 67
+why = "Streamable trait has a generic method fn stream<'a, I: Iterator<...>>, making it non-object-safe; no community backend can be used as Box<dyn Streamable>."
+proposed_fix = "Replace generic iterator parameter with &mut dyn Iterator<Item = MemoryRef<'a>> or Box<dyn Iterator<Item = MemoryRef<'a>> + '_>."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-007"
+severity = "high"
+file = "vyre-driver/src/backend.rs"
+line = 787
+why = "VyreBackend seal method __vyre_backend_sealed has a default body {}, so external crates can silently implement the trait; BACKEND_CONTRACT.md claims it is sealed but it is not."
+proposed_fix = "Either remove the default body (requires a private super-trait or sealed-pattern module) to actually seal VyreBackend, or remove the misleading documentation and accept external implementations."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-008"
+severity = "high"
+file = "vyre-foundation/src/optimizer.rs"
+line = 100
+why = "PassKind is pub but not #[non_exhaustive]; consumers introspecting the pass pipeline will break when new built-in passes are added."
+proposed_fix = "Add #[non_exhaustive] to PassKind."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-009"
+severity = "high"
+file = "vyre-foundation/src/optimizer.rs"
+line = 166
+why = "OptimizerError is pub but not #[non_exhaustive]; downstream error handlers will break on new error variants."
+proposed_fix = "Add #[non_exhaustive] to OptimizerError."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-010"
+severity = "high"
+file = "vyre-driver/src/registry/enforce.rs"
+line = 18
+why = "EnforceVerdict is pub but not #[non_exhaustive]; conformance tooling matching on Allow/Deny will break when new verdict kinds are introduced."
+proposed_fix = "Add #[non_exhaustive] to EnforceVerdict."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-011"
+severity = "high"
+file = "vyre-driver/src/diagnostics.rs"
+line = 61
+why = "Severity is pub but not #[non_exhaustive]; diagnostic renderers and filters will break if a new severity level is added."
+proposed_fix = "Add #[non_exhaustive] to Severity."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-012"
+severity = "high"
+file = "vyre-driver/src/registry/mutation.rs"
+line = 20
+why = "MutationClass is pub but not #[non_exhaustive]; optimizer pass classification consumers break on new classes."
+proposed_fix = "Add #[non_exhaustive] to MutationClass."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-013"
+severity = "high"
+file = "vyre-foundation/src/extension.rs"
+line = 146
+why = "ExtensionKind is pub but not #[non_exhaustive]; extension dispatch code matching on Expr/Node/DataType/RuleCondition will break when new extension surfaces are added."
+proposed_fix = "Add #[non_exhaustive] to ExtensionKind."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-014"
+severity = "high"
+file = "vyre-ops/src/rule/ast.rs"
+line = 264
+why = "RuleFormula is pub but not #[non_exhaustive]; rule AST manipulation tooling breaks on new formula constructors."
+proposed_fix = "Add #[non_exhaustive] to RuleFormula."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-015"
+severity = "high"
+file = "vyre-foundation/src/serial/text.rs"
+line = 84
+why = "TextParseError is pub but not #[non_exhaustive]; parser error handlers break on new parse-failure modes."
+proposed_fix = "Add #[non_exhaustive] to TextParseError."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-016"
+severity = "high"
+file = "vyre-spec/src/engine_invariant.rs"
+line = 12
+why = "EngineInvariant is pub but not #[non_exhaustive]; certificate and conformance tooling matching on I1..I4 will break when new invariants are added."
+proposed_fix = "Add #[non_exhaustive] to EngineInvariant."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-017"
+severity = "high"
+file = "vyre-driver/src/routing.rs"
+line = 18
+why = "SortBackend is pub but not #[non_exhaustive]; profile-guided routing consumers break when new sort algorithm variants are added."
+proposed_fix = "Add #[non_exhaustive] to SortBackend."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-018"
+severity = "high"
+file = "vyre-primitives/src/lib.rs"
+line = 20
+why = "CombineOp is pub but not #[non_exhaustive]; scan/reduce primitive consumers break when new associative operators are added."
+proposed_fix = "Add #[non_exhaustive] to CombineOp."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-019"
+severity = "high"
+file = "vyre-driver/src/registry/migration.rs"
+line = 166
+why = "MigrationError is pub but not #[non_exhaustive]; migration error handlers break on new failure modes."
+proposed_fix = "Add #[non_exhaustive] to MigrationError."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-020"
+severity = "high"
+file = "vyre-driver-photonic/src/lib.rs"
+line = 1
+why = "Photonic backend crate never calls inventory::submit! with a BackendRegistration; it does not appear in registered_backends() despite docs claiming it registers."
+proposed_fix = "Add inventory::submit! { BackendRegistration { id: PHOTONIC_BACKEND_ID, factory: ..., supported_ops: ... } } in vyre-driver-photonic/src/lib.rs, or remove the registration claim from documentation."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-021"
+severity = "high"
+file = "vyre-driver-wgpu/src/runtime/router.rs"
+line = 41
+why = "BACKEND_PRECEDENCE is a hardcoded static slice; a community backend registering via inventory will not auto-rank in the router despite being registered."
+proposed_fix = "Replace the hardcoded precedence table with an inventory-discovered ranking (e.g., each BackendRegistration carries an optional precedence u16) or document that VYRE_BACKEND=<id> is required for out-of-tree backends."
+status = "open"
+
+# =============================================================================
+# MEDIUM  -  Constructibility, dead code, or feature-flag hygiene
+# =============================================================================
+
+[[finding]]
+id = "V7-EXT-022"
+severity = "medium"
+file = "vyre-libs/src/descriptor.rs"
+line = 35
+why = "BufferDescriptor is #[non_exhaustive] but has no public constructor; external crates can only receive it from crate-internal functions."
+proposed_fix = "Add pub fn new(name: String, access: BufferAccess, element_type: DataType, element_count: Option<usize>) -> Self to BufferDescriptor."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-023"
+severity = "medium"
+file = "vyre-libs/src/descriptor.rs"
+line = 17
+why = "ProgramDescriptor is #[non_exhaustive] but has no public constructor; external crates cannot synthesize descriptors for tooling."
+proposed_fix = "Add pub fn new(buffer_count: usize, workgroup_size: [u32; 3], buffers: Vec<BufferDescriptor>, rw_bytes_lower_bound: usize, entry_node_count: usize) -> Self to ProgramDescriptor."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-024"
+severity = "medium"
+file = "vyre-driver/src/backend.rs"
+line = 162
+why = "DispatchConfig is #[non_exhaustive] but only offers Default, not a general new(); external crates cannot construct it with specific fields in one call."
+proposed_fix = "Add pub fn new(profile: Option<String>, ulp_budget: Option<u8>, timeout: Option<Duration>, label: Option<String>) -> Self to DispatchConfig."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-025"
+severity = "medium"
+file = "vyre-foundation/src/graph_view.rs"
+line = 35
+why = "GraphNode is #[non_exhaustive] but has no public constructor; graph-IR consumers cannot synthesize nodes manually."
+proposed_fix = "Add pub fn new(id: u32, kind: DataflowKind) -> Self to GraphNode."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-026"
+severity = "medium"
+file = "vyre-foundation/src/graph_view.rs"
+line = 62
+why = "DataEdge is #[non_exhaustive] but has no public constructor; graph-IR consumers cannot synthesize edges manually."
+proposed_fix = "Add pub fn new(from: u32, to: u32, kind: EdgeKind) -> Self to DataEdge."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-027"
+severity = "medium"
+file = "vyre-foundation/src/graph_view.rs"
+line = 90
+why = "NodeGraph is #[non_exhaustive] but has no public constructor; external crates can only get it from NodeGraph::from_program."
+proposed_fix = "Add pub fn new(nodes: Vec<GraphNode>, edges: Vec<DataEdge>) -> Self to NodeGraph."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-028"
+severity = "medium"
+file = "vyre-spec/src/extension.rs"
+line = 142
+why = "ExtensionTernaryOp is a pub trait with zero implementations and zero references across the workspace; it clutters the public API and creates maintenance surface."
+proposed_fix = "Delete ExtensionTernaryOp unless an in-flight PR needs it; if retained, add a TODO with an issue reference or implement at least one consumer."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-029"
+severity = "medium"
+file = "vyre-foundation/src/extension.rs"
+line = 51
+why = "ExprExtensionNode is a pub trait with zero implementations and zero references; superseded by ExprNode but still exported."
+proposed_fix = "Delete ExprExtensionNode trait and all references (currently none)."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-030"
+severity = "medium"
+file = "vyre-foundation/src/extension.rs"
+line = 61
+why = "NodeNode is a pub trait with zero implementations and zero references; superseded by NodeExtension but still exported."
+proposed_fix = "Delete NodeNode trait and all references (currently none)."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-031"
+severity = "medium"
+file = "vyre-ops/src/lib.rs"
+line = 1
+why = "primitive feature is declared in Cargo.toml and included in the all feature, but src/lib.rs never declares pub mod primitive; the feature is dead."
+proposed_fix = "Add #[cfg(feature = \"primitive\")] pub mod primitive; to vyre-ops/src/lib.rs, or remove the primitive feature and its all inclusion until the module is ready."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-032"
+severity = "medium"
+file = "vyre-core/Cargo.toml"
+line = 1
+why = "wgpu_subgroups feature is declared but has zero cfg(feature = \"wgpu_subgroups\") occurrences in source; dead feature flag."
+proposed_fix = "Remove wgpu_subgroups from vyre-core/Cargo.toml features table."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-033"
+severity = "medium"
+file = "vyre-driver-wgpu/Cargo.toml"
+line = 1
+why = "no-gpu feature is only used in test cfg gates; it has no library-level effect and may confuse consumers expecting a software fallback path."
+proposed_fix = "Document in Cargo.toml and README that no-gpu is test-only, or extend it to actually disable GPU-dependent library APIs."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-034"
+severity = "medium"
+file = "vyre-pipeline/src/lib.rs"
+line = 1
+why = "submit_nvme_passthrough exists unconditionally in the public API; with uring-cmd-nvme off it returns a runtime stub error instead of being compile-gated."
+proposed_fix = "Either hide submit_nvme_passthrough behind #[cfg(feature = \"uring-cmd-nvme\")] or document in the method doc comment that the feature flag only affects implementation, not API presence."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-035"
+severity = "medium"
+file = "vyre-spec/src/float_type.rs"
+line = 8
+why = "FloatType is pub but not #[non_exhaustive]; verification evidence consumers break when new float formats (e.g., F64, E5M2) are added."
+proposed_fix = "Add #[non_exhaustive] to FloatType."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-036"
+severity = "medium"
+file = "vyre-spec/src/monotonic_direction.rs"
+line = 8
+why = "MonotonicDirection is pub but not #[non_exhaustive]; law-checking consumers break if a new direction (e.g., StrictlyIncreasing) is added."
+proposed_fix = "Add #[non_exhaustive] to MonotonicDirection."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-037"
+severity = "medium"
+file = "vyre-spec/src/metadata_category.rs"
+line = 8
+why = "MetadataCategory is pub but not #[non_exhaustive]; catalog classification consumers break on new categories."
+proposed_fix = "Add #[non_exhaustive] to MetadataCategory."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-038"
+severity = "medium"
+file = "vyre-spec/src/invariant_category.rs"
+line = 8
+why = "InvariantCategory is pub but not #[non_exhaustive]; invariant grouping consumers break on new categories."
+proposed_fix = "Add #[non_exhaustive] to InvariantCategory."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-039"
+severity = "medium"
+file = "vyre-driver-wgpu/src/runtime/cache/tiered_cache.rs"
+line = 7
+why = "CacheEntry is built via struct literal inside cache impl with no public constructor; external cache store implementations cannot construct it."
+proposed_fix = "Add pub fn new(...) constructor to CacheEntry, or confirm it is intentionally internal-only and document as crate-private."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-040"
+severity = "medium"
+file = "vyre-driver-wgpu/src/runtime/cache/tiered_cache.rs"
+line = 51
+why = "AccessStats is built via struct literal inside cache impl with no public constructor; external policy implementations cannot construct stats objects."
+proposed_fix = "Add pub fn new(...) constructor to AccessStats, or confirm it is intentionally internal-only."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-041"
+severity = "medium"
+file = "vyre-foundation/src/optimizer/scheduler.rs"
+line = 58
+why = "PassSchedulingError is pub but not #[non_exhaustive]; scheduler error handlers break on new scheduling failure modes."
+proposed_fix = "Add #[non_exhaustive] to PassSchedulingError."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-042"
+severity = "medium"
+file = "vyre-foundation/src/transform/compiler/dominator_tree.rs"
+line = 24
+why = "DominatorTreeError is pub but not #[non_exhaustive]; validation error handlers break on new dominator-tree failure modes."
+proposed_fix = "Add #[non_exhaustive] to DominatorTreeError."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-043"
+severity = "medium"
+file = "vyre-foundation/src/transform/compiler/typed_arena.rs"
+line = 107
+why = "TypedArenaError is pub but not #[non_exhaustive]; validation error handlers break on new typed-arena failure modes."
+proposed_fix = "Add #[non_exhaustive] to TypedArenaError."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-044"
+severity = "medium"
+file = "vyre-foundation/src/transform/compiler/dataflow_fixpoint.rs"
+line = 71
+why = "DataflowFixpointError is pub but not #[non_exhaustive]; validation error handlers break on new dataflow failure modes."
+proposed_fix = "Add #[non_exhaustive] to DataflowFixpointError."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-045"
+severity = "medium"
+file = "vyre-foundation/src/transform/compiler/recursive_descent.rs"
+line = 99
+why = "RecursiveDescentError is pub but not #[non_exhaustive]; validation error handlers break on new recursive-descent failure modes."
+proposed_fix = "Add #[non_exhaustive] to RecursiveDescentError."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-046"
+severity = "medium"
+file = "vyre-foundation/src/transform/compiler/string_interner.rs"
+line = 184
+why = "StringInternerError is pub but not #[non_exhaustive]; validation error handlers break on new interner failure modes."
+proposed_fix = "Add #[non_exhaustive] to StringInternerError."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-047"
+severity = "medium"
+file = "vyre-foundation/src/transform/compiler/visitor_walk.rs"
+line = 119
+why = "VisitorWalkError is pub but not #[non_exhaustive]; validation error handlers break on new visitor-walk failure modes."
+proposed_fix = "Add #[non_exhaustive] to VisitorWalkError."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-048"
+severity = "medium"
+file = "vyre-foundation/src/transform/parallelism.rs"
+line = 13
+why = "DispatchGroup is pub but not #[non_exhaustive]; dispatch-planning consumers break on new group kinds."
+proposed_fix = "Add #[non_exhaustive] to DispatchGroup."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-049"
+severity = "medium"
+file = "vyre-pipeline/src/lib.rs"
+line = 31
+why = "PipelineError is pub but not #[non_exhaustive]; pipeline error handlers break on new failure modes."
+proposed_fix = "Add #[non_exhaustive] to PipelineError."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-050"
+severity = "medium"
+file = "vyre-driver-wgpu/src/lowering/subgroup_intrinsics.rs"
+line = 25
+why = "SubgroupOp is pub but not #[non_exhaustive]; lowering logic consumers break on new subgroup operations."
+proposed_fix = "Add #[non_exhaustive] to SubgroupOp."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-051"
+severity = "medium"
+file = "vyre-driver-wgpu/src/lowering/fusion.rs"
+line = 69
+why = "FusionDecision is pub but not #[non_exhaustive]; fusion-pass consumers break on new decision variants."
+proposed_fix = "Add #[non_exhaustive] to FusionDecision."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-052"
+severity = "medium"
+file = "vyre-driver-wgpu/src/lowering/specialization.rs"
+line = 38
+why = "SpecValue is pub but not #[non_exhaustive]; specialization consumers break on new spec-value kinds."
+proposed_fix = "Add #[non_exhaustive] to SpecValue."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-053"
+severity = "medium"
+file = "vyre-driver-wgpu/src/runtime/tuner.rs"
+line = 28
+why = "Mode is pub but not #[non_exhaustive]; tuner configuration consumers break on new tuning modes."
+proposed_fix = "Add #[non_exhaustive] to Mode."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-054"
+severity = "medium"
+file = "vyre-driver-wgpu/src/runtime/router.rs"
+line = 32
+why = "Override is pub but not #[non_exhaustive]; router configuration consumers break on new override kinds."
+proposed_fix = "Add #[non_exhaustive] to Override."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-055"
+severity = "medium"
+file = "vyre-driver-wgpu/src/runtime/router.rs"
+line = 55
+why = "Reason is pub but not #[non_exhaustive]; routing introspection consumers break on new decision-reason variants."
+proposed_fix = "Add #[non_exhaustive] to Reason."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-056"
+severity = "medium"
+file = "vyre-driver-wgpu/src/runtime/readback_ring.rs"
+line = 106
+why = "SlotState is pub but not #[non_exhaustive]; ring state inspection consumers break on new slot states."
+proposed_fix = "Add #[non_exhaustive] to SlotState."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-057"
+severity = "medium"
+file = "conform/vyre-conform-enforce/src/prover.rs"
+line = 5
+why = "LawVerdict is pub but not #[non_exhaustive]; conformance checking consumers break on new verdict kinds."
+proposed_fix = "Add #[non_exhaustive] to LawVerdict."
+status = "open"
+
+[[finding]]
+id = "V7-EXT-058"
+severity = "medium"
+file = "vyre-driver/src/registry/migration.rs"
+line = 78
+why = "AttrValue is pub but not #[non_exhaustive]; attribute processing consumers break on new value kinds."
+proposed_fix = "Add #[non_exhaustive] to AttrValue."
+status = "open"

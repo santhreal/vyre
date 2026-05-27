@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "component_id": "vyre-frontend-c",
+  "role": "Core GPU-first C frontend pipeline, parser contracts, object container, C fixture tests",
+  "root": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c",
+  "required_files": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/Cargo.toml",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 1796
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/lib.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 3167
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/README.md",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 5417
+    }
+  ],
+  "required_terms": [
+    "parser",
+    "compile",
+    "object"
+  ],
+  "missing_terms": [],
+  "required_contract_topics": [
+    "syntax",
+    "ast",
+    "diagnostic",
+    "span",
+    "preprocessor",
+    "gnu",
+    "unsupported"
+  ],
+  "missing_contract_topics": [],
+  "required_test_categories": [
+    "unit",
+    "integration",
+    "property",
+    "adversarial",
+    "corpus",
+    "benchmark",
+    "conformance",
+    "gap",
+    "fuzz"
+  ],
+  "missing_test_categories": [],
+  "required_evidence_trees": [
+    {
+      "tree": "tests",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests",
+      "exists": true,
+      "source_bytes": 873439,
+      "unreadable_file_count": 0
+    },
+    {
+      "tree": "benches",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/benches",
+      "exists": true,
+      "source_bytes": 4568,
+      "unreadable_file_count": 0
+    },
+    {
+      "tree": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/fuzz",
+      "exists": true,
+      "source_bytes": 275,
+      "unreadable_file_count": 0
+    }
+  ],
+  "unresolved_ownership_markers": [],
+  "blockers": []
+}

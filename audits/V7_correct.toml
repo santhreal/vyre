@@ -1,0 +1,377 @@
+# V7 Phase C2  -  Correctness / Spec audit (#3)
+# Generated: 2026-04-20
+# Scope: Cat-A ops CPU-ref vs docstring, Cat-C intrinsics CPU-ref requirements,
+#        docs/ir-semantics.md vs interpreter, docs/wire-format.md vs code,
+#        AlgebraicLaw claims vs interpreter behavior.
+# Schema: id prefix V7-CORR-NNN, severity ∈ {critical|major|minor|nit}
+
+[[finding]]
+id = "V7-CORR-001"
+severity = "critical"
+file = "docs/wire-format.md"
+line = 24
+why = """
+The wire-format spec claims magic = 'VIR0' (4 bytes) and version = u8.
+The actual implementation in vyre-foundation::serial::wire::framing::magic
+uses MAGIC = b"VYRE" and WIRE_FORMAT_VERSION = u16 (currently 3).
+The entire tag table in the doc (Expr 0x00..0x10, Node 0x00..0x0B)
+is a completely different schema from the one implemented in
+put_expr.rs / put_node.rs / impl_reader.rs.
+Any consumer relying on this doc for cross-machine certificate parsing
+will produce garbage or reject valid programs.
+"""
+proposed_fix = """
+Rewrite docs/wire-format.md from the actual encoder/decoder tables
+in vyre-foundation/src/serial/wire/{encode,decode,tags}/.
+Add a CI gate that fails when the doc and the code diverge.
+"""
+
+[[finding]]
+id = "V7-CORR-002"
+severity = "major"
+file = "docs/ir-semantics.md"
+line = 68
+why = """
+The doc states: "Node::Let and Node::Assign have distinct tag bytes
+(0x02 and 0x03)." The actual wire format assigns Let = 0x00 and
+Assign = 0x01 (put_node.rs lines 44,49; impl_reader.rs lines 84,88).
+This contradiction means anyone hand-crafting wire bytes from the
+semantic spec will emit un-decodable programs.
+"""
+proposed_fix = """
+Sync ir-semantics.md with the live wire tag tables. If the tags are
+intentional, update the doc; if the doc is aspirational, migrate the
+encoder/decoder before claiming stability.
+"""
+
+[[finding]]
+id = "V7-CORR-003"
+severity = "major"
+file = "docs/ir-semantics.md"
+line = 91
+why = """
+The doc defines `Node::forever(body)` as sugar for a Loop with
+to = u32::MAX. No such `Node::forever` variant exists in the
+`vyre::ir::Node` enum, nor is it handled by the reference interpreter
+(eval_node.rs, hashmap_interp.rs) or the wire encoder (put_node.rs).
+The spec describes a construct that cannot be expressed in the IR.
+"""
+proposed_fix = """
+Either add the `Node::forever` variant to the IR, encoder, decoder,
+validator, and both interpreter paths, or remove the mention from
+ir-semantics.md until it lands.
+"""
+
+[[finding]]
+id = "V7-CORR-004"
+severity = "critical"
+file = "vyre-libs/src/math/linalg/matmul_tiled.rs"
+line = 168
+why = """
+The `if_then` guard only checks `out_index < buf_len(out)`.
+Unlike `matmul.rs` (line 167), there is no `col < n` guard.
+When the workgroup grid overshoots the matrix dimensions,
+an invocation with (row=0, col=3) on a 2×2 output passes the index
+check (idx=3 < 4), computes the wrong dot product, and races with
+(row=1, col=1) for the same output slot. The docstring claims
+Cat-A correctness but the IR silently corrupts output.
+"""
+proposed_fix = """
+Add `Expr::lt(Expr::var("col"), Expr::u32(n))` to the `if_then`
+condition, identical to the guard in `matmul.rs`, so out-of-bounds
+invocations are no-op'd.
+"""
+
+[[finding]]
+id = "V7-CORR-005"
+severity = "critical"
+file = "vyre-reference/src/typed_ops/float_ops.rs"
+line = 29
+why = """
+`UnOp::Exp` is not handled in the reference interpreter's float
+dispatch; it falls through to the `_ => Err(...)` arm and aborts
+execution with "unary op `Exp` is not defined for f32 operands".
+Both `softmax.rs` (line 146) and `attention.rs` (line 234) emit
+`UnOp::Exp` as a core part of their Category-A composition.
+Consequently the CPU reference cannot execute two of the most
+important NN ops, making byte-identity conformance impossible.
+"""
+proposed_fix = """
+Add `UnOp::Exp => Ok(wrap(vyre_reference::ieee754::canonical_exp(value)))`
+to `unop_f32` in float_ops.rs, matching the wgpu backend's use of
+`canonical_exp`.
+"""
+
+[[finding]]
+id = "V7-CORR-006"
+severity = "major"
+file = "vyre-libs/src/matching/substring/substring.rs"
+line = 75
+why = """
+The docstring (lines 58–67) claims an "overflow-safe guard" and
+explains that `i + needle_len <= buf_len` can wrap. However the
+actual guard uses `Expr::add(i, needle_len)` which compiles to
+`BinOp::Add` → `u32::wrapping_add`. If `i` is near `u32::MAX`,
+the addition wraps to a small value that satisfies `<= haystack_len`,
+causing out-of-bounds loads in the inner needle loop. The contract
+and the code disagree on overflow safety.
+"""
+proposed_fix = """
+Replace the wrapped-add guard with `Expr::le(i, Expr::sub(Expr::var("haystack_len"), Expr::u32(needle_len)))`.
+`Expr::sub` is also wrapping, so additionally verify `haystack_len >= needle_len`
+up front (already present) and document that the function requires
+`haystack_len - needle_len` not to underflow, or use a checked-sub primitive.
+"""
+
+[[finding]]
+id = "V7-CORR-007"
+severity = "major"
+file = "vyre-libs/src/nn/linear/linear.rs"
+line = 60
+why = """
+`linear` declares the `w` buffer count as `in_dim.saturating_mul(out_dim)`.
+If the product overflows u32, it silently saturates to `u32::MAX` instead
+of failing. The `matmul.rs` builder (line 110) uses `checked_mul().expect(...)`
+to panic on overflow. This inconsistency means `linear` can produce a
+Program with a truncated buffer count while the inner loop still computes
+wrapped indices via `Expr::mul`, leading to silent data corruption.
+"""
+proposed_fix = """
+Replace `saturating_mul` with `checked_mul().expect("linear: in_dim*out_dim overflows u32")`
+to match the fail-fast contract of `matmul.rs`.
+"""
+
+[[finding]]
+id = "V7-CORR-008"
+severity = "major"
+file = "vyre-libs/src/nn/norm/layer_norm.rs"
+line = 37
+why = """
+`LayerNorm::new` accepts any `f32` eps value, including negative
+numbers and NaN. The builder (line 173–181) computes
+`inv_denom = sqrt(variance + eps)`. A negative eps can make the
+radicand negative, producing NaN and poisoning every output element.
+The docstring claims the formula is `y_i = (x_i - mean) / sqrt(var + eps)`
+but does not document the domain requirement `eps >= 0`, nor does
+the builder enforce it.
+"""
+proposed_fix = """
+Add `if eps < 0.0 || eps.is_nan() { return Err(...) }` at the top
+of `LayerNorm::build`, with a clear error message.
+"""
+
+[[finding]]
+id = "V7-CORR-009"
+severity = "major"
+file = "vyre-reference/src/atomics.rs"
+line = 78
+why = """
+The CPU reference implements `atomic_compare_exchange` with strong
+semantics (swap iff old == expected). The V7_RELEASE_PLAN.md
+hardware table (line 147) maps this intrinsic to WGSL
+`atomicCompareExchangeWeak`, which is allowed to spuriously fail
+even when old == expected. A CPU ref that never spuriously fails
+will diverge from WGSL on conform tests that exercise the weak
+contract, and backends that implement the weak contract faithfully
+will fail byte-identity against this oracle.
+"""
+proposed_fix = """
+Either:
+1. Split the intrinsic into `atomic_compare_exchange_weak_u32` (weak ref)
+   and `atomic_compare_exchange_strong_u32` (strong ref), or
+2. Document that the Vyre contract mandates strong semantics and
+   require backends to retry in software until success, removing
+the mapping to `atomicCompareExchangeWeak`.
+"""
+
+[[finding]]
+id = "V7-CORR-010"
+severity = "critical"
+file = "docs/V7_RELEASE_PLAN.md"
+line = 131
+why = """
+The plan lists 6 subgroup intrinsics (subgroup_ballot, shuffle, add,
+broadcast, inclusive_scan_add, exclusive_scan_add) as Cat-C ops
+with CPU references. The reference interpreter has no concept of
+SIMD lanes, subgroups, or wavefronts. `subgroup_ballot` requires
+per-lane active-mask semantics; `subgroup_add` requires reduction
+across a configurable subgroup size; scans require ordered lane
+contribution. None of these can be simulated on the scalar
+hashmap/arena interpreter without a full subgroup execution model.
+"""
+proposed_fix = """
+Design and implement a `SubgroupSimulator` in vyre-reference that
+partitions invocations into fixed-size subgroups, tracks per-lane
+predicates, and executes subgroup ops deterministically. Until then,
+remove these intrinsics from the claimed Cat-C shipped set or mark
+them as blocked on the simulator.
+"""
+
+[[finding]]
+id = "V7-CORR-011"
+severity = "major"
+file = "vyre-reference/src/eval_expr.rs"
+line = 211
+why = """
+The Cat-C `fma_f32` CPU reference (eval_expr.rs) computes
+`a.mul_add(b, c)` using Rust's `f32::mul_add`. On x86_64 with FMA
+support this is a single correctly-rounded instruction, but on GPUs
+or host CPUs without FMA it may lower to separate multiply and add,
+introducing double rounding. The V7 plan (line 153) claims the CPU
+ref is `f32::mul_add`, but byte-identity requires both sides to use
+the *same* rounding semantics. A GPU backend that does not claim FMA
+support and emits `mul` + `add` will never match a host that uses
+hardware FMA.
+"""
+proposed_fix = """
+Define the FMA contract explicitly: either mandate that every
+backend claiming `fma_f32` must use IEEE-754 correctly-rounded FMA,
+or provide a `fma_f32_relaxed` variant that guarantees only
+`a*b + c` with separate rounding. The CPU ref should use `libm::fmaf`
+for strict semantics, not `f32::mul_add` which is target-dependent.
+"""
+
+[[finding]]
+id = "V7-CORR-012"
+severity = "major"
+file = "vyre-libs/src/nn/attention/softmax.rs"
+line = 181
+why = """
+The softmax body initializes `max_val` with `Expr::load(input, 0)`
+without checking `n > 0`. When `n == 0`, this loads element 0 of an
+empty buffer. The OOB load returns zero (per oob.rs), so max becomes
+0, sum loop runs 0 iterations leaving sum_val = 0.0, and the write
+loop also runs 0 times. The output buffer is untouched. This is not
+a crash, but it is an undocumented edge case: the docstring does not
+define softmax(∅). More importantly, if the caller expects the
+builder to reject empty tensors, it silently accepts them.
+"""
+proposed_fix = """
+Add `if n == 0 { return Err(TensorRefError::ShapeMismatch { ... }) }`
+in `Softmax::build`, matching the explicit rejection of other
+shape violations.
+"""
+
+[[finding]]
+id = "V7-CORR-013"
+severity = "major"
+file = "vyre-libs/src/nn/attention/attention.rs"
+line = 141
+why = """
+The attention scale is computed as `1.0f32 / (d as f32).sqrt()` on
+the host CPU at build time. If `d == 0`, this divides by zero and
+produces `f32::INFINITY`. The `Attention::build` method does not
+reject `d == 0`; the invalid scale propagates into the IR as a
+literal `inf`, causing NaN outputs or undefined behavior in the
+exponential loops. The docstring does not mention this edge case.
+"""
+proposed_fix = """
+Add `if d == 0 { return Err(TensorRefError::ShapeMismatch { ... }) }`
+in `Attention::build` before computing the scale.
+"""
+
+[[finding]]
+id = "V7-CORR-014"
+severity = "minor"
+file = "vyre-libs/src/crypto/fnv/fnv1a32.rs"
+line = 27
+why = """
+The docstring states: "`input` is a u32 buffer with one byte per slot
+(upper 24 bits zero)." The CPU reference loop (line 47) loads each
+element as a full u32 and XORs it directly: `h ^ input[i]`. If the
+caller violates the contract and places non-zero data in the upper
+24 bits, the hash is corrupted, yet there is no validation, masking,
+or error. The code agrees with the doc only under the undocumented
+precondition that the caller is well-behaved.
+"""
+proposed_fix = """
+Mask each loaded word to the low 8 bits before XOR: `Expr::bitand(Expr::load(input, i), Expr::u32(0xFF))`.
+This makes the CPU reference robust against malformed input and
+matches the "one byte per slot" contract regardless of upper bits.
+"""
+
+[[finding]]
+id = "V7-CORR-015"
+severity = "critical"
+file = "vyre-ops/src/composite"
+line = 0
+why = """
+The V7_RELEASE_PLAN.md Phase C (line 190) mandates 30+ Cat-A
+composite ops in `vyre-ops/src/composite/`. The directory is
+completely empty: zero .rs files, zero implementations, zero CPU
+references. The README cites a "naga-AST migration" as the blocker.
+Until populated, the workspace cannot satisfy the Phase C deliverable
+or the Phase H verification gate (`cargo xtask check-cat-a`).
+"""
+proposed_fix = """
+Populate `vyre-ops/src/composite/` with the 30+ Cat-A compositions
+listed in the plan (graph ops, encoding ops, set ops, network ops,
+ML activations, hash ops). Each must ship `build`, `cpu_ref`,
+`test_inputs`, and `inventory::submit!` per the OpEntry contract.
+"""
+
+[[finding]]
+id = "V7-CORR-016"
+severity = "major"
+file = "vyre-spec/src/all_algebraic_laws.rs"
+line = 26
+why = """
+The canonical algebraic-law catalog references op IDs that do not
+exist in the registered op set. For example:
+- `inner_op: "primitive.bitwise.and"`  -  actual ID is `primitive.logical.and`
+- `over_op: "primitive.math.add"`  -  no such op exists (math ops are `avg_floor`, `wrapping_neg`)
+- `dual_op: "primitive.math.min"`  -  no such op exists
+Because the law registry is indexed by op_id, these entries will
+never be matched to any real operation, making the catalog useless
+for canonical-form passes that rely on `laws_for_op`.
+"""
+proposed_fix = """
+Audit every string literal in `all_algebraic_laws.rs` against the
+actual `OP_ID` constants in `vyre-ops/src/*/op.rs`. Replace
+fictional IDs with real ones, or register the missing primitives
+if the laws are intended to apply to them.
+"""
+
+[[finding]]
+id = "V7-CORR-017"
+severity = "major"
+file = "vyre-reference/src/hashmap_interp.rs"
+line = 198
+why = """
+Workgroups are dispatched in parallel via `rayon::par_iter`. Each
+workgroup receives a cloned `HashmapMemory` whose storage buffers
+share the underlying `Arc<RwLock<Vec<u8>>>`. Atomics are
+sequentialized only *within* a workgroup by the round-robin stepper.
+Across workgroups there is no defined ordering: two workgroups
+issuing `atomic_add` to the same index race through the same
+`RwLock`, and the winner depends on rayon scheduling. The V7 plan
+(line 141–148) claims sequential semantics for all atomics, but
+the interpreter does not provide cross-workgroup sequentialization.
+"""
+proposed_fix = """
+Replace the per-workgroup parallel dispatch with a single dispatcher
+that runs all workgroups sequentially, or implement a global atomic
+sequencer (e.g., a `Mutex` around the atomic buffer operations) that
+preserves total order across all invocations in the dispatch.
+"""
+
+[[finding]]
+id = "V7-CORR-018"
+severity = "minor"
+file = "vyre-libs/src/math/scan/prefix_sum.rs"
+line = 18
+why = """
+The docstring claims "inclusive prefix sum" but does not document
+that intermediate additions use `u32::wrapping_add`. For large
+inputs the accumulator silently wraps around modulo 2^32, producing
+incorrect mathematical results. The CPU reference (`Expr::add` in
+typed_ops.rs) does wrap, so the code is internally consistent, but
+the contract omits a critical semantic detail required for callers
+to reason about correctness.
+"""
+proposed_fix = """
+Add an explicit note to the docstring: "All arithmetic is unsigned
+32-bit wrapping; overflow is defined modulo 2^32." If wrapping is
+not the intended semantics, switch to `checked_add` and return an
+error on overflow.
+"""

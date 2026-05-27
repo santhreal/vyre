@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/README.md",
+  "exists": true,
+  "read_error": null,
+  "source_bytes": 33742,
+  "required_tokens": [
+    "0.4.1",
+    "vyre",
+    "gpu",
+    "cuda",
+    "wgpu",
+    "bytecode",
+    "condition",
+    "vyre::program",
+    "release/evidence",
+    "cargo add vyre"
+  ],
+  "missing_tokens": [],
+  "example_count": 4,
+  "blockers": []
+}

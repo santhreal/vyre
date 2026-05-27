@@ -1,0 +1,35 @@
+{
+  "schema_version": 2,
+  "command": "cargo_full run --bin xtask -- release-conformance",
+  "requested_backends": [
+    "cuda",
+    "wgpu",
+    "cpu-ref"
+  ],
+  "required_artifacts": [
+    "cuda-conformance.json",
+    "wgpu-conformance.json",
+    "reference-conformance.json"
+  ],
+  "artifact_statuses": [
+    {
+      "path": "cuda-conformance.json",
+      "exists": true,
+      "bytes": 173296,
+      "read_error": null
+    },
+    {
+      "path": "wgpu-conformance.json",
+      "exists": true,
+      "bytes": 173295,
+      "read_error": null
+    },
+    {
+      "path": "reference-conformance.json",
+      "exists": true,
+      "bytes": 174610,
+      "read_error": null
+    }
+  ],
+  "blockers": []
+}

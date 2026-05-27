@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "gate": "scripts/check_cuda_parity_perf_gate.sh",
+  "validated_command": "CARGO_BUILD_JOBS=1 scripts/check_cuda_parity_perf_gate.sh",
+  "gpu_probe_command": "nvidia-smi",
+  "gpu_probe_policy": "fail_loudly",
+  "cargo_runner_policy": "VYRE_CARGO_RUNNER if set; otherwise ./cargo_full when executable; otherwise cargo under CARGO_BUILD_JOBS=1",
+  "required_cuda_tests": [
+    "capability_contracts",
+    "cuda_device_contract",
+    "cuda_release_surface_contracts",
+    "gpu_elementwise_conformance",
+    "megakernel_scale_scheduler_contracts",
+    "module_cache_contracts"
+  ],
+  "gpu_parity_integration_tests": [
+    "int4_quantized_gpu_parity"
+  ],
+  "int4_conformance_ops": [
+    "vyre-libs::quant::int4_dot_i32",
+    "vyre-libs::quant::int4_dot_f32_scaled",
+    "vyre-libs::quant::int4_matvec_f32_scaled",
+    "vyre-libs::quant::int4_batched_matvec_f32_scaled",
+    "vyre-libs::quant::int4_batched_matmul_f32_scaled",
+    "vyre-libs::quant::int4_batched_matmul_top1_f32_scaled"
+  ],
+  "release_path_assertions": [
+    "live_cuda_device_probe",
+    "cuda_is_preferred_dispatch_backend",
+    "no_cpu_or_wgpu_fallback_on_cuda_path",
+    "elementwise_programs_execute_end_to_end_on_cuda",
+    "async_dispatch_returns_pending_gpu_work",
+    "megakernel_schedule_uses_cuda_runtime_telemetry",
+    "cuda_module_and_launch_resource_cache_reuse"
+  ],
+  "last_local_validation": {
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "driver_version": "570.211.01",
+    "cuda_version": "12.8",
+    "result": "passed"
+  }
+}

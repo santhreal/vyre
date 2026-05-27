@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "component_id": "surgec",
+  "role": "Security compiler consumer integration surface",
+  "root": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec",
+  "required_files": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/Cargo.toml",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 3524
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lib.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 4311
+    }
+  ],
+  "required_terms": [
+    "surge",
+    "compile"
+  ],
+  "missing_terms": [],
+  "required_contract_topics": [
+    "consumer",
+    "surge",
+    "parser",
+    "condition"
+  ],
+  "missing_contract_topics": [],
+  "required_test_categories": [
+    "unit",
+    "integration",
+    "property",
+    "adversarial",
+    "corpus",
+    "benchmark",
+    "conformance",
+    "gap",
+    "fuzz"
+  ],
+  "missing_test_categories": [],
+  "required_evidence_trees": [
+    {
+      "tree": "tests",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests",
+      "exists": true,
+      "source_bytes": 1099765,
+      "unreadable_file_count": 0
+    },
+    {
+      "tree": "benches",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/benches",
+      "exists": true,
+      "source_bytes": 23380,
+      "unreadable_file_count": 0
+    },
+    {
+      "tree": "fuzz",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz",
+      "exists": true,
+      "source_bytes": 5379,
+      "unreadable_file_count": 0
+    }
+  ],
+  "unresolved_ownership_markers": [],
+  "blockers": []
+}

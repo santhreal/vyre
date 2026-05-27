@@ -1,0 +1,13 @@
+[package]
+name = "external_backend_extension"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+vyre = "0.4.2"
+
+[workspace]
+
+[patch.crates-io]
+vyre = { path = "../../vyre-core" }
