@@ -6,8 +6,7 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
-use vyre::DispatchConfig;
+use common::{cuda_u32_bitset_output, live_dispatcher};
 use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::label::resolve_family::{cpu_ref as resolve_family_cpu, resolve_family};
 use vyre_primitives::predicate::in_file::{cpu_ref as in_file_cpu, in_file};
@@ -16,23 +15,8 @@ use vyre_primitives::predicate::in_package::{cpu_ref as in_pkg_cpu, in_package};
 
 fn run_resolve_family(backend: &CudaBackend, node_tags: &[u32], family: u32) -> Vec<u32> {
     let n = node_tags.len() as u32;
-    let words = (n.div_ceil(32)).max(1);
     let program = resolve_family("tags", "out", n, family);
-    let inputs: Vec<Vec<u8>> = vec![
-        u32_bytes(node_tags),
-        // out: zero-init.
-        vec![0u8; words as usize * 4],
-    ];
-    let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
-    let mut out = bytes_u32(&outputs[0]);
-    out.truncate(words as usize);
-    out
+    cuda_u32_bitset_output(backend, &program, n, node_tags, "resolve_family")
 }
 
 #[test]
@@ -61,19 +45,8 @@ where
     B: FnOnce(&str, &str, u32) -> vyre::ir::Program,
 {
     let n = node_tags.len() as u32;
-    let words = (n.div_ceil(32)).max(1);
     let program = program_builder("tags", "out", n);
-    let inputs: Vec<Vec<u8>> = vec![u32_bytes(node_tags), vec![0u8; words as usize * 4]];
-    let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
-    let mut out = bytes_u32(&outputs[0]);
-    out.truncate(words as usize);
-    out
+    cuda_u32_bitset_output(backend, &program, n, node_tags, "tag-family predicate")
 }
 
 #[test]

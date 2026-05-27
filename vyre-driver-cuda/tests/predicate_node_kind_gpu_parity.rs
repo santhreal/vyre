@@ -5,27 +5,15 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
-use vyre::DispatchConfig;
+use common::{cuda_u32_bitset_output, live_dispatcher};
 use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::predicate::literal_of::{cpu_ref as literal_cpu, literal_of};
 use vyre_primitives::predicate::node_kind_eq::{cpu_ref as kind_eq_cpu, node_kind_eq};
 
 fn run_node_kind_eq(backend: &CudaBackend, nodes: &[u32], kind: u32) -> Vec<u32> {
     let n = nodes.len() as u32;
-    let words = (n.div_ceil(32)).max(1);
     let program = node_kind_eq("nodes", "nodeset", n, kind);
-    let inputs: Vec<Vec<u8>> = vec![u32_bytes(nodes), vec![0u8; words as usize * 4]];
-    let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
-    let mut out = bytes_u32(&outputs[0]);
-    out.truncate(words as usize);
-    out
+    cuda_u32_bitset_output(backend, &program, n, nodes, "node_kind_eq")
 }
 
 #[test]
@@ -63,19 +51,8 @@ fn cuda_node_kind_eq_all_match() {
 
 fn run_literal_of(backend: &CudaBackend, nodes: &[u32]) -> Vec<u32> {
     let n = nodes.len() as u32;
-    let words = (n.div_ceil(32)).max(1);
     let program = literal_of("nodes", "nodeset", n);
-    let inputs: Vec<Vec<u8>> = vec![u32_bytes(nodes), vec![0u8; words as usize * 4]];
-    let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
-    let mut out = bytes_u32(&outputs[0]);
-    out.truncate(words as usize);
-    out
+    cuda_u32_bitset_output(backend, &program, n, nodes, "literal_of")
 }
 
 #[test]
