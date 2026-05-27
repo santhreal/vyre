@@ -1,6 +1,222 @@
 //! Test: memory vector.
 use super::*;
 
+fn dynamic_reassociated_vector_load_kernel(seed: u32) -> KernelDescriptor {
+    let stride = seed.wrapping_mul(13).wrapping_add(4) | 1;
+    two_slot_u32_kernel(
+        "dynamic_reassociated_vec_load",
+        vec![
+            KernelOp {
+                kind: KernelOpKind::LocalInvocationId,
+                operands: vec![0],
+                result: Some(0),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![0],
+                result: Some(1),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                operands: vec![0, 1],
+                result: Some(2),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![1],
+                result: Some(3),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![2],
+                result: Some(4),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![3],
+                result: Some(5),
+            },
+            KernelOp {
+                kind: KernelOpKind::LoadGlobal,
+                operands: vec![0, 2],
+                result: Some(6),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![2, 3],
+                result: Some(7),
+            },
+            KernelOp {
+                kind: KernelOpKind::LoadGlobal,
+                operands: vec![0, 7],
+                result: Some(8),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![2, 4],
+                result: Some(9),
+            },
+            KernelOp {
+                kind: KernelOpKind::LoadGlobal,
+                operands: vec![0, 9],
+                result: Some(10),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![2, 5],
+                result: Some(11),
+            },
+            KernelOp {
+                kind: KernelOpKind::LoadGlobal,
+                operands: vec![0, 11],
+                result: Some(12),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![4],
+                result: Some(13),
+            },
+            KernelOp {
+                kind: KernelOpKind::StoreGlobal,
+                operands: vec![1, 13, 12],
+                result: None,
+            },
+        ],
+        vec![
+            LiteralValue::U32(stride),
+            LiteralValue::U32(1),
+            LiteralValue::U32(2),
+            LiteralValue::U32(3),
+            LiteralValue::U32(0),
+        ],
+    )
+}
+
+fn dynamic_reassociated_vector_store_kernel(seed: u32) -> KernelDescriptor {
+    let stride = seed.wrapping_mul(17).wrapping_add(8) | 1;
+    let value_base = 0x1000_0000_u32.wrapping_add(seed.rotate_left(seed % 31));
+    two_slot_u32_kernel(
+        "dynamic_reassociated_vec_store",
+        vec![
+            KernelOp {
+                kind: KernelOpKind::LocalInvocationId,
+                operands: vec![0],
+                result: Some(0),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![0],
+                result: Some(1),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                operands: vec![0, 1],
+                result: Some(2),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![1],
+                result: Some(3),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![2],
+                result: Some(4),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![3],
+                result: Some(5),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![4],
+                result: Some(6),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![0, 6],
+                result: Some(7),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![5],
+                result: Some(8),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![0, 8],
+                result: Some(9),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![6],
+                result: Some(10),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![0, 10],
+                result: Some(11),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![7],
+                result: Some(12),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![0, 12],
+                result: Some(13),
+            },
+            KernelOp {
+                kind: KernelOpKind::StoreGlobal,
+                operands: vec![1, 2, 7],
+                result: None,
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![2, 3],
+                result: Some(14),
+            },
+            KernelOp {
+                kind: KernelOpKind::StoreGlobal,
+                operands: vec![1, 14, 9],
+                result: None,
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![2, 4],
+                result: Some(15),
+            },
+            KernelOp {
+                kind: KernelOpKind::StoreGlobal,
+                operands: vec![1, 15, 11],
+                result: None,
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![2, 5],
+                result: Some(16),
+            },
+            KernelOp {
+                kind: KernelOpKind::StoreGlobal,
+                operands: vec![1, 16, 13],
+                result: None,
+            },
+        ],
+        vec![
+            LiteralValue::U32(stride),
+            LiteralValue::U32(1),
+            LiteralValue::U32(2),
+            LiteralValue::U32(3),
+            LiteralValue::U32(value_base),
+            LiteralValue::U32(value_base.wrapping_add(1)),
+            LiteralValue::U32(value_base.wrapping_add(2)),
+            LiteralValue::U32(value_base.wrapping_add(3)),
+        ],
+    )
+}
+
 #[test]
 fn emit_fuses_four_adjacent_u32_loads_to_ptx_vector_load() {
     let s = emit(&two_slot_u32_kernel(
@@ -66,6 +282,23 @@ fn emit_fuses_four_adjacent_u32_loads_to_ptx_vector_load() {
         !s.contains("add.u32"),
         "fused vector load must not leave dead scalar index-increment adds:\n{s}"
     );
+}
+
+#[test]
+fn generated_dynamic_reassociated_load_indices_fuse_to_v4() {
+    for seed in 0..1024 {
+        let s = emit(&dynamic_reassociated_vector_load_kernel(seed))
+            .unwrap_or_else(|error| panic!("seed {seed} failed to emit: {error}"));
+        assert!(
+            s.contains("ld.global.nc.v4.u32"),
+            "seed {seed} must recover v4 load fusion after affine reassociation:\n{s}"
+        );
+        assert_eq!(
+            s.matches("ld.global.u32").count() + s.matches("ld.global.nc.u32").count(),
+            0,
+            "seed {seed} must not leave scalar data loads after v4 load fusion:\n{s}"
+        );
+    }
 }
 
 #[test]
@@ -427,6 +660,23 @@ fn emit_fuses_four_adjacent_u32_stores_to_ptx_vector_store() {
         !s.contains("add.u32"),
         "fused vector store must not leave dead scalar index-increment adds:\n{s}"
     );
+}
+
+#[test]
+fn generated_dynamic_reassociated_store_indices_fuse_to_v4() {
+    for seed in 0..1024 {
+        let s = emit(&dynamic_reassociated_vector_store_kernel(seed))
+            .unwrap_or_else(|error| panic!("seed {seed} failed to emit: {error}"));
+        assert!(
+            s.contains("st.global.v4.u32"),
+            "seed {seed} must recover v4 store fusion after affine reassociation:\n{s}"
+        );
+        assert_eq!(
+            s.matches("st.global.u32").count(),
+            0,
+            "seed {seed} must not leave scalar stores after v4 store fusion:\n{s}"
+        );
+    }
 }
 
 #[test]
