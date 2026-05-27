@@ -17,12 +17,21 @@ fn rw_slot(id: u32, name: &str) -> BindingSlot {
 }
 
 fn rw_slot_typed(id: u32, name: &str, element_type: DataType) -> BindingSlot {
+    slot_typed(id, name, element_type, BindingVisibility::ReadWrite)
+}
+
+fn slot_typed(
+    id: u32,
+    name: &str,
+    element_type: DataType,
+    visibility: BindingVisibility,
+) -> BindingSlot {
     BindingSlot {
         slot: id,
         element_type,
         element_count: None,
         memory_class: MemoryClass::Global,
-        visibility: BindingVisibility::ReadWrite,
+        visibility,
         name: name.into(),
     }
 }
@@ -149,6 +158,182 @@ fn ptx_for_op(op_kind: KernelOpKind) -> String {
     vyre_emit_ptx::emit_optimized(&desc).unwrap()
 }
 
+fn ptx_for_vector_load_fusion() -> String {
+    let desc = KernelDescriptor {
+        id: "vector_load_fusion".into(),
+        bindings: BindingLayout {
+            slots: vec![
+                slot_typed(0, "input", DataType::U32, BindingVisibility::ReadOnly),
+                slot_typed(1, "output", DataType::U32, BindingVisibility::WriteOnly),
+            ],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 0],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![0, 1],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 3],
+                    result: Some(4),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![3, 1],
+                    result: Some(5),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 5],
+                    result: Some(6),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![5, 1],
+                    result: Some(7),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 7],
+                    result: Some(8),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![2, 4],
+                    result: Some(9),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![9, 6],
+                    result: Some(10),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![10, 8],
+                    result: Some(11),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![1, 0, 11],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
+        },
+    };
+    vyre_emit_ptx::emit_optimized(&desc).unwrap()
+}
+
+fn ptx_for_vector_store_fusion() -> String {
+    let desc = KernelDescriptor {
+        id: "vector_store_fusion".into(),
+        bindings: BindingLayout {
+            slots: vec![slot_typed(
+                0,
+                "output",
+                DataType::U32,
+                BindingVisibility::WriteOnly,
+            )],
+        },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![2],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![3],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![4],
+                    result: Some(4),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 0, 1],
+                    result: None,
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![5],
+                    result: Some(5),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 5, 2],
+                    result: None,
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![6],
+                    result: Some(6),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 6, 3],
+                    result: None,
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![7],
+                    result: Some(7),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 7, 4],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![
+                LiteralValue::U32(0),
+                LiteralValue::U32(10),
+                LiteralValue::U32(11),
+                LiteralValue::U32(12),
+                LiteralValue::U32(13),
+                LiteralValue::U32(1),
+                LiteralValue::U32(2),
+                LiteralValue::U32(3),
+            ],
+        },
+    };
+    vyre_emit_ptx::emit_optimized(&desc).unwrap()
+}
+
 #[test]
 fn mock_gate_add_ptx_is_well_formed() {
     let ptx = ptx_for_op(KernelOpKind::BinOpKind(BinOp::Add));
@@ -187,6 +372,36 @@ fn mock_gate_ptx_has_register_declarations() {
 }
 
 #[test]
+fn mock_gate_vector_load_fusion_ptx_is_well_formed() {
+    let ptx = ptx_for_vector_load_fusion();
+    assert!(
+        ptx.contains("ld.global.nc.v4.u32") || ptx.contains("ld.global.v4.u32"),
+        "missing fused vector load instruction\n{ptx}"
+    );
+    assert_eq!(
+        ptx.matches("ld.global.u32").count(),
+        0,
+        "fused vector load must not leave scalar global loads\n{ptx}"
+    );
+    assert!(ptx.contains("ret;"), "missing ret instruction");
+}
+
+#[test]
+fn mock_gate_vector_store_fusion_ptx_is_well_formed() {
+    let ptx = ptx_for_vector_store_fusion();
+    assert!(
+        ptx.contains("st.global.v4.u32"),
+        "missing fused vector store instruction\n{ptx}"
+    );
+    assert_eq!(
+        ptx.matches("st.global.u32").count(),
+        0,
+        "fused vector store must not leave scalar global stores\n{ptx}"
+    );
+    assert!(ptx.contains("ret;"), "missing ret instruction");
+}
+
+#[test]
 fn mock_gate_rejects_malformed_placeholder() {
     // A syntactically invalid PTX fragment should not pass structural
     // checks that real emitted PTX satisfies.
@@ -206,7 +421,7 @@ mod nvrtc_real {
 
     use std::ffi::CString;
 
-    use super::ptx_for_op;
+    use super::{ptx_for_op, ptx_for_vector_load_fusion, ptx_for_vector_store_fusion};
     use cudarc::driver::{sys::CUresult, CudaContext};
     use vyre_foundation::ir::BinOp;
     use vyre_lower::KernelOpKind;
@@ -263,6 +478,28 @@ mod nvrtc_real {
         assert!(
             compiled.is_ok(),
             "CUDA driver failed to load fma PTX: {:?}",
+            compiled.err()
+        );
+    }
+
+    #[test]
+    fn nvrtc_compiles_vector_load_fusion_ptx() {
+        let ptx = ptx_for_vector_load_fusion();
+        let compiled = driver_loads_ptx(&ptx);
+        assert!(
+            compiled.is_ok(),
+            "CUDA driver failed to load vector-load fusion PTX: {:?}",
+            compiled.err()
+        );
+    }
+
+    #[test]
+    fn nvrtc_compiles_vector_store_fusion_ptx() {
+        let ptx = ptx_for_vector_store_fusion();
+        let compiled = driver_loads_ptx(&ptx);
+        assert!(
+            compiled.is_ok(),
+            "CUDA driver failed to load vector-store fusion PTX: {:?}",
             compiled.err()
         );
     }
