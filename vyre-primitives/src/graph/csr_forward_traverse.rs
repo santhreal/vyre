@@ -103,6 +103,44 @@ pub fn cpu_ref(
     out
 }
 
+/// Validate CSR buffers shared by forward and backward CPU references.
+///
+/// The CPU oracle is used as GPU parity evidence, so malformed graph layouts
+/// must fail loudly instead of producing an empty frontier that can mask
+/// upstream object corruption.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn validate_csr_frontier_step_cpu_inputs(
+    label: &str,
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+) -> usize {
+    let expected_offsets = node_count as usize + 1;
+    assert_eq!(
+        edge_offsets.len(),
+        expected_offsets,
+        "{label} CPU oracle received {} row offsets for node_count={node_count}; Fix: pass exactly node_count + 1 CSR offsets.",
+        edge_offsets.len()
+    );
+    let edge_count = edge_offsets[expected_offsets - 1] as usize;
+    assert!(
+        edge_targets.len() >= edge_count && edge_kind_mask.len() >= edge_count,
+        "{label} CPU oracle received edge_count={edge_count} but targets_len={} kind_mask_len={}. Fix: pass complete CSR edge buffers.",
+        edge_targets.len(),
+        edge_kind_mask.len()
+    );
+    for (index, pair) in edge_offsets.windows(2).enumerate() {
+        assert!(
+            pair[0] <= pair[1],
+            "{label} CPU oracle received non-monotonic CSR offsets at row {index}: {} > {}. Fix: rebuild CSR row pointers before parity comparison.",
+            pair[0],
+            pair[1]
+        );
+    }
+    edge_count
+}
+
 /// CPU reference using caller-owned output storage.
 ///
 /// Malformed CSR inputs fail loudly. GPU parity evidence must not turn a
@@ -121,28 +159,13 @@ pub fn cpu_ref_into(
     let words = bitset_words(node_count) as usize;
     out.clear();
     out.resize(words, 0);
-    let expected_offsets = node_count as usize + 1;
-    assert_eq!(
-        edge_offsets.len(),
-        expected_offsets,
-        "csr_forward_traverse CPU oracle received {} row offsets for node_count={node_count}; Fix: pass exactly node_count + 1 CSR offsets.",
-        edge_offsets.len()
+    validate_csr_frontier_step_cpu_inputs(
+        "csr_forward_traverse",
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
     );
-    let edge_count = edge_offsets[expected_offsets - 1] as usize;
-    assert!(
-        edge_targets.len() >= edge_count && edge_kind_mask.len() >= edge_count,
-        "csr_forward_traverse CPU oracle received edge_count={edge_count} but targets_len={} kind_mask_len={}. Fix: pass complete CSR edge buffers.",
-        edge_targets.len(),
-        edge_kind_mask.len()
-    );
-    for (index, pair) in edge_offsets.windows(2).enumerate() {
-        assert!(
-            pair[0] <= pair[1],
-            "csr_forward_traverse CPU oracle received non-monotonic CSR offsets at row {index}: {} > {}. Fix: rebuild CSR row pointers before parity comparison.",
-            pair[0],
-            pair[1]
-        );
-    }
     for src in 0..node_count {
         let word_idx = (src / 32) as usize;
         let bit_mask = 1u32 << (src % 32);
