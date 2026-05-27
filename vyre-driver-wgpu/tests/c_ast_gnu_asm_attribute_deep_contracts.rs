@@ -14,21 +14,19 @@
 mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices, word_at, Fixture, FixtureToken,
-    VAST_STRIDE_U32,
+    assert_full_pipeline_parity, build_fixture, classify, row_indices, word_at, Fixture,
+    FixtureToken, VAST_STRIDE_U32,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
-    reference_c11_annotate_typedef_names, reference_c11_build_vast_nodes,
-    reference_c11_classify_vast_node_kinds, C_AST_KIND_ASM_CLOBBERS_LIST,
-    C_AST_KIND_ASM_GOTO_LABELS, C_AST_KIND_ASM_INPUT_OPERAND, C_AST_KIND_ASM_OUTPUT_OPERAND,
-    C_AST_KIND_ASM_QUALIFIER, C_AST_KIND_ASM_TEMPLATE, C_AST_KIND_ATTRIBUTE_ALIAS,
-    C_AST_KIND_ATTRIBUTE_ALIGNED, C_AST_KIND_ATTRIBUTE_CLEANUP, C_AST_KIND_ATTRIBUTE_CONSTRUCTOR,
-    C_AST_KIND_ATTRIBUTE_DESTRUCTOR, C_AST_KIND_ATTRIBUTE_MODE, C_AST_KIND_ATTRIBUTE_NAKED,
-    C_AST_KIND_ATTRIBUTE_PACKED, C_AST_KIND_ATTRIBUTE_SECTION, C_AST_KIND_ATTRIBUTE_UNUSED,
-    C_AST_KIND_ATTRIBUTE_USED, C_AST_KIND_ATTRIBUTE_VISIBILITY, C_AST_KIND_ATTRIBUTE_WEAK,
-    C_AST_KIND_FIELD_DECL, C_AST_KIND_FUNCTION_DEFINITION, C_AST_KIND_GNU_ATTRIBUTE,
-    C_AST_KIND_GOTO_STMT, C_AST_KIND_INLINE_ASM,
+    C_AST_KIND_ASM_CLOBBERS_LIST, C_AST_KIND_ASM_GOTO_LABELS, C_AST_KIND_ASM_INPUT_OPERAND,
+    C_AST_KIND_ASM_OUTPUT_OPERAND, C_AST_KIND_ASM_QUALIFIER, C_AST_KIND_ASM_TEMPLATE,
+    C_AST_KIND_ATTRIBUTE_ALIAS, C_AST_KIND_ATTRIBUTE_ALIGNED, C_AST_KIND_ATTRIBUTE_CLEANUP,
+    C_AST_KIND_ATTRIBUTE_CONSTRUCTOR, C_AST_KIND_ATTRIBUTE_DESTRUCTOR, C_AST_KIND_ATTRIBUTE_MODE,
+    C_AST_KIND_ATTRIBUTE_NAKED, C_AST_KIND_ATTRIBUTE_PACKED, C_AST_KIND_ATTRIBUTE_SECTION,
+    C_AST_KIND_ATTRIBUTE_UNUSED, C_AST_KIND_ATTRIBUTE_USED, C_AST_KIND_ATTRIBUTE_VISIBILITY,
+    C_AST_KIND_ATTRIBUTE_WEAK, C_AST_KIND_FIELD_DECL, C_AST_KIND_FUNCTION_DEFINITION,
+    C_AST_KIND_GNU_ATTRIBUTE, C_AST_KIND_GOTO_STMT, C_AST_KIND_INLINE_ASM,
 };
 use vyre_primitives::predicate::node_kind;
 
@@ -300,16 +298,6 @@ fn fixture_non_attribute_identifiers() -> Fixture {
         FixtureToken::new(")", TOK_RPAREN),
         FixtureToken::new(";", TOK_SEMICOLON),
     ])
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-fn classify(fix: &Fixture) -> Vec<u8> {
-    let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
-    let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
-    reference_c11_classify_vast_node_kinds(&annotated)
 }
 
 // ---------------------------------------------------------------------------

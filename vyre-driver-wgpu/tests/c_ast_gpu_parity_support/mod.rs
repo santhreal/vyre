@@ -77,6 +77,36 @@ pub(crate) fn classify(fix: &Fixture) -> Vec<u8> {
     reference_c11_classify_vast_node_kinds(&annotated)
 }
 
+pub(crate) fn lexeme_indices(fix: &Fixture, lexeme: &str) -> Vec<usize> {
+    fix.tok_starts
+        .iter()
+        .zip(&fix.tok_lens)
+        .enumerate()
+        .filter_map(|(idx, (start, len))| {
+            let start = *start as usize;
+            let end = start.saturating_add(*len as usize);
+            (fix.source.as_bytes().get(start..end) == Some(lexeme.as_bytes())).then_some(idx)
+        })
+        .collect()
+}
+
+pub(crate) fn token_indices_containing(fix: &Fixture, needle: &str) -> Vec<usize> {
+    fix.tok_starts
+        .iter()
+        .zip(&fix.tok_lens)
+        .enumerate()
+        .filter_map(|(idx, (start, len))| {
+            let start = *start as usize;
+            let end = start.saturating_add(*len as usize);
+            let token = fix.source.as_bytes().get(start..end)?;
+            token
+                .windows(needle.len())
+                .any(|window| window == needle.as_bytes())
+                .then_some(idx)
+        })
+        .collect()
+}
+
 fn bytes(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
