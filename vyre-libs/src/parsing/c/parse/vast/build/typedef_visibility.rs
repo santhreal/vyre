@@ -472,7 +472,6 @@ pub(crate) fn emit_precomputed_declaration_kind_for_index(
     let next_base = format!("{prefix}_next_base");
     let next_kind = format!("{prefix}_next_kind");
     let possible_declarator = format!("{prefix}_possible_declarator");
-    let declaration_candidate = format!("{prefix}_declaration_candidate");
 
     vec![
         Node::let_bind(out_name, Expr::u32(0)),
@@ -587,37 +586,17 @@ pub(crate) fn emit_precomputed_declaration_kind_for_index(
             &possible_declarator,
             is_declaration_candidate_follower_token(Expr::var(&next_kind)),
         ),
-        Node::let_bind(
-            &declaration_candidate,
-            Expr::and(
-                Expr::eq(Expr::var(&kind), Expr::u32(TOK_IDENTIFIER)),
-                Expr::and(
-                    Expr::var(&possible_declarator),
-                    Expr::and(
-                        Expr::not(is_precomputed_declaration_previous_disqualifier_token(
-                            Expr::var(&prev_kind),
-                        )),
-                        Expr::and(
-                            Expr::ne(Expr::var(&next_kind), Expr::u32(TOK_COLON)),
-                            Expr::or(
-                                Expr::eq(Expr::var(&has_typedef), Expr::u32(1)),
-                                Expr::eq(Expr::var(&has_type), Expr::u32(1)),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        ),
-        Node::if_then(
-            Expr::var(&declaration_candidate),
-            vec![Node::assign(
-                out_name,
-                Expr::select(
-                    Expr::eq(Expr::var(&has_typedef), Expr::u32(1)),
-                    Expr::u32(1),
-                    Expr::u32(2),
-                ),
-            )],
+        emit_declaration_kind_result_assignment(
+            out_name,
+            Expr::eq(Expr::var(&kind), Expr::u32(TOK_IDENTIFIER)),
+            Expr::var(&possible_declarator),
+            Expr::not(is_precomputed_declaration_previous_disqualifier_token(
+                Expr::var(&prev_kind),
+            )),
+            Expr::ne(Expr::var(&next_kind), Expr::u32(TOK_COLON)),
+            Expr::bool(true),
+            Expr::eq(Expr::var(&has_typedef), Expr::u32(1)),
+            Expr::eq(Expr::var(&has_type), Expr::u32(1)),
         ),
     ]
 }
