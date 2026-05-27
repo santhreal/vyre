@@ -2,7 +2,7 @@
 
 use crate::index_facts::IndexFacts;
 use rustc_hash::FxHashMap;
-use vyre_foundation::ir::{BinOp, DataType};
+use vyre_foundation::ir::DataType;
 use vyre_lower::{BindingSlot, KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,6 +28,13 @@ impl MemoryFusionKind {
             return None;
         }
         Some((op.operands[0], op.operands[1]))
+    }
+
+    fn value_operand(self, op: &KernelOp) -> Option<u32> {
+        match self {
+            Self::Load => None,
+            Self::Store => op.operands.get(2).copied(),
+        }
     }
 }
 
@@ -83,28 +90,35 @@ fn walk(
         let mut prev_idx_id = base_idx_id;
         let mut j = i + 1;
         while j < body.ops.len() && chain_len < 4 {
-            let mut next = &body.ops[j];
-            if matches!(next.kind, KernelOpKind::BinOpKind(BinOp::Add)) {
-                if let Some(rid) = next.result {
-                    if facts.is_index_plus_one(body, rid, prev_idx_id) {
-                        j += 1;
-                        if j >= body.ops.len() {
-                            break;
-                        }
-                        next = &body.ops[j];
-                    } else {
-                        break;
-                    }
-                } else {
+            let gap_start = j;
+            while j < body.ops.len() {
+                let next = &body.ops[j];
+                if kind.matches(&next.kind) {
                     break;
                 }
+                if is_scheduling_fence(next) || !is_schedulable_pure_op(next) {
+                    break;
+                }
+                j += 1;
             }
+            if j >= body.ops.len() {
+                break;
+            }
+            let next = &body.ops[j];
             if !kind.matches(&next.kind) {
                 break;
             }
             let Some((next_slot, next_idx_id)) = kind.slot_and_index(next) else {
                 break;
             };
+            if let Some(next_value_id) = kind.value_operand(next) {
+                if body.ops[gap_start..j]
+                    .iter()
+                    .any(|gap_op| gap_op.result == Some(next_value_id))
+                {
+                    break;
+                }
+            }
             if next_slot != slot || !facts.is_index_plus_one(body, next_idx_id, prev_idx_id) {
                 break;
             }
@@ -132,4 +146,46 @@ fn walk(
     for child in &body.child_bodies {
         walk(child, binding_by_slot, kind, candidates);
     }
+}
+
+fn is_scheduling_fence(op: &KernelOp) -> bool {
+    matches!(
+        op.kind,
+        KernelOpKind::StoreGlobal
+            | KernelOpKind::StoreShared
+            | KernelOpKind::Atomic { .. }
+            | KernelOpKind::Barrier { .. }
+            | KernelOpKind::Return
+            | KernelOpKind::Region { .. }
+            | KernelOpKind::StructuredBlock
+            | KernelOpKind::StructuredIfThen
+            | KernelOpKind::StructuredIfThenElse
+            | KernelOpKind::StructuredForLoop { .. }
+            | KernelOpKind::AsyncLoad { .. }
+            | KernelOpKind::AsyncStore { .. }
+            | KernelOpKind::AsyncWait { .. }
+            | KernelOpKind::Trap { .. }
+    )
+}
+
+fn is_schedulable_pure_op(op: &KernelOp) -> bool {
+    matches!(
+        op.kind,
+        KernelOpKind::Literal
+            | KernelOpKind::LocalInvocationId
+            | KernelOpKind::GlobalInvocationId
+            | KernelOpKind::WorkgroupId
+            | KernelOpKind::BinOpKind(_)
+            | KernelOpKind::UnOpKind(_)
+            | KernelOpKind::Fma
+            | KernelOpKind::MatrixMma { .. }
+            | KernelOpKind::Cast { .. }
+            | KernelOpKind::Select
+            | KernelOpKind::BufferLength
+            | KernelOpKind::SubgroupLocalId
+            | KernelOpKind::SubgroupSize
+            | KernelOpKind::SubgroupBallot
+            | KernelOpKind::SubgroupShuffle
+            | KernelOpKind::SubgroupAdd
+    ) && op.result.is_some()
 }
