@@ -43,6 +43,9 @@ flamegraph.svg
 __pycache__/
 **/__pycache__/
 
+# Generated split scratch emitted by local organization experiments.
+**/__law7_split/
+
 # Merge / rebase leftovers.
 *.orig
 *.rej
