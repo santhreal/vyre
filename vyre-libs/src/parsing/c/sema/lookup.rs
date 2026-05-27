@@ -2,7 +2,10 @@ use crate::parsing::c::lex::tokens::*;
 use vyre::ir::{Expr, Node};
 
 mod predicates;
-use super::scan::{emit_forward_matching_paren_scan, emit_reverse_unmatched_lbrace_scan};
+use super::scan::{
+    emit_forward_matching_paren_scan, emit_post_paren_boundary_scan,
+    emit_reverse_unmatched_lbrace_scan,
+};
 use predicates::{declaration_context, tag_keyword};
 
 /// No declaration kind.
@@ -174,49 +177,18 @@ fn emit_function_declarator_after_lparen(node_idx: &Expr, num_tokens: &Expr) -> 
     );
     body.push(Node::if_then(
         Expr::ne(Expr::var("matching_rparen"), Expr::u32(u32::MAX)),
-        vec![
-            Node::let_bind("after_matching_paren", Expr::u32(u32::MAX)),
-            Node::let_bind("after_scan_active", Expr::u32(1)),
-            Node::if_then(
-                Expr::lt(
-                    Expr::add(Expr::var("matching_rparen"), Expr::u32(1)),
-                    num_tokens.clone(),
-                ),
-                vec![Node::loop_for(
-                    "after_paren_scan",
-                    Expr::add(Expr::var("matching_rparen"), Expr::u32(1)),
-                    num_tokens.clone(),
-                    vec![
-                        Node::let_bind(
-                            "after_scan_tok",
-                            Expr::load("tok_types", Expr::var("after_paren_scan")),
-                        ),
-                        Node::if_then(
-                            Expr::and(
-                                Expr::eq(Expr::var("after_scan_active"), Expr::u32(1)),
-                                Expr::or(
-                                    Expr::eq(Expr::var("after_scan_tok"), Expr::u32(TOK_LBRACE)),
-                                    Expr::and(
-                                        Expr::eq(
-                                            Expr::var("after_scan_tok"),
-                                            Expr::u32(TOK_SEMICOLON),
-                                        ),
-                                        Expr::eq(
-                                            Expr::var("after_paren_scan"),
-                                            Expr::add(Expr::var("matching_rparen"), Expr::u32(1)),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                            vec![
-                                Node::assign("after_matching_paren", Expr::var("after_scan_tok")),
-                                Node::assign("after_scan_active", Expr::u32(0)),
-                            ],
-                        ),
-                    ],
-                )],
-            ),
-            Node::if_then_else(
+        {
+            let mut after_paren = emit_post_paren_boundary_scan(
+                "tok_types",
+                "after_paren_scan",
+                "after_scan_tok",
+                "after_scan_active",
+                Expr::var("matching_rparen"),
+                num_tokens.clone(),
+                "after_matching_paren",
+                "after_matching_paren_idx",
+            );
+            after_paren.push(Node::if_then_else(
                 Expr::eq(Expr::var("after_matching_paren"), Expr::u32(TOK_LBRACE)),
                 vec![Node::assign("decl_kind", Expr::u32(DECL_KIND_FUNCTION))],
                 vec![Node::if_then_else(
@@ -234,8 +206,9 @@ fn emit_function_declarator_after_lparen(node_idx: &Expr, num_tokens: &Expr) -> 
                         vec![Node::assign("decl_kind", Expr::u32(DECL_KIND_TYPEDEF))],
                     )],
                 )],
-            ),
-        ],
+            ));
+            after_paren
+        },
     ));
     Node::if_then(Expr::eq(Expr::var("next_tok"), Expr::u32(TOK_LPAREN)), body)
 }
