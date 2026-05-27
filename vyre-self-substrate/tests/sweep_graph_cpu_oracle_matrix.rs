@@ -361,3 +361,91 @@ fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
     }
     assert_eq!(assertions, CASES_PER_FAMILY as usize * 2);
 }
+
+#[test]
+fn sweep_exploded_ifds_substrate_matches_primitive_oracle_matrix() {
+    let mut assertions = 0usize;
+    for case in 0..CASES_PER_FAMILY {
+        let (
+            num_procs,
+            blocks_per_proc,
+            facts_per_proc,
+            intra,
+            inter,
+            gen,
+            kill,
+        ) = generated_ifds_rules(0x1F05_0004 ^ case.wrapping_mul(0x85EB_CA6B));
+        let expected = canonical_ifds_csr(
+            num_procs,
+            blocks_per_proc,
+            facts_per_proc,
+            &intra,
+            &inter,
+            &gen,
+            &kill,
+        );
+        let (row_ptr, col_idx) = reference_build_ifds_csr(
+            num_procs,
+            blocks_per_proc,
+            facts_per_proc,
+            &intra,
+            &inter,
+            &gen,
+            &kill,
+        );
+        let actual = reference_canonicalize_csr_within_rows(&row_ptr, &col_idx);
+        assert_eq!(
+            actual, expected,
+            "Fix: exploded IFDS substrate reference case {case} procs={num_procs} blocks={blocks_per_proc} facts={facts_per_proc} must match primitive CPU oracle."
+        );
+        assertions += 2;
+    }
+    assert_eq!(assertions, CASES_PER_FAMILY as usize * 2);
+}
+
+#[test]
+fn sweep_exploded_ifds_via_matches_cpu_oracle_matrix() {
+    let dispatcher = CpuOracleDispatcher::new();
+    let mut assertions = 0usize;
+    for case in 0..CASES_PER_FAMILY {
+        let (
+            num_procs,
+            blocks_per_proc,
+            facts_per_proc,
+            intra,
+            inter,
+            gen,
+            kill,
+        ) = generated_ifds_rules(0x1F05_0005 ^ case.wrapping_mul(0xC2B2_AE35));
+        let expected = canonical_ifds_csr(
+            num_procs,
+            blocks_per_proc,
+            facts_per_proc,
+            &intra,
+            &inter,
+            &gen,
+            &kill,
+        );
+        let actual = build_ifds_csr_via(
+            &dispatcher,
+            num_procs,
+            blocks_per_proc,
+            facts_per_proc,
+            &intra,
+            &inter,
+            &gen,
+            &kill,
+        )
+        .unwrap_or_else(|error| {
+            panic!(
+                "Fix: exploded IFDS via CPU oracle case {case} must dispatch: {error:?}"
+            )
+        });
+        assert_eq!(
+            actual, expected,
+            "Fix: exploded IFDS via CPU oracle case {case} procs={num_procs} blocks={blocks_per_proc} facts={facts_per_proc} must match reference CSR."
+        );
+        assertions += 2;
+    }
+    assert_eq!(assertions, CASES_PER_FAMILY as usize * 2);
+}

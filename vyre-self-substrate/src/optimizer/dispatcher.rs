@@ -667,16 +667,16 @@ fn with_staged_fill_uploads<R>(
     run(&combined_uploads)
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "cpu-parity"))]
 pub mod oracle {
-    //! CPU oracle dispatcher  -  test-only. Maps a small allowlist of
+    //! CPU oracle dispatcher for tests and explicit CPU-parity builds. Maps a small allowlist of
     //! self-hosted-optimizer Programs onto their `vyre_primitives`
     //! `cpu_ref` reference implementations and reproduces the
     //! dispatch byte contract.
     //!
     //! This module exists to prove the encoder/decoder are sound
     //! against the same numerical contract the production GPU path
-    //! must honor. It is never reachable from a production build.
+    //! must honor. It is not compiled unless tests or `cpu-parity` are enabled.
     //!
     //! Adding a Program here means the oracle hand-writes the byte
     //! marshalling that the WgpuBackend dispatcher infers from
