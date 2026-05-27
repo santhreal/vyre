@@ -30,10 +30,7 @@ impl CompileBackedPass {
     }
 
     fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::PassResult {
-            program,
-            changed: true,
-        }
+        optimizer::pass_result(program, true)
     }
 }
 
@@ -42,10 +39,7 @@ pub struct AnalyzeAlwaysPass;
 
 impl AnalyzeAlwaysPass {
     fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::PassResult {
-            program,
-            changed: false,
-        }
+        optimizer::unchanged(program)
     }
 }
 
@@ -58,10 +52,7 @@ impl DefaultedPass {
     }
 
     fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::PassResult {
-            program,
-            changed: false,
-        }
+        optimizer::unchanged(program)
     }
 }
 

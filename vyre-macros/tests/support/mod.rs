@@ -75,6 +75,14 @@ pub mod optimizer {
         pub changed: bool,
     }
 
+    pub fn pass_result(program: Program, changed: bool) -> PassResult {
+        PassResult { program, changed }
+    }
+
+    pub fn unchanged(program: Program) -> PassResult {
+        pass_result(program, false)
+    }
+
     pub mod private {
         pub trait Sealed {}
     }
