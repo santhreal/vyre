@@ -5,9 +5,8 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::matching::bracket_match::{
     bracket_match, cpu_ref as bracket_cpu, CLOSE_BRACE, MATCH_NONE, OPEN_BRACE, OTHER,
 };
@@ -17,7 +16,7 @@ fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
     source.iter().map(|&b| b as u32).collect()
 }
 
-fn run_char_class(backend: &CudaBackend, source: &[u8], table: &[u32; 256]) -> Vec<u32> {
+fn run_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
     let n = source.len() as u32;
     let program = char_class("source", "classified", n);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(&bytes_to_u32_per_lane(source)), u32_bytes(table)];
@@ -25,9 +24,11 @@ fn run_char_class(backend: &CudaBackend, source: &[u8], table: &[u32; 256]) -> V
     let workgroup_x = 64u32;
     let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
     config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("char class", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA char-class dispatch failed: {error}"))
+    });
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(n as usize);
     out
@@ -35,35 +36,32 @@ fn run_char_class(backend: &CudaBackend, source: &[u8], table: &[u32; 256]) -> V
 
 #[test]
 fn cuda_char_class_alpha_digit_ws() {
-    let backend = live_dispatcher();
     let table = build_char_class_table();
     let source = b"A1 ";
     let cpu = reference_char_class(source, &table);
-    let gpu = run_char_class(&backend, source, &table);
+    let gpu = run_char_class(source, &table);
     assert_eq!(gpu, cpu);
 }
 
 #[test]
 fn cuda_char_class_mixed_ascii() {
-    let backend = live_dispatcher();
     let table = build_char_class_table();
     let source = b"Hello, World!";
     let cpu = reference_char_class(source, &table);
-    let gpu = run_char_class(&backend, source, &table);
+    let gpu = run_char_class(source, &table);
     assert_eq!(gpu, cpu);
 }
 
 #[test]
 fn cuda_char_class_underscore_treated_as_alpha() {
-    let backend = live_dispatcher();
     let table = build_char_class_table();
     let source = b"foo_bar123";
     let cpu = reference_char_class(source, &table);
-    let gpu = run_char_class(&backend, source, &table);
+    let gpu = run_char_class(source, &table);
     assert_eq!(gpu, cpu);
 }
 
-fn run_bracket_match(backend: &CudaBackend, kinds: &[u32], max_depth: u32) -> Vec<u32> {
+fn run_bracket_match(kinds: &[u32], max_depth: u32) -> Vec<u32> {
     let n = kinds.len() as u32;
     let program = bracket_match("kinds", "stack", "match_pairs", n, max_depth);
     let inputs: Vec<Vec<u8>> = vec![
@@ -73,9 +71,11 @@ fn run_bracket_match(backend: &CudaBackend, kinds: &[u32], max_depth: u32) -> Ve
     ];
     let mut config = DispatchConfig::default();
     config.grid_override = Some([1, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("bracket match", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA bracket-match dispatch failed: {error}"))
+    });
     // Buffer order: 0:kinds(RO) 1:stack(RW) 2:match_pairs(output).
     // outputs[0]=stack, outputs[1]=match_pairs.
     let mut out = bytes_u32(&outputs[1]);
@@ -85,11 +85,10 @@ fn run_bracket_match(backend: &CudaBackend, kinds: &[u32], max_depth: u32) -> Ve
 
 #[test]
 fn cuda_bracket_match_simple_pair() {
-    let backend = live_dispatcher();
     // {x} → indices 0 OPEN, 1 OTHER, 2 CLOSE.
     let kinds = vec![OPEN_BRACE, OTHER, CLOSE_BRACE];
     let cpu = bracket_cpu(&kinds, 3);
-    let gpu = run_bracket_match(&backend, &kinds, 3);
+    let gpu = run_bracket_match(&kinds, 3);
     // CPU initialises match_pairs to MATCH_NONE; GPU's output buffer
     // is zero-init. Compare only the matched slots.
     assert_eq!(gpu[0], 2u32);
@@ -100,11 +99,10 @@ fn cuda_bracket_match_simple_pair() {
 
 #[test]
 fn cuda_bracket_match_nested_pairs() {
-    let backend = live_dispatcher();
     // {{}} → 0 OPEN, 1 OPEN, 2 CLOSE, 3 CLOSE.
     let kinds = vec![OPEN_BRACE, OPEN_BRACE, CLOSE_BRACE, CLOSE_BRACE];
     let _cpu = bracket_cpu(&kinds, 4);
-    let gpu = run_bracket_match(&backend, &kinds, 4);
+    let gpu = run_bracket_match(&kinds, 4);
     // Inner: 1 ↔ 2. Outer: 0 ↔ 3.
     assert_eq!(gpu[1], 2u32);
     assert_eq!(gpu[2], 1u32);
@@ -114,11 +112,10 @@ fn cuda_bracket_match_nested_pairs() {
 
 #[test]
 fn cuda_bracket_match_unbalanced_open_left_unmatched() {
-    let backend = live_dispatcher();
     // {{} → 0 OPEN, 1 OPEN, 2 CLOSE. Inner pair 1↔2; outer 0 unmatched.
     let kinds = vec![OPEN_BRACE, OPEN_BRACE, CLOSE_BRACE];
     let cpu = bracket_cpu(&kinds, 3);
-    let gpu = run_bracket_match(&backend, &kinds, 3);
+    let gpu = run_bracket_match(&kinds, 3);
     assert_eq!(gpu[1], 2u32);
     assert_eq!(gpu[2], 1u32);
     // Outer open at 0 has no matching close.
@@ -127,11 +124,10 @@ fn cuda_bracket_match_unbalanced_open_left_unmatched() {
 
 #[test]
 fn cuda_bracket_match_extra_close_dropped() {
-    let backend = live_dispatcher();
     // }{} → 0 CLOSE (no opening), 1 OPEN, 2 CLOSE.
     let kinds = vec![CLOSE_BRACE, OPEN_BRACE, CLOSE_BRACE];
     let cpu = bracket_cpu(&kinds, 3);
-    let gpu = run_bracket_match(&backend, &kinds, 3);
+    let gpu = run_bracket_match(&kinds, 3);
     assert_eq!(gpu[1], 2u32);
     assert_eq!(gpu[2], 1u32);
     assert_eq!(cpu[0], MATCH_NONE);
