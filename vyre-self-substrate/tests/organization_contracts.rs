@@ -976,8 +976,11 @@ fn adaptive_traverse_resident_paths_use_primitive_frontier_contract() {
         .unwrap_or_else(|err| panic!("{} must be readable: {err}", wrapper_path.display()));
 
     assert!(
-        release_path.matches("plan_adaptive_frontier_work").count() >= 4,
-        "adaptive resident sparse/dense, Four-Russians, sparse-queue, and auto paths must delegate frontier validation and zero-work classification to vyre-primitives"
+        release_path.matches("plan_adaptive_resident_frontier_step").count() >= 2
+            && release_path.contains("plan_adaptive_resident_sparse_queue_step")
+            && release_path.contains("plan_adaptive_resident_auto_step")
+            && release_path.matches(".work.has_active_bits").count() >= 4,
+        "adaptive resident sparse/dense, Four-Russians, sparse-queue, and auto paths must delegate frontier validation and zero-work classification to vyre-primitives resident planners"
     );
     assert!(
         release_path.matches("resident_sequence_single_u32_output_into").count() >= 2,
