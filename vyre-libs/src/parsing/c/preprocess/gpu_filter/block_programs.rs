@@ -1,5 +1,8 @@
-use super::program_helpers::packed_byte_load;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use super::program_helpers::{
+    packed_byte_load, singleton_u32_read_buffer, u32_read_buffer, u32_rw_buffer,
+    wrap_gpu_filter_program,
+};
+use vyre::ir::{Expr, Node, Program};
 
 pub(super) fn simple_block_comment_marks_program(n: u32) -> Program {
     let i = Expr::var("i");
@@ -55,31 +58,16 @@ pub(super) fn simple_block_comment_marks_program(n: u32) -> Program {
             ],
         ),
     ];
-    Program::wrapped(
+    wrap_gpu_filter_program(
+        "vyre-libs::parsing::c::preprocess::simple_block_comment_marks",
         vec![
-            BufferDecl::storage("bytes_in", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.div_ceil(4).max(1)),
-            BufferDecl::storage(
-                "block_open_flags",
-                1,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(n.max(1)),
-            BufferDecl::storage(
-                "block_close_after_flags",
-                2,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(n.max(1)),
-            BufferDecl::storage("block_n_real", 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
+            super::program_helpers::packed_bytes_input_buffer("bytes_in", 0, n),
+            u32_rw_buffer("block_open_flags", 1, n),
+            u32_rw_buffer("block_close_after_flags", 2, n),
+            singleton_u32_read_buffer("block_n_real", 3),
         ],
-        [256, 1, 1],
         body,
     )
-    .with_entry_op_id("vyre-libs::parsing::c::preprocess::simple_block_comment_marks")
 }
 
 pub(super) fn simple_block_comment_topology_program(n: u32) -> Program {
@@ -143,40 +131,18 @@ pub(super) fn simple_block_comment_topology_program(n: u32) -> Program {
             ],
         ),
     ];
-    Program::wrapped(
+    wrap_gpu_filter_program(
+        "vyre-libs::parsing::c::preprocess::simple_block_comment_topology",
         vec![
-            BufferDecl::storage("block_open_flags", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.max(1)),
-            BufferDecl::storage(
-                "block_close_after_flags",
-                1,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(n.max(1)),
-            BufferDecl::storage("block_open_scan", 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.max(1)),
-            BufferDecl::storage(
-                "block_close_after_scan",
-                3,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(n.max(1)),
-            BufferDecl::storage(
-                "block_topology_invalid",
-                4,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(1),
-            BufferDecl::storage("block_n_real", 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
+            u32_read_buffer("block_open_flags", 0, n),
+            u32_read_buffer("block_close_after_flags", 1, n),
+            u32_read_buffer("block_open_scan", 2, n),
+            u32_read_buffer("block_close_after_scan", 3, n),
+            u32_rw_buffer("block_topology_invalid", 4, 1),
+            singleton_u32_read_buffer("block_n_real", 5),
         ],
-        [256, 1, 1],
         body,
     )
-    .with_entry_op_id("vyre-libs::parsing::c::preprocess::simple_block_comment_topology")
 }
 
 pub(super) fn simple_block_comment_masks_program(n: u32) -> Program {
@@ -233,33 +199,16 @@ pub(super) fn simple_block_comment_masks_program(n: u32) -> Program {
             ],
         ),
     ];
-    Program::wrapped(
+    wrap_gpu_filter_program(
+        "vyre-libs::parsing::c::preprocess::simple_block_comment_masks",
         vec![
-            BufferDecl::storage("block_open_flags", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.max(1)),
-            BufferDecl::storage("block_open_scan", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n.max(1)),
-            BufferDecl::storage(
-                "block_close_after_scan",
-                2,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(n.max(1)),
-            BufferDecl::storage("final_keep", 3, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(n.max(1)),
-            BufferDecl::storage(
-                "comment_mask_out",
-                4,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(n.max(1)),
-            BufferDecl::storage("block_n_real", 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
+            u32_read_buffer("block_open_flags", 0, n),
+            u32_read_buffer("block_open_scan", 1, n),
+            u32_read_buffer("block_close_after_scan", 2, n),
+            u32_rw_buffer("final_keep", 3, n),
+            u32_rw_buffer("comment_mask_out", 4, n),
+            singleton_u32_read_buffer("block_n_real", 5),
         ],
-        [256, 1, 1],
         body,
     )
-    .with_entry_op_id("vyre-libs::parsing::c::preprocess::simple_block_comment_masks")
 }
