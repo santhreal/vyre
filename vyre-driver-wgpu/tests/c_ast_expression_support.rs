@@ -33,6 +33,11 @@ pub(crate) fn starts_for_lens(lens: &[u32]) -> Vec<u32> {
         .collect()
 }
 
+pub(crate) fn unit_lens_fixture(tok_types: Vec<u32>) -> (Vec<u32>, Vec<u32>) {
+    let tok_lens = vec![1; tok_types.len()];
+    (tok_types, tok_lens)
+}
+
 pub(crate) fn word_at(bytes: &[u8], word: usize) -> u32 {
     let offset = word * 4;
     u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap())

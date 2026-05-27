@@ -23,7 +23,8 @@ mod c_ast_expression_support;
 mod c_ast_gpu_parity_support;
 use c_ast_expression_support::{
     assert_pg_links_match_vast, assert_pg_preserves_row, assert_shape_row, bytes, row_indices,
-    run_pipeline, run_reference_pg_lower, starts_for_lens, word_at, SENTINEL, VAST_STRIDE_U32,
+    run_pipeline, run_reference_pg_lower, starts_for_lens, unit_lens_fixture, word_at, SENTINEL,
+    VAST_STRIDE_U32,
 };
 use c_ast_gpu_parity_support::{run_gpu_expr_shape, run_gpu_pg_lower};
 
@@ -46,8 +47,7 @@ fn comma_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn assignment_chain_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -61,8 +61,7 @@ fn assignment_chain_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn ternary_nesting_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -78,8 +77,7 @@ fn ternary_nesting_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn logical_bitwise_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -106,8 +104,7 @@ fn logical_bitwise_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn cast_vs_paren_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -125,8 +122,7 @@ fn cast_vs_paren_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_RPAREN,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn postfix_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -151,8 +147,7 @@ fn postfix_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 fn unary_chain_fixture() -> (Vec<u32>, Vec<u32>) {
@@ -167,8 +162,7 @@ fn unary_chain_fixture() -> (Vec<u32>, Vec<u32>) {
         TOK_IDENTIFIER,
         TOK_SEMICOLON,
     ];
-    let tok_lens = vec![1; tok_types.len()];
-    (tok_types, tok_lens)
+    unit_lens_fixture(tok_types)
 }
 
 // ---------------------------------------------------------------------------
