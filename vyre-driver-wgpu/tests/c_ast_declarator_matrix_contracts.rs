@@ -40,22 +40,15 @@ use vyre_libs::parsing::c::parse::vast::{
 use vyre_primitives::predicate::node_kind;
 
 use c_ast_gpu_parity_support::{
-    row_indices, run_gpu_classifier, run_gpu_fast_typedef_annotation,
+    c_fixture, row_indices, run_gpu_classifier, run_gpu_fast_typedef_annotation,
     run_gpu_pg_lower_with_count as run_gpu_pg_lower, run_gpu_vast_builder_from_parts, word_at,
-    VAST_STRIDE_U32,
+    Fixture, VAST_STRIDE_U32,
 };
 
 const PG_STRIDE_U32: usize = 6;
 const TYPEDEF_FLAGS_FIELD: usize = 7;
 const TYPEDEF_FLAG_DECL: u32 = 1 << 1;
 const TYPEDEF_FLAG_VISIBLE: u32 = 1;
-
-// ---------------------------------------------------------------------------
-// Fixture builders
-// ---------------------------------------------------------------------------
-
-mod common;
-use common::c_fixture::*;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -176,52 +169,52 @@ fn assert_pg_preserves_row(
 
 /// `int (*p)[4];`
 fn fixture_pointer_to_array() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("int", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("*", TOK_STAR),
+        ("p", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        ("[", TOK_LBRACKET),
+        ("4", TOK_INTEGER),
+        ("]", TOK_RBRACKET),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// `static const int *p, arr[4];`
 fn fixture_storage_class_multi_declarator() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("static", TOK_IDENTIFIER),
-        FixtureToken::new("const", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("arr", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("4", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("static", TOK_IDENTIFIER),
+        ("const", TOK_IDENTIFIER),
+        ("int", TOK_IDENTIFIER),
+        ("*", TOK_STAR),
+        ("p", TOK_IDENTIFIER),
+        (",", TOK_COMMA),
+        ("arr", TOK_IDENTIFIER),
+        ("[", TOK_LBRACKET),
+        ("4", TOK_INTEGER),
+        ("]", TOK_RBRACKET),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// `void f(int arr[static restrict 10]);`
 fn fixture_parameter_array_static_restrict() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("arr", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("static", TOK_IDENTIFIER),
-        FixtureToken::new("restrict", TOK_IDENTIFIER),
-        FixtureToken::new("10", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("void", TOK_IDENTIFIER),
+        ("f", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("int", TOK_IDENTIFIER),
+        ("arr", TOK_IDENTIFIER),
+        ("[", TOK_LBRACKET),
+        ("static", TOK_IDENTIFIER),
+        ("restrict", TOK_IDENTIFIER),
+        ("10", TOK_INTEGER),
+        ("]", TOK_RBRACKET),
+        (")", TOK_RPAREN),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// ```c
@@ -229,136 +222,136 @@ fn fixture_parameter_array_static_restrict() -> Fixture {
 /// fn_t f;
 /// ```
 fn fixture_nested_typedef_complex_declarator() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("typedef", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("fn_t", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("fn_t", TOK_IDENTIFIER),
-        FixtureToken::new("f", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("typedef", TOK_IDENTIFIER),
+        ("int", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("*", TOK_STAR),
+        ("fn_t", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        ("(", TOK_LPAREN),
+        ("int", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (";", TOK_SEMICOLON),
+        ("fn_t", TOK_IDENTIFIER),
+        ("f", TOK_IDENTIFIER),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// ```c
 /// struct foo { int x; } *p, arr[2];
 /// ```
 fn fixture_struct_tag_with_mixed_declarators() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("struct", TOK_IDENTIFIER),
-        FixtureToken::new("foo", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("arr", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("2", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("struct", TOK_IDENTIFIER),
+        ("foo", TOK_IDENTIFIER),
+        ("{", TOK_LBRACE),
+        ("int", TOK_IDENTIFIER),
+        ("x", TOK_IDENTIFIER),
+        (";", TOK_SEMICOLON),
+        ("}", TOK_RBRACE),
+        ("*", TOK_STAR),
+        ("p", TOK_IDENTIFIER),
+        (",", TOK_COMMA),
+        ("arr", TOK_IDENTIFIER),
+        ("[", TOK_LBRACKET),
+        ("2", TOK_INTEGER),
+        ("]", TOK_RBRACKET),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// ```c
 /// union cell { char c; int i; } u, *up;
 /// ```
 fn fixture_union_tag_with_mixed_declarators() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("union", TOK_IDENTIFIER),
-        FixtureToken::new("cell", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("char", TOK_IDENTIFIER),
-        FixtureToken::new("c", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("i", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("u", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("up", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("union", TOK_IDENTIFIER),
+        ("cell", TOK_IDENTIFIER),
+        ("{", TOK_LBRACE),
+        ("char", TOK_IDENTIFIER),
+        ("c", TOK_IDENTIFIER),
+        (";", TOK_SEMICOLON),
+        ("int", TOK_IDENTIFIER),
+        ("i", TOK_IDENTIFIER),
+        (";", TOK_SEMICOLON),
+        ("}", TOK_RBRACE),
+        ("u", TOK_IDENTIFIER),
+        (",", TOK_COMMA),
+        ("*", TOK_STAR),
+        ("up", TOK_IDENTIFIER),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// ```c
 /// enum mode { ON, OFF } ev, *ep;
 /// ```
 fn fixture_enum_tag_with_mixed_declarators() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("enum", TOK_IDENTIFIER),
-        FixtureToken::new("mode", TOK_IDENTIFIER),
-        FixtureToken::new("{", TOK_LBRACE),
-        FixtureToken::new("ON", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("OFF", TOK_IDENTIFIER),
-        FixtureToken::new("}", TOK_RBRACE),
-        FixtureToken::new("ev", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("ep", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("enum", TOK_IDENTIFIER),
+        ("mode", TOK_IDENTIFIER),
+        ("{", TOK_LBRACE),
+        ("ON", TOK_IDENTIFIER),
+        (",", TOK_COMMA),
+        ("OFF", TOK_IDENTIFIER),
+        ("}", TOK_RBRACE),
+        ("ev", TOK_IDENTIFIER),
+        (",", TOK_COMMA),
+        ("*", TOK_STAR),
+        ("ep", TOK_IDENTIFIER),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// `extern volatile char * const * restrict x, y[8];`
 fn fixture_heavy_qualifiers_and_storage_multi_decl() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("extern", TOK_IDENTIFIER),
-        FixtureToken::new("volatile", TOK_IDENTIFIER),
-        FixtureToken::new("char", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("const", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("restrict", TOK_IDENTIFIER),
-        FixtureToken::new("x", TOK_IDENTIFIER),
-        FixtureToken::new(",", TOK_COMMA),
-        FixtureToken::new("y", TOK_IDENTIFIER),
-        FixtureToken::new("[", TOK_LBRACKET),
-        FixtureToken::new("8", TOK_INTEGER),
-        FixtureToken::new("]", TOK_RBRACKET),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("extern", TOK_IDENTIFIER),
+        ("volatile", TOK_IDENTIFIER),
+        ("char", TOK_IDENTIFIER),
+        ("*", TOK_STAR),
+        ("const", TOK_IDENTIFIER),
+        ("*", TOK_STAR),
+        ("restrict", TOK_IDENTIFIER),
+        ("x", TOK_IDENTIFIER),
+        (",", TOK_COMMA),
+        ("y", TOK_IDENTIFIER),
+        ("[", TOK_LBRACKET),
+        ("8", TOK_INTEGER),
+        ("]", TOK_RBRACKET),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// `(const int (*)(void))p;`
 fn fixture_abstract_declarator_with_qualifiers() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("const", TOK_IDENTIFIER),
-        FixtureToken::new("int", TOK_IDENTIFIER),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("(", TOK_LPAREN),
-        FixtureToken::new("void", TOK_IDENTIFIER),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new(")", TOK_RPAREN),
-        FixtureToken::new("p", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("(", TOK_LPAREN),
+        ("const", TOK_IDENTIFIER),
+        ("int", TOK_IDENTIFIER),
+        ("(", TOK_LPAREN),
+        ("*", TOK_STAR),
+        (")", TOK_RPAREN),
+        ("(", TOK_LPAREN),
+        ("void", TOK_IDENTIFIER),
+        (")", TOK_RPAREN),
+        (")", TOK_RPAREN),
+        ("p", TOK_IDENTIFIER),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 /// `char * __restrict z;`
 fn fixture_gnu_restrict_qualifier() -> Fixture {
-    build_fixture(&[
-        FixtureToken::new("char", TOK_IDENTIFIER),
-        FixtureToken::new("*", TOK_STAR),
-        FixtureToken::new("__restrict", TOK_IDENTIFIER),
-        FixtureToken::new("z", TOK_IDENTIFIER),
-        FixtureToken::new(";", TOK_SEMICOLON),
-    ])
+    c_fixture![
+        ("char", TOK_IDENTIFIER),
+        ("*", TOK_STAR),
+        ("__restrict", TOK_IDENTIFIER),
+        ("z", TOK_IDENTIFIER),
+        (";", TOK_SEMICOLON),
+    ]
 }
 
 // ---------------------------------------------------------------------------
