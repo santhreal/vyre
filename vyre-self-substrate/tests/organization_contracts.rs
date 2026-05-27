@@ -622,7 +622,8 @@ fn dominator_frontier_wrapper_uses_primitive_layout_contract() {
     let wrapper_path = manifest
         .join("src")
         .join("graph")
-        .join("dominator_frontier.rs");
+        .join("dominator_frontier")
+        .join("mod.rs");
     let dispatch_path = manifest
         .join("src")
         .join("graph")
@@ -665,7 +666,8 @@ fn csr_bidirectional_wrapper_uses_primitive_layout_contract() {
     let wrapper_path = manifest
         .join("src")
         .join("graph")
-        .join("csr_bidirectional.rs");
+        .join("csr_bidirectional")
+        .join("mod.rs");
     let wrapper_source = std::fs::read_to_string(&wrapper_path)
         .unwrap_or_else(|err| panic!("{} must be readable: {err}", wrapper_path.display()));
     let dispatch_path = manifest
@@ -753,7 +755,11 @@ fn csr_forward_or_changed_wrapper_uses_primitive_layout_contract() {
 #[test]
 fn toposort_wrapper_uses_primitive_layout_contract() {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let wrapper_path = manifest.join("src").join("graph").join("toposort.rs");
+    let wrapper_path = manifest
+        .join("src")
+        .join("graph")
+        .join("toposort")
+        .join("mod.rs");
     let dispatch_path = manifest
         .join("src")
         .join("graph")
@@ -883,7 +889,11 @@ fn exploded_wrapper_uses_primitive_input_layout_contract() {
 #[test]
 fn motif_wrapper_uses_primitive_layout_contract() {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let wrapper_path = manifest.join("src").join("graph").join("motif.rs");
+    let wrapper_path = manifest
+        .join("src")
+        .join("graph")
+        .join("motif")
+        .join("mod.rs");
     let wrapper_source = std::fs::read_to_string(&wrapper_path)
         .unwrap_or_else(|err| panic!("{} must be readable: {err}", wrapper_path.display()));
     let dispatch_path = manifest
@@ -928,7 +938,8 @@ fn path_reconstruct_batch_uses_primitive_layout_contract() {
     let wrapper_path = manifest
         .join("src")
         .join("graph")
-        .join("path_reconstruct.rs");
+        .join("path_reconstruct")
+        .join("mod.rs");
     let wrapper_source = std::fs::read_to_string(&wrapper_path)
         .unwrap_or_else(|err| panic!("{} must be readable: {err}", wrapper_path.display()));
     let dispatch_path = manifest

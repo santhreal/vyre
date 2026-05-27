@@ -310,7 +310,7 @@ fn topo_order_csr_via_reuses_static_graph_inputs_and_rezeros_work_slots() {
 
 #[test]
 fn topo_order_csr_static_graph_identity_is_primitive_owned() {
-    let root_source = include_str!("../toposort.rs");
+    let root_source = include_str!("mod.rs");
     let dispatch_source = include_str!("dispatch.rs");
 
     assert!(root_source.contains("ToposortCsrStaticInputKey"));

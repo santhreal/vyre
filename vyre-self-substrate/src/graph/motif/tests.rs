@@ -347,7 +347,7 @@ fn via_rejects_malformed_csr_before_dispatch() {
 
 #[test]
 fn via_uses_primitive_static_input_key_and_witness_validation() {
-    let root_source = include_str!("../motif.rs");
+    let root_source = include_str!("mod.rs");
     let dispatch_source = include_str!("dispatch.rs");
 
     assert!(root_source.contains("MotifStaticInputKey"));
