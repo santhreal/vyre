@@ -2,6 +2,7 @@ use super::*;
 
 mod precomputed_declaration;
 mod precomputed_visibility;
+mod visibility_match;
 
 pub(crate) use precomputed_declaration::emit_precomputed_declaration_kind_for_index;
 pub(crate) use precomputed_visibility::emit_typedef_visibility_scan_precomputed_context;
@@ -22,7 +23,6 @@ pub(crate) fn emit_visible_typedef_name_for_index(
     let target_chain_len = format!("{prefix}_target_chain_len");
     let scan_limit = format!("{prefix}_scan_limit");
     let target_scope = format!("{prefix}_target_scope");
-    let target_function = format!("{prefix}_target_function");
     let last_decl_kind = format!("{prefix}_last_decl_kind");
     let chain_cursor = format!("{prefix}_chain_cursor");
     let chain_raw = format!("{prefix}_chain_raw");
@@ -33,7 +33,6 @@ pub(crate) fn emit_visible_typedef_name_for_index(
     let scan_base = format!("{prefix}_scan_base");
     let scan_kind = format!("{prefix}_scan_kind");
     let scan_scope = format!("{prefix}_scan_scope");
-    let scan_function = format!("{prefix}_scan_function");
     let scan_decl_kind = format!("{prefix}_scan_decl_result_kind");
     let scope_walk = format!("{prefix}_scope_walk");
     let scope_walk_depth = format!("{prefix}_scope_walk_depth");
@@ -234,98 +233,31 @@ pub(crate) fn emit_visible_typedef_name_for_index(
                             ));
                             same_name_body
                                 .push(Node::let_bind(&visible_function, Expr::bool(true)));
-                            let mut scan_function_body = emit_enclosing_function_lparen_for_index(
+                            same_name_body.push(visibility_match::emit_function_visibility_gate(
                                 vast_nodes,
                                 idx.clone(),
-                                &target_function,
-                                &format!("{prefix}_function"),
-                            );
-                            scan_function_body.extend(emit_enclosing_function_lparen_for_index(
-                                vast_nodes,
                                 Expr::var(&scan),
-                                &scan_function,
-                                &format!("{prefix}_scan_function"),
-                            ));
-                            scan_function_body.push(Node::assign(
+                                &scan_decl_kind,
                                 &visible_function,
-                                Expr::or(
-                                    Expr::eq(Expr::var(&scan_function), Expr::u32(SENTINEL)),
-                                    Expr::eq(
-                                        Expr::var(&scan_function),
-                                        Expr::var(&target_function),
-                                    ),
-                                ),
-                            ));
-                            same_name_body.push(Node::if_then(
-                                Expr::eq(Expr::var(&scan_decl_kind), Expr::u32(2)),
-                                scan_function_body,
+                                &format!("{prefix}_target_function"),
+                                &format!("{prefix}_scan_function"),
+                                &format!("{prefix}_function"),
+                                &format!("{prefix}_scan_function"),
                             ));
                             same_name_body.push(Node::let_bind(
                                 &visible_scope,
                                 Expr::eq(Expr::var(&scan_scope), Expr::u32(SENTINEL)),
                             ));
-                            same_name_body.push(Node::if_then(
-                                Expr::and(
-                                    Expr::not(Expr::var(&visible_scope)),
-                                    Expr::and(
-                                        Expr::var(&visible_function),
-                                        Expr::ne(Expr::var(&scan_decl_kind), Expr::u32(0)),
-                                    ),
-                                ),
-                                vec![
-                                    Node::let_bind(&scope_walk, Expr::var(&target_scope)),
-                                    Node::loop_for(
-                                        &scope_walk_depth,
-                                        Expr::u32(0),
-                                        Expr::var("annot_num_nodes"),
-                                        vec![
-                                            Node::if_then(
-                                                Expr::and(
-                                                    Expr::not(Expr::var(&visible_scope)),
-                                                    Expr::eq(
-                                                        Expr::var(&scope_walk),
-                                                        Expr::var(&scan_scope),
-                                                    ),
-                                                ),
-                                                vec![Node::assign(
-                                                    &visible_scope,
-                                                    Expr::bool(true),
-                                                )],
-                                            ),
-                                            Node::if_then(
-                                                Expr::and(
-                                                    Expr::not(Expr::var(&visible_scope)),
-                                                    Expr::ne(
-                                                        Expr::var(&scope_walk),
-                                                        Expr::u32(SENTINEL),
-                                                    ),
-                                                ),
-                                                vec![Node::assign(
-                                                    &scope_walk,
-                                                    Expr::load(
-                                                        vast_nodes,
-                                                        Expr::add(
-                                                            vast_row_base_expr(Expr::var(
-                                                                &scope_walk,
-                                                            )),
-                                                            Expr::u32(1),
-                                                        ),
-                                                    ),
-                                                )],
-                                            ),
-                                        ],
-                                    ),
-                                ],
-                            ));
-                            same_name_body.push(Node::if_then(
-                                Expr::and(
-                                    Expr::var(&visible_scope),
-                                    Expr::and(
-                                        Expr::var(&visible_function),
-                                        Expr::ne(Expr::var(&scan_decl_kind), Expr::u32(0)),
-                                    ),
-                                ),
-                                vec![Node::assign(&last_decl_kind, Expr::var(&scan_decl_kind))],
+                            same_name_body.extend(visibility_match::emit_scope_visibility_update(
+                                vast_nodes,
+                                &target_scope,
+                                &scan_scope,
+                                &visible_scope,
+                                &visible_function,
+                                &scan_decl_kind,
+                                &last_decl_kind,
+                                &scope_walk,
+                                &scope_walk_depth,
                             ));
                             body.push(Node::if_then(Expr::var(&same_name), same_name_body));
                             vec![
