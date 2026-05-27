@@ -76,13 +76,16 @@ impl Buffer {
             .fill(0);
     }
 
+    pub(crate) fn into_bytes(self) -> Vec<u8> {
+        std::sync::Arc::try_unwrap(self.bytes)
+            .map(|rw| rw.into_inner().unwrap_or_else(|error| error.into_inner()))
+            .unwrap_or_else(|a| a.read().unwrap_or_else(|error| error.into_inner()).clone())
+    }
+
     /// Consume this buffer and return its contents as a Value.
     #[must_use]
     pub fn to_value(self) -> crate::value::Value {
-        let vec = std::sync::Arc::try_unwrap(self.bytes)
-            .map(|rw| rw.into_inner().unwrap_or_else(|error| error.into_inner()))
-            .unwrap_or_else(|a| a.read().unwrap_or_else(|error| error.into_inner()).clone());
-        crate::value::Value::from(vec)
+        crate::value::Value::from(self.into_bytes())
     }
 }
 
