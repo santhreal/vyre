@@ -107,6 +107,52 @@ fn vectorized_scalar_pair_copy_emits_packed_v2_ptx_and_matches_reference_on_live
     );
 }
 
+#[test]
+fn vectorized_symbolic_affine_copy_emits_packed_v4_ptx_and_matches_reference_on_live_cuda() {
+    let backend = live_backend();
+    let mut checked = 0usize;
+
+    for case in vector_cases() {
+        let program = vectorized_symbolic_affine_copy_program(case.ty.clone());
+        let ptx = vyre_driver_cuda::codegen::program_to_ptx(&program, &DispatchConfig::default())
+            .expect("Fix: CUDA PTX emission must support symbolically-aligned vectorized memory programs.");
+        let vector_load = format!("ld.global.v4.{}", case.ptx_suffix);
+        let vector_load_nc = format!("ld.global.nc.v4.{}", case.ptx_suffix);
+        let vector_store = format!("st.global.v4.{}", case.ptx_suffix);
+        assert!(
+            ptx.contains(&vector_load) || ptx.contains(&vector_load_nc),
+            "Fix: CUDA release PTX must fuse symbolic-affine adjacent {name} loads into a packed v4 global load.\n{ptx}",
+            name = case.name
+        );
+        assert!(
+            ptx.contains(&vector_store),
+            "Fix: CUDA release PTX must fuse symbolic-affine adjacent {name} stores into a packed v4 global store.\n{ptx}",
+            name = case.name
+        );
+
+        let input = generated_input_bytes(case.input);
+        let outputs = cuda_reference_outputs(&backend, &program, &[input], case.name);
+        checked += assert_case_outputs(
+            &case,
+            "direct-symbolic-v4",
+            &outputs.direct_cuda,
+            &outputs.reference,
+        );
+        checked += assert_case_outputs(
+            &case,
+            "compiled-symbolic-v4",
+            &outputs.compiled_cuda,
+            &outputs.reference,
+        );
+    }
+
+    assert_eq!(
+        checked,
+        vector_cases().len() * VECTOR_LANE_COUNT * 2,
+        "Fix: live CUDA symbolic-affine vectorized memory matrix must compare every lane on direct and compiled paths."
+    );
+}
+
 #[derive(Clone)]
 struct VectorCase {
     name: &'static str,
@@ -197,6 +243,35 @@ fn vectorized_pair_copy_program(ty: DataType) -> Program {
                 Node::let_bind("v1", Expr::load("input", Expr::var("i1"))),
                 Node::store("out", Expr::var("i0"), Expr::var("v0")),
                 Node::store("out", Expr::var("i1"), Expr::var("v1")),
+            ],
+        )],
+    )
+}
+
+fn vectorized_symbolic_affine_copy_program(ty: DataType) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, ty.clone()).with_count(VECTOR_LANE_COUNT as u32),
+            BufferDecl::output("out", 1, ty).with_count(VECTOR_LANE_COUNT as u32),
+        ],
+        [WORKGROUP_SIZE_X, 1, 1],
+        vec![Node::if_then(
+            Expr::lt(Expr::gid_x(), Expr::u32(VECTOR_GROUP_COUNT as u32)),
+            vec![
+                Node::let_bind("two_x", Expr::add(Expr::gid_x(), Expr::gid_x())),
+                Node::let_bind("base", Expr::add(Expr::var("two_x"), Expr::var("two_x"))),
+                Node::let_bind("i0", Expr::var("base")),
+                Node::let_bind("i1", Expr::add(Expr::var("base"), Expr::u32(1))),
+                Node::let_bind("i2", Expr::add(Expr::var("base"), Expr::u32(2))),
+                Node::let_bind("i3", Expr::add(Expr::var("base"), Expr::u32(3))),
+                Node::let_bind("v0", Expr::load("input", Expr::var("i0"))),
+                Node::let_bind("v1", Expr::load("input", Expr::var("i1"))),
+                Node::let_bind("v2", Expr::load("input", Expr::var("i2"))),
+                Node::let_bind("v3", Expr::load("input", Expr::var("i3"))),
+                Node::store("out", Expr::var("i0"), Expr::var("v0")),
+                Node::store("out", Expr::var("i1"), Expr::var("v1")),
+                Node::store("out", Expr::var("i2"), Expr::var("v2")),
+                Node::store("out", Expr::var("i3"), Expr::var("v3")),
             ],
         )],
     )
