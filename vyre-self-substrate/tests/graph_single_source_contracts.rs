@@ -137,7 +137,7 @@ fn duplicated_graph_files_are_not_flat_root_modules() {
     let manifest = manifest_dir();
     for contract in GRAPH_WRAPPERS {
         let old_root = manifest.join("src").join(contract.file);
-        let graph_wrapper = manifest.join("src").join("graph").join(contract.file);
+        let graph_wrapper = graph_wrapper_path(&manifest, contract.file);
         assert!(
             !old_root.exists(),
             "{} must not exist; graph substrate wrappers belong under src/graph/",
@@ -157,7 +157,7 @@ fn graph_wrappers_import_their_primitive_authority() {
     let mut failures = Vec::new();
 
     for contract in GRAPH_WRAPPERS {
-        let path = manifest.join("src").join("graph").join(contract.file);
+        let path = graph_wrapper_path(&manifest, contract.file);
         let source = read_wrapper_with_child_tests(&path);
         let primitive_path = format!("vyre_primitives::graph::{}", contract.primitive_module);
         if !source.contains(&primitive_path) {
@@ -189,7 +189,7 @@ fn graph_wrappers_keep_closure_bar_tests_near_dispatch_wiring() {
     let mut failures = Vec::new();
 
     for contract in GRAPH_WRAPPERS {
-        let path = manifest.join("src").join("graph").join(contract.file);
+        let path = graph_wrapper_path(&manifest, contract.file);
         let source = read_wrapper_with_child_tests(&path);
         if !source.contains("matches_primitive_directly")
             && !source.contains("equals primitive")
@@ -238,7 +238,7 @@ fn graph_wrappers_do_not_grow_past_single_source_ratchet() {
     let mut failures = Vec::new();
 
     for contract in GRAPH_WRAPPERS {
-        let path = manifest.join("src").join("graph").join(contract.file);
+        let path = graph_wrapper_path(&manifest, contract.file);
         let source = read(&path);
         let observed = source.lines().count();
         if observed > contract.max_wrapper_lines {
@@ -260,6 +260,21 @@ fn manifest_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
+fn graph_wrapper_path(manifest: &Path, file: &str) -> PathBuf {
+    let direct = manifest.join("src").join("graph").join(file);
+    if direct.exists() {
+        return direct;
+    }
+    let stem = file
+        .strip_suffix(".rs")
+        .expect("graph wrapper contract files must use .rs");
+    manifest
+        .join("src")
+        .join("graph")
+        .join(stem)
+        .join("mod.rs")
+}
+
 fn read(path: &Path) -> String {
     fs::read_to_string(path)
         .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()))
@@ -268,7 +283,11 @@ fn read(path: &Path) -> String {
 fn read_wrapper_with_child_tests(path: &Path) -> String {
     let mut source = read(path);
     if let (Some(parent), Some(stem)) = (path.parent(), path.file_stem()) {
-        let child_dir = parent.join(stem);
+        let child_dir = if path.file_name().is_some_and(|name| name == "mod.rs") {
+            parent.to_path_buf()
+        } else {
+            parent.join(stem)
+        };
         if child_dir.is_dir() {
             let mut children = fs::read_dir(&child_dir)
                 .unwrap_or_else(|err| panic!("{} must be readable: {err}", child_dir.display()))

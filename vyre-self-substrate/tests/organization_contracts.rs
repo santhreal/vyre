@@ -237,8 +237,14 @@ fn every_domain_module_is_declared_by_its_domain_mod_file() {
 
         for module_file in *modules {
             let module_path = source_root.join(domain).join(module_file);
+            let directory_module_path = module_file
+                .strip_suffix(".rs")
+                .map(|stem| source_root.join(domain).join(stem).join("mod.rs"));
             assert!(
-                module_path.exists(),
+                module_path.exists()
+                    || directory_module_path
+                        .as_ref()
+                        .is_some_and(|path| path.exists()),
                 "{domain}/{module_file} must exist because it is part of the self-substrate organization contract"
             );
             let stem = module_file
@@ -266,8 +272,14 @@ fn graph_wrappers_live_under_graph_module() {
         );
 
         let graph_path = graph_root.join(wrapper);
+        let graph_directory_path = wrapper
+            .strip_suffix(".rs")
+            .map(|stem| graph_root.join(stem).join("mod.rs"));
         assert!(
-            graph_path.exists(),
+            graph_path.exists()
+                || graph_directory_path
+                    .as_ref()
+                    .is_some_and(|path| path.exists()),
             "graph wrapper {wrapper} must live under src/graph/"
         );
     }
@@ -332,15 +344,35 @@ fn graph_wrappers_do_not_define_local_u32_byte_helpers() {
 }
 
 fn read_graph_wrapper_source(wrapper_path: &Path) -> String {
-    let mut source = std::fs::read_to_string(wrapper_path)
-        .unwrap_or_else(|err| panic!("{} must be readable: {err}", wrapper_path.display()));
-    let Some(parent) = wrapper_path.parent() else {
+    let actual_wrapper_path = if wrapper_path.exists() {
+        wrapper_path.to_path_buf()
+    } else {
+        let stem = wrapper_path
+            .file_stem()
+            .unwrap_or_else(|| panic!("{} must have a stem", wrapper_path.display()));
+        wrapper_path
+            .parent()
+            .unwrap_or_else(|| panic!("{} must have a parent", wrapper_path.display()))
+            .join(stem)
+            .join("mod.rs")
+    };
+    let mut source = std::fs::read_to_string(&actual_wrapper_path).unwrap_or_else(|err| {
+        panic!("{} must be readable: {err}", actual_wrapper_path.display())
+    });
+    let Some(parent) = actual_wrapper_path.parent() else {
         return source;
     };
-    let Some(stem) = wrapper_path.file_stem() else {
+    let Some(stem) = actual_wrapper_path.file_stem() else {
         return source;
     };
-    let child_dir = parent.join(stem);
+    let child_dir = if actual_wrapper_path
+        .file_name()
+        .is_some_and(|name| name == "mod.rs")
+    {
+        parent.to_path_buf()
+    } else {
+        parent.join(stem)
+    };
     if !child_dir.is_dir() {
         return source;
     }
@@ -677,7 +709,8 @@ fn csr_forward_or_changed_wrapper_uses_primitive_layout_contract() {
     let wrapper_path = manifest
         .join("src")
         .join("graph")
-        .join("csr_forward_or_changed.rs");
+        .join("csr_forward_or_changed")
+        .join("mod.rs");
     let wrapper_source = std::fs::read_to_string(&wrapper_path)
         .unwrap_or_else(|err| panic!("{} must be readable: {err}", wrapper_path.display()));
     let dispatch_path = manifest
@@ -800,7 +833,11 @@ fn union_find_wrapper_uses_primitive_layout_contract() {
 #[test]
 fn exploded_wrapper_uses_primitive_input_layout_contract() {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let wrapper_path = manifest.join("src").join("graph").join("exploded.rs");
+    let wrapper_path = manifest
+        .join("src")
+        .join("graph")
+        .join("exploded")
+        .join("mod.rs");
     let wrapper_source = std::fs::read_to_string(&wrapper_path)
         .unwrap_or_else(|err| panic!("{} must be readable: {err}", wrapper_path.display()));
     let dispatch_path = manifest
