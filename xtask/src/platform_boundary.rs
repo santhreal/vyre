@@ -178,7 +178,7 @@ fn contains_word_case_insensitive(line: &str, needle: &str) -> bool {
     while let Some(offset) = lower[search_from..].find(needle) {
         let start = search_from + offset;
         let end = start + needle.len();
-        if is_word_boundary(&lower, start) && is_word_boundary(&lower, end) {
+        if is_left_word_boundary(&lower, start) && is_right_word_boundary(&lower, end) {
             return true;
         }
         search_from = end;
@@ -186,11 +186,22 @@ fn contains_word_case_insensitive(line: &str, needle: &str) -> bool {
     false
 }
 
-fn is_word_boundary(text: &str, byte_index: usize) -> bool {
+fn is_left_word_boundary(text: &str, byte_index: usize) -> bool {
+    if byte_index == 0 {
+        return true;
+    }
+    is_non_word_byte(text.as_bytes()[byte_index - 1])
+}
+
+fn is_right_word_boundary(text: &str, byte_index: usize) -> bool {
     match text.as_bytes().get(byte_index) {
         None => true,
-        Some(byte) => !byte.is_ascii_alphanumeric() && *byte != b'_',
+        Some(byte) => is_non_word_byte(*byte),
     }
+}
+
+fn is_non_word_byte(byte: u8) -> bool {
+    !byte.is_ascii_alphanumeric() && byte != b'_'
 }
 
 #[cfg(test)]
@@ -209,6 +220,21 @@ mod tests {
         assert_eq!(findings.len(), 2);
         assert_eq!(findings[0].term, "weir");
         assert_eq!(findings[1].term, "keyhog");
+    }
+
+    #[test]
+    fn scans_markdown_docs_for_consumer_names() {
+        let mut findings = Vec::new();
+        collect_findings(
+            Path::new("vyre-primitives/README.md"),
+            Path::new(""),
+            "# Graph primitives\n\nThis platform doc mentions SurgeC and Gossan.",
+            &mut findings,
+        );
+
+        assert_eq!(findings.len(), 2);
+        assert_eq!(findings[0].term, "surgec");
+        assert_eq!(findings[1].term, "gossan");
     }
 
     #[test]
