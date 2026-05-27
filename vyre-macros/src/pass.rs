@@ -280,6 +280,18 @@ pub(crate) fn vyre_pass_impl(args: TokenStream, item: TokenStream) -> TokenStrea
     } else {
         quote! { Self::analyze_impl(program) }
     };
+    let metadata = quote! {
+        ::vyre::optimizer::PassMetadata {
+            name: #name,
+            requires: &[#(#requires),*],
+            invalidates: &[#(#invalidates),*],
+            phase: #phase,
+            boundary_class: #boundary_class,
+            requires_caps: &[#(#requires_caps),*],
+            preserves_abi: #preserves_abi,
+            cost_model_family: #cost_model_family,
+        }
+    };
 
     quote! {
         #item
@@ -289,16 +301,7 @@ pub(crate) fn vyre_pass_impl(args: TokenStream, item: TokenStream) -> TokenStrea
         impl ::vyre::optimizer::ProgramPass for #ident {
             #[inline]
             fn metadata(&self) -> ::vyre::optimizer::PassMetadata {
-                ::vyre::optimizer::PassMetadata {
-                    name: #name,
-                    requires: &[#(#requires),*],
-                    invalidates: &[#(#invalidates),*],
-                    phase: #phase,
-                    boundary_class: #boundary_class,
-                    requires_caps: &[#(#requires_caps),*],
-                    preserves_abi: #preserves_abi,
-                    cost_model_family: #cost_model_family,
-                }
+                #metadata
             }
 
             #[inline]
@@ -322,16 +325,7 @@ pub(crate) fn vyre_pass_impl(args: TokenStream, item: TokenStream) -> TokenStrea
 
         ::inventory::submit! {
             ::vyre::optimizer::ProgramPassRegistration {
-                metadata: ::vyre::optimizer::PassMetadata {
-                    name: #name,
-                    requires: &[#(#requires),*],
-                    invalidates: &[#(#invalidates),*],
-                    phase: #phase,
-                    boundary_class: #boundary_class,
-                    requires_caps: &[#(#requires_caps),*],
-                    preserves_abi: #preserves_abi,
-                    cost_model_family: #cost_model_family,
-                },
+                metadata: #metadata,
                 factory: || ::std::boxed::Box::new(#ident),
             }
         }
