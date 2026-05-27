@@ -41,6 +41,7 @@ pub fn scan_roots(roots: &[&Path]) -> Result<Vec<Violation>> {
             .map(|hit| hit.path.as_str())
             .collect::<Vec<_>>()
             .join(", ");
+        let shared = shared_symbol_summary(&paths);
         for hit in paths {
             violations.push(Violation {
                 file: hit.path,
@@ -48,7 +49,7 @@ pub fn scan_roots(roots: &[&Path]) -> Result<Vec<Violation>> {
                 column: 1,
                 kind: ViolationKind::ModuleFork,
                 message: format!(
-                    "module filename `{basename}` appears in multiple scanned roots: {joined}. Fix: pick one authority module and make the other crate a thin adapter or give the adapter a domain-specific name."
+                    "module filename `{basename}` appears in multiple scanned roots: {joined}; {shared}. Fix: pick one authority module and make the other crate a thin adapter or give the adapter a domain-specific name."
                 ),
             });
         }
@@ -61,6 +62,7 @@ pub fn scan_roots(roots: &[&Path]) -> Result<Vec<Violation>> {
 struct ModuleHit {
     root_index: usize,
     path: String,
+    symbols: BTreeSet<String>,
 }
 
 fn scan_root(
@@ -89,9 +91,78 @@ fn scan_root(
             .push(ModuleHit {
                 root_index,
                 path: workspace_relative(path),
+                symbols: function_symbols(
+                    &std::fs::read_to_string(path)
+                        .with_context(|| format!("read {}", path.display()))?,
+                ),
             });
     }
     Ok(())
+}
+
+fn shared_symbol_summary(paths: &[ModuleHit]) -> String {
+    let mut roots_by_symbol: BTreeMap<&str, BTreeSet<usize>> = BTreeMap::new();
+    for hit in paths {
+        for symbol in &hit.symbols {
+            roots_by_symbol
+                .entry(symbol.as_str())
+                .or_default()
+                .insert(hit.root_index);
+        }
+    }
+    let shared = roots_by_symbol
+        .into_iter()
+        .filter_map(|(symbol, roots)| (roots.len() > 1).then_some(symbol))
+        .take(8)
+        .collect::<Vec<_>>();
+    if shared.is_empty() {
+        "shared Rust symbols: none detected".to_string()
+    } else {
+        format!("shared Rust symbols: {}", shared.join(", "))
+    }
+}
+
+fn function_symbols(source: &str) -> BTreeSet<String> {
+    source
+        .lines()
+        .filter_map(function_symbol)
+        .map(str::to_string)
+        .collect()
+}
+
+fn function_symbol(line: &str) -> Option<&str> {
+    let mut rest = line.trim_start();
+    if rest.starts_with("//") {
+        return None;
+    }
+    if let Some(after_pub) = rest.strip_prefix("pub ") {
+        rest = after_pub.trim_start();
+    } else if let Some(after_pub_scope) = rest.strip_prefix("pub(") {
+        let close = after_pub_scope.find(')')?;
+        rest = after_pub_scope[close + 1..].trim_start();
+    }
+    loop {
+        if let Some(after) = rest.strip_prefix("async ") {
+            rest = after.trim_start();
+        } else if let Some(after) = rest.strip_prefix("const ") {
+            rest = after.trim_start();
+        } else if let Some(after) = rest.strip_prefix("unsafe ") {
+            rest = after.trim_start();
+        } else if let Some(after) = rest.strip_prefix("extern ") {
+            rest = after.trim_start();
+            if let Some(after_abi) = rest.strip_prefix('"') {
+                let close = after_abi.find('"')?;
+                rest = after_abi[close + 1..].trim_start();
+            }
+        } else {
+            break;
+        }
+    }
+    let after_fn = rest.strip_prefix("fn ")?;
+    let end = after_fn
+        .find(|ch: char| !(ch == '_' || ch.is_ascii_alphanumeric()))
+        .unwrap_or(after_fn.len());
+    (end > 0).then_some(&after_fn[..end])
 }
 
 #[cfg(test)]
@@ -102,5 +173,23 @@ mod tests {
     fn exempt_generic_module_names() {
         assert!(EXEMPT_BASENAMES.contains(&"mod.rs"));
         assert!(EXEMPT_BASENAMES.contains(&"tests.rs"));
+    }
+
+    #[test]
+    fn extracts_function_symbols_without_comments_or_visibility_noise() {
+        let source = r#"
+            pub fn public_api() {}
+            pub(crate) const fn scoped_const() {}
+            async fn async_local() {}
+            unsafe extern "C" fn ffi_entry() {}
+            // fn commented_out() {}
+            let not_a_function = 1;
+        "#;
+        let symbols = function_symbols(source);
+        assert!(symbols.contains("public_api"));
+        assert!(symbols.contains("scoped_const"));
+        assert!(symbols.contains("async_local"));
+        assert!(symbols.contains("ffi_entry"));
+        assert!(!symbols.contains("commented_out"));
     }
 }
