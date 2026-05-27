@@ -25,3 +25,29 @@ pub(crate) fn assert_byte_lru_core_rejects_and_accounts() {
         "Fix: shared GPU preprocessor cache core must reject oversized entries, evict to byte budget, and update byte accounting."
     );
 }
+
+pub(crate) fn assert_contains_all(source: &str, needles: &[&str], message: &str) {
+    let missing = needles
+        .iter()
+        .copied()
+        .filter(|needle| !source.contains(needle))
+        .collect::<Vec<_>>();
+    assert!(
+        missing.is_empty(),
+        "{message} Missing required source fragment(s): {}",
+        missing.join(" | ")
+    );
+}
+
+pub(crate) fn assert_contains_none(source: &str, needles: &[&str], message: &str) {
+    let present = needles
+        .iter()
+        .copied()
+        .filter(|needle| source.contains(needle))
+        .collect::<Vec<_>>();
+    assert!(
+        present.is_empty(),
+        "{message} Forbidden source fragment(s): {}",
+        present.join(" | ")
+    );
+}
