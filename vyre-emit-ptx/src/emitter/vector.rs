@@ -7,6 +7,7 @@ use vyre_lower::{KernelBody, KernelOpKind};
 use super::facts::EmitFacts;
 use super::format::{is_ptx_vectorizable_dtype, write_reg_tuple};
 use super::operands::{read_store_operands, read_two_operands};
+use super::schedule::{is_schedulable_pure_op, is_scheduling_fence};
 use super::BodyCtx;
 use crate::reg::PtxType;
 use crate::EmitError;
@@ -25,10 +26,10 @@ impl BodyCtx<'_> {
         start_idx: usize,
     ) -> Result<Option<VectorChain>, EmitError> {
         let op = &body.ops[start_idx];
-        if !matches!(op.kind, KernelOpKind::LoadGlobal) {
+        if !is_vector_load_op(&op.kind) {
             return Ok(None);
         }
-        let (slot, base_idx_id) = read_two_operands(op, "LoadGlobal")?;
+        let (slot, base_idx_id) = read_two_operands(op, "vector load")?;
         let binding = self.binding_for_slot(slot)?;
         if !is_ptx_vectorizable_dtype(&binding.element_type) || op.result.is_none() {
             return Ok(None);
@@ -40,25 +41,25 @@ impl BodyCtx<'_> {
         let mut scan_idx = start_idx + 1;
         while scan_idx < body.ops.len() && chain.len() < PTX_VECTOR_WIDTH_V4 {
             let mut next_idx = scan_idx;
-            let next = &body.ops[next_idx];
-            if matches!(next.kind, KernelOpKind::BinOpKind(BinOp::Add)) {
-                let Some(result_id) = next.result else {
+            while next_idx < body.ops.len() {
+                let next = &body.ops[next_idx];
+                if is_vector_load_op(&next.kind) {
                     break;
-                };
-                if !facts.is_index_plus_one(body, result_id, prev_idx_id) {
+                }
+                if is_scheduling_fence(next) || !is_schedulable_pure_op(next) {
                     break;
                 }
                 next_idx += 1;
-                if next_idx >= body.ops.len() {
-                    break;
-                }
             }
 
-            let next = &body.ops[next_idx];
-            if !matches!(next.kind, KernelOpKind::LoadGlobal) || next.result.is_none() {
+            if next_idx >= body.ops.len() {
                 break;
             }
-            let (next_slot, next_index_id) = read_two_operands(next, "LoadGlobal")?;
+            let next = &body.ops[next_idx];
+            if !is_vector_load_op(&next.kind) || next.result.is_none() {
+                break;
+            }
+            let (next_slot, next_index_id) = read_two_operands(next, "vector load")?;
             if next_slot != slot || !facts.is_index_plus_one(body, next_index_id, prev_idx_id) {
                 break;
             }
@@ -128,7 +129,7 @@ impl BodyCtx<'_> {
         chain: &[usize],
     ) -> Result<(), EmitError> {
         let first = &body.ops[chain[0]];
-        let (binding_slot, index_op_id) = read_two_operands(first, "LoadGlobal")?;
+        let (binding_slot, index_op_id) = read_two_operands(first, "vector load")?;
         let element_type = self.binding_for_slot(binding_slot)?.element_type.clone();
         let memory_class = self.binding_for_slot(binding_slot)?.memory_class;
         let elem_ty = PtxType::from_dtype(&element_type)?;
@@ -224,7 +225,7 @@ impl BodyCtx<'_> {
         if index_adds.iter().any(|(idx, _)| {
             !matches!(
                 body.ops.get(*idx).map(|op| &op.kind),
-                Some(KernelOpKind::BinOpKind(BinOp::Add))
+                Some(KernelOpKind::BinOpKind(BinOp::Add) | KernelOpKind::Literal)
             )
         }) {
             return Ok(());
@@ -274,8 +275,14 @@ fn vector_load_mnemonic_parts(load_space: &str) -> Option<(&'static str, &'stati
 
 fn vector_index_operand(op: &vyre_lower::KernelOp) -> Result<u32, EmitError> {
     match op.kind {
-        KernelOpKind::LoadGlobal => read_two_operands(op, "LoadGlobal").map(|(_, index)| index),
+        KernelOpKind::LoadGlobal | KernelOpKind::LoadConstant => {
+            read_two_operands(op, "vector load").map(|(_, index)| index)
+        }
         KernelOpKind::StoreGlobal => read_store_operands(op).map(|(_, index, _)| index),
         _ => Err(EmitError::UnsupportedOp(op.clone())),
     }
+}
+
+fn is_vector_load_op(kind: &KernelOpKind) -> bool {
+    matches!(kind, KernelOpKind::LoadGlobal | KernelOpKind::LoadConstant)
 }

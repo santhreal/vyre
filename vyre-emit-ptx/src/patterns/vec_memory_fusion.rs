@@ -14,7 +14,7 @@ pub(super) enum MemoryFusionKind {
 impl MemoryFusionKind {
     fn matches(self, kind: &KernelOpKind) -> bool {
         match self {
-            Self::Load => matches!(kind, KernelOpKind::LoadGlobal),
+            Self::Load => matches!(kind, KernelOpKind::LoadGlobal | KernelOpKind::LoadConstant),
             Self::Store => matches!(kind, KernelOpKind::StoreGlobal),
         }
     }

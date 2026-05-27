@@ -73,6 +73,12 @@ impl IndexFacts {
         candidate_id: u32,
         prev_id: u32,
     ) -> bool {
+        if let (Some(candidate), Some(prev)) = (
+            self.lit_u32.get(&candidate_id),
+            self.lit_u32.get(&prev_id),
+        ) {
+            return prev.checked_add(1) == Some(*candidate);
+        }
         let Some(&op_idx) = self.producer.get(&candidate_id) else {
             return false;
         };
@@ -208,6 +214,29 @@ mod tests {
         let body = body_with_add(vec![1, 7], Some(9), vec![LiteralValue::I32(1)]);
         let facts = IndexFacts::new(&body);
         assert!(facts.is_index_plus_one(&body, 9, 7));
+    }
+
+    #[test]
+    fn detects_adjacent_folded_literal_indices() {
+        let body = KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(10),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(11),
+                },
+            ],
+            child_bodies: Vec::new(),
+            literals: vec![LiteralValue::U32(8), LiteralValue::U32(9)],
+        };
+        let facts = IndexFacts::new(&body);
+        assert!(facts.is_index_plus_one(&body, 11, 10));
+        assert!(!facts.is_index_plus_one(&body, 10, 11));
     }
 
     #[test]
