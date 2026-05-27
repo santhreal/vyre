@@ -89,6 +89,7 @@ pub fn vyre_primitives::wire::decode_f32_le_bytes_all(bytes: &[u8]) -> alloc::ve
 pub fn vyre_primitives::wire::decode_i32_le_bytes_all(bytes: &[u8]) -> alloc::vec::Vec<i32>
 pub fn vyre_primitives::wire::decode_u16_le_bytes_all(bytes: &[u8]) -> alloc::vec::Vec<u16>
 pub fn vyre_primitives::wire::decode_u32_le_bytes_all(bytes: &[u8]) -> alloc::vec::Vec<u32>
+pub fn vyre_primitives::wire::decode_u32x8_le_bytes(bytes: &[u8; 32]) -> [u32; 8]
 pub fn vyre_primitives::wire::decode_u64_le_bytes_all(bytes: &[u8]) -> alloc::vec::Vec<u64>
 pub fn vyre_primitives::wire::pack_bytes_as_u32_slice(bytes: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_primitives::wire::pack_bytes_as_u32_slice_into(bytes: &[u8], out: &mut alloc::vec::Vec<u8>)
