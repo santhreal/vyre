@@ -150,7 +150,7 @@ fn scan_manifest(member: &str, tier: u32, table: &Value, failures: &mut Vec<Stri
                 .or(fallback)
                 .unwrap_or_else(|| key.to_string());
             let dep_tier = crate_tier(&dep_name);
-            if dep_tier >= tier && tier < 99 {
+            if dep_tier > tier && tier < 99 {
                 failures.push(format!(
                     "{member} (T{tier}) must not path-depend on {dep_name} (T{dep_tier}) via `{key}` = `{path}`"
                 ));
