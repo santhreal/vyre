@@ -27,7 +27,7 @@ fn gpu_unary_many(backend: &WgpuBackend, op: UnOp, xs: &[f32]) -> Vec<f32> {
         .expect("Fix: wgpu f32 unary batch probe must dispatch successfully")
 }
 
-fn cpu_canonical(op: UnOp, x: f32) -> f32 {
+fn cpu_canonical(op: &UnOp, x: f32) -> f32 {
     use vyre_reference::ieee754::{canonical_cos, canonical_exp, canonical_log, canonical_sin, canonical_sqrt};
     match op {
         UnOp::Sin => canonical_sin(x),
@@ -40,7 +40,7 @@ fn cpu_canonical(op: UnOp, x: f32) -> f32 {
 }
 
 fn assert_bitwise_parity(op: UnOp, x: f32, gpu: f32) {
-    let cpu = cpu_canonical(op, x);
+    let cpu = cpu_canonical(&op, x);
     assert_eq!(
         cpu.to_bits(),
         gpu.to_bits(),

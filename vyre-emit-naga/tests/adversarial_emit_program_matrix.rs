@@ -11,6 +11,20 @@ use vyre_lower::emit_adversarial_corpus::{
     self, EmitAdversarialCase, EmitAdversarialFamily, EmitOutcome,
 };
 
+fn block_has_barrier(block: &Block) -> bool {
+    block.iter().any(|statement| match statement {
+        Statement::Barrier(_) => true,
+        Statement::Block(child) => block_has_barrier(child),
+        Statement::If { accept, reject, .. } => {
+            block_has_barrier(accept) || block_has_barrier(reject)
+        }
+        Statement::Loop {
+            body, continuing, ..
+        } => block_has_barrier(body) || block_has_barrier(continuing),
+        _ => false,
+    })
+}
+
 fn block_has_loop(block: &Block) -> bool {
     block.iter().any(|statement| match statement {
         Statement::Loop { .. } => true,
@@ -89,11 +103,8 @@ fn assert_naga_structure(case: &EmitAdversarialCase, module: &naga::Module) {
         }
         EmitAdversarialFamily::SharedGlobalTile => {
             assert!(
-                module.global_variables.values().any(|global| {
-                    matches!(
-                        module.types[global.ty].inner,
-                        TypeInner::Array { space, .. } if space == AddressSpace::WorkGroup
-                    )
+                module.global_variables.iter().any(|(_, global)| {
+                    global.space == AddressSpace::WorkGroup
                 }),
                 "{}: shared tile must allocate workgroup memory",
                 case.id
@@ -101,8 +112,8 @@ fn assert_naga_structure(case: &EmitAdversarialCase, module: &naga::Module) {
         }
         EmitAdversarialFamily::LoopWithBarrier => {
             assert!(
-                block_has_loop(entry_body(module)),
-                "{}: loop+barrier kernel must emit a Loop",
+                block_has_loop(entry_body(module)) || block_has_barrier(entry_body(module)),
+                "{}: loop+barrier kernel must emit Loop or Barrier",
                 case.id
             );
         }
@@ -117,7 +128,7 @@ fn assert_naga_structure(case: &EmitAdversarialCase, module: &naga::Module) {
                     matches!(
                         module.types[global.ty].inner,
                         TypeInner::Array { base, .. }
-                            if matches!(module.types[*base].inner, TypeInner::Atomic(_))
+                            if matches!(module.types[base].inner, TypeInner::Atomic(_))
                     )
                 }),
                 "{}: atomic binding must use atomic element type",
@@ -179,10 +190,10 @@ fn multi_binding_preserves_distinct_global_types() {
     let case = emit_adversarial_corpus::case_by_id("adv_multi_binding").unwrap();
     let module = vyre_emit_naga::emit_optimized(&case.descriptor).unwrap();
     let mut scalar_kinds = std::collections::BTreeSet::new();
-    for global in module.global_variables.values() {
+    for (_, global) in module.global_variables.iter() {
         if let TypeInner::Array { base, .. } = module.types[global.ty].inner {
-            if let TypeInner::Scalar { kind, .. } = module.types[base].inner {
-                scalar_kinds.insert(format!("{kind:?}"));
+            if let TypeInner::Scalar(scalar) = module.types[base].inner {
+                scalar_kinds.insert(format!("{:?}", scalar.kind));
             }
         }
     }

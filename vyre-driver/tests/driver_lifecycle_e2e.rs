@@ -7,13 +7,14 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
+use std::time::Duration;
 
 use vyre_driver::pipeline::compile;
 use vyre_driver::validation::LaunchGeometryLimits;
 use vyre_driver::persistent::{PersistentEngine, PersistentWorkItem, QueueFull};
 use vyre_driver::{BindingPlan, DispatchConfig, LaunchPlan, VyreBackend};
 use vyre_driver_reference::CpuRefBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::value::Value;
 
 const PERSISTENT_PRODUCERS: usize = 16;
@@ -27,7 +28,7 @@ fn multi_op_program() -> Program {
         vec![
             BufferDecl::read("a", 0, DataType::U32).with_count(1),
             BufferDecl::read("b", 1, DataType::U32).with_count(1),
-            BufferDecl::storage("out", 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            BufferDecl::output("out", 2, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         vec![
@@ -114,18 +115,34 @@ fn driver_lifecycle_e2e_parse_plan_emit_dispatch_readback() {
 }
 
 struct PersistentWaitGroup {
-    lock: Mutex<()>,
+    lock: Mutex<WaitState>,
     work_ready: Condvar,
     space_ready: Condvar,
+}
+
+struct WaitState {
+    producers_done: bool,
 }
 
 impl PersistentWaitGroup {
     fn new() -> Self {
         Self {
-            lock: Mutex::new(()),
+            lock: Mutex::new(WaitState {
+                producers_done: false,
+            }),
             work_ready: Condvar::new(),
             space_ready: Condvar::new(),
         }
+    }
+
+    fn mark_producers_done(&self) {
+        let mut guard = self.lock.lock().unwrap();
+        guard.producers_done = true;
+        self.work_ready.notify_all();
+    }
+
+    fn producers_done(&self) -> bool {
+        self.lock.lock().unwrap().producers_done
     }
 
     fn blocking_enqueue(
@@ -147,15 +164,21 @@ impl PersistentWaitGroup {
         }
     }
 
-    fn blocking_claim(&self, engine: &PersistentEngine) -> PersistentWorkItem {
-        loop {
-            if let Some(item) = engine.claim() {
-                self.space_ready.notify_all();
-                return item;
-            }
-            let guard = self.lock.lock().unwrap();
-            let _guard = self.work_ready.wait(guard).unwrap();
+    fn try_claim(&self, engine: &PersistentEngine) -> Option<PersistentWorkItem> {
+        if let Some(item) = engine.claim() {
+            self.space_ready.notify_all();
+            Some(item)
+        } else {
+            None
         }
+    }
+
+    fn wait_for_work(&self) {
+        let guard = self.lock.lock().unwrap();
+        let _guard = self
+            .work_ready
+            .wait_timeout(guard, Duration::from_millis(5))
+            .unwrap();
     }
 }
 
@@ -207,26 +230,29 @@ fn persistent_engine_stress_16_prod_16_cons_100k_items() {
             if consumed_count.load(Ordering::Acquire) >= PERSISTENT_TOTAL_ITEMS as usize {
                 break;
             }
-            let item = wait.blocking_claim(&engine);
-            let correlation = item.correlation as usize;
-            let mut seen = consumed.lock().unwrap();
-            if correlation >= seen.len() || seen[correlation] {
-                duplicate_claims.fetch_add(1, Ordering::Relaxed);
-            } else {
-                seen[correlation] = true;
-                consumed_count.fetch_add(1, Ordering::Release);
+            if let Some(item) = wait.try_claim(&engine) {
+                let correlation = item.correlation as usize;
+                let mut seen = consumed.lock().unwrap();
+                if correlation >= seen.len() || seen[correlation] {
+                    duplicate_claims.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    seen[correlation] = true;
+                    consumed_count.fetch_add(1, Ordering::Release);
+                }
+                drop(seen);
+                continue;
             }
-            drop(seen);
-            if consumed_count.load(Ordering::Acquire) >= PERSISTENT_TOTAL_ITEMS as usize {
+            if wait.producers_done() && engine.in_flight() == 0 {
                 break;
             }
+            wait.wait_for_work();
         }));
     }
 
     for handle in producer_handles {
         handle.join().expect("Fix: persistent stress producer must not panic");
     }
-    wait.work_ready.notify_all();
+    wait.mark_producers_done();
 
     for handle in consumer_handles {
         handle.join().expect("Fix: persistent stress consumer must not panic");
