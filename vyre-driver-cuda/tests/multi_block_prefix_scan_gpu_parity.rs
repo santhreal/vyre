@@ -6,14 +6,13 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::reduce::multi_block_prefix_scan::{
     cpu_ref as mbps_cpu, multi_block_prefix_scan_sum_u32, BLOCK_LANES,
 };
 
-fn run_mbps(backend: &CudaBackend, input: &[u32]) -> Vec<u32> {
+fn run_mbps(input: &[u32]) -> Vec<u32> {
     use vyre::ir::BufferAccess;
     let n = input.len() as u32;
     let program = multi_block_prefix_scan_sum_u32("input", "output", n);
@@ -44,9 +43,13 @@ fn run_mbps(backend: &CudaBackend, input: &[u32]) -> Vec<u32> {
     if n <= BLOCK_LANES {
         config.grid_override = Some([1, 1, 1]);
     }
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("multi-block prefix scan", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA multi-block prefix-scan dispatch failed: {error}")
+            })
+    });
     // Outputs are returned in declaration order over writeable buffers
     // (RW storage + WriteOnly + is_output marker). Locate "output".
     let out_idx = program
@@ -68,31 +71,28 @@ fn run_mbps(backend: &CudaBackend, input: &[u32]) -> Vec<u32> {
 
 #[test]
 fn cuda_mbps_small_inclusive_sum() {
-    let backend = live_dispatcher();
     let input = vec![1u32, 2, 3, 4, 5];
     let cpu = mbps_cpu(&input);
-    let gpu = run_mbps(&backend, &input);
+    let gpu = run_mbps(&input);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![1, 3, 6, 10, 15]);
 }
 
 #[test]
 fn cuda_mbps_zeros() {
-    let backend = live_dispatcher();
     let input = vec![0u32; 16];
     let cpu = mbps_cpu(&input);
-    let gpu = run_mbps(&backend, &input);
+    let gpu = run_mbps(&input);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0u32; 16]);
 }
 
 #[test]
 fn cuda_mbps_one_full_block() {
-    let backend = live_dispatcher();
     // Exactly BLOCK_LANES elements, all ones; inclusive scan = 1..=BLOCK_LANES.
     let input = vec![1u32; BLOCK_LANES as usize];
     let cpu = mbps_cpu(&input);
-    let gpu = run_mbps(&backend, &input);
+    let gpu = run_mbps(&input);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu[BLOCK_LANES as usize - 1], BLOCK_LANES);
 }
