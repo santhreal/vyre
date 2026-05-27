@@ -20,6 +20,7 @@
 //! when the ticket lands.
 
 pub mod allowlist;
+pub mod consumer_coupling;
 pub mod drift;
 pub mod production_cpu_fallbacks;
 pub mod raw_ir_in_libs;
@@ -47,6 +48,8 @@ pub enum ViolationKind {
     /// Production code reached into CPU/reference execution instead of an
     /// explicit parity-test oracle.
     ProductionCpuFallback,
+    /// Platform docs/comments mention a downstream consumer by name.
+    ConsumerCoupling,
 }
 
 /// Run the `raw_ir_in_libs` lint over a directory tree.
@@ -84,6 +87,16 @@ pub fn run_production_cpu_fallbacks(roots: &[&Path]) -> Result<Vec<Violation>> {
     let mut all = Vec::new();
     for root in roots {
         all.extend(production_cpu_fallbacks::scan_tree(root)?);
+    }
+    all.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)));
+    Ok(all)
+}
+
+/// Run the consumer-name coupling guard over platform source/doc roots.
+pub fn run_consumer_coupling(roots: &[&Path]) -> Result<Vec<Violation>> {
+    let mut all = Vec::new();
+    for root in roots {
+        all.extend(consumer_coupling::scan_tree(root)?);
     }
     all.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)));
     Ok(all)
