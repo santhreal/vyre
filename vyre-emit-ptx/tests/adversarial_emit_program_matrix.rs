@@ -10,45 +10,55 @@ use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialCase, EmitAdversa
 fn assert_ptx_structure(case: &EmitAdversarialCase, ptx: &str) {
     assert!(ptx.contains(".version"), "{}: missing .version", case.id);
     assert!(ptx.contains(".target"), "{}: missing .target", case.id);
-    assert!(ptx.contains(".entry main"), "{}: missing .entry main", case.id);
+    assert!(
+        ptx.contains(".entry main"),
+        "{}: missing .entry main",
+        case.id
+    );
 
     match case.family {
         EmitAdversarialFamily::DeepIfElse => {
             assert!(
                 ptx.contains("$L_if_else_") || ptx.contains("$L_if_end_"),
                 "{}: nested if/else must emit branch labels\n{}",
-                case.id, ptx
+                case.id,
+                ptx
             );
         }
         EmitAdversarialFamily::HostileWorkgroup => {
             assert!(
                 ptx.contains("ld.global") && ptx.contains("st.global"),
                 "{}: workgroup-indexed store must touch global memory\n{}",
-                case.id, ptx
+                case.id,
+                ptx
             );
         }
         EmitAdversarialFamily::MultiBinding => {
             assert!(
                 ptx.matches(".param .u64").count() >= 3,
                 "{}: ≥3 bindings must produce ≥3 u64 params\n{}",
-                case.id, ptx
+                case.id,
+                ptx
             );
             assert!(
                 ptx.contains("st.global.f32") || ptx.contains("add.f32"),
                 "{}: f32 binding must lower to f32 PTX ops\n{}",
-                case.id, ptx
+                case.id,
+                ptx
             );
         }
         EmitAdversarialFamily::SharedGlobalTile => {
             assert!(
                 ptx.contains("shared") || ptx.contains(".shared"),
                 "{}: shared tile must allocate shared memory\n{}",
-                case.id, ptx
+                case.id,
+                ptx
             );
             assert!(
                 ptx.contains("bar.sync"),
                 "{}: tile kernel must emit workgroup barrier\n{}",
-                case.id, ptx
+                case.id,
+                ptx
             );
         }
         EmitAdversarialFamily::LoopWithBarrier => {
@@ -74,18 +84,23 @@ fn assert_ptx_structure(case: &EmitAdversarialCase, ptx: &str) {
             assert!(
                 ptx.contains("atom.global"),
                 "{}: atomic counter must emit global atom instruction\n{}",
-                case.id, ptx
+                case.id,
+                ptx
             );
         }
         EmitAdversarialFamily::DeadIdentityChain => {
             assert!(
                 ptx.contains("st.global.u32"),
                 "{}: dead identity chain must still store the live literal\n{}",
-                case.id, ptx
+                case.id,
+                ptx
             );
         }
         EmitAdversarialFamily::RejectCall | EmitAdversarialFamily::RejectGridSyncBarrier => {
-            panic!("{}: rejection case must not reach PTX structure oracle", case.id);
+            panic!(
+                "{}: rejection case must not reach PTX structure oracle",
+                case.id
+            );
         }
     }
 }
@@ -120,9 +135,7 @@ fn rejection_corpus_fails_without_panic() {
                         "Fix: GridSync rejection must name scope loss; got: {message}"
                     );
                 }
-                other => panic!(
-                    "Fix: GridSync must reject with InvalidDescriptor, got {other:?}"
-                ),
+                other => panic!("Fix: GridSync must reject with InvalidDescriptor, got {other:?}"),
             }
         }
     }

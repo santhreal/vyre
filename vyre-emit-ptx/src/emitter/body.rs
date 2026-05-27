@@ -213,7 +213,10 @@ impl BodyCtx<'_> {
         };
 
         let out = self.alloc(out_ty);
-        let _ = writeln!(self.text, "    mad.lo.{ptx_suffix}    {out}, {a}, {b}, {c};");
+        let _ = writeln!(
+            self.text,
+            "    mad.lo.{ptx_suffix}    {out}, {a}, {b}, {c};"
+        );
         self.bind_result(op, out)?;
         Ok(true)
     }
@@ -224,7 +227,13 @@ impl BodyCtx<'_> {
         facts: &EmitFacts,
         mul_result_id: u32,
         addend_id: u32,
-    ) -> Option<(crate::reg::Reg, crate::reg::Reg, crate::reg::Reg, &'static str, PtxType)> {
+    ) -> Option<(
+        crate::reg::Reg,
+        crate::reg::Reg,
+        crate::reg::Reg,
+        &'static str,
+        PtxType,
+    )> {
         if facts.result_use_count(mul_result_id) != 1 {
             return None;
         }

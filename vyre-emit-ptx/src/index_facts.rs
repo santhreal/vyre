@@ -9,6 +9,12 @@ pub(crate) struct IndexFacts {
     lit_u32: FxHashMap<u32, u32>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct NormalizedIndex {
+    root: Option<u32>,
+    offset: u32,
+}
+
 impl IndexFacts {
     pub(crate) fn new(body: &KernelBody) -> Self {
         let mut producer = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
@@ -73,11 +79,18 @@ impl IndexFacts {
         candidate_id: u32,
         prev_id: u32,
     ) -> bool {
-        if let (Some(candidate), Some(prev)) = (
-            self.lit_u32.get(&candidate_id),
-            self.lit_u32.get(&prev_id),
-        ) {
+        if let (Some(candidate), Some(prev)) =
+            (self.lit_u32.get(&candidate_id), self.lit_u32.get(&prev_id))
+        {
             return prev.checked_add(1) == Some(*candidate);
+        }
+        if let (Some(candidate), Some(prev)) = (
+            self.normalized_index(body, candidate_id),
+            self.normalized_index(body, prev_id),
+        ) {
+            if candidate.root == prev.root && prev.offset.checked_add(1) == Some(candidate.offset) {
+                return true;
+            }
         }
         let Some(&op_idx) = self.producer.get(&candidate_id) else {
             return false;
@@ -93,6 +106,69 @@ impl IndexFacts {
         let rhs = op.operands[1];
         let is_one = |id: u32| self.lit_u32.get(&id) == Some(&1);
         (lhs == prev_id && is_one(rhs)) || (rhs == prev_id && is_one(lhs))
+    }
+
+    fn normalized_index(&self, body: &KernelBody, result_id: u32) -> Option<NormalizedIndex> {
+        self.normalized_index_inner(body, result_id, 0)
+    }
+
+    fn normalized_index_inner(
+        &self,
+        body: &KernelBody,
+        result_id: u32,
+        depth: u8,
+    ) -> Option<NormalizedIndex> {
+        if depth > 8 {
+            return Some(NormalizedIndex {
+                root: Some(result_id),
+                offset: 0,
+            });
+        }
+        if let Some(value) = self.lit_u32.get(&result_id).copied() {
+            return Some(NormalizedIndex {
+                root: None,
+                offset: value,
+            });
+        }
+        let Some(&op_idx) = self.producer.get(&result_id) else {
+            return Some(NormalizedIndex {
+                root: Some(result_id),
+                offset: 0,
+            });
+        };
+        let op = &body.ops[op_idx];
+        if !matches!(
+            op.kind,
+            KernelOpKind::BinOpKind(BinOp::Add | BinOp::WrappingAdd)
+        ) || op.operands.len() != 2
+        {
+            return Some(NormalizedIndex {
+                root: Some(result_id),
+                offset: 0,
+            });
+        }
+
+        let lhs = op.operands[0];
+        let rhs = op.operands[1];
+        if let Some(delta) = self.lit_u32.get(&rhs).copied() {
+            let base = self.normalized_index_inner(body, lhs, depth + 1)?;
+            return Some(NormalizedIndex {
+                root: base.root,
+                offset: base.offset.checked_add(delta)?,
+            });
+        }
+        if let Some(delta) = self.lit_u32.get(&lhs).copied() {
+            let base = self.normalized_index_inner(body, rhs, depth + 1)?;
+            return Some(NormalizedIndex {
+                root: base.root,
+                offset: base.offset.checked_add(delta)?,
+            });
+        }
+
+        Some(NormalizedIndex {
+            root: Some(result_id),
+            offset: 0,
+        })
     }
 
     pub(crate) fn producer_idx(&self, result_id: u32) -> Option<usize> {
@@ -186,7 +262,11 @@ mod tests {
         KernelBody, KernelOp, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape,
     };
 
-    fn body_with_add(operands: Vec<u32>, result: Option<u32>, literals: Vec<LiteralValue>) -> KernelBody {
+    fn body_with_add(
+        operands: Vec<u32>,
+        result: Option<u32>,
+        literals: Vec<LiteralValue>,
+    ) -> KernelBody {
         KernelBody {
             ops: vec![
                 KernelOp {
@@ -240,6 +320,66 @@ mod tests {
     }
 
     #[test]
+    fn detects_adjacent_dynamic_indices_after_affine_reassociation() {
+        let body = KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![7, 1],
+                    result: Some(9),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![7, 2],
+                    result: Some(10),
+                },
+            ],
+            child_bodies: Vec::new(),
+            literals: vec![LiteralValue::U32(1), LiteralValue::U32(2)],
+        };
+        let facts = IndexFacts::new(&body);
+        assert!(facts.is_index_plus_one(&body, 10, 9));
+        assert!(!facts.is_index_plus_one(&body, 9, 10));
+    }
+
+    #[test]
+    fn detects_adjacent_dynamic_indices_after_chained_reassociation() {
+        let body = KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![7, 1],
+                    result: Some(9),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::WrappingAdd),
+                    operands: vec![9, 1],
+                    result: Some(10),
+                },
+            ],
+            child_bodies: Vec::new(),
+            literals: vec![LiteralValue::U32(1)],
+        };
+        let facts = IndexFacts::new(&body);
+        assert!(facts.is_index_plus_one(&body, 10, 9));
+    }
+
+    #[test]
     fn rejects_missing_producer_non_add_and_non_one_literals() {
         let body = body_with_add(vec![7, 1], Some(9), vec![LiteralValue::U32(2)]);
         let facts = IndexFacts::new(&body);
@@ -289,7 +429,11 @@ mod tests {
                 },
             ],
             child_bodies: Vec::new(),
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1), LiteralValue::U32(2)],
+            literals: vec![
+                LiteralValue::U32(0),
+                LiteralValue::U32(1),
+                LiteralValue::U32(2),
+            ],
         };
         let facts = IndexFacts::new(&body);
         assert_eq!(facts.result_use_count(0), 0);

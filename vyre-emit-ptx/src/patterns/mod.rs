@@ -10,8 +10,8 @@ pub mod instruction_scheduling;
 pub mod ldmatrix_cp_async;
 pub mod predicated_execution;
 pub mod tensor_core_fragment;
-mod vec_memory_fusion;
 pub mod vec_load_fusion;
+mod vec_memory_fusion;
 pub mod vec_store_fusion;
 
 use serde::{Deserialize, Serialize};

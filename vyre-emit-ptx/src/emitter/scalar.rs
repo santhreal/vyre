@@ -28,7 +28,10 @@ impl BodyCtx<'_> {
             self.text,
             "    setp.lt.u32    {subnormal_or_zero}, {abs_bits}, 0x00800000;"
         );
-        let _ = writeln!(self.text, "    setp.gt.u32    {nan}, {abs_bits}, 0x7f800000;");
+        let _ = writeln!(
+            self.text,
+            "    setp.gt.u32    {nan}, {abs_bits}, 0x7f800000;"
+        );
         let _ = writeln!(
             self.text,
             "    selp.u32    {no_subnormal_bits}, {sign_bits}, {bits}, {subnormal_or_zero};"
@@ -149,7 +152,11 @@ impl BodyCtx<'_> {
             BinOp::Shl | BinOp::Shr if ty == PtxType::U32 || ty == PtxType::I32 => {
                 let out = self.alloc(ty);
                 let masked_shift = self.alloc(PtxType::U32);
-                let mnemonic = if matches!(op, BinOp::Shl) { "shl" } else { "shr" };
+                let mnemonic = if matches!(op, BinOp::Shl) {
+                    "shl"
+                } else {
+                    "shr"
+                };
                 let suffix = ptx_binop_suffix(op, ty);
                 let _ = writeln!(self.text, "    and.b32    {masked_shift}, {right}, 31;");
                 let _ = writeln!(

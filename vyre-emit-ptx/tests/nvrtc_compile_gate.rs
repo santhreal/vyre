@@ -485,19 +485,19 @@ fn mock_gate_vector_load_fusion_ptx_is_well_formed() {
 fn mock_gate_dynamic_vector_load_fusion_ptx_is_well_formed() {
     let ptx = ptx_for_dynamic_vector_load_fusion();
     assert!(
-        ptx.contains("ld.global.nc.v4.u32")
-            || ptx.contains("ld.global.v4.u32")
-            || ptx.contains("ld.global.nc.v2.u32")
-            || ptx.contains("ld.global.v2.u32"),
-        "missing dynamic-base fused vector load instruction\n{ptx}"
+        ptx.contains("ld.global.nc.v4.u32") || ptx.contains("ld.global.v4.u32"),
+        "missing dynamic-base fused v4 vector load instruction\n{ptx}"
     );
     let scalar_data_loads =
         ptx.matches("ld.global.u32").count() + ptx.matches("ld.global.nc.u32").count();
-    assert!(
-        scalar_data_loads <= 2,
-        "dynamic-base fused vector load should eliminate at least half of the scalar data loads\n{ptx}"
+    assert_eq!(
+        scalar_data_loads, 0,
+        "dynamic-base fused vector load must eliminate scalar data loads\n{ptx}"
     );
-    assert!(ptx.contains("st.global.u32"), "missing per-thread output store");
+    assert!(
+        ptx.contains("st.global.u32"),
+        "missing per-thread output store"
+    );
     assert!(ptx.contains("ret;"), "missing ret instruction");
 }
 
@@ -553,9 +553,8 @@ mod nvrtc_real {
         let ptx = CString::new(ptx)
             .map_err(|error| format!("emitted PTX contained interior NUL: {error}"))?;
         let mut module = std::ptr::null_mut();
-        let load = unsafe {
-            cudarc::driver::sys::cuModuleLoadData(&mut module, ptx.as_ptr().cast())
-        };
+        let load =
+            unsafe { cudarc::driver::sys::cuModuleLoadData(&mut module, ptx.as_ptr().cast()) };
         if load != CUresult::CUDA_SUCCESS {
             return Err(format!("cuModuleLoadData failed with {load:?}"));
         }
@@ -572,10 +571,7 @@ mod nvrtc_real {
         launch_vector_load_fusion_matrix(ptx, &[[7_u32, 11, 13, 17]])
     }
 
-    fn launch_vector_load_fusion_matrix(
-        ptx: &str,
-        cases: &[[u32; 4]],
-    ) -> Result<Vec<u32>, String> {
+    fn launch_vector_load_fusion_matrix(ptx: &str, cases: &[[u32; 4]]) -> Result<Vec<u32>, String> {
         let ctx = CudaContext::new(0)
             .map_err(|error| format!("CUDA context creation failed: {error}"))?;
         let stream = ctx.default_stream();
@@ -708,9 +704,9 @@ mod nvrtc_real {
                 .clone_dtoh(&output)
                 .map_err(|error| format!("output DtoH copy failed: {error}"))?;
             observed.push(
-                output_host
-                    .try_into()
-                    .map_err(|output: Vec<u32>| format!("expected 4 lanes, got {}", output.len()))?,
+                output_host.try_into().map_err(|output: Vec<u32>| {
+                    format!("expected 4 lanes, got {}", output.len())
+                })?,
             );
         }
         Ok(observed)
