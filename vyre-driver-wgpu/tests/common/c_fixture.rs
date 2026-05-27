@@ -49,6 +49,7 @@ pub(crate) fn build_fixture(tokens: &[FixtureToken]) -> Fixture {
     }
 }
 
+#[allow(unused_macros)]
 macro_rules! c_fixture {
     ($(($lexeme:literal, $kind:expr $(,)?)),+ $(,)?) => {
         $crate::c_ast_gpu_parity_support::build_fixture(&[
@@ -59,4 +60,5 @@ macro_rules! c_fixture {
     };
 }
 
+#[allow(unused_imports)]
 pub(crate) use c_fixture;
