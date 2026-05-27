@@ -103,6 +103,7 @@ impl IndexFacts {
         (lhs == prev_id && is_one(rhs)) || (rhs == prev_id && is_one(lhs))
     }
 
+    #[cfg(test)]
     pub(crate) fn index_is_multiple_of(
         &self,
         body: &KernelBody,
