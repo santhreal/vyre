@@ -1,14 +1,8 @@
 //! Structural contracts for the C macro expansion cache.
 
-use std::fs;
-use std::path::Path;
+mod support;
 
-fn crate_file(path: &str) -> String {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    fs::read_to_string(manifest.join(path)).unwrap_or_else(|error| {
-        panic!("failed to read {path}: {error}");
-    })
-}
+use support::{assert_byte_lru_core_rejects_and_accounts, crate_file};
 
 #[test]
 fn macro_expansion_caches_are_byte_bounded() {
@@ -31,13 +25,7 @@ fn macro_expansion_caches_are_byte_bounded() {
             && model.contains("ByteBoundLruCache<[u8; 16], macro_table::PackedMacroTable>"),
         "Fix: macro expansion caches must use the shared byte-bounded LRU core instead of bespoke entry-only caching."
     );
-    let byte_lru_cache = crate_file("src/parsing/c/preprocess/gpu_pipeline/byte_lru_cache.rs");
-    assert!(
-        byte_lru_cache.contains("entry_bytes > self.max_bytes")
-            && byte_lru_cache.contains(".checked_add(entry_bytes)")
-            && byte_lru_cache.contains("checked_sub(entry.bytes)"),
-        "Fix: shared GPU preprocessor cache core must reject oversized entries, evict to byte budget, and update byte accounting."
-    );
+    assert_byte_lru_core_rejects_and_accounts();
     assert!(
         model.contains("value.byte_len()"),
         "Fix: packed macro table cache must size packed table buffers before storing."
