@@ -14,6 +14,7 @@ const DEFAULT_TOP_N: usize = 20;
 const DEFAULT_MIN_SCORE: f64 = 0.86;
 const DEFAULT_MAX_FILE_BYTES: u64 = 512 * 1024;
 const SHINGLE_WIDTH: usize = 8;
+const MIN_SOURCE_TOKENS: usize = 96;
 const MAX_CANDIDATE_SHINGLE_FANOUT: usize = 64;
 const MIN_SHARED_RARE_SHINGLES: u16 = 16;
 
@@ -436,7 +437,7 @@ fn fingerprint_files(files: &[PathBuf]) -> Vec<SourceFingerprint> {
             continue;
         }
         let tokens = normalize_tokens(&source);
-        if tokens.len() < SHINGLE_WIDTH * 2 {
+        if tokens.len() < MIN_SOURCE_TOKENS {
             continue;
         }
         let shingles = shingle_counts(&tokens, SHINGLE_WIDTH);
@@ -1066,6 +1067,23 @@ mod tests {
 
         assert_eq!(tracked_only.scanned_files, 1);
         assert_eq!(with_untracked.scanned_files, 2);
+    }
+
+    #[test]
+    fn tiny_wrapper_sources_do_not_enter_similarity_scan() {
+        let dir = tempfile::TempDir::new().expect("tempdir");
+        let path = dir.path().join("wrapper.rs");
+        fs::write(
+            &path,
+            "pub struct AddDualReference;\ndefine_arith_dual_reference!(AddDualReference, u32::wrapping_add, super::common::wrapping_add_bits_reference);\n",
+        )
+        .expect("wrapper fixture");
+
+        let fingerprints = fingerprint_files(&[path]);
+        assert!(
+            fingerprints.is_empty(),
+            "tiny macro/module wrappers should not outrank implementation duplicates"
+        );
     }
 
     #[test]
