@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use super::common::decode_u32_words_for_section;
-use crate::object_format::{parse_embedded_vyrecob2, SectionTag, Vyrecob2};
+use super::{common::decode_u32_words_for_section, decode_embedded_object, read_object_file};
+use crate::object_format::{SectionTag, Vyrecob2};
 
 /// Decoded ABI layout table from a `vyre-frontend-c` object.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,8 +29,7 @@ pub struct CObjectAbiLayoutEntry {
 
 /// Decode ABI layout rows from a compiled `vyre-frontend-c` object.
 pub fn decode_object_abi_layout(object_bytes: &[u8]) -> Result<CObjectAbiLayout, String> {
-    let container = parse_embedded_vyrecob2(object_bytes)?;
-    decode_object_abi_layout_from_container(&container)
+    decode_embedded_object(object_bytes, decode_object_abi_layout_from_container)
 }
 
 pub(crate) fn decode_object_abi_layout_from_container(
@@ -55,9 +54,7 @@ pub(crate) fn decode_object_abi_layout_from_container(
 
 /// Read and decode ABI layout rows from a compiled object path.
 pub fn decode_object_abi_layout_file(path: &Path) -> Result<CObjectAbiLayout, String> {
-    let bytes = std::fs::read(path)
-        .map_err(|error| format!("vyre-frontend-c: read object {}: {error}", path.display()))?;
-    decode_object_abi_layout(&bytes)
+    read_object_file(path, decode_object_abi_layout)
 }
 
 fn decode_abi_layout_entries(
