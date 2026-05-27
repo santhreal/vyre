@@ -20,9 +20,7 @@ use serde::{Deserialize, Serialize};
 use vyre_foundation::ir::DataType;
 use vyre_lower::KernelDescriptor;
 
-use super::vec_memory_fusion::{
-    analyze_memory_fusion, MemoryFusionCandidate, MemoryFusionKind,
-};
+use super::vec_memory_fusion::{analyze_memory_fusion, MemoryFusionCandidate, MemoryFusionKind};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FusionCandidate {

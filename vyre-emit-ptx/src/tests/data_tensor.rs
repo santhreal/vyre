@@ -221,9 +221,18 @@ fn bool_global_load_uses_word_load_then_predicate_set() {
     };
 
     let s = emit(&kernel).unwrap();
-    assert!(!s.contains("ld.global.pred"), "PTX cannot load predicate registers from memory:\n{s}");
-    assert!(s.contains("ld.global.u32"), "Bool memory load must use the physical word ABI:\n{s}");
-    assert!(s.contains("setp.ne.u32"), "Bool memory load must canonicalize non-zero words to predicates:\n{s}");
+    assert!(
+        !s.contains("ld.global.pred"),
+        "PTX cannot load predicate registers from memory:\n{s}"
+    );
+    assert!(
+        s.contains("ld.global.u32"),
+        "Bool memory load must use the physical word ABI:\n{s}"
+    );
+    assert!(
+        s.contains("setp.ne.u32"),
+        "Bool memory load must canonicalize non-zero words to predicates:\n{s}"
+    );
 }
 
 #[test]
@@ -265,9 +274,18 @@ fn bool_global_store_materializes_predicate_word() {
     };
 
     let s = emit(&kernel).unwrap();
-    assert!(!s.contains("st.global.pred"), "PTX cannot store predicate registers to memory:\n{s}");
-    assert!(s.contains("selp.u32"), "Bool memory store must materialize a 0/1 word:\n{s}");
-    assert!(s.contains("st.global.u32"), "Bool memory store must use the physical word ABI:\n{s}");
+    assert!(
+        !s.contains("st.global.pred"),
+        "PTX cannot store predicate registers to memory:\n{s}"
+    );
+    assert!(
+        s.contains("selp.u32"),
+        "Bool memory store must materialize a 0/1 word:\n{s}"
+    );
+    assert!(
+        s.contains("st.global.u32"),
+        "Bool memory store must use the physical word ABI:\n{s}"
+    );
 }
 
 #[test]

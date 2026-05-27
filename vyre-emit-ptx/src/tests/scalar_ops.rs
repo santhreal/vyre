@@ -92,7 +92,11 @@ fn integer_single_use_mul_add_emits_mad_without_dead_mul() {
                 },
             ],
             child_bodies: vec![],
-            literals: vec![LiteralValue::I32(-3), LiteralValue::I32(7), LiteralValue::I32(5)],
+            literals: vec![
+                LiteralValue::I32(-3),
+                LiteralValue::I32(7),
+                LiteralValue::I32(5),
+            ],
         },
     };
 
@@ -152,7 +156,11 @@ fn integer_multi_use_mul_add_keeps_separate_mul() {
                 },
             ],
             child_bodies: vec![],
-            literals: vec![LiteralValue::I32(-3), LiteralValue::I32(7), LiteralValue::I32(5)],
+            literals: vec![
+                LiteralValue::I32(-3),
+                LiteralValue::I32(7),
+                LiteralValue::I32(5),
+            ],
         },
     };
 
