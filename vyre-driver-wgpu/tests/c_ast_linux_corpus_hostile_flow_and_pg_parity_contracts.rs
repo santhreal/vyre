@@ -16,9 +16,8 @@
 mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
-    assert_full_pipeline_parity, build_fixture, row_indices,
-    run_gpu_pg_lower_with_count as run_gpu_pg_lower, word_at, Fixture, FixtureToken,
-    VAST_STRIDE_U32,
+    assert_full_pipeline_parity, assert_gpu_pg_parity, assert_pg_preserves_row, build_fixture,
+    kind_at, row_indices, Fixture, FixtureToken,
 };
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
@@ -30,70 +29,6 @@ use vyre_libs::parsing::c::parse::vast::{
     C_AST_KIND_LABEL_STMT, C_AST_KIND_RETURN_STMT, C_AST_KIND_SWITCH_STMT, C_AST_KIND_WHILE_STMT,
 };
 use vyre_primitives::predicate::node_kind;
-
-const PG_STRIDE_U32: usize = 6;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-fn kind_at(rows: &[u8], idx: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32)
-}
-
-fn pg_word_at(pg: &[u8], idx: usize, field: usize) -> u32 {
-    word_at(pg, idx * PG_STRIDE_U32 + field)
-}
-
-fn node_count_from_vast(vast: &[u8]) -> u32 {
-    (vast.len() / (VAST_STRIDE_U32 * 4)) as u32
-}
-
-fn assert_gpu_pg_parity(_fix: &Fixture, typed: &[u8], label: &str) {
-    let expected = reference_ast_to_pg_nodes(typed);
-    let gpu = run_gpu_pg_lower(typed, node_count_from_vast(typed));
-    assert_eq!(gpu, expected, "GPU PG lowerer must match CPU for {label}");
-}
-
-fn assert_pg_preserves_row(
-    typed_vast: &[u8],
-    pg: &[u8],
-    tok_starts: &[u32],
-    tok_lens: &[u32],
-    idx: usize,
-    expected_kind: u32,
-) {
-    assert_eq!(
-        pg_word_at(pg, idx, 0),
-        expected_kind,
-        "PG kind mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 1),
-        tok_starts[idx],
-        "PG span_start mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 2),
-        tok_starts[idx] + tok_lens[idx],
-        "PG span_end mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 3),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 1),
-        "PG parent mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 4),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 2),
-        "PG first_child mismatch at row {idx}"
-    );
-    assert_eq!(
-        pg_word_at(pg, idx, 5),
-        word_at(typed_vast, idx * VAST_STRIDE_U32 + 3),
-        "PG next_sibling mismatch at row {idx}"
-    );
-}
 
 fn lexeme_indices(fix: &Fixture, lexeme: &str) -> Vec<usize> {
     fix.tok_starts
