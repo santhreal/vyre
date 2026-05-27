@@ -8,7 +8,7 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
@@ -106,131 +106,137 @@ where
 
 #[test]
 fn cuda_call_to_one_step() {
-    let backend = live_dispatcher();
-    // Caller 0 -> callee 1 via CALL_ARG. Edge kind mask = CALL_ARG.
-    let edge_offsets = vec![0u32, 1, 1];
-    let edge_targets = vec![1u32];
-    let edge_kind_mask = vec![edge_kind::CALL_ARG];
-    let frontier = vec![0b01u32]; // {0}
-    let cpu = call_to_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
-    let gpu = run_forward(
-        &backend,
-        call_to,
-        2,
-        &edge_offsets,
-        &edge_targets,
-        &edge_kind_mask,
-        &frontier,
-    );
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![0b10u32]);
+    with_live_backend("cuda_call_to_one_step", |backend| {
+        // Caller 0 -> callee 1 via CALL_ARG. Edge kind mask = CALL_ARG.
+        let edge_offsets = vec![0u32, 1, 1];
+        let edge_targets = vec![1u32];
+        let edge_kind_mask = vec![edge_kind::CALL_ARG];
+        let frontier = vec![0b01u32]; // {0}
+        let cpu = call_to_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let gpu = run_forward(
+            backend,
+            call_to,
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+        );
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, vec![0b10u32]);
+    });
 }
 
 #[test]
 fn cuda_call_to_skips_non_call_edges() {
-    let backend = live_dispatcher();
-    // Edge has kind ASSIGNMENT, not CALL_ARG. call_to must skip it.
-    let edge_offsets = vec![0u32, 1, 1];
-    let edge_targets = vec![1u32];
-    let edge_kind_mask = vec![edge_kind::ASSIGNMENT];
-    let frontier = vec![0b01u32];
-    let cpu = call_to_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
-    let gpu = run_forward(
-        &backend,
-        call_to,
-        2,
-        &edge_offsets,
-        &edge_targets,
-        &edge_kind_mask,
-        &frontier,
-    );
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![0u32]);
+    with_live_backend("cuda_call_to_skips_non_call_edges", |backend| {
+        // Edge has kind ASSIGNMENT, not CALL_ARG. call_to must skip it.
+        let edge_offsets = vec![0u32, 1, 1];
+        let edge_targets = vec![1u32];
+        let edge_kind_mask = vec![edge_kind::ASSIGNMENT];
+        let frontier = vec![0b01u32];
+        let cpu = call_to_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let gpu = run_forward(
+            backend,
+            call_to,
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+        );
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, vec![0u32]);
+    });
 }
 
 #[test]
 fn cuda_return_value_of_one_step() {
-    let backend = live_dispatcher();
-    // Callsite 0 → return-binding 1 via RETURN edge.
-    let edge_offsets = vec![0u32, 1, 1];
-    let edge_targets = vec![1u32];
-    let edge_kind_mask = vec![edge_kind::RETURN];
-    let frontier = vec![0b01u32];
-    let cpu = return_value_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
-    let gpu = run_forward(
-        &backend,
-        return_value_of,
-        2,
-        &edge_offsets,
-        &edge_targets,
-        &edge_kind_mask,
-        &frontier,
-    );
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![0b10u32]);
+    with_live_backend("cuda_return_value_of_one_step", |backend| {
+        // Callsite 0 → return-binding 1 via RETURN edge.
+        let edge_offsets = vec![0u32, 1, 1];
+        let edge_targets = vec![1u32];
+        let edge_kind_mask = vec![edge_kind::RETURN];
+        let frontier = vec![0b01u32];
+        let cpu = return_value_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let gpu = run_forward(
+            backend,
+            return_value_of,
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+        );
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, vec![0b10u32]);
+    });
 }
 
 #[test]
 fn cuda_return_value_of_ignores_call_arg_edges() {
-    let backend = live_dispatcher();
-    let edge_offsets = vec![0u32, 1, 1];
-    let edge_targets = vec![1u32];
-    let edge_kind_mask = vec![edge_kind::CALL_ARG];
-    let frontier = vec![0b01u32];
-    let cpu = return_value_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
-    let gpu = run_forward(
-        &backend,
-        return_value_of,
-        2,
-        &edge_offsets,
-        &edge_targets,
-        &edge_kind_mask,
-        &frontier,
-    );
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![0u32]);
+    with_live_backend("cuda_return_value_of_ignores_call_arg_edges", |backend| {
+        let edge_offsets = vec![0u32, 1, 1];
+        let edge_targets = vec![1u32];
+        let edge_kind_mask = vec![edge_kind::CALL_ARG];
+        let frontier = vec![0b01u32];
+        let cpu = return_value_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let gpu = run_forward(
+            backend,
+            return_value_of,
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+        );
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, vec![0u32]);
+    });
 }
 
 #[test]
 fn cuda_arg_of_unspecified_one_step_backward() {
-    let backend = live_dispatcher();
-    // Caller 0 -> arg-expr 1 via CALL_ARG. arg_of from {1} → {0}.
-    let edge_offsets = vec![0u32, 1, 1];
-    let edge_targets = vec![1u32];
-    let edge_kind_mask = vec![edge_kind::CALL_ARG];
-    let frontier = vec![0b10u32]; // {1}
-    let cpu = arg_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
-    let gpu = run_backward(
-        &backend,
-        arg_of,
-        2,
-        &edge_offsets,
-        &edge_targets,
-        &edge_kind_mask,
-        &frontier,
-    );
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![0b01u32]);
+    with_live_backend("cuda_arg_of_unspecified_one_step_backward", |backend| {
+        // Caller 0 -> arg-expr 1 via CALL_ARG. arg_of from {1} → {0}.
+        let edge_offsets = vec![0u32, 1, 1];
+        let edge_targets = vec![1u32];
+        let edge_kind_mask = vec![edge_kind::CALL_ARG];
+        let frontier = vec![0b10u32]; // {1}
+        let cpu = arg_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let gpu = run_backward(
+            backend,
+            arg_of,
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+        );
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, vec![0b01u32]);
+    });
 }
 
 #[test]
 fn cuda_arg_of_kind_filtered_out() {
-    let backend = live_dispatcher();
-    // Edge is RETURN, not CALL_ARG. arg_of must not pick it up.
-    let edge_offsets = vec![0u32, 1, 1];
-    let edge_targets = vec![1u32];
-    let edge_kind_mask = vec![edge_kind::RETURN];
-    let frontier = vec![0b10u32];
-    let cpu = arg_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
-    let gpu = run_backward(
-        &backend,
-        arg_of,
-        2,
-        &edge_offsets,
-        &edge_targets,
-        &edge_kind_mask,
-        &frontier,
-    );
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![0u32]);
+    with_live_backend("cuda_arg_of_kind_filtered_out", |backend| {
+        // Edge is RETURN, not CALL_ARG. arg_of must not pick it up.
+        let edge_offsets = vec![0u32, 1, 1];
+        let edge_targets = vec![1u32];
+        let edge_kind_mask = vec![edge_kind::RETURN];
+        let frontier = vec![0b10u32];
+        let cpu = arg_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let gpu = run_backward(
+            backend,
+            arg_of,
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+        );
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, vec![0u32]);
+    });
 }
