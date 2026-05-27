@@ -16,57 +16,72 @@ fn assert_ptx_structure(case: &EmitAdversarialCase, ptx: &str) {
         EmitAdversarialFamily::DeepIfElse => {
             assert!(
                 ptx.contains("$L_if_else_") || ptx.contains("$L_if_end_"),
-                "{}: nested if/else must emit branch labels\n{ptx}"
+                "{}: nested if/else must emit branch labels\n{}",
+                case.id, ptx
             );
         }
         EmitAdversarialFamily::HostileWorkgroup => {
             assert!(
                 ptx.contains("ld.global") && ptx.contains("st.global"),
-                "{}: workgroup-indexed store must touch global memory\n{ptx}"
+                "{}: workgroup-indexed store must touch global memory\n{}",
+                case.id, ptx
             );
         }
         EmitAdversarialFamily::MultiBinding => {
             assert!(
                 ptx.matches(".param .u64").count() >= 3,
-                "{}: ≥3 bindings must produce ≥3 u64 params\n{ptx}"
+                "{}: ≥3 bindings must produce ≥3 u64 params\n{}",
+                case.id, ptx
             );
             assert!(
                 ptx.contains("st.global.f32") || ptx.contains("add.f32"),
-                "{}: f32 binding must lower to f32 PTX ops\n{ptx}"
+                "{}: f32 binding must lower to f32 PTX ops\n{}",
+                case.id, ptx
             );
         }
         EmitAdversarialFamily::SharedGlobalTile => {
             assert!(
                 ptx.contains("shared") || ptx.contains(".shared"),
-                "{}: shared tile must allocate shared memory\n{ptx}"
+                "{}: shared tile must allocate shared memory\n{}",
+                case.id, ptx
             );
             assert!(
                 ptx.contains("bar.sync"),
-                "{}: tile kernel must emit workgroup barrier\n{ptx}"
+                "{}: tile kernel must emit workgroup barrier\n{}",
+                case.id, ptx
             );
         }
         EmitAdversarialFamily::LoopWithBarrier => {
+            let has_structured_loop = ptx.contains("$L_for_head_") && ptx.contains("bar.sync");
+            let has_precisely_unrolled_loop =
+                ptx.matches("bar.sync").count() == 4 && ptx.matches("st.global.u32").count() == 4;
             assert!(
-                ptx.contains("$L_for_head_") && ptx.contains("bar.sync"),
-                "{}: loop+barrier must emit loop head and CTA barrier\n{ptx}"
-            );
-        }
-        EmitAdversarialFamily::AtomicCounter => {
-            assert!(
-                ptx.contains("atom.global"),
-                "{}: atomic counter must emit global atom instruction\n{ptx}"
-            );
-        }
-        EmitAdversarialFamily::DeadIdentityChain => {
-            assert!(
-                ptx.contains("st.global.u32"),
-                "{}: dead identity chain must still store the live literal\n{ptx}"
+                has_structured_loop || has_precisely_unrolled_loop,
+                "{}: loop+barrier must emit a structured loop or exact four-iteration unrolled CTA barrier/store sequence\n{}",
+                case.id,
+                ptx
             );
         }
         EmitAdversarialFamily::VecLoadFusion => {
             assert!(
                 ptx.contains("ld.global.nc.v4.u32") || ptx.contains("ld.global.v4.u32"),
-                "{}: unit-stride quad load must fuse to vector load\n{ptx}"
+                "{}: unit-stride quad load must fuse to vector load\n{}",
+                case.id,
+                ptx
+            );
+        }
+        EmitAdversarialFamily::AtomicCounter => {
+            assert!(
+                ptx.contains("atom.global"),
+                "{}: atomic counter must emit global atom instruction\n{}",
+                case.id, ptx
+            );
+        }
+        EmitAdversarialFamily::DeadIdentityChain => {
+            assert!(
+                ptx.contains("st.global.u32"),
+                "{}: dead identity chain must still store the live literal\n{}",
+                case.id, ptx
             );
         }
         EmitAdversarialFamily::RejectCall | EmitAdversarialFamily::RejectGridSyncBarrier => {
@@ -128,11 +143,16 @@ fn dead_identity_chain_optimized_ptx_is_not_longer_than_raw() {
 fn vec_load_fusion_emits_no_scalar_load_fallback() {
     let case = emit_adversarial_corpus::case_by_id("adv_vec_load_fusion").unwrap();
     let ptx = vyre_emit_ptx::emit_optimized(&case.descriptor).unwrap();
+    assert!(
+        ptx.contains("ld.global.nc.v4.u32") || ptx.contains("ld.global.v4.u32"),
+        "Fix: unit-stride quad load must fuse to a PTX vector load\n{ptx}"
+    );
     assert_eq!(
         ptx.matches("ld.global.u32").count(),
         0,
         "Fix: fused vector load must not leave scalar ld.global.u32 behind\n{ptx}"
     );
+    assert!(ptx.contains("st.global.u32"), "must store result\n{ptx}");
 }
 
 #[test]

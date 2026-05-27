@@ -30,17 +30,24 @@ fn assert_spirv_structure(case: &EmitAdversarialCase, words: &[u32]) {
     );
 
     match case.family {
-        EmitAdversarialFamily::DeepIfElse | EmitAdversarialFamily::LoopWithBarrier => {
+        EmitAdversarialFamily::DeepIfElse => {
             assert!(
                 spirv_contains_op(words, OP_LOOP_MERGE) || words.len() > 48,
-                "{}: control-flow kernel must emit structured CFG ops",
+                "{}: nested if/else must emit structured CFG ops",
                 case.id
             );
         }
-        EmitAdversarialFamily::SharedGlobalTile | EmitAdversarialFamily::LoopWithBarrier => {
+        EmitAdversarialFamily::LoopWithBarrier => {
             assert!(
                 spirv_contains_op(words, OP_MEMORY_BARRIER),
-                "{}: barrier kernel must emit OpMemoryBarrier",
+                "{}: loop+barrier must emit OpMemoryBarrier",
+                case.id
+            );
+        }
+        EmitAdversarialFamily::SharedGlobalTile => {
+            assert!(
+                spirv_contains_op(words, OP_MEMORY_BARRIER),
+                "{}: shared tile must emit OpMemoryBarrier",
                 case.id
             );
         }

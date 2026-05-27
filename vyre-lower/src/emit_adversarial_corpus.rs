@@ -506,7 +506,22 @@ fn vec_load_fusion() -> EmitAdversarialCase {
                         Some(7),
                     ),
                     op(KernelOpKind::LoadGlobal, vec![0, 7], Some(8)),
-                    op(KernelOpKind::StoreGlobal, vec![1, 0, 8], None),
+                    op(
+                        KernelOpKind::BinOpKind(BinOp::Add),
+                        vec![2, 4],
+                        Some(9),
+                    ),
+                    op(
+                        KernelOpKind::BinOpKind(BinOp::Add),
+                        vec![9, 6],
+                        Some(10),
+                    ),
+                    op(
+                        KernelOpKind::BinOpKind(BinOp::Add),
+                        vec![10, 8],
+                        Some(11),
+                    ),
+                    op(KernelOpKind::StoreGlobal, vec![1, 0, 11], None),
                 ],
                 child_bodies: vec![],
                 literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
