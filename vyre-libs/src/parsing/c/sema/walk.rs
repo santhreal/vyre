@@ -1,4 +1,5 @@
 use super::predicates::expr_is_any;
+use super::scan::emit_forward_matching_paren_scan;
 use crate::parsing::c::lex::tokens::*;
 use vyre::ir::{Expr, Node};
 
@@ -283,52 +284,24 @@ fn emit_parameter_scope_from_lparen(
     node_idx: Expr,
     num_tokens: &Expr,
 ) -> Vec<Node> {
-    vec![
-        Node::let_bind("fn_param_rparen", Expr::u32(u32::MAX)),
-        Node::let_bind("fn_param_right_depth", Expr::u32(1)),
-        Node::loop_for(
-            "fn_param_right_scan",
-            Expr::add(Expr::var("fn_param_lparen"), Expr::u32(1)),
-            num_tokens.clone(),
-            vec![
-                Node::let_bind(
-                    "fn_param_right_tok",
-                    Expr::load(tok_types, Expr::var("fn_param_right_scan")),
-                ),
-                Node::if_then(
-                    Expr::eq(Expr::var("fn_param_right_tok"), Expr::u32(TOK_LPAREN)),
-                    vec![Node::assign(
-                        "fn_param_right_depth",
-                        Expr::add(Expr::var("fn_param_right_depth"), Expr::u32(1)),
-                    )],
-                ),
-                Node::if_then(
-                    Expr::and(
-                        Expr::eq(Expr::var("fn_param_rparen"), Expr::u32(u32::MAX)),
-                        Expr::eq(Expr::var("fn_param_right_tok"), Expr::u32(TOK_RPAREN)),
-                    ),
-                    vec![Node::if_then_else(
-                        Expr::eq(Expr::var("fn_param_right_depth"), Expr::u32(1)),
-                        vec![Node::assign(
-                            "fn_param_rparen",
-                            Expr::var("fn_param_right_scan"),
-                        )],
-                        vec![Node::assign(
-                            "fn_param_right_depth",
-                            Expr::sub(Expr::var("fn_param_right_depth"), Expr::u32(1)),
-                        )],
-                    )],
-                ),
-            ],
+    let mut nodes = emit_forward_matching_paren_scan(
+        tok_types,
+        "fn_param_right_scan",
+        Expr::add(Expr::var("fn_param_lparen"), Expr::u32(1)),
+        num_tokens.clone(),
+        "fn_param_right_tok",
+        "fn_param_right_depth",
+        "fn_param_rparen",
+        None,
+    );
+    nodes.push(Node::if_then(
+        Expr::and(
+            Expr::ne(Expr::var("fn_param_rparen"), Expr::u32(u32::MAX)),
+            Expr::lt(node_idx.clone(), Expr::var("fn_param_rparen")),
         ),
-        Node::if_then(
-            Expr::and(
-                Expr::ne(Expr::var("fn_param_rparen"), Expr::u32(u32::MAX)),
-                Expr::lt(node_idx.clone(), Expr::var("fn_param_rparen")),
-            ),
-            emit_parameter_scope_boundary(tok_types, node_idx, num_tokens),
-        ),
-    ]
+        emit_parameter_scope_boundary(tok_types, node_idx, num_tokens),
+    ));
+    nodes
 }
 
 fn emit_parameter_scope_boundary(tok_types: &str, node_idx: Expr, num_tokens: &Expr) -> Vec<Node> {

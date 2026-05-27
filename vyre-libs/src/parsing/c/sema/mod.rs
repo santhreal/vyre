@@ -13,6 +13,7 @@ pub mod lookup;
 mod predicates;
 /// Registered C semantic-analysis programs.
 pub mod registry;
+mod scan;
 /// Scope-walk IR fragments.
 pub mod walk;
 
