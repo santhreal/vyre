@@ -22,6 +22,12 @@ pub(crate) fn parse_litstr_array(
         .collect()
 }
 
+/// Parse a bracketed array of Rust expressions.
+pub(crate) fn parse_expr_array(input: ParseStream<'_>) -> syn::Result<Vec<Expr>> {
+    let array: ExprArray = input.parse()?;
+    Ok(array.elems.into_iter().collect())
+}
+
 /// Reject repeated top-level macro arguments before a later value can silently
 /// override an earlier value.
 pub(crate) fn reject_duplicate_key(

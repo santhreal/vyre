@@ -28,7 +28,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
-use syn::{parse_macro_input, Expr, ExprArray, LitStr, Token};
+use syn::{parse_macro_input, Expr, LitStr, Token};
 
 struct DefineOpArgs {
     id: LitStr,
@@ -61,7 +61,7 @@ impl Parse for DefineOpArgs {
                 "category" => category = Some(input.parse()?),
                 "inputs" => inputs = parse_str_array(input)?,
                 "outputs" => outputs = parse_str_array(input)?,
-                "laws" => laws = parse_expr_array(input)?,
+                "laws" => laws = crate::parse_helpers::parse_expr_array(input)?,
                 "program" => program = Some(input.parse()?),
                 other => {
                     return Err(syn::Error::new(
@@ -100,11 +100,6 @@ fn parse_str_array(input: ParseStream<'_>) -> syn::Result<Vec<LitStr>> {
         input,
         "expected string literal. Fix: use string type names such as [\"u32\"].",
     )
-}
-
-fn parse_expr_array(input: ParseStream<'_>) -> syn::Result<Vec<Expr>> {
-    let array: ExprArray = input.parse()?;
-    Ok(array.elems.into_iter().collect())
 }
 
 pub(crate) fn define_op_impl(item: TokenStream) -> TokenStream {
