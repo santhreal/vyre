@@ -429,6 +429,142 @@ fn ptx_for_vector_store_fusion() -> String {
     vyre_emit_ptx::emit_optimized(&desc).unwrap()
 }
 
+fn ptx_for_dynamic_vector_store_fusion() -> String {
+    let desc = KernelDescriptor {
+        id: "dynamic_vector_store_fusion".into(),
+        bindings: BindingLayout {
+            slots: vec![slot_typed(
+                0,
+                "output",
+                DataType::U32,
+                BindingVisibility::WriteOnly,
+            )],
+        },
+        dispatch: Dispatch::new(64, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::LocalInvocationId,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                    operands: vec![0, 1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![2],
+                    result: Some(4),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![3],
+                    result: Some(5),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![4],
+                    result: Some(6),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![0, 6],
+                    result: Some(7),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![5],
+                    result: Some(8),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![0, 8],
+                    result: Some(9),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![6],
+                    result: Some(10),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![0, 10],
+                    result: Some(11),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![7],
+                    result: Some(12),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![0, 12],
+                    result: Some(13),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 2, 7],
+                    result: None,
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![2, 3],
+                    result: Some(14),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 14, 9],
+                    result: None,
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![2, 4],
+                    result: Some(15),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 15, 11],
+                    result: None,
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![2, 5],
+                    result: Some(16),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 16, 13],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![
+                LiteralValue::U32(4),
+                LiteralValue::U32(1),
+                LiteralValue::U32(2),
+                LiteralValue::U32(3),
+                LiteralValue::U32(1000),
+                LiteralValue::U32(1001),
+                LiteralValue::U32(1002),
+                LiteralValue::U32(1003),
+            ],
+        },
+    };
+    vyre_emit_ptx::emit_optimized(&desc).unwrap()
+}
+
 #[test]
 fn mock_gate_add_ptx_is_well_formed() {
     let ptx = ptx_for_op(KernelOpKind::BinOpKind(BinOp::Add));
@@ -517,6 +653,21 @@ fn mock_gate_vector_store_fusion_ptx_is_well_formed() {
 }
 
 #[test]
+fn mock_gate_dynamic_vector_store_fusion_ptx_is_well_formed() {
+    let ptx = ptx_for_dynamic_vector_store_fusion();
+    assert!(
+        ptx.contains("st.global.v4.u32"),
+        "missing dynamic-base fused vector store instruction\n{ptx}"
+    );
+    assert_eq!(
+        ptx.matches("st.global.u32").count(),
+        0,
+        "dynamic-base fused vector store must not leave scalar global stores\n{ptx}"
+    );
+    assert!(ptx.contains("ret;"), "missing ret instruction");
+}
+
+#[test]
 fn mock_gate_rejects_malformed_placeholder() {
     // A syntactically invalid PTX fragment should not pass structural
     // checks that real emitted PTX satisfies.
@@ -537,8 +688,8 @@ mod nvrtc_real {
     use std::ffi::CString;
 
     use super::{
-        ptx_for_dynamic_vector_load_fusion, ptx_for_op, ptx_for_vector_load_fusion,
-        ptx_for_vector_store_fusion,
+        ptx_for_dynamic_vector_load_fusion, ptx_for_dynamic_vector_store_fusion, ptx_for_op,
+        ptx_for_vector_load_fusion, ptx_for_vector_store_fusion,
     };
     use cudarc::driver::{sys::CUresult, CudaContext, LaunchConfig, PushKernelArg};
     use cudarc::nvrtc::Ptx;
@@ -712,6 +863,40 @@ mod nvrtc_real {
         Ok(observed)
     }
 
+    fn launch_dynamic_vector_store_fusion_ptx(
+        ptx: &str,
+        thread_count: usize,
+    ) -> Result<Vec<u32>, String> {
+        let ctx = CudaContext::new(0)
+            .map_err(|error| format!("CUDA context creation failed: {error}"))?;
+        let stream = ctx.default_stream();
+        let module = ctx
+            .load_module(Ptx::from_src(ptx))
+            .map_err(|error| format!("CUDA module load failed: {error}"))?;
+        let kernel = module
+            .load_function("main")
+            .map_err(|error| format!("CUDA function lookup failed: {error}"))?;
+        let mut output = stream
+            .alloc_zeros::<u32>(thread_count * 4)
+            .map_err(|error| format!("output allocation failed: {error}"))?;
+        let params = stream
+            .clone_htod(&[thread_count as u32, (thread_count * 4) as u32])
+            .map_err(|error| format!("params HtoD copy failed: {error}"))?;
+
+        unsafe {
+            stream
+                .launch_builder(&kernel)
+                .arg(&mut output)
+                .arg(&params)
+                .launch(LaunchConfig::for_num_elems(thread_count as u32))
+        }
+        .map_err(|error| format!("dynamic vector store kernel launch failed: {error}"))?;
+
+        stream
+            .clone_dtoh(&output)
+            .map_err(|error| format!("output DtoH copy failed: {error}"))
+    }
+
     fn vector_load_runtime_cases() -> Vec<[u32; 4]> {
         (0_u32..64)
             .map(|seed| {
@@ -748,6 +933,20 @@ mod nvrtc_real {
                     .wrapping_mul(0x045d_9f3b)
                     .rotate_left((value % 17) + 1)
                     ^ 0x9e37_79b9
+            })
+            .collect()
+    }
+
+    fn dynamic_vector_store_expected(thread_count: usize) -> Vec<u32> {
+        (0..thread_count)
+            .flat_map(|thread| {
+                let thread = thread as u32;
+                [
+                    thread.wrapping_add(1000),
+                    thread.wrapping_add(1001),
+                    thread.wrapping_add(1002),
+                    thread.wrapping_add(1003),
+                ]
             })
             .collect()
     }
@@ -814,6 +1013,17 @@ mod nvrtc_real {
         assert!(
             compiled.is_ok(),
             "CUDA driver failed to load vector-store fusion PTX: {:?}",
+            compiled.err()
+        );
+    }
+
+    #[test]
+    fn nvrtc_compiles_dynamic_vector_store_fusion_ptx() {
+        let ptx = ptx_for_dynamic_vector_store_fusion();
+        let compiled = driver_loads_ptx(&ptx);
+        assert!(
+            compiled.is_ok(),
+            "CUDA driver failed to load dynamic vector-store fusion PTX: {:?}",
             compiled.err()
         );
     }
@@ -892,6 +1102,19 @@ mod nvrtc_real {
             output,
             Ok(expected),
             "CUDA execution must overwrite every sentinel lane through the fused vector store"
+        );
+    }
+
+    #[test]
+    fn nvrtc_executes_dynamic_vector_store_fusion_multithread_matrix() {
+        let ptx = ptx_for_dynamic_vector_store_fusion();
+        let thread_count = 64;
+        let expected = dynamic_vector_store_expected(thread_count);
+        let output = launch_dynamic_vector_store_fusion_ptx(&ptx, thread_count);
+        assert_eq!(
+            output,
+            Ok(expected),
+            "CUDA execution must materialize every dynamic-base fused vector-store lane"
         );
     }
 }
