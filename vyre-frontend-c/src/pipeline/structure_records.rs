@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::mem;
 
-use vyre::ir::Expr;
+use vyre::ir::{Expr, Program};
 use vyre::{DispatchConfig, VyreBackend};
 use vyre_libs::parsing::c::parse::structure::{c11_extract_calls, c11_extract_functions};
 
@@ -133,6 +133,27 @@ fn compact_sparse_record_stream(
     Ok(records)
 }
 
+fn dispatch_structure_stage_into<F>(
+    backend: &dyn VyreBackend,
+    stage_key: crate::hash::StableHash128,
+    build_program: F,
+    inputs: &[&[u8]],
+    config: &DispatchConfig,
+    outputs: &mut Vec<Vec<u8>>,
+) -> Result<(), vyre::BackendError>
+where
+    F: FnOnce() -> Result<Program, String>,
+{
+    if backend.id() == "cuda" {
+        let program = build_program().map_err(|message| vyre::BackendError::DispatchFailed {
+            code: None,
+            message,
+        })?;
+        return backend.dispatch_borrowed_into(&program, inputs, config, outputs);
+    }
+    dispatch_borrowed_stage_cached_into(backend, stage_key, build_program, inputs, config, outputs)
+}
+
 pub(super) fn build_structure_records(
     backend: &dyn VyreBackend,
     token_types: &[u8],
@@ -181,7 +202,7 @@ fn build_structure_records_with_scratch(
         brace_pairs,
         zero_function_count.as_slice(),
     ];
-    let function_dispatch = dispatch_borrowed_stage_cached_into(
+    let function_dispatch = dispatch_structure_stage_into(
         backend,
         fn_key,
         || {
@@ -257,8 +278,14 @@ fn build_structure_records_with_scratch(
         "c11_extract_calls_sparse_records_v3",
         &[nt as u64, function_count as u64],
     );
-    let call_inputs = [token_types, paren_pairs, function_input];
-    let call_dispatch = dispatch_borrowed_stage_cached_into(
+    let zero_call_count = 0u32.to_le_bytes();
+    let call_inputs = [
+        token_types,
+        paren_pairs,
+        function_input,
+        zero_call_count.as_slice(),
+    ];
+    let call_dispatch = dispatch_structure_stage_into(
         backend,
         call_key,
         || {
@@ -271,7 +298,7 @@ fn build_structure_records_with_scratch(
                 "out_calls",
                 "out_counts",
             );
-            let call_prog = mark_program_outputs(call_prog, &["out_calls", "out_counts"]);
+            let call_prog = mark_program_outputs(call_prog, &["out_calls"]);
             validate_internal_stage(&call_prog, "c11_extract_calls")?;
             Ok(call_prog)
         },
@@ -397,5 +424,18 @@ mod tests {
 
         assert!(error.contains("declared 4 call words"));
         assert!(error.contains("returned only 12 bytes"));
+    }
+
+    #[test]
+    fn call_extraction_uses_zeroed_sparse_count_input() {
+        let source = include_str!("structure_records.rs");
+        assert!(
+            source.contains("let zero_call_count = 0u32.to_le_bytes();"),
+            "Fix: c11_extract_calls must initialize the sparse count buffer before CUDA dispatch."
+        );
+        assert!(
+            !source.contains("mark_program_outputs(call_prog, &[\"out_calls\", \"out_counts\"])"),
+            "Fix: c11_extract_calls must not expose the sparse count buffer as an uninitialized write-only output."
+        );
     }
 }
