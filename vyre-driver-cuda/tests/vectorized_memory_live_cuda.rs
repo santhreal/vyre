@@ -2,60 +2,107 @@
 
 mod common;
 
-use common::{assert_u32_output_lanes, cuda_reference_outputs, live_backend, u32_bytes};
+use common::{
+    assert_f32_output_lanes, assert_u32_output_lanes, cuda_reference_outputs, f32_bytes,
+    i32_bytes, live_backend, u32_bytes,
+};
 use vyre::DispatchConfig;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 const VECTOR_LANE_COUNT: usize = 2048;
 const VECTOR_GROUP_COUNT: usize = VECTOR_LANE_COUNT / 4;
 const WORKGROUP_SIZE_X: u32 = 128;
+const MAX_F32_ULP: u32 = 1;
 
 #[test]
-fn vectorized_u32_copy_emits_packed_ptx_and_matches_reference_on_live_cuda() {
-    let program = vectorized_copy_program();
-    let ptx = vyre_driver_cuda::codegen::program_to_ptx(&program, &DispatchConfig::default())
-        .expect("Fix: CUDA PTX emission must support unit-stride vectorized memory programs.");
-    assert!(
-        ptx.contains("ld.global.v4.u32") || ptx.contains("ld.global.nc.v4.u32"),
-        "Fix: CUDA release PTX must fuse four adjacent u32 loads into a packed v4 global load.\n{ptx}"
-    );
-    assert!(
-        ptx.contains("st.global.v4.u32"),
-        "Fix: CUDA release PTX must fuse four adjacent u32 stores into st.global.v4.u32.\n{ptx}"
-    );
-
+fn vectorized_scalar_copy_emits_packed_ptx_and_matches_reference_on_live_cuda() {
     let backend = live_backend();
-    let input = generated_u32_values();
-    let outputs = cuda_reference_outputs(
-        &backend,
-        &program,
-        &[u32_bytes(&input)],
-        "vectorized_u32_copy",
-    );
-    let checked = assert_u32_output_lanes(
-        "vectorized_u32_copy direct",
-        VECTOR_LANE_COUNT,
-        &outputs.direct_cuda,
-        &outputs.reference,
-    ) + assert_u32_output_lanes(
-        "vectorized_u32_copy compiled",
-        VECTOR_LANE_COUNT,
-        &outputs.compiled_cuda,
-        &outputs.reference,
-    );
+    let mut checked = 0usize;
+
+    for case in vector_cases() {
+        let program = vectorized_copy_program(case.ty.clone());
+        let ptx = vyre_driver_cuda::codegen::program_to_ptx(&program, &DispatchConfig::default())
+            .expect("Fix: CUDA PTX emission must support unit-stride vectorized memory programs.");
+        let vector_load = format!("ld.global.v4.{}", case.ptx_suffix);
+        let vector_load_nc = format!("ld.global.nc.v4.{}", case.ptx_suffix);
+        let vector_store = format!("st.global.v4.{}", case.ptx_suffix);
+        assert!(
+            ptx.contains(&vector_load) || ptx.contains(&vector_load_nc),
+            "Fix: CUDA release PTX must fuse four adjacent {name} loads into a packed v4 global load.\n{ptx}",
+            name = case.name
+        );
+        assert!(
+            ptx.contains(&vector_store),
+            "Fix: CUDA release PTX must fuse four adjacent {name} stores into a packed v4 global store.\n{ptx}",
+            name = case.name
+        );
+
+        let input = generated_input_bytes(case.input);
+        let outputs = cuda_reference_outputs(&backend, &program, &[input], case.name);
+        checked += assert_case_outputs(
+            &case,
+            "direct",
+            &outputs.direct_cuda,
+            &outputs.reference,
+        );
+        checked += assert_case_outputs(
+            &case,
+            "compiled",
+            &outputs.compiled_cuda,
+            &outputs.reference,
+        );
+    }
 
     assert_eq!(
         checked,
-        VECTOR_LANE_COUNT * 2,
-        "Fix: live CUDA vectorized memory test must compare every lane on direct and compiled paths."
+        vector_cases().len() * VECTOR_LANE_COUNT * 2,
+        "Fix: live CUDA vectorized memory matrix must compare every lane on direct and compiled paths."
     );
 }
 
-fn vectorized_copy_program() -> Program {
+#[derive(Clone)]
+struct VectorCase {
+    name: &'static str,
+    ty: DataType,
+    input: VectorInput,
+    ptx_suffix: &'static str,
+}
+
+#[derive(Clone, Copy)]
+enum VectorInput {
+    U32,
+    I32,
+    F32,
+}
+
+fn vector_cases() -> [VectorCase; 3] {
+    [
+        VectorCase {
+            name: "vectorized_u32_copy",
+            ty: DataType::U32,
+            input: VectorInput::U32,
+            ptx_suffix: "u32",
+        },
+        VectorCase {
+            name: "vectorized_i32_copy",
+            ty: DataType::I32,
+            input: VectorInput::I32,
+            ptx_suffix: "s32",
+        },
+        VectorCase {
+            name: "vectorized_f32_copy",
+            ty: DataType::F32,
+            input: VectorInput::F32,
+            ptx_suffix: "f32",
+        },
+    ]
+}
+
+fn vectorized_copy_program(ty: DataType) -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(VECTOR_LANE_COUNT as u32),
-            BufferDecl::output("out", 1, DataType::U32).with_count(VECTOR_LANE_COUNT as u32),
+            BufferDecl::read("input", 0, ty.clone()).with_count(VECTOR_LANE_COUNT as u32),
+            BufferDecl::output("out", 1, ty).with_count(VECTOR_LANE_COUNT as u32),
         ],
         [WORKGROUP_SIZE_X, 1, 1],
         vec![Node::if_then(
@@ -79,6 +126,28 @@ fn vectorized_copy_program() -> Program {
     )
 }
 
+fn assert_case_outputs(
+    case: &VectorCase,
+    path: &str,
+    actual: &[Vec<u8>],
+    expected: &[Vec<u8>],
+) -> usize {
+    let name = format!("{} {path}", case.name);
+    if matches!(case.ty, DataType::F32) {
+        assert_f32_output_lanes(&name, VECTOR_LANE_COUNT, MAX_F32_ULP, actual, expected)
+    } else {
+        assert_u32_output_lanes(&name, VECTOR_LANE_COUNT, actual, expected)
+    }
+}
+
+fn generated_input_bytes(kind: VectorInput) -> Vec<u8> {
+    match kind {
+        VectorInput::U32 => u32_bytes(&generated_u32_values()),
+        VectorInput::I32 => i32_bytes(&generated_i32_values()),
+        VectorInput::F32 => f32_bytes(&generated_f32_values()),
+    }
+}
+
 fn generated_u32_values() -> Vec<u32> {
     (0..VECTOR_LANE_COUNT)
         .map(|lane| {
@@ -86,6 +155,35 @@ fn generated_u32_values() -> Vec<u32> {
             lane.wrapping_mul(0x9e37_79b9)
                 .rotate_left((lane & 31) + 1)
                 ^ 0xa5a5_5a5a_u32.rotate_right(lane & 31)
+        })
+        .collect()
+}
+
+fn generated_i32_values() -> Vec<i32> {
+    generated_u32_values()
+        .into_iter()
+        .enumerate()
+        .map(|(lane, value)| match lane & 7 {
+            0 => 0,
+            1 => 1,
+            2 => -1,
+            3 => i32::MAX,
+            4 => i32::MIN,
+            _ => value as i32,
+        })
+        .collect()
+}
+
+fn generated_f32_values() -> Vec<f32> {
+    (0..VECTOR_LANE_COUNT)
+        .map(|lane| {
+            let lane = lane as u32;
+            let magnitude = (lane.wrapping_mul(37) & 0x3ff) as f32 / 8.0;
+            if (lane & 1) == 0 {
+                magnitude
+            } else {
+                -magnitude
+            }
         })
         .collect()
 }
