@@ -42,9 +42,9 @@
 //!   - `path_start_out`, `path_len_out`, `is_system_out`.
 
 use super::gpu_directive_parse_shared::{
-    directive_program_from_parse, push_directive_row_bounds, push_hash_and_keyword_start,
-    push_keyword_end, push_ws_skip_from_expr, safe_source_byte_expr as safe_load,
-    DirectiveOutputColumn, DirectiveThreadLayout,
+    directive_program_from_parse, push_bounded_byte_scan_until, push_directive_row_bounds,
+    push_hash_and_keyword_start, push_keyword_end, push_ws_skip_from_expr,
+    safe_source_byte_expr as safe_load, DirectiveOutputColumn, DirectiveThreadLayout,
 };
 use crate::parsing::c::lex::tokens::{TOK_PP_INCLUDE, TOK_PP_INCLUDE_NEXT};
 use vyre::ir::{Expr, Node, Program};
@@ -167,37 +167,17 @@ pub fn gpu_include_parse(num_tokens: u32, source_len: u32) -> Program {
     // probe, which silently rejected long Linux/generated include
     // paths. The row-length loop keeps the program shape constant but
     // removes the semantic cap.
-    parse.push(Node::let_bind(
-        "path_scan_limit",
-        Expr::select(
-            Expr::lt(Expr::var("path_start_val"), Expr::var("tok_end")),
-            Expr::sub(Expr::var("tok_end"), Expr::var("path_start_val")),
-            Expr::u32(0),
-        ),
-    ));
-    parse.push(Node::let_bind("path_len_val", Expr::u32(0)));
-    parse.push(Node::let_bind("path_done", Expr::u32(0)));
-    parse.push(Node::loop_for(
+    push_bounded_byte_scan_until(
+        &mut parse,
         "path_i",
-        Expr::u32(0),
-        Expr::var("path_scan_limit"),
-        vec![Node::if_then(
-            Expr::eq(Expr::var("path_done"), Expr::u32(0)),
-            vec![
-                Node::let_bind(
-                    "path_byte",
-                    safe_load(Expr::add(Expr::var("path_start_val"), Expr::var("path_i"))),
-                ),
-                Node::if_then(
-                    Expr::eq(Expr::var("path_byte"), Expr::var("close_byte")),
-                    vec![
-                        Node::assign("path_len_val", Expr::var("path_i")),
-                        Node::assign("path_done", Expr::u32(1)),
-                    ],
-                ),
-            ],
-        )],
-    ));
+        "path_start_val",
+        "path_scan_limit",
+        "path_byte",
+        "path_len_val",
+        "path_done",
+        Expr::var("close_byte"),
+        Expr::eq(Expr::u32(1), Expr::u32(1)),
+    );
 
     // ---- step 7: commit if found_hash AND valid_delim ----
     // Both are u32 0/1; bitand stays u32; convert to bool for if_then.
