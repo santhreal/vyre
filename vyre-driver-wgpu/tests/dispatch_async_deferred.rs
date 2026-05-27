@@ -8,37 +8,14 @@
 //! - The returned handle implements `PendingDispatch` and is object-safe
 
 mod common;
-use common::acquire_live_backend as live_backend;
+use common::{
+    acquire_live_backend as live_backend, add_one_expected, add_one_input, add_one_program,
+};
 
 use std::time::{Duration, Instant};
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre::ir::{BufferDecl, DataType, Node, Program};
 use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver::PendingDispatch;
-
-fn add_one_program(words: u32) -> Program {
-    let idx = Expr::gid_x();
-    let in_bounds = Expr::lt(idx.clone(), Expr::u32(words));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(words),
-            BufferDecl::output("out", 1, DataType::U32)
-                .with_count(words)
-                .with_output_byte_range(0..(words as usize * 4)),
-        ],
-        [64, 1, 1],
-        vec![
-            Node::if_then(
-                in_bounds,
-                vec![Node::store(
-                    "out",
-                    idx.clone(),
-                    Expr::add(Expr::load("input", idx), Expr::u32(1)),
-                )],
-            ),
-            Node::return_(),
-        ],
-    )
-}
 
 // ------------------------------------------------------------------
 // 1. Handle returned before GPU completion
@@ -48,7 +25,7 @@ fn add_one_program(words: u32) -> Program {
 fn dispatch_async_returns_before_gpu_completion_for_real_work() {
     let backend = live_backend();
     let program = add_one_program(512 * 1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..512 * 1024u32);
+    let input = add_one_input(512 * 1024);
 
     let start = Instant::now();
     let pending = backend
@@ -74,7 +51,7 @@ fn dispatch_async_returns_before_gpu_completion_for_real_work() {
     let outputs = pending
         .await_result()
         .expect("Fix: await_result must resolve correctly");
-    let expected: Vec<u8> = vyre_primitives::wire::pack_u32_iter(1..=512 * 1024u32);
+    let expected = add_one_expected(512 * 1024);
     assert_eq!(outputs, vec![expected]);
 }
 
@@ -86,7 +63,7 @@ fn dispatch_async_returns_before_gpu_completion_for_real_work() {
 fn dispatch_async_ready_state_is_observable_for_non_trivial_work() {
     let backend = live_backend();
     let program = add_one_program(256 * 1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..256 * 1024u32);
+    let input = add_one_input(256 * 1024);
 
     let pending = backend
         .dispatch_async(&program, &[input], &DispatchConfig::default())
@@ -98,7 +75,7 @@ fn dispatch_async_ready_state_is_observable_for_non_trivial_work() {
     let outputs = pending
         .await_result()
         .expect("Fix: await_result must resolve");
-    let expected: Vec<u8> = vyre_primitives::wire::pack_u32_iter(1..=256 * 1024u32);
+    let expected = add_one_expected(256 * 1024);
     assert_eq!(outputs, vec![expected]);
 
     // If the handle was not ready on the first poll, we proved the deferred contract.
@@ -115,7 +92,7 @@ fn dispatch_async_ready_state_is_observable_for_non_trivial_work() {
 fn multiple_concurrent_async_dispatches_do_not_serialize() {
     let backend = live_backend();
     let program = add_one_program(128 * 1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..128 * 1024u32);
+    let input = add_one_input(128 * 1024);
 
     // Warm the pipeline cache.
     let _ = backend
@@ -164,7 +141,7 @@ fn multiple_concurrent_async_dispatches_do_not_serialize() {
 fn pending_dispatch_from_wgpu_is_object_safe() {
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input = add_one_input(1024);
 
     let pending: Box<dyn PendingDispatch> = backend
         .dispatch_async(&program, &[input], &DispatchConfig::default())
@@ -173,7 +150,7 @@ fn pending_dispatch_from_wgpu_is_object_safe() {
     let outputs = pending
         .await_result()
         .expect("Fix: object-safe await must succeed");
-    let expected: Vec<u8> = vyre_primitives::wire::pack_u32_iter(1..=1024u32);
+    let expected = add_one_expected(1024);
     assert_eq!(outputs, vec![expected]);
 }
 
