@@ -23,6 +23,7 @@ struct Config {
     top_n: usize,
     min_score: f64,
     max_file_bytes: u64,
+    fail_on_findings: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -95,6 +96,14 @@ pub(crate) fn run(args: &[String]) {
             right.bytes
         );
     }
+    if config.fail_on_findings {
+        eprintln!(
+            "Fix: source-similar found {} duplicate/similar Rust source pair(s) at score >= {:.2}. Extract a shared module or lower --min only for exploratory scans.",
+            pairs.len(),
+            config.min_score
+        );
+        process::exit(1);
+    }
 }
 
 fn parse_args(args: &[String]) -> Result<Config, String> {
@@ -102,6 +111,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut top_n = DEFAULT_TOP_N;
     let mut min_score = DEFAULT_MIN_SCORE;
     let mut max_file_bytes = DEFAULT_MAX_FILE_BYTES;
+    let mut fail_on_findings = false;
     let mut index = 2usize;
     while index < args.len() {
         match args[index].as_str() {
@@ -148,6 +158,9 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
                     return Err("--max-file-bytes must be greater than zero".to_string());
                 }
             }
+            "--fail-on-findings" | "--check" => {
+                fail_on_findings = true;
+            }
             "--help" | "-h" => {
                 print_usage();
                 process::exit(0);
@@ -164,12 +177,13 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
         top_n,
         min_score,
         max_file_bytes,
+        fail_on_findings,
     })
 }
 
 fn print_usage() {
     eprintln!(
-        "USAGE:\n  cargo_full run --bin xtask -- source-similar [--root PATH] [--top N] [--min SCORE] [--max-file-bytes BYTES]\n\n\
+        "USAGE:\n  cargo_full run --bin xtask -- source-similar [--root PATH] [--top N] [--min SCORE] [--max-file-bytes BYTES] [--fail-on-findings]\n\n\
          Defaults scan Rust files under the Vyre workspace source roots and report high-confidence renamed/forked source skeletons."
     );
 }
@@ -252,7 +266,14 @@ fn should_skip_path(path: &Path) -> bool {
         let name = component.as_os_str().to_string_lossy();
         matches!(
             name.as_ref(),
-            ".git" | "target" | ".pytest_cache" | "__pycache__" | ".cursor"
+            ".git"
+                | "target"
+                | ".pytest_cache"
+                | "__pycache__"
+                | ".cursor"
+                | ".internals"
+                | "jules_tickets"
+                | "__law7_split"
         )
     })
 }
@@ -606,6 +627,32 @@ mod tests {
         ];
         let error = parse_args(&args).unwrap_err();
         assert!(error.contains("--top"));
+    }
+
+    #[test]
+    fn parse_args_accepts_check_mode_for_ci_duplicate_gates() {
+        let args = vec![
+            "xtask".to_string(),
+            "source-similar".to_string(),
+            "--check".to_string(),
+            "--min".to_string(),
+            "0.95".to_string(),
+        ];
+        let config = parse_args(&args).expect("check args");
+        assert!(config.fail_on_findings);
+        assert_eq!(config.min_score, 0.95);
+    }
+
+    #[test]
+    fn skips_generated_split_scratch_and_internal_planning_trees() {
+        assert!(should_skip_path(Path::new(
+            "vyre-macros/src/__law7_split/lib_part1.rs"
+        )));
+        assert!(should_skip_path(Path::new(
+            ".internals/audits/notes/generated.rs"
+        )));
+        assert!(should_skip_path(Path::new("jules_tickets/ticket.rs")));
+        assert!(!should_skip_path(Path::new("vyre-primitives/src/graph/toposort.rs")));
     }
 
     #[test]
