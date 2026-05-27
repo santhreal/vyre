@@ -169,6 +169,23 @@ fn input_buffer_passthrough() {
     assert_eq!(outputs, vec![99u32.to_le_bytes().to_vec()]);
 }
 
+#[test]
+fn missing_input_buffer_is_zero_synthesized_for_reference_only_dispatch() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32),
+            BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![
+            Node::let_bind("val", Expr::load("input", Expr::u32(0))),
+            Node::store("out", Expr::u32(0), Expr::var("val")),
+        ],
+    );
+    let outputs = dispatch_with_inputs(&program, &[]);
+    assert_eq!(outputs, vec![0u32.to_le_bytes().to_vec()]);
+}
+
 // ---------------------------------------------------------------
 // Two-buffer XOR (the README example)
 // ---------------------------------------------------------------
