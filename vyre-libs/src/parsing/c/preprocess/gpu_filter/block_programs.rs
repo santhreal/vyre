@@ -1,6 +1,7 @@
 use super::program_helpers::{
-    packed_byte_load, singleton_u32_read_buffer, u32_read_buffer, u32_rw_buffer,
-    wrap_gpu_filter_program,
+    byte_eq, clear_comment_mask_and_final_keep, packed_byte_load, packed_byte_load_or_zero,
+    singleton_u32_read_buffer, store_comment_mask, store_final_keep_from_comment_mask,
+    u32_read_buffer, u32_rw_buffer, wrap_gpu_filter_program,
 };
 use vyre::ir::{Expr, Node, Program};
 
@@ -8,11 +9,7 @@ pub(super) fn simple_block_comment_marks_program(n: u32) -> Program {
     let i = Expr::var("i");
     let b0 = packed_byte_load("bytes_in", i.clone());
     let b1_addr = Expr::add(i.clone(), Expr::u32(1));
-    let b1 = Expr::select(
-        Expr::lt(b1_addr.clone(), Expr::load("block_n_real", Expr::u32(0))),
-        packed_byte_load("bytes_in", b1_addr),
-        Expr::u32(0),
-    );
+    let b1 = packed_byte_load_or_zero("bytes_in", b1_addr, "block_n_real");
     let after_close = Expr::add(i.clone(), Expr::u32(2));
     let body = vec![
         Node::let_bind("i", Expr::InvocationId { axis: 0 }),
@@ -25,8 +22,8 @@ pub(super) fn simple_block_comment_marks_program(n: u32) -> Program {
                     Expr::and(
                         Expr::lt(i.clone(), Expr::var("n_real")),
                         Expr::and(
-                            Expr::eq(b0, Expr::u32(b'/' as u32)),
-                            Expr::eq(b1.clone(), Expr::u32(b'*' as u32)),
+                            byte_eq(b0.clone(), b'/'),
+                            byte_eq(b1.clone(), b'*'),
                         ),
                     ),
                 ),
@@ -41,11 +38,8 @@ pub(super) fn simple_block_comment_marks_program(n: u32) -> Program {
                         Expr::and(
                             Expr::lt(i.clone(), Expr::var("n_real")),
                             Expr::and(
-                                Expr::eq(
-                                    packed_byte_load("bytes_in", i.clone()),
-                                    Expr::u32(b'*' as u32),
-                                ),
-                                Expr::eq(b1, Expr::u32(b'/' as u32)),
+                                byte_eq(b0, b'*'),
+                                byte_eq(b1, b'/'),
                             ),
                         ),
                     ),
@@ -180,21 +174,10 @@ pub(super) fn simple_block_comment_masks_program(n: u32) -> Program {
                                 Expr::u32(0),
                             ),
                         ),
-                        Node::store("comment_mask_out", i.clone(), Expr::var("comment_mask")),
-                        Node::store(
-                            "final_keep",
-                            i.clone(),
-                            Expr::select(
-                                Expr::ne(Expr::var("comment_mask"), Expr::u32(1)),
-                                Expr::u32(1),
-                                Expr::u32(0),
-                            ),
-                        ),
+                        store_comment_mask(i.clone(), Expr::var("comment_mask")),
+                        store_final_keep_from_comment_mask(i.clone(), Expr::var("comment_mask")),
                     ],
-                    vec![
-                        Node::store("comment_mask_out", i.clone(), Expr::u32(0)),
-                        Node::store("final_keep", i.clone(), Expr::u32(0)),
-                    ],
+                    clear_comment_mask_and_final_keep(i.clone()),
                 ),
             ],
         ),
