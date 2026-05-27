@@ -1,5 +1,5 @@
 use super::predicates::expr_is_any;
-use super::scan::emit_forward_matching_paren_scan;
+use super::scan::{emit_forward_matching_paren_scan, emit_reverse_unmatched_lbrace_scan};
 use crate::parsing::c::lex::tokens::*;
 use vyre::ir::{Expr, Node};
 
@@ -37,42 +37,16 @@ pub fn emit_brace_scope_resolution(
     node_idx: Expr,
     _num_tokens: &Expr,
 ) -> Vec<Node> {
-    let mut nodes = vec![Node::loop_for(
+    let mut nodes = emit_reverse_unmatched_lbrace_scan(
+        tok_types,
         "scope_scan",
-        Expr::u32(0),
+        "scan_idx",
+        "scan_tok",
+        "scope_depth",
+        "scope_open",
         node_idx.clone(),
-        vec![
-            Node::let_bind(
-                "scan_idx",
-                Expr::sub(
-                    Expr::sub(node_idx.clone(), Expr::u32(1)),
-                    Expr::var("scope_scan"),
-                ),
-            ),
-            Node::let_bind("scan_tok", Expr::load(tok_types, Expr::var("scan_idx"))),
-            Node::if_then(
-                Expr::eq(Expr::var("scan_tok"), Expr::u32(TOK_RBRACE)),
-                vec![Node::assign(
-                    "scope_depth",
-                    Expr::add(Expr::var("scope_depth"), Expr::u32(1)),
-                )],
-            ),
-            Node::if_then(
-                Expr::eq(Expr::var("scope_open"), Expr::u32(u32::MAX)),
-                vec![Node::if_then(
-                    Expr::eq(Expr::var("scan_tok"), Expr::u32(TOK_LBRACE)),
-                    vec![Node::if_then_else(
-                        Expr::eq(Expr::var("scope_depth"), Expr::u32(0)),
-                        vec![Node::assign("scope_open", Expr::var("scan_idx"))],
-                        vec![Node::assign(
-                            "scope_depth",
-                            Expr::sub(Expr::var("scope_depth"), Expr::u32(1)),
-                        )],
-                    )],
-                )],
-            ),
-        ],
-    )];
+        None,
+    );
 
     nodes.push(Node::if_then(
         Expr::ne(Expr::var("scope_open"), Expr::u32(u32::MAX)),
@@ -82,48 +56,16 @@ pub fn emit_brace_scope_resolution(
             Node::let_bind("scope_parent_depth", Expr::u32(0)),
             Node::if_then(
                 Expr::gt(Expr::var("scope_open"), Expr::u32(0)),
-                vec![Node::loop_for(
+                emit_reverse_unmatched_lbrace_scan(
+                    tok_types,
                     "scope_parent_scan",
-                    Expr::u32(0),
+                    "scope_parent_idx",
+                    "scope_parent_tok",
+                    "scope_parent_depth",
+                    "scope_parent_open",
                     Expr::var("scope_open"),
-                    vec![
-                        Node::let_bind(
-                            "scope_parent_idx",
-                            Expr::sub(
-                                Expr::sub(Expr::var("scope_open"), Expr::u32(1)),
-                                Expr::var("scope_parent_scan"),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "scope_parent_tok",
-                            Expr::load(tok_types, Expr::var("scope_parent_idx")),
-                        ),
-                        Node::if_then(
-                            Expr::eq(Expr::var("scope_parent_tok"), Expr::u32(TOK_RBRACE)),
-                            vec![Node::assign(
-                                "scope_parent_depth",
-                                Expr::add(Expr::var("scope_parent_depth"), Expr::u32(1)),
-                            )],
-                        ),
-                        Node::if_then(
-                            Expr::eq(Expr::var("scope_parent_open"), Expr::u32(u32::MAX)),
-                            vec![Node::if_then(
-                                Expr::eq(Expr::var("scope_parent_tok"), Expr::u32(TOK_LBRACE)),
-                                vec![Node::if_then_else(
-                                    Expr::eq(Expr::var("scope_parent_depth"), Expr::u32(0)),
-                                    vec![Node::assign(
-                                        "scope_parent_open",
-                                        Expr::var("scope_parent_idx"),
-                                    )],
-                                    vec![Node::assign(
-                                        "scope_parent_depth",
-                                        Expr::sub(Expr::var("scope_parent_depth"), Expr::u32(1)),
-                                    )],
-                                )],
-                            )],
-                        ),
-                    ],
-                )],
+                    None,
+                ),
             ),
             Node::if_then(
                 Expr::ne(Expr::var("scope_parent_open"), Expr::u32(u32::MAX)),

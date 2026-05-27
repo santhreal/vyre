@@ -2,7 +2,7 @@ use crate::parsing::c::lex::tokens::*;
 use vyre::ir::{Expr, Node};
 
 mod predicates;
-use super::scan::emit_forward_matching_paren_scan;
+use super::scan::{emit_forward_matching_paren_scan, emit_reverse_unmatched_lbrace_scan};
 use predicates::{declaration_context, tag_keyword};
 
 /// No declaration kind.
@@ -45,52 +45,31 @@ fn emit_neighbor_tokens(node_idx: &Expr, num_tokens: &Expr) -> Vec<Node> {
 }
 
 fn emit_aggregate_context(node_idx: &Expr) -> Vec<Node> {
-    vec![
+    let mut nodes = vec![
         Node::let_bind("aggregate_kind", Expr::u32(0)),
+        Node::let_bind("aggregate_open", Expr::u32(u32::MAX)),
         Node::let_bind("aggregate_depth", Expr::u32(0)),
-        Node::if_then(
+    ];
+    nodes.extend(emit_reverse_unmatched_lbrace_scan(
+        "tok_types",
+        "aggregate_scan",
+        "aggregate_idx",
+        "aggregate_tok",
+        "aggregate_depth",
+        "aggregate_open",
+        node_idx.clone(),
+        Some(Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_IDENTIFIER))),
+    ));
+    let mut aggregate_body = vec![Node::let_bind("aggregate_idx", Expr::var("aggregate_open"))];
+    aggregate_body.extend(emit_set_aggregate_kind());
+    nodes.push(Node::if_then(
+        Expr::and(
             Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_IDENTIFIER)),
-            vec![Node::loop_for(
-                "aggregate_scan",
-                Expr::u32(0),
-                node_idx.clone(),
-                vec![
-                    Node::let_bind(
-                        "aggregate_idx",
-                        Expr::sub(
-                            Expr::sub(node_idx.clone(), Expr::u32(1)),
-                            Expr::var("aggregate_scan"),
-                        ),
-                    ),
-                    Node::let_bind(
-                        "aggregate_tok",
-                        Expr::load("tok_types", Expr::var("aggregate_idx")),
-                    ),
-                    Node::if_then(
-                        Expr::eq(Expr::var("aggregate_tok"), Expr::u32(TOK_RBRACE)),
-                        vec![Node::assign(
-                            "aggregate_depth",
-                            Expr::add(Expr::var("aggregate_depth"), Expr::u32(1)),
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::eq(Expr::var("aggregate_kind"), Expr::u32(0)),
-                        vec![Node::if_then(
-                            Expr::eq(Expr::var("aggregate_tok"), Expr::u32(TOK_LBRACE)),
-                            vec![Node::if_then_else(
-                                Expr::eq(Expr::var("aggregate_depth"), Expr::u32(0)),
-                                emit_set_aggregate_kind(),
-                                vec![Node::assign(
-                                    "aggregate_depth",
-                                    Expr::sub(Expr::var("aggregate_depth"), Expr::u32(1)),
-                                )],
-                            )],
-                        )],
-                    ),
-                ],
-            )],
+            Expr::ne(Expr::var("aggregate_open"), Expr::u32(u32::MAX)),
         ),
-    ]
+        aggregate_body,
+    ));
+    nodes
 }
 
 fn emit_set_aggregate_kind() -> Vec<Node> {
