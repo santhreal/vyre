@@ -50,6 +50,12 @@ pub(crate) fn live_backend() -> CudaBackend {
     live_dispatcher()
 }
 
+/// Run a closure with the live CUDA backend required by release-path GPU tests.
+pub(crate) fn with_live_backend<R>(_test_name: &str, run: impl FnOnce(&CudaBackend) -> R) -> R {
+    let backend = live_dispatcher();
+    run(&backend)
+}
+
 /// Run a closure with a live CUDA-backed optimizer dispatcher.
 ///
 /// The backend must outlive the dispatcher, so this helper centralizes the
