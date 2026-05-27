@@ -4,7 +4,7 @@
 
 mod common;
 
-use common::{live_dispatcher, CudaOptimizerDispatcher};
+use common::with_cuda_optimizer_dispatcher;
 use vyre_primitives::graph::path_reconstruct::cpu_ref as path_reconstruct_cpu;
 use vyre_self_substrate::path_reconstruct::{reconstruct_path_via, reconstruct_paths_via};
 
@@ -16,12 +16,11 @@ fn cpu_path(parent: &[u32], target: u32, max_depth: u32) -> (Vec<u32>, u32) {
 
 #[test]
 fn cuda_reconstruct_path_chain() {
-    let backend = live_dispatcher();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
     let parent = vec![0u32, 0, 1, 2];
     let mut gpu_scratch = Vec::new();
-    let gpu_len =
-        reconstruct_path_via(&dispatcher, &parent, 3, 4, &mut gpu_scratch).expect("dispatch");
+    let gpu_len = with_cuda_optimizer_dispatcher("path chain", |dispatcher| {
+        reconstruct_path_via(dispatcher, &parent, 3, 4, &mut gpu_scratch).expect("dispatch")
+    });
     let (cpu_scratch, cpu_len) = cpu_path(&parent, 3, 4);
     assert_eq!(gpu_len, cpu_len);
     assert_eq!(gpu_scratch, cpu_scratch);
@@ -29,12 +28,11 @@ fn cuda_reconstruct_path_chain() {
 
 #[test]
 fn cuda_reconstruct_path_root_target() {
-    let backend = live_dispatcher();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
     let parent = vec![0u32, 0, 1];
     let mut gpu_scratch = Vec::new();
-    let gpu_len =
-        reconstruct_path_via(&dispatcher, &parent, 0, 4, &mut gpu_scratch).expect("dispatch");
+    let gpu_len = with_cuda_optimizer_dispatcher("path root", |dispatcher| {
+        reconstruct_path_via(dispatcher, &parent, 0, 4, &mut gpu_scratch).expect("dispatch")
+    });
     let (cpu_scratch, cpu_len) = cpu_path(&parent, 0, 4);
     assert_eq!(gpu_len, cpu_len);
     assert_eq!(gpu_scratch, cpu_scratch);
@@ -42,13 +40,12 @@ fn cuda_reconstruct_path_root_target() {
 
 #[test]
 fn cuda_reconstruct_path_cycle_caps_at_max_depth() {
-    let backend = live_dispatcher();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
     // Cycle 0 -> 1 -> 2 -> 0.
     let parent = vec![1u32, 2, 0];
     let mut gpu_scratch = Vec::new();
-    let gpu_len =
-        reconstruct_path_via(&dispatcher, &parent, 0, 5, &mut gpu_scratch).expect("dispatch");
+    let gpu_len = with_cuda_optimizer_dispatcher("path cycle", |dispatcher| {
+        reconstruct_path_via(dispatcher, &parent, 0, 5, &mut gpu_scratch).expect("dispatch")
+    });
     let (cpu_scratch, cpu_len) = cpu_path(&parent, 0, 5);
     assert_eq!(gpu_len, cpu_len);
     assert_eq!(gpu_scratch, cpu_scratch);
@@ -56,13 +53,12 @@ fn cuda_reconstruct_path_cycle_caps_at_max_depth() {
 
 #[test]
 fn cuda_reconstruct_paths_batched() {
-    let backend = live_dispatcher();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
     let parent = vec![0u32, 0, 1, 2, 3, 4];
     let targets = vec![5u32, 4, 3, 2, 1, 0];
     let max_depth = 6u32;
-    let (paths, lens) =
-        reconstruct_paths_via(&dispatcher, &parent, &targets, max_depth).expect("dispatch");
+    let (paths, lens) = with_cuda_optimizer_dispatcher("batched paths", |dispatcher| {
+        reconstruct_paths_via(dispatcher, &parent, &targets, max_depth).expect("dispatch")
+    });
     assert_eq!(lens.len(), targets.len());
     for (i, &t) in targets.iter().enumerate() {
         let (cpu_scratch, cpu_len) = cpu_path(&parent, t, max_depth);
@@ -79,12 +75,12 @@ fn cuda_reconstruct_paths_batched() {
 
 #[test]
 fn cuda_reconstruct_paths_oob_target_self_loops() {
-    let backend = live_dispatcher();
-    let dispatcher = CudaOptimizerDispatcher { backend: &backend };
     let parent = vec![0u32, 0, 1];
     // OOB target  -  cpu_ref reads parent.get(target).copied().unwrap_or(target) → self-loop.
     let targets = vec![100u32];
-    let (paths, lens) = reconstruct_paths_via(&dispatcher, &parent, &targets, 4).expect("dispatch");
+    let (paths, lens) = with_cuda_optimizer_dispatcher("oob target paths", |dispatcher| {
+        reconstruct_paths_via(dispatcher, &parent, &targets, 4).expect("dispatch")
+    });
     let (cpu_scratch, cpu_len) = cpu_path(&parent, 100, 4);
     assert_eq!(lens[0], cpu_len);
     assert_eq!(&paths[..4], &cpu_scratch[..]);
