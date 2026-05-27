@@ -4,14 +4,13 @@
 //! → pipeline compile → dispatch → readback) through the cpu-ref backend, and
 //! a 16×16 producer/consumer PersistentEngine stress run at 100k items.
 
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
 
 use vyre_driver::pipeline::compile;
 use vyre_driver::validation::LaunchGeometryLimits;
-use vyre_driver::persistent::{PersistentEngine, PersistentWorkItem, QueueFull};
+use vyre_driver::persistent::{PersistentEngine, PersistentWorkItem};
 use vyre_driver::{BindingPlan, DispatchConfig, LaunchPlan, VyreBackend};
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -115,71 +114,33 @@ fn driver_lifecycle_e2e_parse_plan_emit_dispatch_readback() {
 }
 
 struct PersistentWaitGroup {
-    lock: Mutex<WaitState>,
-    work_ready: Condvar,
-    space_ready: Condvar,
-}
-
-struct WaitState {
-    producers_done: bool,
+    producers_done: AtomicBool,
 }
 
 impl PersistentWaitGroup {
     fn new() -> Self {
         Self {
-            lock: Mutex::new(WaitState {
-                producers_done: false,
-            }),
-            work_ready: Condvar::new(),
-            space_ready: Condvar::new(),
+            producers_done: AtomicBool::new(false),
         }
     }
 
     fn mark_producers_done(&self) {
-        let mut guard = self.lock.lock().unwrap();
-        guard.producers_done = true;
-        self.work_ready.notify_all();
+        self.producers_done.store(true, Ordering::Release);
     }
+}
 
-    fn producers_done(&self) -> bool {
-        self.lock.lock().unwrap().producers_done
-    }
-
-    fn blocking_enqueue(
-        &self,
-        engine: &PersistentEngine,
-        item: PersistentWorkItem,
-    ) -> u32 {
-        loop {
-            match engine.enqueue(item) {
-                Ok(slot) => {
-                    self.work_ready.notify_all();
-                    return slot;
-                }
-                Err(QueueFull) => {
-                    let guard = self.lock.lock().unwrap();
-                    let _guard = self.space_ready.wait(guard).unwrap();
-                }
-            }
-        }
-    }
-
-    fn try_claim(&self, engine: &PersistentEngine) -> Option<PersistentWorkItem> {
-        if let Some(item) = engine.claim() {
-            self.space_ready.notify_all();
-            Some(item)
-        } else {
-            None
-        }
-    }
-
-    fn wait_for_work(&self) {
-        let guard = self.lock.lock().unwrap();
-        let _guard = self
-            .work_ready
-            .wait_timeout(guard, Duration::from_millis(5))
-            .unwrap();
-    }
+fn producer_correlation_range(producer_id: usize) -> (u32, u32) {
+    let total = usize::try_from(PERSISTENT_TOTAL_ITEMS)
+        .expect("Fix: persistent stress item count must fit usize");
+    let base = total / PERSISTENT_PRODUCERS;
+    let extra = total % PERSISTENT_PRODUCERS;
+    let start = producer_id * base + producer_id.min(extra);
+    let count = base + usize::from(producer_id < extra);
+    let end = start + count;
+    (
+        u32::try_from(start).expect("Fix: persistent stress start index must fit u32"),
+        u32::try_from(end).expect("Fix: persistent stress end index must fit u32"),
+    )
 }
 
 fn persistent_work_item(correlation: u32) -> PersistentWorkItem {
@@ -197,24 +158,26 @@ fn persistent_engine_stress_16_prod_16_cons_100k_items() {
     assert_eq!(engine.ring_size(), PERSISTENT_RING_SIZE);
 
     let wait = Arc::new(PersistentWaitGroup::new());
-    let consumed = Arc::new(Mutex::new(vec![false; PERSISTENT_TOTAL_ITEMS as usize]));
-    let consumed_count = Arc::new(AtomicUsize::new(0));
-    let duplicate_claims = Arc::new(AtomicUsize::new(0));
-
-    let items_per_producer = usize::try_from(PERSISTENT_TOTAL_ITEMS)
-        .expect("Fix: persistent stress item count must fit usize")
-        / PERSISTENT_PRODUCERS;
+    let shared_consumed = Arc::new(Mutex::new(Vec::new()));
+    let enqueued = Arc::new(AtomicU32::new(0));
+    let total_items = usize::try_from(PERSISTENT_TOTAL_ITEMS)
+        .expect("Fix: persistent stress item count must fit usize");
 
     let mut producer_handles = Vec::with_capacity(PERSISTENT_PRODUCERS);
     for producer_id in 0..PERSISTENT_PRODUCERS {
         let engine = Arc::clone(&engine);
-        let wait = Arc::clone(&wait);
+        let enqueued = Arc::clone(&enqueued);
         producer_handles.push(thread::spawn(move || {
-            let base = producer_id * items_per_producer;
-            for offset in 0..items_per_producer {
-                let correlation = u32::try_from(base + offset)
-                    .expect("Fix: persistent stress correlation ids must fit u32");
-                let _slot = wait.blocking_enqueue(&engine, persistent_work_item(correlation));
+            let (start, end) = producer_correlation_range(producer_id);
+            for correlation in start..end {
+                let item = persistent_work_item(correlation);
+                loop {
+                    if engine.enqueue(item).is_ok() {
+                        enqueued.fetch_add(1, Ordering::Relaxed);
+                        break;
+                    }
+                    thread::yield_now();
+                }
             }
         }));
     }
@@ -223,50 +186,64 @@ fn persistent_engine_stress_16_prod_16_cons_100k_items() {
     for _ in 0..PERSISTENT_CONSUMERS {
         let engine = Arc::clone(&engine);
         let wait = Arc::clone(&wait);
-        let consumed = Arc::clone(&consumed);
-        let consumed_count = Arc::clone(&consumed_count);
-        let duplicate_claims = Arc::clone(&duplicate_claims);
-        consumer_handles.push(thread::spawn(move || loop {
-            if consumed_count.load(Ordering::Acquire) >= PERSISTENT_TOTAL_ITEMS as usize {
-                break;
-            }
-            if let Some(item) = wait.try_claim(&engine) {
-                let correlation = item.correlation as usize;
-                let mut seen = consumed.lock().unwrap();
-                if correlation >= seen.len() || seen[correlation] {
-                    duplicate_claims.fetch_add(1, Ordering::Relaxed);
-                } else {
-                    seen[correlation] = true;
-                    consumed_count.fetch_add(1, Ordering::Release);
+        let shared_consumed = Arc::clone(&shared_consumed);
+        consumer_handles.push(thread::spawn(move || {
+            let mut local = Vec::with_capacity(total_items / PERSISTENT_CONSUMERS);
+            loop {
+                if let Some(item) = engine.claim() {
+                    local.push(item.correlation);
+                    continue;
                 }
-                drop(seen);
-                continue;
+                if wait.producers_done.load(Ordering::Acquire) && engine.in_flight() == 0 {
+                    break;
+                }
+                thread::yield_now();
             }
-            if wait.producers_done() && engine.in_flight() == 0 {
-                break;
-            }
-            wait.wait_for_work();
+            shared_consumed.lock().unwrap().extend(local);
         }));
     }
 
     for handle in producer_handles {
         handle.join().expect("Fix: persistent stress producer must not panic");
     }
+    assert_eq!(
+        enqueued.load(Ordering::Relaxed),
+        PERSISTENT_TOTAL_ITEMS,
+        "Fix: persistent stress producers must enqueue the full workload"
+    );
     wait.mark_producers_done();
 
     for handle in consumer_handles {
         handle.join().expect("Fix: persistent stress consumer must not panic");
     }
 
+    let mut consumed = Arc::try_unwrap(shared_consumed)
+        .expect("Fix: persistent stress consumers must join before merge")
+        .into_inner()
+        .expect("Fix: persistent stress consumed mutex must not be poisoned");
+    while let Some(item) = engine.claim() {
+        consumed.push(item.correlation);
+    }
+    let raw_count = consumed.len();
+    consumed.sort_unstable();
+    consumed.dedup();
     assert_eq!(
-        duplicate_claims.load(Ordering::Relaxed),
-        0,
-        "Fix: persistent stress must not double-claim items"
+        raw_count,
+        total_items,
+        "Fix: persistent stress claim count must match enqueued workload before dedup"
     );
     assert_eq!(
-        consumed_count.load(Ordering::Acquire),
-        PERSISTENT_TOTAL_ITEMS as usize,
+        consumed.len(),
+        total_items,
         "Fix: persistent stress must consume every enqueued item exactly once"
+    );
+    assert!(
+        consumed
+            .iter()
+            .enumerate()
+            .all(|(index, correlation)| *correlation == index as u32),
+        "Fix: persistent stress must observe correlation ids 0..={} without gaps or duplicates",
+        PERSISTENT_TOTAL_ITEMS - 1
     );
     assert_eq!(engine.head_counter(), u64::from(PERSISTENT_TOTAL_ITEMS));
     assert_eq!(engine.tail_counter(), u64::from(PERSISTENT_TOTAL_ITEMS));
