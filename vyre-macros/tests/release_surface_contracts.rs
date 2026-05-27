@@ -30,10 +30,7 @@ impl ReleaseSurfacePass {
     }
 
     fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::PassResult {
-            program,
-            changed: true,
-        }
+        optimizer::pass_result(program, true)
     }
 }
 
@@ -60,10 +57,7 @@ impl ReleaseSurfaceDefaultsPass {
     }
 
     fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::PassResult {
-            program,
-            changed: false,
-        }
+        optimizer::unchanged(program)
     }
 }
 
@@ -77,10 +71,7 @@ pub struct ReleaseSurfaceAnalyzeAlwaysPass;
 
 impl ReleaseSurfaceAnalyzeAlwaysPass {
     fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::PassResult {
-            program,
-            changed: false,
-        }
+        optimizer::unchanged(program)
     }
 }
 
@@ -108,10 +99,7 @@ macro_rules! define_metadata_matrix_pass {
             }
 
             fn transform(program: ir::Program) -> optimizer::PassResult {
-                optimizer::PassResult {
-                    program,
-                    changed: false,
-                }
+                optimizer::unchanged(program)
             }
         }
     };
@@ -251,10 +239,7 @@ fn vyre_pass_default_metadata_is_a_stable_contract() {
     );
     assert_eq!(
         optimizer::ProgramPass::transform(&pass, program.clone()),
-        optimizer::PassResult {
-            program,
-            changed: false,
-        }
+        optimizer::unchanged(program)
     );
 }
 
