@@ -7,6 +7,7 @@
 mod build;
 mod build_declaration_kind_inner;
 mod classify;
+mod decl_context_common;
 mod expr_shape;
 mod helpers;
 #[cfg(any(test, feature = "cpu-parity"))]
