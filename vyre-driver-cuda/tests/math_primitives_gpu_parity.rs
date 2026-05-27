@@ -5,22 +5,23 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::math::prefix_scan::{cpu_ref as prefix_cpu, prefix_scan, ScanKind};
 use vyre_primitives::math::stream_compact::{cpu_ref as compact_cpu, stream_compact};
 
-fn run_prefix_scan(backend: &CudaBackend, input: &[u32], kind: ScanKind) -> Vec<u32> {
+fn run_prefix_scan(input: &[u32], kind: ScanKind) -> Vec<u32> {
     let n = input.len() as u32;
     let program = prefix_scan("in", "out", n, kind);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(input)];
     let mut config = DispatchConfig::default();
     // Workgroup is `n.next_power_of_two()`, 1 workgroup.
     config.grid_override = Some([1, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("prefix scan primitive", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA prefix-scan dispatch failed: {error}"))
+    });
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(n as usize);
     out
@@ -28,44 +29,40 @@ fn run_prefix_scan(backend: &CudaBackend, input: &[u32], kind: ScanKind) -> Vec<
 
 #[test]
 fn cuda_prefix_scan_inclusive_sum() {
-    let backend = live_dispatcher();
     let input = vec![1u32, 2, 3, 4];
     let cpu = prefix_cpu(&input, ScanKind::InclusiveSum);
-    let gpu = run_prefix_scan(&backend, &input, ScanKind::InclusiveSum);
+    let gpu = run_prefix_scan(&input, ScanKind::InclusiveSum);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![1, 3, 6, 10]);
 }
 
 #[test]
 fn cuda_prefix_scan_exclusive_sum() {
-    let backend = live_dispatcher();
     let input = vec![1u32, 2, 3, 4];
     let cpu = prefix_cpu(&input, ScanKind::ExclusiveSum);
-    let gpu = run_prefix_scan(&backend, &input, ScanKind::ExclusiveSum);
+    let gpu = run_prefix_scan(&input, ScanKind::ExclusiveSum);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0, 1, 3, 6]);
 }
 
 #[test]
 fn cuda_prefix_scan_inclusive_zeros() {
-    let backend = live_dispatcher();
     let input = vec![0u32; 8];
     let cpu = prefix_cpu(&input, ScanKind::InclusiveSum);
-    let gpu = run_prefix_scan(&backend, &input, ScanKind::InclusiveSum);
+    let gpu = run_prefix_scan(&input, ScanKind::InclusiveSum);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0u32; 8]);
 }
 
 #[test]
 fn cuda_prefix_scan_inclusive_non_pow2() {
-    let backend = live_dispatcher();
     let input = vec![5u32, 1, 4, 1, 5, 9, 2];
     let cpu = prefix_cpu(&input, ScanKind::InclusiveSum);
-    let gpu = run_prefix_scan(&backend, &input, ScanKind::InclusiveSum);
+    let gpu = run_prefix_scan(&input, ScanKind::InclusiveSum);
     assert_eq!(gpu, cpu);
 }
 
-fn run_stream_compact(backend: &CudaBackend, payloads: &[u32], flags: &[u32]) -> (Vec<u32>, u32) {
+fn run_stream_compact(payloads: &[u32], flags: &[u32]) -> (Vec<u32>, u32) {
     let count = payloads.len() as u32;
     // offsets must be exclusive-sum-of-flags (host-precomputed); the
     // GPU stream_compact primitive expects the offsets as input.
@@ -96,9 +93,11 @@ fn run_stream_compact(backend: &CudaBackend, payloads: &[u32], flags: &[u32]) ->
     let workgroup_x = 256u32;
     let grid_x = ((count + workgroup_x - 1) / workgroup_x).max(1);
     config.grid_override = Some([grid_x, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
+    let outputs = with_live_backend("stream compact primitive", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA stream-compact dispatch failed: {error}"))
+    });
     let compacted = bytes_u32(&outputs[0]);
     let live_count = bytes_u32(&outputs[1])[0];
     let live_compacted = compacted[..live_count as usize].to_vec();
@@ -107,11 +106,10 @@ fn run_stream_compact(backend: &CudaBackend, payloads: &[u32], flags: &[u32]) ->
 
 #[test]
 fn cuda_stream_compact_keeps_live_lanes_in_order() {
-    let backend = live_dispatcher();
     let payloads = vec![10u32, 20, 30, 40, 50];
     let flags = vec![0u32, 1, 1, 0, 1];
     let cpu = compact_cpu(&payloads, &flags);
-    let gpu = run_stream_compact(&backend, &payloads, &flags);
+    let gpu = run_stream_compact(&payloads, &flags);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu.0, vec![20, 30, 50]);
     assert_eq!(gpu.1, 3);
@@ -119,11 +117,10 @@ fn cuda_stream_compact_keeps_live_lanes_in_order() {
 
 #[test]
 fn cuda_stream_compact_all_dead() {
-    let backend = live_dispatcher();
     let payloads = vec![1u32, 2, 3];
     let flags = vec![0u32, 0, 0];
     let cpu = compact_cpu(&payloads, &flags);
-    let gpu = run_stream_compact(&backend, &payloads, &flags);
+    let gpu = run_stream_compact(&payloads, &flags);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu.1, 0);
     assert!(gpu.0.is_empty());
@@ -131,11 +128,10 @@ fn cuda_stream_compact_all_dead() {
 
 #[test]
 fn cuda_stream_compact_all_live() {
-    let backend = live_dispatcher();
     let payloads = vec![100u32, 200, 300, 400];
     let flags = vec![1u32, 1, 1, 1];
     let cpu = compact_cpu(&payloads, &flags);
-    let gpu = run_stream_compact(&backend, &payloads, &flags);
+    let gpu = run_stream_compact(&payloads, &flags);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu.1, 4);
     assert_eq!(gpu.0, payloads);
