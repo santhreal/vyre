@@ -48,3 +48,15 @@ pub(crate) fn build_fixture(tokens: &[FixtureToken]) -> Fixture {
         tok_lens,
     }
 }
+
+macro_rules! c_fixture {
+    ($(($lexeme:literal, $kind:expr)),+ $(,)?) => {
+        $crate::c_ast_gpu_parity_support::build_fixture(&[
+            $(
+                $crate::c_ast_gpu_parity_support::FixtureToken::new($lexeme, $kind),
+            )+
+        ])
+    };
+}
+
+pub(crate) use c_fixture;
