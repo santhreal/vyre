@@ -337,8 +337,8 @@ mod tests {
     }
 
     #[test]
-    fn intervening_non_add_op_breaks_chain() {
-        // Load r2; non-Add intervening op; Add; Load.
+    fn intervening_memory_effect_breaks_chain() {
+        // Load r2; visible memory effect; Add; Load.
         let desc = build(
             vec![
                 KernelOp {
@@ -357,26 +357,25 @@ mod tests {
                     result: Some(2),
                 },
                 KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![2, 1],
-                    result: Some(3),
+                    kind: KernelOpKind::StoreGlobal,
+                    operands: vec![0, 0, 2],
+                    result: None,
                 },
                 KernelOp {
                     kind: KernelOpKind::BinOpKind(BinOp::Add),
                     operands: vec![0, 1],
-                    result: Some(4),
+                    result: Some(3),
                 },
                 KernelOp {
                     kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 4],
-                    result: Some(5),
+                    operands: vec![0, 3],
+                    result: Some(4),
                 },
             ],
             vec![LiteralValue::U32(0), LiteralValue::U32(1)],
         );
-        // The Mul between the two loads breaks the consecutive-loads
-        // sequence  -  chain detection requires loads back-to-back in
-        // the op stream.
+        // Pure arithmetic can be scheduled into a load gap, but visible
+        // memory effects cannot be crossed by vector-load fusion.
         let plan = analyze(&desc);
         assert!(plan.candidates.is_empty());
     }
