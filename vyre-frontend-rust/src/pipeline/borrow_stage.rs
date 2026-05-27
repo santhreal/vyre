@@ -1,7 +1,7 @@
-//! Borrow checking stage using Weir dataflow analysis.
+//! Borrow checking stage using the external dataflow engine.
 //!
 //! Lower the nano-subset AST to a control-flow graph, then run
-//! Weir fixed-point analyses to validate ownership and borrowing.
+//! fixed-point analyses to validate ownership and borrowing.
 
 use external_dataflow_engine::ssa::try_compute_dominators;
 
@@ -12,12 +12,11 @@ use crate::RustFrontendError;
 pub type VerifiedModule = TypedModule;
 
 /// Borrow-check a typed module.
-///
-/// TODO(v0.1.0): build CFG from AST, run Weir liveness + reaching
-/// defs + points-to, emit borrow errors.
 pub fn borrow_check(module: &TypedModule) -> Result<VerifiedModule, RustFrontendError> {
-    // Placeholder: dominator computation is imported to prove Weir
-    // dependency is wired.  Real borrow check is future work.
+    let _ = module;
     let _ = try_compute_dominators;
-    Ok(module.clone())
+    Err(RustFrontendError::Unsupported(
+        "borrow checking is not wired to a Rust CFG yet; disable `borrow_check` for parse-only pipeline runs"
+            .to_string(),
+    ))
 }

@@ -1,4 +1,4 @@
-//! Lexer dispatch: GPU probe → GPU lex or CPU fallback.
+//! Lexer dispatch for the Rust frontend pipeline.
 
 use vyre_libs::parsing::rust::lex::lexer::core::{lex as lex_cpu, Token};
 use vyre_libs::parsing::rust::lex::lexer::plan::RustLexerPlan;
@@ -13,8 +13,10 @@ pub fn lex(
     _plan: &RustLexerPlan,
 ) -> Result<Vec<Token>, RustFrontendError> {
     if config.gpu_lex {
-        // TODO(v0.1.0): probe GPU backend, build plan, dispatch.
-        // For now always fall back to CPU reference.
+        return Err(RustFrontendError::Backend(
+            "Rust GPU lexer dispatch is not wired yet; set `gpu_lex = false` for explicit CPU lexer substrate testing instead of silently falling through"
+                .to_string(),
+        ));
     }
 
     lex_cpu(source).map_err(RustFrontendError::Lex)

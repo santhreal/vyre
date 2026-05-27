@@ -52,26 +52,15 @@ impl RustPipeline {
 
     /// Run the full pipeline on a single source buffer.
     pub fn compile_unit(&self, source: &[u8]) -> Result<CompilationUnit, RustFrontendError> {
-        // Stage 1: Lex
         let tokens = self::lexer_dispatch::lex(source, &self.config, &self.lex_plan)?;
-
-        // Stage 2: Parse
         let module = self::parse_stage::parse(source, &tokens)?;
-
-        // Stage 3: Name resolution (placeholder)
         let resolved = self::resolve_stage::resolve(&module)?;
-
-        // Stage 4: Type check (placeholder)
         let typed = self::typeck_stage::typeck(&resolved)?;
-
-        // Stage 5: Borrow check via Weir (placeholder)
         let verified = if self.config.borrow_check {
             self::borrow_stage::borrow_check(&typed)?
         } else {
             typed
         };
-
-        // Stage 6: Lower to Vyre IR (placeholder)
         let program = if self.config.lower {
             Some(self::lower_stage::lower(&verified)?)
         } else {
