@@ -11,6 +11,22 @@ use vyre_driver::BackendError;
 
 use super::allocations::cuda_check;
 
+pub(crate) const CUDA_ASYNC_COPY_ALIGNMENT: usize = 16;
+
+pub(crate) fn aligned_async_copy_len(byte_len: usize) -> Result<usize, BackendError> {
+    if byte_len == 0 {
+        return Ok(0);
+    }
+    byte_len
+        .checked_add(CUDA_ASYNC_COPY_ALIGNMENT - 1)
+        .map(|len| len & !(CUDA_ASYNC_COPY_ALIGNMENT - 1))
+        .ok_or_else(|| BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA async transfer length {byte_len} cannot be rounded to {CUDA_ASYNC_COPY_ALIGNMENT}-byte alignment without overflowing usize."
+            ),
+        })
+}
+
 fn validate_nonzero_host_to_device_copy(
     dst: u64,
     src: *const c_void,
@@ -344,6 +360,19 @@ mod tests {
         assert!(
             source.contains("if byte_len == 0"),
             "Fix: shared copy primitives must preserve zero-byte no-op behavior."
+        );
+    }
+
+    #[test]
+    fn aligned_async_copy_len_rounds_to_cuda_dma_boundary() {
+        assert_eq!(aligned_async_copy_len(0).unwrap(), 0);
+        assert_eq!(aligned_async_copy_len(1).unwrap(), CUDA_ASYNC_COPY_ALIGNMENT);
+        assert_eq!(aligned_async_copy_len(15).unwrap(), CUDA_ASYNC_COPY_ALIGNMENT);
+        assert_eq!(aligned_async_copy_len(16).unwrap(), CUDA_ASYNC_COPY_ALIGNMENT);
+        assert_eq!(aligned_async_copy_len(17).unwrap(), CUDA_ASYNC_COPY_ALIGNMENT * 2);
+        assert!(
+            aligned_async_copy_len(usize::MAX).is_err(),
+            "Fix: CUDA async copy padding must report usize overflow instead of wrapping."
         );
     }
 
