@@ -261,6 +261,53 @@ pub(super) fn push_c_identifier_span(
     ));
 }
 
+pub(super) fn push_bounded_byte_scan_until(
+    parse: &mut Vec<Node>,
+    iter_var: &'static str,
+    start_var: &'static str,
+    limit_var: &'static str,
+    byte_var: &'static str,
+    len_var: &'static str,
+    done_var: &'static str,
+    close_byte: Expr,
+    active_guard: Expr,
+) {
+    parse.push(Node::let_bind(
+        limit_var,
+        Expr::select(
+            Expr::lt(Expr::var(start_var), Expr::var("tok_end")),
+            Expr::sub(Expr::var("tok_end"), Expr::var(start_var)),
+            Expr::u32(0),
+        ),
+    ));
+    parse.push(Node::let_bind(len_var, Expr::u32(0)));
+    parse.push(Node::let_bind(done_var, Expr::u32(0)));
+    parse.push(Node::loop_for(
+        iter_var,
+        Expr::u32(0),
+        Expr::var(limit_var),
+        vec![Node::if_then(
+            Expr::and(
+                active_guard,
+                Expr::eq(Expr::var(done_var), Expr::u32(0)),
+            ),
+            vec![
+                Node::let_bind(
+                    byte_var,
+                    safe_source_byte_expr(Expr::add(Expr::var(start_var), Expr::var(iter_var))),
+                ),
+                Node::if_then(
+                    Expr::eq(Expr::var(byte_var), close_byte),
+                    vec![
+                        Node::assign(len_var, Expr::var(iter_var)),
+                        Node::assign(done_var, Expr::u32(1)),
+                    ],
+                ),
+            ],
+        )],
+    ));
+}
+
 pub(super) fn source_byte_expr(addr: Expr) -> Expr {
     super::gpu_source_bytes::load_packed_byte_expr("source", addr)
 }

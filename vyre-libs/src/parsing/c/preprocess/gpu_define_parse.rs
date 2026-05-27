@@ -31,8 +31,8 @@
 //! clang-valid macro identifiers or parameter lists.
 
 use super::gpu_directive_parse_shared::{
-    directive_program_from_parse, push_c_identifier_span, push_directive_row_bounds,
-    push_hash_and_keyword_start, push_keyword_end, push_ws_skip_from_expr,
+    directive_program_from_parse, push_bounded_byte_scan_until, push_c_identifier_span,
+    push_directive_row_bounds, push_hash_and_keyword_start, push_keyword_end, push_ws_skip_from_expr,
     safe_source_byte_expr as safe_load, trailing_ws_flag as is_trailing_ws, DirectiveOutputColumn,
     DirectiveThreadLayout, MAX_DIRECTIVE_WS_PREFIX as MAX_WS_PREFIX,
 };
@@ -149,43 +149,17 @@ pub fn gpu_define_parse(num_tokens: u32, source_len: u32) -> Program {
         "args_start_val_raw",
         Expr::add(Expr::var("after_name_idx"), Expr::u32(1)),
     ));
-    parse.push(Node::let_bind(
-        "args_scan_limit",
-        Expr::select(
-            Expr::lt(Expr::var("args_start_val_raw"), Expr::var("tok_end")),
-            Expr::sub(Expr::var("tok_end"), Expr::var("args_start_val_raw")),
-            Expr::u32(0),
-        ),
-    ));
-    parse.push(Node::let_bind("args_len_val_raw", Expr::u32(0)));
-    parse.push(Node::let_bind("args_done", Expr::u32(0)));
-    parse.push(Node::loop_for(
+    push_bounded_byte_scan_until(
+        &mut parse,
         "args_i",
-        Expr::u32(0),
-        Expr::var("args_scan_limit"),
-        vec![Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("is_func_val"), Expr::u32(1)),
-                Expr::eq(Expr::var("args_done"), Expr::u32(0)),
-            ),
-            vec![
-                Node::let_bind(
-                    "args_byte",
-                    safe_load(Expr::add(
-                        Expr::var("args_start_val_raw"),
-                        Expr::var("args_i"),
-                    )),
-                ),
-                Node::if_then(
-                    Expr::eq(Expr::var("args_byte"), Expr::u32(b')' as u32)),
-                    vec![
-                        Node::assign("args_len_val_raw", Expr::var("args_i")),
-                        Node::assign("args_done", Expr::u32(1)),
-                    ],
-                ),
-            ],
-        )],
-    ));
+        "args_start_val_raw",
+        "args_scan_limit",
+        "args_byte",
+        "args_len_val_raw",
+        "args_done",
+        Expr::u32(b')' as u32),
+        Expr::eq(Expr::var("is_func_val"), Expr::u32(1)),
+    );
 
     // ---- Step 7: body span ----
     // body_pre_start = position right after the closing `)` for
