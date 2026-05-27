@@ -1,4 +1,5 @@
 use super::*;
+use super::chain;
 
 pub(crate) fn emit_typedef_visibility_scan_precomputed_context(
     vast_nodes: &str,
@@ -36,60 +37,32 @@ pub(crate) fn emit_typedef_visibility_scan_precomputed_context(
         Node::let_bind(&target_base, vast_row_base_expr(t.clone())),
         Node::let_bind(
             &target_len,
-            Expr::load(vast_nodes, Expr::add(Expr::var(&target_base), Expr::u32(6))),
+            chain::vast_len_from_base(vast_nodes, &target_base),
         ),
         Node::let_bind(
             &target_hash,
-            Expr::load(
-                vast_nodes,
-                Expr::add(
-                    Expr::var(&target_base),
-                    Expr::u32(VAST_TYPEDEF_SYMBOL_FIELD),
-                ),
-            ),
+            chain::vast_typedef_hash_from_base(vast_nodes, &target_base),
         ),
         Node::let_bind(
             &target_scope,
-            Expr::load(
-                vast_nodes,
-                Expr::add(Expr::var(&target_base), Expr::u32(VAST_TYPEDEF_SCOPE_FIELD)),
-            ),
+            chain::vast_scope_from_base(vast_nodes, &target_base),
         ),
         Node::let_bind(
             &target_context_base,
-            Expr::mul(t.clone(), Expr::u32(VAST_DECL_CONTEXT_STRIDE_U32)),
+            chain::decl_context_base_for_index(t.clone()),
         ),
         Node::let_bind(
             &target_link_raw,
-            Expr::load(
-                decl_contexts,
-                Expr::add(
-                    Expr::var(&target_context_base),
-                    Expr::u32(VAST_DECL_CONTEXT_PREV_DECL_LINK_FIELD),
-                ),
-            ),
+            chain::prev_decl_link_from_base(decl_contexts, &target_context_base),
         ),
         Node::let_bind(
             &target_chain_len,
-            Expr::load(
-                decl_contexts,
-                Expr::add(
-                    Expr::var(&target_context_base),
-                    Expr::u32(VAST_DECL_CONTEXT_PREV_DECL_CHAIN_LEN_FIELD),
-                ),
-            ),
+            chain::prev_decl_chain_len_from_base(decl_contexts, &target_context_base),
         ),
         Node::let_bind(&last_decl_kind, Expr::u32(0)),
         Node::let_bind(
             &chain_cursor,
-            Expr::select(
-                Expr::or(
-                    Expr::eq(Expr::var(&target_link_raw), Expr::u32(0)),
-                    Expr::eq(Expr::var(&target_link_raw), Expr::u32(SENTINEL)),
-                ),
-                Expr::u32(SENTINEL),
-                Expr::sub(Expr::var(&target_link_raw), Expr::u32(1)),
-            ),
+            chain::decode_prev_decl_link(Expr::var(&target_link_raw)),
         ),
     ];
 
@@ -103,10 +76,7 @@ pub(crate) fn emit_typedef_visibility_scan_precomputed_context(
     ));
     same_candidate_body.push(Node::let_bind(
         &scan_scope,
-        Expr::load(
-            vast_nodes,
-            Expr::add(Expr::var(&scan_base), Expr::u32(VAST_TYPEDEF_SCOPE_FIELD)),
-        ),
+        chain::vast_scope_from_base(vast_nodes, &scan_base),
     ));
     same_candidate_body.push(Node::let_bind(
         &visible_scope,
@@ -150,14 +120,11 @@ pub(crate) fn emit_typedef_visibility_scan_precomputed_context(
         Node::let_bind(&scan_base, vast_row_base_expr(Expr::var(&chain_cursor))),
         Node::let_bind(
             &scan_hash,
-            Expr::load(
-                vast_nodes,
-                Expr::add(Expr::var(&scan_base), Expr::u32(VAST_TYPEDEF_SYMBOL_FIELD)),
-            ),
+            chain::vast_typedef_hash_from_base(vast_nodes, &scan_base),
         ),
         Node::let_bind(
             &scan_len,
-            Expr::load(vast_nodes, Expr::add(Expr::var(&scan_base), Expr::u32(6))),
+            chain::vast_len_from_base(vast_nodes, &scan_base),
         ),
         Node::if_then(
             Expr::and(
@@ -171,31 +138,15 @@ pub(crate) fn emit_typedef_visibility_scan_precomputed_context(
         ),
         Node::let_bind(
             &scan_context_base,
-            Expr::mul(
-                Expr::var(&chain_cursor),
-                Expr::u32(VAST_DECL_CONTEXT_STRIDE_U32),
-            ),
+            chain::decl_context_base_for_index(Expr::var(&chain_cursor)),
         ),
         Node::let_bind(
             &next_link_raw,
-            Expr::load(
-                decl_contexts,
-                Expr::add(
-                    Expr::var(&scan_context_base),
-                    Expr::u32(VAST_DECL_CONTEXT_PREV_DECL_LINK_FIELD),
-                ),
-            ),
+            chain::prev_decl_link_from_base(decl_contexts, &scan_context_base),
         ),
         Node::assign(
             &chain_cursor,
-            Expr::select(
-                Expr::or(
-                    Expr::eq(Expr::var(&next_link_raw), Expr::u32(0)),
-                    Expr::eq(Expr::var(&next_link_raw), Expr::u32(SENTINEL)),
-                ),
-                Expr::u32(SENTINEL),
-                Expr::sub(Expr::var(&next_link_raw), Expr::u32(1)),
-            ),
+            chain::decode_prev_decl_link(Expr::var(&next_link_raw)),
         ),
     ];
     nodes.push(Node::loop_for(

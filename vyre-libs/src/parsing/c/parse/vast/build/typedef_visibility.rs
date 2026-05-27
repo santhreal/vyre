@@ -1,5 +1,6 @@
 use super::*;
 
+mod chain;
 mod precomputed_declaration;
 mod precomputed_visibility;
 mod visibility_match;
@@ -46,18 +47,9 @@ pub(crate) fn emit_visible_typedef_name_for_index(
         Node::let_bind(
             &target_link_raw,
             if let Some(decl_contexts) = decl_contexts {
-                Expr::load(
-                    decl_contexts,
-                    Expr::add(
-                        Expr::mul(idx.clone(), Expr::u32(VAST_DECL_CONTEXT_STRIDE_U32)),
-                        Expr::u32(VAST_DECL_CONTEXT_PREV_DECL_LINK_FIELD),
-                    ),
-                )
+                chain::prev_decl_link_for_index(decl_contexts, idx.clone())
             } else {
-                Expr::load(
-                    vast_nodes,
-                    Expr::add(Expr::var(&target_base), Expr::u32(VAST_TYPEDEF_FLAGS_FIELD)),
-                )
+                chain::vast_typedef_flags_from_base(vast_nodes, &target_base)
             },
         ),
         Node::let_bind(
@@ -67,13 +59,7 @@ pub(crate) fn emit_visible_typedef_name_for_index(
         Node::let_bind(
             &target_chain_len,
             if let Some(decl_contexts) = decl_contexts {
-                Expr::load(
-                    decl_contexts,
-                    Expr::add(
-                        Expr::mul(idx.clone(), Expr::u32(VAST_DECL_CONTEXT_STRIDE_U32)),
-                        Expr::u32(VAST_DECL_CONTEXT_PREV_DECL_CHAIN_LEN_FIELD),
-                    ),
-                )
+                chain::prev_decl_chain_len_for_index(decl_contexts, idx.clone())
             } else {
                 idx.clone()
             },
@@ -98,10 +84,7 @@ pub(crate) fn emit_visible_typedef_name_for_index(
     ));
     lookup_body.push(Node::let_bind(
         &target_scope,
-        Expr::load(
-            vast_nodes,
-            Expr::add(Expr::var(&target_base), Expr::u32(VAST_TYPEDEF_SCOPE_FIELD)),
-        ),
+        chain::vast_scope_from_base(vast_nodes, &target_base),
     ));
     let mut target_scope_fallback = emit_scope_open_scan_assign_for_index(
         vast_nodes,
@@ -117,13 +100,9 @@ pub(crate) fn emit_visible_typedef_name_for_index(
     nodes.push(Node::let_bind(&last_decl_kind, Expr::u32(0)));
     nodes.push(Node::let_bind(
         &chain_cursor,
-        Expr::select(
-            Expr::and(
-                Expr::var(&target_prepared),
-                Expr::ne(Expr::var(&target_link_raw), Expr::u32(SENTINEL)),
-            ),
-            Expr::sub(Expr::var(&target_link_raw), Expr::u32(1)),
-            Expr::u32(SENTINEL),
+        chain::decode_prepared_prev_decl_link(
+            Expr::var(&target_link_raw),
+            Expr::var(&target_prepared),
         ),
     ));
     nodes.push(Node::if_then(
@@ -204,13 +183,7 @@ pub(crate) fn emit_visible_typedef_name_for_index(
                             let mut same_name_body = Vec::new();
                             same_name_body.push(Node::let_bind(
                                 &scan_scope,
-                                Expr::load(
-                                    vast_nodes,
-                                    Expr::add(
-                                        Expr::var(&scan_base),
-                                        Expr::u32(VAST_TYPEDEF_SCOPE_FIELD),
-                                    ),
-                                ),
+                                chain::vast_scope_from_base(vast_nodes, &scan_base),
                             ));
                             let mut scan_scope_fallback = emit_scope_open_scan_assign_for_index(
                                 vast_nodes,
@@ -263,10 +236,7 @@ pub(crate) fn emit_visible_typedef_name_for_index(
                             vec![
                                 Node::let_bind(
                                     &scan_len,
-                                    Expr::load(
-                                        vast_nodes,
-                                        Expr::add(Expr::var(&scan_base), Expr::u32(6)),
-                                    ),
+                                    chain::vast_len_from_base(vast_nodes, &scan_base),
                                 ),
                                 Node::let_bind(
                                     &scan_next_idx,
@@ -288,7 +258,7 @@ pub(crate) fn emit_visible_typedef_name_for_index(
                                 ),
                                 Node::let_bind(
                                     &scan_next_kind,
-                                    Expr::load(vast_nodes, Expr::var(&scan_next_base)),
+                                    chain::vast_kind_from_base(vast_nodes, &scan_next_base),
                                 ),
                                 Node::let_bind(
                                     &scan_possible_declarator,
@@ -321,24 +291,11 @@ pub(crate) fn emit_visible_typedef_name_for_index(
                         vec![
                             Node::let_bind(
                                 &chain_raw,
-                                Expr::load(
-                                    vast_nodes,
-                                    Expr::add(
-                                        Expr::var(&scan_base),
-                                        Expr::u32(VAST_TYPEDEF_FLAGS_FIELD),
-                                    ),
-                                ),
+                                chain::vast_typedef_flags_from_base(vast_nodes, &scan_base),
                             ),
                             Node::assign(
                                 &chain_cursor,
-                                Expr::select(
-                                    Expr::or(
-                                        Expr::eq(Expr::var(&chain_raw), Expr::u32(0)),
-                                        Expr::eq(Expr::var(&chain_raw), Expr::u32(SENTINEL)),
-                                    ),
-                                    Expr::u32(SENTINEL),
-                                    Expr::sub(Expr::var(&chain_raw), Expr::u32(1)),
-                                ),
+                                chain::decode_prev_decl_link(Expr::var(&chain_raw)),
                             ),
                         ],
                     ),
