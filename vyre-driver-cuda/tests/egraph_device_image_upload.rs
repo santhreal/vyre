@@ -522,8 +522,8 @@ fn egraph_structural_equivalence_kernel_rejects_forced_ordering_bucket() {
     );
 
     assert_eq!(result.device_reported_count, 0);
+    assert_eq!(result.emitted_pair_count, 0);
     assert!(!result.overflowed_output_capacity);
-    assert!(result.emitted.is_empty());
     assert!(result.unique.is_empty());
 }
 
