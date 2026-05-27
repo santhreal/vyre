@@ -6,9 +6,8 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::bitset::and_into::{bitset_and_into, cpu_ref as and_into_cpu};
 use vyre_primitives::bitset::and_not_into::{bitset_and_not_into, cpu_ref as and_not_into_cpu};
 use vyre_primitives::bitset::clear_bit::{bitset_clear_bit, cpu_ref as clear_bit_cpu};
@@ -23,27 +22,23 @@ use vyre_primitives::bitset::test_bit::{bitset_test_bit, cpu_ref as test_bit_cpu
 use vyre_primitives::bitset::xor_into::{bitset_xor_into, cpu_ref as xor_into_cpu};
 use vyre_primitives::bitset::zero::{bitset_zero, cpu_ref as zero_cpu};
 
-fn dispatch_grid(
-    backend: &CudaBackend,
-    program: &vyre::ir::Program,
-    inputs: &[Vec<u8>],
-    grid_x: u32,
-) -> Vec<Vec<u8>> {
+fn dispatch_grid(program: &vyre::ir::Program, inputs: &[Vec<u8>], grid_x: u32) -> Vec<Vec<u8>> {
     let mut config = DispatchConfig::default();
     config.grid_override = Some([grid_x.max(1), 1, 1]);
-    backend
-        .dispatch(program, inputs, &config)
-        .expect("dispatch")
+    with_live_backend("bitset primitive dispatch", |backend| {
+        backend
+            .dispatch(program, inputs, &config)
+            .unwrap_or_else(|error| panic!("Fix: CUDA bitset primitive dispatch failed: {error}"))
+    })
 }
 
 #[test]
 fn cuda_bitset_not_parity() {
-    let backend = live_dispatcher();
     let input = vec![0x0F0F_0F0Fu32, 0xCAFE_BABE];
     let cpu = not_cpu(&input);
     let program = bitset_not("input", "out", 2);
     let inputs = vec![u32_bytes(&input), vec![0u8; 8]];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
     assert_eq!(gpu, cpu);
@@ -51,13 +46,12 @@ fn cuda_bitset_not_parity() {
 
 #[test]
 fn cuda_bitset_or_parity() {
-    let backend = live_dispatcher();
     let lhs = vec![0xFF00u32, 0x0F0F];
     let rhs = vec![0x00FFu32, 0xF0F0];
     let cpu = or_cpu(&lhs, &rhs);
     let program = bitset_or("lhs", "rhs", "out", 2);
     let inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs), vec![0u8; 8]];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
     assert_eq!(gpu, cpu);
@@ -65,20 +59,19 @@ fn cuda_bitset_or_parity() {
 
 #[test]
 fn cuda_bitset_equal_parity() {
-    let backend = live_dispatcher();
     let lhs = vec![0xDEADu32, 0xBEEF];
     let rhs = vec![0xDEADu32, 0xBEEF];
     let expected = equal_cpu(&lhs, &rhs);
     let program = bitset_equal("lhs", "rhs", "out", 2);
     let inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs), vec![0u8; 4]];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     let scalar = bytes_u32(&outputs[0])[0];
     assert_eq!(scalar, expected);
     assert_eq!(scalar, 1);
 
     let rhs_diff = vec![0xDEAEu32, 0xBEEF];
     let inputs2 = vec![u32_bytes(&lhs), u32_bytes(&rhs_diff), vec![0u8; 4]];
-    let outputs2 = dispatch_grid(&backend, &program, &inputs2, 1);
+    let outputs2 = dispatch_grid(&program, &inputs2, 1);
     let scalar2 = bytes_u32(&outputs2[0])[0];
     assert_eq!(scalar2, equal_cpu(&lhs, &rhs_diff));
     assert_eq!(scalar2, 0);
@@ -86,32 +79,29 @@ fn cuda_bitset_equal_parity() {
 
 #[test]
 fn cuda_bitset_equal_crosses_workgroup_lanes() {
-    let backend = live_dispatcher();
     let lhs = vec![0xFFFF_FFFFu32; 600];
     let mut rhs = lhs.clone();
     rhs[513] ^= 1;
     let program = bitset_equal("lhs", "rhs", "out", lhs.len() as u32);
     let inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs), vec![0u8; 4]];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     assert_eq!(bytes_u32(&outputs[0])[0], equal_cpu(&lhs, &rhs));
 }
 
 #[test]
 fn cuda_bitset_subset_of_parity() {
-    let backend = live_dispatcher();
     let lhs = vec![0b0011u32];
     let rhs = vec![0b1111u32];
     let cpu = subset_of_cpu(&lhs, &rhs);
     let program = bitset_subset_of("lhs", "rhs", "out", 1);
     let inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs), vec![0u8; 4]];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     assert_eq!(bytes_u32(&outputs[0])[0], cpu);
     assert_eq!(cpu, 1);
 }
 
 #[test]
 fn cuda_bitset_subset_of_crosses_workgroup_lanes() {
-    let backend = live_dispatcher();
     let lhs = vec![0u32; 600];
     let mut rhs = vec![0u32; 600];
     rhs[511] = 0xFFFF_FFFF;
@@ -119,10 +109,10 @@ fn cuda_bitset_subset_of_crosses_workgroup_lanes() {
     not_subset[513] = 0b1000;
     let program = bitset_subset_of("lhs", "rhs", "out", lhs.len() as u32);
     let ok_inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs), vec![0u8; 4]];
-    let ok_outputs = dispatch_grid(&backend, &program, &ok_inputs, 1);
+    let ok_outputs = dispatch_grid(&program, &ok_inputs, 1);
     assert_eq!(bytes_u32(&ok_outputs[0])[0], subset_of_cpu(&lhs, &rhs));
     let bad_inputs = vec![u32_bytes(&not_subset), u32_bytes(&rhs), vec![0u8; 4]];
-    let bad_outputs = dispatch_grid(&backend, &program, &bad_inputs, 1);
+    let bad_outputs = dispatch_grid(&program, &bad_inputs, 1);
     assert_eq!(
         bytes_u32(&bad_outputs[0])[0],
         subset_of_cpu(&not_subset, &rhs)
@@ -131,38 +121,35 @@ fn cuda_bitset_subset_of_crosses_workgroup_lanes() {
 
 #[test]
 fn cuda_bitset_test_bit_parity() {
-    let backend = live_dispatcher();
     let buf = vec![0b1010u32];
     let bit_idx = 1u32;
     let expected = test_bit_cpu(&buf, bit_idx);
     let program = bitset_test_bit("buf", bit_idx, "out");
     let inputs = vec![u32_bytes(&buf), vec![0u8; 4]];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     assert_eq!(bytes_u32(&outputs[0])[0], expected);
     assert_eq!(expected, 1);
 }
 
 #[test]
 fn cuda_bitset_contains_parity() {
-    let backend = live_dispatcher();
     let buf = vec![0b1010u32];
     let cpu = contains_cpu(&buf, 1);
     let program = bitset_contains("buf", "idx", "out", 1);
     let inputs = vec![u32_bytes(&buf), u32_bytes(&[1u32]), vec![0u8; 4]];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     assert_eq!(bytes_u32(&outputs[0])[0], cpu);
 }
 
 #[test]
 fn cuda_bitset_copy_parity() {
-    let backend = live_dispatcher();
     let src = vec![0xCAFEu32, 0xBABE];
     let mut cpu_dst = vec![0u32; 2];
     copy_cpu(&mut cpu_dst, &src);
     let program = bitset_copy("dst", "src", 2);
     // RW target then RO source order in declaration.
     let inputs = vec![vec![0u8; 8], u32_bytes(&src)];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
     assert_eq!(gpu, cpu_dst);
@@ -170,11 +157,10 @@ fn cuda_bitset_copy_parity() {
 
 #[test]
 fn cuda_bitset_zero_parity_crosses_workgroup_lanes() {
-    let backend = live_dispatcher();
     let mut cpu_target = (0..600).map(|idx| 0xA5A5_0000u32 ^ idx).collect::<Vec<_>>();
     let program = bitset_zero("target", cpu_target.len() as u32);
     let inputs = vec![u32_bytes(&cpu_target)];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 3);
+    let outputs = dispatch_grid(&program, &inputs, 3);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(cpu_target.len());
     zero_cpu(&mut cpu_target);
@@ -183,12 +169,11 @@ fn cuda_bitset_zero_parity_crosses_workgroup_lanes() {
 
 #[test]
 fn cuda_bitset_and_into_parity() {
-    let backend = live_dispatcher();
     let mut cpu_target = vec![0xFF00u32, 0xFFFF];
     let mask = vec![0x0F00u32, 0x0F0F];
     let program = bitset_and_into("target", "mask", 2);
     let inputs = vec![u32_bytes(&cpu_target), u32_bytes(&mask)];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
     and_into_cpu(&mut cpu_target, &mask);
@@ -197,12 +182,11 @@ fn cuda_bitset_and_into_parity() {
 
 #[test]
 fn cuda_bitset_or_into_parity() {
-    let backend = live_dispatcher();
     let mut cpu_target = vec![0xFF00u32, 0x0F0F];
     let addend = vec![0x00FFu32, 0xF0F0];
     let program = bitset_or_into("target", "addend", 2);
     let inputs = vec![u32_bytes(&cpu_target), u32_bytes(&addend)];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
     or_into_cpu(&mut cpu_target, &addend);
@@ -211,12 +195,11 @@ fn cuda_bitset_or_into_parity() {
 
 #[test]
 fn cuda_bitset_xor_into_parity() {
-    let backend = live_dispatcher();
     let mut cpu_target = vec![0xCAFEu32, 0xBABE];
     let addend = vec![0xDEADu32, 0xBEEF];
     let program = bitset_xor_into("target", "addend", 2);
     let inputs = vec![u32_bytes(&cpu_target), u32_bytes(&addend)];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
     xor_into_cpu(&mut cpu_target, &addend);
@@ -225,12 +208,11 @@ fn cuda_bitset_xor_into_parity() {
 
 #[test]
 fn cuda_bitset_and_not_into_parity() {
-    let backend = live_dispatcher();
     let mut cpu_target = vec![0xFFFFu32, 0x00FF];
     let subtrahend = vec![0xFF00u32, 0x00F0];
     let program = bitset_and_not_into("target", "subtrahend", 2);
     let inputs = vec![u32_bytes(&cpu_target), u32_bytes(&subtrahend)];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
     and_not_into_cpu(&mut cpu_target, &subtrahend);
@@ -239,12 +221,11 @@ fn cuda_bitset_and_not_into_parity() {
 
 #[test]
 fn cuda_bitset_clear_bit_parity() {
-    let backend = live_dispatcher();
     let mut cpu_target = vec![0xFFFFu32, 0xFFFF];
     let bit_idx = 5u32;
     let program = bitset_clear_bit("target", bit_idx, 2);
     let inputs = vec![u32_bytes(&cpu_target)];
-    let outputs = dispatch_grid(&backend, &program, &inputs, 1);
+    let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
     clear_bit_cpu(&mut cpu_target, bit_idx);
