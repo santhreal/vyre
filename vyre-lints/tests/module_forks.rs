@@ -8,10 +8,16 @@ fn flags_same_module_basename_across_authority_roots() {
     let substrate = dir.path().join("vyre-self-substrate/src");
     fs::create_dir_all(&primitive).expect("create primitive root");
     fs::create_dir_all(&substrate).expect("create substrate root");
-    fs::write(primitive.join("toposort.rs"), "pub fn primitive_toposort() {}\n")
-        .expect("write primitive module");
-    fs::write(substrate.join("toposort.rs"), "pub fn substrate_toposort() {}\n")
-        .expect("write substrate module");
+    fs::write(
+        primitive.join("toposort.rs"),
+        "pub fn build_toposort() {}\nfn primitive_only() {}\n",
+    )
+    .expect("write primitive module");
+    fs::write(
+        substrate.join("toposort.rs"),
+        "pub fn build_toposort() {}\nfn substrate_only() {}\n",
+    )
+    .expect("write substrate module");
 
     let violations =
         vyre_lints::run_module_forks(&[primitive.as_path(), substrate.as_path()])
@@ -24,6 +30,9 @@ fn flags_same_module_basename_across_authority_roots() {
     assert!(violations
         .iter()
         .all(|v| v.message.contains("toposort.rs") && v.message.contains("Fix:")));
+    assert!(violations
+        .iter()
+        .all(|v| v.message.contains("shared Rust symbols: build_toposort")));
 }
 
 #[test]
