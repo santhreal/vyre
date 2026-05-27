@@ -491,8 +491,11 @@ fn is_declarative_catalog_source(source: &str) -> bool {
         && const_ratio >= 35
         && declaration_ratio >= 55
         && shape.function_lines <= 4;
+    let wire_tag_catalog = source.contains("impl_builtin_wire_tag!(")
+        && !source.contains("fn ")
+        && source.matches("=>").count() >= 4;
 
-    module_index || const_catalog
+    module_index || const_catalog || wire_tag_catalog
 }
 
 fn source_shape(source: &str) -> SourceShape {
@@ -992,6 +995,22 @@ mod tests {
         ]
         .join("\n");
         assert!(!is_declarative_catalog_source(&real_code_with_constants));
+
+        let wire_tag_catalog = [
+            "pub enum ExampleOp {",
+            "    Add,",
+            "    Mul,",
+            "    Opaque(ExtensionOpId),",
+            "}",
+            "impl_builtin_wire_tag!(ExampleOp, Opaque, {",
+            "    Add => 0x01,",
+            "    Mul => 0x02,",
+            "    Div => 0x03,",
+            "    Rem => 0x04,",
+            "});",
+        ]
+        .join("\n");
+        assert!(is_declarative_catalog_source(&wire_tag_catalog));
     }
 
     #[test]
