@@ -91,26 +91,23 @@ pub fn cpu_ref_into(
     let words = crate::graph::csr_forward_traverse::bitset_words(node_count) as usize;
     out.clear();
     out.resize(words, 0);
+    crate::graph::csr_forward_traverse::validate_csr_frontier_step_cpu_inputs(
+        "csr_backward_traverse",
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+    );
     for src in 0..node_count {
-        let Some(edge_start) = edge_offsets.get(src as usize).copied() else {
-            continue;
-        };
-        let Some(edge_end) = edge_offsets.get(src as usize + 1).copied() else {
-            continue;
-        };
-        let edge_start = edge_start as usize;
-        let edge_end = edge_end as usize;
+        let edge_start = edge_offsets[src as usize] as usize;
+        let edge_end = edge_offsets[src as usize + 1] as usize;
         let mut hit = false;
         for e in edge_start..edge_end {
-            let Some(kind) = edge_kind_mask.get(e).copied() else {
-                break;
-            };
+            let kind = edge_kind_mask[e];
             if (kind & allow_mask) == 0 {
                 continue;
             }
-            let Some(dst) = edge_targets.get(e).copied() else {
-                break;
-            };
+            let dst = edge_targets[e];
             let dst_word = (dst / 32) as usize;
             let dst_bit = 1u32 << (dst % 32);
             if dst_word < frontier_in.len() && (frontier_in[dst_word] & dst_bit) != 0 {
@@ -237,8 +234,7 @@ mod tests {
     fn max_node_count_cross_word_boundary_backward() {
         // 65 nodes (3 words), one edge from node 0 to node 64.
         let mut offsets = vec![0u32; 66];
-        offsets[0] = 0;
-        offsets[1] = 1;
+        offsets[1..].fill(1);
         let mut frontier = vec![0u32; 3];
         frontier[2] = 1; // node 64
         let got = cpu_ref(65, &offsets, &[64], &[1], &frontier, 0xFFFF_FFFF);
@@ -297,9 +293,21 @@ mod tests {
     }
 
     #[test]
-    fn malformed_csr_returns_empty_without_panicking() {
-        // edge_offsets too short  -  cpu_ref uses .get() so it does not panic.
+    #[should_panic(expected = "node_count + 1 CSR offsets")]
+    fn malformed_csr_short_offsets_fail_loudly() {
         let got = cpu_ref(4, &[0, 1], &[1], &[1], &[0b0001], 0xFFFF_FFFF);
         assert_eq!(got, vec![0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "complete CSR edge buffers")]
+    fn malformed_csr_short_edge_buffers_fail_loudly() {
+        let _ = cpu_ref(2, &[0, 2, 2], &[1], &[1], &[0b0010], 0xFFFF_FFFF);
+    }
+
+    #[test]
+    #[should_panic(expected = "non-monotonic CSR offsets")]
+    fn malformed_csr_non_monotonic_offsets_fail_loudly() {
+        let _ = cpu_ref(2, &[0, 2, 1], &[1, 0], &[1, 1], &[0b0010], 0xFFFF_FFFF);
     }
 }
