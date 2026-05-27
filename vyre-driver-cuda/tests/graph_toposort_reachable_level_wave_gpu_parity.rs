@@ -5,7 +5,7 @@
 
 mod common;
 
-use common::{bytes_u32, live_dispatcher, u32_bytes};
+use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -67,43 +67,46 @@ fn run_toposort(backend: &CudaBackend, node_count: u32, edges: &[(u32, u32)]) ->
 
 #[test]
 fn cuda_toposort_two_node_chain() {
-    let backend = live_dispatcher();
-    let edges = vec![(0u32, 1u32)];
-    let cpu = toposort(2, &edges).expect("acyclic");
-    let gpu = run_toposort(&backend, 2, &edges);
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![1, 0]);
+    with_live_backend("cuda_toposort_two_node_chain", |backend| {
+        let edges = vec![(0u32, 1u32)];
+        let cpu = toposort(2, &edges).expect("acyclic");
+        let gpu = run_toposort(backend, 2, &edges);
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, vec![1, 0]);
+    });
 }
 
 #[test]
 fn cuda_toposort_diamond() {
-    let backend = live_dispatcher();
-    // 0 depends on 1 and 2; both depend on 3.
-    let edges = vec![(0u32, 1u32), (0, 2), (1, 3), (2, 3)];
-    let cpu = toposort(4, &edges).expect("acyclic diamond");
-    let gpu = run_toposort(&backend, 4, &edges);
-    assert_eq!(gpu, cpu);
-    let pos = |v: u32| gpu.iter().position(|&x| x == v).unwrap();
-    assert!(pos(3) < pos(1));
-    assert!(pos(3) < pos(2));
-    assert!(pos(1) < pos(0));
-    assert!(pos(2) < pos(0));
+    with_live_backend("cuda_toposort_diamond", |backend| {
+        // 0 depends on 1 and 2; both depend on 3.
+        let edges = vec![(0u32, 1u32), (0, 2), (1, 3), (2, 3)];
+        let cpu = toposort(4, &edges).expect("acyclic diamond");
+        let gpu = run_toposort(backend, 4, &edges);
+        assert_eq!(gpu, cpu);
+        let pos = |v: u32| gpu.iter().position(|&x| x == v).unwrap();
+        assert!(pos(3) < pos(1));
+        assert!(pos(3) < pos(2));
+        assert!(pos(1) < pos(0));
+        assert!(pos(2) < pos(0));
+    });
 }
 
 #[test]
 fn cuda_toposort_no_edges_emits_all_nodes() {
-    let backend = live_dispatcher();
-    let edges: Vec<(u32, u32)> = vec![];
-    let cpu = toposort(3, &edges).expect("no-edge toposort");
-    let gpu = run_toposort(&backend, 3, &edges);
-    // Both should permute {0,1,2}; the kernel emits in iteration
-    // order which equals CPU LIFO order.
-    let mut sorted_gpu = gpu.clone();
-    sorted_gpu.sort_unstable();
-    assert_eq!(sorted_gpu, vec![0, 1, 2]);
-    let mut sorted_cpu = cpu.clone();
-    sorted_cpu.sort_unstable();
-    assert_eq!(sorted_cpu, sorted_gpu);
+    with_live_backend("cuda_toposort_no_edges_emits_all_nodes", |backend| {
+        let edges: Vec<(u32, u32)> = vec![];
+        let cpu = toposort(3, &edges).expect("no-edge toposort");
+        let gpu = run_toposort(backend, 3, &edges);
+        // Both should permute {0,1,2}; the kernel emits in iteration
+        // order which equals CPU LIFO order.
+        let mut sorted_gpu = gpu.clone();
+        sorted_gpu.sort_unstable();
+        assert_eq!(sorted_gpu, vec![0, 1, 2]);
+        let mut sorted_cpu = cpu.clone();
+        sorted_cpu.sort_unstable();
+        assert_eq!(sorted_cpu, sorted_gpu);
+    });
 }
 
 // ---------------------------------------------------------------------
@@ -242,46 +245,49 @@ fn run_reachable(
 
 #[test]
 fn cuda_reachable_two_step_chain() {
-    let backend = live_dispatcher();
-    // 0 -> 1 -> 2; sources={0}; expect {0,1,2}.
-    let edges = vec![(0u32, 1u32), (1, 2)];
-    let cpu: Vec<u32> = {
-        let mut v: Vec<u32> = reachable(3, &edges, &[0]).unwrap().into_iter().collect();
-        v.sort_unstable();
-        v
-    };
-    let gpu = run_reachable(&backend, 3, &edges, &[0], 4);
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![0, 1, 2]);
+    with_live_backend("cuda_reachable_two_step_chain", |backend| {
+        // 0 -> 1 -> 2; sources={0}; expect {0,1,2}.
+        let edges = vec![(0u32, 1u32), (1, 2)];
+        let cpu: Vec<u32> = {
+            let mut v: Vec<u32> = reachable(3, &edges, &[0]).unwrap().into_iter().collect();
+            v.sort_unstable();
+            v
+        };
+        let gpu = run_reachable(backend, 3, &edges, &[0], 4);
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, vec![0, 1, 2]);
+    });
 }
 
 #[test]
 fn cuda_reachable_disconnected() {
-    let backend = live_dispatcher();
-    // 0 -> 1, 2 -> 3; sources={0}; expect {0,1}.
-    let edges = vec![(0u32, 1u32), (2, 3)];
-    let cpu: Vec<u32> = {
-        let mut v: Vec<u32> = reachable(4, &edges, &[0]).unwrap().into_iter().collect();
-        v.sort_unstable();
-        v
-    };
-    let gpu = run_reachable(&backend, 4, &edges, &[0], 4);
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![0, 1]);
+    with_live_backend("cuda_reachable_disconnected", |backend| {
+        // 0 -> 1, 2 -> 3; sources={0}; expect {0,1}.
+        let edges = vec![(0u32, 1u32), (2, 3)];
+        let cpu: Vec<u32> = {
+            let mut v: Vec<u32> = reachable(4, &edges, &[0]).unwrap().into_iter().collect();
+            v.sort_unstable();
+            v
+        };
+        let gpu = run_reachable(backend, 4, &edges, &[0], 4);
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, vec![0, 1]);
+    });
 }
 
 #[test]
 fn cuda_reachable_diamond_converges() {
-    let backend = live_dispatcher();
-    let edges = vec![(0u32, 1u32), (0, 2), (1, 3), (2, 3)];
-    let cpu: Vec<u32> = {
-        let mut v: Vec<u32> = reachable(4, &edges, &[0]).unwrap().into_iter().collect();
-        v.sort_unstable();
-        v
-    };
-    let gpu = run_reachable(&backend, 4, &edges, &[0], 4);
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![0, 1, 2, 3]);
+    with_live_backend("cuda_reachable_diamond_converges", |backend| {
+        let edges = vec![(0u32, 1u32), (0, 2), (1, 3), (2, 3)];
+        let cpu: Vec<u32> = {
+            let mut v: Vec<u32> = reachable(4, &edges, &[0]).unwrap().into_iter().collect();
+            v.sort_unstable();
+            v
+        };
+        let gpu = run_reachable(backend, 4, &edges, &[0], 4);
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, vec![0, 1, 2, 3]);
+    });
 }
 
 // ---------------------------------------------------------------------
@@ -330,34 +336,36 @@ fn run_level_wave(backend: &CudaBackend, depths: &[u32], max_depth: u32) -> Vec<
 
 #[test]
 fn cuda_level_wave_visits_each_lane_exactly_once() {
-    let backend = live_dispatcher();
-    let depths = vec![0u32, 1, 2, 1, 0];
-    let max_depth = 3;
-    // CPU oracle: each lane's counter must end at exactly 1.
-    let mut cpu = vec![0u32; depths.len()];
-    level_wave_cpu(&depths, max_depth, |lane, _depth| {
-        cpu[lane as usize] += 1;
+    with_live_backend("cuda_level_wave_visits_each_lane_exactly_once", |backend| {
+        let depths = vec![0u32, 1, 2, 1, 0];
+        let max_depth = 3;
+        // CPU oracle: each lane's counter must end at exactly 1.
+        let mut cpu = vec![0u32; depths.len()];
+        level_wave_cpu(&depths, max_depth, |lane, _depth| {
+            cpu[lane as usize] += 1;
+        });
+        let gpu = run_level_wave(backend, &depths, max_depth);
+        assert_eq!(gpu, cpu);
+        assert!(
+            gpu.iter().all(|&c| c == 1),
+            "every lane visited once: {:?}",
+            gpu
+        );
     });
-    let gpu = run_level_wave(&backend, &depths, max_depth);
-    assert_eq!(gpu, cpu);
-    assert!(
-        gpu.iter().all(|&c| c == 1),
-        "every lane visited once: {:?}",
-        gpu
-    );
 }
 
 #[test]
 fn cuda_level_wave_skips_lanes_outside_max_depth() {
-    let backend = live_dispatcher();
-    // max_depth=2 → lanes with depth>=2 never fire.
-    let depths = vec![0u32, 1, 2, 3, 0];
-    let max_depth = 2;
-    let mut cpu = vec![0u32; depths.len()];
-    level_wave_cpu(&depths, max_depth, |lane, _depth| {
-        cpu[lane as usize] += 1;
+    with_live_backend("cuda_level_wave_skips_lanes_outside_max_depth", |backend| {
+        // max_depth=2 → lanes with depth>=2 never fire.
+        let depths = vec![0u32, 1, 2, 3, 0];
+        let max_depth = 2;
+        let mut cpu = vec![0u32; depths.len()];
+        level_wave_cpu(&depths, max_depth, |lane, _depth| {
+            cpu[lane as usize] += 1;
+        });
+        let gpu = run_level_wave(backend, &depths, max_depth);
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu, vec![1, 1, 0, 0, 1]);
     });
-    let gpu = run_level_wave(&backend, &depths, max_depth);
-    assert_eq!(gpu, cpu);
-    assert_eq!(gpu, vec![1, 1, 0, 0, 1]);
 }
