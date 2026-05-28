@@ -60,6 +60,7 @@ flowchart TB
       Debug["vyre-debug\ntracing + inspection"]
       Bench["vyre-bench\nbenchmarks"]
       Lints["vyre-lints\npolicy checks"]
+      Fuzz["fuzz\nfuzzing suites + mutation inputs"]
       XTask["xtask\nCI/audit matrix"]
       ConSpec["vyre-conform-spec\nprogram spec"]
       ConGen["vyre-conform-generate\ncase generation"]
@@ -109,6 +110,7 @@ flowchart TB
     ConGen --> ConRun
     ConEnf --> ConRun
     TestHarness --> ConRun
+    Fuzz --> XTask
     XTask --> ConRun
     XTask --> Lints
     ConRun --> Bench
@@ -127,7 +129,7 @@ flowchart TB
     XTask -.-> DX
     XTask -.-> WG
 
-    class Vcore,Fnd,Spec,Macros,Intr,Ref,Primitives,Libs,SelfSS,Drv,Cuda,Wgpu,Spirv,Lower,EmitPtx,EmitNaga,EmitSpv,RefDrv,RT,Aot,Hs,Debug,Bench,Lints,XTask,ConSpec,ConGen,ConEnf,ConRun,TestHarness active
+    class Vcore,Fnd,Spec,Macros,Intr,Ref,Primitives,Libs,SelfSS,Drv,Cuda,Wgpu,Spirv,Lower,EmitPtx,EmitNaga,EmitSpv,RefDrv,RT,Aot,Hs,Debug,Bench,Fuzz,Lints,XTask,ConSpec,ConGen,ConEnf,ConRun,TestHarness active
     class FC,FR,Ff beta
     class Intg stub
     class MT,DX,WG planned
