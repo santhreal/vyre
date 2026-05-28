@@ -2,8 +2,8 @@
 
 Part of [Santh](https://santh.dev) - open source Rust security and infrastructure tooling. Follow [@SanthProject](https://x.com/SanthProject) on X.
 
-Vyre is an experimental GPU compute stack for expressing work that usually
-gets pulled back to the CPU: parsing, graph traversal, fixed-point dataflow,
+Vyre is a production-focused GPU compute stack for workloads that usually get
+pulled back to the CPU: parsing, graph traversal, fixed-point dataflow,
 rule evaluation, and other coordination-heavy programs.
 
 The project is still young. The core IR, spec contracts, CPU reference path,
@@ -14,44 +14,66 @@ useful work without guessing what is production-ready.
 
 For the `0.4.2` line, the public semantic unit is `vyre::Program`: programs are
 constructed as IR, checked against frozen spec contracts, run through the CPU
-reference oracle, and then validated against GPU backends. CUDA is the primary
+reference oracle, then validated against GPU backends. CUDA is the primary
 release path on NVIDIA systems; WGPU is the portable GPU fallback.
 
 ## Workspace architecture
 
 ```mermaid
 flowchart TB
-    app["Consumers<br/>Keyhog, rule engines, compiler experiments"]
-    front["Frontend crates<br/>vyre-frontend-c (beta)<br/>vyre-frontend-rust (beta)"]
-    libs["Primitives and compositions<br/>vyre-primitives<br/>vyre-libs<br/>vyre-self-substrate"]
-    core["Core contracts<br/>vyre-core<br/>vyre-foundation<br/>vyre-spec<br/>vyre-macros"]
-    intr["Hardware-facing ops<br/>vyre-intrinsics<br/>vyre-lower<br/>vyre-emit-ptx<br/>vyre-emit-naga<br/>vyre-emit-spirv"]
-    backends["Backends<br/>vyre-driver<br/>vyre-driver-cuda<br/>vyre-driver-wgpu<br/>vyre-driver-spirv<br/>vyre-driver-reference<br/>vyre-reference"]
-    runtime["Runtime and AOT<br/>vyre-runtime<br/>vyre-aot<br/>vyre-harness<br/>vyre-debug"]
-    conform["Conformance<br/>vyre-conform-spec<br/>vyre-conform-generate<br/>vyre-conform-enforce<br/>vyre-conform-runner<br/>vyre-test-harness"]
-    qa["Project tooling<br/>vyre-bench<br/>vyre-lints<br/>xtask"]
-    planned["Planned / not shipped as first-class crates yet<br/>Metal backend<br/>DXIL backend<br/>wasm/WebGPU packaging"]
-    excluded["Excluded experimental harnesses<br/>fuzz workspace"]
+    classDef active fill:#1f9d55,color:#fff,stroke:#0f5f2f;
+    classDef activeSubtle fill:#2b7a57,color:#ecfef0,stroke:#145a3b;
+    classDef beta fill:#f4a259,color:#fff,stroke:#9a5f24;
+    classDef planned fill:#6b7280,color:#fff,stroke:#3b455a;
+    classDef boundary fill:#a855f7,color:#fff,stroke:#5b21b6;
 
-    app --> front
-    app --> libs
-    front --> libs
-    libs --> core
-    libs --> intr
-    intr --> core
-    intr --> backends
-    backends --> runtime
+    app["Downstream consumers<br/>Keyhog, analysis tools, experiments"]
+    lib["Community-level apps<br/>Dataflow-style tools, parsers, detectors"]
+
+    core["Core platform layer<br/>vyre-core<br/>vyre-foundation<br/>vyre-spec<br/>vyre-macros"]
+    reference["Reference / semantics<br/>vyre-reference"]
+    primitives["Primitives<br/>vyre-primitives<br/>vyre-libs<br/>vyre-self-substrate"]
+    intr["Hardware-facing ops<br/>vyre-intrinsics<br/>vyre-lower<br/>vyre-emit-*<br/>(ptx/naga/spirv)"]
+    drivers["Backend layer<br/>vyre-driver<br/>vyre-driver-cuda<br/>vyre-driver-wgpu<br/>vyre-driver-spirv<br/>vyre-driver-reference"]
+    runtime["Runtime / packaging<br/>vyre-runtime<br/>vyre-aot<br/>vyre-harness<br/>vyre-debug"]
+    front["Frontend crates<br/>vyre-frontend-c<br/>vyre-frontend-rust"]
+    conform["Conformance<br/>vyre-conform-*<br/>vyre-test-harness"]
+    qa["Ops tooling<br/>vyre-bench<br/>vyre-lints<br/>xtask"]
+    bench["Release / benchmark evidence<br/>vyre-bench, benches, artifacts"]
+
+    planned["Planned future backends<br/>Metal backend<br/>DXIL/DirectX backend<br/>Wasm/WebGPU distribution"]
+    archived["Historical / non-release paths<br/>fuzz workspace<br/>legacy experiments"]
+    beta["Beta/stubbed surfaces<br/>frontends by design<br/>non-parity features"]
+
+    app -->|uses| primitives
+    lib -->|downstream validation| primitives
+    app -->|parses / scans with| front
+    front --> primitives
+    primitives -->|compose| core
+    primitives --> intr
+    intr -->|lowers into| drivers
+    drivers --> runtime
     runtime --> conform
+    runtime --> qa
+    runtime --> bench
+    reference --> conform
     conform --> qa
-    core --> conform
-    planned -. future work .-> backends
-    excluded -. opt-in validation .-> conform
+    qa -->|gates| planned
+
+    drivers -->|release path| runtime
+    beta -.-> drivers
+    planned -.-> drivers
+    archived -.-> qa
+
+    class core,reference,primitives,intr,drivers,runtime,conform,qa,bench active
+    class front,beta beta
+    class planned,archived planned
 ```
 
 The older SVG remains in [docs/architecture.svg](docs/architecture.svg), but
 the diagram above is the README source of truth because it names every
-workspace crate, calls out the excluded fuzz harness, and separates active,
-beta, and planned surfaces.
+workspace crate and release-support status and separates active, beta,
+historical, and planned surfaces.
 
 ## The 10-second pitch
 
