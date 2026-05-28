@@ -1,4 +1,4 @@
-# vyre + consumer Crate Graph
+# vyre + language-front-end Crate Graph
 
 Closes F-ORG bundle A (#155 >700 LOC mega-files), B (#156
 500-700 LOC files), C (#157 crate-graph + boundary violations).
@@ -6,14 +6,14 @@ Closes F-ORG bundle A (#155 >700 LOC mega-files), B (#156
 ## The graph (0.6)
 
 ```
-                       ┌──────────────────┐
-                       │  consumer (tool)   │
+                       ┌──────────────────────┐
+                       │ language frontend (tool)│
                        └───────┬──────────┘
                                │ depends
                   ┌────────────┼────────────┐
                   ▼                         ▼
             ┌──────────┐              ┌──────────┐
-            │  surge   │              │  vyre    │ (facade)
+            │ language │              │  vyre    │ (facade)
             │ (lang)   │              │  crate   │
             └──────────┘              └───┬──────┘
                                           │
@@ -54,9 +54,9 @@ Closes F-ORG bundle A (#155 >700 LOC mega-files), B (#156
   spirv implement against it.
 - `vyre-runtime` orchestrates dispatch, pipeline caching,
   megakernel batching. Depends on driver + foundation.
-- `consumer` depends on `surge` + `vyre` facade + `vyre-primitives`
+- `language frontend` depends on `language` + `vyre` facade + `vyre-primitives`
   + optionally `vyre-driver-wgpu` (gpu feature).
-- `surge` (language crate) depends on nothing vyre-internal.
+- `language` (language crate) depends on nothing vyre-internal.
 
 ## Enforced today
 
