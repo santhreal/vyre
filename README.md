@@ -1,5 +1,7 @@
 # vyre
 
+Part of [Santh](https://santh.dev) - open source Rust security and infrastructure tooling. Follow [@SanthProject](https://x.com/SanthProject) on X.
+
 Vyre is an experimental GPU compute stack for expressing work that usually
 gets pulled back to the CPU: parsing, graph traversal, fixed-point dataflow,
 rule evaluation, and other coordination-heavy programs.
