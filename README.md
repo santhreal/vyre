@@ -522,11 +522,9 @@ Community knowledge that does not require Rust can be expressed as TOML rules. D
 
 ## Who uses vyre
 
-- **Keyhog.** Check out the first public consumer of Vyre in action:
-  [github.com/santhsecurity/keyhog](https://github.com/santhsecurity/keyhog).
-  Keyhog uses Vyre as the GPU execution layer for secret-scanning workloads
-  where matching, entropy, hashing, and rule evaluation benefit from staying in
-  one validated compute path.
+- **First public integration.** Follow our first public Vyre consumer to see end-to-end
+  usage in a working security workflow:
+  [Consumer showcase](docs/consumer-showcase.md).
 
 - **Security and analysis tools.** Rule compilers can lower detector DSLs into
   Vyre programs and drive evaluation through the same reference/GPU parity
