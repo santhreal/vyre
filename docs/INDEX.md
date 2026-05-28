@@ -39,6 +39,7 @@ Status values:
 | `current` | 2026-05-26 | 2026-05-26 | [docs/CONVENTIONS.md](CONVENTIONS.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/CPU_GPU_CONVERGENCE.md](CPU_GPU_CONVERGENCE.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/CRATE_GRAPH.md](CRATE_GRAPH.md) |
+| `current` | 2026-05-28 | 2026-05-28 | [docs/consumer-showcase.md](consumer-showcase.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/dialect-cookbook.md](dialect-cookbook.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/DOCUMENTATION_COVERAGE.md](DOCUMENTATION_COVERAGE.md) |
 | `current` | 2026-05-26 | 2026-05-26 | [docs/DOCUMENTATION_GOVERNANCE.md](DOCUMENTATION_GOVERNANCE.md) |
