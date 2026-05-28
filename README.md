@@ -22,58 +22,119 @@ release path on NVIDIA systems; WGPU is the portable GPU fallback.
 ```mermaid
 flowchart TB
     classDef active fill:#1f9d55,color:#fff,stroke:#0f5f2f;
-    classDef activeSubtle fill:#2b7a57,color:#ecfef0,stroke:#145a3b;
     classDef beta fill:#f4a259,color:#fff,stroke:#9a5f24;
     classDef planned fill:#6b7280,color:#fff,stroke:#3b455a;
-    classDef boundary fill:#a855f7,color:#fff,stroke:#5b21b6;
 
-    app["Downstream consumers<br/>Keyhog, analysis tools, experiments"]
-    lib["Community-level apps<br/>Dataflow-style tools, parsers, detectors"]
+    subgraph S0["Active tier-1 foundations"]
+      Vcore["vyre-core<br/>crate entry + public API"]
+      Fnd["vyre-foundation<br/>IR, wire format, validation"]
+      Spec["vyre-spec<br/>contracts + schemas"]
+      Macros["vyre-macros<br/>registration & derive helpers"]
+    end
 
-    core["Core platform layer<br/>vyre-core<br/>vyre-foundation<br/>vyre-spec<br/>vyre-macros"]
-    reference["Reference / semantics<br/>vyre-reference"]
-    primitives["Primitives<br/>vyre-primitives<br/>vyre-libs<br/>vyre-self-substrate"]
-    intr["Hardware-facing ops<br/>vyre-intrinsics<br/>vyre-lower<br/>vyre-emit-*<br/>(ptx/naga/spirv)"]
-    drivers["Backend layer<br/>vyre-driver<br/>vyre-driver-cuda<br/>vyre-driver-wgpu<br/>vyre-driver-spirv<br/>vyre-driver-reference"]
-    runtime["Runtime / packaging<br/>vyre-runtime<br/>vyre-aot<br/>vyre-harness<br/>vyre-debug"]
-    front["Frontend crates<br/>vyre-frontend-c<br/>vyre-frontend-rust"]
-    conform["Conformance<br/>vyre-conform-*<br/>vyre-test-harness"]
-    qa["Ops tooling<br/>vyre-bench<br/>vyre-lints<br/>xtask"]
-    bench["Release / benchmark evidence<br/>vyre-bench, benches, artifacts"]
+    subgraph S1["Semantics, reference, and operators"]
+      Ref["vyre-reference<br/>CPU oracle"]
+      Intr["vyre-intrinsics<br/>hardware-facing op contracts"]
+      Primitives["vyre-primitives<br/>graph, matching, math, hash, text, parse"]
+      Libs["vyre-libs<br/>tier-3 composition crates"]
+      SelfSS["vyre-self-substrate<br/>backend-facing scheduler + tests"]
+    end
 
-    planned["Planned future backends<br/>Metal backend<br/>DXIL/DirectX backend<br/>Wasm/WebGPU distribution"]
-    archived["Historical / non-release paths<br/>fuzz workspace<br/>legacy experiments"]
-    beta["Beta/stubbed surfaces<br/>frontends by design<br/>non-parity features"]
+    subgraph S2["Backends and code generation"]
+      Drv["vyre-driver<br/>backend abstraction"]
+      Cuda["vyre-driver-cuda<br/>preferred CUDA backend"]
+      Wgpu["vyre-driver-wgpu<br/>portable GPU backend"]
+      Spirv["vyre-driver-spirv<br/>SPIR-V surface"]
+      RefDrv["vyre-driver-reference<br/>reference backend adapter"]
+      Lower["vyre-lower<br/>lowering helpers"]
+      EmitPtx["vyre-emit-ptx<br/>PTX + NVRTC"]
+      EmitNaga["vyre-emit-naga<br/>WGSL/Naga"]
+      EmitSpv["vyre-emit-spirv<br/>SPIR-V emitter"]
+    end
 
-    app -->|uses| primitives
-    lib -->|downstream validation| primitives
-    app -->|parses / scans with| front
-    front --> primitives
-    primitives -->|compose| core
-    primitives --> intr
-    intr -->|lowers into| drivers
-    drivers --> runtime
-    runtime --> conform
-    runtime --> qa
-    runtime --> bench
-    reference --> conform
-    conform --> qa
-    qa -->|gates| planned
+    subgraph S3["Runtime, tools, and validation"]
+      RT["vyre-runtime<br/>dispatch + megakernel orchestration"]
+      Aot["vyre-aot<br/>artifact + offline packaging"]
+      Harness["vyre-harness<br/>runtime harness"]
+      Debug["vyre-debug<br/>tracing + inspection"]
+      Bench["vyre-bench<br/>benchmark harness"]
+      Lints["vyre-lints<br/>policy checks"]
+      XTask["xtask<br/>workspace CI/audit matrix"]
+      ConSpec["vyre-conform-spec<br/>spec contracts"]
+      ConGen["vyre-conform-generate<br/>case generation"]
+      ConEnf["vyre-conform-enforce<br/>enforcement gates"]
+      ConRun["vyre-conform-runner<br/>runner + reporting"]
+      TestHarness["vyre-test-harness<br/>shared harness"]
+    end
 
-    drivers -->|release path| runtime
-    beta -.-> drivers
-    planned -.-> drivers
-    archived -.-> qa
+    subgraph S4["Tier-3 consumers"]
+      FC["vyre-frontend-c<br/>C parser + lowering pipeline (beta)"]
+      FR["vyre-frontend-rust<br/>Rust frontend experiments (beta)"]
+    end
 
-    class core,reference,primitives,intr,drivers,runtime,conform,qa,bench active
-    class front,beta beta
-    class planned,archived planned
+    subgraph Future["Planned backends (not yet shipped)"]
+      MT["Metal backend"]
+      DX["DXIL / DirectX backend"]
+      WG["Wasm / WebGPU distribution"]
+    end
+
+    Vcore --> Spec
+    Fnd --> Spec
+    Vcore --> Drv
+    Ref --> ConSpec
+    Ref --> ConRun
+
+    Libs --> Primitives
+    Intr --> Primitives
+    SelfSS --> Primitives
+    Vcore --> Primitives
+    Primitives --> Libs
+
+    Drv --> Cuda
+    Drv --> Wgpu
+    Drv --> Spirv
+    Cuda --> RT
+    Wgpu --> RT
+    Spirv --> RT
+    RefDrv --> RT
+    Lower --> EmitPtx
+    Lower --> EmitNaga
+    Lower --> EmitSpv
+    EmitPtx --> RT
+    EmitNaga --> RT
+    EmitSpv --> RT
+
+    RT --> Harness
+    RT --> Aot
+    RT --> Debug
+    RT --> ConRun
+    RT --> ConEnf
+    RT --> Bench
+    XTask --> Lints
+    ConSpec --> ConRun
+    ConGen --> ConRun
+    TestHarness --> ConRun
+    XTask --> ConEnf
+
+    ConRun -->|release evidence| Bench
+    ConEnf -->|release evidence| Bench
+    FC -->|consume| Libs
+    FR -->|consume| Libs
+    FC --> RT
+    FR --> RT
+
+    Lints -.-> MT
+    Future -.-> Drv
+
+    class Vcore,Fnd,Spec,Macros,Ref,Intr,Primitives,Libs,SelfSS,Drv,Cuda,Wgpu,Spirv,RefDrv,Lower,EmitPtx,EmitNaga,EmitSpv,RT,Aot,Harness,Debug,Bench,Lints,XTask,ConSpec,ConGen,ConEnf,ConRun,TestHarness active
+    class FC,FR beta
+    class MT,DX,WG planned
 ```
 
 The older SVG remains in [docs/architecture.svg](docs/architecture.svg), but
 the diagram above is the README source of truth because it names every
 workspace crate and release-support status and separates active, beta,
-historical, and planned surfaces.
+and planned surfaces.
 
 ## The 10-second pitch
 
