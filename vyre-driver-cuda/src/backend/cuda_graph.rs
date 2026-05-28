@@ -62,6 +62,7 @@ use super::dispatch::CudaBackend;
 use super::output_range::cuda_output_readback;
 use super::staging_reserve::reserve_smallvec;
 use crate::input_identity::{exact_input_key, ExactInputKey};
+use crate::backend::copy::aligned_async_copy_len;
 use crate::numeric::CUDA_NUMERIC;
 
 const CUDA_GRAPH_REPLAY_ACCOUNTING: TransferAccountingPolicy =
@@ -438,6 +439,33 @@ impl GraphHostBuffers {
         Ok(())
     }
 
+    fn push_input_padded(
+        &mut self,
+        bytes: &[u8],
+        transfer_byte_len: usize,
+    ) -> Result<(), BackendError> {
+        if bytes.is_empty() {
+            self.input.push(PinnedHostAllocation::default());
+            return Ok(());
+        }
+        if transfer_byte_len < bytes.len() {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA graph transfer length {} is smaller than logical input length {}.",
+                    transfer_byte_len,
+                    bytes.len()
+                ),
+            });
+        }
+        let mut allocation = self.pool.acquire(transfer_byte_len)?;
+        allocation.copy_from_slice(bytes)?;
+        if transfer_byte_len > bytes.len() {
+            allocation.zero_range(bytes.len(), transfer_byte_len - bytes.len())?;
+        }
+        self.input.push(allocation);
+        Ok(())
+    }
+
     fn push_output(&mut self, byte_len: usize) -> Result<(), BackendError> {
         if byte_len == 0 {
             self.output.push(PinnedHostAllocation::default());
@@ -458,6 +486,7 @@ impl GraphHostBuffers {
         (input, output)
     }
 }
+
 
 impl Drop for GraphHostBuffers {
     fn drop(&mut self) {
@@ -489,6 +518,26 @@ mod tests {
         assert!(buffers.input[0].as_ptr().is_null());
         assert!(buffers.output[0].as_ptr().is_null());
         assert_eq!(pool.cached_bytes(), 0);
+    }
+
+    #[test]
+    fn cuda_graph_padded_input_upload_zero_fills_tail() {
+        let pool = Arc::new(PinnedHostAllocationPool::new(0));
+        let mut buffers = GraphHostBuffers::try_with_capacity(Arc::clone(&pool), 1, 1)
+            .expect("Fix: padded input staging should use fallible pinned buffer acquisition");
+
+        buffers
+            .push_input_padded(&[1_u8, 2, 3], 16)
+            .expect("Fix: padded input staging should allocate enough capacity for async DMA copies");
+
+        let mut out = Vec::new();
+        buffers
+            .input[0]
+            .copy_prefix_into(16, &mut out)
+            .expect("Fix: copy back staged input staging bytes to verify alignment padding");
+
+        assert_eq!(out, &[1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        assert!(pool.cached_bytes() >= 16);
     }
 
     #[test]
@@ -693,6 +742,9 @@ pub struct CachedCudaGraph {
     /// the caller's input sizes match these  -  a mismatch means the graph
     /// is wrong-shape for the input and must be re-recorded.
     pub(crate) expected_input_lens: SmallVec<[usize; 8]>,
+    /// Host-side transfer lengths used for async input uploads during capture
+    /// and replay updates.
+    pub(crate) input_transfer_lens: SmallVec<[usize; 8]>,
     /// Exact tuple-boundary-preserving key for bytes currently stored in
     /// `input_host_bufs`.
     pub(crate) cached_input_key: ExactInputKey,
@@ -857,6 +909,12 @@ impl CudaBackend {
             input_capacity,
             "cuda graph expected input byte lengths",
         )?;
+        let mut input_transfer_lens = SmallVec::<[usize; 8]>::new();
+        reserve_smallvec(
+            &mut input_transfer_lens,
+            input_capacity,
+            "cuda graph input transfer byte lengths",
+        )?;
         let mut output_lens = SmallVec::<[usize; 8]>::new();
         reserve_smallvec(
             &mut output_lens,
@@ -879,27 +937,34 @@ impl CudaBackend {
                 Some(input_index) => sample_inputs[input_index].len(),
                 None => binding
                     .static_byte_len
-                    .ok_or_else(|| BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA-graph output `{}` needs a static byte length to be \
+                .ok_or_else(|| BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA-graph output `{}` needs a static byte length to be \
                              cached. Set BufferDecl::with_count or output_byte_range before \
                              recording.",
                             binding.name
                         ),
                     })?,
             };
+            let device_byte_len = if byte_len == 0 { 1 } else { aligned_async_copy_len(byte_len)? };
             let device_ptr = alloc_cuda_ptr(
-                byte_len.max(1),
+                device_byte_len,
                 "cuMemAlloc_v2 (cuda_graph input/output buffer)",
             )?;
             self.telemetry
                 .record_transient_allocation_bytes(cuda_graph_usize_to_u64(
-                    byte_len.max(1),
+                    device_byte_len,
                     "cudaGraph input/output allocation bytes",
                 )?);
             if let Some(input_index) = binding.input_index {
                 let input_len = sample_inputs[input_index].len();
+                let input_transfer_len = if input_len == 0 {
+                    0
+                } else {
+                    aligned_async_copy_len(input_len)?
+                };
                 expected_input_lens.push(input_len);
+                input_transfer_lens.push(input_transfer_len);
                 add_cuda_graph_replay_bytes(&mut replay_input_bytes, input_len, "input replay")?;
                 if input_len != 0 {
                     add_cuda_graph_replay_operation(
@@ -907,7 +972,7 @@ impl CudaBackend {
                         "host upload replay",
                     )?;
                 }
-                host_buffers.push_input(sample_inputs[input_index])?;
+                host_buffers.push_input_padded(sample_inputs[input_index], input_transfer_len)?;
                 input_device_ptrs.push(DevicePtrGuard::new(device_ptr));
             } else {
                 output_device_ptrs.push(DevicePtrGuard::new(device_ptr));
@@ -957,13 +1022,17 @@ impl CudaBackend {
             &prepared.launch.param_words,
             "cudaGraph capture",
         )?;
+        let param_copy_bytes = if param_bytes == 0 {
+            0
+        } else {
+            aligned_async_copy_len(param_bytes)?
+        };
         let params_device_ptr = if param_bytes != 0 {
-            // SAFETY: param_bytes is u32-aligned and non-zero in this branch.
             let params_device_ptr =
-                alloc_cuda_ptr(param_bytes, "cuMemAlloc_v2 (cuda_graph param buffer)")?;
+                alloc_cuda_ptr(param_copy_bytes, "cuMemAlloc_v2 (cuda_graph param buffer)")?;
             self.telemetry
                 .record_transient_allocation_bytes(cuda_graph_usize_to_u64(
-                    param_bytes,
+                    param_copy_bytes,
                     "cudaGraph parameter allocation bytes",
                 )?);
             params_device_ptr
@@ -981,8 +1050,10 @@ impl CudaBackend {
         if param_bytes != 0 {
             let mut param_host_transfer =
                 HostTransferAllocations::with_capacity(Arc::clone(&self.host_pool), 1, 0)?;
-            let param_host_ptr =
-                param_host_transfer.push_u32_words(&prepared.launch.param_words)?;
+            let param_host_ptr = param_host_transfer.push_u32_words_padded(
+                &prepared.launch.param_words,
+                param_copy_bytes,
+            )?;
             // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
             unsafe {
                 // Upload the param words once; the kernel reads them on every replay.
@@ -991,7 +1062,7 @@ impl CudaBackend {
                 super::copy::h2d_async_checked_with_label(
                     params_device_ptr.ptr(),
                     param_host_ptr,
-                    param_bytes,
+                    param_copy_bytes,
                     stream.ptr().as_ptr(),
                     "cuMemcpyHtoDAsync_v2 (cuda_graph param init)",
                 )?;
@@ -1013,15 +1084,20 @@ impl CudaBackend {
         let mut capture_guard = begin_cuda_graph_capture(&stream, "cuStreamBeginCapture_v2")?;
 
         // Record HtoD memcpys for each input.
-        for ((host_buf, input_len), device_ptr) in host_buffers
+        for ((host_buf, input_len), (input_transfer_len, device_ptr)) in host_buffers
             .input
             .iter()
             .zip(expected_input_lens.iter())
-            .zip(input_device_ptrs.iter())
+            .zip(input_transfer_lens.iter().zip(input_device_ptrs.iter()))
         {
             if *input_len == 0 {
                 continue;
             }
+            let copy_len = if *input_transfer_len == 0 {
+                *input_len
+            } else {
+                *input_transfer_len
+            };
             // SAFETY: host_buf.as_ptr() is stable for the lifetime of CachedCudaGraph
             // (the Vec is owned by CachedCudaGraph and never reallocated  -  capacity is
             // set at construction). device_ptr was allocated above. Both pointers
@@ -1030,7 +1106,7 @@ impl CudaBackend {
                 super::copy::h2d_async_checked_with_label(
                     device_ptr.ptr(),
                     host_buf.as_ptr(),
-                    *input_len,
+                    copy_len,
                     stream.ptr().as_ptr(),
                     "cuMemcpyHtoDAsync_v2 (capture input)",
                 )?;
@@ -1184,6 +1260,7 @@ impl CudaBackend {
             output_device_ptrs,
             output_host_bufs,
             output_lens,
+            input_transfer_lens,
             replay_input_bytes,
             replay_output_bytes,
             replay_host_upload_operations,

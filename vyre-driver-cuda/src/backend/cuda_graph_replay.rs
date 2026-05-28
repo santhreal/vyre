@@ -369,8 +369,16 @@ fn prepare_cuda_graph_replay(
         && cached_input_bytes_match_with_key(cached, inputs, &input_state.input_key)?;
 
     if !resident_input_replay {
-        for (slot, src) in cached.input_host_bufs.iter_mut().zip(inputs.iter()) {
+        for ((slot, src), transfer_len) in cached
+            .input_host_bufs
+            .iter_mut()
+            .zip(inputs.iter())
+            .zip(cached.input_transfer_lens.iter())
+        {
             slot.copy_from_slice(src)?;
+            if *transfer_len > src.len() {
+                slot.zero_range(src.len(), transfer_len - src.len())?;
+            }
         }
         cached.cached_input_key = input_state.input_key;
         cached.host_outputs_initialized = false;
