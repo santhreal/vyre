@@ -21,74 +21,71 @@ release path on NVIDIA systems; WGPU is the portable GPU fallback.
 
 ```mermaid
 flowchart TB
-    classDef active fill:#1f9d55,color:#fff,stroke:#0f5f2f;
-    classDef beta fill:#f4a259,color:#fff,stroke:#9a5f24;
-    classDef planned fill:#6b7280,color:#fff,stroke:#3b455a;
+    classDef active fill:#0f766e,color:#fff,stroke:#045a55;
+    classDef beta fill:#b45309,color:#fff,stroke:#78350f;
+    classDef stub fill:#6b7280,color:#fff,stroke:#374151;
+    classDef planned fill:#4b5563,color:#fff,stroke:#1f2937;
 
-    subgraph S0["Active tier-1 foundations"]
-      Vcore["vyre-core<br/>crate entry + public API"]
-      Fnd["vyre-foundation<br/>IR, wire format, validation"]
-      Spec["vyre-spec<br/>contracts + schemas"]
-      Macros["vyre-macros<br/>registration & derive helpers"]
+    subgraph S0["Tier-1 foundations"]
+      Vcore["vyre-core\npublic facade + re-exports"]
+      Fnd["vyre-foundation\nIR, validation, optimizer"]
+      Spec["vyre-spec\ncontracts + schemas"]
+      Macros["vyre-macros\nregistration helpers"]
+      Intr["vyre-intrinsics\nhardware-facing intrinsic surface"]
     end
 
-    subgraph S1["Semantics, reference, and operators"]
-      Ref["vyre-reference<br/>CPU oracle"]
-      Intr["vyre-intrinsics<br/>hardware-facing op contracts"]
-      Primitives["vyre-primitives<br/>graph, matching, math, hash, text, parse"]
-      Libs["vyre-libs<br/>tier-3 composition crates"]
-      SelfSS["vyre-self-substrate<br/>backend-facing scheduler + tests"]
+    subgraph S1["Tier-2.5/3 and reference"]
+      Ref["vyre-reference\nCPU reference oracle"]
+      Primitives["vyre-primitives\ngraph/matching/math/nn/hash/text/parse"]
+      Libs["vyre-libs\ntier-3 composition surface"]
+      SelfSS["vyre-self-substrate\nself-consumer + scheduler path"]
     end
 
-    subgraph S2["Backends and code generation"]
-      Drv["vyre-driver<br/>backend abstraction"]
-      Cuda["vyre-driver-cuda<br/>preferred CUDA backend"]
-      Wgpu["vyre-driver-wgpu<br/>portable GPU backend"]
-      Spirv["vyre-driver-spirv<br/>SPIR-V surface"]
-      RefDrv["vyre-driver-reference<br/>reference backend adapter"]
-      Lower["vyre-lower<br/>lowering helpers"]
-      EmitPtx["vyre-emit-ptx<br/>PTX + NVRTC"]
-      EmitNaga["vyre-emit-naga<br/>WGSL/Naga"]
-      EmitSpv["vyre-emit-spirv<br/>SPIR-V emitter"]
+    subgraph S2["Backend, lowering, and execution"]
+      Drv["vyre-driver\nbackend traits + registry"]
+      Cuda["vyre-driver-cuda\nrelease backend"]
+      Wgpu["vyre-driver-wgpu\nportable GPU backend"]
+      Spirv["vyre-driver-spirv\nSPIR-V surface"]
+      Lower["vyre-lower\nIR shaping helpers"]
+      EmitPtx["vyre-emit-ptx\nPTX + NVRTC"]
+      EmitNaga["vyre-emit-naga\nWGSL/Naga"]
+      EmitSpv["vyre-emit-spirv\nSPIR-V emitter"]
+      RefDrv["vyre-driver-reference\nreference backend adapter"]
     end
 
-    subgraph S3["Runtime, tools, and validation"]
-      RT["vyre-runtime<br/>dispatch + megakernel orchestration"]
-      Aot["vyre-aot<br/>artifact + offline packaging"]
-      Harness["vyre-harness<br/>runtime harness"]
-      Debug["vyre-debug<br/>tracing + inspection"]
-      Bench["vyre-bench<br/>benchmark harness"]
-      Lints["vyre-lints<br/>policy checks"]
-      XTask["xtask<br/>workspace CI/audit matrix"]
-      ConSpec["vyre-conform-spec<br/>spec contracts"]
-      ConGen["vyre-conform-generate<br/>case generation"]
-      ConEnf["vyre-conform-enforce<br/>enforcement gates"]
-      ConRun["vyre-conform-runner<br/>runner + reporting"]
-      TestHarness["vyre-test-harness<br/>shared harness"]
+    subgraph S3["Runtime + conformance + evidence"]
+      RT["vyre-runtime\nmegakernel + io_uring"]
+      Aot["vyre-aot\noffline packaging"]
+      Hs["vyre-harness\nruntime harness"]
+      Debug["vyre-debug\ntracing + inspection"]
+      Bench["vyre-bench\nbenchmarks"]
+      Lints["vyre-lints\npolicy checks"]
+      XTask["xtask\nCI/audit matrix"]
+      ConSpec["vyre-conform-spec\nprogram spec"]
+      ConGen["vyre-conform-generate\ncase generation"]
+      ConEnf["vyre-conform-enforce\nenforcement gates"]
+      ConRun["vyre-conform-runner\nrunner + reporting"]
+      TestHarness["vyre-test-harness\nshared fixtures"]
     end
 
-    subgraph S4["Tier-3 consumers"]
-      FC["vyre-frontend-c<br/>C parser + lowering pipeline (beta)"]
-      FR["vyre-frontend-rust<br/>Rust frontend experiments (beta)"]
-    end
-
-    subgraph Future["Planned backends (not yet shipped)"]
-      MT["Metal backend"]
-      DX["DXIL / DirectX backend"]
-      WG["Wasm / WebGPU distribution"]
+    subgraph S4["Consumer-facing / experimental surfaces"]
+      FC["vyre-frontend-c\nC frontend pipeline"]
+      FR["vyre-frontend-rust\nRust frontend pipeline"]
+      Ff["consumer-owned tools\nfuture frontend backends"]
+      Intg["consumer examples\noutside Vyre"]
+      MT["Metal backend\nplanned"]
+      DX["DXIL/DirectX\nplanned"]
+      WG["Wasm/WebGPU\nplanned"]
     end
 
     Vcore --> Spec
     Fnd --> Spec
-    Vcore --> Drv
-    Ref --> ConSpec
-    Ref --> ConRun
-
-    Libs --> Primitives
-    Intr --> Primitives
-    SelfSS --> Primitives
-    Vcore --> Primitives
+    Intr --> Fnd
     Primitives --> Libs
+    Libs --> SelfSS
+    Libs --> ConRun
+    Vcore --> Drv
+    Ref --> ConRun
 
     Drv --> Cuda
     Drv --> Wgpu
@@ -104,37 +101,49 @@ flowchart TB
     EmitNaga --> RT
     EmitSpv --> RT
 
-    RT --> Harness
+    RT --> Hs
     RT --> Aot
     RT --> Debug
-    RT --> ConRun
-    RT --> ConEnf
     RT --> Bench
-    XTask --> Lints
     ConSpec --> ConRun
     ConGen --> ConRun
+    ConEnf --> ConRun
     TestHarness --> ConRun
-    XTask --> ConEnf
+    XTask --> ConRun
+    XTask --> Lints
+    ConRun --> Bench
+    ConEnf --> Bench
+    Aot --> RT
+    XTask --> Bench
 
-    ConRun -->|release evidence| Bench
-    ConEnf -->|release evidence| Bench
-    FC -->|consume| Libs
-    FR -->|consume| Libs
+    FC --> Libs
     FC --> RT
+    FR --> Libs
     FR --> RT
+    Ff --> FC
+    Intg --> FC
 
-    Lints -.-> MT
-    Future -.-> Drv
+    XTask -.-> MT
+    XTask -.-> DX
+    XTask -.-> WG
 
-    class Vcore,Fnd,Spec,Macros,Ref,Intr,Primitives,Libs,SelfSS,Drv,Cuda,Wgpu,Spirv,RefDrv,Lower,EmitPtx,EmitNaga,EmitSpv,RT,Aot,Harness,Debug,Bench,Lints,XTask,ConSpec,ConGen,ConEnf,ConRun,TestHarness active
-    class FC,FR beta
+    class Vcore,Fnd,Spec,Macros,Intr,Ref,Primitives,Libs,SelfSS,Drv,Cuda,Wgpu,Spirv,Lower,EmitPtx,EmitNaga,EmitSpv,RefDrv,RT,Aot,Hs,Debug,Bench,Lints,XTask,ConSpec,ConGen,ConEnf,ConRun,TestHarness active
+    class FC,FR,Ff beta
+    class Intg stub
     class MT,DX,WG planned
 ```
 
 The older SVG remains in [docs/architecture.svg](docs/architecture.svg), but
 the diagram above is the README source of truth because it names every
 workspace crate and release-support status and separates active, beta,
-and planned surfaces.
+and planned/stubbed surfaces.
+
+Legend:
+
+- `active`: part of the normal release and supported in the current `0.4.2` train.
+- `beta`: functional in repo but not yet on the release gate.
+- `stub`: explicit placeholders for future consumer surfaces.
+- `planned`: target architecture work not yet represented in code.
 
 ## The 10-second pitch
 
@@ -144,12 +153,12 @@ state, convergence loops, or rule-engine control flow. It tries to keep those
 programs in IR long enough to test them against a reference implementation and
 then run them on GPU without rewriting each workload as hand-authored kernels.
 
-The useful promise is practical: compose ops, run the reference path, run the
-GPU backend, and keep the two results byte-for-byte aligned where the operation
-contract requires exactness.
+The core promise is practical: compose ops, run the reference path, run the
+GPU backend, and keep the two results aligned where the contract requires
+exactness.
 
 Vyre is not a replacement for CUDA, WGPU, SPIR-V, or domain-specific compilers.
-It is a contract layer above them. It is also not finished. The best
+It is a contract layer above them. It is also not finished. The most
 contributions right now are concrete: smaller modules, better conformance
 coverage, CUDA parity tests, frontend bug fixes, benchmark cases that represent
 real workloads, and docs that make rough edges visible instead of hiding them.
@@ -193,9 +202,14 @@ real workloads, and docs that make rough edges visible instead of hiding them.
 | `xtask` | active | Workspace task runner for release, audit, and policy checks |
 
 Planned but not shipped as first-class workspace crates yet: native Metal,
-DXIL/DirectX, and wasm/WebGPU packaging. They are valid roadmap targets, but
-they should not be treated as supported backends until code and parity evidence
+DXIL/DirectX, and wasm/WebGPU packaging. They are roadmap targets, but they
+are not support claims until real backend code, parity evidence, and CI gates
 exist in the repository.
+
+`vyre-frontend-c` and `vyre-frontend-rust` are intentionally beta because
+parser and type-front end parity is still maturing. `conform` and
+`vyre-test-harness` backpressure and corpus coverage are the primary reason they
+are not release gates.
 
 ## `0.4.2` release execution contract
 
@@ -234,7 +248,7 @@ Full rule in [`docs/library-tiers.md`](docs/library-tiers.md).
 | **2** | `vyre-intrinsics` | Cat-C hardware-mapped intrinsics: ops that need a dedicated Naga emitter arm + dedicated `vyre-reference` eval arm (subgroup_*, barrier, fma, popcount, bit_reverse, inverse_sqrt). | frozen 9-op surface |
 | **2.5** | `vyre-primitives` | Reusable LEGO substrate shared by multiple Tier-3 dialects: bitset, graph, reduce, predicate, fixpoint, text, matching, math, hash, parsing, nn. | Gate 1 budget |
 | **3** | `vyre-libs` today; domain crates split only when they earn standalone ownership | Every product-facing `fn(...) -> Program` composition: math, hash, logical, nn, matching, rule, text, parsing, security. | no cap |
-| **4** | External community crates | Tier-3-shaped packs outside the santht org, registered via `vyre-libs-extern` + `ExternDialect` | no cap |
+| **4** | External community crates | Tier-3-shaped packs outside the core org, registered via extension packs | no cap |
 
 **Op ID tells you the tier**: `vyre-intrinsics::hardware::fma_f32` is T2,
 `vyre-primitives::graph::reachable` is T2.5, `vyre-libs::hash::fnv1a32`
@@ -529,10 +543,15 @@ Community knowledge that does not require Rust can be expressed as TOML rules. D
 
 ## Contributing
 
-Contributions are welcome, especially the practical kind: failing tests with a
-clear contract, corpus reductions, backend parity cases, CUDA performance
-regressions, smaller modules, better diagnostics, and docs that make the system
-easier to understand.
+Contributions are welcome. If you want a clean first change, pick one of:
+- Add a failing contract test with a precise expected result.
+- Reduce a rough edge in parser, graph, or GPU runtime behavior with evidence.
+- Add or tighten conformance coverage where current parity is weak.
+- Improve diagnostics, documentation clarity, or failure-mode handling.
+
+Small, high-signal changes are preferred over broad refactors. We value
+correctness, measurable performance, and reusable test evidence over broad
+surface edits.
 
 Review boundaries are strict because this project is mostly contracts. Law
 declarations, reference semantics, certificate format, and conformance gates
