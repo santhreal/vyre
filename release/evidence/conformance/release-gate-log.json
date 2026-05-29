@@ -15,21 +15,23 @@
     {
       "path": "cuda-conformance.json",
       "exists": true,
-      "bytes": 173296,
+      "bytes": 284052,
       "read_error": null
     },
     {
       "path": "wgpu-conformance.json",
       "exists": true,
-      "bytes": 173295,
+      "bytes": 256264,
       "read_error": null
     },
     {
       "path": "reference-conformance.json",
       "exists": true,
-      "bytes": 174610,
+      "bytes": 258052,
       "read_error": null
     }
   ],
-  "blockers": []
+  "blockers": [
+    "cuda conformance artifact reports 2 blocker(s)"
+  ]
 }
