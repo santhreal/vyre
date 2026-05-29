@@ -304,6 +304,12 @@ impl<'a> Parser<'a> {
 
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         match self.peek().kind {
+            LPAREN => {
+                self.advance();
+                let inner = self.parse_expr()?;
+                self.expect(RPAREN)?;
+                Ok(inner)
+            }
             LITERAL_INT => {
                 let tok = *self.advance();
                 let val = tok.text(self.source).parse::<u64>().unwrap_or(0);
