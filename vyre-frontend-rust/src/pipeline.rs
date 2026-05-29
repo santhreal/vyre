@@ -22,16 +22,18 @@ pub struct RustPipelineConfig {
     /// default; when enabled it runs the full nano-subset borrow check (CFG NLL
     /// dataflow), rustc-differential-verified by `rust_sema_borrow_oracle`.
     pub borrow_check: bool,
-    /// Whether to lower to Vyre IR. Off by default: lowering is not wired yet
-    /// and fails loudly when enabled.
+    /// Whether to lower to Vyre IR. Off by default. When enabled it lowers the
+    /// nano-subset entry function (the last function) to an executable Vyre
+    /// `Program`; unsupported constructs fail loudly rather than miscompiling.
     pub lower: bool,
 }
 
 impl Default for RustPipelineConfig {
     fn default() -> Self {
         // The working envelope today is CPU lex + parse + resolve + typeck.
-        // Borrow checking and lowering are opt-in (borrow check is wired and
-        // rustc-verified; lowering is unwired and fails loudly).
+        // Borrow checking and lowering are opt-in (both wired and verified:
+        // borrow check is rustc-differential; lowering executes the nano-subset
+        // on the reference interpreter, unsupported constructs fail loudly).
         Self {
             gpu_lex: false,
             borrow_check: false,
@@ -60,8 +62,9 @@ impl RustPipeline {
     /// CPU lex, parse, name resolution, and type checking always run. Borrow
     /// checking and lowering are gated on the config. Borrow checking runs the
     /// full nano-subset rules (E0596/E0597/E0499/E0502 via CFG NLL dataflow),
-    /// and lowering fails loudly until wired, so a caller never receives a
-    /// success that skipped a requested stage.
+    /// and lowering produces an executable Vyre `Program` (unsupported
+    /// constructs fail loudly), so a caller never receives a success that
+    /// skipped or miscompiled a requested stage.
     pub fn compile_unit(&self, source: &[u8]) -> Result<CompilationUnit, RustFrontendError> {
         let tokens = self::lexer_dispatch::lex(source, &self.config, &self.lex_plan)?;
         let module: Module = self::parse_stage::parse(source, &tokens)?;
