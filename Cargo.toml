@@ -194,7 +194,7 @@ vyre-self-substrate = { version = "0.6.1", path = "vyre-self-substrate" }
 vyre-intrinsics = { version = "0.6.1", path = "vyre-intrinsics" }
 vyre-aot = { version = "0.6.1", path = "vyre-aot" }
 vyre-bench = { version = "0.6.1", path = "vyre-bench" }
-vyre-test-harness = { version = "0.6.1", path = "conform/vyre-test-harness" }
+vyre-test-harness = { path = "conform/vyre-test-harness" }
 vyre-harness = { version = "0.6.1", path = "vyre-harness" }
 vyre-lower = { version = "0.6.1", path = "vyre-lower" }
 vyre-emit-naga = { version = "0.6.1", path = "vyre-emit-naga" }
@@ -204,11 +204,11 @@ vyre-frontend-c = { version = "0.6.1", path = "vyre-frontend-c" }
 vyre-frontend-rust = { version = "0.6.1", path = "vyre-frontend-rust" }
 vyre-lints = { version = "0.6.1", path = "vyre-lints" }
 vyre-debug = { version = "0.6.1", path = "vyre-debug" }
-vyre-conform-spec = { version = "0.6.1", path = "conform/vyre-conform-spec" }
-vyre-conform-generate = { version = "0.6.1", path = "conform/vyre-conform-generate" }
-vyre-conform-enforce = { version = "0.6.1", path = "conform/vyre-conform-enforce" }
-c-grammar-gen = { package = "surgec-grammar-gen", version = "0.6.0", path = "../../../shared/surgec-grammar-gen" }
-external-dataflow-engine = { package = "weir", version = "0.1.0", path = "../../../dataflow/weir" }
+vyre-conform-spec = { path = "conform/vyre-conform-spec" }
+vyre-conform-generate = { path = "conform/vyre-conform-generate" }
+vyre-conform-enforce = { path = "conform/vyre-conform-enforce" }
+c-grammar-gen = { package = "surgec-grammar-gen", path = "../../../shared/surgec-grammar-gen" }
+external-dataflow-engine = { package = "weir", path = "../../../dataflow/weir" }
 
 # Shared third-party pins; every member agrees on versions.
 serde = { version = "=1.0.228", features = ["derive", "rc"] }
