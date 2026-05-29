@@ -18,7 +18,7 @@ use vyre_libs::parsing::rust::parse::{parse, Expr, Module, Stmt};
 use vyre_libs::parsing::rust::sema::{resolve, typeck, BindingId, Resolution};
 use vyre_reference::value::Value;
 
-use vyre_libs::parsing::rust::lex::tokens::{EQ, LT, MINUS, PLUS, SLASH, STAR};
+use vyre_libs::parsing::rust::lex::tokens::{EQ, GE, GT, LE, LT, MINUS, NE, PERCENT, PLUS, SLASH, STAR};
 
 // ---------------------------------------------------------------------------
 // Pipeline helpers
@@ -128,6 +128,7 @@ impl Ev<'_> {
                     MINUS => l.wrapping_sub(r),
                     STAR => l.wrapping_mul(r),
                     SLASH => l / r, // generator guarantees a nonzero literal divisor
+                    PERCENT => l % r, // generator guarantees a nonzero literal divisor
                     other => panic!("non-arithmetic op {other} in integer position"),
                 }
             }
@@ -149,7 +150,11 @@ impl Ev<'_> {
                 let (l, r) = (self.eval_int(lhs, env), self.eval_int(rhs, env));
                 match *op {
                     LT => l < r,
+                    GT => l > r,
+                    LE => l <= r,
+                    GE => l >= r,
                     EQ => l == r,
+                    NE => l != r,
                     other => panic!("non-comparison op {other} in bool position"),
                 }
             }
@@ -196,9 +201,10 @@ impl Gen {
                 };
             }
             if self.next() % 6 == 0 {
-                // Division by a nonzero literal divisor (1..=5): no div-by-zero,
-                // dividend may be negative to exercise signed truncation.
-                return format!("({} / {})", self.expr(nvars, depth - 1, calls, refs), self.next() % 5 + 1);
+                // Division or remainder by a nonzero literal divisor (1..=5): no
+                // div-by-zero; dividend may be negative (signed truncation).
+                let op = if self.next() % 2 == 0 { "/" } else { "%" };
+                return format!("({} {} {})", self.expr(nvars, depth - 1, calls, refs), op, self.next() % 5 + 1);
             }
         }
         if depth == 0 || self.next() % 3 == 0 {
@@ -213,7 +219,7 @@ impl Gen {
         }
     }
     fn cond(&mut self, nvars: usize) -> String {
-        let op = if self.next() % 2 == 0 { "<" } else { "==" };
+        let op = ["<", ">", "<=", ">=", "==", "!="][(self.next() % 6) as usize];
         format!("{} {} {}", self.expr(nvars, 1, false, false), op, self.expr(nvars, 1, false, false))
     }
 }
@@ -299,6 +305,12 @@ fn curated_programs_execute_correctly() {
         ("fn d(p: &i32) -> i32 { return *p + 1; } fn f(a: i32) -> i32 { return d(&a); }", &[8], 9),
         ("fn f(a: i32) -> i32 { return a / 3; }", &[7], 2),
         ("fn f(a: i32) -> i32 { return a / 3; }", &[-7], -2), // truncates toward zero
+        ("fn f(a: i32) -> i32 { return a % 3; }", &[7], 1),
+        ("fn f(a: i32) -> i32 { return a % 3; }", &[-7], -1), // remainder sign follows dividend
+        ("fn f(a: i32, b: i32) -> i32 { if a > b { return 1; } else { return 0; } }", &[5, 2], 1),
+        ("fn f(a: i32, b: i32) -> i32 { if a <= b { return 1; } else { return 0; } }", &[2, 2], 1),
+        ("fn f(a: i32, b: i32) -> i32 { if a >= b { return 1; } else { return 0; } }", &[1, 2], 0),
+        ("fn f(a: i32, b: i32) -> i32 { if a != b { return 1; } else { return 0; } }", &[3, 3], 0),
     ];
     for (src, inputs, expected) in cases {
         assert_eq!(ir_exec(src, inputs), *expected, "{src} with {inputs:?}");
