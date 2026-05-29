@@ -448,6 +448,7 @@ impl BodyCtx<'_> {
                 let out = self.alloc(PtxType::F32);
                 if self.options.ulp_budget.is_some_and(|budget| budget > 0) {
                     let _ = writeln!(self.text, "    rcp.approx.f32    {out}, {operand};");
+
                 } else {
                     let _ = writeln!(self.text, "    rcp.rn.f32    {out}, {operand};");
                 }
@@ -646,3 +647,4 @@ impl BodyCtx<'_> {
         result
     }
 }
+

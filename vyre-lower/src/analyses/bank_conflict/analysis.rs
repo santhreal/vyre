@@ -448,6 +448,7 @@ mod tests {
             r.sites[0].conflict,
             BankConflictKind::Conflict { way_count: 32 }
         );
+
         assert_eq!(r.problematic_count(), 1);
         assert_eq!(r.critical_count(), 1);
     }
@@ -701,3 +702,4 @@ mod tests {
         assert_eq!(super::gcd_u32(12, 18), 6);
     }
 }
+

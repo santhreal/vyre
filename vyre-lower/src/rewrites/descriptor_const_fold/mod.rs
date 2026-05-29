@@ -448,6 +448,7 @@ mod tests {
                     literals: vec![LiteralValue::Bool(a), LiteralValue::Bool(b)],
                 },
             };
+
             let out = descriptor_const_fold(&desc);
             let pool_idx = out.body.ops[2].operands[0] as usize;
             assert_eq!(out.body.literals[pool_idx], LiteralValue::Bool(expected));
@@ -898,6 +899,7 @@ mod tests {
                 ],
             },
         };
+
         let out = crate::rewrites::run_all(&desc);
         // Final store value must reference the literal pool entry holding
         // U32(7)  -  the then branch was selected.
@@ -1123,3 +1125,4 @@ mod tests {
         ));
     }
 }
+

@@ -275,77 +275,86 @@ fn dynamic_vector_store_expected(thread_count: usize) -> Vec<u32> {
 #[test]
 fn nvrtc_compiles_add_ptx() {
     let ptx = ptx_for_op(KernelOpKind::BinOpKind(BinOp::Add));
-    let compiled = driver_loads_ptx(&ptx);
-    assert!(
-        compiled.is_ok(),
-        "CUDA driver failed to load add PTX: {:?}",
-        compiled.err()
+    assert!(ptx.contains(".visible .entry main"), "missing entry point");
+    assert!(ptx.contains("add"), "missing add instruction");
+    assert_eq!(
+        driver_loads_ptx(&ptx),
+        Ok(()),
+        "CUDA driver must load add PTX"
     );
 }
 
 #[test]
 fn nvrtc_compiles_mul_ptx() {
     let ptx = ptx_for_op(KernelOpKind::BinOpKind(BinOp::Mul));
-    let compiled = driver_loads_ptx(&ptx);
-    assert!(
-        compiled.is_ok(),
-        "CUDA driver failed to load mul PTX: {:?}",
-        compiled.err()
+    assert!(ptx.contains(".visible .entry main"), "missing entry point");
+    assert!(ptx.contains("mul.lo"), "missing mul.lo instruction");
+    assert_eq!(
+        driver_loads_ptx(&ptx),
+        Ok(()),
+        "CUDA driver must load mul PTX"
     );
 }
 
 #[test]
 fn nvrtc_compiles_fma_ptx() {
     let ptx = ptx_for_op(KernelOpKind::Fma);
-    let compiled = driver_loads_ptx(&ptx);
-    assert!(
-        compiled.is_ok(),
-        "CUDA driver failed to load fma PTX: {:?}",
-        compiled.err()
+    assert!(ptx.contains(".visible .entry main"), "missing entry point");
+    assert!(ptx.contains("fma.rn"), "missing fma.rn instruction");
+    assert_eq!(
+        driver_loads_ptx(&ptx),
+        Ok(()),
+        "CUDA driver must load fma PTX"
     );
 }
 
 #[test]
 fn nvrtc_compiles_vector_load_fusion_ptx() {
     let ptx = ptx_for_vector_load_fusion();
-    let compiled = driver_loads_ptx(&ptx);
     assert!(
-        compiled.is_ok(),
-        "CUDA driver failed to load vector-load fusion PTX: {:?}",
-        compiled.err()
+        ptx.contains("ld.global.nc.v4.u32") || ptx.contains("ld.global.v4.u32"),
+        "missing fused vector load"
+    );
+    assert_eq!(
+        driver_loads_ptx(&ptx),
+        Ok(()),
+        "CUDA driver must load vector-load fusion PTX"
     );
 }
 
 #[test]
 fn nvrtc_compiles_dynamic_vector_load_fusion_ptx() {
     let ptx = ptx_for_dynamic_vector_load_fusion();
-    let compiled = driver_loads_ptx(&ptx);
-    assert!(
-        compiled.is_ok(),
-        "CUDA driver failed to load dynamic vector-load fusion PTX: {:?}",
-        compiled.err()
+    assert!(ptx.contains(".visible .entry main"), "missing entry point");
+    assert_eq!(
+        driver_loads_ptx(&ptx),
+        Ok(()),
+        "CUDA driver must load dynamic vector-load fusion PTX"
     );
 }
 
 #[test]
 fn nvrtc_compiles_vector_store_fusion_ptx() {
     let ptx = ptx_for_vector_store_fusion();
-    let compiled = driver_loads_ptx(&ptx);
     assert!(
-        compiled.is_ok(),
-        "CUDA driver failed to load vector-store fusion PTX: {:?}",
-        compiled.err()
+        ptx.contains("st.global.v4.u32") || ptx.contains("st.global.nc.v4.u32"),
+        "missing fused vector store"
+    );
+    assert_eq!(
+        driver_loads_ptx(&ptx),
+        Ok(()),
+        "CUDA driver must load vector-store fusion PTX"
     );
 }
 
 #[test]
 fn nvrtc_compiles_dynamic_vector_store_fusion_ptx() {
     let ptx = ptx_for_dynamic_vector_store_fusion();
-    let compiled = driver_loads_ptx(&ptx);
-    assert!(
-        compiled.is_ok(),
-        "CUDA driver failed to load dynamic vector-store fusion PTX: {:?}",
-        compiled.err()
+    assert!(ptx.contains(".visible .entry main"), "missing entry point");
+    assert_eq!(
+        driver_loads_ptx(&ptx),
+        Ok(()),
+        "CUDA driver must load dynamic vector-store fusion PTX"
     );
 }
 

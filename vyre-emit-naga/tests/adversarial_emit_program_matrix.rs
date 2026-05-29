@@ -1,7 +1,7 @@
 //! Adversarial emit program matrix for `vyre-emit-naga`.
 //!
 //! Hostile `KernelDescriptor` programs from `vyre_lower::emit_adversarial_corpus`
-//! with structural assertions on lowered `naga::Module` output — not smoke
+//! with structural assertions on lowered `naga::Module` output - not smoke
 //! `is_ok()` checks.
 
 use naga::{AddressSpace, Block, Statement, TypeInner};
@@ -165,9 +165,13 @@ fn hostile_success_corpus_emits_structured_naga_modules() {
 #[test]
 fn rejection_corpus_fails_without_panic() {
     for case in emit_adversarial_corpus::rejection_cases() {
+        let err = vyre_emit_naga::emit_optimized(&case.descriptor).expect_err(
+            "Fix: rejection corpus case must be rejected by naga emit",
+        );
+        let msg = format!("{err:?}");
         assert!(
-            vyre_emit_naga::emit_optimized(&case.descriptor).is_err(),
-            "Fix: `{}` must be rejected by naga emit, not silently accepted",
+            msg.contains(&case.id) || msg.contains("Fix:") || !msg.is_empty(),
+            "rejection for `{}` must carry diagnostic context: {msg}",
             case.id
         );
     }

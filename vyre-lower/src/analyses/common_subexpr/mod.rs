@@ -448,6 +448,7 @@ mod tests {
                         kind: KernelOpKind::Literal,
                         operands: vec![0],
                         result: Some(2),
+
                     },
                 ],
                 child_bodies: vec![],
@@ -551,3 +552,4 @@ mod tests {
         assert!(shallow.groups.is_empty());
     }
 }
+

@@ -448,6 +448,7 @@ impl BodyBuilder<'_> {
         let accept = self.child_block(body, op, child_indices[0])?;
         let reject = if child_indices.len() > 1 {
             self.child_block(body, op, child_indices[1])?
+
         } else {
             naga::Block::new()
         };
@@ -898,6 +899,7 @@ impl BodyBuilder<'_> {
                     (Literal::U32(narrow), self.types.u32_ty)
                 }
                 "vyre.literal.i64" => {
+
                     let value = i64::from_le_bytes(bytes);
                     let narrow: i32 = value.try_into().map_err(|_| {
                         EmitError::InvalidDescriptor(format!(
@@ -1115,3 +1117,4 @@ impl BodyBuilder<'_> {
         Ok(())
     }
 }
+

@@ -524,6 +524,7 @@ fn buffer_length_registers_are_preloaded_before_branch_stores() {
 }
 
 #[test]
+
 fn select_on_predicates_does_not_emit_selp_pred() {
     // PTX `selp` does not support `.pred` operands. ptxas rejects
     // `selp.pred` with "Unexpected instruction types specified for 'selp'".
@@ -688,3 +689,4 @@ fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {
         "fourth MatrixMma result id must be usable by later ops"
     );
 }
+

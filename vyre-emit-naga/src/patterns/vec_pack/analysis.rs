@@ -448,6 +448,7 @@ mod tests {
     }
 
     #[test]
+
     fn adversarial_loads_with_compute_op_between_still_pack() {
         // load(buf, base+0); add(...); load(buf, base+1)
         // The intervening compute op is pure (consumes the loaded
@@ -575,3 +576,4 @@ mod tests {
         assert_eq!(p.kernel_id, "k");
     }
 }
+

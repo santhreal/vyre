@@ -448,6 +448,7 @@ mod tests {
                         visibility: BindingVisibility::ReadWrite,
                         name: "s".into(),
                     },
+
                 ],
             },
             dispatch: Dispatch::new(32, 1, 1),
@@ -707,3 +708,4 @@ mod tests {
         assert_eq!(r.kernel_id, "audit_opt");
     }
 }
+

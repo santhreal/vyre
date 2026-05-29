@@ -448,6 +448,7 @@ mod tests {
             fma(2, 4, 8, 12),
             fma(3, 5, 9, 13),
         ];
+
         let mut child_ops = prelude;
         child_ops.extend(fmas);
         let child = KernelBody {
@@ -503,3 +504,4 @@ mod tests {
         assert_eq!(once.body.ops.len(), twice.body.ops.len());
     }
 }
+

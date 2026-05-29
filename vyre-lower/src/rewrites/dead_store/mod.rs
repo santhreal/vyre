@@ -448,6 +448,7 @@ mod tests {
             .filter(|op| matches!(op.kind, KernelOpKind::StoreGlobal))
             .count();
         assert_eq!(alias_aware_store_count, 1);
+
     }
 
     #[test]
@@ -897,3 +898,4 @@ mod tests {
         assert_eq!(once.body.ops.len(), twice.body.ops.len());
     }
 }
+

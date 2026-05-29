@@ -448,6 +448,7 @@ mod tests {
         let h = analyze(&build(
             vec![
                 KernelOp {
+
                     kind: KernelOpKind::LocalInvocationId,
                     operands: vec![0],
                     result: Some(0),
@@ -529,3 +530,4 @@ mod tests {
         assert_eq!(h.total(), 22);
     }
 }
+

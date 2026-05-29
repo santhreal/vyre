@@ -172,20 +172,20 @@ fn op_corpus() -> Vec<KernelDescriptor> {
 #[test]
 fn every_op_lowers_through_ptx_and_naga() {
     for desc in op_corpus() {
-        let ptx = vyre_emit_ptx::emit_optimized(&desc);
+        let ptx = vyre_emit_ptx::emit_optimized(&desc)
+            .unwrap_or_else(|e| panic!("ptx emit_optimized failed for `{}`: {e:?}", desc.id));
         assert!(
-            ptx.is_ok(),
-            "ptx emit_optimized failed for `{}`: {:?}",
-            desc.id,
-            ptx.err()
+            ptx.contains(".version"),
+            "ptx for `{}` must include a version directive",
+            desc.id
         );
 
-        let naga = vyre_emit_naga::emit_optimized(&desc);
+        let naga = vyre_emit_naga::emit_optimized(&desc)
+            .unwrap_or_else(|e| panic!("naga emit_optimized failed for `{}`: {e:?}", desc.id));
         assert!(
-            naga.is_ok(),
-            "naga emit_optimized failed for `{}`: {:?}",
-            desc.id,
-            naga.err()
+            !naga.entry_points.is_empty(),
+            "naga module for `{}` must expose an entry point",
+            desc.id
         );
     }
 }

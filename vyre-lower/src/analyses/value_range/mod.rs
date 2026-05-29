@@ -448,6 +448,7 @@ mod tests {
     }
 
     #[test]
+
     fn bitand_with_mask_bounds_to_zero_through_mask() {
         // x & 0xFF where x is unknown but BitAnd(x, 0xFF) bounds to [0, 0xFF].
         // Phase 1 only knows x's range when x is itself a literal,
@@ -789,3 +790,4 @@ mod tests {
         assert_eq!(u, IntRange { min: 0, max: 10 });
     }
 }
+
