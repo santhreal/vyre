@@ -840,9 +840,9 @@ impl FactBuilder<'_> {
                 self.facts.cfg_edges.push((pred, point));
             }
             match stmt {
-                Stmt::Let { name, init, .. } => {
+                Stmt::Let { name, ty, init, .. } => {
                     self.record_uses(init, point);
-                    self.record_loan(name, init, point);
+                    self.record_loan(name, ty, init, point);
                     cur = vec![point];
                 }
                 Stmt::Return(value) => {
@@ -869,31 +869,43 @@ impl FactBuilder<'_> {
         cur
     }
 
-    /// Record `let a = &[mut] x;` as a loan over place `x`, and
-    /// `let a = &[mut] *r;` as a reborrow loan keyed by `r`'s place issued at
-    /// `point`. In the nano-subset a reborrow `&[mut] *r` conflicts exactly when
-    /// another borrow of the same `r` is live, matching rustc.
-    fn record_loan(&mut self, name: &u32, init: &Expr, point: u32) {
-        let Expr::Borrow { mutable, expr } = init else {
-            return;
-        };
-        let place_off = match expr.as_ref() {
-            Expr::Var(off) => Some(*off),
-            Expr::Deref(inner) => match inner.as_ref() {
-                Expr::Var(off) => Some(*off),
-                _ => None,
+    /// Record a loan for a borrow-introducing `let`:
+    /// - `let a = &[mut] x;` borrows place `x`;
+    /// - `let a = &[mut] *r;` reborrows through `r` (place `r`);
+    /// - `let a: &[mut] T = r;` is a reborrow coercion (the grammar requires the
+    ///   annotation, so it is never a move): it reborrows `*r` with the let
+    ///   type's mutability, place `r`.
+    ///
+    /// In the nano-subset a reborrow conflicts exactly when another borrow of
+    /// the same `r` is live, matching rustc.
+    fn record_loan(&mut self, name: &u32, ty: &Type, init: &Expr, point: u32) {
+        let (place_off, mutable) = match init {
+            Expr::Borrow { mutable, expr } => {
+                let off = match expr.as_ref() {
+                    Expr::Var(off) => Some(*off),
+                    Expr::Deref(inner) => match inner.as_ref() {
+                        Expr::Var(off) => Some(*off),
+                        _ => None,
+                    },
+                    _ => None,
+                };
+                match off {
+                    Some(off) => (off, *mutable),
+                    None => return,
+                }
+            }
+            Expr::Var(off) => match ty {
+                Type::Ref { mutable, .. } => (*off, *mutable),
+                _ => return,
             },
-            _ => None,
-        };
-        let Some(off) = place_off else {
-            return;
+            _ => return,
         };
         if let (Some(&place), Some(&binding)) =
-            (self.resolution.uses.get(&off), self.def_to_id.get(name))
+            (self.resolution.uses.get(&place_off), self.def_to_id.get(name))
         {
             let loan = self.facts.loan_place.len() as crate::borrowck::Loan;
             self.facts.loan_place.push(place as crate::borrowck::Place);
-            self.facts.loan_kind.push(if *mutable {
+            self.facts.loan_kind.push(if mutable {
                 crate::borrowck::LoanKind::Mut
             } else {
                 crate::borrowck::LoanKind::Shared
