@@ -135,6 +135,12 @@ pub enum RustSemaError {
         /// The declared return type.
         expected: String,
     },
+    /// Assignment to a binding not declared `mut` (rustc E0384).
+    #[error("cannot assign twice to immutable variable `{name}`")]
+    AssignToImmutable {
+        /// The immutable binding being assigned.
+        name: String,
+    },
 }
 
 /// Recover the identifier text that begins at `offset` in `source`.
@@ -269,6 +275,16 @@ impl Resolver<'_> {
                     self.declare(recovered, *mutable, ty.clone(), *name);
                 }
                 Stmt::Expr(expr) => self.resolve_expr(expr)?,
+                Stmt::Assign { name, value } => {
+                    self.resolve_expr(value)?;
+                    let n = ident_at(self.source, *name);
+                    match self.lookup(&n) {
+                        Some(id) => {
+                            self.uses.insert(*name, id);
+                        }
+                        None => return Err(RustSemaError::UnresolvedName { name: n, offset: *name }),
+                    }
+                }
                 Stmt::Return(Some(expr)) => self.resolve_expr(expr)?,
                 Stmt::Return(None) => {}
             }
@@ -458,6 +474,18 @@ impl TypeCk<'_> {
                 Stmt::Expr(expr) => {
                     self.type_of(expr)?;
                 }
+                Stmt::Assign { name, value } => {
+                    let id = self.resolution.uses[name];
+                    let (mutable, target_ty, bname) = {
+                        let b = &self.resolution.bindings[id];
+                        (b.mutable, b.ty.clone(), b.name.clone())
+                    };
+                    if !mutable {
+                        return Err(RustSemaError::AssignToImmutable { name: bname });
+                    }
+                    let vt = self.type_of(value)?;
+                    self.require(&vt, &target_ty, "assignment")?;
+                }
                 Stmt::Return(Some(expr)) => {
                     let rt = self.type_of(expr)?;
                     self.require(&rt, self.ret, "return value")?;
@@ -516,6 +544,7 @@ fn stmt_diverges(stmt: &Stmt) -> bool {
     match stmt {
         Stmt::Return(_) => true,
         Stmt::Expr(expr) => expr_diverges(expr),
+        Stmt::Assign { .. } => false,
         Stmt::Let { init, .. } => expr_diverges(init),
     }
 }
@@ -573,6 +602,7 @@ fn check_mut_stmts(stmts: &[Stmt], resolution: &Resolution) -> Result<(), RustSe
         match stmt {
             Stmt::Let { init, .. } => check_mut_expr(init, resolution)?,
             Stmt::Expr(expr) => check_mut_expr(expr, resolution)?,
+            Stmt::Assign { value, .. } => check_mut_expr(value, resolution)?,
             Stmt::Return(Some(expr)) => check_mut_expr(expr, resolution)?,
             Stmt::Return(None) => {}
         }
@@ -700,6 +730,9 @@ fn walk_escape(
             }
             Stmt::Expr(expr) => {
                 descend_escape(expr, returns_ref, def_to_id, resolution, borrows_local)?;
+            }
+            Stmt::Assign { value, .. } => {
+                descend_escape(value, returns_ref, def_to_id, resolution, borrows_local)?;
             }
             Stmt::Return(Some(expr)) => {
                 if returns_ref {
@@ -890,6 +923,10 @@ impl FactBuilder<'_> {
                         self.record_uses(expr, point);
                     }
                     cur = Vec::new();
+                }
+                Stmt::Assign { value, .. } => {
+                    self.record_uses(value, point);
+                    cur = vec![point];
                 }
                 Stmt::Expr(Expr::If { cond, then_block, else_block }) => {
                     self.record_uses(cond, point);

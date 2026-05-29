@@ -68,6 +68,13 @@ pub enum Stmt {
     },
     /// Expression statement.
     Expr(Expr),
+    /// Assignment to an existing binding (`name = value;`).
+    Assign {
+        /// Target name source offset.
+        name: u32,
+        /// Assigned value.
+        value: Expr,
+    },
     /// Return statement.
     Return(Option<Expr>),
 }
@@ -229,6 +236,15 @@ impl<'a> Parser<'a> {
             KW_RETURN => self.parse_return(),
             _ => {
                 let expr = self.parse_expr()?;
+                // `name = value;` is an assignment to an existing binding.
+                if let Expr::Var(name) = expr {
+                    if self.peek().kind == ASSIGN {
+                        self.advance();
+                        let value = self.parse_expr()?;
+                        self.expect(SEMI)?;
+                        return Ok(Stmt::Assign { name, value });
+                    }
+                }
                 // Block-like expression statements (`if`/`else`, `{ ... }`) are
                 // valid without a trailing semicolon, matching Rust; any other
                 // expression statement still requires one.

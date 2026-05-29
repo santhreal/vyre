@@ -113,6 +113,12 @@ impl LowerCtx<'_> {
                     return Ok(nodes);
                 }
                 Stmt::Return(None) => return Ok(nodes),
+                Stmt::Assign { name, value } => {
+                    let binding = self.resolution.uses.get(name).copied().ok_or_else(|| {
+                        RustLowerError::Unsupported("unresolved assignment target".to_string())
+                    })?;
+                    nodes.push(Node::assign(format!("v{binding}"), self.lower_value(value, None)?));
+                }
                 Stmt::Expr(Expr::If { cond, then_block, else_block }) => {
                     let then_nodes = self.lower_stmts(block_stmts(then_block))?;
                     let else_nodes = match else_block {
