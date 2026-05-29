@@ -1,15 +1,12 @@
-//! Lowering stage: Rust AST → Vyre IR.
+//! Lowering stage: thin orchestrator over the `vyre-libs` lowering substrate.
 
 use vyre::ir::Program;
+use vyre_libs::parsing::rust::lower as rust_lower;
+use vyre_libs::parsing::rust::parse::Module;
 
-use crate::pipeline::borrow_stage::VerifiedModule;
 use crate::RustFrontendError;
 
-/// Lower a verified module to Vyre IR.
-pub fn lower(module: &VerifiedModule) -> Result<Program, RustFrontendError> {
-    let _ = module;
-    Err(RustFrontendError::Unsupported(
-        "Rust AST to Vyre IR lowering is not wired yet; do not consume a default empty Program as compiled output"
-            .to_string(),
-    ))
+/// Lower a verified module to Vyre IR via the reusable lowering substrate.
+pub fn lower(module: &Module) -> Result<Program, RustFrontendError> {
+    rust_lower::lower(module).map_err(|e| RustFrontendError::Unsupported(e.to_string()))
 }

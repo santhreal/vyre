@@ -1,16 +1,11 @@
-//! Type inference and checking stage.
+//! Type-checking stage: thin orchestrator over the `vyre-libs` sema substrate.
 
-use crate::pipeline::resolve_stage::ResolvedModule;
+use vyre_libs::parsing::rust::parse::Module;
+use vyre_libs::parsing::rust::sema;
+
 use crate::RustFrontendError;
 
-/// Module with inferred types.
-pub type TypedModule = ResolvedModule;
-
-/// Type-check a resolved module.
-pub fn typeck(module: &ResolvedModule) -> Result<TypedModule, RustFrontendError> {
-    let _ = module;
-    Err(RustFrontendError::Unsupported(
-        "type checking is not wired to the Rust nano-subset type environment yet; use parse-only API calls until semantic analysis is enabled"
-            .to_string(),
-    ))
+/// Type-check a resolved module via the reusable sema substrate.
+pub fn typeck(module: &Module) -> Result<Module, RustFrontendError> {
+    sema::typeck(module).map_err(|e| RustFrontendError::Unsupported(e.to_string()))
 }

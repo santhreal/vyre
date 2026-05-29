@@ -1,22 +1,15 @@
-//! Borrow checking stage using the external dataflow engine.
+//! Borrow-checking stage: thin orchestrator over the `vyre-libs` sema substrate.
 //!
-//! Lower the nano-subset AST to a control-flow graph, then run
-//! fixed-point analyses to validate ownership and borrowing.
+//! The borrow analysis (CFG construction plus the dataflow fixed point) is
+//! language-specific substrate and lives in `vyre-libs::parsing::rust::sema`.
+//! This stage only orchestrates it.
 
-use external_dataflow_engine::ssa::try_compute_dominators;
+use vyre_libs::parsing::rust::parse::Module;
+use vyre_libs::parsing::rust::sema;
 
-use crate::pipeline::typeck_stage::TypedModule;
 use crate::RustFrontendError;
 
-/// Verified module (borrow-checked).
-pub type VerifiedModule = TypedModule;
-
-/// Borrow-check a typed module.
-pub fn borrow_check(module: &TypedModule) -> Result<VerifiedModule, RustFrontendError> {
-    let _ = module;
-    let _ = try_compute_dominators;
-    Err(RustFrontendError::Unsupported(
-        "borrow checking is not wired to a Rust CFG yet; disable `borrow_check` for parse-only pipeline runs"
-            .to_string(),
-    ))
+/// Borrow-check a typed module via the reusable sema substrate.
+pub fn borrow_check(module: &Module) -> Result<Module, RustFrontendError> {
+    sema::borrow_check(module).map_err(|e| RustFrontendError::Unsupported(e.to_string()))
 }

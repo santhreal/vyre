@@ -36,7 +36,6 @@ fn parse_borrow() {
 fn compile_pipeline_rejects_unwired_gpu_lex_without_silent_cpu_path() {
     let pipeline = RustPipeline::new(RustPipelineConfig {
         gpu_lex: true,
-        validate: false,
         borrow_check: false,
         lower: false,
     });
@@ -55,7 +54,6 @@ fn compile_pipeline_rejects_unwired_gpu_lex_without_silent_cpu_path() {
 fn compile_pipeline_rejects_unwired_semantics_without_fake_program() {
     let pipeline = RustPipeline::new(RustPipelineConfig {
         gpu_lex: false,
-        validate: false,
         borrow_check: false,
         lower: false,
     });
