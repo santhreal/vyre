@@ -99,6 +99,10 @@ impl Ev<'_> {
                 }
                 Stmt::Return(Some(e)) => return Flow::Return(self.eval_int(e, env)),
                 Stmt::Return(None) => return Flow::Return(0),
+                Stmt::Assign { name, value } => {
+                    let v = self.eval_int(value, env);
+                    env.insert(self.resolution.uses[name], v);
+                }
                 Stmt::Expr(Expr::If { cond, then_block, else_block }) => {
                     let taken = if self.eval_bool(cond, env) {
                         Some(then_block.as_ref())
@@ -265,8 +269,15 @@ fn gen_program(seed: u64) -> (String, usize) {
     module.push_str(&format!("fn f({}) -> i32 {{", params.join(", ")));
     let nlets = (g.next() % 3) as usize;
     for _ in 0..nlets {
-        module.push_str(&format!(" let v{}: i32 = {};", nvars, g.expr(nvars, 2, calls, refs)));
+        module.push_str(&format!(" let mut v{}: i32 = {};", nvars, g.expr(nvars, 2, calls, refs)));
         nvars += 1;
+    }
+    // Reassign existing mut locals (params stay immutable).
+    if nvars > nparams {
+        for _ in 0..(g.next() % 3) {
+            let k = nparams + (g.next() as usize) % (nvars - nparams);
+            module.push_str(&format!(" v{k} = {};", g.expr(nvars, 2, calls, refs)));
+        }
     }
     if g.next() % 2 == 0 {
         module.push_str(&format!(" return {}; }}", g.expr(nvars, 2, calls, refs)));
@@ -332,6 +343,7 @@ fn curated_programs_execute_correctly() {
         ("fn f(a: i32, b: i32) -> i32 { if a < b && b < 10 { return 1; } else { return 0; } }", &[3, 50], 0),
         ("fn f(a: i32, b: i32) -> i32 { if a == 0 || b == 0 { return 1; } else { return 0; } }", &[0, 7], 1),
         ("fn f(a: i32, b: i32) -> i32 { if !(a < b) { return 1; } else { return 0; } }", &[5, 2], 1),
+        ("fn f(a: i32) -> i32 { let mut x: i32 = a; x = x + 1; x = x * 2; return x; }", &[3], 8),
     ];
     for (src, inputs, expected) in cases {
         assert_eq!(ir_exec(src, inputs), *expected, "{src} with {inputs:?}");
