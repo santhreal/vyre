@@ -478,6 +478,7 @@ impl NaturalLaunchCacheKey {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+
 struct NaturalLaunchEntry {
     selected: [u32; 3],
     measurements: BTreeMap<[u32; 3], u64>,
@@ -885,3 +886,4 @@ mod tests {
         );
     }
 }
+

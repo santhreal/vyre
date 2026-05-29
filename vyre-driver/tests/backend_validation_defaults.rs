@@ -145,7 +145,10 @@ fn node_op_id_is_deterministic_for_same_node() {
 #[test]
 fn default_supported_ops_is_non_empty() {
     let ops = default_supported_ops();
-    assert!(!ops.is_empty(), "default supported ops must not be empty");
+    assert!(
+        ops.contains(node_op_id(&Node::Return)),
+        "default supported ops must include Return"
+    );
 }
 
 #[test]

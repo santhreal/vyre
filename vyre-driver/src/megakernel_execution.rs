@@ -454,6 +454,7 @@ fn finite_unit(value: f64) -> f64 {
     }
 }
 
+
 fn pressure_bps(numerator: u64, denominator: u64) -> u32 {
     let clamped = pressure_bps_u64(numerator, denominator).min(10_000);
     match u32::try_from(clamped) {
@@ -772,3 +773,4 @@ mod tests {
         *state
     }
 }
+

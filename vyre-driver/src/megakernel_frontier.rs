@@ -448,6 +448,7 @@ mod tests {
         assert_eq!(
             graph_error,
             MegakernelFrontierMemoryPlanError::GroupOverBudget {
+
                 required_bytes: 1_600,
                 budget_bytes: 1_000,
                 field: "resident graph bytes",
@@ -552,3 +553,4 @@ mod tests {
         }
     }
 }
+
