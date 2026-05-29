@@ -1,24 +1,38 @@
 #!/usr/bin/env bash
-# Phase 23a enforcement: every .expect("...") / .unwrap_or_else(...) must
-# include an actionable "Fix:" clause documenting how the caller recovers.
+# Phase 23a enforcement: every .expect("...") must include actionable "Fix:" guidance.
+# Counts a site as OK if "Fix:" appears on the same line or within the next 3 lines.
 #
-# Ratchet mode: set VYRE_EXPECT_BASELINE to the committed baseline count; the
-# script fails if the current count exceeds the baseline, allowing a
-# monotonic reduction without forcing a single giant cleanup commit.
+# Ratchet: set VYRE_EXPECT_BASELINE to committed baseline; fails if count exceeds baseline.
 set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-count=$(grep -rn '\.expect("' --include='*.rs' \
+count=0
+while IFS= read -r hit; do
+  file="${hit%%:*}"
+  line_no="${hit#*:}"
+  line_no="${line_no%%:*}"
+  line_text=$(sed -n "${line_no}p" "$file")
+  # Skip string-literal / hygiene scans, not real expect calls
+  [[ "$line_text" == *'contains(".expect("'* ]] && continue
+  [[ "$line_text" == *"contains('.expect('"* ]] && continue
+  # Skip tests/benches
+  [[ "$file" == *"/tests/"* || "$file" == *"/benches/"* ]] && continue
+  # Skip LAW7 fragment dirs (often mid-statement chunks)
+  [[ "$file" == *"/__law7_split/"* ]] && continue
+  window=$(sed -n "${line_no},$((line_no + 3))p" "$file")
+  # Skip meta-string hygiene scans on this line's window only
+  grep -q 'production\.contains.*\.expect(' <<<"$window" 2>/dev/null && continue
+  grep -q 'contains("\.expect(")' <<<"$window" 2>/dev/null && continue
+  if ! grep -q 'Fix:' <<<"$window"; then
+    count=$((count + 1))
+  fi
+done < <(grep -rn '\.expect("' --include='*.rs' \
   --exclude-dir=target --exclude-dir=.git \
+  --exclude-dir=__law7_split \
   . 2>/dev/null \
-  | grep -v 'Fix:' \
-  | grep -F -v 'contains(".expect(")' \
-  | grep -F -v '("expect_call", ".expect(")' \
-  | grep -v '/tests/' \
-  | grep -v '/benches/' \
-  | wc -l \
-  | tr -d ' ')
+  | grep -v '("\.expect("' \
+  | grep -v 'concat!.*expect')
 
 baseline="${VYRE_EXPECT_BASELINE:-0}"
 

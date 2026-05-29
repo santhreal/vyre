@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# check_cuda_parity_perf_gate.sh
 # CUDA parity/performance gate — contract + full *gpu_parity* integration suite.
 # VYRE-TASK-000006: gate must exercise documented gpu_parity tests, not a narrow subset.
 # VYRE-TASK-000005: packed INT4 extension ops are covered by int4_quantized_gpu_parity

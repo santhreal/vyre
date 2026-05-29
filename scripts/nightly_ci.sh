@@ -30,7 +30,7 @@ CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$CARGO_RUNNER" test -q -p vyre-libs -
 CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$CARGO_RUNNER" test -q -p vyre-bench --test release_matrix_contracts
 CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$CARGO_RUNNER" test -q -p vyre --test wire_malformed_adversarial
 CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$CARGO_RUNNER" test -q -p vyre-self-substrate --test organization_contracts
-scripts/check_graph_single_source_contracts.sh
+CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$CARGO_RUNNER" test -q -p vyre-self-substrate --test graph_single_source_contracts
 CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" "$CARGO_RUNNER" test -q -p vyre-self-substrate --test platform_doc_consumer_boundary
 scripts/check_ownership_boundaries.sh
 scripts/check_spirv_parity_perf_gate.sh
