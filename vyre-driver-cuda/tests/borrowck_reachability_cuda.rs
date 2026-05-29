@@ -446,3 +446,24 @@ fn cuda_crate_batched_scales_to_many_functions_two_dispatches() {
         assert_eq!(conflicts[0].kind, ConflictKind::TwoMutable);
     }
 }
+
+#[test]
+fn cuda_crate_batched_sharding_matches_cpu() {
+    // A tiny shard budget forces the corpus crate to split across several
+    // two-dispatch batches; the concatenated per-function verdict must still
+    // match the CPU engine, proving the sharding + reassembly is correct.
+    let cases = corpus();
+    let crate_facts: Vec<BorrowFacts> = cases.iter().map(|(_, f)| f.clone()).collect();
+    let cpu: Vec<Vec<Conflict>> = crate_facts.iter().map(analyze).collect();
+    let gpu = with_live_backend("cuda crate sharded", |backend| {
+        let dispatcher = CudaResidentDispatcher::new(backend);
+        gpu::analyze_crate_batched_with_shard_cap(&dispatcher, &crate_facts, 2)
+            .expect("sharded crate batch dispatch must succeed on the CUDA device")
+    });
+    assert_eq!(
+        gpu.len(),
+        cpu.len(),
+        "sharded crate batch must return a verdict per function"
+    );
+    assert_eq!(gpu, cpu, "sharded crate-batch verdict diverged from the CPU engine");
+}

@@ -88,6 +88,62 @@ pub fn analyze_crate_batched(
     dispatcher: &dyn OptimizerDispatcher,
     functions: &[BorrowFacts],
 ) -> Result<Vec<Vec<Conflict>>, DispatchError> {
+    analyze_crate_batched_with_shard_cap(dispatcher, functions, DEFAULT_SHARD_WORDS)
+}
+
+/// Per-shard seed/output buffer budget in u32 words. A shard's batch buffers are
+/// `shard_loans * ceil(shard_points / 32)` words; functions are packed greedily
+/// up to this many words so a crate of any size fits VRAM (each shard is still
+/// two dispatches). ~32 MiB per buffer at the default.
+pub const DEFAULT_SHARD_WORDS: usize = 8 * 1024 * 1024;
+
+/// Like [`analyze_crate_batched`] but with an explicit per-shard word budget.
+/// Functions are packed into shards under `max_shard_words` (a single function
+/// always forms at least its own shard); each shard runs in two dispatches and
+/// the per-function results are concatenated in input order.
+///
+/// # Errors
+///
+/// Returns [`DispatchError`] if a device upload or batch dispatch fails.
+pub fn analyze_crate_batched_with_shard_cap(
+    dispatcher: &dyn OptimizerDispatcher,
+    functions: &[BorrowFacts],
+    max_shard_words: usize,
+) -> Result<Vec<Vec<Conflict>>, DispatchError> {
+    let mut results: Vec<Vec<Conflict>> = Vec::with_capacity(functions.len());
+    let mut start = 0;
+    while start < functions.len() {
+        let mut end = start;
+        let mut shard_points: u64 = 0;
+        let mut shard_loans: u64 = 0;
+        while end < functions.len() {
+            let f = &functions[end];
+            let next_points = shard_points + u64::from(f.point_count);
+            let next_loans = shard_loans + f.loan_count() as u64;
+            let next_words = next_points.div_ceil(32);
+            let next_buffer = next_loans.saturating_mul(next_words);
+            // Always take at least one function; otherwise close the shard
+            // before exceeding the budget.
+            if end > start && next_buffer > max_shard_words as u64 {
+                break;
+            }
+            shard_points = next_points;
+            shard_loans = next_loans;
+            end += 1;
+        }
+        results.extend(batch_shard(dispatcher, &functions[start..end])?);
+        start = end;
+    }
+    Ok(results)
+}
+
+/// One shard: union every function's CFG into a disconnected graph and run all
+/// loans through two dispatches. Caller bounds the shard size; this is where the
+/// device work happens.
+fn batch_shard(
+    dispatcher: &dyn OptimizerDispatcher,
+    functions: &[BorrowFacts],
+) -> Result<Vec<Vec<Conflict>>, DispatchError> {
     let empty = || functions.iter().map(|_| Vec::new()).collect::<Vec<_>>();
 
     // Disjoint node ranges: function fi occupies [point_base[fi], +point_count).
@@ -108,7 +164,14 @@ pub fn analyze_crate_batched(
         return Ok(empty());
     }
     let words = bitset_words(combined_points);
-    let max_iters = combined_points.max(1);
+    // Functions are disconnected, so no closure exceeds its own function's
+    // point count; the largest function bounds iterations (not the crate total).
+    let max_iters = functions
+        .iter()
+        .map(|f| f.point_count)
+        .max()
+        .unwrap_or(1)
+        .max(1);
 
     // Union every function's CFG into one disconnected graph (edges shifted into
     // each function's node range; no cross-function edges exist, so a closure
