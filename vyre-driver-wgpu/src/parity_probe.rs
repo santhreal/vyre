@@ -376,7 +376,7 @@ mod tests {
         let production = src
             .split("#[cfg(test)]")
             .next()
-            .expect("production section must exist");
+            .expect("Fix: meta-test scans production sources; update fixture path if module moved - production section must exist");
         assert!(
             !production.contains("Vec::with_capacity("),
             "parity probe staging must use reserve_backend_vec"

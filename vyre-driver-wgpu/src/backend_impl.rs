@@ -737,6 +737,7 @@ pub(crate) fn borrowed_slices_from_owned_inputs<'a>(
     borrowed
 }
 
+
 impl vyre_driver::VyreBackend for WgpuBackend {
     fn id(&self) -> &'static str {
         "wgpu"
@@ -1244,6 +1245,7 @@ impl vyre_driver::VyreBackend for WgpuBackend {
     }
 }
 
+
 impl vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher for WgpuBackend {
     fn dispatch(
         &self,
@@ -1351,3 +1353,4 @@ mod borrowed_slice_conversion_tests {
         }
     }
 }
+

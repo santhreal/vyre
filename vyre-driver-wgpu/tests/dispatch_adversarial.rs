@@ -67,7 +67,12 @@ fn dispatch_with_mismatched_inputs_yields_structured_error() {
     let config = vyre::DispatchConfig::default();
     let result = backend.dispatch(&program, &inputs, &config);
     assert!(
-        result.is_err(),
+        matches!(
+            result,
+            Err(BackendError::InvalidProgram { .. })
+                | Err(BackendError::DispatchFailed { .. })
+                | Err(BackendError::KernelCompileFailed { .. })
+        ),
         "missing-input dispatch must fail; got {result:?}"
     );
 }
@@ -83,8 +88,9 @@ fn empty_program_compile_native_returns_result() {
     // gate forbids are a panic or undefined behavior.
     let config = vyre::DispatchConfig::default();
     if let Err(error) = backend.compile_native(&program, &config) {
-        assert!(
-            !error.to_string().is_empty(),
+        assert_ne!(
+            error.to_string().len(),
+            0,
             "structured BackendError must carry diagnostic text"
         );
     }

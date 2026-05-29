@@ -348,8 +348,7 @@ fn gpu_unreachable_stmt_has_unreachable_role() {
     let (gpu_nodes, _gpu_edges) = run_gpu_semantic_lower(&typed);
 
     let unreachable_idxs = row_indices(&typed, C_AST_KIND_BUILTIN_UNREACHABLE_STMT);
-    assert!(
-        !unreachable_idxs.is_empty(),
+    assert_ne!(unreachable_idxs.len(), 0,
         "fixture must classify __builtin_unreachable"
     );
 

@@ -448,6 +448,7 @@ fn every_op_random_input_stress() {
                 vyre_reference::reference_eval(&program, &cpu_values)
             }));
 
+
             let cpu_outputs = match cpu_result {
                 Ok(Ok(outputs)) => outputs
                     .into_iter()
@@ -525,3 +526,4 @@ fn every_op_random_input_stress() {
         total_cases
     );
 }
+

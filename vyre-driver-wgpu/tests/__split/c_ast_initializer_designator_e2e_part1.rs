@@ -135,14 +135,12 @@ fn cpu_reference_compound_literal_in_call_materialises_call_and_compound() {
     let typed = reference_c11_classify_vast_node_kinds(&raw);
 
     let calls = typed_indices(&typed, node_kind::CALL);
-    assert!(
-        !calls.is_empty(),
+    assert_ne!(calls.len(), 0,
         "function call f(...) must materialise; got {calls:?}"
     );
 
     let compounds = typed_indices(&typed, C_AST_KIND_COMPOUND_LITERAL_EXPR);
-    assert!(
-        !compounds.is_empty(),
+    assert_ne!(compounds.len(), 0,
         "compound literal inside call must materialise; got {compounds:?}"
     );
 }

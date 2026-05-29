@@ -11,8 +11,7 @@ fn gpu_backend_acquisition_does_not_return_err() {
     );
     // Verify the backend is actually usable by reading adapter info.
     let info = backend.adapter_info();
-    assert!(
-        !info.name.is_empty(),
+    assert_ne!(info.name.len(), 0,
         "acquired backend must report a non-empty adapter name"
     );
 }
@@ -24,7 +23,7 @@ fn gpu_backend_new_does_not_return_err() {
          This is a configuration bug, not a graceful skip.",
     );
     let info = backend.adapter_info();
-    assert!(!info.name.is_empty());
+    assert_ne!(info.name.len(), 0);
 }
 
 // ---------------------------------------------------------------------------

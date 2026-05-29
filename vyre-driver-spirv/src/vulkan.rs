@@ -748,6 +748,7 @@ pub(crate) unsafe fn dispatch_program(
 }
 
 /// Infer the dispatch grid from the program's output buffer sizes.
+
 fn infer_grid(program: &Program, workgroup_size: [u32; 3]) -> Result<[u32; 3], BackendError> {
     if workgroup_size[1] != 1 || workgroup_size[2] != 1 {
         return Err(BackendError::new(format!(
@@ -768,3 +769,4 @@ fn infer_grid(program: &Program, workgroup_size: [u32; 3]) -> Result<[u32; 3], B
     let x = max_count.div_ceil(lanes).max(1);
     Ok([x, 1, 1])
 }
+

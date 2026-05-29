@@ -209,7 +209,7 @@ fn workgroup_at_exact_limit_succeeds() {
     let result = backend.dispatch(&program, &[], &DispatchConfig::default());
 
     assert!(
-        result.is_ok(),
+        matches!(result, Ok(_)),
         "Fix: dispatch of a program with workgroup_size={:?} (at adapter limit) \
          must succeed on adapter `{}`. Got error: {:?}",
         safe_size,

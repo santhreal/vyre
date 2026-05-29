@@ -39,28 +39,25 @@ fn asm_attribute_interaction_parity_and_shape() {
     assert_full_pipeline_parity(&fix, "asm_attribute_interaction");
 
     let typed = classify(&fix);
-    assert!(
-        !typed.is_empty(),
+    assert_ne!(typed.len(), 0,
         "fixture must produce non-empty typed VAST"
     );
 
     // __attribute__ node
     let attrs = row_indices(&typed, C_AST_KIND_GNU_ATTRIBUTE);
-    assert!(
-        !attrs.is_empty(),
+    assert_ne!(attrs.len(), 0,
         "attribute on declaration must produce GNU_ATTRIBUTE"
     );
 
     // used attribute kind
     let used = row_indices(&typed, C_AST_KIND_ATTRIBUTE_USED);
-    assert!(
-        !used.is_empty(),
+    assert_ne!(used.len(), 0,
         "__attribute__((used)) must produce ATTRIBUTE_USED"
     );
 
     // Inline asm statement inside function body
     let asms = row_indices(&typed, C_AST_KIND_INLINE_ASM);
-    assert!(!asms.is_empty(), "asm statement must produce INLINE_ASM");
+    assert_ne!(asms.len(), 0, "asm statement must produce INLINE_ASM");
 }
 
 // ---------------------------------------------------------------------------
@@ -73,8 +70,7 @@ fn control_flow_all_parity_and_shape() {
     assert_full_pipeline_parity(&fix, "control_flow_all");
 
     let typed = classify(&fix);
-    assert!(
-        !typed.is_empty(),
+    assert_ne!(typed.len(), 0,
         "fixture must produce non-empty typed VAST"
     );
 
@@ -156,23 +152,20 @@ fn statement_expression_parity_and_shape() {
     assert_full_pipeline_parity(&fix, "statement_expression");
 
     let typed = classify(&fix);
-    assert!(
-        !typed.is_empty(),
+    assert_ne!(typed.len(), 0,
         "fixture must produce non-empty typed VAST"
     );
 
     // The brace-enclosed body of the statement expression should appear as a
     // BASIC_BLOCK (or similar container) in the typed VAST.
     let bbs = row_indices(&typed, node_kind::BASIC_BLOCK);
-    assert!(
-        !bbs.is_empty(),
+    assert_ne!(bbs.len(), 0,
         "statement expression must contain BASIC_BLOCK"
     );
 
     // Assignment inside the statement expression
     let assigns = row_indices(&typed, C_AST_KIND_ASSIGN_EXPR);
-    assert!(
-        !assigns.is_empty(),
+    assert_ne!(assigns.len(), 0,
         "statement expression must contain at least one ASSIGN_EXPR"
     );
 }

@@ -499,6 +499,7 @@ fn record_dispatch_unsubmitted_impl(
     })
 }
 
+
 fn padded_wgpu_usize(size: usize, label: &'static str) -> Result<usize, BackendError> {
     crate::numeric::align_up_usize(size, 4, label)
 }
@@ -514,3 +515,4 @@ pub(crate) fn record_and_readback(
 ) -> Result<vyre_driver::OutputBuffers, BackendError> {
     record_and_submit_async(request)?.await_result()
 }
+

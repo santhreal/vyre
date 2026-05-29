@@ -309,8 +309,7 @@ fn cpu_attribute_aligned_on_label_classifies() {
     let fix = fixture_attribute_aligned_on_label();
     let typed = classify(&fix);
     let labels = row_indices(&typed, C_AST_KIND_LABEL_STMT);
-    assert!(
-        !labels.is_empty(),
+    assert_ne!(labels.len(), 0,
         "label must classify as LABEL_STMT; got {labels:?}"
     );
     assert!(

@@ -174,8 +174,7 @@ fn unterminated_attribute_missing_inner_rparen() {
     ]);
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
-    assert!(
-        !typed.is_empty(),
+    assert_ne!(typed.len(), 0,
         "unterminated attribute string arg must not crash"
     );
 }

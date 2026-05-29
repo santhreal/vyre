@@ -124,8 +124,7 @@ fn function_pointer_declarator_marks_pointer_context() {
             semantic_node_word(&semantic.nodes, *idx, 7) == C_AST_PG_ROLE_FUNCTION_POINTER_DECL
         })
         .collect();
-    assert!(
-        !function_pointer_ptrs.is_empty(),
+    assert_ne!(function_pointer_ptrs.len(), 0,
         "function-pointer declarator must mark at least one POINTER_DECL with the function-pointer role"
     );
 }

@@ -122,8 +122,7 @@ fn gpu_classifier_nonempty_input_produces_nonempty_output() {
     let fix = build_fixture(&[("int", TOK_INT), ("x", TOK_IDENTIFIER)]);
     let raw = run_cpu_vast_builder(&fix);
     let gpu_typed = run_gpu_classifier(&raw);
-    assert!(
-        !gpu_typed.is_empty(),
+    assert_ne!(gpu_typed.len(), 0,
         "GPU classifier must not silently return empty for non-empty input"
     );
 }
@@ -134,8 +133,7 @@ fn gpu_pg_lower_nonempty_input_produces_nonempty_output() {
     let raw = run_cpu_vast_builder(&fix);
     let typed = run_cpu_classifier(&raw);
     let gpu_pg = run_gpu_pg_lower(&typed);
-    assert!(
-        !gpu_pg.is_empty(),
+    assert_ne!(gpu_pg.len(), 0,
         "GPU PG lowerer must not silently return empty for non-empty input"
     );
 }
@@ -150,8 +148,7 @@ fn gpu_expr_shape_nonempty_input_produces_nonempty_output() {
     let raw = run_cpu_vast_builder(&fix);
     let typed = run_cpu_classifier(&raw);
     let gpu_shape = run_gpu_expr_shape(&raw, &typed);
-    assert!(
-        !gpu_shape.is_empty(),
+    assert_ne!(gpu_shape.len(), 0,
         "GPU expr-shape must not silently return empty for non-empty input"
     );
 }
