@@ -94,6 +94,14 @@ const ACCEPT: &[&str] = &[
     "fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let b: &mut i32 = &mut x; let c: i32 = *b; }",
     // Conflict-clean: &mut borrows confined to mutually exclusive branches.
     "fn f() { let mut x: i32 = 0; if true { let a: &mut i32 = &mut x; let p: i32 = *a; } else { let b: &mut i32 = &mut x; let q: i32 = *b; }; }",
+    // Both arms return: the function diverges on every path.
+    "fn diverge_if(a: i32) -> i32 { if a < 0 { return 0; } else { return a; }; }",
+    // Nested if/else, all paths return.
+    "fn nested_if(a: i32) -> i32 { if a < 0 { if a < 0 { return 1; } else { return 2; }; return 3; } else { return 4; }; }",
+    // Nested calls, forward-referenced function.
+    "fn nested_calls() -> i32 { return adder(adder(1, 2), 3); } fn adder(a: i32, b: i32) -> i32 { return a + b; }",
+    // Passing `&mut` to a function (a temporary borrow, not a stored loan).
+    "fn takes_mut(r: &mut i32) -> i32 { return *r; } fn caller(x: i32) -> i32 { let mut y: i32 = x; let z: i32 = takes_mut(&mut y); return z; }",
 ];
 
 /// Programs rustc rejects and we must reject.
@@ -117,6 +125,10 @@ const REJECT: &[&str] = &[
     "fn f() { let mut x: i32 = 0; let a: &i32 = &x; let b: &mut i32 = &mut x; let c: i32 = *a; }",              // E0502
     // Two &mut live across a branch point (used in separate arms).
     "fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let b: &mut i32 = &mut x; if true { let p: i32 = *a; } else { let q: i32 = *b; }; }", // E0499
+    "fn f() -> bool { return 1; }",                                    // E0308 i32 vs bool
+    "fn f(a: i32) -> i32 { if a { return 1; } else { return 2; }; }",  // E0308 non-bool condition
+    "fn f() -> i32 { let x: i32 = 0; if x < 1 { return x; }; }",       // E0308 missing return on fallthrough
+    "fn unit_fn(x: i32) {} fn f() -> i32 { return unit_fn(1); }",      // E0308 return () where i32
 ];
 
 #[test]
