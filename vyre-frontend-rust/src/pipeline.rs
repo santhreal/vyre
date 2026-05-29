@@ -1,4 +1,4 @@
-//! Pipeline orchestration: lex → parse → resolve → typeck → borrow → lower.
+//! Pipeline orchestration: lex -> parse -> resolve -> typeck -> borrow -> lower.
 
 use vyre_libs::parsing::rust::lex::lexer::plan::RustLexerPlan;
 
@@ -14,23 +14,27 @@ pub mod typeck_stage;
 /// Configuration for the Rust frontend pipeline.
 #[derive(Debug, Clone)]
 pub struct RustPipelineConfig {
-    /// Whether to attempt GPU lexing.
+    /// Whether to attempt GPU lexing. Off by default: GPU lexer dispatch is not
+    /// wired yet and fails loudly when enabled.
     pub gpu_lex: bool,
-    /// Whether to validate against rustc (oracle mode).
-    pub validate: bool,
-    /// Whether to run borrow checking.
+    /// Whether to run borrow checking. Off by default: borrow checking is not
+    /// wired yet and fails loudly when enabled.
     pub borrow_check: bool,
-    /// Whether to lower to Vyre IR.
+    /// Whether to lower to Vyre IR. Off by default: lowering is not wired yet
+    /// and fails loudly when enabled.
     pub lower: bool,
 }
 
 impl Default for RustPipelineConfig {
     fn default() -> Self {
+        // The working envelope today is CPU lex + parse. GPU lexing, borrow
+        // checking, and lowering are unwired and fail loudly, so they are
+        // opt-in: the default pipeline reaches the meaningful boundary (name
+        // resolution is not wired) rather than dying at the GPU probe.
         Self {
-            gpu_lex: true,
-            validate: cfg!(debug_assertions),
-            borrow_check: true,
-            lower: true,
+            gpu_lex: false,
+            borrow_check: false,
+            lower: false,
         }
     }
 }
@@ -51,6 +55,12 @@ impl RustPipeline {
     }
 
     /// Run the full pipeline on a single source buffer.
+    ///
+    /// CPU lex + parse always run. Resolution and type checking are attempted
+    /// next; they currently return a loud error until the `vyre-libs` sema
+    /// substrate is implemented. Borrow checking and lowering are gated on the
+    /// config and likewise fail loudly until wired, so a caller never receives
+    /// a success that skipped a requested stage.
     pub fn compile_unit(&self, source: &[u8]) -> Result<CompilationUnit, RustFrontendError> {
         let tokens = self::lexer_dispatch::lex(source, &self.config, &self.lex_plan)?;
         let module = self::parse_stage::parse(source, &tokens)?;

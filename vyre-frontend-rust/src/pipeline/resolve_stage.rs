@@ -1,17 +1,11 @@
-//! Name resolution stage.
+//! Name resolution stage: thin orchestrator over the `vyre-libs` sema substrate.
 
 use vyre_libs::parsing::rust::parse::Module;
+use vyre_libs::parsing::rust::sema;
 
 use crate::RustFrontendError;
 
-/// Resolved module for the nano-subset.
-pub type ResolvedModule = Module;
-
-/// Resolve names in a module.
-pub fn resolve(module: &Module) -> Result<ResolvedModule, RustFrontendError> {
-    let _ = module;
-    Err(RustFrontendError::Unsupported(
-        "name resolution is not wired to a Rust scope graph yet; use `parse_rust_bytes` for parse-only API calls"
-            .to_string(),
-    ))
+/// Resolve names in a module via the reusable sema substrate.
+pub fn resolve(module: &Module) -> Result<Module, RustFrontendError> {
+    sema::resolve(module).map_err(|e| RustFrontendError::Unsupported(e.to_string()))
 }

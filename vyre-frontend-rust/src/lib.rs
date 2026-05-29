@@ -1,13 +1,17 @@
 //! GPU-first Rust compiler frontend for Vyre.
 //!
-//! This crate is the thick driver.  All reusable parsing substrate lives
-//! in `vyre-libs::parsing::rust`.
+//! This crate is a thin-on-semantics driver: the lexer, parser, semantic
+//! analysis, and lowering to Vyre IR all live in `vyre-libs::parsing::rust`.
+//! The crate orchestrates those stages and owns the application-level surface
+//! (object emission, GPU dispatch, public API), mirroring `vyre-frontend-c`.
 //!
 //! Architecture:
-//! - `api/`     - public entry points (`parse_rust_bytes`)
-//! - `oracle/`  - differential testing against rustc
-//! - `pipeline/` - stage dispatch (lex → parse → resolve → typeck → borrow → lower)
-//! - `object/`  - evidence object emission
+//! - `api/`      - public entry points (`parse_rust_bytes`)
+//! - `pipeline/` - stage orchestration (lex -> parse -> resolve -> typeck -> borrow -> lower)
+//! - `object/`   - evidence object emission
+//!
+//! The differential oracle against `rustc_lexer` lives under `tests/`;
+//! `rustc_lexer` is a dev-dependency, not a runtime dependency.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -16,7 +20,6 @@ use thiserror::Error;
 
 pub mod api;
 pub mod object;
-pub mod oracle;
 pub mod pipeline;
 
 /// Unified error type for the Rust frontend.
@@ -42,8 +45,8 @@ pub enum RustFrontendError {
     /// GPU backend unavailable.
     #[error("Rust frontend GPU backend unavailable: {0}. Fix: ensure a CUDA or WGPU backend is installed and detected.")]
     Backend(String),
-    /// Oracle mismatch: our output diverged from rustc.
-    #[error("Rust frontend oracle mismatch: {0}. Fix: compare token spans and kinds against rustc_lexer output.")]
+    /// Oracle mismatch: frontend output diverged from rustc.
+    #[error("Rust frontend oracle mismatch: {0}. Fix: compare token spans against rustc_lexer output.")]
     Oracle(String),
 }
 

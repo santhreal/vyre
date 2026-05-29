@@ -3806,7 +3806,6 @@ dependencies = [
  "vyre-libs",
  "vyre-primitives",
  "vyre-runtime",
- "weir",
 ]
 
 [[package]]
