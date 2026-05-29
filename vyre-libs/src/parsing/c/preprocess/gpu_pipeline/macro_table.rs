@@ -463,6 +463,7 @@ fn macro_params(args: &[u8]) -> Result<Vec<&[u8]>, String> {
     Ok(params)
 }
 
+
 fn replacement_tokens(body: &[u8], params: &[&[u8]]) -> Result<Vec<ReplacementToken>, String> {
     let param_indexes = parameter_indexes(params)?;
     let mut tokens = Vec::new();
@@ -755,3 +756,4 @@ mod tests {
         );
     }
 }
+

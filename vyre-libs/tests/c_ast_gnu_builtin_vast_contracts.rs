@@ -159,9 +159,11 @@ fn real_header_libc_builtins_parse_without_unknown_builtin_rejection() {
         }
         "#,
     );
+    let idxs = indices_with_kind(&vast, C_AST_KIND_BUILTIN_LIBC_INTRIN_EXPR);
     assert!(
-        !vast.is_empty(),
-        "real-header GNU libc builtins must classify into VAST rows instead of failing as unsupported compiler intrinsics"
+        idxs.len() >= 3,
+        "memchr/strnlen/memcpy_chk must each classify as BUILTIN_LIBC_INTRIN_EXPR, got {}",
+        idxs.len()
     );
 }
 

@@ -433,7 +433,12 @@ mod tests {
     #[test]
     fn scan_guard_zero_ceiling_rejects_nonempty() {
         let buf = vec![0u8; 1];
-        assert!(scan_guard(&buf, "ctx", 0).is_err());
+        let err = scan_guard(&buf, "ctx", 0).expect_err("nonempty haystack with zero ceiling");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("scan-guard ceiling") && msg.contains('0'),
+            "zero-ceiling rejection must name the ceiling: {msg}"
+        );
     }
 
     #[test]

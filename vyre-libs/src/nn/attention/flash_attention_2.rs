@@ -638,6 +638,7 @@ pub fn flash_attention_2_reference(
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use crate::test_support::byte_pack::decode_f32;
@@ -824,3 +825,4 @@ mod tests {
         }
     }
 }
+

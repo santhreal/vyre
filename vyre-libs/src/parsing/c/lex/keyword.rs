@@ -262,6 +262,7 @@ fn c_keyword_impl(
 
     let loop_body = vec![
         Node::let_bind("tok_type", Expr::load(tok_types, t.clone())),
+        Node::store(tok_types, t.clone(), Expr::var("tok_type")),
         Node::if_then(
             Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_IDENTIFIER)),
             vec![

@@ -23,7 +23,11 @@ fn overflow_named_macro_expansion_output_capacity() {
 
     let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 2)));
     let eval = result.expect("output overflow must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 #[test]
@@ -35,7 +39,11 @@ fn overflow_dynamic_macro_expansion_output_capacity() {
         run_dynamic(&[TOK_IDENTIFIER, TOK_IDENTIFIER], &fixture, 5)
     }));
     let eval = result.expect("dynamic output overflow must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 #[test]

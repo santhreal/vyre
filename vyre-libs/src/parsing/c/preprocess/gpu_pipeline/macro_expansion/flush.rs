@@ -448,6 +448,7 @@ pub(crate) fn flush_active_macro_segment_inner(
         tracing::debug!(
             "[stage-trace] macro-flush expand-dispatched file={} segment_bytes={} elapsed_us={}",
             file_path.display(),
+
             segment.len(),
             flush_start.elapsed().as_micros()
         );
@@ -605,3 +606,4 @@ pub(crate) fn flush_active_macro_segment_inner(
     segment.clear();
     Ok(())
 }
+

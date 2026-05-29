@@ -33,7 +33,7 @@ pub use crate::scan::{
 #[cfg(feature = "matching-nfa")]
 pub use crate::scan::{build_rule_pipeline, PipelineWireError, RulePipeline};
 
-/// Maximum NFA states that fit in one subgroup's bitfield lanes — the
+/// Maximum NFA states that fit in one subgroup's bitfield lanes - the
 /// cap `plan_shards` packs pattern shards under. Re-exported here so
 /// downstream consumers can size their own per-shard match buffers
 /// without reaching into the internal `scan::nfa` module.

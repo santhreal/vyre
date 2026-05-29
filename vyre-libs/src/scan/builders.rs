@@ -9,7 +9,7 @@ use vyre::ir::{Expr, Node};
 ///
 /// Returns `(let_bind_node, byte_expr)`. The caller must push the
 /// `let_bind_node` into its surrounding Block before evaluating
-/// `byte_expr` — the let-bind gives the optimiser a CSE handle for
+/// `byte_expr` - the let-bind gives the optimiser a CSE handle for
 /// the underlying word load when the byte is referenced multiple
 /// times.
 pub fn load_packed_byte(haystack: &str, idx: Expr) -> (Node, Expr) {
@@ -34,7 +34,7 @@ pub fn load_packed_byte(haystack: &str, idx: Expr) -> (Node, Expr) {
 /// hoisting a let-bind would either inject it at the wrong scope or
 /// require restructuring the surrounding IR.
 ///
-/// Trade-off: no CSE handle for the word load — if the same byte
+/// Trade-off: no CSE handle for the word load - if the same byte
 /// position is referenced more than once, prefer `load_packed_byte`
 /// and bind the result. Single-use call sites (the cursor body in
 /// `nfa::nfa_scan_with_plan` and the literal-compare inside
@@ -190,7 +190,7 @@ mod packed_byte_dedup_lock {
     //! divrem-shr-and(0xFF) shape and fails if it appears outside
     //! `scan/builders.rs`.
     //!
-    //! Detection is text-based and conservative — false positives are
+    //! Detection is text-based and conservative - false positives are
     //! tolerable (just add a `// allow-packed-byte-dup:` reason
     //! comment on the line to suppress). False negatives (missing a
     //! real duplicate) are the failure mode that matters; the shape
@@ -220,11 +220,11 @@ mod packed_byte_dedup_lock {
     fn no_inline_packed_byte_duplicates_outside_builders() {
         let mut files = Vec::new();
         walk(&vyre_libs_src(), &mut files);
-        assert!(!files.is_empty(), "no .rs files discovered — wrong root?");
+        assert!(!files.is_empty(), "no .rs files discovered - wrong root?");
 
         let mut offenders: Vec<(PathBuf, usize, String)> = Vec::new();
         for path in files {
-            // Skip the canonical home — `load_packed_byte` and
+            // Skip the canonical home - `load_packed_byte` and
             // `load_packed_byte_expr` legitimately contain the
             // shape because they ARE the shape.
             if path.ends_with("scan/builders.rs") {

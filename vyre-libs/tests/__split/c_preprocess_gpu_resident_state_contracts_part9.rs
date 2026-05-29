@@ -10,7 +10,11 @@ fn conditional_stack_endif_without_open_fails_loudly() {
         run_conditional_mask_with_directives(tok_types, directive_kinds, directive_values)
     }));
     let eval = result.expect("endif-without-open must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 // ---------------------------------------------------------------------------

@@ -512,6 +512,7 @@ mod compile_tests {
     }
 }
 
+
 const LITERAL_SET_WIRE_MAGIC: &[u8; 4] = b"VLIT";
 const LITERAL_SET_WIRE_VERSION: u32 = 1;
 
@@ -709,3 +710,4 @@ fn build_state_cascade(dfa: &CompiledDfa, state: u32, state_var: &str, byte_expr
     }
     node
 }
+

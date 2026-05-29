@@ -1,7 +1,7 @@
 //! Cross-crate compatibility: vyre-libs encodes with
 //! `vyre_primitives::wire`, vyre-libs (mirroring a vyre-frontend-c
 //! consumer) decodes the same bytes. Asserts the wire format is
-//! crate-boundary stable — independent re-implementations would
+//! crate-boundary stable - independent re-implementations would
 //! show up here as divergent output.
 
 use vyre_libs::scan::dispatch_io::{pack_haystack_u32, pack_u32_slice};

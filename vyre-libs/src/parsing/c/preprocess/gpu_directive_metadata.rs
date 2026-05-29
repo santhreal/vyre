@@ -474,6 +474,7 @@ pub fn gpu_directive_metadata(num_tokens: u32, source_len: u32) -> Program {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
@@ -522,3 +523,4 @@ mod tests {
         assert!(MAX_KEYWORD_LEN >= 12);
     }
 }
+

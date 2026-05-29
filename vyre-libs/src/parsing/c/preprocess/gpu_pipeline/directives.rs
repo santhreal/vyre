@@ -601,6 +601,7 @@ fn gpu_extract_directive_payloads_impl(
     Ok(out)
 }
 
+
 fn payload_span_bytes(
     source: &[u8],
     start: usize,
@@ -718,3 +719,4 @@ mod tests {
         assert_eq!(scratch.zero_init, vec![0; 8]);
     }
 }
+

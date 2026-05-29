@@ -62,6 +62,10 @@ fn conditional_stack_nesting_overflow_fails_loudly() {
         run_conditional_mask_with_directives(&tok_types, &kinds, &values)
     }));
     let eval = result.expect("nesting overflow must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 

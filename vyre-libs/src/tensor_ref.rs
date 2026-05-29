@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn check_dtype_passes_on_match() {
         let t = TensorRef::f32_1d("y", 8);
-        assert!(check_dtype(&t, DataType::F32, "op").is_ok());
+        assert!(matches!(check_dtype(&t, DataType::F32, "op"), Ok(())));
     }
 
     #[test]

@@ -12,7 +12,7 @@ const OP_ID: &str = "vyre-libs::matching::cooperative_dfa";
 const ALPHABET_SIZE: u32 = 256;
 
 // Forwarding alias to the canonical packer in `scan::dispatch_io`.
-// Was a private inline copy with identical body — removed so the
+// Was a private inline copy with identical body - removed so the
 // LE-byte packing format has a single source of truth.
 use crate::scan::dispatch_io::pack_u32_slice as pack_u32;
 

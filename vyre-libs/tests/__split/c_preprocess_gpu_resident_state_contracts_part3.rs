@@ -16,7 +16,11 @@ fn macro_replacement_range_must_be_inside_table_bounds() {
         run_dynamic(&[TOK_IDENTIFIER], &fixture, 8)
     }));
     let eval = result.expect("out-of-bounds replacement must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 // ---------------------------------------------------------------------------

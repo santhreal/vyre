@@ -463,6 +463,7 @@ pub fn build_ac_bounded_ranges_program_ext(
 ///
 /// Returns an actionable error when DFA metadata cannot fit the GPU program's
 /// u32 buffer-count ABI.
+
 pub fn try_build_ac_bounded_ranges_program(
     dfa: &CompiledDfa,
     pattern_count: u32,
@@ -770,3 +771,4 @@ mod tests {
         );
     }
 }
+

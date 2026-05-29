@@ -448,6 +448,7 @@ mod tests {
         .build()
         .expect_err("zero tile must be a build error");
 
+
         assert!(
             error.to_string().contains("tile"),
             "zero-tile error must identify the invalid tile dimension: {error}"
@@ -665,3 +666,4 @@ mod tests {
         }
     }
 }
+

@@ -120,15 +120,21 @@ fn skill_md_compile_regex_set_round_trips() {
 #[cfg(feature = "matching-substring")]
 #[test]
 fn skill_md_substring_search_emits_program() {
+    use vyre::ir::Node;
     use vyre_libs::scan::substring_search;
+    use vyre_libs::scan::SCAN_SUBSTRING_OP_ID;
     // Decision-table row: "substring_search  -  one literal needle".
     let prog = substring_search("input", "needle", "matches", 64, 4);
-    assert!(!prog.entry().is_empty());
+    let [Node::Region { generator, .. }] = prog.entry() else {
+        panic!("substring_search must emit one scan region");
+    };
+    assert_eq!(generator.as_str(), SCAN_SUBSTRING_OP_ID);
 }
 
 #[cfg(feature = "matching-dfa")]
 #[test]
 fn skill_md_aho_corasick_emits_program() {
+    use vyre::ir::Node;
     use vyre_libs::scan::{aho_corasick, dfa_compile};
     // Decision-table row: "aho_corasick  -  many literals".
     let dfa = dfa_compile(&[b"AKIA".as_slice(), b"ghp_".as_slice()]);
@@ -140,5 +146,8 @@ fn skill_md_aho_corasick_emits_program() {
         128,
         dfa.state_count,
     );
-    assert!(!prog.entry().is_empty());
+    let [Node::Region { generator, .. }] = prog.entry() else {
+        panic!("aho_corasick must emit one scan region");
+    };
+    assert_eq!(generator.as_str(), "vyre-libs::matching::aho_corasick");
 }

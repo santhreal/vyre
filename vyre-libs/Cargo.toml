@@ -141,3 +141,13 @@ required-features = ["text"]
 name = "sweep_decode_hex_oracle_matrix"
 path = "tests/sweep_decode_hex_oracle_matrix.rs"
 required-features = ["decode"]
+
+[[test]]
+name = "sweep_logical_reference_matrix"
+path = "tests/sweep_logical_reference_matrix.rs"
+required-features = ["logical"]
+
+[[test]]
+name = "sweep_hash_crc32_reference_matrix"
+path = "tests/sweep_hash_crc32_reference_matrix.rs"
+required-features = ["hash"]

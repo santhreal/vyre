@@ -18,7 +18,7 @@ impl Token {
     /// Return the token's text as a `&str` from the source buffer.
     pub fn text<'a>(&self, source: &'a [u8]) -> &'a str {
         std::str::from_utf8(&source[self.start as usize..(self.start + self.len as u32) as usize])
-            .expect("lexer only produces valid UTF-8 spans")
+            .expect("Fix: lexer must reject invalid UTF-8 spans; return Lex error instead of panicking - lexer only produces valid UTF-8 spans")
     }
 }
 

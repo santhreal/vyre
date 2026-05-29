@@ -523,6 +523,7 @@ pub fn q2_k_linear(
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use crate::test_support::byte_pack::decode_f32;
@@ -621,3 +622,4 @@ mod tests {
         assert_eq!(out[1], 1.0);
     }
 }
+

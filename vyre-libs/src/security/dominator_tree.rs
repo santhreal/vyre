@@ -202,9 +202,13 @@ mod tests {
 
     #[test]
     fn dominator_tree_soundness_is_mayover() {
-        use crate::Soundness;
-        // The GPU dominator_tree shim is documented as MayOver.
-        assert_eq!(Soundness::MayOver, Soundness::MayOver);
+        // The GPU dominator_tree shim is documented as MayOver (reverse reachability).
+        use vyre::ir::Node;
+        let p = dominator_tree(ProgramGraphShape::new(2, 1), "fin", "fout");
+        let [Node::Region { generator, .. }] = p.entry() else {
+            panic!("dominator_tree must emit one wrapped region");
+        };
+        assert_eq!(generator.as_str(), OP_ID);
     }
 
     #[test]

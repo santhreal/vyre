@@ -182,29 +182,28 @@ mod tests {
 
     #[test]
     fn moe_layer_zero_dim_errors() {
-        assert!(moe_layer_route_and_accumulate(
-            "x", "wr", "br", "ei", "ew", "eo", "out", 0, 4, 2, 2,
-        )
-        .is_err());
-        assert!(moe_layer_route_and_accumulate(
-            "x", "wr", "br", "ei", "ew", "eo", "out", 2, 0, 2, 2,
-        )
-        .is_err());
-        assert!(moe_layer_route_and_accumulate(
-            "x", "wr", "br", "ei", "ew", "eo", "out", 2, 4, 0, 2,
-        )
-        .is_err());
-        assert!(moe_layer_route_and_accumulate(
-            "x", "wr", "br", "ei", "ew", "eo", "out", 2, 4, 2, 0,
-        )
-        .is_err());
+        for (batch, hidden, k, experts) in [(0, 4, 2, 2), (2, 0, 2, 2), (2, 4, 0, 2), (2, 4, 2, 0)]
+        {
+            let err = moe_layer_route_and_accumulate(
+                "x", "wr", "br", "ei", "ew", "eo", "out", batch, hidden, k, experts,
+            )
+            .expect_err("zero dim must error");
+            assert!(
+                err.contains("moe_layer") && err.contains("> 0"),
+                "moe_layer zero-dim ({batch},{hidden},{k},{experts}): {err}"
+            );
+        }
     }
 
     #[test]
     fn moe_layer_k_greater_than_num_experts_errors() {
-        assert!(moe_layer_route_and_accumulate(
+        let err = moe_layer_route_and_accumulate(
             "x", "wr", "br", "ei", "ew", "eo", "out", 2, 4, 2, 5,
         )
-        .is_err());
+        .expect_err("k > num_experts");
+        assert!(
+            err.contains("k cannot exceed num_experts"),
+            "moe_layer k/experts error: {err}"
+        );
     }
 }

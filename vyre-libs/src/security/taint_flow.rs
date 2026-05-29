@@ -1,6 +1,6 @@
 //! `taint_flow`  -  alias for [`crate::security::flows_to::flows_to`],
 //! exposed under a separate op id for conformance-harness coverage of
-//! a program-analysis consumer `taint_flow` / `taint_flow_unsanitized` predicates.
+//! API-facing `taint_flow` / `taint_flow_unsanitized` predicates.
 //!
 //! Downstream analyzer's predicate lowering routes both `taint_flow` and `flows_to`
 //! through `BinaryGraphKind::FlowsToForward`, which calls the

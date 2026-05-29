@@ -465,6 +465,7 @@ pub(crate) mod testutil {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use testutil::{assert_serial_matches, SerialAtomicOracle};
@@ -547,3 +548,4 @@ mod tests {
         }
     }
 }
+

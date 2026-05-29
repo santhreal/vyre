@@ -478,6 +478,7 @@ pub fn matmul_strassen_one_level(a: &str, b: &str, c: &str, n: u32) -> Result<Pr
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use crate::test_support::byte_pack::f32_bytes;
@@ -638,3 +639,4 @@ mod tests {
         }
     }
 }
+

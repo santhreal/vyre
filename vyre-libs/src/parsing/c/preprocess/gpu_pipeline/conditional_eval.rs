@@ -283,7 +283,7 @@ mod tests {
                 b"#if IS_ENABLED(CONFIG_ON) && !defined(CONFIG_OFF)",
                 &macros
             )
-            .expect("truth table should fit"),
+            .expect("Fix: conditional_eval truth tables must fit fixed storage; reject oversized macro expansions - truth table should fit"),
             Some(true)
         );
         assert_eq!(
@@ -291,12 +291,12 @@ mod tests {
                 b"#if IS_ENABLED(CONFIG_ZERO) || IS_MODULE(CONFIG_MOD)",
                 &macros
             )
-            .expect("truth table should fit"),
+            .expect("Fix: conditional_eval truth tables must fit fixed storage; reject oversized macro expansions - truth table should fit"),
             Some(true)
         );
         assert_eq!(
             fast_kernel_config_if_truth(b"#elif (CONFIG_ON) && (defined(CONFIG_ZERO))", &macros)
-                .expect("truth table should fit"),
+                .expect("Fix: conditional_eval truth tables must fit fixed storage; reject oversized macro expansions - truth table should fit"),
             Some(true)
         );
     }

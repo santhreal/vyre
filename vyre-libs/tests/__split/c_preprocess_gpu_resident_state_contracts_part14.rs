@@ -19,7 +19,11 @@ fn overflow_function_like_macro_missing_rparen() {
 
     let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
     let eval = result.expect("missing-rparen must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 #[test]
@@ -43,7 +47,11 @@ fn overflow_object_like_macro_replacement_cannot_reference_parameters() {
 
     let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
     let eval = result.expect("object-like param ref must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 #[test]
@@ -67,7 +75,11 @@ fn overflow_named_macro_replacement_range_out_of_bounds() {
 
     let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
     let eval = result.expect("replacement range overflow must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 // ---------------------------------------------------------------------------

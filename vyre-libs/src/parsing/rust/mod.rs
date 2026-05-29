@@ -1,4 +1,4 @@
-//! Rust pipeline modules — lex / parse / AST.
+//! Rust pipeline modules - lex / parse / AST.
 //!
 //! This is the reusable substrate.  All compiler-specific concerns
 //! (name resolution, type inference, borrow checking, lowering) live

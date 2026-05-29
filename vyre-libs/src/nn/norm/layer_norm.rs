@@ -448,6 +448,7 @@ mod tests {
     fn layer_norm_small_tensor_clamps_reduction_tile_to_live_lanes() {
         let program = layer_norm("input", "output", 4, 1e-5);
         assert_eq!(
+
             program.workgroup_size(),
             [4, 1, 1],
             "Fix: layer_norm must not emit a 256-lane scratch reduction for a 4-element tensor; CUDA may not initialize dead lanes before reduction."
@@ -564,14 +565,27 @@ mod tests {
     #[test]
     fn layer_norm_empty_tensor_traps() {
         // n=0 is rejected by the builder.
+        let err = LayerNorm::new(
+            TensorRef::f32_1d("input", 0),
+            TensorRef::f32_1d("output", 0),
+            1e-5,
+        )
+        .build()
+        .expect_err("layer_norm n=0 must be rejected at build time");
+        assert!(
+            matches!(err, TensorRefError::ShapeMismatch { .. }),
+            "layer_norm n=0 shape error: {err:?}"
+        );
         let program = layer_norm("input", "output", 0, 1e-5);
-        let result = vyre_reference::reference_eval(
+        let eval_err = vyre_reference::reference_eval(
             &program,
             &[Value::from(vec![0u8; 4]), Value::from(vec![0u8; 4])],
-        );
+        )
+        .expect_err("layer_norm n=0 must trap instead of producing output");
+        let msg = eval_err.to_string();
         assert!(
-            result.is_err(),
-            "layer_norm n=0 must trap instead of producing output"
+            msg.contains("trap") || msg.contains("Fix:"),
+            "layer_norm n=0 eval error: {msg}"
         );
     }
 
@@ -596,3 +610,4 @@ mod tests {
         }
     }
 }
+

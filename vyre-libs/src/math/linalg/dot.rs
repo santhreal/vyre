@@ -293,8 +293,11 @@ mod tests {
 
     #[test]
     fn dot_empty_rejected() {
-        let err = dot("lhs", "rhs", "out", 0);
-        assert!(err.is_err(), "dot n=0 must be rejected");
+        let err = dot("lhs", "rhs", "out", 0).expect_err("dot n=0 must be rejected");
+        assert!(
+            err.contains("dot") || err.contains("ShapeMismatch"),
+            "dot n=0 error must name the op or shape failure: {err}"
+        );
     }
 
     #[test]

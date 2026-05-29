@@ -207,8 +207,13 @@ mod tests {
 
     #[test]
     fn expert_mlp_zero_dim_errors() {
-        assert!(expert_mlp("x", "wg", "bg", "wu", "bu", "wd", "bd", "out", 0, 2, 2).is_err());
-        assert!(expert_mlp("x", "wg", "bg", "wu", "bu", "wd", "bd", "out", 2, 0, 2).is_err());
-        assert!(expert_mlp("x", "wg", "bg", "wu", "bu", "wd", "bd", "out", 2, 2, 0).is_err());
+        for (batch, hidden, out_dim) in [(0, 2, 2), (2, 0, 2), (2, 2, 0)] {
+            let err = expert_mlp("x", "wg", "bg", "wu", "bu", "wd", "bd", "out", batch, hidden, out_dim)
+                .expect_err("zero dim must error");
+            assert!(
+                err.contains("expert_mlp") && err.contains("> 0"),
+                "expert_mlp zero-dim ({batch},{hidden},{out_dim}): {err}"
+            );
+        }
     }
 }

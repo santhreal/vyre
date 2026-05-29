@@ -316,10 +316,11 @@ mod tests {
 
     #[test]
     fn conv2d_zero_dimensions_should_error() {
-        let prog = conv2d_3x3_direct("input", "kernel", "output", 0, 0);
+        let err = conv2d_3x3_direct("input", "kernel", "output", 0, 0)
+            .expect_err("0x0 conv2d must error instead of returning empty program");
         assert!(
-            prog.is_err(),
-            "0x0 conv2d must error instead of returning empty program"
+            err.contains("non-zero height and width"),
+            "0x0 conv2d error must name the dimension contract: {err}"
         );
     }
 }

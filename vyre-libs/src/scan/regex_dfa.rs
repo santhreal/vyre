@@ -2,10 +2,10 @@
 //!
 //! Composes three existing primitives end-to-end:
 //!
-//! 1. `compile_regex_set` (this crate) — regex sources → bit-vector NFA.
-//! 2. `vyre_primitives::matching::nfa_to_dfa` — NFA → dense
+//! 1. `compile_regex_set` (this crate) - regex sources → bit-vector NFA.
+//! 2. `vyre_primitives::matching::nfa_to_dfa` - NFA → dense
 //!    `CompiledDfa` via subset construction.
-//! 3. `build_ac_bounded_ranges_program` (this crate) — `CompiledDfa`
+//! 3. `build_ac_bounded_ranges_program` (this crate) - `CompiledDfa`
 //!    → GPU `Program` with O(1)-per-byte AC scan semantics.
 //!
 //! The output [`RegexDfaPipeline`] is the regex-aware counterpart of
@@ -18,7 +18,7 @@
 //! # When this beats `RulePipeline`
 //!
 //! `RulePipeline` (the bit-vector NFA scan kernel) is O(LANES²) per
-//! byte regardless of pattern set size — fine for short-buffer per-
+//! byte regardless of pattern set size - fine for short-buffer per-
 //! anchor confirmation, catastrophic for whole-buffer scans at >1 MiB.
 //! `RegexDfaPipeline` is O(1) per byte but pays a state-explosion risk
 //! in the subset construction. Use it when:
@@ -53,7 +53,7 @@ use crate::scan::regex_compile::{compile_regex_set, RegexCompileError};
 #[derive(Debug, Clone)]
 pub struct RegexDfaPipeline {
     /// Dispatchable GPU program. Same shape as
-    /// `classic_ac_bounded_ranges_program` output — caller wires the
+    /// `classic_ac_bounded_ranges_program` output - caller wires the
     /// existing AC kernel host-side, no new dispatch path needed.
     pub program: Program,
     /// Dense DFA produced by NFA → DFA subset construction. Owns the
@@ -73,7 +73,7 @@ pub struct RegexDfaPipeline {
 pub enum RegexDfaError {
     /// Regex parsing or NFA construction rejected a pattern.
     Compile(RegexCompileError),
-    /// Subset construction couldn't lower the NFA — typically state
+    /// Subset construction couldn't lower the NFA - typically state
     /// explosion. The caller should either raise `max_dfa_states`,
     /// shard the pattern set, or fall back to `RulePipeline`.
     Lower(NfaToDfaError),
@@ -120,7 +120,7 @@ impl From<NfaToDfaError> for RegexDfaError {
 /// states matches `DEFAULT_DFA_BUDGET_BYTES = 16 MiB` (16k × 256 × 4 B).
 ///
 /// The match-append strategy is the default `append_match_subgroup`
-/// (I.17 — one atomic per subgroup leader). On backends that can't
+/// (I.17 - one atomic per subgroup leader). On backends that can't
 /// lower `subgroup_ballot` / `subgroup_shuffle` yet (currently
 /// `vyre-driver-cuda`) use [`build_regex_dfa_pipeline_ext`] with
 /// `use_subgroup_coalesce = false`.
@@ -137,7 +137,7 @@ pub fn build_regex_dfa_pipeline(
 
 /// [`build_regex_dfa_pipeline`] with explicit `use_subgroup_coalesce`
 /// control. Pass `false` on backends whose IR lowering cannot yet emit
-/// `subgroup_ballot` + `subgroup_shuffle` — currently `vyre-driver-cuda`
+/// `subgroup_ballot` + `subgroup_shuffle` - currently `vyre-driver-cuda`
 /// rejects the subgroup form during canonical pre-emit lowering. Either
 /// flag produces bit-identical match output; the difference is purely
 /// the atomic-coalescing strategy at hit-buffer append time.
@@ -172,7 +172,7 @@ pub fn build_regex_dfa_pipeline_ext(
         .unwrap_or(0);
     // pattern_lengths is per-pattern indexed; build it from the accept
     // table. A pattern with multiple accept states (alternation) takes
-    // the longest match length — same convention `dfa_compile` uses.
+    // the longest match length - same convention `dfa_compile` uses.
     let pattern_count = u32::try_from(patterns.len()).map_err(|source| RegexDfaError::Size {
         message: format!(
             "pattern count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the regex set before building a DFA dispatch.",
@@ -238,7 +238,7 @@ mod tests {
 
     /// End-to-end: a literal regex set should produce a Program whose
     /// CompiledDfa accepts the literal at the expected end offset. The
-    /// CompiledDfa accept table is the load-bearing assertion — if it's
+    /// CompiledDfa accept table is the load-bearing assertion - if it's
     /// empty, the composition didn't propagate accept metadata through
     /// the subset construction.
     #[test]
@@ -298,8 +298,8 @@ mod tests {
         // an accept's pattern_id.
         let has_pid0 = pipeline.dfa.accept.iter().any(|&value| value == 1);
         let has_pid1 = pipeline.dfa.accept.iter().any(|&value| value == 2);
-        assert!(has_pid0, "no DFA state accepts pid 0 — 'abc' lost in lower");
-        assert!(has_pid1, "no DFA state accepts pid 1 — 'xyz' lost in lower");
+        assert!(has_pid0, "no DFA state accepts pid 0 - 'abc' lost in lower");
+        assert!(has_pid1, "no DFA state accepts pid 1 - 'xyz' lost in lower");
     }
 
     /// State-explosion path: setting `max_dfa_states` to 1 must surface
@@ -314,7 +314,7 @@ mod tests {
         }
     }
 
-    /// A regex with a character class should also lower — this is the
+    /// A regex with a character class should also lower - this is the
     /// case `RulePipeline` would scan via NFA bit-vector. The DFA path
     /// must produce an accept somewhere so the consumer gets a hit.
     #[test]

@@ -36,7 +36,7 @@ const HISTOGRAM_BUFFER: &str = "__vyre_decode_encodex_histogram";
 
 // Cross-domain reuse: same LE u32-pack byte layout as the matching
 // dialect's storage-buffer inputs. Single source of truth in
-// `scan::dispatch_io::pack_u32_slice` — was a third inline copy here.
+// `scan::dispatch_io::pack_u32_slice` - was a third inline copy here.
 use crate::scan::dispatch_io::pack_u32_slice as pack_words;
 
 /// Build a Program that computes a 256-bin byte histogram over `input`

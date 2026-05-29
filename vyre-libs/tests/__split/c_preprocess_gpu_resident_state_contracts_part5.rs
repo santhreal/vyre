@@ -13,7 +13,11 @@ fn function_like_macro_parameter_count_overflow_fails_loudly() {
 
     let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
     let eval = result.expect("param-count overflow must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 #[test]
@@ -47,7 +51,11 @@ fn function_like_macro_argument_count_overflow_fails_loudly() {
 
     let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
     let eval = result.expect("arg-count overflow must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 // ---------------------------------------------------------------------------

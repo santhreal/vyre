@@ -595,6 +595,7 @@ pub(super) fn has_live_macro_for_segment_excluding(
     lookup.has_live_macro_for_segment_excluding(macros, classified, excluded_names)
 }
 
+
 fn next_non_ws_byte(source: &[u8], mut pos: usize) -> Option<u8> {
     loop {
         while source
@@ -777,3 +778,4 @@ mod tests {
         assert_eq!(segment.tok_lens, vec![3, 1]);
     }
 }
+

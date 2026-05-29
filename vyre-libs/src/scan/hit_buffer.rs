@@ -261,7 +261,7 @@ fn compact_hits_expected_output() -> Vec<Vec<Vec<u8>>> {
 }
 
 // Forwarding alias to the canonical packer in `scan::dispatch_io`.
-// Was a private inline copy with identical body — removed so the
+// Was a private inline copy with identical body - removed so the
 // LE-byte packing format has a single source of truth.
 use crate::scan::dispatch_io::pack_u32_slice as pack_words;
 
@@ -280,7 +280,17 @@ mod emit_then_compact_tests {
             "out_cursor",
         )
         .expect("Fix: emit_hit and compact_hits must fuse");
-        assert!(!fused.entry().is_empty());
+        use vyre::ir::Node;
+        let generators: Vec<&str> = fused
+            .entry()
+            .iter()
+            .filter_map(|node| match node {
+                Node::Region { generator, .. } => Some(generator.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert!(generators.contains(&EMIT_HIT_OP_ID));
+        assert!(generators.contains(&COMPACT_HITS_OP_ID));
     }
 }
 
