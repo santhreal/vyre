@@ -84,7 +84,10 @@ fn scalar_dtype(ty: &Type) -> Result<DataType, RustLowerError> {
         Type::I32 => Ok(DataType::I32),
         Type::Bool => Ok(DataType::Bool),
         Type::Unit => Err(RustLowerError::Unsupported("unit-typed parameter or return".to_string())),
-        Type::Ref { .. } => Err(RustLowerError::Unsupported("reference-typed parameter or return".to_string())),
+        // A reference parameter carries its pointee value: in the
+        // assignment-free nano-subset a `&T` is a pure read-alias, so it lowers
+        // to a buffer of the pointee's element type.
+        Type::Ref { inner, .. } => scalar_dtype(inner),
     }
 }
 
@@ -167,8 +170,11 @@ impl LowerCtx<'_> {
                 })
             }
             Expr::Call { name, args } => self.lower_call(name, args, subst),
-            Expr::Borrow { .. } => Err(RustLowerError::Unsupported("borrow expression".to_string())),
-            Expr::Deref(_) => Err(RustLowerError::Unsupported("dereference expression".to_string())),
+            // In the assignment-free nano-subset a reference is a pure read
+            // alias: `&e` evaluates to e's value and `*r` reads that value back,
+            // so borrow and dereference are value-transparent.
+            Expr::Borrow { expr, .. } => self.lower_value(expr, subst),
+            Expr::Deref(inner) => self.lower_value(inner, subst),
             Expr::Block(_) | Expr::If { .. } => {
                 Err(RustLowerError::Unsupported("block/if used as a value".to_string()))
             }
