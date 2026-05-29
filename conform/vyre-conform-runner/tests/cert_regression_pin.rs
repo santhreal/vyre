@@ -75,42 +75,42 @@ fn deterministic_signing_key() -> SigningKey {
 // ---------------------------------------------------------------------------
 
 /// Ed25519 verifying key (hex) for the deterministic signing key.
-const VERIFYING_KEY_HEX: &str = "aa574a488a4914e19909654c24d421aa6b85f509c15c227cb9477faba1130026";
+const VERIFYING_KEY_HEX: &str = "7d6cdd2bb962491984ea484fe095a24719aac478eae2cf943af71c9941f99d83";
 
 // --- trivial const ---
 const TRIVIAL_CONST_BUNDLE_BLAKE3: &str =
     "c1f2ccf5754f0e561c767f6d6e2a847947d70e4bd0593b617d53f5aee5cc0428";
 const TRIVIAL_CONST_WIRE_LEN: usize = 194;
 const TRIVIAL_CONST_SIG_HEX: &str =
-    "3b6cf9dfa7f0879e75959be707ab42f783f648f3a3ce9ff241ddc050484217d717567bff97c95beca17bc425d9c632bb6d82c8246ccbf733ac0e710053c71401";
+    "e4caafc46aaf1f9d023158a38667c99d451f57b03d3696e687588ae0992e49742acbf4711853271770bed37a2affa68a978a816b9873aa849c5e8a54c6e51105";
 
 // --- 1-op add ---
 const ONE_OP_ADD_BUNDLE_BLAKE3: &str =
     "9e8a8762168ae22123d41cb22f7268dbe565fa416e4408f0be78c840531e04cc";
 const ONE_OP_ADD_WIRE_LEN: usize = 201;
 const ONE_OP_ADD_SIG_HEX: &str =
-    "b43d504491869f4a32b043928339914e7f9c9d182275d189c8a8af03529301a8e6b3b2a7f2f3dba63ef765f6f584aeb86ba15a8a1c9e51d707d39850cad2b00b";
+    "8f4a16dac97de14e98d821b9b7582a19c0e61087e85dd9bee4cfec7ea3cbae61ff118e91062e06294293378f3b2808f766174a1540651fde6c3fdcf4aa17f20e";
 
 // --- loop-add ---
 const LOOP_ADD_BUNDLE_BLAKE3: &str =
     "c0939ac097203b376d7466ea6bae4fa6b76ee82020562ade8bd8af4a10e05a3f";
 const LOOP_ADD_WIRE_LEN: usize = 254;
 const LOOP_ADD_SIG_HEX: &str =
-    "688353d9dc5318f160ee59f49da7f6e1702bda39ddae520108dc39c7aa0a3e01778a45f31a50bc3135fa4e8be22bff9b01737befcf870d52b24084b647fd3c02";
+    "1b75c86b57aa4ab8dac5036fb05f83a123a98d649d1ee416185c3a82d92c1041c21afb4a2766a32302beba896e2668f60f56ebb8e961cb107ae327a857af9f0d";
 
 // --- composed nested ---
 const COMPOSED_NESTED_BUNDLE_BLAKE3: &str =
     "de6cc803a8ac5d35caa993c92d87d1c5bdcaf365e5d52281d41bc3f21e699f5f";
 const COMPOSED_NESTED_WIRE_LEN: usize = 197;
 const COMPOSED_NESTED_SIG_HEX: &str =
-    "e154254c2cf3c88ff70b790555210fb0cfa8f2379c569665318156a00b463ba71e55297b9cb9d112efa03e20c0ca1fc9c2d1367df80ae6e5c8514225b52f4204";
+    "445fd4a1ee36e67b6b45f6c289e16b0d38ba7c6bfb4e2716ad6811fcdad1396d25b9fc7675e218bb3b1789be13bee83573888beb4e22d2517fdb6ad6572d650e";
 
 // --- region-chain with intrinsic + dialect op ---
 const REGION_CHAIN_BUNDLE_BLAKE3: &str =
     "ae744c66b22dcb9c2142b22bd9c26fcfdca9b61abe3c841e05c52ea16baa952b";
 const REGION_CHAIN_WIRE_LEN: usize = 321;
 const REGION_CHAIN_SIG_HEX: &str =
-    "162712896fa3996afde61d224fb0f94b2cc15b2749ec60c8518ecefd8505914f85436f9649f62730830404971e7687cc3932f83aeaf5305693ff1965c9bc6d0b";
+    "1683c0447941c5d4a71cbeafcbe77f9e810e3e37415b1b041944c3ccfdf2d4b7f0801f4cf29b7f83438921127321ae598f0c4493b9ece6c51931537a30225808";
 
 // ---------------------------------------------------------------------------
 // Sign a bundle cert with the deterministic key.

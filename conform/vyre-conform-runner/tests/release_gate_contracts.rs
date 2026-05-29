@@ -452,6 +452,7 @@ fn nightly_ci_runs_backend_gates_and_real_conform_subcommands() {
 }
 
 #[test]
+
 fn release_shell_scripts_use_shared_cargo_runner_selection() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -676,3 +677,4 @@ fn concrete_driver_crates() -> Vec<String> {
         })
         .collect()
 }
+

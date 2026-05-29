@@ -37,7 +37,7 @@ vyre-driver-reference = { workspace = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
 vyre-foundation = { workspace = true }
 vyre-intrinsics = { workspace = true }
-vyre-libs = { workspace = true }
+vyre-libs = { workspace = true, features = ["full", "logical", "nn-moe", "security", "visual", "parsing", "math", "nn", "matching", "crypto"] }
 vyre-primitives = { workspace = true }
 vyre-reference = { workspace = true }
 vyre-spec = { workspace = true }
