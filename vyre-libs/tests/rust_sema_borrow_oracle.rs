@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use vyre_libs::parsing::rust::lex::lexer::core::lex;
 use vyre_libs::parsing::rust::parse::parse;
-use vyre_libs::parsing::rust::sema::{check_conflicts, check_escape, check_mutability, resolve, typeck};
+use vyre_libs::parsing::rust::sema::{borrow_check, resolve, typeck};
 
 static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -47,10 +47,7 @@ fn sema_accepts(src: &str) -> bool {
     let Ok(tokens) = lex(bytes) else { return false };
     let Ok(module) = parse(bytes, &tokens) else { return false };
     let Ok(resolution) = resolve(&module, bytes) else { return false };
-    typeck(&module, bytes, &resolution).is_ok()
-        && check_mutability(&module, &resolution).is_ok()
-        && check_escape(&module, &resolution).is_ok()
-        && check_conflicts(&module, &resolution).is_ok()
+    typeck(&module, bytes, &resolution).is_ok() && borrow_check(&module, &resolution).is_ok()
 }
 
 /// Deterministic type-correct nano-subset borrow program (no `pub`, so the
@@ -130,32 +127,67 @@ fn gen_branch(seed: u64) -> String {
     s
 }
 
-/// The core soundness gate: the sema borrow checks must never reject a program
-/// rustc accepts (no false positives). Any divergence is a real soundness bug.
-fn assert_no_false_reject(cases: u64, gen: impl Fn(u64) -> String) {
-    let mut false_rejects = Vec::new();
+/// Deterministic reborrow program: a `mut` var, a `&mut` ref to it, then a
+/// sequence of `&[mut] *r` reborrows and deref-uses. Exercises through-deref
+/// loan tracking (`&mut *r` conflicts like `&mut x` does).
+fn gen_reborrow(seed: u64) -> String {
+    let mut state = seed ^ 0x14F6_3D9C_2B7A_05E1;
+    let mut next = || {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (state >> 33) as u32
+    };
+    let mut s = String::from("fn f() { let mut x: i32 = 0; let r: &mut i32 = &mut x;");
+    let mut borrows = 0usize;
+    let mut uses = 0u32;
+    for _ in 0..(2 + next() % 6) {
+        if next() % 2 == 0 {
+            let m = next() % 2 == 0;
+            let kw = if m { "mut " } else { "" };
+            s.push_str(&format!(" let a{borrows}: &{kw}i32 = &{kw}*r;"));
+            borrows += 1;
+        } else if borrows > 0 {
+            let bk = (next() as usize) % borrows;
+            s.push_str(&format!(" let u{uses}: i32 = *a{bk};"));
+            uses += 1;
+        }
+    }
+    s.push_str(" }");
+    s
+}
+
+/// The agreement gate: the sema verdict must match rustc exactly (no false
+/// reject and no false accept) on every generated program.
+fn assert_matches_rustc(cases: u64, gen: impl Fn(u64) -> String) {
+    let mut mismatches = Vec::new();
     for seed in 0..cases {
         let src = gen(seed);
-        if rustc_accepts(&src) && !sema_accepts(&src) {
-            false_rejects.push(src);
+        let rustc = rustc_accepts(&src);
+        let sema = sema_accepts(&src);
+        if rustc != sema {
+            mismatches.push(format!("rustc={rustc} sema={sema}: {src}"));
         }
     }
     assert!(
-        false_rejects.is_empty(),
-        "sema borrow checks rejected {} programs rustc accepts (false positives):\n{}",
-        false_rejects.len(),
-        false_rejects.join("\n")
+        mismatches.is_empty(),
+        "sema borrow verdict diverged from rustc on {} programs:\n{}",
+        mismatches.len(),
+        mismatches.join("\n")
     );
 }
 
 #[test]
-fn sema_never_false_rejects_straight_line_programs() {
-    assert_no_false_reject(200, gen_straight);
+fn sema_matches_rustc_on_straight_line_programs() {
+    assert_matches_rustc(200, gen_straight);
 }
 
 #[test]
-fn sema_never_false_rejects_branch_programs() {
-    assert_no_false_reject(150, gen_branch);
+fn sema_matches_rustc_on_branch_programs() {
+    assert_matches_rustc(150, gen_branch);
+}
+
+#[test]
+fn sema_matches_rustc_on_reborrow_programs() {
+    assert_matches_rustc(150, gen_reborrow);
 }
 
 /// Programs with a real conflicting-borrow error: rustc rejects, and the sema

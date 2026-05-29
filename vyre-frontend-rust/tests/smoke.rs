@@ -75,13 +75,12 @@ fn compile_unit_borrow_check_catches_e0596() {
 }
 
 #[test]
-fn compile_unit_borrow_check_reports_incomplete_on_clean_program() {
-    // Mutability passes, but the conflicting-borrow rules are not yet wired, so
-    // the pipeline reports incomplete rather than faking a complete borrow check.
+fn compile_unit_borrow_check_accepts_clean_program() {
+    // The conflicting-borrow rules are wired (CFG NLL dataflow engine), so a
+    // conflict-free program borrow-checks successfully, matching rustc.
     let pipeline = RustPipeline::new(RustPipelineConfig { gpu_lex: false, borrow_check: true, lower: false });
-    let error = pipeline
-        .compile_unit(b"fn f() { let mut x: i32 = 0; let r: &mut i32 = &mut x; }")
-        .expect_err("Fix: an incomplete borrow check must not report a clean pass.");
-    assert!(matches!(error, RustFrontendError::Borrow(_)), "got {error:?}");
-    assert!(error.to_string().contains("borrow checking is incomplete"));
+    let unit = pipeline
+        .compile_unit(b"fn f() { let mut x: i32 = 0; let r: &mut i32 = &mut x; let _p: i32 = *r; }")
+        .expect("Fix: a conflict-free program must pass the wired borrow check");
+    assert!(unit.program.is_none(), "lowering is off by default, so there is no Program yet");
 }

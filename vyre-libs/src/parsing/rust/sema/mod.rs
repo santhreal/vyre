@@ -133,9 +133,6 @@ pub enum RustSemaError {
         /// The declared return type.
         expected: String,
     },
-    /// Borrow checking is incomplete: the conflicting-borrow rules require weir.
-    #[error("borrow checking is incomplete: the conflicting-borrow rules (E0499/E0502) require the weir dataflow analysis and are not yet wired")]
-    BorrowUnavailable,
 }
 
 /// Recover the identifier text that begins at `offset` in `source`.
@@ -501,26 +498,23 @@ fn expr_diverges(expr: &Expr) -> bool {
 // Borrow checking
 // ----------------------------------------------------------------------------
 
-/// Borrow-check a resolved module.
+/// Borrow-check a resolved module: the nano-subset verdict.
 ///
-/// Implemented rules: mutability (E0596) via [`check_mutability`], dangling
-/// reference / escape (E0597) via [`check_escape`], and conflicting borrows
-/// (E0499/E0502) via [`check_conflicts`]. Conflict detection currently covers
-/// straight-line top-level borrows; branch-crossing, nested, and through-deref
-/// conflicts await the weir CFG-liveness analysis, so `borrow_check` surfaces a
-/// real error when one exists and otherwise reports
-/// [`RustSemaError::BorrowUnavailable`] rather than claiming a complete borrow
-/// check it has not performed.
+/// Runs mutability (E0596) via [`check_mutability`], dangling-reference / escape
+/// (E0597) via [`check_escape`], and conflicting borrows (E0499/E0502) via
+/// [`check_conflicts`], which lowers each function to a CFG and runs the NLL
+/// loan-liveness engine (branches and through-deref reborrows included). On the
+/// nano-subset this verdict is accept/reject-identical to rustc; the
+/// `rust_sema_borrow_oracle` differential gates that agreement against a real
+/// rustc over generated straight-line, branch, and reborrow programs.
 ///
 /// # Errors
-/// Returns the matching [`RustSemaError`] for an E0596/E0597/E0499/E0502
-/// violation, or [`RustSemaError::BorrowUnavailable`] while conflict detection
-/// remains partial.
+/// Returns the matching [`RustSemaError`] for an E0596/E0597/E0499/E0502 violation.
 pub fn borrow_check(module: &Module, resolution: &Resolution) -> Result<(), RustSemaError> {
     check_mutability(module, resolution)?;
     check_escape(module, resolution)?;
     check_conflicts(module, resolution)?;
-    Err(RustSemaError::BorrowUnavailable)
+    Ok(())
 }
 
 /// Check the mutability borrow rule (rustc E0596) over a resolved module.
@@ -875,25 +869,38 @@ impl FactBuilder<'_> {
         cur
     }
 
-    /// Record `let a = &[mut] x;` as a loan over place `x` issued at `point`.
+    /// Record `let a = &[mut] x;` as a loan over place `x`, and
+    /// `let a = &[mut] *r;` as a reborrow loan keyed by `r`'s place issued at
+    /// `point`. In the nano-subset a reborrow `&[mut] *r` conflicts exactly when
+    /// another borrow of the same `r` is live, matching rustc.
     fn record_loan(&mut self, name: &u32, init: &Expr, point: u32) {
-        if let Expr::Borrow { mutable, expr } = init {
-            if let Expr::Var(off) = expr.as_ref() {
-                if let (Some(&place), Some(&binding)) =
-                    (self.resolution.uses.get(off), self.def_to_id.get(name))
-                {
-                    let loan = self.facts.loan_place.len() as crate::borrowck::Loan;
-                    self.facts.loan_place.push(place as crate::borrowck::Place);
-                    self.facts.loan_kind.push(if *mutable {
-                        crate::borrowck::LoanKind::Mut
-                    } else {
-                        crate::borrowck::LoanKind::Shared
-                    });
-                    self.facts.loan_issued_at.push(point);
-                    self.facts.loan_offset.push(*name);
-                    self.binding_to_loan.insert(binding, loan);
-                }
-            }
+        let Expr::Borrow { mutable, expr } = init else {
+            return;
+        };
+        let place_off = match expr.as_ref() {
+            Expr::Var(off) => Some(*off),
+            Expr::Deref(inner) => match inner.as_ref() {
+                Expr::Var(off) => Some(*off),
+                _ => None,
+            },
+            _ => None,
+        };
+        let Some(off) = place_off else {
+            return;
+        };
+        if let (Some(&place), Some(&binding)) =
+            (self.resolution.uses.get(&off), self.def_to_id.get(name))
+        {
+            let loan = self.facts.loan_place.len() as crate::borrowck::Loan;
+            self.facts.loan_place.push(place as crate::borrowck::Place);
+            self.facts.loan_kind.push(if *mutable {
+                crate::borrowck::LoanKind::Mut
+            } else {
+                crate::borrowck::LoanKind::Shared
+            });
+            self.facts.loan_issued_at.push(point);
+            self.facts.loan_offset.push(*name);
+            self.binding_to_loan.insert(binding, loan);
         }
     }
 
