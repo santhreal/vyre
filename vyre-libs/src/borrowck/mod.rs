@@ -110,22 +110,28 @@ pub fn analyze(facts: &BorrowFacts) -> Vec<Conflict> {
         }
     }
 
-    let mut uses: Vec<Vec<usize>> = vec![Vec::new(); loans];
+    let words = loans.div_ceil(64);
+    // Per-point loan bitsets seeding the two dataflows.
+    let mut use_seed = vec![vec![0u64; words]; n];
     for &(l, p) in &facts.loan_used_at {
         if (l as usize) < loans && (p as usize) < n {
-            uses[l as usize].push(p as usize);
+            set_bit(&mut use_seed[p as usize], l as usize);
+        }
+    }
+    let mut issue_seed = vec![vec![0u64; words]; n];
+    for l in 0..loans {
+        let p = facts.loan_issued_at[l] as usize;
+        if p < n {
+            set_bit(&mut issue_seed[p], l);
         }
     }
 
-    // Live-point set per loan: reachable-from-issue intersected with
-    // can-reach-a-use. An unused loan has an empty live set (dead immediately).
-    let live: Vec<Vec<bool>> = (0..loans)
-        .map(|l| {
-            let from_issue = reach(&succ, &[facts.loan_issued_at[l] as usize], n);
-            let to_use = reach(&pred, &uses[l], n);
-            (0..n).map(|p| from_issue[p] && to_use[p]).collect()
-        })
-        .collect();
+    // Two monotone bitset fixpoints (the exact form the weir GPU backend
+    // evaluates, batched): `backward[p]` holds loans whose use is forward-
+    // reachable from p, `forward[p]` holds loans whose issue reaches p. A loan
+    // is live at p iff it is in both.
+    let backward = fixpoint(&succ, &use_seed, n, words);
+    let forward = fixpoint(&pred, &issue_seed, n, words);
 
     let mut conflicts = Vec::new();
     for a in 0..loans {
@@ -140,7 +146,13 @@ pub fn analyze(facts: &BorrowFacts) -> Vec<Conflict> {
             }
             let issue_a = facts.loan_issued_at[a] as usize;
             let issue_b = facts.loan_issued_at[b] as usize;
-            let overlap = (issue_b < n && live[a][issue_b]) || (issue_a < n && live[b][issue_a]);
+            // `a` is live at `b`'s issue iff issue_a reaches it and a use of `a`
+            // is still reachable from there (and symmetrically for `b`).
+            let a_live_at_b =
+                issue_b < n && test_bit(&forward[issue_b], a) && test_bit(&backward[issue_b], a);
+            let b_live_at_a =
+                issue_a < n && test_bit(&forward[issue_a], b) && test_bit(&backward[issue_a], b);
+            let overlap = a_live_at_b || b_live_at_a;
             if overlap {
                 let (first, second) = if issue_a <= issue_b { (a, b) } else { (b, a) };
                 conflicts.push(Conflict {
@@ -159,23 +171,55 @@ pub fn analyze(facts: &BorrowFacts) -> Vec<Conflict> {
     conflicts
 }
 
-/// Points reachable from any of `starts` following adjacency `adj` (BFS).
-fn reach(adj: &[Vec<usize>], starts: &[usize], n: usize) -> Vec<bool> {
-    let mut seen = vec![false; n];
-    let mut stack: Vec<usize> = Vec::new();
-    for &s in starts {
-        if s < n && !seen[s] {
-            seen[s] = true;
-            stack.push(s);
+/// Monotone bitset dataflow fixpoint:
+/// `out[p] = seed[p] | union over q in adj[p] of out[q]`, iterated with a
+/// worklist until stable. With `adj = succ` this is backward liveness (use
+/// reachability); with `adj = pred` it is forward issue reachability. The set
+/// lattice is finite and the transfer monotone, so it terminates on any CFG
+/// (loops included). This is the kernel the weir GPU backend evaluates.
+fn fixpoint(adj: &[Vec<usize>], seed: &[Vec<u64>], n: usize, words: usize) -> Vec<Vec<u64>> {
+    // dependents[q] = points p that read out[q] (i.e. q in adj[p]).
+    let mut dependents: Vec<Vec<usize>> = vec![Vec::new(); n];
+    for (p, edges) in adj.iter().enumerate() {
+        for &q in edges {
+            dependents[q].push(p);
         }
     }
-    while let Some(p) = stack.pop() {
+    let mut out = seed.to_vec();
+    let mut work: Vec<usize> = (0..n).collect();
+    let mut queued = vec![true; n];
+    while let Some(p) = work.pop() {
+        queued[p] = false;
+        let mut next = seed[p].clone();
         for &q in &adj[p] {
-            if !seen[q] {
-                seen[q] = true;
-                stack.push(q);
+            or_into(&mut next, &out[q], words);
+        }
+        if next != out[p] {
+            out[p] = next;
+            for &d in &dependents[p] {
+                if !queued[d] {
+                    queued[d] = true;
+                    work.push(d);
+                }
             }
         }
     }
-    seen
+    out
+}
+
+#[inline]
+fn set_bit(set: &mut [u64], bit: usize) {
+    set[bit / 64] |= 1u64 << (bit % 64);
+}
+
+#[inline]
+fn test_bit(set: &[u64], bit: usize) -> bool {
+    (set[bit / 64] >> (bit % 64)) & 1 == 1
+}
+
+#[inline]
+fn or_into(dst: &mut [u64], src: &[u64], words: usize) {
+    for i in 0..words {
+        dst[i] |= src[i];
+    }
 }
