@@ -17,7 +17,7 @@ use std::collections::HashMap;
 
 use thiserror::Error;
 
-use super::lex::tokens::{EQ, GE, GT, LE, LT, MINUS, NE, PERCENT, PLUS, SLASH, STAR};
+use super::lex::tokens::{ANDAND, EQ, GE, GT, LE, LT, MINUS, NE, OROR, PERCENT, PLUS, SLASH, STAR};
 use super::parse::{Expr, Module, Stmt, Type};
 
 /// Stable id for a resolved binding (index into [`Resolution::bindings`]).
@@ -367,6 +367,11 @@ impl TypeCk<'_> {
                                 found: type_str(&rt),
                             });
                         }
+                        Ok(Type::Bool)
+                    }
+                    ANDAND | OROR => {
+                        self.require(&lt, &Type::Bool, "logical operand")?;
+                        self.require(&rt, &Type::Bool, "logical operand")?;
                         Ok(Type::Bool)
                     }
                     _ => Ok(Type::I32),

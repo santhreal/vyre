@@ -72,6 +72,10 @@ pub const RPAREN: u16 = 61;
 pub const LBRACE: u16 = 62;
 /// `}` delimiter.
 pub const RBRACE: u16 = 63;
+/// `&&` logical-and operator.
+pub const ANDAND: u16 = 64;
+/// `||` logical-or operator.
+pub const OROR: u16 = 65;
 /// Unrecognised token.
 pub const ERROR: u16 = 0xFFFE;
 /// Token outside the nano-subset.
