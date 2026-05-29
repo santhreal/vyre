@@ -57,9 +57,10 @@ fn barrier_inserted_when_read_arm_precedes_atomic_arm() {
         .map(|(i, _)| i)
         .collect();
 
-    assert!(
-        !barrier_positions.is_empty(),
-        "Fix: fusion must insert Node::Barrier {{ ordering: MemoryOrdering::SeqCst }} between a read arm and an atomic-write arm"
+    assert_eq!(
+        barrier_positions.len(),
+        1,
+        "Fix: fusion must insert exactly one SeqCst barrier between read and atomic arms"
     );
 }
 

@@ -229,8 +229,11 @@ fn validation_rejects_zero_workgroup_size() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.is_empty(),
-        "zero workgroup size must be rejected, not silently accepted"
+        errors
+            .iter()
+            .any(|e| e.message().contains("workgroup") || e.message().contains("zero")),
+        "zero workgroup size must be rejected, got: {:?}",
+        errors
     );
 }
 
@@ -247,9 +250,10 @@ fn graph_validation_rejects_cycles() {
             DataEdge::new(1, 0, EdgeKind::Ordering),
         ],
     );
+    let err = from_graph(g).expect_err("graph with a cycle must be rejected");
     assert!(
-        from_graph(g).is_err(),
-        "graph with a cycle must be rejected, not silently defaulted"
+        matches!(err, GraphValidateError::Cycle { .. }),
+        "cycle rejection must surface GraphValidateError::Cycle, got {err:?}"
     );
 }
 
@@ -258,10 +262,11 @@ fn graph_validation_rejects_cycles() {
 #[test]
 fn wire_decode_rejects_truncated_input() {
     let bad = vec![0x01, 0x02];
-    let result = Program::from_wire(&bad);
+    let err = Program::from_wire(&bad).expect_err("truncated wire input must be rejected");
+    let msg = err.to_string();
     assert!(
-        result.is_err(),
-        "truncated wire input must be rejected, not silently defaulted"
+        msg.contains("Fix:") || msg.contains("wire") || msg.contains("truncat"),
+        "truncated wire error must be actionable: {msg}"
     );
 }
 
@@ -280,7 +285,7 @@ fn external_fixture_is_loadable() {
         "external fixture must exist at {fixture:?}"
     );
     let bytes = std::fs::read(&fixture).unwrap();
-    assert!(!bytes.is_empty(), "fixture must not be empty");
+    assert_eq!(bytes.len(), 2, "truncated_wire.bin fixture is exactly two bytes");
 }
 
 /// A test that actually consumes the external fixture to drive behavior.
@@ -289,10 +294,11 @@ fn external_fixture_drives_wire_rejection() {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let fixture = manifest.join("tests/fixtures/truncated_wire.bin");
     let bytes = std::fs::read(&fixture).unwrap();
-    let result = Program::from_wire(&bytes);
+    let err = Program::from_wire(&bytes).expect_err("fixture bytes must fail wire decode");
+    let msg = err.to_string();
     assert!(
-        result.is_err(),
-        "fixture bytes must produce a wire decode error, not silent acceptance"
+        msg.contains("Fix:") || msg.contains("wire"),
+        "fixture wire decode error must be actionable: {msg}"
     );
 }
 

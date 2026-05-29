@@ -206,7 +206,7 @@ fn workgroup_size_exceeding_backend_limit_is_reported() {
 fn zero_backend_workgroup_size_is_unlimited() {
     let mut required = RequiredCapabilities::none();
     required.max_workgroup_size = [256, 1, 1];
-    assert!(
+    assert_eq!(
         check_backend_capabilities(
             "test",
             false,
@@ -217,8 +217,8 @@ fn zero_backend_workgroup_size_is_unlimited() {
             false,
             [0, 0, 0],
             &required,
-        )
-        .is_ok(),
+        ),
+        Ok(()),
         "zero backend workgroup size must mean unlimited"
     );
 }
@@ -233,7 +233,7 @@ fn all_capabilities_together_return_ok_when_supported() {
     required.trap = true;
     required.distributed_collectives = true;
     required.max_workgroup_size = [64, 1, 1];
-    assert!(
+    assert_eq!(
         check_backend_capabilities(
             "test",
             true,
@@ -244,8 +244,8 @@ fn all_capabilities_together_return_ok_when_supported() {
             true,
             [128, 1, 1],
             &required,
-        )
-        .is_ok(),
+        ),
+        Ok(()),
         "fully supported backend must pass"
     );
 }

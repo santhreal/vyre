@@ -448,6 +448,7 @@ mod tests {
         assert!(result.changed, "literal must propagate to both arms");
         let entry = result.program.entry().to_vec();
         assert_eq!(
+
             count_var_reads(&entry, "x"),
             0,
             "no Var(x) reads remain after propagation"
@@ -568,3 +569,4 @@ mod tests {
         assert_eq!(p1.changed, p2.changed);
     }
 }
+

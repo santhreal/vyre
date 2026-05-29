@@ -726,6 +726,7 @@ impl GpuEGraphSnapshot {
 
 /// Report returned after applying discovered equivalences to an `EGraph`.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+
 pub struct ApplyEquivalencesReport {
     /// Input equivalence count.
     pub requested: usize,
@@ -804,13 +805,21 @@ where
     GpuEGraphDeviceSpan::new(offset, words.len() - offset)
 }
 
-fn egraph_row_signature(row: &SnapshotRow, children: &[u32]) -> u32 {
-    let mut hash = mix_egraph_signature(0xA24B_AED4, row.language_op_id);
-    hash = mix_egraph_signature(hash, row.children_len);
+/// Structural row signature for packed GPU e-graph columns.
+///
+/// Matches the CUDA row-signature refresh kernel and initial image packing.
+#[must_use]
+pub fn gpu_egraph_row_signature(language_op_id: u32, children_len: u32, children: &[u32]) -> u32 {
+    let mut hash = mix_egraph_signature(0xA24B_AED4, language_op_id);
+    hash = mix_egraph_signature(hash, children_len);
     for &child in children {
         hash = mix_egraph_signature(hash, child);
     }
     hash
+}
+
+fn egraph_row_signature(row: &SnapshotRow, children: &[u32]) -> u32 {
+    gpu_egraph_row_signature(row.language_op_id, row.children_len, children)
 }
 
 fn mix_egraph_signature(hash: u32, value: u32) -> u32 {
@@ -1226,3 +1235,4 @@ mod tests {
         assert_ne!(egraph.find(a), egraph.find(c));
     }
 }
+

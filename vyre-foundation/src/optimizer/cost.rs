@@ -448,6 +448,7 @@ mod tests {
     }
 
     #[test]
+
     fn walker_matches_canonical_on_corpus() {
         // Kept-inline private old walker for drift-prevention
         fn count_divergent_patterns_old(node: &Node, score: &mut u64, visited: &mut Vec<Node>) {
@@ -531,3 +532,4 @@ mod tests {
         }
     }
 }
+

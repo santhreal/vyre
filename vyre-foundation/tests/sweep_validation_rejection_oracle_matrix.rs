@@ -1,5 +1,5 @@
-//! Release sweep R2 — oracle matrix (handwritten reference, hostile corpus).
-//! Generated scaffold — oracle logic is explicit; do not reduce to `assert!(is_ok)`.
+//! Release sweep R2 - oracle matrix (handwritten reference, hostile corpus).
+//! Generated scaffold - oracle logic is explicit; do not reduce to `assert!(is_ok)`.
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -152,11 +152,21 @@ fn sweep_validation_rejection_matrix_workgroup_axes() {
             vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
         );
         let errors = validate(&program);
-        assert!(
-            !errors.is_empty(),
-            "workgroup {:?} must be rejected: {:?}",
-            wg,
-            errors
-        );
+        for (axis, &size) in wg.iter().enumerate() {
+            if size == 0 {
+                let expected = format!(
+                    "workgroup_size[{axis}] is 0. Fix: all workgroup dimensions must be >= 1."
+                );
+                assert_eq!(
+                    errors
+                        .iter()
+                        .find(|e| e.message().contains(&format!("workgroup_size[{axis}] is 0")))
+                        .map(|e| e.message()),
+                    Some(expected.as_str()),
+                    "workgroup {wg:?} axis {axis}: {:?}",
+                    errors
+                );
+            }
+        }
     }
 }

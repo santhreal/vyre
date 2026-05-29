@@ -464,6 +464,7 @@ fn rewrite_select<'a>(
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use crate::ir::{BufferDecl, DataType};
@@ -551,3 +552,4 @@ mod tests {
         );
     }
 }
+

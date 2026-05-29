@@ -448,6 +448,7 @@ impl Reader<'_> {
                 };
                 Ok(Expr::BinOp {
                     op,
+
                     left: Box::new(self.expr()?),
                     right: Box::new(self.expr()?),
                 })
@@ -534,3 +535,4 @@ impl Reader<'_> {
         }
     }
 }
+

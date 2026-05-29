@@ -452,6 +452,7 @@ fn interpret_un_op(op: &UnOp, operand: Value) -> Result<Value, EvalError> {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
@@ -504,3 +505,4 @@ mod tests {
         assert!(matches!(result, Value::F32(value) if value.to_bits() == 0.0f32.to_bits()));
     }
 }
+

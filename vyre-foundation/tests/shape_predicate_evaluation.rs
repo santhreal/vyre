@@ -150,7 +150,7 @@ fn not_inverts_result() {
 
 #[test]
 fn describe_is_non_empty() {
-    assert!(!ShapePredicate::AtLeast(10).describe().is_empty());
-    assert!(!ShapePredicate::Exactly(5).describe().is_empty());
-    assert!(!ShapePredicate::MultipleOf(64).describe().is_empty());
+    assert!(ShapePredicate::AtLeast(10).describe().contains("10"));
+    assert!(ShapePredicate::Exactly(5).describe().contains('5'));
+    assert!(ShapePredicate::MultipleOf(64).describe().contains("64"));
 }

@@ -448,6 +448,7 @@ mod tests {
                 assert_eq!(var.as_str(), "i", "var is not freshened after #2734");
                 assert_eq!(*from, Expr::LitU32(0), "from must be 0");
                 assert_eq!(*to, Expr::LitU32(8), "to must be original (12) - lower (4)");
+
                 match &body[0] {
                     Node::Store { index, .. } => match index {
                         Expr::BinOp { op, left, right } => {
@@ -598,3 +599,4 @@ mod tests {
         }
     }
 }
+

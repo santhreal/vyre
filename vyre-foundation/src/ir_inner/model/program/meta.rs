@@ -448,6 +448,7 @@ impl Program {
     #[must_use]
     #[inline]
     pub fn fingerprint(&self) -> [u8; 32] {
+
         *self.fingerprint.get_or_init(|| {
             let hash = self.compute_wire_hash();
             let _ = self.hash.set(hash);
@@ -898,6 +899,7 @@ pub(crate) fn buffers_equal_ignoring_declaration_order(
         return true;
     }
 
+
     let mut left_keys = Vec::with_capacity(left.len());
     left_keys.extend(left.iter().map(buffer_decl_canonical_key));
     let mut right_keys = Vec::with_capacity(right.len());
@@ -983,3 +985,4 @@ pub(super) fn buffer_decl_canonical_key(buffer: &super::BufferDecl) -> Vec<u8> {
     put_u8(&mut key, u8::from(buffer.bytes_extraction));
     key
 }
+

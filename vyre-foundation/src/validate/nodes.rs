@@ -451,6 +451,7 @@ fn validate_collective_support(options: ValidationOptions<'_>, errors: &mut Vec<
 }
 
 #[cfg(test)]
+
 fn validate_collective_buffer(
     name: &Ident,
     buffers: &FxHashMap<&str, &BufferDecl>,
@@ -655,3 +656,4 @@ mod tests {
         assert!(errors.is_empty(), "dynamic index must be accepted");
     }
 }
+

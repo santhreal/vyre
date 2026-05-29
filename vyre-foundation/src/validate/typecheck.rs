@@ -470,6 +470,7 @@ pub(crate) fn expr_type(
 }
 
 #[cfg(test)]
+
 mod typecheck_critical_test {
     include!("typecheck_critical_test.rs");
 }
@@ -553,9 +554,11 @@ mod tests {
         } else {
             return Err("expected BinOp".to_string());
         }
+        assert_eq!(errors.len(), 1, "bool + int must produce exactly one type error");
         assert!(
-            !errors.is_empty(),
-            "arithmetic on a Bool-typed operand must be rejected"
+            errors[0].message().contains("Bool") || errors[0].message().contains("type"),
+            "type error must mention Bool mismatch: {}",
+            errors[0].message()
         );
         Ok(())
     }
@@ -605,3 +608,4 @@ mod tests {
         assert!(errors.iter().any(|error| error.message().contains("V044")));
     }
 }
+

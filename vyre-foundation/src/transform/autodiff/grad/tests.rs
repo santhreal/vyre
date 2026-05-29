@@ -108,11 +108,10 @@ fn grad_exp() {
         }],
     );
 
-    let result = grad(&program, &["out"], &["x"]);
+    let backward = grad(&program, &["out"], &["x"]).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - exp should be differentiable");
     assert!(
-        result.is_ok(),
-        "exp should be differentiable: {:?}",
-        result.err()
+        backward.buffers().iter().any(|b| b.name() == "x"),
+        "exp backward program must declare an x adjoint buffer"
     );
 }
 

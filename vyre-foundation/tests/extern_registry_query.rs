@@ -138,8 +138,9 @@ fn ops_belong_to_registered_dialects_when_present() {
 fn no_empty_op_ids_when_present() {
     // Every op must have a non-empty op_id.
     for op in all_ops() {
-        assert!(
-            !op.op_id.is_empty(),
+        assert_ne!(
+            op.op_id.len(),
+            0,
             "CRITICAL FINDING: ExternOp with empty op_id in dialect '{}'. \
              Empty op_id breaks downstream lookup and must be rejected. \
              Fix: add verify_op_ids_non_empty().",
