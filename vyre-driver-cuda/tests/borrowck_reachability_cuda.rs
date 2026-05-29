@@ -25,13 +25,9 @@ use std::time::Instant;
 
 use common::{with_cuda_optimizer_dispatcher, with_live_backend};
 use vyre_driver_cuda::CudaOptimizerDispatcher as CudaResidentDispatcher;
-use vyre_libs::borrowck::{analyze, BorrowFacts, Conflict, ConflictKind, LoanKind};
+use vyre_libs::borrowck::{analyze, gpu, BorrowFacts, Conflict, ConflictKind, LoanKind};
 use vyre_self_substrate::csr_forward_or_changed::forward_closure_via_change_flag_gpu;
 use vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher;
-use vyre_self_substrate::persistent_bfs::{
-    bfs_expand_resident_graph_batch_with_scratch_into, upload_resident_bfs_graph,
-    PersistentBfsResidentScratch,
-};
 
 const ALLOW_ALL: u32 = 0xFFFF_FFFF;
 
@@ -271,100 +267,15 @@ fn cuda_borrow_checker_scales_to_a_long_chain() {
     assert_eq!(gpu[0].kind, ConflictKind::TwoMutable);
 }
 
-/// Test a bit in query `q`'s slice of a flattened `query_count x words` bitset.
-fn slice_test_bit(flat: &[u32], words: usize, q: usize, bit: u32) -> bool {
-    test_bit(&flat[q * words..(q + 1) * words], bit)
-}
-
-/// The BATCHED CUDA borrow checker: every loan's forward closure (over the CFG,
-/// seeded at its issue) runs in ONE resident device dispatch, every loan's
-/// backward closure (over the reversed CFG, seeded at its uses) in a second.
-/// Two dispatches per function instead of two per loan: the megakernel-batched
-/// path that amortizes launch overhead across the whole loan set. The host then
-/// intersects and pairs exactly as the CPU engine does.
+/// Thin wrapper so this test exercises the shipped library borrow checker
+/// (`vyre_libs::borrowck::gpu::analyze_batched`) on the real CUDA device, rather
+/// than a copy of its logic: the batched megakernel path lives in the library.
 fn cuda_conflicts_batched(
     dispatcher: &dyn OptimizerDispatcher,
     facts: &BorrowFacts,
 ) -> Vec<Conflict> {
-    let n = facts.point_count;
-    let loans = facts.loan_count();
-    if loans < 2 || n == 0 {
-        return Vec::new();
-    }
-    let words = bitset_words(n);
-    let max_iters = n.max(1);
-
-    let (fwd_off, fwd_tgt, fwd_msk) = build_csr(n, &facts.cfg_edges, false);
-    let (rev_off, rev_tgt, rev_msk) = build_csr(n, &facts.cfg_edges, true);
-    let fwd_graph = upload_resident_bfs_graph(dispatcher, n, &fwd_off, &fwd_tgt, &fwd_msk)
-        .expect("forward CFG resident upload must succeed");
-    let rev_graph = upload_resident_bfs_graph(dispatcher, n, &rev_off, &rev_tgt, &rev_msk)
-        .expect("reversed CFG resident upload must succeed");
-
-    // Per-loan seeds, flattened loans x words: issue point forward, uses backward.
-    let mut issue_seeds = vec![0u32; loans * words];
-    let mut use_seeds = vec![0u32; loans * words];
-    for a in 0..loans {
-        set_bit(&mut issue_seeds[a * words..(a + 1) * words], facts.loan_issued_at[a]);
-    }
-    for &(loan, point) in &facts.loan_used_at {
-        let a = loan as usize;
-        if a < loans {
-            set_bit(&mut use_seeds[a * words..(a + 1) * words], point);
-        }
-    }
-
-    let mut scratch = PersistentBfsResidentScratch::default();
-    let mut forward = Vec::new();
-    let mut forward_changed = Vec::new();
-    bfs_expand_resident_graph_batch_with_scratch_into(
-        dispatcher, &fwd_graph, &issue_seeds, loans, ALLOW_ALL, max_iters, &mut scratch,
-        &mut forward, &mut forward_changed,
-    )
-    .expect("forward batch closure dispatch must succeed on the CUDA device");
-    let mut backward = Vec::new();
-    let mut backward_changed = Vec::new();
-    bfs_expand_resident_graph_batch_with_scratch_into(
-        dispatcher, &rev_graph, &use_seeds, loans, ALLOW_ALL, max_iters, &mut scratch,
-        &mut backward, &mut backward_changed,
-    )
-    .expect("backward batch closure dispatch must succeed on the CUDA device");
-
-    let mut conflicts = Vec::new();
-    for a in 0..loans {
-        for b in (a + 1)..loans {
-            if facts.loan_place[a] != facts.loan_place[b] {
-                continue;
-            }
-            let a_mut = facts.loan_kind[a] == LoanKind::Mut;
-            let b_mut = facts.loan_kind[b] == LoanKind::Mut;
-            if !(a_mut || b_mut) {
-                continue;
-            }
-            let issue_a = facts.loan_issued_at[a];
-            let issue_b = facts.loan_issued_at[b];
-            // a live at issue_b iff issue_a reaches issue_b AND a use of a is
-            // reachable from issue_b: forward[a] & backward[a] at point issue_b.
-            let a_live_at_b = slice_test_bit(&forward, words, a, issue_b)
-                && slice_test_bit(&backward, words, a, issue_b);
-            let b_live_at_a = slice_test_bit(&forward, words, b, issue_a)
-                && slice_test_bit(&backward, words, b, issue_a);
-            if a_live_at_b || b_live_at_a {
-                let (first, second) = if issue_a <= issue_b { (a, b) } else { (b, a) };
-                conflicts.push(Conflict {
-                    first: first as u32,
-                    second: second as u32,
-                    offset: facts.loan_offset[second],
-                    kind: if a_mut && b_mut {
-                        ConflictKind::TwoMutable
-                    } else {
-                        ConflictKind::MutableAndShared
-                    },
-                });
-            }
-        }
-    }
-    conflicts
+    gpu::analyze_batched(dispatcher, facts)
+        .expect("batched GPU borrow-check dispatch must succeed on the CUDA device")
 }
 
 #[test]
