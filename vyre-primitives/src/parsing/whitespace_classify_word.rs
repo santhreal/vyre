@@ -223,7 +223,7 @@ pub const fn is_structural_whitespace(byte: u8) -> bool {
 pub fn reference_whitespace_classify_word(words_in: &[u32]) -> Vec<u32> {
     let mut out = Vec::new();
     try_reference_whitespace_classify_word_into(words_in, &mut out)
-        .expect("whitespace word-classifier reference allocation failed");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - whitespace word-classifier reference allocation failed");
     out
 }
 
@@ -233,7 +233,7 @@ pub fn reference_whitespace_classify_word(words_in: &[u32]) -> Vec<u32> {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_whitespace_classify_word_into(words_in: &[u32], out: &mut Vec<u32>) {
     try_reference_whitespace_classify_word_into(words_in, out)
-        .expect("whitespace word-classifier reference allocation failed");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - whitespace word-classifier reference allocation failed");
 }
 
 /// Fallible reference oracle into caller-owned output storage.
@@ -283,9 +283,20 @@ inventory::submit! {
     crate::harness::OpEntry::new(
         OP_ID,
         || whitespace_classify_word(256),
-        None,
         Some(|| {
-            vec![vec![crate::wire::pack_u32_slice(&[0; 256])]]
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            let mut words = vec![0x78787878; 256];
+            words[0] = 0x20 | (0x09 << 8) | (0x78 << 16) | (0x0A << 24);
+            vec![vec![
+                to_bytes(&words),                // bytes_in
+                to_bytes(&[0; 256]),             // whitespace_mask_out
+            ]]
+        }),
+        Some(|| {
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            let mut expected = vec![0; 256];
+            expected[0] = 11;
+            vec![vec![to_bytes(&expected)]]
         }),
     )
 }

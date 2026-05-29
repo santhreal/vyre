@@ -492,6 +492,7 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
 /// means the node participates in a complete motif match.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
+
 pub fn cpu_ref(
     node_count: u32,
     edge_offsets: &[u32],
@@ -969,17 +970,30 @@ inventory::submit! {
     crate::harness::OpEntry::new(
         OP_ID,
         || motif(ProgramGraphShape::new(4, 4), &[MotifEdge { from: 0, to: 1, kind_mask: 1 }], "witness"),
-        None,
         Some(|| {
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
             vec![vec![
-                crate::wire::pack_u32_slice(&[0; 4]),
-                crate::wire::pack_u32_slice(&[0; 4]),
+                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
+                to_bytes(&[0, 2, 3, 4, 4]),       // pg_edge_offsets
+                to_bytes(&[1, 2, 3, 3]),          // pg_edge_targets
+                to_bytes(&[1, 1, 1, 1]),          // pg_edge_kind_mask
+                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
+                to_bytes(&[0, 0, 0, 0]),          // motif_hits
+                to_bytes(&[0, 0, 0, 0]),          // witness
+            ]]
+        }),
+        Some(|| {
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            vec![vec![
+                to_bytes(&[1, 1, 0, 0]),          // expected motif_hits
+                to_bytes(&[1, 1, 0, 0]),          // expected witness
             ]]
         }),
     )
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
@@ -1129,10 +1143,10 @@ mod tests {
             }];
             let witness = cpu_ref(node_count, &offsets, &targets, &masks, &motif);
             let witness_count =
-                count_witness_participants(&witness).expect("generated witness count must fit u32");
+                count_witness_participants(&witness).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated witness count must fit u32");
             let count =
                 try_cpu_ref_participation_count(node_count, &offsets, &targets, &masks, &motif)
-                    .expect("generated motif participation count must pass validation");
+                    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated motif participation count must pass validation");
 
             assert_eq!(
                 count, witness_count,
@@ -1456,3 +1470,4 @@ mod tests {
         assert!(err.contains("outside node_count"));
     }
 }
+

@@ -541,6 +541,7 @@ fn dfa_compile_inner_capped(
     })
 }
 
+
 fn fail_chain_accepts_pattern(state: usize, pattern: u32, fail: &[u32], accept: &[u32]) -> bool {
     let mut f = fail[state] as usize;
     while f != 0 && f != state {
@@ -652,7 +653,7 @@ mod tests {
         let production = src
             .split("#[cfg(test)]")
             .next()
-            .expect("production section must exist");
+            .expect("Fix: meta-test scans production sources; update fixture path if module moved - production section must exist");
         assert!(
             !production.contains("unwrap_or_else(|_| CompiledDfa::empty())"),
             "dfa_compile must never hide a failed compile by returning the empty rejecting automaton"
@@ -663,3 +664,4 @@ mod tests {
         );
     }
 }
+

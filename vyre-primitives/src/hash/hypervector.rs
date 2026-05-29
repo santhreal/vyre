@@ -336,7 +336,7 @@ mod tests {
     fn xor_bind_zero_is_identity() {
         let a = vec![0x1234, 0x5678, 0xABCD];
         let zero = vec![0u32; a.len()];
-        assert_eq!(xor_bind_cpu(&a, &zero), a);
+        assert_eq!(xor_bind_cpu(&a, &zero), vec![0x1234, 0x5678, 0xABCD]);
     }
 
     #[test]

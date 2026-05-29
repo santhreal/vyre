@@ -135,7 +135,7 @@ pub fn rk4_step_cpu_into(
     out: &mut Vec<f64>,
 ) {
     try_rk4_step_cpu_into(y_prev, k1, k2, k3, k4, h, out)
-        .expect("rk4_step_cpu_into failed: output allocation failed");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - rk4_step_cpu_into failed: output allocation failed");
 }
 
 /// Fallible CPU reference into caller-owned storage.

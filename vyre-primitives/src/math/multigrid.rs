@@ -337,7 +337,7 @@ mod tests {
         let capacity = out.capacity();
 
         try_jacobi_smooth_step_cpu_into(&a, &b, &x_in, 1.0, 2, &mut out)
-            .expect("Jacobi CPU oracle should reuse caller-owned output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - Jacobi CPU oracle should reuse caller-owned output");
 
         assert_eq!(out.len(), 2);
         assert!(approx_eq(out[0], 0.25));
@@ -346,7 +346,7 @@ mod tests {
         assert_eq!(out.capacity(), capacity);
 
         try_jacobi_smooth_step_cpu_into(&[2.0], &[4.0], &[1.0], 1.0, 1, &mut out)
-            .expect("Jacobi CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - Jacobi CPU oracle should truncate stale output");
 
         assert_eq!(out, vec![2.0]);
         assert_eq!(out.as_ptr(), ptr);
@@ -371,7 +371,7 @@ mod tests {
                 .map(|idx| ((idx * 19 + case) % 31) as f64 / 13.0 - 1.0)
                 .collect();
             let actual = try_jacobi_smooth_step_cpu(&a, &b, &x, omega, n as u32)
-                .expect("generated Jacobi CPU oracle should evaluate");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated Jacobi CPU oracle should evaluate");
             let expected = independent_jacobi(&a, &b, &x, omega, n);
 
             assert_eq!(actual.len(), n, "case {case}: output length");

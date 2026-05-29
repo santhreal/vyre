@@ -485,6 +485,7 @@ pub fn validate_csr_inputs(
 }
 
 /// Validate inputs and return the complete dispatch plan for one bidirectional step.
+
 pub fn plan_csr_bidirectional_step(
     node_count: u32,
     edge_offsets: &[u32],
@@ -955,6 +956,7 @@ where
 /// Panics when the two frontier slices differ in length. That is a caller
 /// contract violation: both slices must be bitsets for the same `node_count`.
 #[must_use]
+
 pub fn merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> bool {
     try_merge_frontier_or_changed(current, next).unwrap_or_else(|err| panic!("{err}"))
 }
@@ -1162,11 +1164,11 @@ mod tests {
     fn fallible_cpu_reference_matches_compatibility_wrappers() {
         let (off, tgt, msk) = linear_graph();
         let step = try_cpu_ref(4, &off, &tgt, &msk, &[0b0010], u32::MAX)
-            .expect("valid step should succeed");
+            .expect("Fix: operation must return Err on failure; tests may use expect only with Fix: recovery text - valid step should succeed");
         assert_eq!(step, cpu_ref(4, &off, &tgt, &msk, &[0b0010], u32::MAX));
 
         let closure = try_cpu_ref_closure(4, &off, &tgt, &msk, &[0b0001], u32::MAX, 5)
-            .expect("valid closure should succeed");
+            .expect("Fix: operation must return Err on failure; tests may use expect only with Fix: recovery text - valid closure should succeed");
         assert_eq!(
             closure,
             cpu_ref_closure(4, &off, &tgt, &msk, &[0b0001], u32::MAX, 5)
@@ -1179,7 +1181,7 @@ mod tests {
         let production = source
             .split("\n#[cfg(test)]\nmod tests")
             .next()
-            .expect("production section must exist");
+            .expect("Fix: meta-test scans production sources; update fixture path if module moved - production section must exist");
         assert!(production.contains("pub fn try_cpu_ref("));
         assert!(production.contains("pub fn try_cpu_ref_into("));
         assert!(production.contains("pub fn try_cpu_ref_closure_into("));
@@ -1212,3 +1214,4 @@ mod tests {
         );
     }
 }
+

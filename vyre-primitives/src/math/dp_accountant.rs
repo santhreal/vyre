@@ -193,7 +193,7 @@ mod tests {
         let capacity = out.capacity();
 
         try_gaussian_rdp_step_cpu_into(&[2.0, 4.0], &[1.0, 2.0], &mut out)
-            .expect("DP accountant CPU oracle should reuse caller-owned output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - DP accountant CPU oracle should reuse caller-owned output");
 
         assert_eq!(out.len(), 2);
         assert!(approx_eq(out[0], 1.0));
@@ -202,7 +202,7 @@ mod tests {
         assert_eq!(out.capacity(), capacity);
 
         try_gaussian_rdp_step_cpu_into(&[2.0], &[1.0], &mut out)
-            .expect("DP accountant CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - DP accountant CPU oracle should truncate stale output");
 
         assert_eq!(out, vec![1.0]);
         assert_eq!(out.as_ptr(), ptr);
@@ -223,7 +223,7 @@ mod tests {
                 .collect();
 
             try_gaussian_rdp_step_cpu_into(&alpha, &sigma_squared, &mut out)
-                .expect("generated DP accountant CPU oracle should evaluate");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated DP accountant CPU oracle should evaluate");
 
             let n = alpha_len.min(sigma_len);
             assert_eq!(out.len(), n, "case {case}: output length");

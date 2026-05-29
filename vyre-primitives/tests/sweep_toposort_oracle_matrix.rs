@@ -15,7 +15,7 @@ fn toposort_csr_matches_independent_lifo_kahn_oracle_matrix() {
     let mut order = Vec::new();
     let mut scratch = ToposortCsrScratch::new();
 
-    for case in 0..1024usize {
+    for case in 0..8192usize {
         let (node_count, offsets, targets) = generated_dag_csr(case as u64 ^ 0x7E57_1D00);
         let expected = oracle_lifo_kahn(node_count, &offsets, &targets);
         let actual = toposort_csr(node_count, &offsets, &targets)

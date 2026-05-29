@@ -445,8 +445,9 @@ mod tests {
                 .collect();
             let actual =
                 try_randomized_projection_step_cpu(&a, &omega, m as u32, n as u32, l as u32)
-                    .expect("generated randomized projection should evaluate");
+                    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated randomized projection should evaluate");
             let expected = independent_projection(&a, &omega, m, n, l);
+
 
             assert_eq!(actual.len(), m * l, "case {case}: output shape");
             for idx in 0..actual.len() {
@@ -501,3 +502,4 @@ mod tests {
         );
     }
 }
+

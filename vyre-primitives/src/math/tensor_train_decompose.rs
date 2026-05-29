@@ -491,6 +491,7 @@ inventory::submit! {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
@@ -673,3 +674,4 @@ mod tests {
         assert_eq!(p.buffers.len(), 3);
     }
 }
+

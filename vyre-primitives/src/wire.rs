@@ -98,7 +98,7 @@ pub fn pack_u32_slice(words: &[u32]) -> Vec<u8> {
 ///
 /// Endian-aware fast path: on little-endian hosts (every shipped runtime
 /// target) this reduces to one `extend_from_slice` over a `bytemuck::cast_slice`
-/// — no per-word copies. On big-endian hosts it falls back to the scalar loop
+/// - no per-word copies. On big-endian hosts it falls back to the scalar loop
 /// so the wire format is identical across hosts.
 pub fn pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) {
     if let Err(error) = try_pack_u32_slice_into(words, out) {
@@ -252,7 +252,7 @@ pub fn pack_f32_slice(values: &[f32]) -> Vec<u8> {
 
 /// Pack `&[f32]` into `out` as little-endian bytes; `out` is cleared first.
 ///
-/// Same endian-aware shape as [`pack_u32_slice_into`] — one `bytemuck`
+/// Same endian-aware shape as [`pack_u32_slice_into`] - one `bytemuck`
 /// `cast_slice` copy on LE hosts, scalar fallback on BE hosts.
 pub fn pack_f32_slice_into(values: &[f32], out: &mut Vec<u8>) {
     if let Err(error) = try_pack_f32_slice_into(values, out) {
@@ -388,11 +388,11 @@ pub fn unpack_u32_slice_into(
 /// Decode a packed LE-`f32` byte buffer back into `out` as `Vec<f32>`,
 /// reading exactly `count` values. `out` is cleared before writing.
 ///
-/// Same endian-aware shape as [`unpack_u32_slice_into`] — one
+/// Same endian-aware shape as [`unpack_u32_slice_into`] - one
 /// `bytemuck::cast_slice_mut` copy on LE hosts, scalar fallback on BE
 /// hosts. This is the canonical companion to the `.chunks_exact(4).map(|c|
 /// f32::from_le_bytes(c.try_into().unwrap())).collect()` pattern repeated
-/// across every nn op (activation, attention, norm, moe, linear) — every
+/// across every nn op (activation, attention, norm, moe, linear) - every
 /// caller should route here instead of re-implementing the loop.
 pub fn unpack_f32_slice_into(
     bytes: &[u8],
@@ -635,7 +635,7 @@ pub fn pack_f32_slice_into_uninit(values: &[f32]) -> Vec<u8> {
 }
 
 /// Append raw bytes onto `out` as one `u32` per byte (low 8 bits, zero
-/// high bits). Streaming companion to [`pack_bytes_as_u32_slice`] —
+/// high bits). Streaming companion to [`pack_bytes_as_u32_slice`] -
 /// no intermediate `Vec` allocation, no clear of `out`. Used by header
 /// builders that concatenate a packed-lane byte stream onto a composite
 /// GPU haystack buffer in one extension pass.
@@ -875,3 +875,4 @@ mod tests {
         assert_eq!(decoded, before);
     }
 }
+

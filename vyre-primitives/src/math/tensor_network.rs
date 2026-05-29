@@ -250,14 +250,14 @@ mod tests {
         let capacity = c.capacity();
 
         try_tn_pair_contract_cpu_into(&[1.0, 2.0], &[3.0, 4.0, 5.0, 6.0], 1, 2, 2, &mut c)
-            .expect("tensor-network CPU oracle should reuse caller-owned output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - tensor-network CPU oracle should reuse caller-owned output");
 
         assert_eq!(c, vec![13.0, 16.0]);
         assert_eq!(c.as_ptr(), ptr);
         assert_eq!(c.capacity(), capacity);
 
         try_tn_pair_contract_cpu_into(&[2.0], &[3.0], 1, 1, 1, &mut c)
-            .expect("tensor-network CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - tensor-network CPU oracle should truncate stale output");
 
         assert_eq!(c, vec![6.0]);
         assert_eq!(c.as_ptr(), ptr);
@@ -272,14 +272,14 @@ mod tests {
         let capacity = order.capacity();
 
         try_greedy_contract_order_cpu_into(&[4, 10, 2, 10], &mut order)
-            .expect("greedy contraction order should reuse caller-owned output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - greedy contraction order should reuse caller-owned output");
 
         assert_eq!(order, vec![1, 3, 0, 2]);
         assert_eq!(order.as_ptr(), ptr);
         assert_eq!(order.capacity(), capacity);
 
         try_greedy_contract_order_cpu_into(&[1], &mut order)
-            .expect("greedy contraction order should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - greedy contraction order should truncate stale output");
 
         assert_eq!(order, vec![0]);
         assert_eq!(order.as_ptr(), ptr);
@@ -303,7 +303,7 @@ mod tests {
                 .collect();
 
             try_tn_pair_contract_cpu_into(&a, &b, m as u32, k as u32, n as u32, &mut out)
-                .expect("generated tensor-network CPU oracle should evaluate");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated tensor-network CPU oracle should evaluate");
             let expected = independent_pair_contract(&a, &b, m, k, n);
 
             assert_eq!(out.len(), expected.len(), "case {case}: output length");

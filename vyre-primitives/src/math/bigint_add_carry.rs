@@ -448,6 +448,7 @@ mod tests {
     fn cpu_into_reuses_output_capacity() {
         let a = [1u32, u32::MAX];
         let b = [2u32, 1];
+
         let mut sum = Vec::with_capacity(32);
         let mut carry = Vec::with_capacity(32);
         let sum_cap = sum.capacity();
@@ -581,3 +582,4 @@ mod tests {
         assert_eq!(BINDING_CARRY_PARTIAL_OUT, 3);
     }
 }
+

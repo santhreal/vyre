@@ -126,7 +126,7 @@ pub fn score_denoise_step_cpu_into(
     out: &mut Vec<f64>,
 ) {
     try_score_denoise_step_cpu_into(x, score, noise, alpha, beta, sigma, out)
-        .expect("score_denoise_step_cpu_into failed: output allocation failed");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - score_denoise_step_cpu_into failed: output allocation failed");
 }
 
 /// Fallible CPU reference into caller-owned output storage.

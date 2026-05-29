@@ -1,5 +1,5 @@
 //! Integration test that exercises the `wire_harness_smoke` example as
-//! a real subprocess — the same way an agent harness would invoke it.
+//! a real subprocess - the same way an agent harness would invoke it.
 //!
 //! Locks the user-visible CLI contract (stdin/stdout shape, exit code,
 //! determinism) so the harness can build against a frozen interface.

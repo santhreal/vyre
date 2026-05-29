@@ -103,7 +103,7 @@ fn node_kind_cases() -> Vec<(Vec<u32>, u32)> {
         }
     }
 
-    for case in 0..1024usize {
+    for case in 0..8192usize {
         let len = case % 257;
         let kind = kinds[case % kinds.len()];
         let nodes = generated_node_kinds(case as u64 ^ 0xBADC_0FFE, len);

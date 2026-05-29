@@ -10,7 +10,7 @@ use vyre_primitives::graph::path_reconstruct;
 
 #[test]
 fn path_reconstruct_matches_independent_parent_walk_oracle_matrix() {
-    for case in 0..1024usize {
+    for case in 0..8192usize {
         let seed = case as u64 ^ 0xFACEFE00_00000000;
         let (parent, targets, max_depth) = generated_parent_batch(seed);
 

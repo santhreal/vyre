@@ -1,4 +1,4 @@
-//! Tier 3 — Property: proptest with 10 000 random `petgraph::DiGraph<u32, ()>`.
+//! Tier 3 - Property: proptest with 10 000 random `petgraph::DiGraph<u32, ()>`.
 //!
 //! For every generated graph we assert `dominator_tree(g) == lengauer_tarjan_ref(g)`
 //! entry-by-entry.  Graphs are single-entry (all edges emanate from node 0 or

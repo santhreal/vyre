@@ -164,14 +164,14 @@ mod tests {
         let capacity = out.capacity();
 
         try_mp_edge_clip_cpu_into(&[1.0, 5.0, 10.0], 4.0, &mut out)
-            .expect("MP edge clip CPU oracle should reuse caller-owned output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - MP edge clip CPU oracle should reuse caller-owned output");
 
         assert_eq!(out, vec![1.0, 4.0, 4.0]);
         assert_eq!(out.as_ptr(), ptr);
         assert_eq!(out.capacity(), capacity);
 
         try_mp_edge_clip_cpu_into(&[8.0], 4.0, &mut out)
-            .expect("MP edge clip CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - MP edge clip CPU oracle should truncate stale output");
 
         assert_eq!(out, vec![4.0]);
         assert_eq!(out.as_ptr(), ptr);
@@ -189,7 +189,7 @@ mod tests {
                 .collect();
 
             try_mp_edge_clip_cpu_into(&eigenvalues, edge, &mut out)
-                .expect("generated MP edge clip CPU oracle should evaluate");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated MP edge clip CPU oracle should evaluate");
 
             assert_eq!(out.len(), eigenvalues.len(), "case {case}: output length");
             for idx in 0..out.len() {

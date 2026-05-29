@@ -162,9 +162,21 @@ inventory::submit! {
     crate::harness::OpEntry::new(
         OP_ID,
         || csr_frontier_degree_sum(ProgramGraphShape::new(4, 4)),
-        None,
         Some(|| {
-            vec![vec![crate::wire::pack_u32_slice(&[0])]]
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            vec![vec![
+                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
+                to_bytes(&[0, 2, 3, 4, 4]),       // pg_edge_offsets
+                to_bytes(&[1, 2, 3, 3]),          // pg_edge_targets
+                to_bytes(&[1, 1, 1, 1]),          // pg_edge_kind_mask
+                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
+                to_bytes(&[0b0011]),              // frontier_in = {0, 1}
+                to_bytes(&[0]),                   // degree_sum_out
+            ]]
+        }),
+        Some(|| {
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            vec![vec![to_bytes(&[3])]]
         }),
     )
 }

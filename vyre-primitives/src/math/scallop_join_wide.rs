@@ -448,6 +448,7 @@ mod tests {
         let current_capacity = current.capacity();
         let next_capacity = next.capacity();
 
+
         let iters = cpu_ref_into(&state, &join_rules, n, w, 4, &mut current, &mut next);
 
         assert!(iters <= 4);
@@ -501,3 +502,4 @@ mod tests {
         assert_eq!(actual_state, expected_state);
     }
 }
+

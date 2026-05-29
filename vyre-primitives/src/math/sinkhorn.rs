@@ -113,7 +113,7 @@ pub fn sinkhorn_iter_cpu(
     let mut kv = Vec::new();
     let mut ktu = Vec::new();
     try_sinkhorn_iter_cpu_into(k, a, b, u, v, m, n, &mut kv, &mut ktu)
-        .expect("sinkhorn_iter_cpu failed: invalid Sinkhorn shape");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sinkhorn_iter_cpu failed: invalid Sinkhorn shape");
 }
 
 /// CPU reference using caller-owned temporary vectors.
@@ -131,7 +131,7 @@ pub fn sinkhorn_iter_cpu_into(
     ktu: &mut Vec<f64>,
 ) {
     try_sinkhorn_iter_cpu_into(k, a, b, u, v, m, n, kv, ktu)
-        .expect("sinkhorn_iter_cpu_into failed: invalid Sinkhorn shape");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sinkhorn_iter_cpu_into failed: invalid Sinkhorn shape");
 }
 
 /// Fallible CPU reference using caller-owned temporary vectors.

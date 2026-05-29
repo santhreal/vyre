@@ -201,7 +201,7 @@ pub fn cpu_ref(restriction_diag: &[f64], v_init: &[f64], iterations: u32) -> (f6
     let mut v = Vec::new();
     let mut v_next = Vec::new();
     let lambda = try_cpu_ref_into(restriction_diag, v_init, iterations, &mut v, &mut v_next)
-        .expect("sheaf_laplacian_eigenvalue cpu_ref failed: invalid CPU buffers");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sheaf_laplacian_eigenvalue cpu_ref failed: invalid CPU buffers");
     (lambda, v)
 }
 
@@ -228,7 +228,7 @@ pub fn cpu_ref_into(
     v_next: &mut Vec<f64>,
 ) -> f64 {
     try_cpu_ref_into(restriction_diag, v_init, iterations, v, v_next)
-        .expect("sheaf_laplacian_eigenvalue cpu_ref_into failed: invalid CPU buffers")
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sheaf_laplacian_eigenvalue cpu_ref_into failed: invalid CPU buffers")
 }
 
 /// Fallible CPU reference writing the final eigenvector into caller-owned storage.

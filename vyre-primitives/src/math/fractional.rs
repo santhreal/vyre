@@ -312,9 +312,9 @@ mod tests {
         );
 
         try_fractional_derivative_cpu_into(&f[..1], 1.0, 1.0, &mut kernel, &mut out)
-            .expect("fractional derivative CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - fractional derivative CPU oracle should truncate stale output");
         try_kernel_to_fixed_16_16_into(&kernel, 1.0, 1.0, &mut fixed)
-            .expect("fixed conversion should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - fixed conversion should truncate stale output");
         assert_eq!(kernel.len(), 1);
         assert_eq!(out.len(), 1);
         assert_eq!(fixed.len(), 1);
@@ -336,7 +336,7 @@ mod tests {
                 .collect();
 
             try_fractional_derivative_cpu_into(&f, alpha, step, &mut kernel, &mut out)
-                .expect("generated fractional derivative CPU oracle should evaluate");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated fractional derivative CPU oracle should evaluate");
             let expected = independent_fractional_derivative(&f, alpha, step);
 
             assert_eq!(out.len(), expected.len(), "case {case}: output length");

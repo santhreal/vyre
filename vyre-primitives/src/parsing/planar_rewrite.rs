@@ -182,9 +182,20 @@ inventory::submit! {
     crate::harness::OpEntry::new(
         OP_ID,
         || planar_rewrite_schedule("candidates", "chosen", 4, 4, 2),
-        None,
         Some(|| {
-            vec![vec![crate::wire::pack_u32_slice(&[0; 16])]]
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            let mut cands = vec![0; 16];
+            cands[5] = 1;
+            vec![vec![
+                to_bytes(&cands),                // candidates
+                to_bytes(&[0; 16]),              // chosen
+            ]]
+        }),
+        Some(|| {
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            let mut expected = vec![0; 16];
+            expected[5] = 1;
+            vec![vec![to_bytes(&expected)]]
         }),
     )
 }

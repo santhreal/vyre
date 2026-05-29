@@ -61,13 +61,13 @@ fn pack_unpack_into_reuses_capacity_and_truncates_stale_tail() {
     let packed_capacity = packed.capacity();
 
     try_pack_i4x8_cpu_into(&[-8, -1, 0, 7, 8, -9, 3, -2, 1], &mut packed)
-        .expect("pack_i4x8 CPU oracle should reuse caller-owned packed storage");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - pack_i4x8 CPU oracle should reuse caller-owned packed storage");
 
     assert_eq!(packed.len(), 2);
     assert_eq!(packed.capacity(), packed_capacity);
 
     try_pack_i4x8_cpu_into(&[7], &mut packed)
-        .expect("pack_i4x8 CPU oracle should truncate stale packed words");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - pack_i4x8 CPU oracle should truncate stale packed words");
 
     assert_eq!(packed, vec![7]);
     assert_eq!(packed.capacity(), packed_capacity);
@@ -77,7 +77,7 @@ fn pack_unpack_into_reuses_capacity_and_truncates_stale_tail() {
     let lanes_capacity = lanes.capacity();
 
     try_unpack_i4x8_cpu_into(&packed, 1, &mut lanes)
-        .expect("unpack_i4x8 CPU oracle should reuse caller-owned lane storage");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - unpack_i4x8 CPU oracle should reuse caller-owned lane storage");
 
     assert_eq!(lanes, vec![7]);
     assert_eq!(lanes.capacity(), lanes_capacity);
@@ -466,6 +466,7 @@ fn batched_matmul_top1_cpu_matches_full_matmul_argmax() {
 }
 
 #[test]
+
 fn generated_batched_matmul_matches_dequantized_reference_across_pack_boundaries() {
     let pattern = [-8, -3, -1, 0, 1, 3, 7, 6, 5, 4, 2, -2, -4, -6, -7, -5];
     for batch in 1..=4_u32 {
@@ -850,3 +851,4 @@ fn batched_matmul_top1_zero_shape_traps() {
     .stats()
     .trap());
 }
+

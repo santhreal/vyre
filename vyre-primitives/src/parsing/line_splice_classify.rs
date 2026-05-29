@@ -221,7 +221,7 @@ pub fn line_splice_classify(byte_count: u32) -> Program {
 pub fn reference_line_splice_classify(source: &[u8]) -> Vec<u32> {
     let mut out = Vec::new();
     try_reference_line_splice_classify_into(source, &mut out)
-        .expect("line-splice classifier reference allocation failed");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - line-splice classifier reference allocation failed");
     out
 }
 
@@ -229,7 +229,7 @@ pub fn reference_line_splice_classify(source: &[u8]) -> Vec<u32> {
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_line_splice_classify_into(source: &[u8], out: &mut Vec<u32>) {
     try_reference_line_splice_classify_into(source, out)
-        .expect("line-splice classifier reference allocation failed");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - line-splice classifier reference allocation failed");
 }
 
 /// Fallible capacity-reusing variant of `reference_line_splice_classify`.
@@ -269,9 +269,21 @@ inventory::submit! {
     crate::harness::OpEntry::new(
         OP_ID,
         || line_splice_classify(256),
-        None,
         Some(|| {
-            vec![vec![crate::wire::pack_u32_slice(&[1; 256])]]
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            let mut bytes = vec![120 | (120 << 8) | (120 << 16) | (120 << 24); 64];
+            bytes[0] = 97 | (92 << 8) | (10 << 16) | (98 << 24);
+            vec![vec![
+                to_bytes(&bytes),                // bytes_in
+                to_bytes(&[0; 256]),             // kept_mask_out
+            ]]
+        }),
+        Some(|| {
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            let mut expected = vec![1; 256];
+            expected[1] = 0;
+            expected[2] = 0;
+            vec![vec![to_bytes(&expected)]]
         }),
     )
 }

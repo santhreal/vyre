@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn linear_one_use_is_ok() {
-        assert!(check_linear_use(LinearDiscipline::Linear, 1).is_ok());
+        assert_eq!(check_linear_use(LinearDiscipline::Linear, 1), Ok(()));
     }
 
     #[test]
@@ -141,8 +141,8 @@ mod tests {
 
     #[test]
     fn affine_zero_or_one_use_is_ok() {
-        assert!(check_linear_use(LinearDiscipline::Affine, 0).is_ok());
-        assert!(check_linear_use(LinearDiscipline::Affine, 1).is_ok());
+        assert_eq!(check_linear_use(LinearDiscipline::Affine, 0), Ok(()));
+        assert_eq!(check_linear_use(LinearDiscipline::Affine, 1), Ok(()));
     }
 
     #[test]
@@ -159,15 +159,15 @@ mod tests {
 
     #[test]
     fn relevant_any_nonzero_use_is_ok() {
-        assert!(check_linear_use(LinearDiscipline::Relevant, 1).is_ok());
-        assert!(check_linear_use(LinearDiscipline::Relevant, 5).is_ok());
-        assert!(check_linear_use(LinearDiscipline::Relevant, u32::MAX).is_ok());
+        assert_eq!(check_linear_use(LinearDiscipline::Relevant, 1), Ok(()));
+        assert_eq!(check_linear_use(LinearDiscipline::Relevant, 5), Ok(()));
+        assert_eq!(check_linear_use(LinearDiscipline::Relevant, u32::MAX), Ok(()));
     }
 
     #[test]
     fn unrestricted_accepts_anything() {
         for uses in [0u32, 1, 2, 100, u32::MAX] {
-            assert!(check_linear_use(LinearDiscipline::Unrestricted, uses).is_ok());
+            assert_eq!(check_linear_use(LinearDiscipline::Unrestricted, uses), Ok(()));
         }
     }
 

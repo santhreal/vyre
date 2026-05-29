@@ -447,6 +447,7 @@ pub fn plan_path_reconstruct_dispatch(
 }
 
 /// Validate a batched path-reconstruction dispatch and return its buffer plan.
+
 pub fn plan_batched_path_reconstruct_dispatch(
     parent_len: usize,
     target_len: usize,
@@ -1030,3 +1031,4 @@ mod tests {
         assert!(has_trap, "zero-depth batched path reconstruction must trap");
     }
 }
+

@@ -100,7 +100,7 @@ fn radix_cases() -> Vec<(Vec<u32>, u32)> {
         }
     }
 
-    for case in 0..512usize {
+    for case in 0..4096usize {
         let len = case % 129;
         let bits = match case % 8 {
             0 => 0,

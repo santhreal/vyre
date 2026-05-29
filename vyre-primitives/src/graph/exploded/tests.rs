@@ -179,7 +179,7 @@ fn gpu_builder_rejects_row_ptr_count_overflow_without_panic() {
 
 #[test]
 fn gpu_builder_source_has_checked_row_ptr_count_without_panics() {
-    let source = include_str!("../exploded.rs");
+    let source = include_str!("program_ir.rs");
     let builder_source = source
         .split("pub fn build_ifds_csr_program(")
         .nth(1)
@@ -235,14 +235,27 @@ fn reusable_layout_contract_sizes_dispatch_buffers() {
 
 #[test]
 fn reusable_layout_contract_rejects_invalid_domains() {
-    assert!(validate_ifds_csr_layout(0, 1, 1, 0, 0, 0).is_err());
-    assert!(validate_ifds_csr_layout(MAX_PROC_ID + 2, 1, 1, 0, 0, 0).is_err());
+    let err = validate_ifds_csr_layout(0, 1, 1, 0, 0, 0).unwrap_err();
+    assert!(err.starts_with("Fix:") && err.contains("nonzero"));
+    let err = validate_ifds_csr_layout(MAX_PROC_ID + 2, 1, 1, 0, 0, 0).unwrap_err();
+    assert!(err.starts_with("Fix:") && err.contains("packed IFDS limits"));
+    let err = validate_ifds_csr_layout(
+        MAX_PROC_ID + 1,
+        MAX_BLOCK_ID + 1,
+        MAX_FACT_ID + 1,
+        0,
+        0,
+        0,
+    )
+    .unwrap_err();
     assert!(
-        validate_ifds_csr_layout(MAX_PROC_ID + 1, MAX_BLOCK_ID + 1, MAX_FACT_ID + 1, 0, 0, 0)
-            .is_err()
+        err.starts_with("Fix:"),
+        "oversized IFDS domain must fail validation: {err}"
     );
-    assert!(validate_ifds_csr_layout(u32::MAX, u32::MAX, 2, 0, 0, 0).is_err());
-    assert!(validate_ifds_csr_layout(1, 1, 2, u32::MAX, 0, u32::MAX).is_err());
+    let err = validate_ifds_csr_layout(u32::MAX, u32::MAX, 2, 0, 0, 0).unwrap_err();
+    assert!(err.starts_with("Fix:"), "huge dimensions must fail: {err}");
+    let err = validate_ifds_csr_layout(1, 1, 2, u32::MAX, 0, u32::MAX).unwrap_err();
+    assert!(err.starts_with("Fix:"), "huge rule counts must fail: {err}");
 }
 
 #[test]

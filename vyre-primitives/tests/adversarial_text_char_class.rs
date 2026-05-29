@@ -1,31 +1,32 @@
-//! Generated adversarial contract tests for vyre-primitives.
-
-// Adversarial tests for text::char_class
+//! Adversarial oracle tests for `text::char_class` reference mapping.
 
 #![allow(
     unused_imports,
     unused_variables,
     dead_code,
     unused_mut,
-    unused_macros,
-    clippy::identity_op,
-    clippy::assertions_on_constants
+    clippy::identity_op
 )]
 
-fn reference_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
-    source
-        .iter()
-        .map(|byte| table[usize::from(*byte)])
-        .collect()
-}
+use vyre_primitives::text::char_class::reference_char_class;
 
-mod adversarial_text_char_class_part1 {
-
-    include!("__split/adversarial_text_char_class_part1.rs");
-}
-mod adversarial_text_char_class_part2 {
-    include!("__split/adversarial_text_char_class_part2.rs");
-}
-mod adversarial_text_char_class_part3 {
-    include!("__split/adversarial_text_char_class_part3.rs");
+#[test]
+fn char_class_hostile_corpus_table_driven() {
+    const ZEROS: [u32; 256] = [0u32; 256];
+    const MAXES: [u32; 256] = [0xffff_ffffu32; 256];
+    let cases: &[(&[u8], &[u32; 256], &[u32])] = &[
+        (b"", &ZEROS, &[]),
+        (b"\x00", &ZEROS, &[0]),
+        (b"\xff", &MAXES, &[0xffff_ffff]),
+        (b"vyre", &ZEROS, &[0, 0, 0, 0]),
+        (b"\x00\xff\xfe", &MAXES, &[0xffff_ffff, 0xffff_ffff, 0xffff_ffff]),
+    ];
+    for (idx, (source, table, expected)) in cases.iter().enumerate() {
+        let got = reference_char_class(source, table);
+        assert_eq!(
+            got, *expected,
+            "Fix: char_class oracle mismatch on hostile case {idx} (len={})",
+            source.len()
+        );
+    }
 }

@@ -50,7 +50,7 @@ mod tests {
         let mut scratch = Vec::<u32>::with_capacity(8);
 
         reserve_graph_items(&mut scratch, 4, "test graph primitive", "frontier")
-            .expect("existing capacity should satisfy reservation");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - existing capacity should satisfy reservation");
 
         assert_eq!(scratch.capacity(), 8);
         assert!(scratch.is_empty());

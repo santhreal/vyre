@@ -454,6 +454,7 @@ pub fn i4x8_batched_matmul_f32_scaled(
 /// of materializing the full `[batch][row]` logits matrix.
 #[must_use]
 /// Build a Program that emits the top-1 row score and index per packed INT4 activation.
+
 pub fn i4x8_batched_matmul_top1_f32_scaled(
     weights_packed: &str,
     activation_batches_packed: &str,
@@ -614,3 +615,4 @@ pub fn i4x8_batched_matmul_top1_f32_scaled(
         }],
     )
 }
+

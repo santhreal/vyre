@@ -1,4 +1,4 @@
-//! Property gates for `hash::crc32::crc32` — CRC-32 table-driven properties.
+//! Property gates for `hash::crc32::crc32` - CRC-32 table-driven properties.
 #![cfg(feature = "hash")]
 
 use proptest::prelude::*;

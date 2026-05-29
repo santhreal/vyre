@@ -111,7 +111,7 @@ pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
 
 /// Reference oracle: same line-counting semantics as the GPU kernel.
 #[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
+#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 pub fn reference_line_index(source: &[u8]) -> Vec<u32> {
     let mut out = Vec::with_capacity(source.len());
     let mut line: u32 = 0;

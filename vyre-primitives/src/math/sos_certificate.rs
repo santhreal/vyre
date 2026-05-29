@@ -111,7 +111,7 @@ pub fn sos_gram_construct(
 pub fn sos_gram_construct_cpu(monomial_pairs: &[u32], p_coeffs: &[u32], m: u32) -> Vec<u32> {
     let mut out = Vec::new();
     try_sos_gram_construct_cpu_into(monomial_pairs, p_coeffs, m, &mut out)
-        .expect("sos_gram_construct_cpu failed: invalid Gram-matrix shape");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sos_gram_construct_cpu failed: invalid Gram-matrix shape");
     out
 }
 
@@ -136,7 +136,7 @@ pub fn sos_gram_construct_cpu_into(
     out: &mut Vec<u32>,
 ) {
     try_sos_gram_construct_cpu_into(monomial_pairs, p_coeffs, m, out)
-        .expect("sos_gram_construct_cpu_into failed: invalid Gram-matrix shape");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sos_gram_construct_cpu_into failed: invalid Gram-matrix shape");
 }
 
 /// Fallible CPU reference into caller-owned storage.

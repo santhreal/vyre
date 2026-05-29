@@ -1,4 +1,4 @@
-//! Property gates for `bitset::equal::cpu_ref` — bitset equality predicate.
+//! Property gates for `bitset::equal::cpu_ref` - bitset equality predicate.
 #![cfg(all(feature = "bitset", feature = "cpu-parity"))]
 
 use proptest::prelude::*;

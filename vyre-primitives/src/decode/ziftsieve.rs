@@ -359,7 +359,8 @@ mod tests {
 
     #[test]
     fn reference_rejects_truncated_literal() {
-        assert!(ziftsieve_reference_extract_literals(&[0x20, b'A'], 1024).is_err());
+        let err = ziftsieve_reference_extract_literals(&[0x20, b'A'], 1024).unwrap_err();
+        assert!(err.contains("truncated") || err.contains("literal"));
     }
 
     #[test]
@@ -387,6 +388,7 @@ mod tests {
             data.push(b'X');
             data.extend_from_slice(&[0x00, 0x00]);
         }
-        assert!(ziftsieve_reference_extract_literals(&data, 1024).is_err());
+        let err = ziftsieve_reference_extract_literals(&data, 1024).unwrap_err();
+        assert!(err.contains("sequence") || err.contains("MAX"));
     }
 }

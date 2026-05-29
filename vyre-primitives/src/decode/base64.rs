@@ -452,6 +452,7 @@ inventory::submit! {
 
 /// Build the standard base64 decode table (RFC 4648).
 #[cfg(any(test, feature = "cpu-parity"))]
+
 pub fn cpu_base64_table() -> [u32; 256] {
     standard_decode_table()
 }
@@ -507,7 +508,7 @@ mod tests {
     #[test]
     fn try_decode_reference_matches_infallible_wrapper() {
         let fallible =
-            try_decode_standard_packed_reference(b"Zm9vYmFy").expect("valid base64 must decode");
+            try_decode_standard_packed_reference(b"Zm9vYmFy").expect("Fix: unit-test oracle precondition - valid base64 must decode");
         let infallible = decode_standard_packed_reference(b"Zm9vYmFy");
         assert_eq!(fallible, infallible);
         assert_eq!(fallible.1, 6);
@@ -520,7 +521,7 @@ mod tests {
         let ptr = out.as_ptr();
 
         let decoded_len = try_decode_standard_packed_reference_into(b"TWE=", &mut out)
-            .expect("valid padded base64 must decode into caller-owned storage");
+            .expect("Fix: unit-test oracle precondition - valid padded base64 must decode into caller-owned storage");
 
         assert_eq!(decoded_len, 2);
         assert_eq!(out, vec![u32::from(b'M'), u32::from(b'a'), 0]);
@@ -557,7 +558,7 @@ mod tests {
         let production = include_str!("base64.rs")
             .split("#[cfg(test)]")
             .next()
-            .expect("base64 source must include production section");
+            .expect("Fix: unit-test oracle precondition - base64 source must include production section");
         assert!(!production.contains(".expect("));
         assert!(!production.contains(".unwrap("));
         assert!(!production.contains("panic!("));
@@ -571,7 +572,7 @@ mod tests {
         let production = src
             .split("#[cfg(test)]")
             .next()
-            .expect("production section must exist");
+            .expect("Fix: unit-test oracle precondition - production section must exist");
         assert!(
             production.contains("try_decode_standard_packed_reference"),
             "public base64 CPU oracle must expose a fallible variant"
@@ -621,3 +622,4 @@ mod tests {
         assert_eq!(cpu_base64_decode(b"Zm9vYmFy"), b"foobar");
     }
 }
+

@@ -773,18 +773,19 @@ mod tests {
 }
 
 #[cfg(test)]
+
 mod non_panicking_wrapper_tests {
     use super::*;
 
     #[test]
     fn compatibility_wrappers_match_fallible_references() {
         let packed = pack_rle_segments(&[(3, b'a'), (0, b'b'), (2, b'c')])
-            .expect("valid RLE headers must pack");
+            .expect("Fix: unit-test oracle precondition - valid RLE headers must pack");
 
         let mut lengths = Vec::new();
         let mut values = Vec::new();
         try_rle_segment_lengths_cpu_into(&packed, &mut lengths, &mut values)
-            .expect("fallible length/value oracle must accept valid packed input");
+            .expect("Fix: unit-test oracle precondition - fallible length/value oracle must accept valid packed input");
         assert_eq!(rle_segment_lengths_cpu(&packed), (lengths.clone(), values.clone()));
 
         lengths.fill(u32::MAX);
@@ -795,7 +796,7 @@ mod non_panicking_wrapper_tests {
 
         let mut offsets = Vec::new();
         let total = try_rle_segment_start_offsets_cpu_into(&lengths, &mut offsets)
-            .expect("fallible offset oracle must accept valid lengths");
+            .expect("Fix: unit-test oracle precondition - fallible offset oracle must accept valid lengths");
         assert_eq!(rle_segment_start_offsets_cpu(&lengths), (offsets.clone(), total));
 
         offsets.fill(u32::MAX);
@@ -805,7 +806,7 @@ mod non_panicking_wrapper_tests {
 
         let mut decoded = Vec::new();
         try_rle_decode_cpu_into(&packed, &mut decoded)
-            .expect("fallible decode oracle must accept valid packed input");
+            .expect("Fix: unit-test oracle precondition - fallible decode oracle must accept valid packed input");
         assert_eq!(rle_decode_cpu(&packed), decoded);
 
         decoded.fill(0);
@@ -818,9 +819,10 @@ mod non_panicking_wrapper_tests {
         let production = include_str!("rle_segment_lengths.rs")
             .split("#[cfg(test)]")
             .next()
-            .expect("RLE source must include production section");
+            .expect("Fix: unit-test oracle precondition - RLE source must include production section");
         assert!(!production.contains(".expect("));
         assert!(!production.contains(".unwrap("));
         assert!(!production.contains("panic!("));
     }
 }
+

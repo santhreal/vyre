@@ -261,7 +261,7 @@ mod tests {
     #[test]
     fn cpu_ref_already_sorted() {
         let input = vec![1, 2, 3, 4, 5];
-        assert_eq!(cpu_ref(&input, 32), input);
+        assert_eq!(cpu_ref(&input, 32), vec![1, 2, 3, 4, 5]);
     }
 
     #[test]

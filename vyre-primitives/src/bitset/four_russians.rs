@@ -117,7 +117,7 @@ pub fn dense_matvec_byte_lut_into(
     lut: &mut Vec<u32>,
 ) {
     try_dense_matvec_byte_lut_into(columns, tile_count, dst_words, lut)
-        .expect("dense Four-Russians byte-tile LUT builder failed")
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - dense Four-Russians byte-tile LUT builder failed")
 }
 
 /// Fallibly build a dense boolean-matvec byte-tile LUT into caller-owned storage.
@@ -348,14 +348,14 @@ pub fn four_russians_dense_matvec_byte_lut(
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref(lhs: &[u32], rhs: &[u32], lut: &[u32]) -> Vec<u32> {
     let mut out = Vec::new();
-    try_cpu_ref_into(lhs, rhs, lut, &mut out).expect("Four-Russians byte-LUT CPU reference failed");
+    try_cpu_ref_into(lhs, rhs, lut, &mut out).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - Four-Russians byte-LUT CPU reference failed");
     out
 }
 
 /// CPU reference for [`four_russians_apply_byte_lut`] into caller-owned storage.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref_into(lhs: &[u32], rhs: &[u32], lut: &[u32], out: &mut Vec<u32>) {
-    try_cpu_ref_into(lhs, rhs, lut, out).expect("Four-Russians byte-LUT CPU reference failed");
+    try_cpu_ref_into(lhs, rhs, lut, out).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - Four-Russians byte-LUT CPU reference failed");
 }
 
 /// Fallible CPU reference for [`four_russians_apply_byte_lut`] into caller-owned storage.
@@ -414,7 +414,7 @@ pub fn dense_matvec_cpu_ref(
 ) -> Vec<u32> {
     let mut out = Vec::new();
     try_dense_matvec_cpu_ref_into(frontier, tile_lut, tile_count, dst_words, &mut out)
-        .expect("dense Four-Russians matvec CPU reference failed");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - dense Four-Russians matvec CPU reference failed");
     out
 }
 
@@ -428,7 +428,7 @@ pub fn dense_matvec_cpu_ref_into(
     out: &mut Vec<u32>,
 ) {
     try_dense_matvec_cpu_ref_into(frontier, tile_lut, tile_count, dst_words, out)
-        .expect("dense Four-Russians matvec CPU reference failed");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - dense Four-Russians matvec CPU reference failed");
 }
 
 /// Fallible CPU reference for [`four_russians_dense_matvec_byte_lut`] into caller-owned storage.
@@ -482,6 +482,7 @@ pub fn try_dense_matvec_cpu_ref_into(
     }
     Ok(())
 }
+
 
 fn checked_dense_column_words(tile_count: u32, dst_words: u32) -> usize {
     try_checked_dense_column_words(tile_count, dst_words).expect(
@@ -698,3 +699,4 @@ mod tests {
         .contains("lut_len"));
     }
 }
+

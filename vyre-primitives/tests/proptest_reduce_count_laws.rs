@@ -1,4 +1,4 @@
-//! Property gates for `reduce::count::cpu_ref` — population count monoid.
+//! Property gates for `reduce::count::cpu_ref` - population count monoid.
 #![cfg(all(feature = "reduce", feature = "cpu-parity"))]
 
 use proptest::prelude::*;

@@ -277,7 +277,7 @@ mod tests {
         let capacity = out.capacity();
 
         try_sheaf_diffusion_step_cpu_into(&[10.0, 4.0], &[0.5, 0.25], 1.0, &mut out)
-            .expect("checked sheaf CPU oracle should reuse caller-owned storage");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - checked sheaf CPU oracle should reuse caller-owned storage");
 
         assert_eq!(out.len(), 2);
         assert!(approx_eq(out[0], 5.0));
@@ -285,7 +285,7 @@ mod tests {
         assert_eq!(out.capacity(), capacity);
 
         try_sheaf_diffusion_step_cpu_into(&[10.0], &[0.5], 1.0, &mut out)
-            .expect("checked sheaf CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - checked sheaf CPU oracle should truncate stale output");
 
         assert_eq!(out, vec![5.0]);
         assert_eq!(out.capacity(), capacity);
@@ -307,7 +307,7 @@ mod tests {
                 .collect();
 
             try_sheaf_diffusion_step_cpu_into(&stalks, &restriction_diag, damping, &mut out)
-                .expect("generated sheaf CPU oracle should reserve and evaluate");
+                .expect("Fix: caller must pre-size buffers; use fallible reserve or return ResourceExhausted - generated sheaf CPU oracle should reserve and evaluate");
 
             assert_eq!(
                 out.len(),

@@ -448,6 +448,7 @@ mod tests {
         assert_eq!(got, vec![RegionTriple::new(0, 5, 12), c]);
     }
 
+
     #[test]
     fn cluster_of_three_merges() {
         let a = RegionTriple::new(0, 1, 3);
@@ -549,3 +550,4 @@ mod tests {
         assert_eq!(flag_inputs, vec!["ps", "ss", "es"]);
     }
 }
+

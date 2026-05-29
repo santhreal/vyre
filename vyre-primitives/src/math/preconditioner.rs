@@ -434,7 +434,7 @@ mod tests {
         assert_eq!(out.capacity(), capacity);
 
         try_newton_schulz_y_step_cpu_into(&[1.0], &[0.5], &mut out)
-            .expect("Newton-Schulz Y-step should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - Newton-Schulz Y-step should truncate stale output");
         assert_eq!(out, vec![1.25]);
         assert_eq!(out.as_ptr(), ptr);
         assert_eq!(out.capacity(), capacity);
@@ -448,6 +448,7 @@ mod tests {
 
     #[test]
     fn cpu_inverse_sqrt_recovers_identity_inverse() {
+
         // M = I → M^{-1/2} = I.
         let m = vec![1.0, 0.0, 0.0, 1.0];
         let result = newton_schulz_inverse_sqrt_cpu(&m, 2, 12);
@@ -531,3 +532,4 @@ mod tests {
         assert!(p.stats().trap());
     }
 }
+

@@ -114,7 +114,7 @@ fn assert_unary(
 }
 
 fn binary_pairs() -> impl Iterator<Item = (Vec<u32>, Vec<u32>)> {
-    (0..2048usize).map(|case| {
+    (0..16384usize).map(|case| {
         let seed = case as u64 ^ 0xB175_E7B1_7500_0000;
         let lhs_len = 1 + ((seed >> 3) as usize % 129);
         let rhs_len = 1 + ((seed >> 11) as usize % 129);

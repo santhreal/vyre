@@ -51,8 +51,9 @@ fn cpu_ref(
 fn validate_program_graph_empty() {
     let shape = ProgramGraphShape::new(0, 0);
     let result = validate_program_graph(shape, &[], &[0], &[0], &[0], &[]);
-    assert!(
-        result.is_ok(),
+    assert_eq!(
+        result,
+        Ok(()),
         "empty graph with sentinel edges should validate"
     );
 }

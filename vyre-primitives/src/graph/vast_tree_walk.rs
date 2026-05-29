@@ -59,10 +59,7 @@ pub fn try_ast_walk_plan(
 /// Emit preorder node indices for a VAST first-child / next-sibling tree.
 #[must_use]
 pub fn ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> Program {
-    match try_ast_walk_preorder(nodes, out, node_count, out_cap) {
-        Ok(program) => program,
-        Err(_) => inert_tree_walk_program(PREORDER_OP_ID, nodes, out),
-    }
+    try_ast_walk_preorder(nodes, out, node_count, out_cap).unwrap_or_else(|err| panic!("{err}"))
 }
 
 /// Emit preorder node indices for a VAST first-child / next-sibling tree with
@@ -79,10 +76,7 @@ pub fn try_ast_walk_preorder(
 /// Emit postorder node indices for a VAST first-child / next-sibling tree.
 #[must_use]
 pub fn ast_walk_postorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> Program {
-    match try_ast_walk_postorder(nodes, out, node_count, out_cap) {
-        Ok(program) => program,
-        Err(_) => inert_tree_walk_program(POSTORDER_OP_ID, nodes, out),
-    }
+    try_ast_walk_postorder(nodes, out, node_count, out_cap).unwrap_or_else(|err| panic!("{err}"))
 }
 
 /// Emit postorder node indices for a VAST first-child / next-sibling tree with
@@ -355,10 +349,6 @@ fn tree_walk_program(
     )
 }
 
-fn inert_tree_walk_program(op_id: &'static str, nodes: &str, out: &str) -> Program {
-    tree_walk_program(op_id, nodes, out, 1, 1, vec![Node::return_()])
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -408,12 +398,36 @@ mod tests {
     }
 
     #[test]
-    fn legacy_vast_walk_builders_do_not_panic_on_invalid_shape() {
-        let preorder = ast_walk_preorder("nodes", "out", 1, 0);
-        let postorder = ast_walk_postorder("nodes", "out", u32::MAX, 1);
+    fn legacy_vast_walk_builders_fail_fast_on_invalid_shape() {
+        let preorder_panic = std::panic::catch_unwind(|| {
+            let _ = ast_walk_preorder("nodes", "out", 1, 0);
+        })
+        .expect_err("legacy preorder builder must fail fast on zero output capacity");
+        let postorder_panic = std::panic::catch_unwind(|| {
+            let _ = ast_walk_postorder("nodes", "out", u32::MAX, 1);
+        })
+        .expect_err("legacy postorder builder must fail fast on node_count overflow");
 
-        assert_eq!(preorder.workgroup_size, [1, 1, 1]);
-        assert_eq!(postorder.workgroup_size, [1, 1, 1]);
+        let preorder_message = panic_payload_message(preorder_panic);
+        let postorder_message = panic_payload_message(postorder_panic);
+        assert!(
+            preorder_message.contains("out_cap > 0"),
+            "error should describe the launch-shape fix: {preorder_message}"
+        );
+        assert!(
+            postorder_message.contains("node_count"),
+            "error should describe the node_count overflow: {postorder_message}"
+        );
+    }
+
+    fn panic_payload_message(payload: Box<dyn std::any::Any + Send>) -> String {
+        if let Some(message) = payload.downcast_ref::<&str>() {
+            message.to_string()
+        } else if let Some(message) = payload.downcast_ref::<String>() {
+            message.clone()
+        } else {
+            format!("{payload:?}")
+        }
     }
 
     #[test]
@@ -427,9 +441,9 @@ mod tests {
         assert!(
             production.contains("pub fn try_ast_walk_preorder(")
                 && production.contains("pub fn try_ast_walk_postorder(")
-                && !production.contains(concat!("panic", "!("))
-                && !production.contains(".unwrap_or_else("),
-            "Fix: VAST traversal builders must expose checked release APIs and avoid production panics."
+                && !production.contains("inert_")
+                && !production.contains("Err(_) =>"),
+            "Fix: VAST traversal builders must expose checked release APIs and must not compile inert no-op kernels."
         );
     }
 
@@ -513,7 +527,7 @@ mod tests {
             out.push(n);
             if n == 0 {
                 break;
-            } // root emitted — done
+            } // root emitted - done
             let base = (n * stride) as usize;
             let sib = nodes[base + 3];
             if valid(sib, node_count) {
@@ -673,6 +687,7 @@ mod tests {
 }
 
 #[cfg(feature = "inventory-registry")]
+
 fn fixture_u32(words: &[u32]) -> Vec<u8> {
     crate::wire::pack_u32_slice(words)
 }
@@ -711,3 +726,4 @@ inventory::submit! {
         Some(|| vec![vec![fixture_u32(&[1, 2, 0])]]),
     )
 }
+

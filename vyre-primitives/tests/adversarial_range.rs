@@ -16,10 +16,7 @@ fn new_panics_on_reversed_range() {
     ];
     for (tag, start, end) in cases {
         let result = std::panic::catch_unwind(|| ByteRange::new(tag, start, end));
-        assert!(
-            result.is_err(),
-            "ByteRange::new({tag}, {start}, {end}) must panic when end < start"
-        );
+        result.expect_err("ByteRange::new({tag}, {start}, {end}) must panic when end < start");
     }
 }
 

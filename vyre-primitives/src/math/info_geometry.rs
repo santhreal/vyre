@@ -291,14 +291,14 @@ mod tests {
         let capacity = out.capacity();
 
         try_amari_alpha_step_cpu_into(&[1.0, 0.0], &[0.0, 1.0], -1.0, 0.25, &mut out)
-            .expect("Amari alpha CPU oracle should reuse caller-owned output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - Amari alpha CPU oracle should reuse caller-owned output");
 
         assert_eq!(out, vec![0.25, 0.75]);
         assert_eq!(out.as_ptr(), ptr);
         assert_eq!(out.capacity(), capacity);
 
         try_amari_alpha_step_cpu_into(&[2.0], &[4.0], -1.0, 0.5, &mut out)
-            .expect("Amari alpha CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - Amari alpha CPU oracle should truncate stale output");
 
         assert_eq!(out, vec![3.0]);
         assert_eq!(out.as_ptr(), ptr);
@@ -326,7 +326,7 @@ mod tests {
                 .collect();
 
             try_amari_alpha_step_cpu_into(&p, &q, alpha, t, &mut out)
-                .expect("generated Amari alpha CPU oracle should evaluate");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated Amari alpha CPU oracle should evaluate");
             let expected = independent_amari_alpha(&p, &q, alpha, t);
 
             assert_eq!(out.len(), expected.len(), "case {case}: output length");

@@ -143,7 +143,7 @@ pub fn tt_contract_step_cpu(
 ) -> Vec<f64> {
     let mut out = Vec::new();
     try_tt_contract_step_cpu_into(acc_in, core_slice, r_prev, r_next, &mut out)
-        .expect("tt_contract_step_cpu failed: invalid TT contraction shape");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - tt_contract_step_cpu failed: invalid TT contraction shape");
     out
 }
 
@@ -170,7 +170,7 @@ pub fn tt_contract_step_cpu_into(
     out: &mut Vec<f64>,
 ) {
     try_tt_contract_step_cpu_into(acc_in, core_slice, r_prev, r_next, out)
-        .expect("tt_contract_step_cpu_into failed: invalid TT contraction shape");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - tt_contract_step_cpu_into failed: invalid TT contraction shape");
 }
 
 /// Fallible CPU reference: f64 into caller-owned output storage.
@@ -226,7 +226,7 @@ pub fn tt_full_chain_cpu_with_scratch(
     next: &mut Vec<f64>,
 ) -> f64 {
     try_tt_full_chain_cpu_with_scratch(cores, ranks, mode_dims, indices, acc, next)
-        .expect("tt_full_chain_cpu_with_scratch failed: scratch allocation failed")
+        .expect("Fix: scratch allocation must succeed for declared sizes; shrink test fixture or return Err - tt_full_chain_cpu_with_scratch failed: scratch allocation failed")
 }
 
 /// Fallible full-chain contraction using caller-owned accumulators.

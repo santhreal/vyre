@@ -59,7 +59,7 @@ fn scalar_inputs() -> impl Iterator<Item = Vec<u32>> {
         ]
         .into_iter()
     });
-    let generated = (0..2048usize).map(|case| {
+    let generated = (0..16384usize).map(|case| {
         let len = match case % 20 {
             0 => 0,
             1 => 1,

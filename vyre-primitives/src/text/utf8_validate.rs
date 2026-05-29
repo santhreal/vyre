@@ -346,24 +346,24 @@ fn lead4_validation_body(source: &str, n: u32) -> Vec<Node> {
 
 /// Reference oracle: validate and classify each byte the same way the GPU kernel does.
 #[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
+#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 pub fn reference_utf8_validate(source: &[u8]) -> Vec<u32> {
     (0..source.len())
         .map(|idx| cpu_class_at(source, idx))
         .collect()
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
+#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 fn cpu_is_cont(byte: u8) -> bool {
     matches!(byte, 0x80..=0xBF)
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
+#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 fn cpu_valid_lead2(source: &[u8], idx: usize) -> bool {
     matches!(source[idx], 0xC2..=0xDF) && source.get(idx + 1).copied().is_some_and(cpu_is_cont)
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
+#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 fn cpu_valid_lead3(source: &[u8], idx: usize) -> bool {
     let Some(&b1) = source.get(idx + 1) else {
         return false;
@@ -380,7 +380,7 @@ fn cpu_valid_lead3(source: &[u8], idx: usize) -> bool {
     first_ok && cpu_is_cont(b2)
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
+#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 fn cpu_valid_lead4(source: &[u8], idx: usize) -> bool {
     let Some(&b1) = source.get(idx + 1) else {
         return false;
@@ -400,7 +400,7 @@ fn cpu_valid_lead4(source: &[u8], idx: usize) -> bool {
     first_ok && cpu_is_cont(b2) && cpu_is_cont(b3)
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
+#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 fn cpu_valid_cont_position(source: &[u8], idx: usize) -> bool {
     idx.checked_sub(1).is_some_and(|lead| {
         cpu_valid_lead2(source, lead)
@@ -414,7 +414,7 @@ fn cpu_valid_cont_position(source: &[u8], idx: usize) -> bool {
             .is_some_and(|lead| cpu_valid_lead4(source, lead))
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
+#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 fn cpu_class_at(source: &[u8], idx: usize) -> u32 {
     match source[idx] {
         0x00..=0x7F => UTF8_ASCII,
@@ -447,6 +447,7 @@ inventory::submit! {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
@@ -539,3 +540,4 @@ mod tests {
         );
     }
 }
+

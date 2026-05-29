@@ -308,8 +308,8 @@ mod tests {
             alloc::vec![(4, true), (5, true)],
         ];
         let dag = compile_dnnf(&clauses, 6, 2);
-        // Just need to terminate AND produce a valid DAG.
-        assert!(!dag.gates.is_empty());
+        assert_eq!(dag.num_vars, 6);
+        assert!(dag.gates.len() >= 1, "depth budget must emit at least one gate");
     }
 
     /// model_count handles all 2^k assignments via smoothed-True

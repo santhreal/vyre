@@ -80,7 +80,7 @@ fn segment_cases() -> impl Iterator<Item = (Vec<u32>, Vec<u32>)> {
             .into_iter()
         })
     });
-    let generated = (0..1024usize).map(|case| {
+    let generated = (0..8192usize).map(|case| {
         let len = match case % 16 {
             0 => 0,
             1 => 1,
