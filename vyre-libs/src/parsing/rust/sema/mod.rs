@@ -766,35 +766,22 @@ fn escapes_offset(
 // Conflicting borrows (E0499 / E0502)
 // ----------------------------------------------------------------------------
 
-/// A `let a = &[mut] x;` borrow site over a simple variable place.
-struct BorrowSite {
-    /// The borrow binding `a`.
-    binding: BindingId,
-    /// The borrowed place `x`.
-    place: BindingId,
-    /// Whether the borrow is `&mut`.
-    mutable: bool,
-    /// Top-level statement index of the `let`.
-    created: usize,
-    /// Source byte offset of `a` (for diagnostics).
-    offset: u32,
-}
-
-/// Conflicting-borrow rules (rustc E0499 / E0502) for straight-line code.
+/// Conflicting-borrow rules (rustc E0499 / E0502).
 ///
-/// Among top-level `let a = &[mut] x;` borrows of the same variable, reports a
-/// pair whose NLL live ranges overlap with at least one mutable: two `&mut`
-/// (E0499) or `&mut` plus `&` (E0502). A borrow is live from its `let` to its
-/// last use; an unused borrow is dead immediately. Conservative across control
-/// flow: uses inside `if` blocks are not counted, so the check never reports a
-/// conflict it cannot prove (branch-crossing, nested, and through-deref
-/// conflicts await weir CFG liveness) and never diverges from rustc on
-/// acceptance.
+/// Lowers each function to neutral [`crate::borrowck::BorrowFacts`] (a CFG with
+/// loan issue/use points, branches included) and runs the front-end-agnostic
+/// engine, which computes NLL loan liveness as a CFG dataflow. Correct across
+/// control flow: borrows live across a branch point conflict; borrows confined
+/// to mutually exclusive branches do not. Only direct `&[mut] x` borrows are
+/// tracked as loans today; through-deref and nested-block borrows are a sound
+/// gap (never false-rejects).
 ///
 /// # Errors
 /// Returns [`RustSemaError::MultipleMutableBorrows`] (E0499) or
-/// [`RustSemaError::MutableAndSharedBorrow`] (E0502) on a proven conflict.
+/// [`RustSemaError::MutableAndSharedBorrow`] (E0502) on a detected conflict.
 pub fn check_conflicts(module: &Module, resolution: &Resolution) -> Result<(), RustSemaError> {
+    use crate::borrowck::{analyze, ConflictKind};
+
     let def_to_id: HashMap<u32, BindingId> = resolution
         .bindings
         .iter()
@@ -803,74 +790,131 @@ pub fn check_conflicts(module: &Module, resolution: &Resolution) -> Result<(), R
         .collect();
 
     for func in &module.functions {
-        // Collect top-level `let a = &[mut] x;` borrow sites.
-        let mut sites: Vec<BorrowSite> = Vec::new();
-        for (index, stmt) in func.body.iter().enumerate() {
-            if let Stmt::Let { name, init, .. } = stmt {
-                if let Expr::Borrow { mutable, expr } = init {
-                    if let Expr::Var(off) = expr.as_ref() {
-                        if let (Some(&place), Some(&binding)) =
-                            (resolution.uses.get(off), def_to_id.get(name))
-                        {
-                            sites.push(BorrowSite {
-                                binding,
-                                place,
-                                mutable: *mutable,
-                                created: index,
-                                offset: *name,
-                            });
-                        }
-                    }
+        let facts = build_borrow_facts(func, resolution, &def_to_id);
+        if let Some(conflict) = analyze(&facts).into_iter().next() {
+            return Err(match conflict.kind {
+                ConflictKind::TwoMutable => {
+                    RustSemaError::MultipleMutableBorrows { offset: conflict.offset }
                 }
-            }
-        }
-        if sites.len() < 2 {
-            continue;
-        }
-
-        // Last top-level use index per borrow binding (NLL live-range end);
-        // initialized to the creation index (an unused borrow is dead at once).
-        let mut last_use: HashMap<BindingId, usize> =
-            sites.iter().map(|s| (s.binding, s.created)).collect();
-        for (index, stmt) in func.body.iter().enumerate() {
-            let mut used = Vec::new();
-            collect_stmt_uses(stmt, resolution, &mut used);
-            for id in used {
-                if let Some(slot) = last_use.get_mut(&id) {
-                    if index > *slot {
-                        *slot = index;
-                    }
+                ConflictKind::MutableAndShared => {
+                    RustSemaError::MutableAndSharedBorrow { offset: conflict.offset }
                 }
-            }
-        }
-
-        for a in 0..sites.len() {
-            for b in (a + 1)..sites.len() {
-                let (s, t) = (&sites[a], &sites[b]);
-                if s.place != t.place || !(s.mutable || t.mutable) {
-                    continue;
-                }
-                let (earlier, later) = if s.created <= t.created { (s, t) } else { (t, s) };
-                // earlier is live when later is created -> the borrows overlap.
-                if last_use[&earlier.binding] >= later.created {
-                    return Err(if s.mutable && t.mutable {
-                        RustSemaError::MultipleMutableBorrows { offset: later.offset }
-                    } else {
-                        RustSemaError::MutableAndSharedBorrow { offset: later.offset }
-                    });
-                }
-            }
+            });
         }
     }
     Ok(())
 }
 
-fn collect_stmt_uses(stmt: &Stmt, resolution: &Resolution, into: &mut Vec<BindingId>) {
-    match stmt {
-        Stmt::Let { init, .. } => collect_expr_uses(init, resolution, into),
-        Stmt::Expr(expr) => collect_expr_uses(expr, resolution, into),
-        Stmt::Return(Some(expr)) => collect_expr_uses(expr, resolution, into),
-        Stmt::Return(None) => {}
+/// Lower one function body to neutral borrow facts: a CFG over program points,
+/// the `&[mut] x` loans, and each loan's use points.
+fn build_borrow_facts(
+    func: &super::parse::Function,
+    resolution: &Resolution,
+    def_to_id: &HashMap<u32, BindingId>,
+) -> crate::borrowck::BorrowFacts {
+    let mut builder = FactBuilder {
+        resolution,
+        def_to_id,
+        facts: crate::borrowck::BorrowFacts::default(),
+        binding_to_loan: HashMap::new(),
+    };
+    builder.build_block(&func.body, &[]);
+    builder.facts
+}
+
+struct FactBuilder<'a> {
+    resolution: &'a Resolution,
+    def_to_id: &'a HashMap<u32, BindingId>,
+    facts: crate::borrowck::BorrowFacts,
+    binding_to_loan: HashMap<BindingId, crate::borrowck::Loan>,
+}
+
+impl FactBuilder<'_> {
+    fn alloc_point(&mut self) -> u32 {
+        let point = self.facts.point_count;
+        self.facts.point_count += 1;
+        point
+    }
+
+    /// Build the CFG for `stmts`; `preds` are the points flowing in. Returns the
+    /// points flowing out (empty if every path returns).
+    fn build_block(&mut self, stmts: &[Stmt], preds: &[u32]) -> Vec<u32> {
+        let mut cur: Vec<u32> = preds.to_vec();
+        for stmt in stmts {
+            let point = self.alloc_point();
+            for &pred in &cur {
+                self.facts.cfg_edges.push((pred, point));
+            }
+            match stmt {
+                Stmt::Let { name, init, .. } => {
+                    self.record_uses(init, point);
+                    self.record_loan(name, init, point);
+                    cur = vec![point];
+                }
+                Stmt::Return(value) => {
+                    if let Some(expr) = value {
+                        self.record_uses(expr, point);
+                    }
+                    cur = Vec::new();
+                }
+                Stmt::Expr(Expr::If { cond, then_block, else_block }) => {
+                    self.record_uses(cond, point);
+                    let mut out = self.build_block(block_stmts(then_block), &[point]);
+                    match else_block {
+                        Some(else_block) => out.extend(self.build_block(block_stmts(else_block), &[point])),
+                        None => out.push(point),
+                    }
+                    cur = out;
+                }
+                Stmt::Expr(expr) => {
+                    self.record_uses(expr, point);
+                    cur = vec![point];
+                }
+            }
+        }
+        cur
+    }
+
+    /// Record `let a = &[mut] x;` as a loan over place `x` issued at `point`.
+    fn record_loan(&mut self, name: &u32, init: &Expr, point: u32) {
+        if let Expr::Borrow { mutable, expr } = init {
+            if let Expr::Var(off) = expr.as_ref() {
+                if let (Some(&place), Some(&binding)) =
+                    (self.resolution.uses.get(off), self.def_to_id.get(name))
+                {
+                    let loan = self.facts.loan_place.len() as crate::borrowck::Loan;
+                    self.facts.loan_place.push(place as crate::borrowck::Place);
+                    self.facts.loan_kind.push(if *mutable {
+                        crate::borrowck::LoanKind::Mut
+                    } else {
+                        crate::borrowck::LoanKind::Shared
+                    });
+                    self.facts.loan_issued_at.push(point);
+                    self.facts.loan_offset.push(*name);
+                    self.binding_to_loan.insert(binding, loan);
+                }
+            }
+        }
+    }
+
+    /// Record uses of loan bindings in `expr` at `point` (not descending into
+    /// nested `if`/block bodies, which carry their own points).
+    fn record_uses(&mut self, expr: &Expr, point: u32) {
+        let mut used = Vec::new();
+        collect_expr_uses(expr, self.resolution, &mut used);
+        for binding in used {
+            if let Some(&loan) = self.binding_to_loan.get(&binding) {
+                self.facts.loan_used_at.push((loan, point));
+            }
+        }
+    }
+}
+
+/// Statement list of a block expression (empty for anything else).
+fn block_stmts(expr: &Expr) -> &[Stmt] {
+    match expr {
+        Expr::Block(stmts) => stmts,
+        _ => &[],
     }
 }
 

@@ -92,6 +92,8 @@ const ACCEPT: &[&str] = &[
     "fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let p: i32 = *a; let b: &mut i32 = &mut x; let q: i32 = *b; }",
     // Conflict-clean: an unused first &mut is dead immediately (NLL).
     "fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let b: &mut i32 = &mut x; let c: i32 = *b; }",
+    // Conflict-clean: &mut borrows confined to mutually exclusive branches.
+    "fn f() { let mut x: i32 = 0; if true { let a: &mut i32 = &mut x; let p: i32 = *a; } else { let b: &mut i32 = &mut x; let q: i32 = *b; }; }",
 ];
 
 /// Programs rustc rejects and we must reject.
@@ -113,6 +115,8 @@ const REJECT: &[&str] = &[
     "fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let b: &mut i32 = &mut x; let c: i32 = *a + *b; }", // E0499
     // A &mut while a shared borrow is still live.
     "fn f() { let mut x: i32 = 0; let a: &i32 = &x; let b: &mut i32 = &mut x; let c: i32 = *a; }",              // E0502
+    // Two &mut live across a branch point (used in separate arms).
+    "fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let b: &mut i32 = &mut x; if true { let p: i32 = *a; } else { let q: i32 = *b; }; }", // E0499
 ];
 
 #[test]

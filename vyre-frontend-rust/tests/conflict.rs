@@ -48,3 +48,18 @@ fn allows_unused_first_mutable_borrow() {
     check_src("fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let b: &mut i32 = &mut x; let c: i32 = *b; }")
         .expect("Fix: a never-used borrow is dead immediately (NLL)");
 }
+
+#[test]
+fn rejects_conflict_live_across_a_branch_point() {
+    // a and b are both created before the `if`, then used in separate arms; at
+    // b's creation a is still live -> E0499 (matches rustc).
+    let err = check_src("fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let b: &mut i32 = &mut x; if true { let p: i32 = *a; } else { let q: i32 = *b; }; }").unwrap_err();
+    assert!(matches!(err, RustSemaError::MultipleMutableBorrows { .. }), "got {err:?}");
+}
+
+#[test]
+fn allows_borrows_confined_to_exclusive_branches() {
+    // Each &mut x lives only within its own arm; they are never co-live.
+    check_src("fn f() { let mut x: i32 = 0; if true { let a: &mut i32 = &mut x; let p: i32 = *a; } else { let b: &mut i32 = &mut x; let q: i32 = *b; }; }")
+        .expect("Fix: borrows confined to mutually exclusive branches must be allowed");
+}
