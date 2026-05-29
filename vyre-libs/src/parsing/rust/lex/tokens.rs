@@ -54,6 +54,16 @@ pub const AMP: u16 = 51;
 pub const AMP_MUT: u16 = 52;
 /// `!` operator.
 pub const BANG: u16 = 53;
+/// `%` operator.
+pub const PERCENT: u16 = 54;
+/// `>` operator.
+pub const GT: u16 = 55;
+/// `<=` operator.
+pub const LE: u16 = 56;
+/// `>=` operator.
+pub const GE: u16 = 57;
+/// `!=` operator.
+pub const NE: u16 = 58;
 /// `(` delimiter.
 pub const LPAREN: u16 = 60;
 /// `)` delimiter.
@@ -74,5 +84,5 @@ pub const fn is_literal(tok: u16) -> bool {
 
 /// True if the token id represents a binary operator.
 pub const fn is_binop(tok: u16) -> bool {
-    matches!(tok, PLUS | MINUS | STAR | SLASH | EQ | LT)
+    matches!(tok, PLUS | MINUS | STAR | SLASH | EQ | LT | PERCENT | GT | LE | GE | NE)
 }

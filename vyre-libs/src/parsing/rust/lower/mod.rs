@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use thiserror::Error;
 use vyre::ir::{BufferDecl, DataType, Expr as IrExpr, Node, Program};
 
-use super::lex::tokens::{EQ, LT, MINUS, PLUS, SLASH, STAR};
+use super::lex::tokens::{EQ, GE, GT, LE, LT, MINUS, NE, PERCENT, PLUS, SLASH, STAR};
 use super::parse::{Expr, Module, Stmt, Type};
 use super::sema::{BindingId, Resolution};
 
@@ -164,8 +164,16 @@ impl LowerCtx<'_> {
                     MINUS => IrExpr::sub(l, r),
                     STAR => IrExpr::mul(l, r),
                     SLASH => IrExpr::div(l, r),
+                    // Vyre types `Mod`'s result as u32 even for i32 operands;
+                    // the value is signed-correct, so cast back to i32 to keep
+                    // composition and the i32 store well-typed.
+                    PERCENT => IrExpr::cast(DataType::I32, IrExpr::rem(l, r)),
                     EQ => IrExpr::eq(l, r),
+                    NE => IrExpr::ne(l, r),
                     LT => IrExpr::lt(l, r),
+                    GT => IrExpr::gt(l, r),
+                    LE => IrExpr::le(l, r),
+                    GE => IrExpr::ge(l, r),
                     other => return Err(RustLowerError::Unsupported(format!("binary operator {other}"))),
                 })
             }

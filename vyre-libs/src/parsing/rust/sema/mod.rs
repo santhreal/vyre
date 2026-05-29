@@ -17,7 +17,7 @@ use std::collections::HashMap;
 
 use thiserror::Error;
 
-use super::lex::tokens::{EQ, LT, MINUS, PLUS, SLASH, STAR};
+use super::lex::tokens::{EQ, GE, GT, LE, LT, MINUS, NE, PERCENT, PLUS, SLASH, STAR};
 use super::parse::{Expr, Module, Stmt, Type};
 
 /// Stable id for a resolved binding (index into [`Resolution::bindings`]).
@@ -349,17 +349,17 @@ impl TypeCk<'_> {
                 let lt = self.type_of(lhs)?;
                 let rt = self.type_of(rhs)?;
                 match *op {
-                    PLUS | MINUS | STAR | SLASH => {
+                    PLUS | MINUS | STAR | SLASH | PERCENT => {
                         self.require(&lt, &Type::I32, "arithmetic operand")?;
                         self.require(&rt, &Type::I32, "arithmetic operand")?;
                         Ok(Type::I32)
                     }
-                    LT => {
+                    LT | GT | LE | GE => {
                         self.require(&lt, &Type::I32, "comparison operand")?;
                         self.require(&rt, &Type::I32, "comparison operand")?;
                         Ok(Type::Bool)
                     }
-                    EQ => {
+                    EQ | NE => {
                         if lt != rt {
                             return Err(RustSemaError::TypeMismatch {
                                 context: "equality operands".to_string(),

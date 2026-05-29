@@ -82,6 +82,9 @@ pub fn lex(source: &[u8]) -> Result<Vec<Token>, usize> {
             let pair = [b, source[i + 1]];
             let (kind, advance) = match &pair {
                 b"==" => (EQ, 2),
+                b"<=" => (LE, 2),
+                b">=" => (GE, 2),
+                b"!=" => (NE, 2),
                 b"->" => (ARROW, 2),
                 b"&m" if i + 4 <= source.len() && &source[i + 1..i + 4] == b"mut" => {
                     (AMP_MUT, 4)
@@ -100,8 +103,10 @@ pub fn lex(source: &[u8]) -> Result<Vec<Token>, usize> {
             b'-' => MINUS,
             b'*' => STAR,
             b'/' => SLASH,
+            b'%' => PERCENT,
             b'=' => ASSIGN,
             b'<' => LT,
+            b'>' => GT,
             b';' => SEMI,
             b':' => COLON,
             b',' => COMMA,

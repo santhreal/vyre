@@ -265,7 +265,7 @@ impl<'a> Parser<'a> {
 
     fn parse_cmp(&mut self) -> Result<Expr, ParseError> {
         let mut lhs = self.parse_term()?;
-        while matches!(self.peek().kind, EQ | LT) {
+        while matches!(self.peek().kind, EQ | LT | NE | GT | LE | GE) {
             let op = self.advance().kind;
             lhs = Expr::Binary { op, lhs: Box::new(lhs), rhs: Box::new(self.parse_term()?) };
         }
@@ -283,7 +283,7 @@ impl<'a> Parser<'a> {
 
     fn parse_factor(&mut self) -> Result<Expr, ParseError> {
         let mut lhs = self.parse_unary()?;
-        while matches!(self.peek().kind, STAR | SLASH) {
+        while matches!(self.peek().kind, STAR | SLASH | PERCENT) {
             let op = self.advance().kind;
             lhs = Expr::Binary { op, lhs: Box::new(lhs), rhs: Box::new(self.parse_unary()?) };
         }
