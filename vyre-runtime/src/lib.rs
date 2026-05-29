@@ -128,6 +128,11 @@ pub mod uring;
 pub struct GpuStream<'a> {
     #[cfg(target_os = "linux")]
     uring: Option<uring::AsyncUringStream<'a>>,
+    // On macOS / Windows the `uring` field is compiled out, which leaves the
+    // `'a` lifetime unused and the compiler rejects the struct. Carry a
+    // zero-sized marker so the lifetime stays live on non-Linux targets.
+    #[cfg(not(target_os = "linux"))]
+    _phantom: std::marker::PhantomData<&'a ()>,
     shutdown_requested: bool,
 }
 
@@ -154,6 +159,8 @@ impl<'a> GpuStream<'a> {
         Self {
             #[cfg(target_os = "linux")]
             uring: None,
+            #[cfg(not(target_os = "linux"))]
+            _phantom: std::marker::PhantomData,
             shutdown_requested: false,
         }
     }
