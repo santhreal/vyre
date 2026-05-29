@@ -387,8 +387,7 @@ fn r2_kernel_scripts_pass_rate() {
 
     let corpus_root = Path::new(env!("CARGO_MANIFEST_DIR")).join(CORPUS_ROOT);
     let files = collect_corpus(&corpus_root);
-    assert!(
-        !files.is_empty(),
+    assert_ne!(files.len(), 0,
         "Fix: Linux kernel scripts/ corpus must contain at least one .c file under {}",
         corpus_root.display()
     );
@@ -593,6 +592,7 @@ fn r2_kernel_scripts_pass_rate() {
 
 #[test]
 #[ignore = "throughput measurement on synthetic safe corpus"]
+
 fn r2_synthetic_throughput_files_per_ms() {
     use vyre_frontend_c::api::parse_syntax_batch_bytes;
 
@@ -735,7 +735,7 @@ fn r2_single_file_warm_cold_timing() {
 fn r2_kernel_scripts_per_file_warm_throughput() {
     let corpus_root = Path::new(env!("CARGO_MANIFEST_DIR")).join(CORPUS_ROOT);
     let files = collect_corpus(&corpus_root);
-    assert!(!files.is_empty(), "corpus must contain .c files");
+    assert_ne!(files.len(), 0, "corpus must contain .c files");
 
     let options = kernel_scripts_compile_options();
 
@@ -813,7 +813,7 @@ fn r2_kernel_scripts_per_file_warm_throughput() {
 fn r2_kernel_scripts_cold_per_file_throughput() {
     let corpus_root = Path::new(env!("CARGO_MANIFEST_DIR")).join(CORPUS_ROOT);
     let files = collect_corpus(&corpus_root);
-    assert!(!files.is_empty(), "corpus must contain .c files");
+    assert_ne!(files.len(), 0, "corpus must contain .c files");
 
     let options = kernel_scripts_compile_options();
 
@@ -894,3 +894,4 @@ fn r2_kernel_scripts_cold_per_file_throughput() {
         (580_000.0_f64) / mean.max(1) as f64
     );
 }
+

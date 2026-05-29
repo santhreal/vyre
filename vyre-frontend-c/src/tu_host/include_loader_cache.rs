@@ -449,6 +449,7 @@ mod tests {
             .expect("Fix: borrowed key material must hit the owned cache entry")
             .expect("Fix: cached include must resolve");
 
+
         assert_eq!(hit, PathBuf::from("/tmp/includes/shared.h"));
         assert!(cache.contains_key(&key));
         assert_eq!(cache.len(), 1);
@@ -583,3 +584,4 @@ mod tests {
         }
     }
 }
+

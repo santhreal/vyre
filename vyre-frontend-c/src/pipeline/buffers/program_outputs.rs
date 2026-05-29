@@ -132,12 +132,12 @@ mod tests {
             .buffers
             .iter()
             .find(|buffer| buffer.name.as_ref() == "out_a")
-            .expect("out_a exists");
+            .expect("Fix: pipeline outputs must declare out_a before bind; validate program outputs at compile time - out_a exists");
         let out_b = program
             .buffers
             .iter()
             .find(|buffer| buffer.name.as_ref() == "out_b")
-            .expect("out_b exists");
+            .expect("Fix: pipeline outputs must declare out_b before bind; validate program outputs at compile time - out_b exists");
 
         assert!(out_a.is_output);
         assert!(out_a.pipeline_live_out);

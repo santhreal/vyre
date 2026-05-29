@@ -220,15 +220,16 @@ fn validate_c_frontend_phase_transition_returns_error_on_illegal() {
 fn bootstrap_nodes_are_nonempty() {
     let manifest = small_limits().manifest().unwrap();
     let nodes = c_frontend_workspace_bootstrap_nodes(&manifest);
-    assert!(!nodes.is_empty(), "bootstrap must produce IR nodes");
+    assert_eq!(nodes.len(), 1, "bootstrap must emit one gid-gated IR root");
 }
 
 #[test]
 fn phase_dispatch_nodes_empty_handlers() {
     let nodes = c_frontend_phase_dispatch_nodes(&[]);
-    assert!(
-        !nodes.is_empty(),
-        "dispatch must produce guard even with no handlers"
+    assert_eq!(
+        nodes.len(),
+        1,
+        "dispatch must emit one gid-gated control fragment even with no handlers"
     );
 }
 
@@ -246,7 +247,7 @@ fn phase_dispatch_nodes_with_handler() {
 #[test]
 fn phase_machine_guard_nodes_are_nonempty() {
     let nodes = c_frontend_phase_machine_guard_nodes();
-    assert!(!nodes.is_empty(), "guard must produce IR nodes");
+    assert_eq!(nodes.len(), 1, "guard must emit one gid-gated IR root");
 }
 
 #[test]
@@ -263,7 +264,13 @@ fn advance_phase_invalid_rejected() {
         CFrontendPhase::Lex,
         CFrontendPhase::Complete, // illegal skip
     );
-    assert!(result.is_err());
+    match result {
+        Err(CFrontendWorkspaceError::InvalidPhaseTransition { from, to }) => {
+            assert_eq!(from, CFrontendPhase::Lex);
+            assert_eq!(to, CFrontendPhase::Complete);
+        }
+        other => panic!("expected InvalidPhaseTransition, got {other:?}"),
+    }
 }
 
 #[test]

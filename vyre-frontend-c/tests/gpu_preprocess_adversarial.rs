@@ -462,6 +462,7 @@ fn adversarial_real_gpu_prescans_function_macro_arguments_before_later_paste() {
 }
 
 #[test]
+
 fn adversarial_token_paste_edge_expands_and_records_parameter_provenance() {
     let dispatcher = ReferenceDispatcher;
     let loader = NullLoader;
@@ -524,3 +525,4 @@ impl IncludeEventResidencyAssert
         )
     }
 }
+

@@ -18,8 +18,7 @@ fn attribute_decls_compile_successfully() {
 
     // Verify that every declaration produced a non-empty VAST section.
     let vast = object.section(SECTION_VAST);
-    assert!(
-        !vast.is_empty(),
+    assert_ne!(vast.len(), 0,
         "attribute-bearing TU must produce a VAST section"
     );
 }
