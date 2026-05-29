@@ -24,7 +24,7 @@ vyre-spec.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 thiserror.workspace = true
-sha2.workspace = true
+hashkit = { path = "../../../indexing/hashkit" }
 blake3.workspace = true
 brotli.workspace = true
 lzma-rs.workspace = true
@@ -36,3 +36,4 @@ ptx = []
 [dev-dependencies]
 vyre-reference.workspace = true
 tempfile.workspace = true
+sha2.workspace = true
