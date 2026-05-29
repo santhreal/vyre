@@ -1,4 +1,4 @@
-//! `cargo xtask check-tier-deps` — reject upward tier dependencies in workspace manifests.
+//! `cargo xtask check-tier-deps` - reject upward tier dependencies in workspace manifests.
 //!
 //! Tier order (low → high): T1 foundation/spec/core → T2 intrinsics → T2.5 primitives
 //! → self-substrate → T3 libs → reference/emit/conform → T4 drivers/runtime.

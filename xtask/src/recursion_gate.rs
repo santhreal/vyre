@@ -457,6 +457,7 @@ fn collect_primitives_in_domain(
     }
 }
 
+
 fn public_modules_declared_in(
     dir: &Path,
     scan_errors: &mut Vec<String>,
@@ -735,3 +736,4 @@ use vyre_primitives::matching::{
         fs::remove_dir_all(root).expect("Fix: remove recursive primitive test fixture");
     }
 }
+

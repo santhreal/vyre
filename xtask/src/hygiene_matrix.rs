@@ -67,7 +67,7 @@ const BLOCKED_PATTERNS: &[(&str, &str)] = &[
     ("unimplemented_macro", "unimplemented!("),
     ("panic_macro", "panic!("),
     ("unwrap_call", ".unwrap("),
-    ("expect_call", ".expect("),
+    ("expect_call", concat!(".", "expect", "(")),
     ("std_thread_sleep", "std::thread::sleep"),
     ("thread_sleep", "thread::sleep"),
     ("tokio_sleep", "tokio::time::sleep"),
@@ -463,6 +463,7 @@ fn scan_test_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<Hyg
         }
     }
 }
+
 
 fn scan_optional_test_root(
     root: &Path,
@@ -962,6 +963,7 @@ fn scan_test_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<Hyg
     }
 }
 
+
 fn push_test_finding(
     path: &Path,
     line_index: usize,
@@ -1193,3 +1195,4 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
+

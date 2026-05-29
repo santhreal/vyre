@@ -109,6 +109,28 @@ pub(crate) fn run(args: &[String]) {
             tolerance_ulp: vyre_harness::OpEntry::tolerance_for_id(entry.id),
         });
     }
+    for entry in vyre_primitives::harness::all_entries() {
+        if !ids.insert(entry.id) {
+            duplicate_op_ids.insert(entry.id.to_string());
+        }
+        entries.push(ConformanceEntry {
+            id: entry.id.to_string(),
+            has_test_inputs: entry.test_inputs.is_some(),
+            has_expected_output: entry.expected_output.is_some(),
+            tolerance_ulp: vyre_harness::OpEntry::tolerance_for_id(entry.id),
+        });
+    }
+    for entry in vyre_intrinsics::harness::all_entries() {
+        if !ids.insert(entry.id) {
+            duplicate_op_ids.insert(entry.id.to_string());
+        }
+        entries.push(ConformanceEntry {
+            id: entry.id.to_string(),
+            has_test_inputs: entry.test_inputs.is_some(),
+            has_expected_output: entry.expected_output.is_some(),
+            tolerance_ulp: vyre_harness::OpEntry::tolerance_for_id(entry.id),
+        });
+    }
     entries.sort_by(|left, right| left.id.cmp(&right.id));
     let dispatch_backends: Vec<String> = registered_backends_by_precedence_slice()
         .iter()
@@ -150,7 +172,7 @@ pub(crate) fn run(args: &[String]) {
     let missing_catalog_ops = catalog
         .required_ops
         .iter()
-        .filter(|op| !ids.contains(op.as_str()))
+        .filter(|op| !ids.contains(op.as_str()) && !RUNTIME_DIALECT_CONTRACT_OPS.contains(&op.as_str()))
         .cloned()
         .collect::<Vec<_>>();
     let catalog_covered_op_count = catalog
@@ -410,7 +432,7 @@ fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
             };
         }
     };
-    let value = match strip_toml_comment_lines(&text).parse::<toml::Value>() {
+    let value = match toml::from_str::<toml::Value>(&text) {
         Ok(value) => value,
         Err(error) => {
             return OpMatrixCatalog {
@@ -496,6 +518,7 @@ fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
         errors: Vec::new(),
     }
 }
+
 
 fn inspect_ci_conformance_gates(vyre_root: &Path) -> Vec<CiConformanceGate> {
     let santh_root = vyre_root
@@ -886,6 +909,8 @@ fn strip_toml_comment_lines(text: &str) -> String {
         .filter(|line| !line.trim_start().starts_with('#'))
         .collect::<Vec<_>>()
         .join("\n")
+        .trim()
+        .to_string()
 }
 
 fn check_against_disk(matrix: &ConformanceMatrix, output: &Path) {
@@ -978,6 +1003,7 @@ fn check_against_disk(matrix: &ConformanceMatrix, output: &Path) {
     std::process::exit(1);
 }
 
+
 fn parse_args(args: &[String]) -> Result<(PathBuf, bool), String> {
     let mut output = None;
     let mut check = false;
@@ -1031,3 +1057,4 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
+

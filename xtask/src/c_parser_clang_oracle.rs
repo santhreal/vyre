@@ -448,6 +448,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut clang = "clang".to_string();
     let mut include_dirs = Vec::new();
     let mut macros = Vec::new();
+
     let mut limit = None;
     let mut i = 2;
     while i < args.len() {
@@ -521,3 +522,4 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
         limit,
     })
 }
+

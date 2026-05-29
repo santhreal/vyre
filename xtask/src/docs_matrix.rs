@@ -511,6 +511,7 @@ const DOC_PROOFS: &[(&str, &str, &[&str])] = &[
     ),
 ];
 
+
 fn render_doc_proof(title: &str, matrix: &DocsMatrix, doc_ids: &[&str]) -> String {
     let selected = matrix
         .docs
@@ -836,3 +837,4 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
+

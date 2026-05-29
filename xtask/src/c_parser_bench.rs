@@ -712,6 +712,7 @@ fn run_inner(config: &Config) -> Result<ParserBenchReport, String> {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+
 struct VyreBenchSummary {
     token_count: u32,
     ast_bytes: u64,
@@ -1171,6 +1172,7 @@ fn summary_from_c_parse(summary: CParseSummary) -> VyreBenchSummary {
         call_record_bytes: summary.call_record_bytes,
     }
 }
+
 
 fn summary_from_syntax_parse(summary: SyntaxParseSummary) -> VyreBenchSummary {
     VyreBenchSummary {
@@ -1660,6 +1662,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
     })
 }
 
+
 fn parse_define(value: &str) -> (String, Option<String>) {
     match value.split_once('=') {
         Some((name, body)) => (name.to_string(), Some(body.to_string())),
@@ -1930,3 +1933,4 @@ mod tests {
         assert!(err.contains("--max-batch-bytes >= 536870912"));
     }
 }
+

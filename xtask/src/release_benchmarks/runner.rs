@@ -1,0 +1,195 @@
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+use serde_json::Value;
+
+use super::optimization::suite_case_has_cpu_sota_contract;
+use super::suite_inspect::read_text_bounded;
+use super::types::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
+
+pub(super) fn run_named_benchmark(
+    workspace_root: &Path,
+    case_id: &str,
+    backend: &str,
+    output: &str,
+    measured_samples: Option<usize>,
+    sample_timeout_secs: u64,
+) {
+    let mut owned_args = vec![
+        "run".to_string(),
+        "-p".to_string(),
+        "vyre-bench".to_string(),
+        "--quiet".to_string(),
+        "--".to_string(),
+        "run".to_string(),
+        "--suite".to_string(),
+        "release".to_string(),
+        "--case".to_string(),
+        case_id.to_string(),
+        "--backend".to_string(),
+        backend.to_string(),
+        "--enforce-budgets".to_string(),
+        "--output".to_string(),
+        output.to_string(),
+        "--sample-timeout-secs".to_string(),
+        sample_timeout_secs.to_string(),
+    ];
+    if let Some(samples) = measured_samples {
+        owned_args.push("--measured-samples".to_string());
+        owned_args.push(samples.to_string());
+    }
+    let borrowed = owned_args.iter().map(String::as_str).collect::<Vec<_>>();
+    run_command(workspace_root, &borrowed);
+}
+
+pub(super) fn run_named_benchmark_if_needed(
+    workspace_root: &Path,
+    case_id: &str,
+    backend: &str,
+    output: &str,
+    measured_samples: Option<usize>,
+    sample_timeout_secs: u64,
+    reuse_existing: bool,
+) {
+    if reuse_existing
+        && benchmark_artifact_is_reusable(workspace_root, backend, case_id, case_id, output, false)
+    {
+        return;
+    }
+    run_named_benchmark(
+        workspace_root,
+        case_id,
+        backend,
+        output,
+        measured_samples,
+        sample_timeout_secs,
+    );
+}
+
+pub(super) fn benchmark_artifact_is_reusable(
+    workspace_root: &Path,
+    backend: &str,
+    family_id: &str,
+    case_id: &str,
+    output: &str,
+    cpu_sota_100x_required: bool,
+) -> bool {
+    let path = workspace_root.join(output);
+    let text = match read_text_bounded(&path, MAX_RELEASE_BENCHMARK_TEXT_BYTES) {
+        Ok(text) => text,
+        Err(_) => return false,
+    };
+    let Ok(report) = serde_json::from_str::<Value>(&text) else {
+        return false;
+    };
+    if report.get("selected_backend").and_then(Value::as_str) != Some(backend) {
+        return false;
+    }
+    if report
+        .get("summary")
+        .and_then(|summary| summary.get("failed"))
+        .and_then(Value::as_u64)
+        != Some(0)
+    {
+        return false;
+    }
+    let Some(case) = report
+        .get("cases")
+        .and_then(Value::as_array)
+        .and_then(|cases| {
+            cases
+                .iter()
+                .find(|case| case.get("id").and_then(Value::as_str) == Some(case_id))
+        })
+    else {
+        return false;
+    };
+    if case.get("backend_id").and_then(Value::as_str) != Some(backend) {
+        return false;
+    }
+    if case.get("status").and_then(Value::as_str) != Some("pass") {
+        return false;
+    }
+    if cpu_sota_100x_required && !suite_case_has_cpu_sota_contract(case, 100.0) {
+        return false;
+    }
+    if cpu_sota_100x_required {
+        let contract_passed = case
+            .get("performance")
+            .and_then(|performance| performance.get("contract_passed"))
+            .and_then(Value::as_bool)
+            == Some(true);
+        let speedup_passed = case
+            .get("performance")
+            .and_then(|performance| performance.get("speedup_x"))
+            .and_then(Value::as_f64)
+            .is_some_and(|speedup| speedup >= 100.0);
+        if !contract_passed || !speedup_passed {
+            return false;
+        }
+    }
+    let _ = family_id;
+    true
+}
+
+pub(super) fn copy_artifact(workspace_root: &Path, source: &str, target: &str) {
+    let source = workspace_root.join(source);
+    let target = workspace_root.join(target);
+    if let Some(parent) = target.parent() {
+        if let Err(error) = fs::create_dir_all(parent) {
+            eprintln!("Fix: failed to create `{}`: {error}", parent.display());
+            std::process::exit(1);
+        }
+    }
+    if let Err(error) = fs::copy(&source, &target) {
+        eprintln!(
+            "Fix: failed to copy `{}` to `{}`: {error}",
+            source.display(),
+            target.display()
+        );
+        std::process::exit(1);
+    }
+}
+
+pub(super) fn run_command(workspace_root: &Path, args: &[&str]) {
+    let runner = cargo_runner(workspace_root);
+    let status = Command::new(&runner)
+        .args(args)
+        .current_dir(workspace_root)
+        .status();
+    let display = format!("{} {}", runner.display(), args.join(" "));
+    match status {
+        Ok(status) if status.success() => {}
+        Ok(status) => {
+            eprintln!("Fix: `{display}` failed with {status}");
+            std::process::exit(1);
+        }
+        Err(error) => {
+            eprintln!(
+                "Fix: failed to run `{display}`: {error}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`."
+            );
+            std::process::exit(1);
+        }
+    }
+}
+
+pub(super) fn cargo_runner(workspace_root: &Path) -> PathBuf {
+    if let Some(runner) = std::env::var_os("VYRE_CARGO_RUNNER") {
+        return PathBuf::from(runner);
+    }
+    let local = workspace_root.join("cargo_full");
+    if local.is_file() {
+        return local;
+    }
+    PathBuf::from("cargo_full")
+}
+
+pub(super) struct Config {
+    backend: String,
+    only: Option<String>,
+    measured_samples: Option<usize>,
+    sample_timeout_secs: u64,
+    include_wgpu_comparison: bool,
+    reuse_existing: bool,
+}
