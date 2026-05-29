@@ -18,7 +18,7 @@ use vyre_libs::parsing::rust::parse::{parse, Expr, Module, Stmt};
 use vyre_libs::parsing::rust::sema::{resolve, typeck, BindingId, Resolution};
 use vyre_reference::value::Value;
 
-use vyre_libs::parsing::rust::lex::tokens::{EQ, LT, MINUS, PLUS, STAR};
+use vyre_libs::parsing::rust::lex::tokens::{EQ, LT, MINUS, PLUS, SLASH, STAR};
 
 // ---------------------------------------------------------------------------
 // Pipeline helpers
@@ -127,6 +127,7 @@ impl Ev<'_> {
                     PLUS => l.wrapping_add(r),
                     MINUS => l.wrapping_sub(r),
                     STAR => l.wrapping_mul(r),
+                    SLASH => l / r, // generator guarantees a nonzero literal divisor
                     other => panic!("non-arithmetic op {other} in integer position"),
                 }
             }
@@ -193,6 +194,11 @@ impl Gen {
                 } else {
                     format!("d(&({inner}))")
                 };
+            }
+            if self.next() % 6 == 0 {
+                // Division by a nonzero literal divisor (1..=5): no div-by-zero,
+                // dividend may be negative to exercise signed truncation.
+                return format!("({} / {})", self.expr(nvars, depth - 1, calls, refs), self.next() % 5 + 1);
             }
         }
         if depth == 0 || self.next() % 3 == 0 {
@@ -291,6 +297,8 @@ fn curated_programs_execute_correctly() {
         ("fn f(a: i32) -> i32 { let r: &i32 = &a; return *r + 1; }", &[6], 7),
         ("fn f(a: i32) -> i32 { return *(&a) * 2; }", &[5], 10),
         ("fn d(p: &i32) -> i32 { return *p + 1; } fn f(a: i32) -> i32 { return d(&a); }", &[8], 9),
+        ("fn f(a: i32) -> i32 { return a / 3; }", &[7], 2),
+        ("fn f(a: i32) -> i32 { return a / 3; }", &[-7], -2), // truncates toward zero
     ];
     for (src, inputs, expected) in cases {
         assert_eq!(ir_exec(src, inputs), *expected, "{src} with {inputs:?}");
