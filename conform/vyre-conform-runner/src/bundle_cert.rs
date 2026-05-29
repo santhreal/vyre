@@ -538,6 +538,7 @@ pub fn verify_cert_signature_hex(
     Ok(())
 }
 
+
 fn verify_bundle_with<F>(
     cert: &BundleCertificate,
     program: &Program,
@@ -799,3 +800,4 @@ mod tests {
         assert!(matches!(err, BundleCertError::OutputHashMismatch { .. }));
     }
 }
+

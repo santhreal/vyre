@@ -154,18 +154,28 @@ impl BackendRunner {
                     .map_err(|error| format!("reference dispatch failed: {error}"))
             }
             BackendKind::Registered(backend) => {
+                let run_dispatch = |inputs: &[&[u8]]| {
+                    if self.id == "cuda"
+                        && vyre_driver::grid_sync::contains_grid_sync(program)
+                        && !backend.supports_grid_sync()
+                    {
+                        vyre_driver::grid_sync::dispatch_with_grid_sync_split(
+                            &**backend, program, inputs, config
+                        )
+                    } else {
+                        backend.dispatch_borrowed(program, inputs, config)
+                    }
+                    .map_err(|error| error.to_string())
+                };
+
                 if let Some(plan) = plan {
                     backend_dispatch_inputs_with_plan_into(inputs, plan, backend_inputs)?;
-                    backend
-                        .dispatch_borrowed(program, &backend_inputs, &config)
-                        .map_err(|error| error.to_string())
+                    run_dispatch(backend_inputs)
                 } else {
-                    let plan_storage = backend_dispatch_plan(program)?;
+                    let plan_storage = backend_dispatch_plan(program, inputs.len())?;
                     let mut local_inputs = Vec::new();
                     backend_dispatch_inputs_with_plan_into(inputs, &plan_storage, &mut local_inputs)?;
-                    backend
-                        .dispatch_borrowed(program, &local_inputs, &config)
-                        .map_err(|error| error.to_string())
+                    run_dispatch(&local_inputs)
                 }
             }
         }
@@ -184,7 +194,7 @@ struct BackendDispatchPlan {
     buffer_len: usize,
 }
 
-fn backend_dispatch_plan(program: &Program) -> Result<BackendDispatchPlan, String> {
+fn backend_dispatch_plan(program: &Program, fixture_buffer_count: usize) -> Result<BackendDispatchPlan, String> {
     let mut sources = Vec::with_capacity(program.buffers().len());
     let mut zeroed_inputs = Vec::with_capacity(program.buffers().len());
     for (buffer_index, buffer) in program.buffers().iter().enumerate() {
@@ -195,7 +205,7 @@ fn backend_dispatch_plan(program: &Program) -> Result<BackendDispatchPlan, Strin
         {
             continue;
         }
-        if matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite) {
+        if matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite) && buffer_index >= fixture_buffer_count {
             let byte_len = usize::try_from(buffer.count())
                 .ok()
                 .and_then(|count| count.checked_mul(buffer.element().min_bytes()))
@@ -338,7 +348,7 @@ fn parity_matrix_across_all_registered_ops() {
         );
 
         summary.ops_covered += 1;
-        let input_plan = backend_dispatch_plan(&program).unwrap_or_else(|error| {
+        let input_plan = backend_dispatch_plan(&program, input_cases[0].len()).unwrap_or_else(|error| {
             panic!("Fix: {} backend input plan failed: {error}", entry.id);
         });
         let grid_config = dispatch_grid::config_for_program(&program).unwrap_or_else(|error| {
@@ -475,6 +485,7 @@ fn parity_matrix_across_all_registered_ops() {
     );
 }
 
+
 fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
     let mut registrations: Vec<&BackendRegistration> = registered_backends().iter().copied().collect();
     registrations.sort_by(|left, right| left.id.cmp(right.id));
@@ -545,3 +556,4 @@ fn unified_entries() -> Vec<UnifiedEntry> {
     entries.sort_by(|left, right| left.id.cmp(right.id));
     entries
 }
+

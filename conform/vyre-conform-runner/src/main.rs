@@ -455,6 +455,7 @@ fn select_entries(
     Ok(selected)
 }
 
+
 fn is_reference_backend(backend_id: &str) -> bool {
     backend_id == "cpu-ref" || backend_id == "reference"
 }
@@ -942,6 +943,7 @@ fn prepare_reference_cases(
     }
     Ok(reference_cases)
 }
+
 
 fn compare_backend_against_reference(
     backend: &dyn VyreBackend,
@@ -1559,6 +1561,7 @@ fn merge_certificates(args: impl IntoIterator<Item = String>) -> Result<(), Stri
     write_json_artifact(&out, json, "merged prove artifact")
 }
 
+
 fn read_and_verify_shard(path: &str) -> Result<VerifiedShard, String> {
     let json = std::fs::read_to_string(path).map_err(|error| {
         format!(
@@ -1949,3 +1952,4 @@ fn hash_optional_usize(hasher: &mut blake3::Hasher, value: Option<usize>) {
         }
     }
 }
+

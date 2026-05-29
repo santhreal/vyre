@@ -529,6 +529,7 @@ fn merge_verifies_and_resigns_disjoint_certificate_shards() {
 }
 
 #[test]
+
 fn merge_rejects_tampered_certificate_shard() {
     let dir = tempfile::tempdir().expect("tempdir");
     let shard = dir.path().join("tampered.json");
@@ -818,3 +819,4 @@ fn release_scripts_make_sharded_conformance_certificate_load_bearing() {
         "Fix: final launch must make the merged sharded certificate load-bearing release evidence before publish."
     );
 }
+
