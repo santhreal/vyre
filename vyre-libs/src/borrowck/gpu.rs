@@ -9,12 +9,19 @@
 //! reversed CFG; the loan is live where both hold. Two loans of one place
 //! conflict when one is live at the other's issue and at least one is mutable.
 //!
-//! [`analyze_batched`] computes every loan's forward closure in one device
-//! dispatch and every loan's backward closure in a second: two dispatches per
-//! function regardless of loan count, so launch overhead is amortized across
-//! the whole loan set (the path that makes a crate-scale borrow check
-//! GPU-fast). It is backend-agnostic: the caller supplies an
+//! [`analyze_crate_batched`] is the scale engine: it unions every function's
+//! CFG into one *disconnected* graph (disjoint node ranges, so a closure can
+//! never cross a function boundary) and runs every loan in the whole crate
+//! through **two** device dispatches: one forward-batch seeded at every loan's
+//! issue, one backward-batch seeded at every loan's uses. Launch overhead is
+//! amortized across the entire crate, not per function and not per loan, which
+//! is what makes a crate-scale borrow check GPU-fast. [`analyze_batched`] is the
+//! single-function case. Both are backend-agnostic: the caller supplies an
 //! [`OptimizerDispatcher`], which on the fleet is the CUDA backend.
+//!
+//! Memory scales as `total_loans * ceil(total_points / 32)` words; for very
+//! large crates the function list is sharded into groups before dispatch (each
+//! shard is still two dispatches), which the caller controls by chunking.
 
 use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use vyre_self_substrate::persistent_bfs::{
@@ -66,45 +73,77 @@ fn build_csr(n: u32, edges: &[(u32, u32)], reverse: bool) -> (Vec<u32>, Vec<u32>
     (offsets, targets, masks)
 }
 
-/// Compute every conflicting-borrow violation (rustc E0499 / E0502) for one
-/// function on a GPU device, batched across all loans.
+/// Compute conflicting-borrow violations (rustc E0499 / E0502) for an entire
+/// crate (a slice of per-function [`BorrowFacts`]) on a GPU device, using TWO
+/// total dispatches regardless of function or loan count.
 ///
-/// Returns exactly the conflicts the CPU [`analyze`](super::analyze) engine
-/// returns, in the same order: a per-`Conflict` parity holds by construction
-/// (same live-range definition, same pairing).
+/// Returns one `Vec<Conflict>` per input function, in input order; each is
+/// exactly what the CPU [`analyze`](super::analyze) engine returns for that
+/// function (loan indices are function-local, matching `analyze`).
 ///
 /// # Errors
 ///
 /// Returns [`DispatchError`] if a device upload or batch dispatch fails.
-pub fn analyze_batched(
+pub fn analyze_crate_batched(
     dispatcher: &dyn OptimizerDispatcher,
-    facts: &BorrowFacts,
-) -> Result<Vec<Conflict>, DispatchError> {
-    let n = facts.point_count;
-    let loans = facts.loan_count();
-    if loans < 2 || n == 0 {
-        return Ok(Vec::new());
-    }
-    let words = bitset_words(n);
-    // A monotone closure over n points reaches its fixpoint within n steps; the
-    // change-flag kernel also stops early once stable.
-    let max_iters = n.max(1);
+    functions: &[BorrowFacts],
+) -> Result<Vec<Vec<Conflict>>, DispatchError> {
+    let empty = || functions.iter().map(|_| Vec::new()).collect::<Vec<_>>();
 
-    let (fwd_off, fwd_tgt, fwd_msk) = build_csr(n, &facts.cfg_edges, false);
-    let (rev_off, rev_tgt, rev_msk) = build_csr(n, &facts.cfg_edges, true);
-    let fwd_graph = upload_resident_bfs_graph(dispatcher, n, &fwd_off, &fwd_tgt, &fwd_msk)?;
-    let rev_graph = upload_resident_bfs_graph(dispatcher, n, &rev_off, &rev_tgt, &rev_msk)?;
-
-    // Per-loan seeds, flattened `loans * words`: issue point forward, uses backward.
-    let mut issue_seeds = vec![0u32; loans * words];
-    let mut use_seeds = vec![0u32; loans * words];
-    for a in 0..loans {
-        set_bit(&mut issue_seeds[a * words..(a + 1) * words], facts.loan_issued_at[a]);
+    // Disjoint node ranges: function fi occupies [point_base[fi], +point_count).
+    let mut point_base = Vec::with_capacity(functions.len());
+    let mut combined_points: u32 = 0;
+    for f in functions {
+        point_base.push(combined_points);
+        combined_points = combined_points.saturating_add(f.point_count);
     }
-    for &(loan, point) in &facts.loan_used_at {
-        let a = loan as usize;
-        if a < loans {
-            set_bit(&mut use_seeds[a * words..(a + 1) * words], point);
+    // Disjoint loan ranges in the flattened query set.
+    let mut loan_base = Vec::with_capacity(functions.len());
+    let mut total_loans: usize = 0;
+    for f in functions {
+        loan_base.push(total_loans);
+        total_loans += f.loan_count();
+    }
+    if combined_points == 0 || total_loans == 0 {
+        return Ok(empty());
+    }
+    let words = bitset_words(combined_points);
+    let max_iters = combined_points.max(1);
+
+    // Union every function's CFG into one disconnected graph (edges shifted into
+    // each function's node range; no cross-function edges exist, so a closure
+    // stays within its function).
+    let mut edges: Vec<(u32, u32)> = Vec::new();
+    for (fi, f) in functions.iter().enumerate() {
+        let base = point_base[fi];
+        for &(a, b) in &f.cfg_edges {
+            edges.push((a + base, b + base));
+        }
+    }
+    let (fwd_off, fwd_tgt, fwd_msk) = build_csr(combined_points, &edges, false);
+    let (rev_off, rev_tgt, rev_msk) = build_csr(combined_points, &edges, true);
+    let fwd_graph = upload_resident_bfs_graph(dispatcher, combined_points, &fwd_off, &fwd_tgt, &fwd_msk)?;
+    let rev_graph = upload_resident_bfs_graph(dispatcher, combined_points, &rev_off, &rev_tgt, &rev_msk)?;
+
+    // Per-loan seeds across the whole crate, flattened total_loans * words.
+    let mut issue_seeds = vec![0u32; total_loans * words];
+    let mut use_seeds = vec![0u32; total_loans * words];
+    for (fi, f) in functions.iter().enumerate() {
+        let pbase = point_base[fi];
+        let lbase = loan_base[fi];
+        for a in 0..f.loan_count() {
+            let g = lbase + a;
+            set_bit(
+                &mut issue_seeds[g * words..(g + 1) * words],
+                pbase + f.loan_issued_at[a],
+            );
+        }
+        for &(loan, point) in &f.loan_used_at {
+            let a = loan as usize;
+            if a < f.loan_count() {
+                let g = lbase + a;
+                set_bit(&mut use_seeds[g * words..(g + 1) * words], pbase + point);
+            }
         }
     }
 
@@ -115,7 +154,7 @@ pub fn analyze_batched(
         dispatcher,
         &fwd_graph,
         &issue_seeds,
-        loans,
+        total_loans,
         ALLOW_ALL,
         max_iters,
         &mut scratch,
@@ -128,7 +167,7 @@ pub fn analyze_batched(
         dispatcher,
         &rev_graph,
         &use_seeds,
-        loans,
+        total_loans,
         ALLOW_ALL,
         max_iters,
         &mut scratch,
@@ -136,39 +175,67 @@ pub fn analyze_batched(
         &mut backward_changed,
     )?;
 
-    let mut conflicts = Vec::new();
-    for a in 0..loans {
-        for b in (a + 1)..loans {
-            if facts.loan_place[a] != facts.loan_place[b] {
-                continue;
-            }
-            let a_mut = facts.loan_kind[a] == LoanKind::Mut;
-            let b_mut = facts.loan_kind[b] == LoanKind::Mut;
-            if !(a_mut || b_mut) {
-                continue;
-            }
-            let issue_a = facts.loan_issued_at[a];
-            let issue_b = facts.loan_issued_at[b];
-            // `a` is live at `issue_b` iff issue_a reaches issue_b and a use of
-            // `a` is reachable from there: forward[a] & backward[a] at issue_b.
-            let a_live_at_b = slice_test_bit(&forward, words, a, issue_b)
-                && slice_test_bit(&backward, words, a, issue_b);
-            let b_live_at_a = slice_test_bit(&forward, words, b, issue_a)
-                && slice_test_bit(&backward, words, b, issue_a);
-            if a_live_at_b || b_live_at_a {
-                let (first, second) = if issue_a <= issue_b { (a, b) } else { (b, a) };
-                conflicts.push(Conflict {
-                    first: first as u32,
-                    second: second as u32,
-                    offset: facts.loan_offset[second],
-                    kind: if a_mut && b_mut {
-                        ConflictKind::TwoMutable
+    // Pair within each function (cross-function loans are never compared).
+    let mut per_function = Vec::with_capacity(functions.len());
+    for (fi, f) in functions.iter().enumerate() {
+        let pbase = point_base[fi];
+        let lbase = loan_base[fi];
+        let loans = f.loan_count();
+        let mut conflicts = Vec::new();
+        for a in 0..loans {
+            for b in (a + 1)..loans {
+                if f.loan_place[a] != f.loan_place[b] {
+                    continue;
+                }
+                let a_mut = f.loan_kind[a] == LoanKind::Mut;
+                let b_mut = f.loan_kind[b] == LoanKind::Mut;
+                if !(a_mut || b_mut) {
+                    continue;
+                }
+                let issue_a = pbase + f.loan_issued_at[a];
+                let issue_b = pbase + f.loan_issued_at[b];
+                let ga = lbase + a;
+                let gb = lbase + b;
+                let a_live_at_b = slice_test_bit(&forward, words, ga, issue_b)
+                    && slice_test_bit(&backward, words, ga, issue_b);
+                let b_live_at_a = slice_test_bit(&forward, words, gb, issue_a)
+                    && slice_test_bit(&backward, words, gb, issue_a);
+                if a_live_at_b || b_live_at_a {
+                    let (first, second) = if f.loan_issued_at[a] <= f.loan_issued_at[b] {
+                        (a, b)
                     } else {
-                        ConflictKind::MutableAndShared
-                    },
-                });
+                        (b, a)
+                    };
+                    conflicts.push(Conflict {
+                        first: first as u32,
+                        second: second as u32,
+                        offset: f.loan_offset[second],
+                        kind: if a_mut && b_mut {
+                            ConflictKind::TwoMutable
+                        } else {
+                            ConflictKind::MutableAndShared
+                        },
+                    });
+                }
             }
         }
+        per_function.push(conflicts);
     }
-    Ok(conflicts)
+    Ok(per_function)
+}
+
+/// Compute borrow conflicts for ONE function on a GPU device, batched across
+/// all its loans (two dispatches). The single-function case of
+/// [`analyze_crate_batched`]; returns the same conflicts as the CPU
+/// [`analyze`](super::analyze) engine.
+///
+/// # Errors
+///
+/// Returns [`DispatchError`] if a device upload or batch dispatch fails.
+pub fn analyze_batched(
+    dispatcher: &dyn OptimizerDispatcher,
+    facts: &BorrowFacts,
+) -> Result<Vec<Conflict>, DispatchError> {
+    let mut per_function = analyze_crate_batched(dispatcher, std::slice::from_ref(facts))?;
+    Ok(per_function.pop().unwrap_or_default())
 }

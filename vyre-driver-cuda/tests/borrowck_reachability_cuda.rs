@@ -395,3 +395,54 @@ fn cuda_batched_vs_per_loan_dispatch_speedup() {
         );
     });
 }
+
+#[test]
+fn cuda_crate_batched_matches_cpu_engine_two_dispatches() {
+    // Treat the whole CFG corpus as a "crate": every function's loans run
+    // through TWO total device dispatches (one forward, one backward over the
+    // unioned disconnected graph). Each function's verdict must equal the CPU
+    // engine's verdict for that function.
+    let cases = corpus();
+    let crate_facts: Vec<BorrowFacts> = cases.iter().map(|(_, f)| f.clone()).collect();
+    let cpu: Vec<Vec<Conflict>> = crate_facts.iter().map(analyze).collect();
+    let gpu = with_live_backend("cuda crate batched", |backend| {
+        let dispatcher = CudaResidentDispatcher::new(backend);
+        gpu::analyze_crate_batched(&dispatcher, &crate_facts)
+            .expect("crate batch dispatch must succeed on the CUDA device")
+    });
+    assert_eq!(gpu.len(), cpu.len(), "per-function result count must match");
+    for (i, (label, _)) in cases.iter().enumerate() {
+        assert_eq!(
+            gpu[i], cpu[i],
+            "{label}: crate-batched verdict diverged from the CPU engine (function {i})"
+        );
+    }
+}
+
+#[test]
+fn cuda_crate_batched_scales_to_many_functions_two_dispatches() {
+    // 128 functions, each a straight-line with one conflicting &mut pair. The
+    // ENTIRE crate's borrow check runs in TWO device dispatches; every
+    // function's conflict must still be found, matching the CPU engine.
+    let one = || {
+        facts(
+            3,
+            &[(0, 1), (1, 2)],
+            &[(0, LoanKind::Mut, 0, 10), (0, LoanKind::Mut, 1, 20)],
+            &[(0, 2), (1, 2)],
+        )
+    };
+    let crate_facts: Vec<BorrowFacts> = (0..128).map(|_| one()).collect();
+    let cpu: Vec<Vec<Conflict>> = crate_facts.iter().map(analyze).collect();
+    let gpu = with_live_backend("cuda crate scale", |backend| {
+        let dispatcher = CudaResidentDispatcher::new(backend);
+        gpu::analyze_crate_batched(&dispatcher, &crate_facts)
+            .expect("crate batch dispatch must succeed on the CUDA device")
+    });
+    assert_eq!(gpu.len(), 128, "must return a verdict per function");
+    assert_eq!(gpu, cpu, "128-function crate batch diverged from the CPU engine");
+    for (i, conflicts) in gpu.iter().enumerate() {
+        assert_eq!(conflicts.len(), 1, "function {i} must have exactly one conflict");
+        assert_eq!(conflicts[0].kind, ConflictKind::TwoMutable);
+    }
+}
