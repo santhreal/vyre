@@ -68,6 +68,14 @@ pub enum RustSemaError {
         /// Source byte offset of the call.
         offset: u32,
     },
+    /// A `&mut` borrow targeted an immutable place (rustc E0596).
+    #[error("cannot borrow `{name}` as mutable, as it is not declared as mutable (byte {offset})")]
+    CannotBorrowImmutableAsMutable {
+        /// The immutable binding being borrowed mutably.
+        name: String,
+        /// Source byte offset of the borrowed place.
+        offset: u32,
+    },
     /// Type inference and checking are not implemented for the nano-subset.
     #[error("type checking is not wired to the Rust nano-subset type environment yet; use parse-only API calls until semantic analysis is enabled")]
     TypeckUnavailable,
@@ -237,11 +245,110 @@ pub fn typeck(module: &ResolvedModule) -> Result<TypedModule, RustSemaError> {
 
 /// Borrow-check a typed module.
 ///
-/// When implemented this composes the shared dataflow engine over a Rust CFG.
+/// The mutability rule (rustc E0596: borrowing an immutable place as `&mut`) is
+/// implemented via [`check_mutability`]. The conflicting-borrow rules
+/// (E0499/E0502) require the weir dataflow analysis and are not yet wired, so
+/// `borrow_check` surfaces a real mutability error when one exists and otherwise
+/// reports [`RustSemaError::BorrowUnavailable`] rather than claiming a complete
+/// borrow check it has not performed.
 ///
 /// # Errors
-/// Returns [`RustSemaError::BorrowUnavailable`] until borrow checking is wired.
+/// Returns [`RustSemaError::CannotBorrowImmutableAsMutable`] for an E0596
+/// violation, or [`RustSemaError::BorrowUnavailable`] while the
+/// conflicting-borrow rules remain unimplemented.
 pub fn borrow_check(module: &TypedModule) -> Result<VerifiedModule, RustSemaError> {
-    let _ = module;
+    check_mutability(module)?;
     Err(RustSemaError::BorrowUnavailable)
+}
+
+/// Check the mutability borrow rule (rustc E0596) over a resolved module.
+///
+/// A `&mut` borrow is rejected when the borrowed place is an immutable binding
+/// or a dereference of a shared (`&T`) reference. Borrowing a temporary is
+/// allowed.
+///
+/// # Errors
+/// Returns [`RustSemaError::CannotBorrowImmutableAsMutable`] on a violation.
+pub fn check_mutability(module: &ResolvedModule) -> Result<(), RustSemaError> {
+    for func in &module.module.functions {
+        check_mut_stmts(&func.body, module)?;
+    }
+    Ok(())
+}
+
+fn check_mut_stmts(stmts: &[Stmt], module: &ResolvedModule) -> Result<(), RustSemaError> {
+    for stmt in stmts {
+        match stmt {
+            Stmt::Let { init, .. } => check_mut_expr(init, module)?,
+            Stmt::Expr(expr) => check_mut_expr(expr, module)?,
+            Stmt::Return(Some(expr)) => check_mut_expr(expr, module)?,
+            Stmt::Return(None) => {}
+        }
+    }
+    Ok(())
+}
+
+fn check_mut_expr(expr: &Expr, module: &ResolvedModule) -> Result<(), RustSemaError> {
+    match expr {
+        Expr::Borrow { mutable, expr } => {
+            if *mutable {
+                check_mutable_place(expr, module)?;
+            }
+            check_mut_expr(expr, module)
+        }
+        Expr::Binary { lhs, rhs, .. } => {
+            check_mut_expr(lhs, module)?;
+            check_mut_expr(rhs, module)
+        }
+        Expr::Deref(inner) => check_mut_expr(inner, module),
+        Expr::Call { args, .. } => {
+            for arg in args {
+                check_mut_expr(arg, module)?;
+            }
+            Ok(())
+        }
+        Expr::Block(stmts) => check_mut_stmts(stmts, module),
+        Expr::If { cond, then_block, else_block } => {
+            check_mut_expr(cond, module)?;
+            check_mut_expr(then_block, module)?;
+            if let Some(else_block) = else_block {
+                check_mut_expr(else_block, module)?;
+            }
+            Ok(())
+        }
+        Expr::LiteralInt(..) | Expr::LiteralBool(..) | Expr::Var(..) => Ok(()),
+    }
+}
+
+/// Verify that `place` denotes a mutable place for a `&mut` borrow.
+fn check_mutable_place(place: &Expr, module: &ResolvedModule) -> Result<(), RustSemaError> {
+    match place {
+        Expr::Var(offset) => {
+            if let Some(&id) = module.uses.get(offset) {
+                let binding = &module.bindings[id];
+                if !binding.mutable {
+                    return Err(RustSemaError::CannotBorrowImmutableAsMutable {
+                        name: binding.name.clone(),
+                        offset: *offset,
+                    });
+                }
+            }
+            Ok(())
+        }
+        Expr::Deref(inner) => {
+            if let Expr::Var(offset) = inner.as_ref() {
+                if let Some(&id) = module.uses.get(offset) {
+                    let binding = &module.bindings[id];
+                    if let Type::Ref { mutable: false, .. } = binding.ty {
+                        return Err(RustSemaError::CannotBorrowImmutableAsMutable {
+                            name: binding.name.clone(),
+                            offset: *offset,
+                        });
+                    }
+                }
+            }
+            Ok(())
+        }
+        _ => Ok(()),
+    }
 }
