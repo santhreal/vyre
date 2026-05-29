@@ -448,6 +448,7 @@ mod tests {
             var: Ident::from("i"),
             from: Expr::u32(lo),
             to: Expr::u32(hi),
+
             body: vec![
                 Node::let_bind(
                     "x",
@@ -744,3 +745,4 @@ mod tests {
         assert!(!result.changed);
     }
 }
+

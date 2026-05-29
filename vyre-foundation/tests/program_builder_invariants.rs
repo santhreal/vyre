@@ -99,7 +99,7 @@ fn with_rewritten_buffers_preserves_entry() {
     let rewritten = prog.with_rewritten_buffers(vec![
         BufferDecl::output("out", 0, DataType::U32).with_count(2)
     ]);
-    assert!(rewritten.entry().len() > 0);
+    assert_eq!(rewritten.entry(), prog.entry());
 }
 
 #[test]

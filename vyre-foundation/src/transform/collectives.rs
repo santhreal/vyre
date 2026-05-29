@@ -448,6 +448,7 @@ mod tests {
                     group: CommGroup(group),
                 },
                 8,
+
             );
 
             let error = lower_single_rank_collectives(&program)
@@ -708,3 +709,4 @@ mod tests {
         }
     }
 }
+

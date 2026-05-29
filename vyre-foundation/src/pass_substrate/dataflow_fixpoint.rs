@@ -21,7 +21,7 @@ pub use vyre_spec::Semiring;
 
 /// Multiply matrices over the selected semiring on the CPU.
 ///
-/// AUDIT_2026-05-23: Deprecated — CPU reference. Use GPU semiring GEMM primitive.
+/// AUDIT_2026-05-23: Deprecated - CPU reference. Use GPU semiring GEMM primitive.
 #[deprecated(note = "CPU reference. Use GPU semiring GEMM primitive.")]
 #[must_use]
 pub fn semiring_gemm_cpu(

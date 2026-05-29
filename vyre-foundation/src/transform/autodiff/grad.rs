@@ -456,6 +456,7 @@ impl AdjointEnv {
     }
 }
 
+
 fn collect_adjoint_targets(nodes: &[Node], out: &mut Vec<Ident>) {
     for node in nodes {
         match node {
@@ -678,3 +679,4 @@ fn emit_adjoint_node(
 
 #[cfg(test)]
 mod tests;
+

@@ -448,6 +448,7 @@ mod tests {
 
     fn count_ifs(nodes: &[Node]) -> usize {
         let mut total = 0;
+
         for n in nodes {
             match n {
                 Node::If {
@@ -739,3 +740,4 @@ mod tests {
         assert_eq!(count_ifs(result.program.entry()), 0);
     }
 }
+

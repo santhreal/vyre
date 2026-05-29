@@ -57,3 +57,9 @@ vyre-reference.workspace = true
 proptest.workspace = true
 criterion.workspace = true
 
+[[test]]
+name = "sweep_validation_rejection_oracle_matrix"
+path = "tests/sweep_validation_rejection_oracle_matrix.rs"
+[[test]]
+name = "sweep_validation_rejection_volume_oracle_matrix"
+path = "tests/sweep_validation_rejection_volume_oracle_matrix.rs"

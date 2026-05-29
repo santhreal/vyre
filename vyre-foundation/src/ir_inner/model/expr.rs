@@ -533,6 +533,7 @@ impl Expr {
         Self::Opaque(node)
     }
 }
+
 mod atomics;
 mod builders;
 
@@ -549,3 +550,4 @@ mod tests {
         );
     }
 }
+

@@ -466,6 +466,7 @@ fn generated_differentiable_expr(seed: u32, x: Expr, w: Expr) -> Expr {
 }
 
 #[test]
+
 fn generated_autodiff_rejects_nondifferentiable_bitwise_shapes() {
     for seed in 0..1024u32 {
         let op = match seed % 3 {
@@ -527,3 +528,4 @@ fn bitwise_path_still_fails_with_actionable_not_differentiable_error() {
         other => panic!("expected NotDifferentiable, got {other}"),
     }
 }
+

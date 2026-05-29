@@ -4,7 +4,11 @@ use vyre_foundation::optimizer::rewrite_proof_registry::shipped_obligations;
 
 #[test]
 fn registry_is_non_empty() {
-    assert!(!shipped_obligations().is_empty());
+    let obligations = shipped_obligations();
+    assert!(
+        obligations.iter().any(|o| !o.rewrite.is_empty()),
+        "shipped rewrite proof registry must name at least one rewrite"
+    );
 }
 
 #[test]

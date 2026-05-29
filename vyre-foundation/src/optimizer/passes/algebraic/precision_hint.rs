@@ -448,6 +448,7 @@ mod tests {
             operand: Box::new(Expr::f32(0.5)),
         });
         assert!(matches!(
+
             hints.lookup(digest),
             Some(PrecisionHint::TranscendentalPolynomial {
                 op: TranscendentalOp::Exp,
@@ -519,3 +520,4 @@ mod tests {
         assert_sync::<PrecisionHints>();
     }
 }
+

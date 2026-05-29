@@ -153,11 +153,12 @@ fn try_transform_default_delegates_to_transform_for_every_builtin() {
         .expect("Fix: registered_passes should succeed; restore this invariant before continuing.");
     for pass in passes {
         let result = pass.try_transform(p.clone());
-        assert!(
-            result.is_ok(),
-            "built-in pass `{}` unexpectedly returned a refusal",
-            pass.metadata().name
-        );
+        let _optimized = result.unwrap_or_else(|e| {
+            panic!(
+                "built-in pass `{}` unexpectedly returned a refusal: {e:?}",
+                pass.metadata().name
+            );
+        });
     }
 }
 

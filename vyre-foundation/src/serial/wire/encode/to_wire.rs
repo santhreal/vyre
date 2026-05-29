@@ -456,9 +456,9 @@ fn put_memory_regions_with_scratch(
             // `buffer.element()` returns DataType by value, so the
             // `Quantized { storage, scale, zero_point }` pattern binds
             // by value: storage is Box<DataType>, scale and zero_point
-            // are owned. The helpers want references — &*storage drops
+            // are owned. The helpers want references - &*storage drops
             // the Box to get &DataType.
-            put_leb_u64(shape, u64::from(data_type_tag(&*storage)?));
+            put_leb_u64(shape, u64::from(data_type_tag(&storage)?));
             put_dense_quantization_scale(shape, &scale)?;
             put_dense_quantization_zero_point(shape, &zero_point)?;
         }
@@ -485,6 +485,7 @@ fn put_memory_regions_with_scratch(
     }
     Ok(())
 }
+
 
 fn put_hints_payload(out: &mut Vec<u8>, hints: crate::ir::MemoryHints) {
     match hints.coalesce_axis {
@@ -647,3 +648,4 @@ fn put_leb_u64(out: &mut Vec<u8>, mut value: u64) {
 
 #[cfg(test)]
 mod tests;
+

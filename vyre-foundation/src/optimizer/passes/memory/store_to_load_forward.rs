@@ -448,6 +448,7 @@ mod tests {
         //  -  it is the same buffer/index, so the load forwards from `9`,
         // not the original `7`. That IS a valid forwarding (the value
         // the Load would observe)  -  assert it fired.
+
         assert!(result.changed);
     }
 
@@ -551,3 +552,4 @@ mod tests {
         );
     }
 }
+

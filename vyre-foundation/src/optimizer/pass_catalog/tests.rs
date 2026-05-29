@@ -5,8 +5,8 @@ use std::collections::{BTreeSet, HashSet};
 fn catalog_entries_have_owner_invariant_and_benchmark_contracts() {
     let catalog = optimization_catalog().expect("Fix: optimizer catalog must build");
     assert!(
-        !catalog.is_empty(),
-        "Fix: optimizer catalog must expose registered passes."
+        catalog.iter().any(|e| e.name == "const_fold"),
+        "Fix: optimizer catalog must include const_fold."
     );
     for entry in &catalog {
         assert!(!entry.name.is_empty(), "catalog pass name must be stable");

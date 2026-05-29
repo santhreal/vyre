@@ -79,12 +79,12 @@ fn validate_prefix_input_rejects_too_large() {
 
 #[test]
 fn validate_prefix_input_accepts_small() {
-    assert!(validate_prefix_input(1024).is_ok());
+    assert_eq!(validate_prefix_input(1024), Ok(()));
 }
 
 #[test]
 fn validate_prefix_input_accepts_zero() {
-    assert!(validate_prefix_input(0).is_ok());
+    assert_eq!(validate_prefix_input(0), Ok(()));
 }
 
 #[test]

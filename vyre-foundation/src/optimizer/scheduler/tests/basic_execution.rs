@@ -5,8 +5,10 @@ use super::*;
 #[test]
 fn single_pass_converges() {
     let scheduler = PassScheduler::with_passes(vec![ProgramPassKind::new(ConstFold)]);
-    let result = scheduler.run(trivial_program());
-    assert!(result.is_ok());
+    let program = scheduler
+        .run(trivial_program())
+        .expect("single const_fold pass must converge");
+    assert_eq!(program.workgroup_size(), [1, 1, 1]);
 }
 
 #[test]
@@ -79,8 +81,10 @@ fn idempotent_pass_converges_in_two_iterations() {
     );
     let scheduler =
         PassScheduler::with_passes(vec![ProgramPassKind::new(ConstFold)]).with_max_iterations(2);
-    let result = scheduler.run(program);
-    assert!(result.is_ok(), "should converge within 2 iterations");
+    let program = scheduler
+        .run(program)
+        .expect("should converge within 2 iterations");
+    assert_eq!(program.stats().node_count, 1);
 }
 
 #[test]
@@ -89,8 +93,10 @@ fn multiple_passes_execute() {
         ProgramPassKind::new(ConstFold),
         ProgramPassKind::new(StrengthReduce),
     ]);
-    let result = scheduler.run(trivial_program());
-    assert!(result.is_ok());
+    let program = scheduler
+        .run(trivial_program())
+        .expect("const_fold then strength_reduce must converge");
+    assert_eq!(program.stats().node_count, 1);
 }
 
 #[test]

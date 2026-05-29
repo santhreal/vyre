@@ -697,6 +697,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
     }
 }
 
+
 fn expr_scalar_literal(expr: &Expr) -> Option<ScalarLiteral> {
     match expr {
         Expr::LitU32(value) => Some(ScalarLiteral::U32(*value)),
@@ -839,3 +840,4 @@ fn rewrite_expr_for_mod(
 fn lit_f32_eq(value: f32, expected: f32) -> bool {
     value.to_bits() == expected.to_bits()
 }
+

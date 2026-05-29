@@ -28,7 +28,7 @@ pub trait CategoryAOp {
 /// `DialectRegistry::get_lowering(ReferenceBackend)` dispatches to it
 /// directly rather than going through this sentinel.
 ///
-/// AUDIT_2026-05-23: Deprecated — panicking CPU sentinel is a fallback hole.
+/// AUDIT_2026-05-23: Deprecated - panicking CPU sentinel is a fallback hole.
 /// Category C ops must implement typed GPU lowerings instead.
 #[deprecated(
     note = "structured_intrinsic_cpu is a panicking fallback. Implement typed GPU lowering for the op."

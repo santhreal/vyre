@@ -448,6 +448,7 @@ mod tests {
                 vec![Node::store("buf", Expr::var("i"), Expr::u32(7))],
                 vec![Node::store("buf", Expr::var("i"), Expr::u32(0))],
             )],
+
         )];
         let program = program_with_entry(entry);
         let result = LoopRedundantBoundCheckElidePass::transform(program);
@@ -625,3 +626,4 @@ mod tests {
         assert_eq!(cond_matches_loop_var_lt_lit(&cond, "i"), None);
     }
 }
+

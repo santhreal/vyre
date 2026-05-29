@@ -307,10 +307,6 @@ impl<L: ENodeLang> EGraph<L> {
 
     /// Add a node to the `EGraph`. If an equivalent node already exists,
     /// return its `EClassId`; otherwise create a new `EClass`.
-    #[expect(
-        clippy::needless_pass_by_value,
-        reason = "public insertion API consumes language nodes; canonicalized misses store an owned node"
-    )]
     pub fn add(&mut self, node: L) -> EClassId {
         match self.try_add(node) {
             Ok(id) => id,
@@ -539,6 +535,7 @@ impl<L: ENodeLang> EGraph<L> {
         Ok(self.classes.get(idx))
     }
 }
+
 
 fn eclass_id_from_index(index: usize) -> EClassId {
     match try_eclass_id_from_index(index) {
@@ -1351,17 +1348,17 @@ mod tests {
     #[test]
     fn fallible_add_handles_duplicate_children_without_late_allocation_path() {
         let mut egraph: EGraph<Arith> =
-            EGraph::try_with_capacity(2).expect("small egraph reservation must succeed");
+            EGraph::try_with_capacity(2).expect("Fix: unit-test oracle precondition - small egraph reservation must succeed");
         let one = egraph
             .try_add(Arith::Const(1))
-            .expect("const insert must succeed");
+            .expect("Fix: unit-test oracle precondition - const insert must succeed");
         let add = egraph
             .try_add(Arith::Add(one, one))
-            .expect("duplicate child registration must be pre-reserved");
+            .expect("Fix: unit-test oracle precondition - duplicate child registration must be pre-reserved");
         let class = egraph
             .try_class(add)
-            .expect("class lookup must be valid")
-            .expect("class must exist");
+            .expect("Fix: unit-test oracle precondition - class lookup must be valid")
+            .expect("Fix: unit-test oracle precondition - class must exist");
         assert!(matches!(class.nodes[0], Arith::Add(_, _)));
     }
 
@@ -1384,21 +1381,21 @@ mod tests {
     #[test]
     fn fallible_saturate_and_extract_match_infallible_contracts() {
         let mut egraph: EGraph<Arith> =
-            EGraph::try_with_capacity(4).expect("small egraph reservation must succeed");
-        let one = egraph.try_add(Arith::Const(1)).expect("insert one");
-        let two = egraph.try_add(Arith::Const(2)).expect("insert two");
-        let three = egraph.try_add(Arith::Const(3)).expect("insert three");
-        let add_12 = egraph.try_add(Arith::Add(one, two)).expect("insert add");
+            EGraph::try_with_capacity(4).expect("Fix: unit-test oracle precondition - small egraph reservation must succeed");
+        let one = egraph.try_add(Arith::Const(1)).expect("Fix: unit-test oracle precondition - insert one");
+        let two = egraph.try_add(Arith::Const(2)).expect("Fix: unit-test oracle precondition - insert two");
+        let three = egraph.try_add(Arith::Const(3)).expect("Fix: unit-test oracle precondition - insert three");
+        let add_12 = egraph.try_add(Arith::Add(one, two)).expect("Fix: unit-test oracle precondition - insert add");
         egraph
             .try_union(add_12, three)
-            .expect("union equivalent nodes");
-        egraph.try_rebuild().expect("rebuild equivalent nodes");
+            .expect("Fix: unit-test oracle precondition - union equivalent nodes");
+        egraph.try_rebuild().expect("Fix: unit-test oracle precondition - rebuild equivalent nodes");
         let rules: Vec<Box<dyn Rule<Arith>>> = vec![Box::new(UnionEqualConstsRule)];
-        let iters = try_saturate(&mut egraph, &rules, 10).expect("fallible saturation");
+        let iters = try_saturate(&mut egraph, &rules, 10).expect("Fix: unit-test oracle precondition - fallible saturation");
         assert!(iters <= 10);
         let (best, cost) = try_extract_best(&egraph, add_12, arith_cost)
-            .expect("fallible extraction")
-            .expect("best node must exist");
+            .expect("Fix: unit-test oracle precondition - fallible extraction")
+            .expect("Fix: unit-test oracle precondition - best node must exist");
         assert_eq!(best, Arith::Const(3));
         assert_eq!(cost, 1);
     }
@@ -1413,7 +1410,7 @@ mod tests {
         let production = src
             .split("#[cfg(test)]")
             .next()
-            .expect("production section must exist");
+            .expect("Fix: unit-test oracle precondition - production section must exist");
         assert!(
             !production.contains("unwrap_or(u32::MAX)"),
             "class ids must never saturate to a poisoned sentinel"
@@ -1439,3 +1436,4 @@ mod tests {
         );
     }
 }
+

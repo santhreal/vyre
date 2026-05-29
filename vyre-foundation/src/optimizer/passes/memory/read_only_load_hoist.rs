@@ -448,6 +448,7 @@ mod tests {
             )],
         }];
         let prog = program(vec![ro_buf("ro"), rw_buf("rw")], entry);
+
         let result = ReadOnlyLoadHoistPass::transform(prog);
         assert!(!result.changed, "differing indices must not hoist");
     }
@@ -521,3 +522,4 @@ mod tests {
         assert!(matches!(&siblings[1], Node::Let { name, .. } if name.as_str() == "b"));
     }
 }
+

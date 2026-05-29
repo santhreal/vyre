@@ -448,6 +448,7 @@ mod tests {
         // the buffer post-barrier). Conservative: keep the first store.
         let entry = vec![
             Node::store("buf", Expr::u32(0), Expr::u32(1)),
+
             Node::barrier(),
             Node::store("buf", Expr::u32(0), Expr::u32(2)),
         ];
@@ -556,3 +557,4 @@ mod tests {
         );
     }
 }
+

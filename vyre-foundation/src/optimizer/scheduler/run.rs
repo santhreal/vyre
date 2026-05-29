@@ -448,6 +448,7 @@ impl PassScheduler {
                             pre_shape_predicate_violations_for_gate.len();
                     }
                     let pre_snapshot_for_gate = Clone::clone(&program);
+
                     let result = pass.try_batch_apply(program);
                     metric.runtime_ns = u128::from(perf_scope.finish().elapsed_ns);
                     match result {
@@ -619,3 +620,4 @@ impl PassScheduler {
             .clone()
     }
 }
+

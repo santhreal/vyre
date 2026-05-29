@@ -78,7 +78,9 @@ fn program_with_duplicate_buffer_names_is_rejected() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.is_empty(),
+        errors
+            .iter()
+            .any(|e| e.message().contains("duplicate buffer name")),
         "program with duplicate buffer names must be rejected, got: {:?}",
         errors
     );
@@ -96,7 +98,9 @@ fn program_with_duplicate_bindings_is_rejected() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.is_empty(),
+        errors
+            .iter()
+            .any(|e| e.message().contains("duplicate binding slot")),
         "program with duplicate binding slots must be rejected, got: {:?}",
         errors
     );
@@ -114,7 +118,9 @@ fn program_with_unbound_store_is_rejected() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.is_empty(),
+        errors
+            .iter()
+            .any(|e| e.message().contains("store to unknown buffer")),
         "program storing to undeclared buffer must be rejected, got: {:?}",
         errors
     );
@@ -132,7 +138,9 @@ fn program_with_unbound_load_is_rejected() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.is_empty(),
+        errors
+            .iter()
+            .any(|e| e.message().contains("load from unknown buffer")),
         "program loading from undeclared buffer must be rejected, got: {:?}",
         errors
     );

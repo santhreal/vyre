@@ -512,6 +512,7 @@ fn rewrite_expr(expr: Expr, changed: &mut bool) -> Expr {
     }
 }
 
+
 fn pop_owned_expr_result(results: &mut Vec<Expr>, context: &'static str) -> Expr {
     results.pop().unwrap_or_else(|| {
         unreachable!(
@@ -1015,7 +1016,7 @@ mod tests {
             );
             let rewritten_program = Box::leak(Box::new(rewritten_program));
             let rewritten = find_let_value_ref(rewritten_program, "x")
-                .expect("generated deep atomic program must still contain let x");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated deep atomic program must still contain let x");
             assert!(
                 !expr_contains_atomic(rewritten),
                 "Fix: atomic_minimize left an atomic inside generated depth {depth}: {rewritten:?}"
@@ -1097,3 +1098,4 @@ mod tests {
         false
     }
 }
+

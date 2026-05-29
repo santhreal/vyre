@@ -40,7 +40,7 @@ use crate::cpu_op;
 
 /// Apply a column mapping to a row vector, writing values into `target_size` slots.
 ///
-/// AUDIT_2026-05-23: Deprecated — CPU reference. Use GPU `functor_apply` primitive.
+/// AUDIT_2026-05-23: Deprecated - CPU reference. Use GPU `functor_apply` primitive.
 #[deprecated(note = "CPU reference. Use GPU functor_apply primitive.")]
 #[must_use]
 pub fn functor_apply_cpu(source_row: &[u32], mapping: &[u32], target_size: u32) -> Vec<u32> {
@@ -89,7 +89,7 @@ pub fn monoidal_compose_cpu(
 
 /// Advance a homotopy state by one Euler predictor step.
 ///
-/// AUDIT_2026-05-23: Deprecated — CPU reference. Use GPU homotopy primitive.
+/// AUDIT_2026-05-23: Deprecated - CPU reference. Use GPU homotopy primitive.
 #[deprecated(note = "CPU reference. Use GPU homotopy primitive.")]
 #[must_use]
 pub fn homotopy_euler_predictor_cpu(x_curr: &[f64], v: &[f64], dt: f64) -> Vec<f64> {
@@ -102,7 +102,7 @@ pub fn homotopy_euler_predictor_cpu(x_curr: &[f64], v: &[f64], dt: f64) -> Vec<f
 
 /// Evaluate the linear homotopy `(1 - t) * g_x + t * f_x`.
 ///
-/// AUDIT_2026-05-23: Deprecated — CPU reference. Use GPU homotopy primitive.
+/// AUDIT_2026-05-23: Deprecated - CPU reference. Use GPU homotopy primitive.
 #[deprecated(note = "CPU reference. Use GPU homotopy primitive.")]
 #[must_use]
 pub fn linear_homotopy_cpu(g_x: &[f64], f_x: &[f64], t: f64) -> Vec<f64> {
@@ -119,7 +119,7 @@ pub fn linear_homotopy_cpu(g_x: &[f64], f_x: &[f64], t: f64) -> Vec<f64> {
 /// scans their adjacency row. For sparse frontiers this is O(|F|×n)
 /// instead of the previous O(n²) full scan.
 ///
-/// AUDIT_2026-05-23: Deprecated — CPU reference. Use GPU matroid BFS primitive.
+/// AUDIT_2026-05-23: Deprecated - CPU reference. Use GPU matroid BFS primitive.
 #[deprecated(note = "CPU reference. Use GPU matroid BFS primitive.")]
 #[must_use]
 pub fn matroid_exchange_bfs_step_cpu(
@@ -152,7 +152,7 @@ pub fn matroid_exchange_bfs_step_cpu(
 /// a fused multiply-add per element. For n>64 this is ~1.5× faster
 /// than recomputing `a[i*n+i]` with a branch per row.
 ///
-/// AUDIT_2026-05-23: Deprecated — CPU reference. Use GPU Jacobi smooth primitive.
+/// AUDIT_2026-05-23: Deprecated - CPU reference. Use GPU Jacobi smooth primitive.
 #[deprecated(note = "CPU reference. Use GPU Jacobi smooth primitive.")]
 #[must_use]
 pub fn jacobi_smooth_step_cpu(

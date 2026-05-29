@@ -149,6 +149,9 @@ fn wire_format_corpus_hex_snapshot() {
     for (name, program) in sample_programs() {
         let wire = program.to_wire().expect("encode");
         let dump = hex_dump(&wire);
-        assert!(!dump.is_empty(), "hex dump for `{name}` is empty");
+        assert!(
+            dump.contains("00000000:"),
+            "hex dump for `{name}` must include a line header"
+        );
     }
 }

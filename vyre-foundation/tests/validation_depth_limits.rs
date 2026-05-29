@@ -46,8 +46,11 @@ fn deeply_nested_loop_exceeds_nesting_limit() {
 
     let errors = validate(&program);
     assert!(
-        !errors.is_empty(),
-        "deeply nested Loop (100 levels) must exceed nesting limit, got no errors"
+        errors
+            .iter()
+            .any(|e| e.message().contains("depth") || e.message().contains("limit")),
+        "deeply nested Loop (100 levels) must exceed nesting limit, got: {:?}",
+        errors
     );
 }
 

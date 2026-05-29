@@ -448,6 +448,7 @@ mod tests {
         let result = LoopUnroll::transform(program);
         assert!(!result.changed);
         let body = crate::test_util::region_body(&result.program);
+
         assert!(matches!(&body[0], Node::Loop { .. }));
     }
 
@@ -501,3 +502,4 @@ mod tests {
         ));
     }
 }
+

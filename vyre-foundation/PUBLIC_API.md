@@ -11100,6 +11100,7 @@ impl<T> typenum::type_operators::Same for vyre_foundation::optimizer::eqsat_gpu:
 pub type vyre_foundation::optimizer::eqsat_gpu::SnapshotRow::Output = T
 pub fn vyre_foundation::optimizer::eqsat_gpu::apply_equivalences<F>(equivalences: &[vyre_foundation::optimizer::eqsat_gpu::Equivalence], merger: F) -> usize where F: core::ops::function::FnMut(u32, u32) -> bool
 pub fn vyre_foundation::optimizer::eqsat_gpu::apply_equivalences_to_egraph<L>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, equivalences: &[vyre_foundation::optimizer::eqsat_gpu::Equivalence]) -> vyre_foundation::optimizer::eqsat_gpu::ApplyEquivalencesReport where L: vyre_foundation::optimizer::eqsat::ENodeLang
+pub fn vyre_foundation::optimizer::eqsat_gpu::gpu_egraph_row_signature(language_op_id: u32, children_len: u32, children: &[u32]) -> u32
 pub mod vyre_foundation::optimizer::eqsat_toml
 pub struct vyre_foundation::optimizer::eqsat_toml::EquivalenceRule
 pub vyre_foundation::optimizer::eqsat_toml::EquivalenceRule::left: alloc::string::String

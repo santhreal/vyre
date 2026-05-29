@@ -242,8 +242,8 @@ mod tests {
             // All errors should be well-formed.
             for e in errors {
                 assert!(
-                    !e.to_string().is_empty(),
-                    "extern registry validation errors must be displayable"
+                    e.to_string().contains("Fix:") || e.to_string().contains("extern"),
+                    "extern registry validation errors must be displayable: {e}"
                 );
             }
         }
