@@ -57,12 +57,11 @@ fn ir_exec(src: &str, inputs: &[i32]) -> i32 {
 // Independent AST tree-walk interpreter (oracle #1)
 // ---------------------------------------------------------------------------
 
-fn entry_def_to_id(module: &Module, resolution: &Resolution, entry: usize) -> HashMap<u32, BindingId> {
+fn global_def_to_id(resolution: &Resolution) -> HashMap<u32, BindingId> {
     resolution
         .bindings
         .iter()
         .enumerate()
-        .filter(|(_, b)| b.function == entry)
         .map(|(id, b)| (b.def_offset, id))
         .collect()
 }
@@ -72,30 +71,42 @@ enum Flow {
     Fall,
 }
 
-struct Interp<'a> {
+struct Ev<'a> {
+    module: &'a Module,
     resolution: &'a Resolution,
     def_to_id: &'a HashMap<u32, BindingId>,
-    env: HashMap<BindingId, i32>,
 }
 
-impl Interp<'_> {
-    fn exec(&mut self, stmts: &[Stmt]) -> Flow {
+impl Ev<'_> {
+    fn run_fn(&self, idx: usize, args: &[i32]) -> i32 {
+        let func = &self.module.functions[idx];
+        let mut env: HashMap<BindingId, i32> = HashMap::new();
+        for (i, (offset, _)) in func.params.iter().enumerate() {
+            env.insert(self.def_to_id[offset], args[i]);
+        }
+        match self.exec(&func.body, &mut env) {
+            Flow::Return(v) => v,
+            Flow::Fall => 0,
+        }
+    }
+
+    fn exec(&self, stmts: &[Stmt], env: &mut HashMap<BindingId, i32>) -> Flow {
         for stmt in stmts {
             match stmt {
                 Stmt::Let { name, init, .. } => {
-                    let v = self.eval_int(init);
-                    self.env.insert(self.def_to_id[name], v);
+                    let v = self.eval_int(init, env);
+                    env.insert(self.def_to_id[name], v);
                 }
-                Stmt::Return(Some(e)) => return Flow::Return(self.eval_int(e)),
+                Stmt::Return(Some(e)) => return Flow::Return(self.eval_int(e, env)),
                 Stmt::Return(None) => return Flow::Return(0),
                 Stmt::Expr(Expr::If { cond, then_block, else_block }) => {
-                    let taken = if self.eval_bool(cond) {
+                    let taken = if self.eval_bool(cond, env) {
                         Some(then_block.as_ref())
                     } else {
                         else_block.as_deref()
                     };
                     if let Some(Expr::Block(body)) = taken {
-                        if let Flow::Return(v) = self.exec(body) {
+                        if let Flow::Return(v) = self.exec(body, env) {
                             return Flow::Return(v);
                         }
                     }
@@ -106,12 +117,12 @@ impl Interp<'_> {
         Flow::Fall
     }
 
-    fn eval_int(&self, e: &Expr) -> i32 {
+    fn eval_int(&self, e: &Expr, env: &HashMap<BindingId, i32>) -> i32 {
         match e {
             Expr::LiteralInt(_, v) => *v as i32,
-            Expr::Var(off) => self.env[&self.resolution.uses[off]],
+            Expr::Var(off) => env[&self.resolution.uses[off]],
             Expr::Binary { op, lhs, rhs } => {
-                let (l, r) = (self.eval_int(lhs), self.eval_int(rhs));
+                let (l, r) = (self.eval_int(lhs, env), self.eval_int(rhs, env));
                 match *op {
                     PLUS => l.wrapping_add(r),
                     MINUS => l.wrapping_sub(r),
@@ -119,15 +130,20 @@ impl Interp<'_> {
                     other => panic!("non-arithmetic op {other} in integer position"),
                 }
             }
+            Expr::Call { name, args } => {
+                let idx = self.resolution.calls[name];
+                let a: Vec<i32> = args.iter().map(|x| self.eval_int(x, env)).collect();
+                self.run_fn(idx, &a)
+            }
             other => panic!("unexpected integer expr {other:?}"),
         }
     }
 
-    fn eval_bool(&self, e: &Expr) -> bool {
+    fn eval_bool(&self, e: &Expr, env: &HashMap<BindingId, i32>) -> bool {
         match e {
             Expr::LiteralBool(_, b) => *b,
             Expr::Binary { op, lhs, rhs } => {
-                let (l, r) = (self.eval_int(lhs), self.eval_int(rhs));
+                let (l, r) = (self.eval_int(lhs, env), self.eval_int(rhs, env));
                 match *op {
                     LT => l < r,
                     EQ => l == r,
@@ -141,18 +157,9 @@ impl Interp<'_> {
 
 fn ast_interp(src: &str, inputs: &[i32]) -> i32 {
     let (module, resolution) = frontend(src);
-    let entry = module.functions.len() - 1;
-    let def_to_id = entry_def_to_id(&module, &resolution, entry);
-    let func = &module.functions[entry];
-    let mut env = HashMap::new();
-    for (i, (offset, _)) in func.params.iter().enumerate() {
-        env.insert(def_to_id[offset], inputs[i]);
-    }
-    let mut interp = Interp { resolution: &resolution, def_to_id: &def_to_id, env };
-    match interp.exec(&func.body) {
-        Flow::Return(v) => v,
-        Flow::Fall => 0,
-    }
+    let def_to_id = global_def_to_id(&resolution);
+    let ev = Ev { module: &module, resolution: &resolution, def_to_id: &def_to_id };
+    ev.run_fn(module.functions.len() - 1, inputs)
 }
 
 // ---------------------------------------------------------------------------
@@ -170,8 +177,12 @@ impl Gen {
         self.state = self.state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
         (self.state >> 33) as u32
     }
-    /// Small arithmetic expression over `nvars` in-scope `vN` variables.
-    fn expr(&mut self, nvars: usize, depth: u32) -> String {
+    /// Small arithmetic expression over `nvars` in-scope `vN` variables. When
+    /// `calls`, may emit a call `h(e, e)` to the 2-arg leaf helper.
+    fn expr(&mut self, nvars: usize, depth: u32, calls: bool) -> String {
+        if calls && depth > 0 && self.next() % 4 == 0 {
+            return format!("h({}, {})", self.expr(nvars, depth - 1, calls), self.expr(nvars, depth - 1, calls));
+        }
         if depth == 0 || self.next() % 3 == 0 {
             if self.next() % 2 == 0 {
                 format!("v{}", (self.next() as usize) % nvars)
@@ -180,41 +191,49 @@ impl Gen {
             }
         } else {
             let op = ["+", "-", "*"][(self.next() % 3) as usize];
-            format!("({} {} {})", self.expr(nvars, depth - 1), op, self.expr(nvars, depth - 1))
+            format!("({} {} {})", self.expr(nvars, depth - 1, calls), op, self.expr(nvars, depth - 1, calls))
         }
     }
     fn cond(&mut self, nvars: usize) -> String {
         let op = if self.next() % 2 == 0 { "<" } else { "==" };
-        format!("{} {} {}", self.expr(nvars, 1), op, self.expr(nvars, 1))
+        format!("{} {} {}", self.expr(nvars, 1, false), op, self.expr(nvars, 1, false))
     }
 }
 
-/// Generate `(source, param_count)`. Params `v0..vP` (so locals can extend the
-/// same `vN` index space), some `let` bindings, then a straight-line or
-/// branching return. Magnitudes stay small (literals 0..=5, depth <= 2), so no
-/// i32 overflow occurs and the verdict is unambiguous.
+/// Generate `(source, param_count)`. Half the programs include a leaf helper
+/// `h(a, b)` whose calls the entry inlines. Params `v0..vP`, some `let`
+/// bindings, then a straight-line or branching return. Magnitudes stay small so
+/// no i32 overflow occurs and the verdict is unambiguous.
 fn gen_program(seed: u64) -> (String, usize) {
     let mut g = Gen::new(seed);
+    let with_helper = g.next() % 2 == 0;
+    let mut module = String::new();
+    if with_helper {
+        module.push_str(&format!(
+            "fn h(v0: i32, v1: i32) -> i32 {{ return {}; }}\n",
+            g.expr(2, 2, false)
+        ));
+    }
     let nparams = 1 + (g.next() % 3) as usize; // 1..=3
     let mut nvars = nparams;
     let params: Vec<String> = (0..nparams).map(|i| format!("v{i}: i32")).collect();
-    let mut s = format!("fn f({}) -> i32 {{", params.join(", "));
+    module.push_str(&format!("fn f({}) -> i32 {{", params.join(", ")));
     let nlets = (g.next() % 3) as usize;
     for _ in 0..nlets {
-        s.push_str(&format!(" let v{}: i32 = {};", nvars, g.expr(nvars, 2)));
+        module.push_str(&format!(" let v{}: i32 = {};", nvars, g.expr(nvars, 2, with_helper)));
         nvars += 1;
     }
     if g.next() % 2 == 0 {
-        s.push_str(&format!(" return {}; }}", g.expr(nvars, 2)));
+        module.push_str(&format!(" return {}; }}", g.expr(nvars, 2, with_helper)));
     } else {
-        s.push_str(&format!(
+        module.push_str(&format!(
             " if {} {{ return {}; }} else {{ return {}; }} }}",
             g.cond(nvars),
-            g.expr(nvars, 2),
-            g.expr(nvars, 2)
+            g.expr(nvars, 2, with_helper),
+            g.expr(nvars, 2, with_helper)
         ));
     }
-    (s, nparams)
+    (module, nparams)
 }
 
 fn gen_inputs(seed: u64, n: usize) -> Vec<i32> {
@@ -251,6 +270,8 @@ fn curated_programs_execute_correctly() {
         ("fn f(a: i32, b: i32) -> i32 { if a < b { return b; } else { return a; } }", &[3, 9], 9),
         ("fn f(a: i32, b: i32) -> i32 { if a < b { return b; } else { return a; } }", &[9, 3], 9),
         ("fn f(a: i32) -> i32 { if a == 0 { return 100; } else { return a; } }", &[0], 100),
+        ("fn g(a: i32, b: i32) -> i32 { return a + b; } fn f(a: i32) -> i32 { return g(a, 10); }", &[5], 15),
+        ("fn g(a: i32) -> i32 { let d: i32 = a * a; return d - 1; } fn f(a: i32, b: i32) -> i32 { return g(a) + b; }", &[4, 2], 17),
     ];
     for (src, inputs, expected) in cases {
         assert_eq!(ir_exec(src, inputs), *expected, "{src} with {inputs:?}");
