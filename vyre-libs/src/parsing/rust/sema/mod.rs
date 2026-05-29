@@ -75,6 +75,12 @@ pub enum RustSemaError {
         /// Source byte offset of the borrowed place.
         offset: u32,
     },
+    /// A function returned a reference to a call-local value (rustc E0597).
+    #[error("cannot return a reference to a local value; it does not live long enough (byte {offset})")]
+    ReturnsReferenceToLocal {
+        /// Source byte offset of the offending place.
+        offset: u32,
+    },
     /// An expression's type did not match the expected type (rustc E0308).
     #[error("mismatched types in {context}: expected `{expected}`, found `{found}`")]
     TypeMismatch {
@@ -485,18 +491,22 @@ fn expr_diverges(expr: &Expr) -> bool {
 
 /// Borrow-check a resolved module.
 ///
-/// The mutability rule (rustc E0596) is implemented via [`check_mutability`].
-/// The conflicting-borrow rules (E0499/E0502) require the weir dataflow analysis
-/// and are not yet wired, so `borrow_check` surfaces a real mutability error
-/// when one exists and otherwise reports [`RustSemaError::BorrowUnavailable`]
-/// rather than claiming a complete borrow check it has not performed.
+/// Implemented rules: mutability (rustc E0596) via [`check_mutability`], and
+/// dangling-reference / escape (rustc E0597) via [`check_escape`]. The
+/// conflicting-borrow rules (E0499/E0502) require liveness from the weir
+/// dataflow analysis and are not yet wired, so `borrow_check` surfaces a real
+/// mutability or escape error when one exists and otherwise reports
+/// [`RustSemaError::BorrowUnavailable`] rather than claiming a complete borrow
+/// check it has not performed.
 ///
 /// # Errors
-/// Returns [`RustSemaError::CannotBorrowImmutableAsMutable`] for an E0596
-/// violation, or [`RustSemaError::BorrowUnavailable`] while the
-/// conflicting-borrow rules remain unimplemented.
+/// Returns [`RustSemaError::CannotBorrowImmutableAsMutable`] (E0596) or
+/// [`RustSemaError::ReturnsReferenceToLocal`] (E0597) for a violation, or
+/// [`RustSemaError::BorrowUnavailable`] while the conflicting-borrow rules
+/// remain unimplemented.
 pub fn borrow_check(module: &Module, resolution: &Resolution) -> Result<(), RustSemaError> {
     check_mutability(module, resolution)?;
+    check_escape(module, resolution)?;
     Err(RustSemaError::BorrowUnavailable)
 }
 
@@ -589,5 +599,152 @@ fn check_mutable_place(place: &Expr, resolution: &Resolution) -> Result<(), Rust
             Ok(())
         }
         _ => Ok(()),
+    }
+}
+
+/// Check that no function returns a reference to a call-local value (rustc E0597).
+///
+/// A reference escapes only if it borrows a binding's storage (`&x`, for any
+/// local binding) or transitively points at such a borrow. A reference derived
+/// from a `&T` parameter's pointee (`return r`, `&*r`) is allowed. The check
+/// never rejects a reference whose provenance it cannot prove local, so it never
+/// diverges from rustc on acceptance.
+///
+/// # Errors
+/// Returns [`RustSemaError::ReturnsReferenceToLocal`] when a returned reference
+/// provably borrows a local value.
+pub fn check_escape(module: &Module, resolution: &Resolution) -> Result<(), RustSemaError> {
+    let def_to_id: HashMap<u32, BindingId> = resolution
+        .bindings
+        .iter()
+        .enumerate()
+        .map(|(id, b)| (b.def_offset, id))
+        .collect();
+
+    for func in &module.functions {
+        let returns_ref = matches!(func.ret, Type::Ref { .. });
+        // A reference's borrows-local provenance: true if the reference value
+        // ultimately points at a call-local binding's storage. Parameters point
+        // outside the call, so they start false.
+        let mut borrows_local: HashMap<BindingId, bool> = HashMap::new();
+        for (offset, _ty) in &func.params {
+            if let Some(&id) = def_to_id.get(offset) {
+                borrows_local.insert(id, false);
+            }
+        }
+        walk_escape(&func.body, returns_ref, &def_to_id, resolution, &mut borrows_local)?;
+    }
+    Ok(())
+}
+
+fn walk_escape(
+    stmts: &[Stmt],
+    returns_ref: bool,
+    def_to_id: &HashMap<u32, BindingId>,
+    resolution: &Resolution,
+    borrows_local: &mut HashMap<BindingId, bool>,
+) -> Result<(), RustSemaError> {
+    for stmt in stmts {
+        match stmt {
+            Stmt::Let { name, ty, init, .. } => {
+                if let Some(&id) = def_to_id.get(name) {
+                    let escapes = matches!(ty, Type::Ref { .. })
+                        && escapes_offset(init, resolution, borrows_local).is_some();
+                    borrows_local.insert(id, escapes);
+                }
+                descend_escape(init, returns_ref, def_to_id, resolution, borrows_local)?;
+            }
+            Stmt::Expr(expr) => {
+                descend_escape(expr, returns_ref, def_to_id, resolution, borrows_local)?;
+            }
+            Stmt::Return(Some(expr)) => {
+                if returns_ref {
+                    if let Some(offset) = escapes_offset(expr, resolution, borrows_local) {
+                        return Err(RustSemaError::ReturnsReferenceToLocal { offset });
+                    }
+                }
+                descend_escape(expr, returns_ref, def_to_id, resolution, borrows_local)?;
+            }
+            Stmt::Return(None) => {}
+        }
+    }
+    Ok(())
+}
+
+fn descend_escape(
+    expr: &Expr,
+    returns_ref: bool,
+    def_to_id: &HashMap<u32, BindingId>,
+    resolution: &Resolution,
+    borrows_local: &mut HashMap<BindingId, bool>,
+) -> Result<(), RustSemaError> {
+    match expr {
+        Expr::Block(stmts) => {
+            walk_escape(stmts, returns_ref, def_to_id, resolution, borrows_local)
+        }
+        Expr::If { cond, then_block, else_block } => {
+            descend_escape(cond, returns_ref, def_to_id, resolution, borrows_local)?;
+            descend_escape(then_block, returns_ref, def_to_id, resolution, borrows_local)?;
+            if let Some(else_block) = else_block {
+                descend_escape(else_block, returns_ref, def_to_id, resolution, borrows_local)?;
+            }
+            Ok(())
+        }
+        Expr::Binary { lhs, rhs, .. } => {
+            descend_escape(lhs, returns_ref, def_to_id, resolution, borrows_local)?;
+            descend_escape(rhs, returns_ref, def_to_id, resolution, borrows_local)
+        }
+        Expr::Borrow { expr, .. } => {
+            descend_escape(expr, returns_ref, def_to_id, resolution, borrows_local)
+        }
+        Expr::Deref(inner) => {
+            descend_escape(inner, returns_ref, def_to_id, resolution, borrows_local)
+        }
+        Expr::Call { args, .. } => {
+            for arg in args {
+                descend_escape(arg, returns_ref, def_to_id, resolution, borrows_local)?;
+            }
+            Ok(())
+        }
+        Expr::Var(..) | Expr::LiteralInt(..) | Expr::LiteralBool(..) => Ok(()),
+    }
+}
+
+/// If the reference value `expr` provably borrows a call-local binding, return
+/// the source offset of the offending place; otherwise `None`.
+fn escapes_offset(
+    expr: &Expr,
+    resolution: &Resolution,
+    borrows_local: &HashMap<BindingId, bool>,
+) -> Option<u32> {
+    match expr {
+        Expr::Borrow { expr, .. } => match expr.as_ref() {
+            // `&x` borrows the storage of a call-local binding; it escapes.
+            Expr::Var(offset) => Some(*offset),
+            // `&*r` points at r's pointee; it escapes iff that pointee is local.
+            Expr::Deref(inner) => {
+                if let Expr::Var(offset) = inner.as_ref() {
+                    let id = resolution.uses.get(offset)?;
+                    if *borrows_local.get(id).unwrap_or(&false) {
+                        Some(*offset)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        },
+        // Returning a reference binding escapes iff it holds a local borrow.
+        Expr::Var(offset) => {
+            let id = resolution.uses.get(offset)?;
+            if *borrows_local.get(id).unwrap_or(&false) {
+                Some(*offset)
+            } else {
+                None
+            }
+        }
+        _ => None,
     }
 }
