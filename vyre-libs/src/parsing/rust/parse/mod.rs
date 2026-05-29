@@ -227,7 +227,16 @@ impl<'a> Parser<'a> {
             KW_RETURN => self.parse_return(),
             _ => {
                 let expr = self.parse_expr()?;
-                self.expect(SEMI)?;
+                // Block-like expression statements (`if`/`else`, `{ ... }`) are
+                // valid without a trailing semicolon, matching Rust; any other
+                // expression statement still requires one.
+                if matches!(expr, Expr::If { .. } | Expr::Block(_)) {
+                    if self.peek().kind == SEMI {
+                        self.advance();
+                    }
+                } else {
+                    self.expect(SEMI)?;
+                }
                 Ok(Stmt::Expr(expr))
             }
         }
