@@ -448,6 +448,7 @@ mod tests {
             [64, 1, 1],
             vec![
                 Node::Block(vec![Node::store("a", Expr::u32(0), Expr::u32(1))]),
+
                 Node::barrier(),
                 Node::Block(vec![Node::let_bind("x", Expr::load("a", Expr::u32(0)))]),
             ],
@@ -502,3 +503,4 @@ mod tests {
         }
     }
 }
+

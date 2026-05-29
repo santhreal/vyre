@@ -42,11 +42,12 @@ fn completed_zero_copy_validation_accepts_each_native_path() {
 fn completed_zero_copy_validation_rejects_cpu_bounce_bytes() {
     let mut telemetry = completed_registered();
     telemetry.cpu_bounce_bytes = 1;
+    let err = telemetry
+        .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
+        .expect_err("CPU bounce bytes must fail zero-copy validation");
     assert!(
-        telemetry
-            .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
-            .is_err(),
-        "Fix: zero-copy telemetry must reject any CPU bounce byte."
+        err.to_string().contains("bounce"),
+        "zero-copy rejection must mention bounce buffer: {err}"
     );
 }
 
@@ -54,20 +55,22 @@ fn completed_zero_copy_validation_rejects_cpu_bounce_bytes() {
 fn completed_zero_copy_validation_rejects_failed_or_inflight_reads() {
     let mut failed = completed_registered();
     failed.failed_completions = 1;
+    let failed_err = failed
+        .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
+        .expect_err("failed completions must fail validation");
     assert!(
-        failed
-            .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
-            .is_err(),
-        "Fix: completed telemetry must reject failed completions."
+        failed_err.to_string().contains("failed"),
+        "failed-completion error: {failed_err}"
     );
 
     let mut inflight = completed_registered();
     inflight.completed_reads = 3;
+    let inflight_err = inflight
+        .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
+        .expect_err("inflight reads must fail validation");
     assert!(
-        inflight
-            .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
-            .is_err(),
-        "Fix: completed telemetry must reject inflight reads."
+        inflight_err.to_string().contains("inflight"),
+        "inflight-read error: {inflight_err}"
     );
 }
 
@@ -75,20 +78,22 @@ fn completed_zero_copy_validation_rejects_failed_or_inflight_reads() {
 fn completed_zero_copy_validation_rejects_byte_and_read_mismatch() {
     let mut bytes = completed_registered();
     bytes.completed_bytes = 2048;
+    let bytes_err = bytes
+        .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
+        .expect_err("byte mismatch must fail validation");
     assert!(
-        bytes
-            .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
-            .is_err(),
-        "Fix: completed telemetry must reject partial byte accounting."
+        bytes_err.to_string().contains("byte"),
+        "byte-accounting error: {bytes_err}"
     );
 
     let mut reads = completed_registered();
     reads.completed_reads = 5;
+    let reads_err = reads
+        .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
+        .expect_err("read mismatch must fail validation");
     assert!(
-        reads
-            .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
-            .is_err(),
-        "Fix: completed telemetry must reject impossible read accounting."
+        reads_err.to_string().contains("read"),
+        "read-accounting error: {reads_err}"
     );
 }
 
@@ -96,19 +101,21 @@ fn completed_zero_copy_validation_rejects_byte_and_read_mismatch() {
 fn completed_zero_copy_validation_rejects_path_mixing() {
     let mut registered = completed_registered();
     registered.gpudirect_nvme_submissions = 1;
+    let reg_err = registered
+        .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
+        .expect_err("mixed GPUDirect submissions on registered path");
     assert!(
-        registered
-            .validate_completed_zero_copy(NativeReadPath::RegisteredMappedRead)
-            .is_err(),
-        "Fix: registered mapped telemetry must reject mixed GPUDirect submissions."
+        reg_err.to_string().contains("GPUDirect") || reg_err.to_string().contains("registered"),
+        "path-mixing error (registered): {reg_err}"
     );
 
     let mut gpudirect = completed_gpudirect();
     gpudirect.registered_mapped_read_submissions = 1;
+    let gd_err = gpudirect
+        .validate_completed_zero_copy(NativeReadPath::GpuDirectNvmePassthrough)
+        .expect_err("mixed registered submissions on GPUDirect path");
     assert!(
-        gpudirect
-            .validate_completed_zero_copy(NativeReadPath::GpuDirectNvmePassthrough)
-            .is_err(),
-        "Fix: GPUDirect telemetry must reject mixed registered mapped submissions."
+        gd_err.to_string().contains("registered") || gd_err.to_string().contains("GPUDirect"),
+        "path-mixing error (gpudirect): {gd_err}"
     );
 }

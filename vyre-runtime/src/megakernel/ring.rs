@@ -288,23 +288,49 @@ mod tests {
     fn host_ring_rejects_out_of_range_slot() {
         let mut ring = HostRing::new(2).unwrap();
         let encoded = protocol::encode_load_miss(0, false);
-        assert!(RingProducer::publish(&mut ring, 2, &encoded).is_err());
-        assert!(RingProducer::publish(&mut ring, u32::MAX, &encoded).is_err());
+        let err_hi = RingProducer::publish(&mut ring, 2, &encoded).expect_err("slot 2 OOB");
+        assert!(
+            err_hi.to_string().contains("slot") || err_hi.to_string().contains("range"),
+            "OOB publish error: {err_hi}"
+        );
+        let err_max =
+            RingProducer::publish(&mut ring, u32::MAX, &encoded).expect_err("slot MAX OOB");
+        assert!(
+            err_max.to_string().contains("slot") || err_max.to_string().contains("range"),
+            "MAX slot publish error: {err_max}"
+        );
 
         let mut buf = [0u8; SLOT_BYTES];
-        assert!(RingConsumer::read_slot(&ring, 2, &mut buf).is_err());
+        let read_err = RingConsumer::read_slot(&ring, 2, &mut buf).expect_err("read OOB");
+        assert!(
+            read_err.to_string().contains("slot") || read_err.to_string().contains("range"),
+            "OOB read error: {read_err}"
+        );
     }
 
     #[test]
     fn host_ring_rejects_mis_sized_encoded() {
         let mut ring = HostRing::new(2).unwrap();
         let short = [0u8; SLOT_BYTES - 1];
-        assert!(RingProducer::publish(&mut ring, 0, &short).is_err());
+        let short_pub = RingProducer::publish(&mut ring, 0, &short).expect_err("short publish");
+        assert!(
+            short_pub.to_string().contains("SLOT") || short_pub.to_string().contains("byte"),
+            "short publish error: {short_pub}"
+        );
         let long = [0u8; SLOT_BYTES + 1];
-        assert!(RingProducer::publish(&mut ring, 0, &long).is_err());
+        let long_pub = RingProducer::publish(&mut ring, 0, &long).expect_err("long publish");
+        assert!(
+            long_pub.to_string().contains("SLOT") || long_pub.to_string().contains("byte"),
+            "long publish error: {long_pub}"
+        );
 
         let mut short_out = [0u8; SLOT_BYTES - 1];
-        assert!(RingConsumer::read_slot(&ring, 0, &mut short_out).is_err());
+        let short_read =
+            RingConsumer::read_slot(&ring, 0, &mut short_out).expect_err("short read buffer");
+        assert!(
+            short_read.to_string().contains("SLOT") || short_read.to_string().contains("byte"),
+            "short read error: {short_read}"
+        );
     }
 
     /// Default done_count walks the ring; if we stamp DONE into a slot's

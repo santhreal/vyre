@@ -242,6 +242,8 @@ fn observable_base_is_at_word_160() {
 
 #[test]
 fn observable_base_matches_control_min_words() {
+    assert_eq!(control::OBSERVABLE_BASE, 160);
+    assert_eq!(protocol::CONTROL_MIN_WORDS, 160);
     assert_eq!(
         control::OBSERVABLE_BASE,
         protocol::CONTROL_MIN_WORDS,

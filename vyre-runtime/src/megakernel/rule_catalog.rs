@@ -462,6 +462,7 @@ fn extend_missing_rejections(
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
@@ -560,3 +561,4 @@ mod tests {
         assert_eq!(packed.accept[0], 0);
     }
 }
+

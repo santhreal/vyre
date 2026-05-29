@@ -35,17 +35,20 @@ fn count_min_sketch_estimates_inserted_keys_without_under_counting() {
 
 #[test]
 fn count_min_sketch_rejects_invalid_dimensions() {
+    let depth_err = CountMinSketch::new(0, 64).expect_err("depth zero is invalid");
     assert!(
-        CountMinSketch::new(0, 64).is_err(),
-        "depth zero would make every estimate meaningless"
+        depth_err.to_string().contains("depth") || depth_err.to_string().contains("Fix:"),
+        "depth-zero error: {depth_err}"
     );
+    let width_err = CountMinSketch::new(4, 0).expect_err("width zero is invalid");
     assert!(
-        CountMinSketch::new(4, 0).is_err(),
-        "width zero would make every bucket lookup invalid"
+        width_err.to_string().contains("width") || width_err.to_string().contains("Fix:"),
+        "width-zero error: {width_err}"
     );
+    let overflow_err = CountMinSketch::new(usize::MAX, 2).expect_err("overflow is invalid");
     assert!(
-        CountMinSketch::new(usize::MAX, 2).is_err(),
-        "dimension multiplication overflow must fail before allocation"
+        overflow_err.to_string().contains("overflow"),
+        "dimension-overflow error: {overflow_err}"
     );
 }
 

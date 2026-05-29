@@ -483,6 +483,7 @@ pub fn select_fused_subset_compact_checked_into(
 /// Compute a cost-ordered maximal fusion subset with the same output contract
 /// as [`select_fused_subset`].
 #[must_use]
+
 pub fn select_optimal_fused_subset(costs: &[f64], n: u32, exchange_adj: &[u32]) -> Vec<u32> {
     select_fused_subset(costs, n, exchange_adj)
 }
@@ -833,3 +834,4 @@ fn select_ordered_maximal(
 
 #[cfg(test)]
 mod tests;
+

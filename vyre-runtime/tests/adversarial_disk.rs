@@ -295,9 +295,8 @@ fn symlink_attack_must_not_read_etc_passwd() {
 #[cfg(not(unix))]
 #[test]
 fn symlink_attack_not_applicable_on_non_unix() {
-    // On non-Unix platforms the symlink attack vector differs.
-    // This smoke test ensures the file compiles and runs.
-    assert!(true);
+    // On non-Unix platforms the symlink attack vector differs; no symlink probe.
+    assert!(!cfg!(unix), "symlink adversarial suite is Unix-only");
 }
 
 // ---------------------------------------------------------------------------

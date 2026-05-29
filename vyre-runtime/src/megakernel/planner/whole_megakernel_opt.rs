@@ -448,6 +448,7 @@ mod tests {
             output_handle: 5,
             param: 99,
         }];
+
         let arms: [&[MegakernelWorkItem]; 2] = [&a, &b];
         let report = detect_cross_arm_redundancy(&arms);
         assert_eq!(report.total_redundant_ops, 1);
@@ -610,3 +611,4 @@ mod tests {
         assert_eq!(out, vec![item(1, 0, 5), item(2, 0, 6)]);
     }
 }
+

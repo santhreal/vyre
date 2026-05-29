@@ -447,6 +447,7 @@ fn persistent_body_with_workspace_adapter(
     body
 }
 
+
 fn process_io_requests() -> Vec<Node> {
     let nodes = vec![Node::loop_for(
         "io_idx",
@@ -567,3 +568,4 @@ fn execute_already_claimed_slot_body(tenant_id: Expr, claimed_body: Vec<Node>) -
 
 #[cfg(test)]
 mod tests;
+
