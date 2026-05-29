@@ -1,4 +1,4 @@
-//! Subject: `fuzz(vyre): T10 — GPU dispatch`
+//! Subject: `fuzz(vyre): T10 - GPU dispatch`
 //!
 //! Arbitrary bytes → `Program::from_wire` → validate → wgpu dispatch with
 //! zero-filled inputs (when sizes are known and bounded).
@@ -19,7 +19,7 @@ use vyre::{validate, DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::optimizer::pre_lowering::optimize;
 
-/// `vyre_foundation::serial::wire::MAX_PROGRAM_BYTES` — reject larger blobs early.
+/// `vyre_foundation::serial::wire::MAX_PROGRAM_BYTES` - reject larger blobs early.
 const MAX_WIRE_BYTES: usize = 64 * 1024 * 1024;
 
 /// Cap synthesized dispatch inputs to avoid OOM on huge buffer declarations.
