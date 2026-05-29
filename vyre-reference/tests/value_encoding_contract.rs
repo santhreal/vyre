@@ -134,9 +134,9 @@ fn float_equality_is_bit_exact_not_numeric_approximation() {
 
 #[test]
 fn from_element_bytes_rejects_short_fixed_width_inputs() {
-    assert!(Value::from_element_bytes(DataType::U32, &[1, 2, 3]).is_err());
-    assert!(Value::from_element_bytes(DataType::U64, &[1, 2, 3, 4, 5, 6, 7]).is_err());
-    assert!(Value::from_element_bytes(DataType::Bool, &[1, 0, 0]).is_err());
+    assert!(matches!(Value::from_element_bytes(DataType::U32, &[1, 2, 3]), Err(_)));
+    assert!(matches!(Value::from_element_bytes(DataType::U64, &[1, 2, 3, 4, 5, 6, 7]), Err(_)));
+    assert!(matches!(Value::from_element_bytes(DataType::Bool, &[1, 0, 0]), Err(_)));
     assert!(Value::from_element_bytes(DataType::Vec2U32, &[0; 7].as_slice()).is_err());
     assert!(Value::from_element_bytes(DataType::Vec4U32, &[0; 15].as_slice()).is_err());
     assert!(Value::from_element_bytes(DataType::F32, &[0; 3].as_slice()).is_err());

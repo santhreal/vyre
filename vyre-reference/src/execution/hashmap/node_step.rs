@@ -453,6 +453,7 @@ fn eval_async_store(
     })
 }
 
+
 fn eval_byte_count(
     expr: &Expr,
     label: &str,
@@ -550,3 +551,4 @@ fn resolve_call(
     invocation.op_cache.insert(call_expr, resolved);
     Ok(resolved)
 }
+

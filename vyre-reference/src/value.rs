@@ -429,17 +429,17 @@ mod tests {
     fn f32_element_decode_canonicalizes_subnormal_and_nan_payload_bits() {
         let positive_subnormal =
             Value::from_element_bytes(vyre::ir::DataType::F32, &1u32.to_le_bytes())
-                .expect("f32 positive subnormal decode must succeed");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - f32 positive subnormal decode must succeed");
         assert_eq!(positive_subnormal.try_as_f32().unwrap().to_bits(), 0x0000_0000);
 
         let negative_subnormal =
             Value::from_element_bytes(vyre::ir::DataType::F32, &0x8000_0001u32.to_le_bytes())
-                .expect("f32 negative subnormal decode must succeed");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - f32 negative subnormal decode must succeed");
         assert_eq!(negative_subnormal.try_as_f32().unwrap().to_bits(), 0x8000_0000);
 
         let payload_nan =
             Value::from_element_bytes(vyre::ir::DataType::F32, &0x7fa0_0001u32.to_le_bytes())
-                .expect("f32 payload NaN decode must succeed");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - f32 payload NaN decode must succeed");
         assert_eq!(payload_nan.try_as_f32().unwrap().to_bits(), 0x7fc0_0000);
     }
 

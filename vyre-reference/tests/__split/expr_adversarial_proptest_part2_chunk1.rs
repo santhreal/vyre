@@ -14,7 +14,7 @@ fn mod_i32_by_zero_errors() {
         &mut Memory::empty(),
         &program,
     );
-    assert!(result.is_err(), "i32 remainder by zero must error");
+    assert!(matches!(result, Err(_)), "i32 remainder by zero must error");
 }
 
 #[test]
@@ -31,7 +31,7 @@ fn div_i32_min_by_neg_one_errors() {
         &mut Memory::empty(),
         &program,
     );
-    assert!(result.is_err(), "i32 MIN / -1 overflow must error");
+    assert!(matches!(result, Err(_)), "i32 MIN / -1 overflow must error");
 }
 
 // ---------------------------------------------------------------------------

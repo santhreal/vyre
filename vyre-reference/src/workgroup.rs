@@ -448,6 +448,7 @@ impl<'a> Invocation<'a> {
         Self {
             ids,
             slots,
+
             locals: vec![None; slot_count],
             immutable: vec![false; slot_count],
             scopes: vec![Vec::new()],
@@ -695,3 +696,4 @@ pub(crate) fn workgroup_memory(program: &Program) -> Result<BufferMap, vyre::Err
     }
     Ok(workgroup)
 }
+
