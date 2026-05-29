@@ -229,6 +229,7 @@ impl Resolver<'_> {
             }
             Expr::Borrow { expr, .. } => self.resolve_expr(expr),
             Expr::Deref(inner) => self.resolve_expr(inner),
+            Expr::Not(inner) => self.resolve_expr(inner),
             Expr::Call { name, args } => {
                 let fname = ident_at(self.source, *name);
                 match self.fn_index.get(&fname) {
@@ -385,6 +386,11 @@ impl TypeCk<'_> {
                 Type::Ref { inner, .. } => Ok(*inner),
                 other => Err(RustSemaError::CannotDeref { found: type_str(&other) }),
             },
+            Expr::Not(inner) => {
+                let it = self.type_of(inner)?;
+                self.require(&it, &Type::Bool, "logical-not operand")?;
+                Ok(Type::Bool)
+            }
             Expr::Call { name, args } => {
                 let fname = ident_at(self.source, *name);
                 let sig = self.sigs.get(&fname).ok_or(RustSemaError::UnknownFunction {
@@ -587,6 +593,7 @@ fn check_mut_expr(expr: &Expr, resolution: &Resolution) -> Result<(), RustSemaEr
             check_mut_expr(rhs, resolution)
         }
         Expr::Deref(inner) => check_mut_expr(inner, resolution),
+        Expr::Not(inner) => check_mut_expr(inner, resolution),
         Expr::Call { args, .. } => {
             for arg in args {
                 check_mut_expr(arg, resolution)?;
@@ -735,6 +742,9 @@ fn descend_escape(
             descend_escape(expr, returns_ref, def_to_id, resolution, borrows_local)
         }
         Expr::Deref(inner) => {
+            descend_escape(inner, returns_ref, def_to_id, resolution, borrows_local)
+        }
+        Expr::Not(inner) => {
             descend_escape(inner, returns_ref, def_to_id, resolution, borrows_local)
         }
         Expr::Call { args, .. } => {
@@ -980,6 +990,7 @@ fn collect_expr_uses(expr: &Expr, resolution: &Resolution, into: &mut Vec<Bindin
         }
         Expr::Borrow { expr, .. } => collect_expr_uses(expr, resolution, into),
         Expr::Deref(inner) => collect_expr_uses(inner, resolution, into),
+        Expr::Not(inner) => collect_expr_uses(inner, resolution, into),
         Expr::Call { args, .. } => {
             for arg in args {
                 collect_expr_uses(arg, resolution, into);

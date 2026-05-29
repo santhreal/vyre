@@ -30,6 +30,8 @@ pub enum Expr {
     },
     /// Dereference.
     Deref(Box<Expr>),
+    /// Logical negation (`!expr`).
+    Not(Box<Expr>),
     /// Function call.
     Call {
         /// Function name source offset.
@@ -316,6 +318,7 @@ impl<'a> Parser<'a> {
                 Ok(Expr::Borrow { mutable, expr: Box::new(self.parse_unary()?) })
             }
             STAR => { self.advance(); Ok(Expr::Deref(Box::new(self.parse_unary()?))) }
+            BANG => { self.advance(); Ok(Expr::Not(Box::new(self.parse_unary()?))) }
             _ => self.parse_primary(),
         }
     }

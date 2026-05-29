@@ -146,6 +146,7 @@ impl Ev<'_> {
     fn eval_bool(&self, e: &Expr, env: &HashMap<BindingId, i32>) -> bool {
         match e {
             Expr::LiteralBool(_, b) => *b,
+            Expr::Not(inner) => !self.eval_bool(inner, env),
             Expr::Binary { op, lhs, rhs } => {
                 if *op == ANDAND {
                     return self.eval_bool(lhs, env) && self.eval_bool(rhs, env);
@@ -228,6 +229,9 @@ impl Gen {
         self.cond_depth(nvars, 1)
     }
     fn cond_depth(&mut self, nvars: usize, depth: u32) -> String {
+        if depth > 0 && self.next() % 4 == 0 {
+            return format!("!({})", self.cond_depth(nvars, depth - 1));
+        }
         if depth > 0 && self.next() % 3 == 0 {
             let op = if self.next() % 2 == 0 { "&&" } else { "||" };
             return format!("({}) {} ({})", self.cond_depth(nvars, depth - 1), op, self.cond_depth(nvars, depth - 1));
@@ -327,6 +331,7 @@ fn curated_programs_execute_correctly() {
         ("fn f(a: i32, b: i32) -> i32 { if a < b && b < 10 { return 1; } else { return 0; } }", &[3, 5], 1),
         ("fn f(a: i32, b: i32) -> i32 { if a < b && b < 10 { return 1; } else { return 0; } }", &[3, 50], 0),
         ("fn f(a: i32, b: i32) -> i32 { if a == 0 || b == 0 { return 1; } else { return 0; } }", &[0, 7], 1),
+        ("fn f(a: i32, b: i32) -> i32 { if !(a < b) { return 1; } else { return 0; } }", &[5, 2], 1),
     ];
     for (src, inputs, expected) in cases {
         assert_eq!(ir_exec(src, inputs), *expected, "{src} with {inputs:?}");

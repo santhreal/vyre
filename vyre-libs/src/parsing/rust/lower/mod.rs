@@ -185,6 +185,7 @@ impl LowerCtx<'_> {
             // so borrow and dereference are value-transparent.
             Expr::Borrow { expr, .. } => self.lower_value(expr, subst),
             Expr::Deref(inner) => self.lower_value(inner, subst),
+            Expr::Not(inner) => Ok(IrExpr::not(self.lower_value(inner, subst)?)),
             Expr::Block(_) | Expr::If { .. } => {
                 Err(RustLowerError::Unsupported("block/if used as a value".to_string()))
             }
