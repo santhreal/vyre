@@ -17,6 +17,7 @@
 //! computes the identical verdict on a device, batched across all loans.
 
 pub mod gpu;
+pub mod rustc_facts;
 
 /// A program point in a function's control-flow graph (`0..point_count`).
 pub type Point = u32;
