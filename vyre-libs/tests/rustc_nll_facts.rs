@@ -91,6 +91,74 @@ const REJECT: &[&str] = &[
     "pub fn f() { let mut x: i32 = 0; let a: &i32 = &x; x = 1; let _b: i32 = *a; }",
 ];
 
+/// A realistic, self-contained module of clean functions (rustc compiles it):
+/// loops, slices, vecs, iterators, matches, reborrows, and a two-phase borrow.
+/// Our rule must accept every function - any rejection is a false positive on
+/// real-world borrow patterns.
+const REALISTIC: &str = r#"
+pub fn sum(v: &[i32]) -> i32 { let mut s = 0; for &x in v { s += x; } s }
+pub fn count_pos(v: &[i32]) -> usize { let mut c = 0; for &x in v { if x > 0 { c += 1; } } c }
+pub fn fill(v: &mut Vec<i32>, n: i32) { let mut i = 0; while i < n { v.push(i); i += 1; } }
+pub fn double(v: &mut [i32]) { for x in v.iter_mut() { *x *= 2; } }
+pub fn first_last(v: &[i32]) -> (i32, i32) { (v[0], v[v.len() - 1]) }
+pub fn swap_ends(v: &mut Vec<i32>) { let n = v.len(); if n >= 2 { v.swap(0, n - 1); } }
+pub fn push_len(v: &mut Vec<usize>) { v.push(v.len()); }
+pub fn reborrow(p: &mut i32) { let r = &mut *p; *r += 1; }
+pub fn nested(v: &[i32]) -> i32 { let mut s = 0; for &x in v { if x > 0 { let y = &x; s += *y; } } s }
+pub fn opt_ref(o: &Option<i32>) -> i32 { if let Some(x) = o { *x } else { 0 } }
+pub fn max_val(v: &[i32]) -> i32 { let mut m = i32::MIN; for &x in v { if x > m { m = x; } } m }
+pub fn seq_borrow() { let mut x: i32 = 0; let a = &mut x; *a = 1; let b = &mut x; *b = 2; }
+"#;
+
+#[test]
+fn our_nll_verdict_matches_rustc_on_realistic_module() {
+    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let base = std::env::temp_dir().join(format!("vyre_nll_real_{}_{}", std::process::id(), n));
+    let facts_dir = base.join("facts");
+    std::fs::create_dir_all(&facts_dir).expect("create temp facts dir");
+    let src_path = base.join("lib.rs");
+    std::fs::write(&src_path, REALISTIC).expect("write temp source");
+
+    let output = std::process::Command::new("rustc")
+        .arg("+nightly")
+        .args(["--edition", "2021", "--crate-type", "lib", "--cap-lints", "allow"])
+        .arg("-Znll-facts")
+        .arg(format!("-Znll-facts-dir={}", facts_dir.display()))
+        .args(["--emit", "metadata"])
+        .arg("-o")
+        .arg(base.join("out.rmeta"))
+        .arg(&src_path)
+        .output()
+        .expect("rustc must be on PATH");
+    assert!(
+        output.status.success(),
+        "REALISTIC module must compile under rustc: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let mut rejected = Vec::new();
+    let mut checked = 0usize;
+    for entry in std::fs::read_dir(&facts_dir).expect("read facts dir") {
+        let fn_dir = entry.expect("dir entry").path();
+        if !fn_dir.is_dir() {
+            continue;
+        }
+        checked += 1;
+        let facts = load_facts(|name| read_relation(&fn_dir, name));
+        if !facts.accepts() {
+            let name = fn_dir.file_name().and_then(|n| n.to_str()).unwrap_or("?").to_string();
+            rejected.push(name);
+        }
+    }
+    let _ = std::fs::remove_dir_all(&base);
+
+    assert!(checked >= 12, "expected facts for all functions, got {checked}");
+    assert!(
+        rejected.is_empty(),
+        "our NLL rule false-positived on real code rustc accepts: {rejected:?}"
+    );
+}
+
 #[test]
 fn our_nll_verdict_matches_rustc_on_accept_corpus() {
     for (i, src) in ACCEPT.iter().enumerate() {
