@@ -458,6 +458,7 @@ fn vec_pack_corpus() -> KernelDescriptor {
     )
 }
 
+
 fn descriptor(
     id: &str,
     slots: Vec<BindingSlot>,
@@ -528,3 +529,4 @@ fn local_x(result: u32) -> KernelOp {
 inventory::submit! {
     &LowerRewriteImpact as &'static dyn BenchCase
 }
+

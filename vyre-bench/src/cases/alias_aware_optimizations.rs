@@ -460,6 +460,7 @@ fn encode_eval(eval: &EvalSummary) -> Vec<u8> {
     output
 }
 
+
 fn total_ops(desc: &KernelDescriptor) -> u64 {
     reachable_body_ops(&desc.body)
 }
@@ -729,3 +730,4 @@ fn store_body(binding: u32, index: u32) -> KernelBody {
 inventory::submit! {
     &AliasAwareOptimizations as &'static dyn BenchCase
 }
+

@@ -285,8 +285,7 @@ fn descriptor_generator_produces_valid_id_wiring() {
                 produced.insert(r);
             }
         }
-        assert!(
-            !produced.is_empty(),
+        assert_ne!(produced.len(), 0,
             "generated descriptor must define at least one result"
         );
     }

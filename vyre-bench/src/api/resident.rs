@@ -448,6 +448,7 @@ mod tests {
 
     #[test]
     fn resident_batch_upload_count_skips_empty_resources() {
+
         let inputs = vec![vec![1; 3], Vec::new(), vec![2; 1]];
         let output_sizes = [0, 8, 16, 0];
 
@@ -520,3 +521,4 @@ mod tests {
         assert_eq!(accounting.bytes_touched, u64::MAX);
     }
 }
+

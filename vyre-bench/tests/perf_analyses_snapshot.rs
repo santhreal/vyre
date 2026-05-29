@@ -430,8 +430,7 @@ fn snapshot_naga_emit_succeeds_for_simple_kernels() {
         let m = vyre_emit_naga::emit(&kernel).unwrap_or_else(|e| {
             panic!("emit failed for {}: {e}", kernel.id);
         });
-        assert!(
-            !m.entry_points.is_empty(),
+        assert_ne!(m.entry_points.len(), 0,
             "{} should have an entry point",
             kernel.id
         );

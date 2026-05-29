@@ -106,8 +106,12 @@ fn nvme_gpu_ingest_validation_rejects_bounce_and_path_mixing() {
                 .unwrap_or_else(|error| panic!("Fix: ingest spec `{}` must synthesize: {error}", spec.id));
         bounced.cpu_bounce_bytes = 1;
         assert!(
-            vyre_bench::cases::nvme_gpu_ingest::validate_zero_copy_ingest_telemetry(*spec, bounced)
-                .is_err(),
+            matches!(
+                vyre_bench::cases::nvme_gpu_ingest::validate_zero_copy_ingest_telemetry(
+                    *spec, bounced
+                ),
+                Err(_)
+            ),
             "Fix: ingest validation must reject CPU bounce bytes for `{}`.",
             spec.id
         );
@@ -124,8 +128,12 @@ fn nvme_gpu_ingest_validation_rejects_bounce_and_path_mixing() {
             }
         }
         assert!(
-            vyre_bench::cases::nvme_gpu_ingest::validate_zero_copy_ingest_telemetry(*spec, mixed)
-                .is_err(),
+            matches!(
+                vyre_bench::cases::nvme_gpu_ingest::validate_zero_copy_ingest_telemetry(
+                    *spec, mixed
+                ),
+                Err(_)
+            ),
             "Fix: ingest validation must reject path mixing for `{}`.",
             spec.id
         );

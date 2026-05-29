@@ -454,6 +454,7 @@ pub trait BenchCase: Send + Sync {
     }
 }
 
+
 fn static_program_bytes_touched(program: &vyre::ir::Program) -> (u64, u64) {
     let mut read_bytes = 0_u64;
     let mut write_bytes = 0_u64;
@@ -527,3 +528,4 @@ mod tests {
         );
     }
 }
+
