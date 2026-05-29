@@ -246,6 +246,12 @@ pub mod representation;
 /// Library component.
 pub mod parsing;
 
+/// Front-end-agnostic borrow-check engine: the neutral `BorrowFacts` IR and the
+/// dataflow analysis over it. Producers (the Rust front-end now, a rustc adapter
+/// later) lower to `BorrowFacts`; the engine never depends on any front-end,
+/// which is what lets the borrow checker eventually run standalone.
+pub mod borrowck;
+
 /// Packed AST walks (`ast_walk_*` catalog ops).
 /// Library component.
 /// Library component.
