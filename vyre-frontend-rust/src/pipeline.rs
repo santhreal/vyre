@@ -18,8 +18,9 @@ pub struct RustPipelineConfig {
     /// Whether to attempt GPU lexing. Off by default: GPU lexer dispatch is not
     /// wired yet and fails loudly when enabled.
     pub gpu_lex: bool,
-    /// Whether to run borrow checking. Off by default: the mutability rule is
-    /// implemented, but the conflicting-borrow rules report incomplete.
+    /// Whether to run borrow checking (E0596/E0597/E0499/E0502). Off by
+    /// default; when enabled it runs the full nano-subset borrow check (CFG NLL
+    /// dataflow), rustc-differential-verified by `rust_sema_borrow_oracle`.
     pub borrow_check: bool,
     /// Whether to lower to Vyre IR. Off by default: lowering is not wired yet
     /// and fails loudly when enabled.
@@ -29,8 +30,8 @@ pub struct RustPipelineConfig {
 impl Default for RustPipelineConfig {
     fn default() -> Self {
         // The working envelope today is CPU lex + parse + resolve + typeck.
-        // Borrow checking and lowering are opt-in (borrow is partial; lowering
-        // is unwired and fails loudly).
+        // Borrow checking and lowering are opt-in (borrow check is wired and
+        // rustc-verified; lowering is unwired and fails loudly).
         Self {
             gpu_lex: false,
             borrow_check: false,
@@ -57,10 +58,10 @@ impl RustPipeline {
     /// Run the pipeline on a single source buffer.
     ///
     /// CPU lex, parse, name resolution, and type checking always run. Borrow
-    /// checking and lowering are gated on the config. Borrow checking surfaces
-    /// real mutability (E0596) errors but reports incomplete for the
-    /// conflicting-borrow rules, and lowering fails loudly until wired, so a
-    /// caller never receives a success that skipped a requested stage.
+    /// checking and lowering are gated on the config. Borrow checking runs the
+    /// full nano-subset rules (E0596/E0597/E0499/E0502 via CFG NLL dataflow),
+    /// and lowering fails loudly until wired, so a caller never receives a
+    /// success that skipped a requested stage.
     pub fn compile_unit(&self, source: &[u8]) -> Result<CompilationUnit, RustFrontendError> {
         let tokens = self::lexer_dispatch::lex(source, &self.config, &self.lex_plan)?;
         let module: Module = self::parse_stage::parse(source, &tokens)?;

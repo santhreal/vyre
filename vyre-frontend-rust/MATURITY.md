@@ -37,7 +37,7 @@ Promotion out of experimental requires:
 | Parser correctness | `tests/smoke.rs` on the nano-subset; a `tests/parse_oracle.rs` is pending. |
 | GPU lexing | `tests/gpu_lex.rs` must prove the GPU lexer path matches the CPU oracle byte-for-byte. Pending: GPU dispatch is unwired. |
 | Semantic analysis | `vyre-libs::parsing::rust::sema` (resolution + type inference) with oracles. Pending. |
-| Borrow check | `tests/borrow_oracle.rs` validates the dataflow borrow analysis against rustc on nano-subset programs. Pending. |
+| Borrow check | `vyre-libs/tests/rust_sema_borrow_oracle.rs` proves the sema borrow checks (E0596/E0597/E0499/E0502 via CFG NLL dataflow) match rustc accept/reject exactly over generated straight-line, branch, and reborrow programs plus a curated corpus. `vyre-frontend-rust/tests/{conflict,borrow,escape,differential_fuzz}.rs` exercise the same through the driver. Present. |
 | No silent fallback | Unwired stages (GPU lex, sema, lowering) fail loudly and actionably. Locked by `tests/smoke.rs`. |
 
 ## Production criteria
