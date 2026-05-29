@@ -22,7 +22,7 @@ pub mod api;
 pub mod object;
 pub mod pipeline;
 
-/// Unified error type for the Rust frontend.
+/// Unified error type for the Rust frontend, one variant per pipeline stage.
 ///
 /// Error messages follow the `vyre-frontend-c` convention:
 /// `"description. Fix: suggestion."`
@@ -42,8 +42,16 @@ pub enum RustFrontendError {
     /// Name resolution failed (e.g. use of an undefined name; rustc E0425).
     #[error("Rust frontend name resolution failed: {0}. Fix: declare the name before use or correct the identifier.")]
     Resolve(String),
-    /// The source contains constructs outside the nano-subset, or a stage is not
-    /// yet wired (type checking, borrow checking, lowering).
+    /// Type checking failed (rustc E0308 / E0061 / E0614).
+    #[error("Rust frontend type check failed: {0}. Fix: correct the types so they match.")]
+    Typeck(String),
+    /// Borrow checking failed, or is incomplete for this program.
+    #[error("Rust frontend borrow check failed: {0}. Fix: borrow the place mutably only when it is declared mutable.")]
+    Borrow(String),
+    /// Lowering to Vyre IR failed.
+    #[error("Rust frontend lowering failed: {0}. Fix: see the lowering substrate status.")]
+    Lower(String),
+    /// The source contains constructs outside the nano-subset.
     #[error("Rust frontend unsupported construct: {0}. Fix: simplify the source to the nano-subset.")]
     Unsupported(String),
     /// GPU backend unavailable.

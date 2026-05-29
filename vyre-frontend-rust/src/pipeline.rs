@@ -18,8 +18,8 @@ pub struct RustPipelineConfig {
     /// Whether to attempt GPU lexing. Off by default: GPU lexer dispatch is not
     /// wired yet and fails loudly when enabled.
     pub gpu_lex: bool,
-    /// Whether to run borrow checking. Off by default: borrow checking is not
-    /// wired yet and fails loudly when enabled.
+    /// Whether to run borrow checking. Off by default: the mutability rule is
+    /// implemented, but the conflicting-borrow rules report incomplete.
     pub borrow_check: bool,
     /// Whether to lower to Vyre IR. Off by default: lowering is not wired yet
     /// and fails loudly when enabled.
@@ -28,10 +28,9 @@ pub struct RustPipelineConfig {
 
 impl Default for RustPipelineConfig {
     fn default() -> Self {
-        // The working envelope today is CPU lex + parse + name resolution. Type
-        // checking, borrow checking, and lowering are unwired and fail loudly,
-        // so they are opt-in; the default pipeline reaches the meaningful
-        // boundary (type checking is not wired) rather than the GPU probe.
+        // The working envelope today is CPU lex + parse + resolve + typeck.
+        // Borrow checking and lowering are opt-in (borrow is partial; lowering
+        // is unwired and fails loudly).
         Self {
             gpu_lex: false,
             borrow_check: false,
@@ -57,23 +56,21 @@ impl RustPipeline {
 
     /// Run the pipeline on a single source buffer.
     ///
-    /// CPU lex, parse, and name resolution always run. Type checking is
-    /// attempted next and currently returns a loud error until the `vyre-libs`
-    /// sema substrate is implemented. Borrow checking and lowering are gated on
-    /// the config and likewise fail loudly until wired, so a caller never
-    /// receives a success that skipped a requested stage.
+    /// CPU lex, parse, name resolution, and type checking always run. Borrow
+    /// checking and lowering are gated on the config. Borrow checking surfaces
+    /// real mutability (E0596) errors but reports incomplete for the
+    /// conflicting-borrow rules, and lowering fails loudly until wired, so a
+    /// caller never receives a success that skipped a requested stage.
     pub fn compile_unit(&self, source: &[u8]) -> Result<CompilationUnit, RustFrontendError> {
         let tokens = self::lexer_dispatch::lex(source, &self.config, &self.lex_plan)?;
         let module: Module = self::parse_stage::parse(source, &tokens)?;
-        let resolved = self::resolve_stage::resolve(&module, source)?;
-        let typed = self::typeck_stage::typeck(&resolved)?;
-        let verified = if self.config.borrow_check {
-            self::borrow_stage::borrow_check(&typed)?
-        } else {
-            typed
-        };
+        let resolution = self::resolve_stage::resolve(&module, source)?;
+        self::typeck_stage::typeck(&module, source, &resolution)?;
+        if self.config.borrow_check {
+            self::borrow_stage::borrow_check(&module, &resolution)?;
+        }
         let program = if self.config.lower {
-            Some(self::lower_stage::lower(&verified)?)
+            Some(self::lower_stage::lower(&module, &resolution)?)
         } else {
             None
         };

@@ -1,21 +1,26 @@
-//! Rust semantic analysis: name resolution, type inference, borrow checking.
+//! Rust semantic analysis: name resolution, type checking, borrow checking.
 //!
 //! Reusable substrate (Tier 3), mirroring `vyre-libs::parsing::c::sema`. The
 //! algorithms live here so any consumer can run typed Rust analysis without
 //! depending on the `vyre-frontend-rust` driver crate. The driver orchestrates.
 //!
-//! `resolve` is implemented for the nano-subset. `typeck` and `borrow_check`
-//! are not yet wired and return loud, actionable errors rather than a fake
-//! success, so a caller never consumes an unchecked module as if it were
-//! verified.
+//! Analyses are side tables over the borrowed AST: a pass is
+//! `pass(&Module, &Resolution) -> Result<...>` and never clones the AST. This
+//! keeps the pipeline allocation-lean and extends cleanly as the compiler grows
+//! (new passes add new side tables, not new copies of the program).
+//!
+//! `resolve` and `typeck` are implemented for the nano-subset. `borrow_check`
+//! implements the mutability rule (E0596) and reports the conflicting-borrow
+//! rules (E0499/E0502) as not-yet-wired rather than faking a complete pass.
 
 use std::collections::{HashMap, HashSet};
 
 use thiserror::Error;
 
+use super::lex::tokens::{EQ, LT, MINUS, PLUS, SLASH, STAR};
 use super::parse::{Expr, Module, Stmt, Type};
 
-/// Stable id for a resolved binding (index into [`ResolvedModule::bindings`]).
+/// Stable id for a resolved binding (index into [`Resolution::bindings`]).
 pub type BindingId = usize;
 
 /// A resolved binding: a function parameter or a `let` declaration.
@@ -33,21 +38,15 @@ pub struct Binding {
     pub function: usize,
 }
 
-/// A module with names resolved: a binding table plus a use -> binding map.
-#[derive(Debug, Clone)]
-pub struct ResolvedModule {
-    /// The parsed module (unchanged).
-    pub module: Module,
+/// Name-resolution result: a binding table plus a use -> binding map over the
+/// AST. Holds no copy of the AST; analyses borrow the `Module` alongside it.
+#[derive(Debug, Clone, Default)]
+pub struct Resolution {
     /// Every parameter and `let` binding, in declaration order.
     pub bindings: Vec<Binding>,
     /// Map from each variable-use source offset to its resolved binding.
     pub uses: HashMap<u32, BindingId>,
 }
-
-/// Module after type inference (alias until a distinct typed form exists).
-pub type TypedModule = ResolvedModule;
-/// Module after borrow checking (alias until a distinct verified form exists).
-pub type VerifiedModule = ResolvedModule;
 
 /// Errors from the Rust semantic-analysis stages.
 #[derive(Debug, Clone, Error)]
@@ -76,33 +75,85 @@ pub enum RustSemaError {
         /// Source byte offset of the borrowed place.
         offset: u32,
     },
-    /// Type inference and checking are not implemented for the nano-subset.
-    #[error("type checking is not wired to the Rust nano-subset type environment yet; use parse-only API calls until semantic analysis is enabled")]
-    TypeckUnavailable,
-    /// Borrow checking is not implemented for the nano-subset.
-    #[error("borrow checking is not wired to a Rust CFG yet; disable borrow checking for parse-only pipeline runs")]
+    /// An expression's type did not match the expected type (rustc E0308).
+    #[error("mismatched types in {context}: expected `{expected}`, found `{found}`")]
+    TypeMismatch {
+        /// Where the mismatch occurred (let binding, return, operand, argument).
+        context: String,
+        /// The expected type.
+        expected: String,
+        /// The type actually found.
+        found: String,
+    },
+    /// A dereference was applied to a non-reference type (rustc E0614).
+    #[error("type `{found}` cannot be dereferenced; only references can")]
+    CannotDeref {
+        /// The non-reference type.
+        found: String,
+    },
+    /// An `if` condition was not `bool` (rustc E0308).
+    #[error("`if` condition must be `bool`, found `{found}`")]
+    NonBooleanCondition {
+        /// The non-boolean condition type.
+        found: String,
+    },
+    /// A call passed the wrong number of arguments (rustc E0061).
+    #[error("function `{function}` expects {expected} argument(s), found {found}")]
+    ArgCountMismatch {
+        /// The called function name.
+        function: String,
+        /// The declared parameter count.
+        expected: usize,
+        /// The supplied argument count.
+        found: usize,
+    },
+    /// A non-unit function body does not return on all paths (rustc E0308).
+    #[error("function `{function}` must return `{expected}` on all paths")]
+    MissingReturn {
+        /// The function name.
+        function: String,
+        /// The declared return type.
+        expected: String,
+    },
+    /// Borrow checking is incomplete: the conflicting-borrow rules require weir.
+    #[error("borrow checking is incomplete: the conflicting-borrow rules (E0499/E0502) require the weir dataflow analysis and are not yet wired")]
     BorrowUnavailable,
 }
 
 /// Recover the identifier text that begins at `offset` in `source`.
 ///
-/// The AST stores only the start offset of each identifier, so resolution
-/// re-scans the contiguous identifier bytes (`[A-Za-z0-9_]`) from that offset.
+/// The AST stores only the start offset of each identifier, so resolution and
+/// type checking re-scan the contiguous identifier bytes (`[A-Za-z0-9_]`).
 fn ident_at(source: &[u8], offset: u32) -> String {
-    let start = offset as usize;
+    let start = (offset as usize).min(source.len());
     let mut end = start;
     while end < source.len() && (source[end].is_ascii_alphanumeric() || source[end] == b'_') {
         end += 1;
     }
-    String::from_utf8_lossy(&source[start..end.min(source.len())]).into_owned()
+    String::from_utf8_lossy(&source[start..end]).into_owned()
 }
+
+/// Render a type for diagnostics, matching Rust surface syntax.
+fn type_str(ty: &Type) -> String {
+    match ty {
+        Type::I32 => "i32".to_string(),
+        Type::Bool => "bool".to_string(),
+        Type::Unit => "()".to_string(),
+        Type::Ref { mutable, inner } => {
+            format!("&{}{}", if *mutable { "mut " } else { "" }, type_str(inner))
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Name resolution
+// ----------------------------------------------------------------------------
 
 struct Resolver<'a> {
     source: &'a [u8],
     fn_names: &'a HashSet<String>,
     bindings: Vec<Binding>,
     uses: HashMap<u32, BindingId>,
-    /// Lexical scope stack of name -> binding id; innermost frame is last.
     scopes: Vec<HashMap<String, BindingId>>,
     function: usize,
 }
@@ -177,9 +228,6 @@ impl Resolver<'_> {
         for stmt in stmts {
             match stmt {
                 Stmt::Let { mutable, name, ty, init } => {
-                    // The initializer is resolved against the scope as it exists
-                    // before this binding, so `let x = x + 1` resolves the RHS
-                    // `x` to the outer binding; the new binding then shadows it.
                     self.resolve_expr(init)?;
                     let recovered = ident_at(self.source, *name);
                     self.declare(recovered, *mutable, ty.clone(), *name);
@@ -198,13 +246,11 @@ impl Resolver<'_> {
 /// Recovers identifier text from source offsets, tracks lexical scope
 /// (parameters plus block-nested `let`, with shadowing), maps every variable
 /// use to its binding, and rejects uses of names not in scope (rustc E0425).
-/// Function calls are resolved against the set of module function names
-/// (forward references allowed).
 ///
 /// # Errors
 /// Returns [`RustSemaError::UnresolvedName`] or [`RustSemaError::UnknownFunction`]
 /// for a use with no in-scope definition.
-pub fn resolve(module: &Module, source: &[u8]) -> Result<ResolvedModule, RustSemaError> {
+pub fn resolve(module: &Module, source: &[u8]) -> Result<Resolution, RustSemaError> {
     let fn_names: HashSet<String> =
         module.functions.iter().map(|f| ident_at(source, f.name)).collect();
 
@@ -227,37 +273,230 @@ pub fn resolve(module: &Module, source: &[u8]) -> Result<ResolvedModule, RustSem
         resolver.resolve_block(&func.body)?;
     }
 
-    Ok(ResolvedModule {
-        module: module.clone(),
-        bindings: resolver.bindings,
-        uses: resolver.uses,
-    })
+    Ok(Resolution { bindings: resolver.bindings, uses: resolver.uses })
 }
 
-/// Infer and check types for a resolved module.
+// ----------------------------------------------------------------------------
+// Type checking
+// ----------------------------------------------------------------------------
+
+struct FnSig {
+    params: Vec<Type>,
+    ret: Type,
+}
+
+struct TypeCk<'a> {
+    source: &'a [u8],
+    resolution: &'a Resolution,
+    sigs: &'a HashMap<String, FnSig>,
+    ret: &'a Type,
+}
+
+impl TypeCk<'_> {
+    fn type_of(&self, expr: &Expr) -> Result<Type, RustSemaError> {
+        match expr {
+            Expr::LiteralInt(..) => Ok(Type::I32),
+            Expr::LiteralBool(..) => Ok(Type::Bool),
+            Expr::Var(offset) => {
+                let id = *self
+                    .resolution
+                    .uses
+                    .get(offset)
+                    .expect("Fix: resolve must record every variable use before typeck runs");
+                Ok(self.resolution.bindings[id].ty.clone())
+            }
+            Expr::Binary { op, lhs, rhs } => {
+                let lt = self.type_of(lhs)?;
+                let rt = self.type_of(rhs)?;
+                match *op {
+                    PLUS | MINUS | STAR | SLASH => {
+                        self.require(&lt, &Type::I32, "arithmetic operand")?;
+                        self.require(&rt, &Type::I32, "arithmetic operand")?;
+                        Ok(Type::I32)
+                    }
+                    LT => {
+                        self.require(&lt, &Type::I32, "comparison operand")?;
+                        self.require(&rt, &Type::I32, "comparison operand")?;
+                        Ok(Type::Bool)
+                    }
+                    EQ => {
+                        if lt != rt {
+                            return Err(RustSemaError::TypeMismatch {
+                                context: "equality operands".to_string(),
+                                expected: type_str(&lt),
+                                found: type_str(&rt),
+                            });
+                        }
+                        Ok(Type::Bool)
+                    }
+                    _ => Ok(Type::I32),
+                }
+            }
+            Expr::Borrow { mutable, expr } => {
+                let inner = self.type_of(expr)?;
+                Ok(Type::Ref { mutable: *mutable, inner: Box::new(inner) })
+            }
+            Expr::Deref(inner) => match self.type_of(inner)? {
+                Type::Ref { inner, .. } => Ok(*inner),
+                other => Err(RustSemaError::CannotDeref { found: type_str(&other) }),
+            },
+            Expr::Call { name, args } => {
+                let fname = ident_at(self.source, *name);
+                let sig = self.sigs.get(&fname).ok_or(RustSemaError::UnknownFunction {
+                    name: fname.clone(),
+                    offset: *name,
+                })?;
+                if args.len() != sig.params.len() {
+                    return Err(RustSemaError::ArgCountMismatch {
+                        function: fname,
+                        expected: sig.params.len(),
+                        found: args.len(),
+                    });
+                }
+                for (arg, param_ty) in args.iter().zip(&sig.params) {
+                    let at = self.type_of(arg)?;
+                    self.require(&at, param_ty, "function argument")?;
+                }
+                Ok(sig.ret.clone())
+            }
+            Expr::Block(stmts) => {
+                self.check_block(stmts)?;
+                Ok(Type::Unit)
+            }
+            Expr::If { cond, then_block, else_block } => {
+                let ct = self.type_of(cond)?;
+                if ct != Type::Bool {
+                    return Err(RustSemaError::NonBooleanCondition { found: type_str(&ct) });
+                }
+                let tt = self.type_of(then_block)?;
+                let et = match else_block {
+                    Some(else_block) => self.type_of(else_block)?,
+                    None => Type::Unit,
+                };
+                if tt != et {
+                    return Err(RustSemaError::TypeMismatch {
+                        context: "if/else branches".to_string(),
+                        expected: type_str(&tt),
+                        found: type_str(&et),
+                    });
+                }
+                Ok(tt)
+            }
+        }
+    }
+
+    fn require(&self, found: &Type, expected: &Type, context: &str) -> Result<(), RustSemaError> {
+        if found == expected {
+            Ok(())
+        } else {
+            Err(RustSemaError::TypeMismatch {
+                context: context.to_string(),
+                expected: type_str(expected),
+                found: type_str(found),
+            })
+        }
+    }
+
+    fn check_block(&self, stmts: &[Stmt]) -> Result<(), RustSemaError> {
+        for stmt in stmts {
+            match stmt {
+                Stmt::Let { ty, init, .. } => {
+                    let it = self.type_of(init)?;
+                    self.require(&it, ty, "let binding")?;
+                }
+                Stmt::Expr(expr) => {
+                    self.type_of(expr)?;
+                }
+                Stmt::Return(Some(expr)) => {
+                    let rt = self.type_of(expr)?;
+                    self.require(&rt, self.ret, "return value")?;
+                }
+                Stmt::Return(None) => {
+                    self.require(&Type::Unit, self.ret, "return value")?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Type-check a resolved module against its `source` (rustc E0308 / E0061 / E0614).
+///
+/// Checks `let` initializer types, return-value types, binary-operator operand
+/// types, dereference of references only, boolean `if` conditions, call arity
+/// and argument types, and that a non-unit function returns on all paths.
 ///
 /// # Errors
-/// Returns [`RustSemaError::TypeckUnavailable`] until type checking is wired.
-pub fn typeck(module: &ResolvedModule) -> Result<TypedModule, RustSemaError> {
-    let _ = module;
-    Err(RustSemaError::TypeckUnavailable)
+/// Returns the matching [`RustSemaError`] variant on a type error.
+pub fn typeck(module: &Module, source: &[u8], resolution: &Resolution) -> Result<(), RustSemaError> {
+    let sigs: HashMap<String, FnSig> = module
+        .functions
+        .iter()
+        .map(|f| {
+            (
+                ident_at(source, f.name),
+                FnSig {
+                    params: f.params.iter().map(|(_, t)| t.clone()).collect(),
+                    ret: f.ret.clone(),
+                },
+            )
+        })
+        .collect();
+
+    for func in &module.functions {
+        let ck = TypeCk { source, resolution, sigs: &sigs, ret: &func.ret };
+        ck.check_block(&func.body)?;
+        if func.ret != Type::Unit && !block_diverges(&func.body) {
+            return Err(RustSemaError::MissingReturn {
+                function: ident_at(source, func.name),
+                expected: type_str(&func.ret),
+            });
+        }
+    }
+    Ok(())
 }
 
-/// Borrow-check a typed module.
+/// Whether a statement sequence is guaranteed to return on all paths.
+fn block_diverges(stmts: &[Stmt]) -> bool {
+    stmts.iter().any(stmt_diverges)
+}
+
+fn stmt_diverges(stmt: &Stmt) -> bool {
+    match stmt {
+        Stmt::Return(_) => true,
+        Stmt::Expr(expr) => expr_diverges(expr),
+        Stmt::Let { init, .. } => expr_diverges(init),
+    }
+}
+
+fn expr_diverges(expr: &Expr) -> bool {
+    match expr {
+        Expr::Block(stmts) => block_diverges(stmts),
+        Expr::If { then_block, else_block: Some(else_block), .. } => {
+            expr_diverges(then_block) && expr_diverges(else_block)
+        }
+        _ => false,
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Borrow checking
+// ----------------------------------------------------------------------------
+
+/// Borrow-check a resolved module.
 ///
-/// The mutability rule (rustc E0596: borrowing an immutable place as `&mut`) is
-/// implemented via [`check_mutability`]. The conflicting-borrow rules
-/// (E0499/E0502) require the weir dataflow analysis and are not yet wired, so
-/// `borrow_check` surfaces a real mutability error when one exists and otherwise
-/// reports [`RustSemaError::BorrowUnavailable`] rather than claiming a complete
-/// borrow check it has not performed.
+/// The mutability rule (rustc E0596) is implemented via [`check_mutability`].
+/// The conflicting-borrow rules (E0499/E0502) require the weir dataflow analysis
+/// and are not yet wired, so `borrow_check` surfaces a real mutability error
+/// when one exists and otherwise reports [`RustSemaError::BorrowUnavailable`]
+/// rather than claiming a complete borrow check it has not performed.
 ///
 /// # Errors
 /// Returns [`RustSemaError::CannotBorrowImmutableAsMutable`] for an E0596
 /// violation, or [`RustSemaError::BorrowUnavailable`] while the
 /// conflicting-borrow rules remain unimplemented.
-pub fn borrow_check(module: &TypedModule) -> Result<VerifiedModule, RustSemaError> {
-    check_mutability(module)?;
+pub fn borrow_check(module: &Module, resolution: &Resolution) -> Result<(), RustSemaError> {
+    check_mutability(module, resolution)?;
     Err(RustSemaError::BorrowUnavailable)
 }
 
@@ -269,50 +508,50 @@ pub fn borrow_check(module: &TypedModule) -> Result<VerifiedModule, RustSemaErro
 ///
 /// # Errors
 /// Returns [`RustSemaError::CannotBorrowImmutableAsMutable`] on a violation.
-pub fn check_mutability(module: &ResolvedModule) -> Result<(), RustSemaError> {
-    for func in &module.module.functions {
-        check_mut_stmts(&func.body, module)?;
+pub fn check_mutability(module: &Module, resolution: &Resolution) -> Result<(), RustSemaError> {
+    for func in &module.functions {
+        check_mut_stmts(&func.body, resolution)?;
     }
     Ok(())
 }
 
-fn check_mut_stmts(stmts: &[Stmt], module: &ResolvedModule) -> Result<(), RustSemaError> {
+fn check_mut_stmts(stmts: &[Stmt], resolution: &Resolution) -> Result<(), RustSemaError> {
     for stmt in stmts {
         match stmt {
-            Stmt::Let { init, .. } => check_mut_expr(init, module)?,
-            Stmt::Expr(expr) => check_mut_expr(expr, module)?,
-            Stmt::Return(Some(expr)) => check_mut_expr(expr, module)?,
+            Stmt::Let { init, .. } => check_mut_expr(init, resolution)?,
+            Stmt::Expr(expr) => check_mut_expr(expr, resolution)?,
+            Stmt::Return(Some(expr)) => check_mut_expr(expr, resolution)?,
             Stmt::Return(None) => {}
         }
     }
     Ok(())
 }
 
-fn check_mut_expr(expr: &Expr, module: &ResolvedModule) -> Result<(), RustSemaError> {
+fn check_mut_expr(expr: &Expr, resolution: &Resolution) -> Result<(), RustSemaError> {
     match expr {
         Expr::Borrow { mutable, expr } => {
             if *mutable {
-                check_mutable_place(expr, module)?;
+                check_mutable_place(expr, resolution)?;
             }
-            check_mut_expr(expr, module)
+            check_mut_expr(expr, resolution)
         }
         Expr::Binary { lhs, rhs, .. } => {
-            check_mut_expr(lhs, module)?;
-            check_mut_expr(rhs, module)
+            check_mut_expr(lhs, resolution)?;
+            check_mut_expr(rhs, resolution)
         }
-        Expr::Deref(inner) => check_mut_expr(inner, module),
+        Expr::Deref(inner) => check_mut_expr(inner, resolution),
         Expr::Call { args, .. } => {
             for arg in args {
-                check_mut_expr(arg, module)?;
+                check_mut_expr(arg, resolution)?;
             }
             Ok(())
         }
-        Expr::Block(stmts) => check_mut_stmts(stmts, module),
+        Expr::Block(stmts) => check_mut_stmts(stmts, resolution),
         Expr::If { cond, then_block, else_block } => {
-            check_mut_expr(cond, module)?;
-            check_mut_expr(then_block, module)?;
+            check_mut_expr(cond, resolution)?;
+            check_mut_expr(then_block, resolution)?;
             if let Some(else_block) = else_block {
-                check_mut_expr(else_block, module)?;
+                check_mut_expr(else_block, resolution)?;
             }
             Ok(())
         }
@@ -321,11 +560,11 @@ fn check_mut_expr(expr: &Expr, module: &ResolvedModule) -> Result<(), RustSemaEr
 }
 
 /// Verify that `place` denotes a mutable place for a `&mut` borrow.
-fn check_mutable_place(place: &Expr, module: &ResolvedModule) -> Result<(), RustSemaError> {
+fn check_mutable_place(place: &Expr, resolution: &Resolution) -> Result<(), RustSemaError> {
     match place {
         Expr::Var(offset) => {
-            if let Some(&id) = module.uses.get(offset) {
-                let binding = &module.bindings[id];
+            if let Some(&id) = resolution.uses.get(offset) {
+                let binding = &resolution.bindings[id];
                 if !binding.mutable {
                     return Err(RustSemaError::CannotBorrowImmutableAsMutable {
                         name: binding.name.clone(),
@@ -337,8 +576,8 @@ fn check_mutable_place(place: &Expr, module: &ResolvedModule) -> Result<(), Rust
         }
         Expr::Deref(inner) => {
             if let Expr::Var(offset) = inner.as_ref() {
-                if let Some(&id) = module.uses.get(offset) {
-                    let binding = &module.bindings[id];
+                if let Some(&id) = resolution.uses.get(offset) {
+                    let binding = &resolution.bindings[id];
                     if let Type::Ref { mutable: false, .. } = binding.ty {
                         return Err(RustSemaError::CannotBorrowImmutableAsMutable {
                             name: binding.name.clone(),

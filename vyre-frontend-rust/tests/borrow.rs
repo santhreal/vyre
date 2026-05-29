@@ -14,8 +14,8 @@ fn check_src(src: &str) -> Result<(), RustSemaError> {
     let bytes = src.as_bytes();
     let tokens = lex(bytes).expect("Fix: test corpus must lex");
     let module = parse(bytes, &tokens).expect("Fix: test corpus must parse");
-    let resolved = resolve(&module, bytes).expect("Fix: test corpus must resolve");
-    check_mutability(&resolved)
+    let resolution = resolve(&module, bytes).expect("Fix: test corpus must resolve");
+    check_mutability(&module, &resolution)
 }
 
 #[test]
