@@ -21,10 +21,17 @@
 
 mod common;
 
-use common::with_cuda_optimizer_dispatcher;
+use std::time::Instant;
+
+use common::{with_cuda_optimizer_dispatcher, with_live_backend};
+use vyre_driver_cuda::CudaOptimizerDispatcher as CudaResidentDispatcher;
 use vyre_libs::borrowck::{analyze, BorrowFacts, Conflict, ConflictKind, LoanKind};
 use vyre_self_substrate::csr_forward_or_changed::forward_closure_via_change_flag_gpu;
 use vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher;
+use vyre_self_substrate::persistent_bfs::{
+    bfs_expand_resident_graph_batch_with_scratch_into, upload_resident_bfs_graph,
+    PersistentBfsResidentScratch,
+};
 
 const ALLOW_ALL: u32 = 0xFFFF_FFFF;
 
@@ -262,4 +269,218 @@ fn cuda_borrow_checker_scales_to_a_long_chain() {
     assert_eq!(gpu, cpu, "CUDA long-chain verdict diverged from the CPU engine");
     assert_eq!(gpu.len(), 1, "expected exactly one conflict, got {gpu:?}");
     assert_eq!(gpu[0].kind, ConflictKind::TwoMutable);
+}
+
+/// Test a bit in query `q`'s slice of a flattened `query_count x words` bitset.
+fn slice_test_bit(flat: &[u32], words: usize, q: usize, bit: u32) -> bool {
+    test_bit(&flat[q * words..(q + 1) * words], bit)
+}
+
+/// The BATCHED CUDA borrow checker: every loan's forward closure (over the CFG,
+/// seeded at its issue) runs in ONE resident device dispatch, every loan's
+/// backward closure (over the reversed CFG, seeded at its uses) in a second.
+/// Two dispatches per function instead of two per loan: the megakernel-batched
+/// path that amortizes launch overhead across the whole loan set. The host then
+/// intersects and pairs exactly as the CPU engine does.
+fn cuda_conflicts_batched(
+    dispatcher: &dyn OptimizerDispatcher,
+    facts: &BorrowFacts,
+) -> Vec<Conflict> {
+    let n = facts.point_count;
+    let loans = facts.loan_count();
+    if loans < 2 || n == 0 {
+        return Vec::new();
+    }
+    let words = bitset_words(n);
+    let max_iters = n.max(1);
+
+    let (fwd_off, fwd_tgt, fwd_msk) = build_csr(n, &facts.cfg_edges, false);
+    let (rev_off, rev_tgt, rev_msk) = build_csr(n, &facts.cfg_edges, true);
+    let fwd_graph = upload_resident_bfs_graph(dispatcher, n, &fwd_off, &fwd_tgt, &fwd_msk)
+        .expect("forward CFG resident upload must succeed");
+    let rev_graph = upload_resident_bfs_graph(dispatcher, n, &rev_off, &rev_tgt, &rev_msk)
+        .expect("reversed CFG resident upload must succeed");
+
+    // Per-loan seeds, flattened loans x words: issue point forward, uses backward.
+    let mut issue_seeds = vec![0u32; loans * words];
+    let mut use_seeds = vec![0u32; loans * words];
+    for a in 0..loans {
+        set_bit(&mut issue_seeds[a * words..(a + 1) * words], facts.loan_issued_at[a]);
+    }
+    for &(loan, point) in &facts.loan_used_at {
+        let a = loan as usize;
+        if a < loans {
+            set_bit(&mut use_seeds[a * words..(a + 1) * words], point);
+        }
+    }
+
+    let mut scratch = PersistentBfsResidentScratch::default();
+    let mut forward = Vec::new();
+    let mut forward_changed = Vec::new();
+    bfs_expand_resident_graph_batch_with_scratch_into(
+        dispatcher, &fwd_graph, &issue_seeds, loans, ALLOW_ALL, max_iters, &mut scratch,
+        &mut forward, &mut forward_changed,
+    )
+    .expect("forward batch closure dispatch must succeed on the CUDA device");
+    let mut backward = Vec::new();
+    let mut backward_changed = Vec::new();
+    bfs_expand_resident_graph_batch_with_scratch_into(
+        dispatcher, &rev_graph, &use_seeds, loans, ALLOW_ALL, max_iters, &mut scratch,
+        &mut backward, &mut backward_changed,
+    )
+    .expect("backward batch closure dispatch must succeed on the CUDA device");
+
+    let mut conflicts = Vec::new();
+    for a in 0..loans {
+        for b in (a + 1)..loans {
+            if facts.loan_place[a] != facts.loan_place[b] {
+                continue;
+            }
+            let a_mut = facts.loan_kind[a] == LoanKind::Mut;
+            let b_mut = facts.loan_kind[b] == LoanKind::Mut;
+            if !(a_mut || b_mut) {
+                continue;
+            }
+            let issue_a = facts.loan_issued_at[a];
+            let issue_b = facts.loan_issued_at[b];
+            // a live at issue_b iff issue_a reaches issue_b AND a use of a is
+            // reachable from issue_b: forward[a] & backward[a] at point issue_b.
+            let a_live_at_b = slice_test_bit(&forward, words, a, issue_b)
+                && slice_test_bit(&backward, words, a, issue_b);
+            let b_live_at_a = slice_test_bit(&forward, words, b, issue_a)
+                && slice_test_bit(&backward, words, b, issue_a);
+            if a_live_at_b || b_live_at_a {
+                let (first, second) = if issue_a <= issue_b { (a, b) } else { (b, a) };
+                conflicts.push(Conflict {
+                    first: first as u32,
+                    second: second as u32,
+                    offset: facts.loan_offset[second],
+                    kind: if a_mut && b_mut {
+                        ConflictKind::TwoMutable
+                    } else {
+                        ConflictKind::MutableAndShared
+                    },
+                });
+            }
+        }
+    }
+    conflicts
+}
+
+#[test]
+fn cuda_batched_borrow_checker_matches_cpu_engine() {
+    let cases = corpus();
+    with_live_backend("cuda batched borrowck", |backend| {
+        let dispatcher = CudaResidentDispatcher::new(backend);
+        for (label, f) in &cases {
+            let cpu = analyze(f);
+            let gpu = cuda_conflicts_batched(&dispatcher, f);
+            assert_eq!(
+                gpu, cpu,
+                "{label}: batched CUDA borrow-check verdict diverged from the CPU engine"
+            );
+        }
+    });
+}
+
+#[test]
+fn cuda_batched_borrow_checker_many_loans_two_dispatches() {
+    // A 200-point chain carrying 64 distinct-place loans, each issued and used
+    // once along the chain. The per-loan path would launch 2 x 64 = 128 device
+    // dispatches; the batched path runs every loan's forward closure in one
+    // dispatch and every backward closure in a second: 2 total, same verdict.
+    let n = 200u32;
+    let loan_count = 64u32;
+    let cfg: Vec<(u32, u32)> = (0..n - 1).map(|i| (i, i + 1)).collect();
+    // Distinct places -> no conflicts; issued at i, used at i+1 (live one step).
+    let loans: Vec<(u32, LoanKind, u32, u32)> = (0..loan_count)
+        .map(|i| (i, LoanKind::Mut, i, i * 4))
+        .collect();
+    let uses: Vec<(u32, u32)> = (0..loan_count).map(|i| (i, i + 1)).collect();
+    let f = facts(n, &cfg, &loans, &uses);
+
+    let cpu = analyze(&f);
+    let gpu = with_live_backend("cuda batched many-loan", |backend| {
+        let dispatcher = CudaResidentDispatcher::new(backend);
+        cuda_conflicts_batched(&dispatcher, &f)
+    });
+    assert_eq!(
+        gpu, cpu,
+        "batched CUDA verdict diverged from the CPU engine on 64 distinct-place loans"
+    );
+    assert!(gpu.is_empty(), "distinct-place loans never conflict, got {gpu:?}");
+}
+
+#[test]
+fn cuda_batched_borrow_checker_many_loans_shared_place_conflict() {
+    // 64 &mut loans of ONE place, all issued early and all used at the end, so
+    // every pair is co-live across the chain: the batched path must report the
+    // exact conflict set the CPU engine does, computed in two dispatches.
+    let n = 80u32;
+    let loan_count = 8u32;
+    let cfg: Vec<(u32, u32)> = (0..n - 1).map(|i| (i, i + 1)).collect();
+    let loans: Vec<(u32, LoanKind, u32, u32)> = (0..loan_count)
+        .map(|i| (0u32, LoanKind::Mut, i, i * 4))
+        .collect();
+    // Every loan used at the last point -> all live across the whole chain.
+    let uses: Vec<(u32, u32)> = (0..loan_count).map(|i| (i, n - 1)).collect();
+    let f = facts(n, &cfg, &loans, &uses);
+
+    let cpu = analyze(&f);
+    let gpu = with_live_backend("cuda batched shared-place", |backend| {
+        let dispatcher = CudaResidentDispatcher::new(backend);
+        cuda_conflicts_batched(&dispatcher, &f)
+    });
+    assert_eq!(
+        gpu, cpu,
+        "batched CUDA verdict diverged from the CPU engine on shared-place &mut loans"
+    );
+    // n choose 2 over 8 loans = 28 conflicting pairs.
+    assert_eq!(gpu.len(), 28, "expected 28 TwoMutable conflicts, got {}", gpu.len());
+}
+
+#[test]
+fn cuda_batched_vs_per_loan_dispatch_speedup() {
+    // 64 loans on a 200-point chain. Per-loan: 2 x 64 = 128 device dispatches.
+    // Batched: 2. Same verdict; this measures the megakernel-batching win on the
+    // device and asserts the two paths agree.
+    let n = 200u32;
+    let loan_count = 64u32;
+    let cfg: Vec<(u32, u32)> = (0..n - 1).map(|i| (i, i + 1)).collect();
+    let loans: Vec<(u32, LoanKind, u32, u32)> = (0..loan_count)
+        .map(|i| (i, LoanKind::Mut, i, i * 4))
+        .collect();
+    let uses: Vec<(u32, u32)> = (0..loan_count).map(|i| (i, i + 1)).collect();
+    let f = facts(n, &cfg, &loans, &uses);
+
+    with_live_backend("cuda batched vs per-loan", |backend| {
+        let dispatcher = CudaResidentDispatcher::new(backend);
+        // Warm both paths (PTX/module/resident-graph caches) before timing.
+        let warm_per_loan = cuda_conflicts(&dispatcher, &f);
+        let warm_batched = cuda_conflicts_batched(&dispatcher, &f);
+        assert_eq!(warm_per_loan, warm_batched, "per-loan and batched must agree");
+
+        let t0 = Instant::now();
+        let per_loan = cuda_conflicts(&dispatcher, &f);
+        let per_loan_us = t0.elapsed().as_micros();
+        let t1 = Instant::now();
+        let batched = cuda_conflicts_batched(&dispatcher, &f);
+        let batched_us = t1.elapsed().as_micros();
+
+        assert_eq!(per_loan, batched, "per-loan and batched verdicts must agree");
+        let speedup = per_loan_us as f64 / batched_us.max(1) as f64;
+        println!();
+        println!("=== batched megakernel borrow checker vs per-loan ({loan_count} loans) ===");
+        println!("per-loan   {:>3} dispatches   {per_loan_us:>8} us", 2 * loan_count);
+        println!("batched      2 dispatches   {batched_us:>8} us");
+        println!("speedup    {speedup:>6.1}x");
+        println!("===");
+        // Regression gate with a wide margin (observed ~900x): batching must
+        // stay at least an order of magnitude faster than per-loan dispatch.
+        assert!(
+            batched_us.saturating_mul(10) < per_loan_us,
+            "megakernel batching regressed: batched {batched_us}us vs per-loan {per_loan_us}us \
+             (must be >=10x faster)"
+        );
+    });
 }
