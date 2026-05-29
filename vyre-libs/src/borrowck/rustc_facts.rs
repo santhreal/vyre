@@ -424,30 +424,41 @@ impl RustcNllFacts {
         subset
     }
 
-    /// Illegal-subset (region-outlives) errors: a derived subset between two
-    /// placeholder origins that is not a known/declared placeholder subset.
-    /// These are the escape/lifetime errors (rustc E0515 / E0521 and kin) that
-    /// carry no loan invalidation.
-    #[must_use]
-    pub fn subset_errors(&self) -> Vec<(Origin, Origin)> {
-        if self.point_count == 0 || self.universal_region.is_empty() {
-            return Vec::new();
+    /// CFG successor adjacency `succ[p] = {q : edge(p,q)}`.
+    fn succ_edges(&self) -> HashMap<Point, Vec<Point>> {
+        let mut m: HashMap<Point, Vec<Point>> = HashMap::new();
+        for &(p, q) in &self.cfg_edge {
+            m.entry(p).or_default().push(q);
         }
+        m
+    }
+
+    /// The shared analysis base used by every error relation: region liveness,
+    /// the CFG successor map, and the `subset` closure. Computed once so
+    /// [`accepts`](Self::accepts) does not derive it twice (once per error kind).
+    fn region_subset(
+        &self,
+    ) -> (
+        HashSet<(Origin, Point)>,
+        HashMap<Point, Vec<Point>>,
+        HashSet<(Origin, Origin, Point)>,
+    ) {
+        let region_live = self.region_live_at();
+        let succ = self.succ_edges();
+        let subset = self.subset_closure(&region_live, &succ);
+        (region_live, succ, subset)
+    }
+
+    /// Illegal-subset (region-outlives) errors from a precomputed `subset`: a
+    /// derived subset between two placeholder origins that is not a
+    /// known/declared placeholder subset.
+    fn subset_errors_from(&self, subset: &HashSet<(Origin, Origin, Point)>) -> Vec<(Origin, Origin)> {
         let placeholders: HashSet<Origin> = self.placeholder.iter().map(|&(o, _)| o).collect();
         if placeholders.is_empty() {
             return Vec::new();
         }
         let known: HashSet<(Origin, Origin)> =
             self.known_placeholder_subset.iter().copied().collect();
-        let region_live = self.region_live_at();
-        let succ: HashMap<Point, Vec<Point>> = {
-            let mut m: HashMap<Point, Vec<Point>> = HashMap::new();
-            for &(p, q) in &self.cfg_edge {
-                m.entry(p).or_default().push(q);
-            }
-            m
-        };
-        let subset = self.subset_closure(&region_live, &succ);
         let mut errors: Vec<(Origin, Origin)> = subset
             .iter()
             .filter(|&&(a, b, _)| {
@@ -463,25 +474,26 @@ impl RustcNllFacts {
         errors
     }
 
-    /// Compute the Polonius "Naive" borrow-check errors for this function.
+    /// Illegal-subset (region-outlives) errors: a derived subset between two
+    /// placeholder origins that is not a known/declared placeholder subset.
+    /// These are the escape/lifetime errors (rustc E0515 / E0521 and kin) that
+    /// carry no loan invalidation.
     #[must_use]
-    pub fn nll_errors(&self) -> Vec<NllError> {
-        if self.point_count == 0 || self.loan_count == 0 {
+    pub fn subset_errors(&self) -> Vec<(Origin, Origin)> {
+        if self.point_count == 0 || self.universal_region.is_empty() {
             return Vec::new();
         }
-        let region_live = self.region_live_at();
-        let region_live_set: HashSet<(Origin, Point)> = region_live;
+        let (_, _, subset) = self.region_subset();
+        self.subset_errors_from(&subset)
+    }
 
-        let succ: HashMap<Point, Vec<Point>> = {
-            let mut m: HashMap<Point, Vec<Point>> = HashMap::new();
-            for &(p, q) in &self.cfg_edge {
-                m.entry(p).or_default().push(q);
-            }
-            m
-        };
-
-        let subset = self.subset_closure(&region_live_set, &succ);
-
+    /// Polonius "Naive" loan-invalidation errors from a precomputed base.
+    fn nll_errors_from(
+        &self,
+        region_live_set: &HashSet<(Origin, Point)>,
+        succ: &HashMap<Point, Vec<Point>>,
+        subset: &HashSet<(Origin, Origin, Point)>,
+    ) -> Vec<NllError> {
         // requires(O,L,P): issued, via subset, and forward while live + not
         // killed. Evaluated semi-naively: only the previous round's newly
         // derived `requires` tuples (the delta) drive new derivations.
@@ -490,7 +502,7 @@ impl RustcNllFacts {
         let killed: HashSet<(Loan, Point)> = self.loan_killed_at.iter().copied().collect();
         let subset_by_first: HashMap<(Origin, Point), Vec<Origin>> = {
             let mut m: HashMap<(Origin, Point), Vec<Origin>> = HashMap::new();
-            for &(a, b, p) in &subset {
+            for &(a, b, p) in subset {
                 m.entry((a, p)).or_default().push(b);
             }
             m
@@ -550,12 +562,35 @@ impl RustcNllFacts {
         errors
     }
 
+    /// Compute the Polonius "Naive" borrow-check errors for this function.
+    #[must_use]
+    pub fn nll_errors(&self) -> Vec<NllError> {
+        if self.point_count == 0 || self.loan_count == 0 {
+            return Vec::new();
+        }
+        let (region_live, succ, subset) = self.region_subset();
+        self.nll_errors_from(&region_live, &succ, &subset)
+    }
+
     /// Whether the function borrow-checks: no conflicting-borrow (loan
     /// invalidation) errors and no illegal-subset (region-outlives) errors.
     /// This is the verdict rustc's own borrow checker reaches on these facts.
+    /// The shared region/subset base is derived once for both error kinds.
     #[must_use]
     pub fn accepts(&self) -> bool {
-        self.nll_errors().is_empty() && self.subset_errors().is_empty()
+        let need_nll = self.point_count != 0 && self.loan_count != 0;
+        let need_subset = self.point_count != 0 && !self.universal_region.is_empty();
+        if !need_nll && !need_subset {
+            return true;
+        }
+        let (region_live, succ, subset) = self.region_subset();
+        if need_nll && !self.nll_errors_from(&region_live, &succ, &subset).is_empty() {
+            return false;
+        }
+        if need_subset && !self.subset_errors_from(&subset).is_empty() {
+            return false;
+        }
+        true
     }
 }
 
