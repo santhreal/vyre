@@ -449,6 +449,7 @@ mod tests {
         );
     }
 
+
     struct NativeGridSyncProbe {
         calls: Mutex<usize>,
     }
@@ -684,3 +685,4 @@ mod tests {
         );
     }
 }
+

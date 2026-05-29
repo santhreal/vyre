@@ -96,6 +96,9 @@ pub fn try_dispatch_param_words_into(
     words.resize(word_len, 0);
     words[0] = element_count;
     for binding in bindings {
+        if binding.role == BindingRole::Shared {
+            continue;
+        }
         let slot = dispatch_param_word_slot(binding)?;
         words[slot] = if binding.element_count == 0 {
             element_count
@@ -109,6 +112,9 @@ pub fn try_dispatch_param_words_into(
 fn dispatch_param_word_len_for_bindings(bindings: &[Binding]) -> Result<usize, String> {
     let mut word_len = dispatch_param_word_len_checked(bindings.len())?;
     for binding in bindings {
+        if binding.role == BindingRole::Shared {
+            continue;
+        }
         let required = dispatch_param_word_slot(binding)?
             .checked_add(1)
             .ok_or_else(|| {

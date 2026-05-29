@@ -450,6 +450,7 @@ pub fn scale_u64_by_basis_points_round_clamped(
 /// Apply a basis-point multiplier to a `u64` with floor rounding and an output
 /// lower bound.
 #[must_use]
+
 pub fn scale_u64_by_basis_points_floor_min(
     base: u64,
     scale_bps: u32,
@@ -966,3 +967,4 @@ mod tests {
         );
     }
 }
+

@@ -448,6 +448,7 @@ mod tests {
 
     #[test]
     fn from_inventory_ingests_extern_ops() {
+
         let _lock = registry_test_lock();
         let registry = DialectRegistry::from_inventory();
         let op_id = "vyre-libs-driver-registry-test::dummy";
@@ -556,3 +557,4 @@ mod tests {
         DialectRegistry::install(DialectRegistry::from_inventory());
     }
 }
+

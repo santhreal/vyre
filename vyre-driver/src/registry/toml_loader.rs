@@ -449,6 +449,7 @@ ops = [
         assert_eq!(store.diagnostics().len(), 0);
     }
 
+
     #[test]
     fn rejects_mismatched_op_prefix_with_diagnostic() {
         let file = write_tmp(
@@ -604,3 +605,4 @@ ops = [ { id = "wrong.bad", category = "B" } ]
         assert_eq!(CODE_PARSE.as_str(), "E-TOML-PARSE");
     }
 }
+

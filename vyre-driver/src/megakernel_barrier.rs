@@ -448,6 +448,7 @@ mod tests {
         let plan = plan_megakernel_barriers(
             4,
             &[
+
                 MegakernelWaveDependency {
                     before: 0,
                     after: 1,
@@ -686,3 +687,4 @@ mod tests {
         }
     }
 }
+

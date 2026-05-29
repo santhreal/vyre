@@ -448,6 +448,7 @@ mod tests {
     fn enqueue_claim_fifo_single_thread() {
         let eng = PersistentEngine::new(8);
         for i in 0..8 {
+
             assert_eq!(eng.enqueue(item(i)).unwrap(), i);
         }
         for i in 0..8 {
@@ -613,3 +614,4 @@ mod tests {
         assert!(s.contains("ring buffer"));
     }
 }
+

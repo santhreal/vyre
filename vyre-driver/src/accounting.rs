@@ -460,6 +460,7 @@ pub fn checked_atomic_add_usize_with_order<E>(
 ///
 /// Returns `E` from `overflow` when the addition would overflow, or from
 /// `validate_next` when the computed next value violates a caller invariant.
+
 pub fn checked_atomic_add_usize_guarded_with_order<E>(
     counter: &AtomicUsize,
     value: usize,
@@ -647,7 +648,7 @@ mod checked_atomic_update_with_order_tests {
             |observed| observed.checked_add(1).ok_or("overflow"),
             |_, _| Ok(()),
         )
-        .expect("update should fit");
+        .expect("Fix: reject accounting updates that overflow the tracked counter range - update should fit");
 
         assert_eq!(previous, 41);
         assert_eq!(counter.load(Ordering::Acquire), 42);
@@ -920,6 +921,7 @@ pub fn checked_atomic_next_u64_with_order<E>(
 /// Raise a `u64` atomic counter to at least `value` using one atomic max update.
 ///
 /// Returns the previous value observed by the atomic operation.
+
 pub fn atomic_max_u64(counter: &AtomicU64, value: u64, order: Ordering) -> u64 {
     counter.fetch_max(value, order)
 }
@@ -1184,7 +1186,7 @@ mod tests {
             Ordering::Acquire,
             |_, _| "overflow",
         )
-        .expect("ordered atomic add should accept non-overflow");
+        .expect("Fix: reject adds that would overflow; use checked accounting API on hostile sizes - ordered atomic add should accept non-overflow");
         assert_eq!(add_counter.load(Ordering::Acquire), 42);
 
         let sub_counter = AtomicU64::new(42);
@@ -1196,7 +1198,7 @@ mod tests {
             Ordering::Acquire,
             |_, _| "underflow",
         )
-        .expect("ordered atomic sub should accept non-underflow");
+        .expect("Fix: reject subs that would underflow; use checked accounting API on hostile sizes - ordered atomic sub should accept non-underflow");
         assert_eq!(sub_counter.load(Ordering::Acquire), 40);
 
         let usize_counter = AtomicUsize::new(10);
@@ -1208,7 +1210,7 @@ mod tests {
             Ordering::Acquire,
             |_, _| "usize overflow",
         )
-        .expect("ordered usize atomic add should accept non-overflow");
+        .expect("Fix: reject usize atomics that overflow/underflow; return Err from guarded helpers - ordered usize atomic add should accept non-overflow");
         assert_eq!(usize_counter.load(Ordering::Acquire), 15);
         checked_atomic_sub_usize_with_order(
             &usize_counter,
@@ -1218,7 +1220,7 @@ mod tests {
             Ordering::Acquire,
             |_, _| "usize underflow",
         )
-        .expect("ordered usize atomic sub should accept non-underflow");
+        .expect("Fix: reject usize atomics that overflow/underflow; return Err from guarded helpers - ordered usize atomic sub should accept non-underflow");
         assert_eq!(usize_counter.load(Ordering::Acquire), 12);
     }
 
@@ -1253,7 +1255,7 @@ mod tests {
             |_, _| "overflow",
             |next| if next <= 12 { Ok(()) } else { Err("budget") },
         )
-        .expect("guarded u64 add should publish accepted next value");
+        .expect("Fix: reject guarded adds that overflow; surface Err to caller instead of panicking - guarded u64 add should publish accepted next value");
         assert_eq!(u64_counter.load(Ordering::Acquire), 12);
 
         let usize_counter = AtomicUsize::new(3);
@@ -1386,7 +1388,7 @@ mod tests {
                 Ordering::Acquire,
                 |_| "overflow",
             )
-            .expect("checked atomic next should allocate non-overflowing value"),
+            .expect("Fix: allocation of next atomic value must not overflow; return None/Err on hostile input - checked atomic next should allocate non-overflowing value"),
             41
         );
         assert_eq!(counter.load(Ordering::Acquire), 42);
@@ -1438,3 +1440,4 @@ mod tests {
         assert_eq!(repairs, 1);
     }
 }
+

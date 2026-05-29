@@ -477,6 +477,7 @@ where
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use std::collections::HashSet;
@@ -845,3 +846,4 @@ mod tests {
         assert_eq!(outcome.outputs, vec![b"confirmed".to_vec()]);
     }
 }
+

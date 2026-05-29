@@ -458,6 +458,7 @@ pub trait BackendObservabilityProvider {
     fn backend_metrics(&self) -> Vec<(&'static str, u64)>;
 }
 
+
 fn trace_events() -> &'static Mutex<VecDeque<SubstrateAuditEvent>> {
     static EVENTS: OnceLock<Mutex<VecDeque<SubstrateAuditEvent>>> = OnceLock::new();
     EVENTS.get_or_init(|| Mutex::new(VecDeque::with_capacity(TRACE_EVENT_CAPACITY)))
@@ -562,7 +563,12 @@ mod tests {
     #[cfg(feature = "self-substrate-adapters")]
     fn snapshot_yields_nonempty_substrate_list() {
         let snap = DriverObservability::snapshot();
-        assert!(!snap.substrate_calls.is_empty());
+        assert!(
+            snap.substrate_calls
+                .iter()
+                .any(|(module, count)| *count > 0 && !module.is_empty()),
+            "snapshot must record at least one substrate module with nonzero calls"
+        );
     }
 
     #[test]
@@ -687,3 +693,4 @@ mod tests {
             .contains("kind=\"sync_points\""));
     }
 }
+

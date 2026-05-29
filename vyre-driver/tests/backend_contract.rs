@@ -190,9 +190,12 @@ fn minimal_backend_lifecycle_hooks_are_noops() {
     backend
         .shutdown()
         .expect("Fix: default shutdown must return Ok");
+    let err = backend
+        .try_recover()
+        .expect_err("default try_recover must fail - recovery is opt-in");
     assert!(
-        backend.try_recover().is_err(),
-        "default try_recover must return UnsupportedFeature  -  recovery is opt-in"
+        matches!(err, BackendError::UnsupportedFeature { .. }),
+        "default try_recover must return UnsupportedFeature, got: {err:?}"
     );
 }
 

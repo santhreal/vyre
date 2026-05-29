@@ -448,6 +448,7 @@ mod tests {
                     }),
                     other => Err(other),
                 })
+
                 .expect(
                     "Fix: generated launch fusion should only reject singleton over-budget stages",
                 );
@@ -466,12 +467,12 @@ mod tests {
                 "Fix: launch fusion must preserve original stage order for seed {seed}."
             );
             assert_eq!(
-                usize::try_from(plan.launch_count).expect("launch_count fits usize"),
+                usize::try_from(plan.launch_count).expect("Fix: plan launch_count must fit usize on this platform; reject oversized plans upstream - launch_count fits usize"),
                 plan.groups.len(),
                 "Fix: launch_count must match group count for seed {seed}."
             );
             assert_eq!(
-                usize::try_from(plan.avoided_launches).expect("avoided_launches fits usize"),
+                usize::try_from(plan.avoided_launches).expect("Fix: avoided_launches must fit usize; clamp or reject plan before fusion stats - avoided_launches fits usize"),
                 stages.len() - plan.groups.len(),
                 "Fix: avoided_launches must match fused group reduction for seed {seed}."
             );
@@ -577,3 +578,4 @@ mod tests {
         x
     }
 }
+

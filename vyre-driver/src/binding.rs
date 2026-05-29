@@ -450,6 +450,7 @@ fn static_byte_len(buffer: &BufferDecl) -> Result<Option<usize>, BackendError> {
         })
 }
 
+
 fn dynamic_element_count_from_bytes(buffer: &BufferDecl, byte_len: usize) -> Option<u32> {
     if let Some(bits) = buffer.element().bit_width() {
         let total_bits = byte_len.checked_mul(8)?;
@@ -527,7 +528,7 @@ mod exact_length_tests {
     fn dynamic_input_length_sets_runtime_element_count() {
         let program = static_u32_input_program(0);
         let plan = BindingPlan::from_program(&program, &[vec![0u8; 12]])
-            .expect("dynamic input byte length should define element count");
+            .expect("Fix: reject bindings without known element width; do not dispatch un-sized dynamic inputs - dynamic input byte length should define element count");
 
         assert_eq!(plan.bindings[0].element_count, 3);
         assert_eq!(plan.bindings[0].static_byte_len, None);
@@ -888,3 +889,4 @@ mod tests {
         );
     }
 }
+

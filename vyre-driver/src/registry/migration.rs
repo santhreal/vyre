@@ -448,6 +448,7 @@ mod tests {
             Semver::new(1, 1, 0),
             "migrate to test.op_dep2",
         )
+
     }
 
     #[test]
@@ -558,3 +559,4 @@ mod tests {
         assert_eq!(Semver::new(1, 2, 3).to_string(), "1.2.3");
     }
 }
+

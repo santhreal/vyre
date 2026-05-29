@@ -466,6 +466,7 @@ fn per_call_config_overrides_compile_config() {
 }
 
 #[test]
+
 fn native_pipeline_is_used_when_backend_provides_one() {
     // Backend that returns a NoopPipeline from compile_native; verifies
     // the framework hands it back directly instead of wrapping in
@@ -616,3 +617,4 @@ fn compile_rejects_non_region_programs() {
         "Fix: runtime admission rejection must mention the region invariant, got: {error}"
     );
 }
+

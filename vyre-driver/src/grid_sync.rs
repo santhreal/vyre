@@ -484,6 +484,7 @@ fn propagate_let_bindings(segments: &mut [Vec<Node>], hoisted_inner: &[Node]) {
 /// # Errors
 /// Returns an actionable [`BackendError`] if segment storage cannot be
 /// reserved or if split accounting overflows.
+
 pub fn try_split_on_grid_sync(program: &Program) -> Result<Vec<Program>, BackendError> {
     let (wrappers, inner) = peel_entry_wrappers(program);
     let hoisted_inner = hoist_grid_sync_barriers(inner);
@@ -1467,3 +1468,4 @@ mod tests {
         assert_eq!(timed.wait_ns, Some(12));
     }
 }
+
