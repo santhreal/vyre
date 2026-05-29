@@ -462,6 +462,7 @@ fn direct_record_and_readback_trap_uses_readback_rings_only() {
 }
 
 #[test]
+
 fn direct_record_and_readback_trap_without_readback_rings_allocates_full_sidecar_copy() {
     use std::sync::Arc;
 
@@ -687,3 +688,4 @@ fn direct_record_and_readback_trap_with_output_preserves_ring_fast_path() {
         "Fix: no-ring mixed output+trap path should allocate output storage, trap storage, output readback, and trap readback buffers; ring-backed dispatch must be the path that avoids the two pooled readback allocations.",
     );
 }
+

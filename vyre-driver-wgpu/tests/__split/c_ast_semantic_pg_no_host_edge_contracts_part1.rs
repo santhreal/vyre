@@ -7,9 +7,10 @@ fn gpu_typedef_node_has_declaration_category_and_typedef_role() {
     let (gpu_nodes, gpu_edges) = run_gpu_semantic_lower(&typed);
 
     let typedef_idxs = row_indices(&typed, C_AST_KIND_TYPEDEF_DECL);
-    assert!(
-        !typedef_idxs.is_empty(),
-        "fixture must contain a typedef declaration"
+    assert_eq!(
+        typedef_idxs.len(),
+        1,
+        "fixture must classify exactly one typedef declaration"
     );
 
     for &idx in &typedef_idxs {
@@ -40,9 +41,10 @@ fn gpu_struct_tag_node_has_aggregate_decl_role() {
     let (gpu_nodes, _gpu_edges) = run_gpu_semantic_lower(&typed);
 
     let struct_idxs = row_indices(&typed, C_AST_KIND_STRUCT_DECL);
-    assert!(
-        !struct_idxs.is_empty(),
-        "fixture must contain a struct declaration"
+    assert_eq!(
+        struct_idxs.len(),
+        1,
+        "fixture must classify exactly one struct declaration"
     );
 
     for &idx in &struct_idxs {
@@ -63,9 +65,10 @@ fn gpu_enum_tag_and_enumerator_nodes_have_correct_roles() {
     let (gpu_nodes, _gpu_edges) = run_gpu_semantic_lower(&typed);
 
     let enum_idxs = row_indices(&typed, C_AST_KIND_ENUM_DECL);
-    assert!(
-        !enum_idxs.is_empty(),
-        "fixture must contain an enum declaration"
+    assert_eq!(
+        enum_idxs.len(),
+        1,
+        "fixture must classify exactly one enum declaration"
     );
 
     for &idx in &enum_idxs {
@@ -79,9 +82,10 @@ fn gpu_enum_tag_and_enumerator_nodes_have_correct_roles() {
     }
 
     let enumerator_idxs = row_indices(&typed, C_AST_KIND_ENUMERATOR_DECL);
-    assert!(
-        !enumerator_idxs.is_empty(),
-        "fixture must contain enumerators"
+    assert_eq!(
+        enumerator_idxs.len(),
+        2,
+        "fixture must classify exactly two enumerators"
     );
 
     for &idx in &enumerator_idxs {
@@ -102,9 +106,10 @@ fn gpu_function_pointer_declarator_marks_function_pointer_role() {
     let (gpu_nodes, _gpu_edges) = run_gpu_semantic_lower(&typed);
 
     let fn_declarator_idxs = row_indices(&typed, C_AST_KIND_FUNCTION_DECLARATOR);
-    assert!(
-        !fn_declarator_idxs.is_empty(),
-        "fixture must contain a function declarator"
+    assert_eq!(
+        fn_declarator_idxs.len(),
+        1,
+        "fixture must classify exactly one function declarator"
     );
 
     let ptr_idxs: Vec<usize> = row_indices(&typed, C_AST_KIND_POINTER_DECL)
@@ -114,9 +119,10 @@ fn gpu_function_pointer_declarator_marks_function_pointer_role() {
         })
         .collect();
 
-    assert!(
-        !ptr_idxs.is_empty(),
-        "function-pointer declarator must mark at least one POINTER_DECL with FUNCTION_POINTER_DECL role"
+    assert_eq!(
+        ptr_idxs.len(),
+        1,
+        "function-pointer declarator must mark exactly one POINTER_DECL with FUNCTION_POINTER_DECL role"
     );
 }
 
@@ -134,9 +140,10 @@ fn gpu_regular_pointer_declarator_has_pointer_decl_role() {
     let (gpu_nodes, _gpu_edges) = run_gpu_semantic_lower(&typed);
 
     let ptr_idxs = row_indices(&typed, C_AST_KIND_POINTER_DECL);
-    assert!(
-        !ptr_idxs.is_empty(),
-        "fixture must contain a pointer declarator"
+    assert_eq!(
+        ptr_idxs.len(),
+        1,
+        "fixture must classify exactly one pointer declarator"
     );
 
     for &idx in &ptr_idxs {
@@ -352,9 +359,10 @@ fn gpu_function_definition_has_declaration_category_and_role() {
     let (gpu_nodes, _gpu_edges) = run_gpu_semantic_lower(&typed);
 
     let fn_idxs = row_indices(&typed, C_AST_KIND_FUNCTION_DEFINITION);
-    assert!(
-        !fn_idxs.is_empty(),
-        "fixture must contain a function definition"
+    assert_eq!(
+        fn_idxs.len(),
+        1,
+        "fixture must classify exactly one function definition"
     );
 
     for &idx in &fn_idxs {

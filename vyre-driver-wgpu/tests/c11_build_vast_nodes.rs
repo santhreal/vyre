@@ -454,6 +454,7 @@ fn assert_vast_row(
     assert_eq!(word_at(rows, row + 2), first_child, "first_child[{idx}]");
     assert_eq!(word_at(rows, row + 3), next_sibling, "next_sibling[{idx}]");
 }
+
 fn assert_kind(rows: &[u8], idx: usize, kind: u32) {
     assert_eq!(word_at(rows, idx * VAST_STRIDE_U32), kind, "kind[{idx}]");
 }
@@ -506,3 +507,4 @@ mod c11_build_vast_nodes_part4 {
 mod c11_build_vast_nodes_part5 {
     include!("__split/c11_build_vast_nodes_part5.rs");
 }
+

@@ -581,6 +581,7 @@ impl WgpuPendingReadback {
     }
 }
 
+
 fn trimmed_output_bytes<'a>(
     output: &OutputBindingLayout,
     mapped: &'a [u8],
@@ -616,3 +617,4 @@ impl ReadbackPollBackoff {
         self.backoff.idle_until(deadline);
     }
 }
+

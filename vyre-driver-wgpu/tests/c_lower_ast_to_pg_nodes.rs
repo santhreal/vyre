@@ -449,6 +449,7 @@ fn assert_pg_row(
         "pg next_sibling[{idx}]"
     );
 }
+
 fn adversarial_vast_cases() -> Vec<Vec<u8>> {
     let mut cases = Vec::with_capacity(64);
     for case_idx in 0..60 {
@@ -513,3 +514,4 @@ mod c_lower_ast_to_pg_nodes_part4 {
 mod c_lower_ast_to_pg_nodes_part5 {
     include!("__split/c_lower_ast_to_pg_nodes_part5.rs");
 }
+

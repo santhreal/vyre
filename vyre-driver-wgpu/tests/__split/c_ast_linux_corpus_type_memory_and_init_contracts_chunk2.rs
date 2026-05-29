@@ -26,20 +26,18 @@ fn nested_anonymous_union_classifies_union_and_struct_rows() {
     let typed = reference_c11_classify_vast_node_kinds(&annotated);
 
     let unions = row_indices(&typed, C_AST_KIND_UNION_DECL);
-    assert!(
-        !unions.is_empty(),
+    assert_ne!(unions.len(), 0,
         "anonymous union must produce UNION_DECL"
     );
 
     let structs = row_indices(&typed, C_AST_KIND_STRUCT_DECL);
-    assert!(
-        !structs.is_empty(),
+    assert_ne!(structs.len(), 0,
         "outer struct X must produce STRUCT_DECL"
     );
 
     // Array declarator for char c[4]
     let arrays = row_indices(&typed, C_AST_KIND_ARRAY_DECL);
-    assert!(!arrays.is_empty(), "char c[4] must produce ARRAY_DECL");
+    assert_ne!(arrays.len(), 0, "char c[4] must produce ARRAY_DECL");
 }
 
 #[test]

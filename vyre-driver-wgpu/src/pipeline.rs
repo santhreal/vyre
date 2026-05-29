@@ -659,6 +659,7 @@ impl WgpuPipeline {
     }
 }
 
+
 impl WgpuPipeline {
     fn readback_persistent_outputs(
         &self,
@@ -859,3 +860,4 @@ pub mod persistent;
 
 #[cfg(test)]
 mod tests;
+

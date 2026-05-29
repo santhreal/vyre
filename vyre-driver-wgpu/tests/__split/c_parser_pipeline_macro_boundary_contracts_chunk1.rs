@@ -229,7 +229,7 @@ fn macro_expansion_one_past_max_out_tokens_fails() {
     }));
     let eval_result = result.expect("overflow must return error, not panic");
     assert!(
-        eval_result.is_err(),
+        matches!(eval_result, Err(_)),
         "two 3-token expansions into 5 slots must fail"
     );
 }
@@ -288,7 +288,7 @@ fn conditional_mask_on_empty_stream_fails_validation() {
     let result = catch_unwind(AssertUnwindSafe(|| run_conditional_mask(&[])));
     let eval_result = result.expect("empty conditional mask must return an error, not panic");
     assert!(
-        eval_result.is_err(),
+        matches!(eval_result, Err(_)),
         "zero-length token stream must fail validation through the engine, not silently succeed"
     );
 }

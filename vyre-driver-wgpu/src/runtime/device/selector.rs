@@ -450,14 +450,14 @@ fn reserve_probe_vec<T>(vec: &mut Vec<T>, additional: usize, context: &'static s
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
     #[test]
     fn enumerate_adapters_finds_required_gpu() {
         let adapters = enumerate_adapters();
-        assert!(
-            !adapters.is_empty(),
+        assert_ne!(adapters.len(), 0,
             "Fix: WGPU adapter enumeration returned no adapters on a GPU-required release host; repair driver/runtime configuration instead of accepting a CPU-only environment."
         );
     }
@@ -571,3 +571,4 @@ mod tests {
         assert!(production.contains("adapter_name_contains"));
     }
 }
+

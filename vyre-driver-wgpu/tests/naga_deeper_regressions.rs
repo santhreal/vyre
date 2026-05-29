@@ -141,7 +141,7 @@ fn f59_u64_bitand_still_lowers() {
 
     let res = naga_emit::emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE);
     assert!(
-        res.is_ok(),
+        matches!(res, Ok(_)),
         "Fix: bitwise ops on U64 are componentwise-correct under the \
          vec2<u32> backing; rejection is a regression. Got: {:?}",
         res.err()

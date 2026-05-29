@@ -563,6 +563,7 @@ pub(crate) fn binding_padded_size(
     Ok(len)
 }
 
+
 fn padded_wgpu_u64(size: u64, label: &'static str) -> Result<u64, BackendError> {
     crate::numeric::align_up_u64(size, 4, label)
 }
@@ -633,3 +634,4 @@ mod tests {
         assert_eq!(size, 20);
     }
 }
+

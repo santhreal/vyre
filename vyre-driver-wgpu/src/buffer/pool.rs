@@ -543,6 +543,7 @@ impl BufferPool {
     }
 }
 
+
 impl PoolReturn {
     pub(crate) fn release(
         self,
@@ -748,7 +749,7 @@ mod tests {
         let production = src
             .split("\n#[cfg(test)]\nmod tests")
             .next()
-            .expect("production section must exist");
+            .expect("Fix: meta-test scans production sources; update fixture path if module moved - production section must exist");
         assert!(
             !production.contains(" as usize"),
             "buffer-pool release/acquire class selection must use checked conversion helpers"
@@ -920,3 +921,4 @@ mod tests {
         }
     }
 }
+

@@ -89,7 +89,7 @@ fn is_validated_does_not_substitute_for_capability_check() {
     let reduced = ReducedBackend { id: "reduced" };
     let result = reduced.dispatch(&program, &[], &vyre::DispatchConfig::default());
     assert!(
-        result.is_err(),
+        matches!(result, Err(_)),
         "transcendental parity6: reduced backend must refuse dispatch of a program validated elsewhere; \
          never read Program::is_validated() as a capability shortcut"
     );

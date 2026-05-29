@@ -464,6 +464,7 @@ fn wgpu_backend_ranged_batch_alignment_error_writes_nothing() {
 }
 
 #[test]
+
 fn wgpu_backend_ranged_batch_download_validates_before_any_readback() {
     let backend = backend();
     let first = backend
@@ -506,3 +507,4 @@ fn wgpu_backend_ranged_batch_download_validates_before_any_readback() {
         .free_resident(second)
         .expect("second resident buffer must free cleanly");
 }
+

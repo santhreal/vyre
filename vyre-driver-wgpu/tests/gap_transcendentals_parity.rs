@@ -1,4 +1,4 @@
-//! Release gap #1 — cross-backend bitwise transcendental parity.
+//! Release gap #1 - cross-backend bitwise transcendental parity.
 //!
 //! See `contracts/release.md`. WGSL hardware transcendentals do not
 //! guarantee correctly-rounded f32 today, so this test **fails** until

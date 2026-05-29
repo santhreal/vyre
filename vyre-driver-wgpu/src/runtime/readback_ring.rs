@@ -637,6 +637,7 @@ impl ReadbackRing {
 }
 
 #[inline]
+
 fn staging_capacity(byte_len: u64) -> Result<u64, BackendError> {
     aligned_copy_len(byte_len).map_err(|error| {
         tracing::warn!(
@@ -751,3 +752,4 @@ mod tests {
         );
     }
 }
+

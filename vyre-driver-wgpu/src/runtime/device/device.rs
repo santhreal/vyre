@@ -447,6 +447,7 @@ fn gpu_candidate_score(
         | storage_buffers
 }
 
+
 fn subgroup_smoke_compiles(device: &wgpu::Device) -> std::result::Result<(), String> {
     const WGSL: &str = r#"
 @compute @workgroup_size(32)
@@ -638,3 +639,4 @@ mod tests {
         );
     }
 }
+
