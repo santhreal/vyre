@@ -138,8 +138,8 @@ fn bisect_rewrites_terminates_on_smoke_fixture() {
     // bisect_rewrites is the rewrite-bisection harness used to find a
     // minimal failing transform. On a passing program it must
     // *terminate* (no infinite loop, no crash) and return an Ok result.
-    // We don't assert on the exact RewriteBisectResult shape — that's
-    // a behavior contract, not a structural one — only that it
+    // We don't assert on the exact RewriteBisectResult shape - that's
+    // a behavior contract, not a structural one - only that it
     // completes within a reasonable wall-clock budget.
     let start = std::time::Instant::now();
     let result = bisect_rewrites(&program);
