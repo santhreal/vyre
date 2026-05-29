@@ -7,7 +7,7 @@
 fn test_cli_list_produces_output() {
     let result = vyre_bench::cli::run_cli_with(["vyre-bench", "list", "--format", "table"]);
     assert!(
-        result.is_ok(),
+        matches!(result, Ok(())),
         "CLI list command should succeed: {:?}",
         result.err()
     );
@@ -23,7 +23,7 @@ fn test_cli_snapshot_diff_requires_commit() {
         "0000000000000000000000000000000000000000",
     ]);
     assert!(
-        result.is_err(),
+        matches!(result, Err(_)),
         "snapshot-diff should fail for non-existent commit"
     );
 }

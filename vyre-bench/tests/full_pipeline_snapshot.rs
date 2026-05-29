@@ -198,9 +198,9 @@ fn three_substrates_all_emit_for_rewritten_kernel() {
     let naga = vyre_emit_naga::emit(&rewritten);
     let ptx = vyre_emit_ptx::emit(&rewritten);
     let spirv = vyre_emit_spirv::emit(&rewritten);
-    assert!(naga.is_ok(), "naga emit failed: {:?}", naga.err());
-    assert!(ptx.is_ok(), "ptx emit failed: {:?}", ptx.err());
-    assert!(spirv.is_ok(), "spirv emit failed: {:?}", spirv.err());
+    assert!(matches!(naga, Ok(_)), "naga emit failed: {:?}", naga.err());
+    assert!(matches!(ptx, Ok(_)), "ptx emit failed: {:?}", ptx.err());
+    assert!(matches!(spirv, Ok(_)), "spirv emit failed: {:?}", spirv.err());
 }
 
 #[test]
