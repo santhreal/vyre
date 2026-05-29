@@ -118,7 +118,7 @@ fn render_escape(nlocals: usize, ref_inits: &[(u8, usize)], ret: (u8, usize)) ->
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(256))]
+    #![proptest_config(ProptestConfig::with_cases(1024))]
 
     #[test]
     fn ours_matches_rustc_on_generated_borrow_programs(
