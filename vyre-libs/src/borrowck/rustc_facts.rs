@@ -72,6 +72,12 @@ pub struct RustcNllFacts {
     pub use_of_var_derefs_origin: Vec<(Var, Origin)>,
     /// `(var, origin)`: a drop of the variable dereferences the origin.
     pub drop_of_var_derefs_origin: Vec<(Var, Origin)>,
+    /// `(origin, loan)`: origin is a placeholder (a universal/free region).
+    pub placeholder: Vec<(Origin, Loan)>,
+    /// `(o1, o2)`: the subset `o1 <= o2` between placeholders is known/declared.
+    pub known_placeholder_subset: Vec<(Origin, Origin)>,
+    /// Origins that are universal (free) regions, live at every point.
+    pub universal_region: Vec<Origin>,
     /// Interned point atom for each point id (for diagnostics).
     pub point_names: Vec<String>,
     /// Interned loan atom for each loan id (for diagnostics).
@@ -220,6 +226,33 @@ pub fn load_facts(read: impl Fn(&str) -> String) -> RustcNllFacts {
             }
         }),
     );
+    let mut placeholder = Vec::new();
+    for_each(
+        "placeholder",
+        Box::new(|f| {
+            if f.len() == 2 {
+                placeholder.push((origins.intern(f[0]), loans.intern(f[1])));
+            }
+        }),
+    );
+    let mut known_placeholder_subset = Vec::new();
+    for_each(
+        "known_placeholder_subset",
+        Box::new(|f| {
+            if f.len() == 2 {
+                known_placeholder_subset.push((origins.intern(f[0]), origins.intern(f[1])));
+            }
+        }),
+    );
+    let mut universal_region = Vec::new();
+    for_each(
+        "universal_region",
+        Box::new(|f| {
+            if f.len() == 1 {
+                universal_region.push(origins.intern(f[0]));
+            }
+        }),
+    );
 
     RustcNllFacts {
         point_count: points.names.len() as u32,
@@ -236,6 +269,9 @@ pub fn load_facts(read: impl Fn(&str) -> String) -> RustcNllFacts {
         var_dropped_at,
         use_of_var_derefs_origin,
         drop_of_var_derefs_origin,
+        placeholder,
+        known_placeholder_subset,
+        universal_region,
         point_names: points.names,
         loan_names: loans.names,
     }
@@ -266,7 +302,7 @@ impl RustcNllFacts {
     }
 
     /// `region_live_at`: an origin is live where a variable that derefs it is
-    /// (use- or drop-) live.
+    /// (use- or drop-) live; universal (free) regions are live at every point.
     fn region_live_at(&self) -> HashSet<(Origin, Point)> {
         let var_live = self.var_liveness(&self.var_used_at);
         let drop_live = self.var_liveness(&self.var_dropped_at);
@@ -283,7 +319,99 @@ impl RustcNllFacts {
                 region.insert((o, p));
             }
         }
+        // Universal regions are live throughout the function.
+        for &o in &self.universal_region {
+            for p in 0..self.point_count {
+                region.insert((o, p));
+            }
+        }
         region
+    }
+
+    /// `subset(O1,O2,P)`: base subsets, their transitive closure, and forward
+    /// CFG propagation where both origins are live.
+    fn subset_closure(
+        &self,
+        region_live: &HashSet<(Origin, Point)>,
+        succ: &HashMap<Point, Vec<Point>>,
+    ) -> HashSet<(Origin, Origin, Point)> {
+        let mut subset: HashSet<(Origin, Origin, Point)> =
+            self.subset_base.iter().copied().collect();
+        loop {
+            let mut added = Vec::new();
+            let by_first: HashMap<(Origin, Point), Vec<Origin>> = {
+                let mut m: HashMap<(Origin, Point), Vec<Origin>> = HashMap::new();
+                for &(a, b, p) in &subset {
+                    m.entry((a, p)).or_default().push(b);
+                }
+                m
+            };
+            for &(a, b, p) in &subset {
+                if let Some(cs) = by_first.get(&(b, p)) {
+                    for &c in cs {
+                        if !subset.contains(&(a, c, p)) {
+                            added.push((a, c, p));
+                        }
+                    }
+                }
+                if let Some(qs) = succ.get(&p) {
+                    for &q in qs {
+                        if region_live.contains(&(a, q))
+                            && region_live.contains(&(b, q))
+                            && !subset.contains(&(a, b, q))
+                        {
+                            added.push((a, b, q));
+                        }
+                    }
+                }
+            }
+            if added.is_empty() {
+                break;
+            }
+            for t in added {
+                subset.insert(t);
+            }
+        }
+        subset
+    }
+
+    /// Illegal-subset (region-outlives) errors: a derived subset between two
+    /// placeholder origins that is not a known/declared placeholder subset.
+    /// These are the escape/lifetime errors (rustc E0515 / E0521 and kin) that
+    /// carry no loan invalidation.
+    #[must_use]
+    pub fn subset_errors(&self) -> Vec<(Origin, Origin)> {
+        if self.point_count == 0 || self.universal_region.is_empty() {
+            return Vec::new();
+        }
+        let placeholders: HashSet<Origin> = self.placeholder.iter().map(|&(o, _)| o).collect();
+        if placeholders.is_empty() {
+            return Vec::new();
+        }
+        let known: HashSet<(Origin, Origin)> =
+            self.known_placeholder_subset.iter().copied().collect();
+        let region_live = self.region_live_at();
+        let succ: HashMap<Point, Vec<Point>> = {
+            let mut m: HashMap<Point, Vec<Point>> = HashMap::new();
+            for &(p, q) in &self.cfg_edge {
+                m.entry(p).or_default().push(q);
+            }
+            m
+        };
+        let subset = self.subset_closure(&region_live, &succ);
+        let mut errors: Vec<(Origin, Origin)> = subset
+            .iter()
+            .filter(|&&(a, b, _)| {
+                a != b
+                    && placeholders.contains(&a)
+                    && placeholders.contains(&b)
+                    && !known.contains(&(a, b))
+            })
+            .map(|&(a, b, _)| (a, b))
+            .collect();
+        errors.sort_unstable();
+        errors.dedup();
+        errors
     }
 
     /// Compute the Polonius "Naive" borrow-check errors for this function.
@@ -303,46 +431,7 @@ impl RustcNllFacts {
             m
         };
 
-        // subset(O1,O2,P): base, transitive, and forward where both live.
-        let mut subset: HashSet<(Origin, Origin, Point)> =
-            self.subset_base.iter().copied().collect();
-        loop {
-            let mut added = Vec::new();
-            // transitive closure
-            let by_first: HashMap<(Origin, Point), Vec<Origin>> = {
-                let mut m: HashMap<(Origin, Point), Vec<Origin>> = HashMap::new();
-                for &(a, b, p) in &subset {
-                    m.entry((a, p)).or_default().push(b);
-                }
-                m
-            };
-            for &(a, b, p) in &subset {
-                if let Some(cs) = by_first.get(&(b, p)) {
-                    for &c in cs {
-                        if !subset.contains(&(a, c, p)) {
-                            added.push((a, c, p));
-                        }
-                    }
-                }
-                // forward propagation while both origins live at the successor
-                if let Some(qs) = succ.get(&p) {
-                    for &q in qs {
-                        if region_live_set.contains(&(a, q))
-                            && region_live_set.contains(&(b, q))
-                            && !subset.contains(&(a, b, q))
-                        {
-                            added.push((a, b, q));
-                        }
-                    }
-                }
-            }
-            if added.is_empty() {
-                break;
-            }
-            for t in added {
-                subset.insert(t);
-            }
-        }
+        let subset = self.subset_closure(&region_live_set, &succ);
 
         // requires(O,L,P): issued, via subset, and forward while live + not killed.
         let killed: HashSet<(Loan, Point)> = self.loan_killed_at.iter().copied().collect();
@@ -406,10 +495,11 @@ impl RustcNllFacts {
         errors
     }
 
-    /// Whether the function borrow-checks (no NLL errors): the verdict rustc's
-    /// own borrow checker reaches on these facts.
+    /// Whether the function borrow-checks: no conflicting-borrow (loan
+    /// invalidation) errors and no illegal-subset (region-outlives) errors.
+    /// This is the verdict rustc's own borrow checker reaches on these facts.
     #[must_use]
     pub fn accepts(&self) -> bool {
-        self.nll_errors().is_empty()
+        self.nll_errors().is_empty() && self.subset_errors().is_empty()
     }
 }
