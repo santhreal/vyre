@@ -93,12 +93,47 @@ fn host_ring_done_count_oracle_matrix_matches_independent_status_scan() {
 fn host_ring_rejects_oracle_documented_misaligned_and_oob_cases() {
     let mut ring = HostRing::new(4).expect("Fix: ring must construct");
     let encoded = protocol::encode_load_miss(7, false);
-    assert!(RingProducer::publish(&mut ring, 4, &encoded).is_err());
-    assert!(RingProducer::publish(&mut ring, u32::MAX, &encoded).is_err());
+    let ring_bytes = ring.as_bytes().len();
+    let oob_slot = 4u32;
+    let oob_word = (oob_slot as usize) * 16;
+    assert_eq!(
+        RingProducer::publish(&mut ring, oob_slot, &encoded)
+            .unwrap_err()
+            .to_string(),
+        format!(
+            "ring slot is missing word {oob_word} in {ring_bytes} bytes. Fix: slot_idx must be < slot_count"
+        )
+    );
+    let huge_slot = u32::MAX;
+    let huge_word = (huge_slot as usize) * 16;
+    assert_eq!(
+        RingProducer::publish(&mut ring, huge_slot, &encoded)
+            .unwrap_err()
+            .to_string(),
+        format!(
+            "ring slot is missing word {huge_word} in {ring_bytes} bytes. Fix: slot_idx must be < slot_count"
+        )
+    );
     let short = [0u8; SLOT_BYTES - 1];
-    assert!(RingProducer::publish(&mut ring, 0, &short).is_err());
+    assert_eq!(
+        RingProducer::publish(&mut ring, 0, &short)
+            .unwrap_err()
+            .to_string(),
+        format!(
+            "ring slot has {} bytes, not a whole number of u32 words. Fix: encoded slot must be exactly SLOT_BYTES (64) long",
+            short.len()
+        )
+    );
     let mut short_out = [0u8; SLOT_BYTES - 1];
-    assert!(RingConsumer::read_slot(&ring, 0, &mut short_out).is_err());
+    assert_eq!(
+        RingConsumer::read_slot(&ring, 0, &mut short_out)
+            .unwrap_err()
+            .to_string(),
+        format!(
+            "ring slot has {} bytes, not a whole number of u32 words. Fix: out slice must be exactly SLOT_BYTES (64) long",
+            short_out.len()
+        )
+    );
 }
 
 fn oracle_slot_byte_offset(slot_idx: u32) -> usize {

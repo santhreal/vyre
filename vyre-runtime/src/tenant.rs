@@ -451,6 +451,7 @@ impl TenantHandle {
 }
 
 /// Thread-safe tenant registry. One per megakernel instance.
+
 pub struct TenantRegistry {
     tenants: DashMap<u32, TenantHandle>,
     next_id: AtomicU32,
@@ -1057,3 +1058,4 @@ mod tests {
         assert_eq!(sorted.len(), ids.len(), "concurrent ids must be unique");
     }
 }
+

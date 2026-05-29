@@ -659,6 +659,7 @@ impl<'a> NvmeGpuIngestDriver<'a> {
     }
 }
 
+
 fn checked_telemetry_add(
     current: u64,
     increment: u64,
@@ -830,3 +831,4 @@ mod tests {
         assert_eq!(bytes.capacity(), original_capacity);
     }
 }
+

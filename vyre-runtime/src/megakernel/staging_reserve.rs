@@ -61,7 +61,7 @@ mod tests {
         values.extend_from_slice(&[1, 2, 3, 4]);
         values.clear();
         reserve_vec_capacity(&mut values, 8, "test vector")
-            .expect("cleared vector should grow to target capacity");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - cleared vector should grow to target capacity");
         assert!(values.capacity() >= 8);
         assert!(values.is_empty());
     }
@@ -82,7 +82,7 @@ mod tests {
         values.insert(7, 11);
 
         reserve_hash_map_capacity(&mut values, 32, "test map")
-            .expect("hash map reservation should use shared staging policy");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - hash map reservation should use shared staging policy");
 
         assert_eq!(values.get(&7), Some(&11));
         assert!(values.capacity() >= 32);

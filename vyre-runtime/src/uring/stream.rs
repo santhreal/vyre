@@ -729,6 +729,7 @@ impl<'a> AsyncUringStream<'a> {
     }
 }
 
+
 fn checked_chunk_target_offset(chunk_idx: usize, len: u32) -> Result<u64, PipelineError> {
     let chunk_idx = usize_to_u64(chunk_idx, "chunk index")?;
     vyre_driver::accounting::checked_mul_u64_lazy(chunk_idx, u64::from(len), || {
@@ -838,3 +839,4 @@ mod tests {
         assert_eq!(backing, [9, 2, 3, 7]);
     }
 }
+

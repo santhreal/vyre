@@ -448,6 +448,7 @@ mod tests {
         log.append(rec(2, 11)).unwrap();
         log.sync().unwrap();
 
+
         let replay = log
             .replay_all()
             .expect("Fix: replay; restore this invariant before continuing.");
@@ -569,3 +570,4 @@ mod tests {
         ));
     }
 }
+

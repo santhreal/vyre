@@ -540,6 +540,7 @@ impl IoUringState {
     }
 }
 
+
 impl Drop for IoUringState {
     fn drop(&mut self) {
         // SAFETY: all pointers were returned by the kernel and are unmapped once on drop.
@@ -676,3 +677,4 @@ fn slice_len_u32(value: usize, label: &'static str) -> Result<u32, PipelineError
         },
     })
 }
+

@@ -685,6 +685,7 @@ impl RingTelemetry {
     }
 }
 
+
 fn read_required_control_word(control_bytes: &[u8], word_idx: usize) -> Result<u32, PipelineError> {
     read_word(control_bytes, word_idx).ok_or_else(|| {
         PipelineError::Backend(format!(
@@ -800,3 +801,4 @@ fn fairness_skew(counters: &[u32]) -> u32 {
 mod tests {
     include!("telemetry_tests.rs");
 }
+

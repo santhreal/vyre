@@ -500,6 +500,6 @@ mod tests {
             .find(|e| e.id == "vyre-harness::test::trivial_minimal")
             .expect("Fix: entry must exist");
         let program = (entry.build)();
-        assert!(!program.entry().is_empty());
+        assert_ne!(program.entry().len(), 0);
     }
 }
