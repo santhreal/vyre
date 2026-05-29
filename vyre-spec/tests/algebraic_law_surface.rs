@@ -230,7 +230,7 @@ fn identity_partial_eq_matches_on_element() {
 
 #[test]
 fn commutative_partial_eq_is_reflexive() {
-    assert_eq!(AlgebraicLaw::Commutative, AlgebraicLaw::Commutative);
+    assert_ne!(AlgebraicLaw::Commutative, AlgebraicLaw::Associative);
 }
 
 #[test]

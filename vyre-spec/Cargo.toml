@@ -21,6 +21,7 @@ smallvec.workspace = true
 proptest.workspace = true
 serde_json.workspace = true
 vyre-foundation.workspace = true
+vyre-primitives.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
@@ -28,3 +29,10 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [lints]
 workspace = true
+
+[[test]]
+name = "sweep_wire_roundtrip_oracle_matrix"
+path = "tests/sweep_wire_roundtrip_oracle_matrix.rs"
+[[test]]
+name = "sweep_wire_u32_volume_oracle_matrix"
+path = "tests/sweep_wire_u32_volume_oracle_matrix.rs"

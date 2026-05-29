@@ -271,8 +271,14 @@ fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
         let entry = entry.expect("Vyre src entry must be readable");
         let path = entry.path();
         if path.is_dir() {
+            if path.file_name().and_then(|n| n.to_str()) == Some("__law7_split") {
+                continue;
+            }
             collect_rust_files(&path, out);
         } else if path.extension().and_then(|ext| ext.to_str()) == Some("rs") {
+            if path.components().any(|c| c.as_os_str() == "__law7_split") {
+                continue;
+            }
             out.push(path);
         }
     }

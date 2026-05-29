@@ -25,7 +25,8 @@ fn count_pattern(source: &str, pattern: &str) -> usize {
 /// Cold-path `format!` diagnostics for contextual `InvalidProgram` fixes.
 const MAX_PRODUCTION_FORMAT_MACRO: usize = 27;
 
-/// Borrowed-fallback staging only (env `VYRE_CUDA_RESIDENT_BORROWED_FALLBACK`).
+/// Borrowed-fallback staging only (debug: `VYRE_CUDA_RESIDENT_BORROWED_FALLBACK`;
+/// release also requires `VYRE_CUDA_ALLOW_BORROWED_FALLBACK=1`).
 const MAX_PRODUCTION_VEC_NEW: usize = 1;
 
 #[test]

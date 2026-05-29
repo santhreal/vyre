@@ -84,6 +84,7 @@ fn sampled_extension_names_do_not_collapse_to_a_single_id() {
 #[test]
 fn serde_round_trip_preserves_raw_extension_ids() {
     let data_type = ExtensionDataTypeId::from_name("serde.dtype");
+    assert_ne!(data_type, ExtensionDataTypeId::from_name("serde.binop"));
     let binop = ExtensionBinOpId::from_name("serde.binop");
     let unop = ExtensionUnOpId::from_name("serde.unop");
     let atomic = ExtensionAtomicOpId::from_name("serde.atomic");
