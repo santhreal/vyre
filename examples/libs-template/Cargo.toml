@@ -12,7 +12,7 @@ categories = ["algorithms"]
 
 [dependencies]
 vyre = "0.4.2"
-vyre-libs = { version = "0.4.2", default-features = false }
+vyre-libs = { version = "0.6.1", default-features = false }
 vyre-foundation = "0.4.2"
 vyre-spec = "0.4.2"
 thiserror = "=2.0.18"
