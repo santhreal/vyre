@@ -91,6 +91,122 @@ const REJECT: &[&str] = &[
     "pub fn f() { let mut x: i32 = 0; let a: &i32 = &x; x = 1; let _b: i32 = *a; }",
 ];
 
+/// Deterministically generate a type- and name-correct borrow program from a
+/// seed: some `i32` vars (each maybe `mut`), then a sequence of `&`/`&mut`
+/// borrows and deref-uses. Every program compiles, so rustc's accept/reject is
+/// purely a borrow-check decision - exactly what our Naive rule must reproduce.
+fn generate_borrow_program(seed: u64) -> String {
+    let mut state = seed ^ 0x9E37_79B9_7F4A_7C15;
+    let mut next = || {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (state >> 33) as u32
+    };
+    let nvars = 2 + (next() % 3) as usize; // 2..=4
+    let var_mut: Vec<bool> = (0..nvars).map(|_| next() % 2 == 0).collect();
+    let mut s = String::from("pub fn f() {");
+    for (i, &m) in var_mut.iter().enumerate() {
+        s.push_str(&format!(" let {}v{}: i32 = {};", if m { "mut " } else { "" }, i, i));
+    }
+    let nops = (next() % 8) as usize;
+    let mut borrows = 0usize;
+    let mut uses = 0u32;
+    for _ in 0..nops {
+        if next() % 2 == 0 {
+            let vk = (next() as usize) % nvars;
+            // Only `&mut` a `mut` var, so the program never trips E0596 (a
+            // different error class); the verdict stays about conflicting borrows.
+            let m = next() % 2 == 0 && var_mut[vk];
+            let kw = if m { "mut " } else { "" };
+            s.push_str(&format!(" let r{borrows}: &{kw}i32 = &{kw}v{vk};"));
+            borrows += 1;
+        } else if borrows > 0 {
+            let bk = (next() as usize) % borrows;
+            s.push_str(&format!(" let u{uses}: i32 = *r{bk};"));
+            uses += 1;
+        }
+    }
+    s.push_str(" }");
+    s
+}
+
+/// Like [`generate_borrow_program`] but the borrows are taken at the top level
+/// and then deref-used inside the arms of an `if`/`else`, fuzzing cross-branch
+/// liveness: borrows used in separate reachable arms are live across the branch
+/// point, so two `&mut` of one place conflict. Exercises the CFG-sensitive part
+/// of the ruleset against rustc.
+fn generate_branch_program(seed: u64) -> String {
+    let mut state = seed ^ 0x2545_F491_4F6C_DD1D;
+    let mut next = || {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (state >> 33) as u32
+    };
+    let nvars = 2 + (next() % 3) as usize;
+    let var_mut: Vec<bool> = (0..nvars).map(|_| next() % 2 == 0).collect();
+    let mut s = String::from("pub fn f() {");
+    for (i, &m) in var_mut.iter().enumerate() {
+        s.push_str(&format!(" let {}v{}: i32 = {};", if m { "mut " } else { "" }, i, i));
+    }
+    let nborrows = 1 + (next() % 4) as usize;
+    let mut borrows = 0usize;
+    for _ in 0..nborrows {
+        let vk = (next() as usize) % nvars;
+        let m = next() % 2 == 0 && var_mut[vk];
+        let kw = if m { "mut " } else { "" };
+        s.push_str(&format!(" let r{borrows}: &{kw}i32 = &{kw}v{vk};"));
+        borrows += 1;
+    }
+    let mut uses = 0u32;
+    let mut arm = |s: &mut String, n: u32, next: &mut dyn FnMut() -> u32, uses: &mut u32| {
+        for _ in 0..n {
+            if borrows > 0 {
+                let bk = (next() as usize) % borrows;
+                s.push_str(&format!(" let u{}: i32 = *r{bk};", *uses));
+                *uses += 1;
+            }
+        }
+    };
+    s.push_str(" if true {");
+    arm(&mut s, next() % 3, &mut next, &mut uses);
+    s.push_str(" } else {");
+    arm(&mut s, next() % 3, &mut next, &mut uses);
+    s.push_str(" }; }");
+    s
+}
+
+fn run_fuzz(cases: u64, gen: impl Fn(u64) -> String) -> Vec<String> {
+    let mut mismatches = Vec::new();
+    for seed in 0..cases {
+        let src = gen(seed);
+        let (rustc_accepts, our_accepts) = verdicts(&src);
+        if rustc_accepts != our_accepts {
+            mismatches.push(format!("seed {seed}: rustc={rustc_accepts} ours={our_accepts}: {src}"));
+        }
+    }
+    mismatches
+}
+
+#[test]
+fn our_nll_verdict_matches_rustc_on_generated_borrow_programs() {
+    let mismatches = run_fuzz(300, generate_borrow_program);
+    assert!(
+        mismatches.is_empty(),
+        "Naive verdict diverged from rustc on {} straight-line programs:\n{}",
+        mismatches.len(),
+        mismatches.join("\n")
+    );
+}
+
+#[test]
+fn our_nll_verdict_matches_rustc_on_generated_branch_programs() {
+    let mismatches = run_fuzz(200, generate_branch_program);
+    assert!(
+        mismatches.is_empty(),
+        "Naive verdict diverged from rustc on {} branch programs:\n{}",
+        mismatches.len(),
+        mismatches.join("\n")
+    );
+}
+
 /// A realistic, self-contained module of clean functions (rustc compiles it):
 /// loops, slices, vecs, iterators, matches, reborrows, and a two-phase borrow.
 /// Our rule must accept every function - any rejection is a false positive on
