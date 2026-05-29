@@ -465,6 +465,7 @@ fn un_op_tag(op: &UnOp) -> Result<u32, EncodeError> {
 /// Reverse-lookup a `bin_op_tag` u32 back into a `BinOp` for decoder
 /// use. Returns `None` for unknown / extension tags.
 #[must_use]
+
 pub fn bin_op_from_tag(tag: u32) -> Option<BinOp> {
     Some(match tag {
         0x01 => BinOp::Add,
@@ -781,3 +782,4 @@ mod tests {
         assert!(matches!(err, EncodeError::Unsupported(_)));
     }
 }
+

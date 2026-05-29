@@ -448,6 +448,7 @@ mod tests {
         let dispatcher = ProvenanceDispatcher {
             outputs: vec![u32_slice_to_le_bytes(&expected)],
         };
+
         let state = vec![0u32; 4];
         let join_rules = vec![0u32; 4];
         let mut scratch = ScallopProvenanceGpuScratch::default();
@@ -574,3 +575,4 @@ mod tests {
         );
     }
 }
+

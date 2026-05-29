@@ -476,6 +476,7 @@ pub fn build_structural_hash_program(expr_count: u32, max_depth_iter_cap: u32) -
 ///   1: canonical (RW)
 ///   2: table_canonical (RW; init `u32::MAX`)
 #[must_use]
+
 pub fn build_canonical_id_program(expr_count: u32, capacity: u32) -> Program {
     let buffers = vec![
         BufferDecl::storage("hash", 0, BufferAccess::ReadOnly, DataType::U32)
@@ -938,6 +939,7 @@ fn rewrite_expr(expr: &Expr, canonical: &[u32], counter: &mut u32) -> Expr {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
@@ -1142,3 +1144,4 @@ mod tests {
         );
     }
 }
+

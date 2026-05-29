@@ -454,6 +454,7 @@ fn gpu_reuses_cached_program_by_primitive_key() {
 }
 
 #[test]
+
 fn gpu_rejects_mismatched_edge_arrays() {
     let dispatcher = CsrChangedDispatcher {
         outputs: vec![
@@ -649,3 +650,4 @@ fn generated_gpu_seed_copy_bounds_to_primitive_frontier_words() {
         }
     }
 }
+

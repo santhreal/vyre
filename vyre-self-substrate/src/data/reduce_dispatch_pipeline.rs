@@ -302,9 +302,12 @@ mod tests {
 
     #[test]
     fn body_builders_emit_non_empty_composable_ir() {
-        assert!(!range_count_accumulator_body("hist", "sum", 0, 8).is_empty());
-        assert!(!any_accumulator_body("changed", "any", 8).is_empty());
-        assert!(!prefixed_any_accumulator_body("changed", "any", 8, "changed_i").is_empty());
+        assert_ne!(range_count_accumulator_body("hist", "sum", 0, 8).len(), 0);
+        assert_ne!(any_accumulator_body("changed", "any", 8).len(), 0);
+        assert_ne!(
+            prefixed_any_accumulator_body("changed", "any", 8, "changed_i").len(),
+            0
+        );
     }
 
     #[test]

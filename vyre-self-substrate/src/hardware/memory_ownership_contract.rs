@@ -448,6 +448,7 @@ mod tests {
                 "reference-oracle",
                 "vyre-cuda-tests",
                 MemoryOwner::ParityOnly,
+
                 false,
             ),
         ])
@@ -591,3 +592,4 @@ mod tests {
         )
     }
 }
+

@@ -448,6 +448,7 @@ mod tests {
     use super::*;
 
     #[test]
+
     fn crate_metadata_accepts_publishable_real_crates() {
         let proof = validate_crate_metadata_readiness(&[
             record("vyre"),
@@ -613,3 +614,4 @@ mod tests {
         }
     }
 }
+

@@ -114,19 +114,25 @@ fn child_regions_preserve_parent_context() {
 #[test]
 fn body_builders_emit_composable_ir() {
     let shape = ProgramGraphShape::new(4, 4);
-    assert!(!csr_forward_body(shape, "frontier", "changed", 1).is_empty());
-    assert!(!prefixed_csr_forward_body(shape, "frontier", "changed", 1, "csr").is_empty());
-    assert!(!persistent_step_body(shape, "frontier", "changed", "scratch", 1).is_empty());
-    assert!(
-        !prefixed_persistent_step_body(shape, "frontier", "changed", "scratch", 1, "step")
-            .is_empty()
+    assert_ne!(csr_forward_body(shape, "frontier", "changed", 1).len(), 0);
+    assert_ne!(
+        prefixed_csr_forward_body(shape, "frontier", "changed", 1, "csr").len(),
+        0
+    );
+    assert_ne!(
+        persistent_step_body(shape, "frontier", "changed", "scratch", 1).len(),
+        0
+    );
+    assert_ne!(
+        prefixed_persistent_step_body(shape, "frontier", "changed", "scratch", 1, "step").len(),
+        0
     );
 }
 
 #[test]
 fn checked_batch_builders_reject_invalid_dimensions() {
     let shape = ProgramGraphShape::new(4, 4);
-    assert!(dispatch_csr_forward_batch_checked(shape, "frontier", "changed", 1, 0).is_err());
+    assert!(matches!(dispatch_csr_forward_batch_checked(shape, "frontier", "changed", 1, 0), Err(_)));
     assert!(dispatch_csr_forward_batch_global_slot_checked(
         shape, "frontier", "changed", 1, 1, 2, 2
     )

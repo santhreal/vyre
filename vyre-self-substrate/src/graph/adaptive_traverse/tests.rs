@@ -476,6 +476,7 @@ fn generated_adaptive_resident_free_releases_each_handle_once_in_first_seen_orde
 }
 
 #[test]
+
 fn auto_step_rejects_bad_frontier_before_resident_allocation() {
     let dispatcher = RecordingResidentDispatcher::default();
     let graph = ResidentAdaptiveTraversalGraph {
@@ -514,3 +515,4 @@ fn auto_step_rejects_bad_frontier_before_resident_allocation() {
         "failed validation must not mutate caller output storage"
     );
 }
+

@@ -514,6 +514,7 @@ fn resident_graph_uploads_topology_once_and_reuses_frontier_handles() {
 }
 
 #[test]
+
 fn resident_single_zero_iters_returns_seed_without_query_allocation_or_dispatch() {
     let dispatcher = ResidentPersistentBfsDispatcher::new();
     let (off, tgt, msk) = linear_graph();
@@ -923,3 +924,4 @@ fn bfs_expand_via_scratch_caches_static_graph_inputs() {
         "Fix: repeated persistent BFS dispatches must rewrite only frontier, output, and changed slots."
     );
 }
+

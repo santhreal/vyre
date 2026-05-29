@@ -452,6 +452,7 @@ pub fn solve_to_tolerance_into(
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
@@ -677,3 +678,4 @@ mod tests {
         assert!(!via_section.contains("vec![0u32"));
     }
 }
+

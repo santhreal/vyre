@@ -457,6 +457,7 @@ pub fn validate_committed_architecture_boundary_artifacts(
     })
 }
 
+
 fn artifact_contains(
     artifact: &str,
     evidence: &'static str,
@@ -659,3 +660,4 @@ mod tests {
         )
     }
 }
+

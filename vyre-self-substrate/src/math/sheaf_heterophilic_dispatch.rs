@@ -449,6 +449,7 @@ mod tests {
         assert_eq!(out, vec![5 * one, 10 * one]);
     }
 
+
     #[test]
     fn fixed_via_rejects_shape_mismatch() {
         let err = diffuse_dispatch_stalks_fixed_via(&SheafDispatcher, &[1, 2, 3], &[1, 2], 1, 2, 2)
@@ -510,3 +511,4 @@ mod tests {
         assert!(!via_section.contains("reference_diffuse"));
     }
 }
+

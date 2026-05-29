@@ -448,6 +448,7 @@ mod tests {
                 vyre_primitives::reduce::histogram::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     let bins = (inputs[1].len() / std::mem::size_of::<u32>()) as u32;
+
                     Ok(vec![u32_slice_to_le_bytes(&primitive_histogram(
                         &values, bins,
                     ))])
@@ -547,3 +548,4 @@ mod tests {
             .contains("Fix: histogram_atomic_scatter_via requires num_bins > 0"));
     }
 }
+

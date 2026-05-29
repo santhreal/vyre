@@ -461,6 +461,7 @@ pub fn apply_combined_arena_deltas_with_lookup<D: ArenaDeltaLookup + ?Sized>(
 }
 
 /// Apply compressed bitset arena deltas.
+
 pub fn apply_combined_arena_deltas_bitsets(
     program: &Program,
     swap_bits: &[u32],
@@ -789,3 +790,4 @@ mod tests {
         );
     }
 }
+

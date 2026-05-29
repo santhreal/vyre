@@ -454,6 +454,7 @@ fn alloc_many_lens(
         .map_err(PipelineError::Dispatch)
 }
 
+
 fn run_dce_resident(
     program: Program,
     dispatcher: &dyn OptimizerDispatcher,
@@ -793,3 +794,4 @@ mod tests {
         );
     }
 }
+

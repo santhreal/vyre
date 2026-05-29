@@ -104,7 +104,7 @@ mod tests {
     fn reserve_vec_capacity_reuses_existing_allocation() {
         let mut scratch = Vec::<u32>::with_capacity(8);
         reserve_vec_capacity(&mut scratch, 4, "frontier seed")
-            .expect("existing capacity should be reused");
+            .expect("Fix: scratch grow must reuse capacity; fall back to allocate on hostile zero-cap - existing capacity should be reused");
         assert_eq!(scratch.capacity(), 8);
     }
 

@@ -616,6 +616,7 @@ pub trait OptimizerDispatcher {
     }
 }
 
+
 fn free_resident_handles<D: OptimizerDispatcher + ?Sized>(
     dispatcher: &D,
     handles: &[u64],
@@ -817,9 +818,9 @@ pub mod oracle {
         program: &Program,
         inputs: &[Vec<u8>],
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        if inputs.len() != 17 {
+        if inputs.len() != 18 {
             return Err(DispatchError::BadInputs(format!(
-                "Fix: exploded IFDS oracle expected 17 input buffers, got {}.",
+                "Fix: exploded IFDS oracle expected 18 input buffers, got {}.",
                 inputs.len()
             )));
         }
@@ -1166,7 +1167,7 @@ mod tests {
                     byte_len: 5,
                 },
             ])
-            .expect("deduplicated ranged readback must succeed");
+            .expect("Fix: ranged readback must succeed for in-bounds dedup keys; return Err on overlap violations - deduplicated ranged readback must succeed");
 
         assert_eq!(
             outputs,
@@ -1223,7 +1224,7 @@ mod tests {
                 ],
                 &mut outputs,
             )
-            .expect("ranged readback into caller storage must succeed");
+            .expect("Fix: caller buffer must be sized for readback range; return Err if storage too small - ranged readback into caller storage must succeed");
 
         assert_eq!(
             outputs,
@@ -1276,7 +1277,7 @@ mod tests {
 
         let outputs = dispatcher
             .read_resident_ranges(&ranges)
-            .expect("generated ranged readback matrix must succeed");
+            .expect("Fix: generated matrix fixtures must stay in-bounds; fix fixture or return Err - generated ranged readback matrix must succeed");
 
         assert_eq!(outputs.len(), ranges.len());
         for (range, output) in ranges.iter().zip(outputs.iter()) {
@@ -1285,7 +1286,7 @@ mod tests {
                 .iter()
                 .find(|(handle, _)| *handle == range.handle_id)
                 .map(|(_, bytes)| bytes.as_slice())
-                .expect("generated range uses known handle");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated range uses known handle");
             assert_eq!(
                 output.as_slice(),
                 &full[range.byte_offset..range.byte_offset + range.byte_len],
@@ -1299,3 +1300,4 @@ mod tests {
         );
     }
 }
+

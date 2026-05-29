@@ -1,7 +1,7 @@
 //! Sweep oracle matrix for self-substrate CSR/graph CPU references.
 //!
 //! Compares substrate reference wrappers against independent bitset oracles
-//! across hostile CSR shapes. Uses CPU reference paths only — no mock
+//! across hostile CSR shapes. Uses CPU reference paths only - no mock
 //! dispatchers.
 
 #![forbid(unsafe_code)]

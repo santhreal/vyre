@@ -448,6 +448,7 @@ fn rewrite_expr(expr: &Expr, env: &ConstEnv) -> Expr {
         }
         Expr::Select {
             cond,
+
             true_val,
             false_val,
         } => {
@@ -521,3 +522,4 @@ fn rewrite_expr(expr: &Expr, env: &ConstEnv) -> Expr {
         _ => expr.clone(),
     }
 }
+

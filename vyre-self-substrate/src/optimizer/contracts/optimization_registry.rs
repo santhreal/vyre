@@ -452,6 +452,7 @@ fn phase_rank(owner: &'static str, phase: &'static str) -> Option<u16> {
     }
 }
 
+
 pub use super::optimization_release_passes::RELEASE_OPTIMIZATION_PASSES;
 
 #[cfg(test)]
@@ -484,8 +485,9 @@ mod tests {
             "semantic-analysis",
             "release-gate",
         ] {
-            assert!(
-                !registry.by_phase(phase).is_empty(),
+            assert_ne!(
+                registry.by_phase(phase).len(),
+                0,
                 "Fix: optimization registry must expose phase `{phase}`."
             );
         }
@@ -496,8 +498,7 @@ mod tests {
         let mut registry = OptimizationRegistry::default();
         let pass = RELEASE_OPTIMIZATION_PASSES[0];
         registry.register(pass).expect("Fix: first pass registers");
-        assert!(
-            registry.register(pass).is_err(),
+        assert!(matches!(registry.register(pass), Err(_)),
             "Fix: duplicate optimization pass ids must be rejected."
         );
         assert!(
@@ -533,3 +534,4 @@ mod tests {
             .expect("Fix: all built-in release optimization phases must be ordered");
     }
 }
+

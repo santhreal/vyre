@@ -462,6 +462,7 @@ pub fn reference_select_optimal_subset_all_eligible(
 ///
 /// Returns a view into `scratch.result()`.
 #[cfg(any(test, feature = "cpu-parity"))]
+
 pub fn reference_select_optimal_subset_all_eligible_into<'a>(
     exchange_adj: &[u32],
     seed_x: &[u32],
@@ -797,3 +798,4 @@ mod tests {
         assert!(!via_section.contains("reference_select"));
     }
 }
+
