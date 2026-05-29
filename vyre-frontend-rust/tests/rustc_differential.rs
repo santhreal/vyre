@@ -14,7 +14,9 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use vyre_libs::parsing::rust::lex::lexer::core::lex;
 use vyre_libs::parsing::rust::parse::parse;
-use vyre_libs::parsing::rust::sema::{check_escape, check_mutability, resolve, typeck};
+use vyre_libs::parsing::rust::sema::{
+    check_conflicts, check_escape, check_mutability, resolve, typeck,
+};
 
 static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -36,6 +38,7 @@ fn ours_accepts(src: &str) -> bool {
     typeck(&module, bytes, &resolution).is_ok()
         && check_mutability(&module, &resolution).is_ok()
         && check_escape(&module, &resolution).is_ok()
+        && check_conflicts(&module, &resolution).is_ok()
 }
 
 /// rustc verdict: does `rustc --crate-type lib` accept this program?
@@ -83,6 +86,12 @@ const ACCEPT: &[&str] = &[
     "fn shadow(x: i32) -> i32 { let x: i32 = x + 1; return x; }",
     "fn deref_mut(r: &mut i32) -> i32 { return *r; }",
     "fn mutref(r: &mut i32) -> &mut i32 { return r; }",
+    // Conflict-clean: two shared borrows coexist.
+    "fn f() { let x: i32 = 0; let a: &i32 = &x; let b: &i32 = &x; let c: i32 = *a + *b; }",
+    // Conflict-clean: sequential non-overlapping &mut borrows (NLL).
+    "fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let p: i32 = *a; let b: &mut i32 = &mut x; let q: i32 = *b; }",
+    // Conflict-clean: an unused first &mut is dead immediately (NLL).
+    "fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let b: &mut i32 = &mut x; let c: i32 = *b; }",
 ];
 
 /// Programs rustc rejects and we must reject.
@@ -100,6 +109,10 @@ const REJECT: &[&str] = &[
     "fn g(x: i32) -> i32 { return x; } fn f() -> i32 { return g(1, 2); }", // E0061 arity
     "fn f() { if 1 { let x: i32 = 0; }; }",                            // E0308 non-bool cond
     "fn f(x: i32) -> &i32 { return &x; }",                             // E0106/E0515
+    // Two live &mut borrows of one place.
+    "fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let b: &mut i32 = &mut x; let c: i32 = *a + *b; }", // E0499
+    // A &mut while a shared borrow is still live.
+    "fn f() { let mut x: i32 = 0; let a: &i32 = &x; let b: &mut i32 = &mut x; let c: i32 = *a; }",              // E0502
 ];
 
 #[test]

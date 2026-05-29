@@ -81,6 +81,18 @@ pub enum RustSemaError {
         /// Source byte offset of the offending place.
         offset: u32,
     },
+    /// Two mutable borrows of the same place are live simultaneously (rustc E0499).
+    #[error("cannot borrow as mutable more than once at a time (byte {offset})")]
+    MultipleMutableBorrows {
+        /// Source byte offset of the conflicting borrow.
+        offset: u32,
+    },
+    /// A mutable and a shared borrow of the same place are live at once (rustc E0502).
+    #[error("cannot borrow as mutable because it is also borrowed as immutable (byte {offset})")]
+    MutableAndSharedBorrow {
+        /// Source byte offset of the conflicting borrow.
+        offset: u32,
+    },
     /// An expression's type did not match the expected type (rustc E0308).
     #[error("mismatched types in {context}: expected `{expected}`, found `{found}`")]
     TypeMismatch {
@@ -491,22 +503,23 @@ fn expr_diverges(expr: &Expr) -> bool {
 
 /// Borrow-check a resolved module.
 ///
-/// Implemented rules: mutability (rustc E0596) via [`check_mutability`], and
-/// dangling-reference / escape (rustc E0597) via [`check_escape`]. The
-/// conflicting-borrow rules (E0499/E0502) require liveness from the weir
-/// dataflow analysis and are not yet wired, so `borrow_check` surfaces a real
-/// mutability or escape error when one exists and otherwise reports
+/// Implemented rules: mutability (E0596) via [`check_mutability`], dangling
+/// reference / escape (E0597) via [`check_escape`], and conflicting borrows
+/// (E0499/E0502) via [`check_conflicts`]. Conflict detection currently covers
+/// straight-line top-level borrows; branch-crossing, nested, and through-deref
+/// conflicts await the weir CFG-liveness analysis, so `borrow_check` surfaces a
+/// real error when one exists and otherwise reports
 /// [`RustSemaError::BorrowUnavailable`] rather than claiming a complete borrow
 /// check it has not performed.
 ///
 /// # Errors
-/// Returns [`RustSemaError::CannotBorrowImmutableAsMutable`] (E0596) or
-/// [`RustSemaError::ReturnsReferenceToLocal`] (E0597) for a violation, or
-/// [`RustSemaError::BorrowUnavailable`] while the conflicting-borrow rules
-/// remain unimplemented.
+/// Returns the matching [`RustSemaError`] for an E0596/E0597/E0499/E0502
+/// violation, or [`RustSemaError::BorrowUnavailable`] while conflict detection
+/// remains partial.
 pub fn borrow_check(module: &Module, resolution: &Resolution) -> Result<(), RustSemaError> {
     check_mutability(module, resolution)?;
     check_escape(module, resolution)?;
+    check_conflicts(module, resolution)?;
     Err(RustSemaError::BorrowUnavailable)
 }
 
@@ -746,5 +759,141 @@ fn escapes_offset(
             }
         }
         _ => None,
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Conflicting borrows (E0499 / E0502)
+// ----------------------------------------------------------------------------
+
+/// A `let a = &[mut] x;` borrow site over a simple variable place.
+struct BorrowSite {
+    /// The borrow binding `a`.
+    binding: BindingId,
+    /// The borrowed place `x`.
+    place: BindingId,
+    /// Whether the borrow is `&mut`.
+    mutable: bool,
+    /// Top-level statement index of the `let`.
+    created: usize,
+    /// Source byte offset of `a` (for diagnostics).
+    offset: u32,
+}
+
+/// Conflicting-borrow rules (rustc E0499 / E0502) for straight-line code.
+///
+/// Among top-level `let a = &[mut] x;` borrows of the same variable, reports a
+/// pair whose NLL live ranges overlap with at least one mutable: two `&mut`
+/// (E0499) or `&mut` plus `&` (E0502). A borrow is live from its `let` to its
+/// last use; an unused borrow is dead immediately. Conservative across control
+/// flow: uses inside `if` blocks are not counted, so the check never reports a
+/// conflict it cannot prove (branch-crossing, nested, and through-deref
+/// conflicts await weir CFG liveness) and never diverges from rustc on
+/// acceptance.
+///
+/// # Errors
+/// Returns [`RustSemaError::MultipleMutableBorrows`] (E0499) or
+/// [`RustSemaError::MutableAndSharedBorrow`] (E0502) on a proven conflict.
+pub fn check_conflicts(module: &Module, resolution: &Resolution) -> Result<(), RustSemaError> {
+    let def_to_id: HashMap<u32, BindingId> = resolution
+        .bindings
+        .iter()
+        .enumerate()
+        .map(|(id, b)| (b.def_offset, id))
+        .collect();
+
+    for func in &module.functions {
+        // Collect top-level `let a = &[mut] x;` borrow sites.
+        let mut sites: Vec<BorrowSite> = Vec::new();
+        for (index, stmt) in func.body.iter().enumerate() {
+            if let Stmt::Let { name, init, .. } = stmt {
+                if let Expr::Borrow { mutable, expr } = init {
+                    if let Expr::Var(off) = expr.as_ref() {
+                        if let (Some(&place), Some(&binding)) =
+                            (resolution.uses.get(off), def_to_id.get(name))
+                        {
+                            sites.push(BorrowSite {
+                                binding,
+                                place,
+                                mutable: *mutable,
+                                created: index,
+                                offset: *name,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        if sites.len() < 2 {
+            continue;
+        }
+
+        // Last top-level use index per borrow binding (NLL live-range end);
+        // initialized to the creation index (an unused borrow is dead at once).
+        let mut last_use: HashMap<BindingId, usize> =
+            sites.iter().map(|s| (s.binding, s.created)).collect();
+        for (index, stmt) in func.body.iter().enumerate() {
+            let mut used = Vec::new();
+            collect_stmt_uses(stmt, resolution, &mut used);
+            for id in used {
+                if let Some(slot) = last_use.get_mut(&id) {
+                    if index > *slot {
+                        *slot = index;
+                    }
+                }
+            }
+        }
+
+        for a in 0..sites.len() {
+            for b in (a + 1)..sites.len() {
+                let (s, t) = (&sites[a], &sites[b]);
+                if s.place != t.place || !(s.mutable || t.mutable) {
+                    continue;
+                }
+                let (earlier, later) = if s.created <= t.created { (s, t) } else { (t, s) };
+                // earlier is live when later is created -> the borrows overlap.
+                if last_use[&earlier.binding] >= later.created {
+                    return Err(if s.mutable && t.mutable {
+                        RustSemaError::MultipleMutableBorrows { offset: later.offset }
+                    } else {
+                        RustSemaError::MutableAndSharedBorrow { offset: later.offset }
+                    });
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn collect_stmt_uses(stmt: &Stmt, resolution: &Resolution, into: &mut Vec<BindingId>) {
+    match stmt {
+        Stmt::Let { init, .. } => collect_expr_uses(init, resolution, into),
+        Stmt::Expr(expr) => collect_expr_uses(expr, resolution, into),
+        Stmt::Return(Some(expr)) => collect_expr_uses(expr, resolution, into),
+        Stmt::Return(None) => {}
+    }
+}
+
+fn collect_expr_uses(expr: &Expr, resolution: &Resolution, into: &mut Vec<BindingId>) {
+    match expr {
+        Expr::Var(off) => {
+            if let Some(&id) = resolution.uses.get(off) {
+                into.push(id);
+            }
+        }
+        Expr::Binary { lhs, rhs, .. } => {
+            collect_expr_uses(lhs, resolution, into);
+            collect_expr_uses(rhs, resolution, into);
+        }
+        Expr::Borrow { expr, .. } => collect_expr_uses(expr, resolution, into),
+        Expr::Deref(inner) => collect_expr_uses(inner, resolution, into),
+        Expr::Call { args, .. } => {
+            for arg in args {
+                collect_expr_uses(arg, resolution, into);
+            }
+        }
+        // Do not descend into branch bodies: uses inside `if` blocks are not
+        // counted, keeping the straight-line check sound (never false-rejects).
+        Expr::Block(..) | Expr::If { .. } | Expr::LiteralInt(..) | Expr::LiteralBool(..) => {}
     }
 }
