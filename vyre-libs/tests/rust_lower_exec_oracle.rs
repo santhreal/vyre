@@ -135,6 +135,8 @@ impl Ev<'_> {
                 let a: Vec<i32> = args.iter().map(|x| self.eval_int(x, env)).collect();
                 self.run_fn(idx, &a)
             }
+            Expr::Borrow { expr, .. } => self.eval_int(expr, env),
+            Expr::Deref(inner) => self.eval_int(inner, env),
             other => panic!("unexpected integer expr {other:?}"),
         }
     }
@@ -178,10 +180,20 @@ impl Gen {
         (self.state >> 33) as u32
     }
     /// Small arithmetic expression over `nvars` in-scope `vN` variables. When
-    /// `calls`, may emit a call `h(e, e)` to the 2-arg leaf helper.
-    fn expr(&mut self, nvars: usize, depth: u32, calls: bool) -> String {
-        if calls && depth > 0 && self.next() % 4 == 0 {
-            return format!("h({}, {})", self.expr(nvars, depth - 1, calls), self.expr(nvars, depth - 1, calls));
+    /// `calls`, may emit `h(e, e)`; when `refs`, may emit `*(&e)` or `d(&e)`.
+    fn expr(&mut self, nvars: usize, depth: u32, calls: bool, refs: bool) -> String {
+        if depth > 0 {
+            if calls && self.next() % 5 == 0 {
+                return format!("h({}, {})", self.expr(nvars, depth - 1, calls, refs), self.expr(nvars, depth - 1, calls, refs));
+            }
+            if refs && self.next() % 5 == 0 {
+                let inner = self.expr(nvars, depth - 1, calls, refs);
+                return if self.next() % 2 == 0 {
+                    format!("*(&({inner}))")
+                } else {
+                    format!("d(&({inner}))")
+                };
+            }
         }
         if depth == 0 || self.next() % 3 == 0 {
             if self.next() % 2 == 0 {
@@ -191,28 +203,32 @@ impl Gen {
             }
         } else {
             let op = ["+", "-", "*"][(self.next() % 3) as usize];
-            format!("({} {} {})", self.expr(nvars, depth - 1, calls), op, self.expr(nvars, depth - 1, calls))
+            format!("({} {} {})", self.expr(nvars, depth - 1, calls, refs), op, self.expr(nvars, depth - 1, calls, refs))
         }
     }
     fn cond(&mut self, nvars: usize) -> String {
         let op = if self.next() % 2 == 0 { "<" } else { "==" };
-        format!("{} {} {}", self.expr(nvars, 1, false), op, self.expr(nvars, 1, false))
+        format!("{} {} {}", self.expr(nvars, 1, false, false), op, self.expr(nvars, 1, false, false))
     }
 }
 
-/// Generate `(source, param_count)`. Half the programs include a leaf helper
-/// `h(a, b)` whose calls the entry inlines. Params `v0..vP`, some `let`
-/// bindings, then a straight-line or branching return. Magnitudes stay small so
-/// no i32 overflow occurs and the verdict is unambiguous.
+/// Generate `(source, param_count)`. Programs may include a leaf helper `h(a,b)`
+/// and a ref-deref helper `d(p: &i32)` that the entry inlines, plus internal
+/// `*(&e)` borrows. Params are i32; magnitudes stay small so no i32 overflow
+/// occurs and the verdict is unambiguous.
 fn gen_program(seed: u64) -> (String, usize) {
     let mut g = Gen::new(seed);
-    let with_helper = g.next() % 2 == 0;
+    let calls = g.next() % 2 == 0;
+    let refs = g.next() % 2 == 0;
     let mut module = String::new();
-    if with_helper {
+    if calls {
         module.push_str(&format!(
             "fn h(v0: i32, v1: i32) -> i32 {{ return {}; }}\n",
-            g.expr(2, 2, false)
+            g.expr(2, 2, false, false)
         ));
+    }
+    if refs {
+        module.push_str("fn d(v0: &i32) -> i32 { return *v0; }\n");
     }
     let nparams = 1 + (g.next() % 3) as usize; // 1..=3
     let mut nvars = nparams;
@@ -220,17 +236,17 @@ fn gen_program(seed: u64) -> (String, usize) {
     module.push_str(&format!("fn f({}) -> i32 {{", params.join(", ")));
     let nlets = (g.next() % 3) as usize;
     for _ in 0..nlets {
-        module.push_str(&format!(" let v{}: i32 = {};", nvars, g.expr(nvars, 2, with_helper)));
+        module.push_str(&format!(" let v{}: i32 = {};", nvars, g.expr(nvars, 2, calls, refs)));
         nvars += 1;
     }
     if g.next() % 2 == 0 {
-        module.push_str(&format!(" return {}; }}", g.expr(nvars, 2, with_helper)));
+        module.push_str(&format!(" return {}; }}", g.expr(nvars, 2, calls, refs)));
     } else {
         module.push_str(&format!(
             " if {} {{ return {}; }} else {{ return {}; }} }}",
             g.cond(nvars),
-            g.expr(nvars, 2, with_helper),
-            g.expr(nvars, 2, with_helper)
+            g.expr(nvars, 2, calls, refs),
+            g.expr(nvars, 2, calls, refs)
         ));
     }
     (module, nparams)
@@ -272,6 +288,9 @@ fn curated_programs_execute_correctly() {
         ("fn f(a: i32) -> i32 { if a == 0 { return 100; } else { return a; } }", &[0], 100),
         ("fn g(a: i32, b: i32) -> i32 { return a + b; } fn f(a: i32) -> i32 { return g(a, 10); }", &[5], 15),
         ("fn g(a: i32) -> i32 { let d: i32 = a * a; return d - 1; } fn f(a: i32, b: i32) -> i32 { return g(a) + b; }", &[4, 2], 17),
+        ("fn f(a: i32) -> i32 { let r: &i32 = &a; return *r + 1; }", &[6], 7),
+        ("fn f(a: i32) -> i32 { return *(&a) * 2; }", &[5], 10),
+        ("fn d(p: &i32) -> i32 { return *p + 1; } fn f(a: i32) -> i32 { return d(&a); }", &[8], 9),
     ];
     for (src, inputs, expected) in cases {
         assert_eq!(ir_exec(src, inputs), *expected, "{src} with {inputs:?}");
