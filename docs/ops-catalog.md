@@ -320,6 +320,7 @@ closes.
 - Cat-C hardware intrinsics: **24**
 - Cat-A-on-Cat-C workgroup primitives: **4**
 
-Total surface area at 0.6 release stamp: **92 ops** with
-byte-identity CPU↔GPU conform, every one registered via `inventory`,
-matrix-tested against every backend that claims support.
+Total surface area at 0.6 release stamp: **92 ops** (historical V7 stamp; **live
+inventory is 599 ops** — see `docs/catalog/README.md` and
+`docs/generated/OP_INVENTORY.md`) with byte-identity CPU↔GPU conform, every one
+registered via `inventory`, matrix-tested against every backend that claims support.

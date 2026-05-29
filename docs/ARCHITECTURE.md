@@ -19,7 +19,7 @@ audit requirements.
 | 2 | `vyre-intrinsics` | Cat-C hardware intrinsics requiring dedicated Naga emission + dedicated interpreter handling. 9 ops at 0.6. |  -  | Frozen surface; hand-audited. |
 | **2.5** | **`vyre-primitives` (feature-gated: `text`, `matching`, `math`, `nn`, `hash`, `parsing`, `graph`)** | **Shared `fn(...)->Program` primitives reused by ≥ 2 Tier-3 dialects. The LEGO substrate. One crate, per-domain feature flags  -  mirrors vyre-libs.** | **Gate 1: ≤ 4 loops AND ≤ 200 nodes** | **Per-domain feature gate; single crate semver.** |
 | 3 | `vyre-libs` (monolithic today; modules under `src/`; per-domain splits require a package migration) | Domain-specific compositions over Tier 2.5 primitives. Per the LEGO-block rule, every high-level op composes registered primitives via `region::wrap_child`. | Gate 1 enforces composition (composed_fraction ≥ 60% if over raw budget) | Per-crate / per-dialect semver. |
-| 4 | `vyre-libs-extern` + `ExternDialect` | Third-party tier-3–shaped packs, versioned and published independently. | Same Gate 1 contract. | Community-governed. |
+| 4 | External community packs (extension registry) | Third-party dialect crates that reuse the public OpDef/extension interfaces and may be published independently of core Vyre crates. | Same Gate 1 contract. | Community-governed. |
 
 - Op ID encodes tier: `vyre-intrinsics::…` (T2), `vyre-primitives::<domain>::…` (T2.5), `vyre-libs-<domain>::…` (T3), `<dialect>::…` (T4).
 - Dependency direction is one-way (T4 → T3 → T2.5 → T2 → T1). CI gate `cargo xtask check-tier-deps` rejects upward dependencies.
@@ -85,13 +85,12 @@ vyre/
 │   ├── label/ predicate/  Tag-family resolver + 10 canonical predicates
 │   └── text/ matching/    char_class, utf8_validate, bracket_match, …
 │                          (≤ 200 top-level Nodes per op; CI-enforced)
-├── vyre-libs-extern/      Tier 4 registration mechanism (ExternDialect)
-├── vyre-libs-template/    Template crate for authoring Tier-3/Tier-4 packs
 ├── vyre-libs/             Tier-3  -  `src/<domain>/` (C11: `parsing/core`,
 │                          `parsing/c`, `compiler` + `c-parser` feature;
 │                          per-domain splits require package migration)
+├── conform/               Conformance subcrates (`vyre-conform-*`) and shared evidence harness
 ├── vyre-frontend-c/               C11 driver crate  -  depends on `vyre-libs` w/ `c-parser`
-├── grammar-table-gen/     (consumer-owned grammar table generator) Host table generator for grammar-driven GPU parsers
+├── vyre-test-harness/     Shared fixtures and proof harness used by conformance and external grading
 ├── vyre-driver/           Backend traits, registry, routing, diagnostics
 │   ├── backend/           VyreBackend, Executable, Streamable
 │   ├── registry/          DialectRegistry, OpDefRegistration
@@ -103,10 +102,10 @@ vyre/
 ├── vyre-macros/           Proc-macros for op declarations
 ├── vyre-reference/        Pure-Rust CPU reference interpreter (the oracle)
 ├── vyre-runtime/          Persistent megakernel, replay, io_uring native ingest
-├── conform/               Split conformance crates (spec, generate, enforce, runner)
 ├── xtask/                 Release tooling, benchmarks, quick-check
 ├── benches/               Criterion benchmarks
 ├── docs/                  Architecture, memory model, targets, wire format
+├── fuzz/                  Fuzzing harnesses and mutators
 └── rules/                 Example rule / fixture corpora (optional)
 ```
 
@@ -145,7 +144,7 @@ Program (certified)
    ▼
 Compiled pipeline (backend-owned)
    │
-   │  5. dispatch  -  GPU/CPU/future-hardware execution
+│  5. dispatch  -  GPU execution  (host reference/discovery paths stay in the oracle and diagnostics)
    ▼
 Output bytes
 ```

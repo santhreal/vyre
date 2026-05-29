@@ -76,7 +76,7 @@ shape locally because Tier 2.5 is the reason this document exists.
 | 2       | `vyre-intrinsics`                                                 | Cat-C hardware intrinsics: ops requiring dedicated Naga emission AND dedicated interpreter handling. 9 ops.              | Frozen surface; hand-audited.                     |
 | **2.5** | `**vyre-primitives` (feature-gated per domain)**                  | **Shared `fn(...) -> Program` primitives reused by ≥ 2 Tier-3 dialects. ONE concern per domain folder; no domain glue.** | **Per-domain feature gate; single crate semver.** |
 | 3       | **`vyre-libs` (one crate today, `src/<domain>/` + Cargo features; per-domain splits require a package migration, see `library-tiers.md`)** | Domain-specific compositions over Tier 2.5 primitives. Public surface a downstream tool actually imports.                | Per-dialect semver.                               |
-| 4       | Community packs (`vyre-libs-extern` + `ExternDialect`)            | Same Tier-3 op shape; published and versioned independently of the main crates.                                         | Community-governed.                               |
+| 4       | Community packs (external extension mechanism) | Same Tier-3 op shape; published and versioned independently of the main crates.                                         | Community-governed.                               |
 
 
 ## Tier 2.5  -  the seven domain folders
