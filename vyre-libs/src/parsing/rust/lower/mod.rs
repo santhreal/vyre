@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use thiserror::Error;
 use vyre::ir::{BufferDecl, DataType, Expr as IrExpr, Node, Program};
 
-use super::lex::tokens::{EQ, GE, GT, LE, LT, MINUS, NE, PERCENT, PLUS, SLASH, STAR};
+use super::lex::tokens::{ANDAND, EQ, GE, GT, LE, LT, MINUS, NE, OROR, PERCENT, PLUS, SLASH, STAR};
 use super::parse::{Expr, Module, Stmt, Type};
 use super::sema::{BindingId, Resolution};
 
@@ -174,6 +174,8 @@ impl LowerCtx<'_> {
                     GT => IrExpr::gt(l, r),
                     LE => IrExpr::le(l, r),
                     GE => IrExpr::ge(l, r),
+                    ANDAND => IrExpr::and(l, r),
+                    OROR => IrExpr::or(l, r),
                     other => return Err(RustLowerError::Unsupported(format!("binary operator {other}"))),
                 })
             }

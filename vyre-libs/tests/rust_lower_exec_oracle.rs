@@ -18,7 +18,7 @@ use vyre_libs::parsing::rust::parse::{parse, Expr, Module, Stmt};
 use vyre_libs::parsing::rust::sema::{resolve, typeck, BindingId, Resolution};
 use vyre_reference::value::Value;
 
-use vyre_libs::parsing::rust::lex::tokens::{EQ, GE, GT, LE, LT, MINUS, NE, PERCENT, PLUS, SLASH, STAR};
+use vyre_libs::parsing::rust::lex::tokens::{ANDAND, EQ, GE, GT, LE, LT, MINUS, NE, OROR, PERCENT, PLUS, SLASH, STAR};
 
 // ---------------------------------------------------------------------------
 // Pipeline helpers
@@ -147,6 +147,12 @@ impl Ev<'_> {
         match e {
             Expr::LiteralBool(_, b) => *b,
             Expr::Binary { op, lhs, rhs } => {
+                if *op == ANDAND {
+                    return self.eval_bool(lhs, env) && self.eval_bool(rhs, env);
+                }
+                if *op == OROR {
+                    return self.eval_bool(lhs, env) || self.eval_bool(rhs, env);
+                }
                 let (l, r) = (self.eval_int(lhs, env), self.eval_int(rhs, env));
                 match *op {
                     LT => l < r,
@@ -219,6 +225,13 @@ impl Gen {
         }
     }
     fn cond(&mut self, nvars: usize) -> String {
+        self.cond_depth(nvars, 1)
+    }
+    fn cond_depth(&mut self, nvars: usize, depth: u32) -> String {
+        if depth > 0 && self.next() % 3 == 0 {
+            let op = if self.next() % 2 == 0 { "&&" } else { "||" };
+            return format!("({}) {} ({})", self.cond_depth(nvars, depth - 1), op, self.cond_depth(nvars, depth - 1));
+        }
         let op = ["<", ">", "<=", ">=", "==", "!="][(self.next() % 6) as usize];
         format!("{} {} {}", self.expr(nvars, 1, false, false), op, self.expr(nvars, 1, false, false))
     }
@@ -311,6 +324,9 @@ fn curated_programs_execute_correctly() {
         ("fn f(a: i32, b: i32) -> i32 { if a <= b { return 1; } else { return 0; } }", &[2, 2], 1),
         ("fn f(a: i32, b: i32) -> i32 { if a >= b { return 1; } else { return 0; } }", &[1, 2], 0),
         ("fn f(a: i32, b: i32) -> i32 { if a != b { return 1; } else { return 0; } }", &[3, 3], 0),
+        ("fn f(a: i32, b: i32) -> i32 { if a < b && b < 10 { return 1; } else { return 0; } }", &[3, 5], 1),
+        ("fn f(a: i32, b: i32) -> i32 { if a < b && b < 10 { return 1; } else { return 0; } }", &[3, 50], 0),
+        ("fn f(a: i32, b: i32) -> i32 { if a == 0 || b == 0 { return 1; } else { return 0; } }", &[0, 7], 1),
     ];
     for (src, inputs, expected) in cases {
         assert_eq!(ir_exec(src, inputs), *expected, "{src} with {inputs:?}");

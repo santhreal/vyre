@@ -261,7 +261,25 @@ impl<'a> Parser<'a> {
         Ok(Stmt::Return(expr))
     }
 
-    fn parse_expr(&mut self) -> Result<Expr, ParseError> { self.parse_cmp() }
+    fn parse_expr(&mut self) -> Result<Expr, ParseError> { self.parse_or() }
+
+    fn parse_or(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_and()?;
+        while self.peek().kind == OROR {
+            let op = self.advance().kind;
+            lhs = Expr::Binary { op, lhs: Box::new(lhs), rhs: Box::new(self.parse_and()?) };
+        }
+        Ok(lhs)
+    }
+
+    fn parse_and(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_cmp()?;
+        while self.peek().kind == ANDAND {
+            let op = self.advance().kind;
+            lhs = Expr::Binary { op, lhs: Box::new(lhs), rhs: Box::new(self.parse_cmp()?) };
+        }
+        Ok(lhs)
+    }
 
     fn parse_cmp(&mut self) -> Result<Expr, ParseError> {
         let mut lhs = self.parse_term()?;
