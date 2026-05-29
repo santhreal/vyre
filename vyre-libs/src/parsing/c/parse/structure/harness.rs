@@ -56,8 +56,8 @@ fn function_extract_inputs() -> Vec<Vec<Vec<u8>>> {
 
 fn function_extract_expected() -> Vec<Vec<Vec<u8>>> {
     let mut functions = vec![0u32; 18];
-    functions[0..3].copy_from_slice(&[1, 4, 5]);
-    vec![vec![pack_u32(&functions), pack_u32(&[3])]]
+    functions[3..6].copy_from_slice(&[1, 4, 5]);
+    vec![vec![pack_u32(&functions), pack_u32(&[18])]]
 }
 
 fn call_extract_inputs() -> Vec<Vec<Vec<u8>>> {
@@ -82,8 +82,8 @@ fn call_extract_inputs() -> Vec<Vec<Vec<u8>>> {
 
 fn call_extract_expected() -> Vec<Vec<Vec<u8>>> {
     let mut calls = vec![0u32; 9 * 4];
-    calls[0..4].copy_from_slice(&[0, 5, 6, 7]);
-    vec![vec![pack_u32(&calls), pack_u32(&[4])]]
+    calls[21..24].copy_from_slice(&[5, 6, 7]);
+    vec![vec![pack_u32(&calls), pack_u32(&[36])]]
 }
 
 fn call_graph_inputs() -> Vec<Vec<Vec<u8>>> {

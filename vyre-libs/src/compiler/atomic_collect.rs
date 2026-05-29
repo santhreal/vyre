@@ -79,7 +79,7 @@ mod tests {
     fn unpack_u32(bytes: &[u8]) -> Vec<u32> {
         bytes
             .chunks_exact(4)
-            .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("u32 chunk")))
+            .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("Fix: byte slices must be 4-byte aligned for u32 chunks; reject odd-length buffers - u32 chunk")))
             .collect()
     }
 

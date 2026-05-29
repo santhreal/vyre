@@ -451,26 +451,31 @@ inventory::submit! {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
     #[test]
     fn checked_u32_binary_builders_reject_aliasing() {
+        let program = try_lattice_join("a", "b", "out", 4).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid lattice_join must build");
+        assert_eq!(program.buffers.len(), 3, "lattice_join must declare a, b, and out");
+
+        let join_err = try_lattice_join("a", "a", "out", 4).expect_err("aliased inputs");
         assert!(
-            try_lattice_join("a", "b", "out", 4).is_ok(),
-            "valid lattice_join buffers must build"
+            matches!(join_err, TensorRefError::NameCollision { .. }),
+            "lattice_join aliasing error: {join_err:?}"
         );
+
+        let meet_err = try_lattice_meet("a", "b", "a", 4).expect_err("aliased output");
         assert!(
-            try_lattice_join("a", "a", "out", 4).is_err(),
-            "lattice_join must reject aliased input buffers"
+            matches!(meet_err, TensorRefError::NameCollision { .. }),
+            "lattice_meet aliasing error: {meet_err:?}"
         );
+
+        let mul_err = try_semiring_min_plus_mul("a", "b", "b", 4).expect_err("aliased output");
         assert!(
-            try_lattice_meet("a", "b", "a", 4).is_err(),
-            "lattice_meet must reject aliased output buffers"
-        );
-        assert!(
-            try_semiring_min_plus_mul("a", "b", "b", 4).is_err(),
-            "min-plus multiply must reject aliased output buffers"
+            matches!(mul_err, TensorRefError::NameCollision { .. }),
+            "min-plus mul aliasing error: {mul_err:?}"
         );
     }
 
@@ -536,3 +541,4 @@ mod tests {
         }
     }
 }
+

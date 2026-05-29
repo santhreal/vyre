@@ -77,13 +77,15 @@ mod tests {
     #[test]
     fn prefix_sum_empty_n_zero_should_trap() {
         let program = scan_prefix_sum("input", "output", 0);
-        let result = vyre_reference::reference_eval(
+        let error = vyre_reference::reference_eval(
             &program,
             &[Value::from(vec![0u8; 0]), Value::from(vec![0u8; 0])],
-        );
+        )
+        .expect_err("n=0 prefix_sum must trap instead of returning empty");
+        let msg = error.to_string();
         assert!(
-            result.is_err(),
-            "n=0 prefix_sum must trap instead of returning empty"
+            msg.contains("trap") || msg.contains("Fix:"),
+            "n=0 prefix_sum error must be actionable: {msg}"
         );
     }
 

@@ -208,7 +208,7 @@ pub fn compile_regex_set(patterns: &[&str]) -> Result<CompiledRegexSet, RegexCom
         // ranges), then unicode-mode as a fallback when the source
         // contains a non-ASCII codepoint inside a character class
         // (e.g. homoglyph-expanded `[hнһｈ]`). The unicode-mode HIR
-        // gets the same `build_class` lowering — non-ASCII members
+        // gets the same `build_class` lowering - non-ASCII members
         // expand into UTF-8 byte-sequence alternations.
         let hir = match regex_syntax::ParserBuilder::new()
             .unicode(false)
@@ -452,6 +452,7 @@ fn table_word_count(
         .ok_or(RegexCompileError::TableWordCountOverflow { table })
 }
 
+
 fn zeroed_u32_table(words: usize, field: &'static str) -> Result<Vec<u32>, RegexCompileError> {
     let mut table = Vec::new();
     reserve_vec(&mut table, words, field)?;
@@ -684,7 +685,7 @@ fn build_repetition(
 /// codepoint) and ε-merges them via a shared end state.
 ///
 /// `match_len` for the expansion case is the MAX byte length across
-/// arms — anchored extraction uses `match_len` only to position
+/// arms - anchored extraction uses `match_len` only to position
 /// the post-process window, not to extract the credential text, and
 /// over-sizing the window is harmless (the real regex re-extracts the
 /// exact match inside it).
@@ -747,7 +748,7 @@ fn try_class_as_ascii_byte_set(cls: &Class) -> Option<ByteSet> {
     let mut out = ByteSet::new();
     match cls {
         Class::Bytes(byte_class) => {
-            // Byte classes are already at the byte level — every member
+            // Byte classes are already at the byte level - every member
             // is a u8, no codepoint expansion involved. The legacy fast
             // path always applies.
             for r in byte_class.iter() {
@@ -778,7 +779,7 @@ fn try_class_as_ascii_byte_set(cls: &Class) -> Option<ByteSet> {
 /// Cap on enumerated codepoints during UTF-8 expansion. A class like
 /// `[\u{0100}-\u{017F}]` (Latin Extended-A) expands to 128 sequences,
 /// well within the cap. A class spanning a full CJK block (~20 000
-/// codepoints) would blow past it — the byte-state automaton can't
+/// codepoints) would blow past it - the byte-state automaton can't
 /// represent that cleanly, so the consumer should keep that pattern on
 /// the CPU regex path.
 const MAX_CLASS_EXPANSION_CODEPOINTS: usize = 256;
@@ -818,7 +819,7 @@ fn class_to_utf8_sequences(cls: &Class, pid: usize) -> Result<Vec<Vec<u8>>, Rege
                     }
                     // Use a small buffer + `char::encode_utf8` to avoid
                     // pulling in a heavyweight UTF-8 dependency. Invalid
-                    // codepoints (surrogates) are silently skipped —
+                    // codepoints (surrogates) are silently skipped -
                     // regex-syntax shouldn't emit them in a parsed HIR
                     // for character classes, but the `char::from_u32`
                     // guard catches the corner case if it ever does.
@@ -995,7 +996,7 @@ mod tests {
         };
         // 4 alternation arms (one per codepoint) × varying byte length
         // + chain states + literal `f_` chain + bounded repetition
-        // states — the exact count is implementation-dependent, but
+        // states - the exact count is implementation-dependent, but
         // every successfully-compiled regex must produce >=2 accept-
         // state-ids worth of state graph.
         assert!(
@@ -1028,7 +1029,7 @@ mod tests {
     /// unbounded memory.
     #[test]
     fn unicode_class_above_expansion_cap_errors_cleanly() {
-        // 257 codepoints — one above MAX_CLASS_EXPANSION_CODEPOINTS = 256.
+        // 257 codepoints - one above MAX_CLASS_EXPANSION_CODEPOINTS = 256.
         let pat = "[\u{0100}-\u{0200}]";
         let err = compile_regex_set(&[pat]).unwrap_err();
         match err {
@@ -1042,3 +1043,4 @@ mod tests {
         }
     }
 }
+

@@ -43,6 +43,10 @@ fn dynamic_macro_table_full_without_empty_slot_fails_loudly() {
         run_dynamic(&[TOK_IDENTIFIER], &fixture, 8)
     }));
     let eval = result.expect("full-table probe must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 

@@ -448,6 +448,7 @@ mod tests {
         let dfa = CompiledDfa {
             transitions: vec![0; 256],
             accept: vec![0],
+
             state_count: 1,
             max_pattern_len: 0,
             output_offsets: vec![0, 0],
@@ -545,3 +546,4 @@ mod tests {
         }
     }
 }
+

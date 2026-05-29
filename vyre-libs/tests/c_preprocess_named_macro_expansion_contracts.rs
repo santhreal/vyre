@@ -370,7 +370,12 @@ fn function_like_macro_argument_count_mismatch_fails_loudly() {
         run_named_macro_expansion(&stream, &fixture, 8)
     }))
     .expect("argument mismatch must return an error, not panic");
-    assert!(result.is_err());
+    let err = result.expect_err("MAX(a) with arity 2 must fail");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("argument") || msg.contains("Fix:") || msg.contains("MAX"),
+        "argument-count mismatch error: {msg}"
+    );
 }
 
 #[test]
@@ -441,5 +446,10 @@ fn named_macro_expansion_reports_capacity_overflow_deterministically() {
         run_named_macro_expansion(&stream, &fixture, 2)
     }))
     .expect("output overflow must return an error, not panic");
-    assert!(result.is_err());
+    let err = result.expect_err("FOO expansion into two slots must fail");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("capacity") || msg.contains("overflow") || msg.contains("Fix:"),
+        "named macro capacity overflow error: {msg}"
+    );
 }

@@ -4,7 +4,7 @@ use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 // with a redundant `Expr::cast(DataType::U32, …)` wrapper around the
 // load (the source buffer is already declared as `DataType::U32`).
 // All call sites in this file now route through the canonical
-// scan::builders primitive — single source of truth for packed-byte
+// scan::builders primitive - single source of truth for packed-byte
 // extract across vyre-libs.
 pub(super) use crate::scan::builders::load_packed_byte_expr as packed_byte_load;
 

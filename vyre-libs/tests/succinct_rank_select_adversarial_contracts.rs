@@ -339,9 +339,10 @@ fn rank_query_traps_out_of_bounds() {
         ],
     );
 
+    let err = result.expect_err("rank1_query must fail loudly when query offset addresses a missing word");
     assert!(
-        result.is_err(),
-        "rank1_query must fail loudly when query offset addresses a missing word"
+        err.to_string().contains("rank-query-out-of-bounds"),
+        "unexpected error: {err}"
     );
 }
 
@@ -358,9 +359,10 @@ fn rank_query_traps_far_out_of_bounds() {
         ],
     );
 
+    let err = result.expect_err("rank1_query must fail loudly for far-out-of-bounds bit indices");
     assert!(
-        result.is_err(),
-        "rank1_query must fail loudly for far-out-of-bounds bit indices"
+        err.to_string().contains("rank-query-out-of-bounds"),
+        "unexpected error: {err}"
     );
 }
 
@@ -423,7 +425,11 @@ fn select_query_traps_zero_rank() {
         ],
     );
 
-    assert!(result.is_err(), "select1_query must reject k == 0");
+    let err = result.expect_err("select1_query must reject k == 0");
+    assert!(
+        err.to_string().contains("select-query-zero-rank"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -438,9 +444,10 @@ fn select_query_traps_rank_past_total_popcount() {
         ],
     );
 
+    let err = result.expect_err("select1_query must reject ranks beyond total popcount");
     assert!(
-        result.is_err(),
-        "select1_query must reject ranks beyond total popcount"
+        err.to_string().contains("select-query-rank-out-of-bounds"),
+        "unexpected error: {err}"
     );
 }
 

@@ -448,6 +448,7 @@ mod tests {
         assert!(
             (out_vals[1] - 0.0).abs() < 1e-4,
             "expected 0.0, got {}",
+
             out_vals[1]
         );
     }
@@ -753,3 +754,4 @@ inventory::submit! {
         category: Some("nn"),
     }
 }
+

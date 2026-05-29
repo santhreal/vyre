@@ -315,10 +315,10 @@ mod payload_codec_allocation_tests {
     #[test]
     fn read_bytes_reserves_fallibly_before_copying_payload() {
         let mut encoded = Vec::new();
-        write_bytes(&mut encoded, b"payload").expect("payload byte field should encode");
+        write_bytes(&mut encoded, b"payload").expect("Fix: codec write failures indicate corrupt buffer state; abort encode and return Err - payload byte field should encode");
         let mut cursor = 0usize;
 
-        let decoded = read_bytes(&encoded, &mut cursor).expect("encoded bytes must decode");
+        let decoded = read_bytes(&encoded, &mut cursor).expect("Fix: reject truncated or hostile codec payloads; do not decode past bounds - encoded bytes must decode");
 
         assert_eq!(decoded, b"payload");
         assert_eq!(cursor, encoded.len());

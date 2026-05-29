@@ -449,6 +449,7 @@ mod tests {
         (0..size).map(|_| next_u32(state)).collect()
     }
 
+
     fn run_u32_output(program: &Program, inputs: Vec<Vec<u32>>, out_bytes: usize) -> Vec<u32> {
         let packed_inputs = inputs
             .into_iter()
@@ -532,25 +533,37 @@ mod tests {
 
     #[test]
     fn matmul_builder_rejects_zero_m() {
-        let result = Matmul::new(
+        let error = Matmul::new(
             TensorRef::u32_2d("a", 0, 4),
             TensorRef::u32_2d("b", 4, 4),
             TensorRef::u32_2d("out", 0, 4),
         )
-        .build();
-        assert!(result.is_err(), "Matmul builder must reject M=0");
+        .build()
+        .expect_err("Matmul builder must reject M=0");
+        assert!(
+            matches!(error, TensorRefError::ShapeMismatch { .. }),
+            "unexpected matmul zero-M error: {error:?}"
+        );
+        let msg = format!("{error:?}");
+        assert!(msg.contains('0'), "zero-M error must mention zero dimension: {msg}");
     }
 
     #[test]
     fn matmul_bias_builder_rejects_zero_m() {
-        let result = MatmulBias::new(
+        let error = MatmulBias::new(
             TensorRef::u32_2d("a", 0, 4),
             TensorRef::u32_2d("b", 4, 4),
             TensorRef::u32_1d("bias", 4),
             TensorRef::u32_2d("out", 0, 4),
         )
-        .build();
-        assert!(result.is_err(), "MatmulBias builder must reject M=0");
+        .build()
+        .expect_err("MatmulBias builder must reject M=0");
+        assert!(
+            matches!(error, TensorRefError::ShapeMismatch { .. }),
+            "unexpected matmul-bias zero-M error: {error:?}"
+        );
+        let msg = format!("{error:?}");
+        assert!(msg.contains('0'), "zero-M bias error must mention zero dimension: {msg}");
     }
 
     #[test]
@@ -558,15 +571,20 @@ mod tests {
         let a: Vec<u32> = vec![];
         let b: Vec<u32> = vec![];
         let program = matmul("a", "b", "out", 2, 0, 3);
-        let result = vyre_reference::reference_eval(
+        let error = vyre_reference::reference_eval(
             &program,
             &[
                 Value::from(vyre_primitives::wire::pack_u32_slice(&a)),
                 Value::from(vyre_primitives::wire::pack_u32_slice(&b)),
                 Value::from(vec![0u8; 6 * 4]),
             ],
+        )
+        .expect_err("zero-K matmul must trap");
+        let msg = error.to_string();
+        assert!(
+            msg.contains("trap") || msg.contains("Fix:"),
+            "zero-K matmul error must be actionable: {msg}"
         );
-        assert!(result.is_err(), "zero-K matmul must trap");
     }
 
     /// u32 wrapping overflow must be preserved.
@@ -755,3 +773,4 @@ inventory::submit! {
         category: Some("math"),
     }
 }
+

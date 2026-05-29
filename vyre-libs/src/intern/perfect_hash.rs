@@ -448,6 +448,7 @@ mod tests {
             .enumerate()
             .map(|(i, f)| (f.to_string(), i as u32))
             .collect();
+
         let ph = build_chd(entries.clone());
         for (k, v) in entries {
             assert_eq!(ph.lookup(&k), Some(v));
@@ -508,3 +509,4 @@ mod tests {
         }
     }
 }
+

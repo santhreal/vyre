@@ -287,8 +287,16 @@ mod tests {
     /// Rejects N < 2.
     #[test]
     fn fft_radix2_rejects_tiny_n() {
-        assert!(fft_radix2_complex("input", "output", 0).is_err());
-        assert!(fft_radix2_complex("input", "output", 1).is_err());
+        let err0 = fft_radix2_complex("input", "output", 0).expect_err("n=0 must error");
+        let err1 = fft_radix2_complex("input", "output", 1).expect_err("n=1 must error");
+        assert!(
+            err0.contains("power of two") || err0.contains("Fix:"),
+            "n=0 fft error: {err0}"
+        );
+        assert!(
+            err1.contains("power of two") || err1.contains("Fix:"),
+            "n=1 fft error: {err1}"
+        );
     }
 
     /// Bit-reverse helper sanity check.

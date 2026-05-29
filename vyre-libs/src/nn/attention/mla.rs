@@ -494,6 +494,7 @@ pub fn mla_decode(
 ///   `h: [hidden_dim]`  -  current token hidden state
 ///   `w_dk: [hidden_dim, kv_lora_rank]`  -  down-projection weights
 ///   `c_out: [kv_lora_rank]`  -  compressed latent output
+
 pub fn mla_compress_kv(
     h: &str,
     w_dk: &str,
@@ -665,10 +666,16 @@ mod tests {
 
     #[test]
     fn mla_decode_zero_dim_errors() {
-        assert!(mla_decode("q", "kv", "kr", "w_uk", "w_uv", "out", 0, 1, 2, 2, 2).is_err());
-        assert!(mla_decode("q", "kv", "kr", "w_uk", "w_uv", "out", 1, 0, 2, 2, 2).is_err());
-        assert!(mla_decode("q", "kv", "kr", "w_uk", "w_uv", "out", 1, 1, 0, 2, 2).is_err());
-        assert!(mla_decode("q", "kv", "kr", "w_uk", "w_uv", "out", 1, 1, 2, 0, 2).is_err());
-        assert!(mla_decode("q", "kv", "kr", "w_uk", "w_uv", "out", 1, 1, 2, 2, 0).is_err());
+        for (batch, seq, kv_heads, head_dim, latent) in
+            [(0, 1, 2, 2, 2), (1, 0, 2, 2, 2), (1, 1, 0, 2, 2), (1, 1, 2, 0, 2), (1, 1, 2, 2, 0)]
+        {
+            let err = mla_decode("q", "kv", "kr", "w_uk", "w_uv", "out", batch, seq, kv_heads, head_dim, latent)
+                .expect_err("zero dim must error");
+            assert!(
+                err.contains("mla_decode") && err.contains("> 0"),
+                "mla_decode zero-dim ({batch},{seq},{kv_heads},{head_dim},{latent}): {err}"
+            );
+        }
     }
 }
+

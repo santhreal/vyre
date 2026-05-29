@@ -100,20 +100,37 @@ fn has_embed_consumes_resource_and_parameters() {
 fn has_include_rejects_unterminated_header() {
     // An unterminated angle-form header must produce a Fix: diagnostic,
     // not silently swallow the rest of the directive.
-    assert!(eval(b"__has_include(<threads.h", &[]).is_err());
+    let err = eval(b"__has_include(<threads.h", &[]).expect_err("unterminated header");
+    assert!(
+        err.to_string().contains("close __has_include header"),
+        "unterminated header error: {err}"
+    );
 }
 
 #[test]
 fn has_embed_rejects_unterminated_operands() {
-    assert!(eval(b"__has_embed(<asset.bin", &[]).is_err());
-    assert!(eval(b"__has_embed(\"asset.bin\" limit(4)", &[]).is_err());
+    let err_angle = eval(b"__has_embed(<asset.bin", &[]).expect_err("unterminated angle resource");
+    assert!(
+        err_angle.to_string().contains("close __has_embed resource"),
+        "unterminated embed angle error: {err_angle}"
+    );
+    let err_paren = eval(b"__has_embed(\"asset.bin\" limit(4)", &[])
+        .expect_err("unterminated embed tail");
+    assert!(
+        err_paren.to_string().contains("close __has_embed operator"),
+        "unterminated embed paren error: {err_paren}"
+    );
 }
 
 #[test]
 fn has_attribute_rejects_missing_paren() {
     // `__has_attribute visibility` (no parens) is a malformed directive  -
     // we must reject it rather than silently treating it as 0.
-    assert!(eval(b"__has_attribute visibility", &[]).is_err());
+    let err = eval(b"__has_attribute visibility", &[]).expect_err("missing paren");
+    assert!(
+        err.to_string().contains("parenthesized argument"),
+        "missing-paren __has_attribute error: {err}"
+    );
 }
 
 #[test]

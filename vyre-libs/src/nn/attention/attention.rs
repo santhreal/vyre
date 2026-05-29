@@ -540,6 +540,7 @@ fn attention_program(
 }
 
 #[allow(clippy::too_many_arguments)]
+
 fn attention_reference_program(
     q: &str,
     k: &str,
@@ -835,3 +836,4 @@ mod tests {
         );
     }
 }
+

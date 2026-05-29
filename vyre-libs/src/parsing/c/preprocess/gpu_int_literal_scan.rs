@@ -468,6 +468,7 @@ pub fn gpu_int_literal_scan(source_len: u32) -> Program {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use vyre_reference::value::Value;
@@ -546,3 +547,4 @@ mod tests {
         assert_eq!(run_literal_scan(b"0b1010'0101WB", 0), (165, 13));
     }
 }
+

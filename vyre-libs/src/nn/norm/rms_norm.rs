@@ -38,7 +38,7 @@ fn invalid_rms_program(op_id: &'static str, output: &str) -> Program {
 }
 
 fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Program {
-    let tile = RMS_TILE;
+    let tile = RMS_TILE.min(n).max(1);
     let chunks = n.div_ceil(tile);
     let local = Expr::var("local");
     let mut body = vec![

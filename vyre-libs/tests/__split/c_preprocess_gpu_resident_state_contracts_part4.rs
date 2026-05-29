@@ -44,7 +44,11 @@ fn function_like_macro_arg_count_mismatch_fails_loudly() {
 
     let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
     let eval = result.expect("arg-count mismatch must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 #[test]
@@ -61,6 +65,10 @@ fn function_like_macro_replacement_parameter_out_of_range_fails_loudly() {
 
     let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 8)));
     let eval = result.expect("out-of-range param must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 

@@ -46,10 +46,10 @@ mod tests {
         let source = include_str!("caller_lookup.rs");
         let end_pos = source
             .find("\"fn_body_end\"")
-            .expect("function lookup binds body end");
+            .expect("Fix: malformed C structure lookup must return parse Err, not panic - function lookup binds body end");
         let start_pos = source
             .find("\"fn_body_start\"")
-            .expect("function lookup binds body start");
+            .expect("Fix: malformed C structure lookup must return parse Err, not panic - function lookup binds body start");
         assert!(
             end_pos < start_pos,
             "Fix: 3-word function records must not load body_start/body_end in adjacent ascending order because PTX vector-load fusion requires stronger alignment than record stride 3 provides."

@@ -543,6 +543,7 @@ where
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
@@ -569,7 +570,10 @@ mod tests {
     fn check_tensors_passes_on_clean_inputs() {
         let a = TensorRef::u32_1d("a", 4);
         let b = TensorRef::u32_1d("b", 4);
-        assert!(check_tensors("op", &[(&a, DataType::U32), (&b, DataType::U32)]).is_ok());
+        assert!(matches!(
+            check_tensors("op", &[(&a, DataType::U32), (&b, DataType::U32)]),
+            Ok(())
+        ));
     }
 
     #[test]
@@ -643,3 +647,4 @@ mod tests {
         );
     }
 }
+

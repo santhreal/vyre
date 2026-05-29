@@ -112,8 +112,10 @@ fn dynamic_macro_expansion_rejects_output_capacity_overflow_without_panic() {
         run_dynamic_macro_expansion(&[TOK_IDENTIFIER, TOK_IDENTIFIER], &fixture, 5)
     }));
     let eval_result = result.expect("output-capacity overflow must return an error, not panic");
+    let err = eval_result.expect_err("two 3-token expansions into five output slots must reject");
+    let msg = err.to_string();
     assert!(
-        eval_result.is_err(),
-        "two 3-token expansions into five output slots must reject capacity overflow"
+        msg.contains("capacity") || msg.contains("overflow") || msg.contains("Fix:"),
+        "capacity overflow error: {msg}"
     );
 }

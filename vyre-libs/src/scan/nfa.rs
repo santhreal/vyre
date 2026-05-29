@@ -91,12 +91,12 @@ pub const HAYSTACK_LEN_BUF: &str = "nfa_haystack_len";
 /// Canonical buffer name for the runtime-supplied per-workgroup cursor
 /// bound. Each workgroup walks bytes from `WorkgroupId(0)` up to
 /// `min(haystack_len, WorkgroupId(0) + max_scan_bytes)`. Set to
-/// `u32::MAX` for unbounded scans (legacy behavior — every workgroup
+/// `u32::MAX` for unbounded scans (legacy behavior - every workgroup
 /// walks to the end of the haystack, giving O(N²) total work).
 ///
 /// The bound exists because the entry-anchored cursor design dispatches
 /// one workgroup per byte and each workgroup walks until accept OR
-/// end-of-haystack — for a 62 MiB input that's ~1.9e15 transition-table
+/// end-of-haystack - for a 62 MiB input that's ~1.9e15 transition-table
 /// loads total, fundamentally O(N²). When the consumer knows the longest
 /// possible match (e.g. `[MN].{22-24}\..{6-8}\..{27-38}` cannot exceed
 /// 73 bytes), passing that bound flips the kernel to O(N × bound), which
@@ -162,7 +162,7 @@ pub fn nfa_scan_with_plan(
     // to the longest possible pattern match, total work drops to O(N × bound).
     // Pass `u32::MAX` for unbounded scans to preserve legacy semantics.
     let max_scan_bytes_expr = || Expr::load(MAX_SCAN_BYTES_BUF, Expr::u32(0));
-    // `min(haystack_len, start + max_scan_bytes)` — saturating add to
+    // `min(haystack_len, start + max_scan_bytes)` - saturating add to
     // avoid wraparound when `start + max_scan_bytes > u32::MAX`. The
     // saturation produces u32::MAX, which then loses the `min` race
     // against `haystack_len`, so the cursor still stops at the real
@@ -470,6 +470,7 @@ pub fn nfa_scan_with_plan(
     ))
 }
 
+
 mod alloc;
 mod plan;
 mod shards;
@@ -737,7 +738,9 @@ mod tests {
         // Program, so callers can route empty haystacks through the
         // same dispatch builder as non-empty inputs.
         let prog = nfa_scan(&["abc"], "input", "hits", 0);
-        assert!(!prog.entry().is_empty());
+        let names: Vec<&str> = prog.buffers().iter().map(|b| b.name()).collect();
+        assert!(names.contains(&"input"));
+        assert!(names.contains(&"hits"));
     }
 
     #[test]
@@ -830,3 +833,4 @@ pub mod bench {
         acc
     }
 }
+

@@ -539,6 +539,7 @@ impl MacroIntegerParser<'_> {
     }
 }
 
+
 fn scan_while(body: &[u8], start: usize, predicate: impl Fn(u8) -> bool) -> usize {
     let mut index = start;
     while body.get(index).copied().is_some_and(&predicate) {
@@ -592,7 +593,7 @@ mod tests {
         for (body, expected) in cases {
             let macros = [object_macro(b"VALUE", body)];
             assert_eq!(
-                macro_integer_values(&macros).expect("macro integer values should fit"),
+                macro_integer_values(&macros).expect("Fix: reject preprocessor macros whose values do not fit u32; fail parse, do not truncate - macro integer values should fit"),
                 vec![expected],
                 "body `{}`",
                 String::from_utf8_lossy(body)
@@ -609,7 +610,7 @@ mod tests {
             object_macro(b"D", b"MISSING"),
         ];
         assert_eq!(
-            macro_integer_values(&macros).expect("macro integer values should fit"),
+            macro_integer_values(&macros).expect("Fix: reject preprocessor macros whose values do not fit u32; fail parse, do not truncate - macro integer values should fit"),
             vec![1, 3, 1, 0]
         );
     }
@@ -621,7 +622,7 @@ mod tests {
             object_macro(b"HZ", b"CONFIG_HZ\t/* Internal kernel timer frequency */"),
         ];
         assert_eq!(
-            macro_integer_values(&macros).expect("macro integer values should fit"),
+            macro_integer_values(&macros).expect("Fix: reject preprocessor macros whose values do not fit u32; fail parse, do not truncate - macro integer values should fit"),
             vec![1000, 1000]
         );
     }
@@ -634,8 +635,9 @@ mod tests {
             object_macro(b"DEPENDS_ON_STABLE", b"STABLE + 1"),
         ];
         assert_eq!(
-            macro_integer_values(&macros).expect("macro integer values should fit"),
+            macro_integer_values(&macros).expect("Fix: reject preprocessor macros whose values do not fit u32; fail parse, do not truncate - macro integer values should fit"),
             vec![9, 0, 10]
         );
     }
 }
+

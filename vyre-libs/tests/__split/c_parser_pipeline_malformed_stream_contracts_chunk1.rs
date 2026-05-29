@@ -114,12 +114,18 @@ fn pg_lower_try_reference_accepts_exact_multiple_of_stride() {
 
 #[test]
 fn pg_lower_reference_oracle_panics_on_misaligned_input() {
-    let result = catch_unwind(AssertUnwindSafe(|| {
+    let panic = catch_unwind(AssertUnwindSafe(|| {
         let _ = reference_ast_to_pg_nodes(&[0u8; 14]);
-    }));
+    }))
+    .expect_err("reference_ast_to_pg_nodes must panic on misaligned bytes");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("non-string panic payload");
     assert!(
-        result.is_err(),
-        "reference_ast_to_pg_nodes must panic on misaligned bytes"
+        message.contains("misaligned") || message.contains("stride"),
+        "unexpected panic payload: {message}"
     );
 }
 
@@ -145,9 +151,17 @@ fn vast_reference_oracles_panic_on_malformed_public_input() {
             })),
         ),
     ] {
+        let panic = result.expect_err(
+            "{name} reference oracle must panic on malformed VAST bytes instead of emitting an empty vector",
+        );
+        let message = panic
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| panic.downcast_ref::<&str>().copied())
+            .unwrap_or("non-string panic payload");
         assert!(
-            result.is_err(),
-            "{name} reference oracle must panic on malformed VAST bytes instead of emitting an empty vector"
+            message.contains("misaligned") || message.contains("stride"),
+            "unexpected {name} panic payload: {message}"
         );
     }
 }
@@ -180,10 +194,13 @@ fn pg_lower_zero_nodes_fails_validation_on_cpu_reference() {
     // Zero-node input must fail validation, not silently emit all zeros.
     let program = c_lower_ast_to_pg_nodes("vast_nodes", Expr::u32(0), "pg_nodes");
     let values = [Value::from(vec![]), Value::from(vec![0u8; 4])];
-    let result = vyre_reference::reference_eval(&program, &values);
+    let err = vyre_reference::reference_eval(&program, &values).expect_err(
+        "zero-node PG lowerer must fail validation on CPU reference, not silently succeed",
+    );
     assert!(
-        result.is_err(),
-        "zero-node PG lowerer must fail validation on CPU reference, not silently succeed"
+        err.to_string().contains("reference dispatch trapped")
+            || err.to_string().contains("VAST"),
+        "unexpected error: {err}"
     );
 }
 

@@ -13,8 +13,8 @@ impl RustLexerPlan {
 
     /// Build the vyre::Program that lexes a source buffer.
     ///
-    /// TODO(v0.1.0): implement as pure vyre IR over text primitives.
-    /// For now returns a placeholder; callers fall back to `core::lex`.
+    /// **Not implemented:** returns an empty program. `vyre-frontend-rust` must
+    /// use the host `core::lex` path until GPU lexer IR lands (tracked OPEN).
     pub fn build(&self) -> Program {
         Program::default()
     }

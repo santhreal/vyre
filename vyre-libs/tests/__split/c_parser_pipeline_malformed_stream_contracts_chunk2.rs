@@ -48,9 +48,10 @@ fn pg_lower_nonempty_input_produces_nonempty_output() {
     vast[0] = node_kind::CALL;
     let vast_bytes = u32_bytes(&vast);
     let pg = run_reference_pg_lower(&vast_bytes);
-    assert!(
-        !pg.is_empty(),
-        "PG lowerer must not produce empty output for non-empty input"
+    assert_eq!(
+        pg.len(),
+        PG_STRIDE_U32 * 4,
+        "single-node PG lowerer must emit one PG_STRIDE row"
     );
 }
 
@@ -64,13 +65,13 @@ fn full_pipeline_on_mismatched_delimiters_produces_non_empty_output() {
     let tok_starts = [0u32, 2, 4];
     let tok_lens = [1u32; 3];
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
-    assert!(!raw.is_empty());
+    assert_eq!(raw.len(), 3 * VAST_STRIDE_U32 * 4);
     let typed = reference_c11_classify_vast_node_kinds(&raw);
-    assert!(!typed.is_empty());
+    assert_eq!(typed.len(), raw.len());
     let shape = reference_c11_build_expression_shape_nodes(&raw, &typed);
-    assert!(!shape.is_empty());
+    assert_eq!(shape.len(), typed.len());
     let pg = run_reference_pg_lower(&typed);
-    assert!(!pg.is_empty());
+    assert_eq!(pg.len(), 3 * PG_STRIDE_U32 * 4);
 }
 
 #[test]

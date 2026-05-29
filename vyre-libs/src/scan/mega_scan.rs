@@ -54,7 +54,7 @@ impl RulePipeline {
     /// matchers without changing post-processing code.
     ///
     /// Equivalent to [`Self::scan_bounded`] with `max_scan_bytes =
-    /// u32::MAX` — every workgroup walks to the end of the haystack
+    /// u32::MAX` - every workgroup walks to the end of the haystack
     /// (O(N²) total work). Use [`Self::scan_bounded`] when the longest
     /// possible match is known to bound per-workgroup work and make
     /// the kernel O(N × max_scan_bytes).
@@ -459,6 +459,7 @@ impl std::fmt::Display for PipelineWireError {
     }
 }
 
+
 impl std::error::Error for PipelineWireError {}
 
 impl RulePipeline {
@@ -696,7 +697,7 @@ mod tests {
     /// guarantee that any haystack ≤ declared capacity can dispatch
     /// against the same program. Removing this buffer would silently
     /// re-introduce the "input expected N bytes but received M" hard
-    /// error on every short-input dispatch — locking it as a contract.
+    /// error on every short-input dispatch - locking it as a contract.
     #[test]
     fn rule_pipeline_program_declares_haystack_len_buffer() {
         let pipe = build(&["ab"], "input", "hits", 1024);
@@ -714,7 +715,7 @@ mod tests {
     /// `nfa_max_scan_bytes` 1-u32 storage buffer so the per-workgroup
     /// cursor cap is runtime-supplied. Without this buffer the cursor
     /// loop runs unbounded per workgroup, making the kernel O(N²) on
-    /// large inputs — the discord-bot-token-on-62 MiB case that drove
+    /// large inputs - the discord-bot-token-on-62 MiB case that drove
     /// the bound into existence. Removing this buffer would silently
     /// reintroduce that perf cliff.
     #[test]
@@ -730,3 +731,4 @@ mod tests {
         );
     }
 }
+

@@ -448,6 +448,7 @@ pub(super) fn recompute_ifdef_truths_gpu_with_scratch<'a>(
         .map_err(|e| format!("gpu_ifdef_value batched live conditional: {e}"))?;
     if scratch.dispatch_outputs.len() != 1 {
         return Err(format!(
+
             "gpu_ifdef_value batched live conditional: expected exactly 1 output, got {}. Fix: backend must return only the defined flags.",
             scratch.dispatch_outputs.len()
         ));
@@ -533,3 +534,4 @@ pub(super) fn recompute_if_expr_truth_gpu_with_scratch(
     insert_live_conditional_cache_value(cache_key, value, "live if-expression")?;
     Ok(value)
 }
+

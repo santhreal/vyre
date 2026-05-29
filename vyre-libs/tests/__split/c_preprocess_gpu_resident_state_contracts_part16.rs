@@ -22,7 +22,11 @@ fn collision_safe_macro_name_long_name_exceeds_pool_bounds_fails_loudly() {
 
     let result = catch_unwind(AssertUnwindSafe(|| run_named(&stream, &fixture, 4)));
     let eval = result.expect("name-pool overflow must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 #[test]
@@ -50,7 +54,11 @@ fn collision_safe_macro_name_source_span_out_of_bounds_fails_loudly() {
 
     let result = catch_unwind(AssertUnwindSafe(|| run_named(&short_stream, &fixture, 4)));
     let eval = result.expect("source-span out-of-bounds must return an error, not panic");
-    assert!(eval.is_err());
+    let err = eval.expect_err("expected reference evaluation failure");
+        assert!(
+            err.to_string().contains("reference dispatch trapped"),
+            "unexpected error: {err}"
+        );
 }
 
 // ---------------------------------------------------------------------------

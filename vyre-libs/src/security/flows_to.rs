@@ -10,7 +10,7 @@
 //!   where fixpoint on reached
 //! ```
 //!
-//! vyre-libs ships one dispatch step that a program-analysis consumer's fixpoint driver
+//! vyre-libs ships one dispatch step that an analysis-stage fixpoint driver
 //! iterates. Op id stays stable; the dead v2 edges_from/edges_to
 //! signature from the inert v2 API has been deleted  -  the shim
 //! now takes only the canonical frontier / sink buffer names.
@@ -187,8 +187,8 @@ mod tests {
 
     #[test]
     fn flows_to_and_taint_flow_convergence_contracts_match_intentionally() {
-        // taint_flow is a program-analysis consumer-facing predicate name; flows_to is the
-        // vyre-side primitive. Both close the same FLOWS_TO_MASK forward
+        // taint_flow is an alternate API-facing predicate name; flows_to is the
+        // core primitive. Both close the same FLOWS_TO_MASK forward
         // closure and therefore share the same convergence regime  -
         // matching `max_iterations` is the contract, not a hygiene gap.
         // Their IR differs (distinct OP_ID tags) but their fixpoint
@@ -238,10 +238,13 @@ mod tests {
             .into_iter()
             .map(vyre_reference::value::Value::from)
             .collect();
-        let result = vyre_reference::reference_eval(&p, &values);
+        let error = vyre_reference::reference_eval(&p, &values).expect_err(
+            "edge_count (10) exceeds actual edges (3) must trap or error in reference_eval",
+        );
+        let msg = error.to_string();
         assert!(
-            result.is_err(),
-            "edge_count (10) exceeds actual edges (3) must trap or error in reference_eval, not silently succeed"
+            msg.contains("trap") || msg.contains("Fix:") || msg.contains("edge"),
+            "flows_to edge-count mismatch error must be actionable: {msg}"
         );
     }
 }

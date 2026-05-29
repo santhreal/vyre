@@ -482,6 +482,7 @@ pub fn reference_c_preprocessor_directive_metadata(
     Ok((directive_kinds, directive_values))
 }
 
+
 fn conditional_directive_value(
     row: &[u8],
     directive: CPreprocessorDirective,
@@ -590,3 +591,4 @@ mod tests {
         );
     }
 }
+

@@ -526,6 +526,7 @@ pub fn gpu_ifdef_value(num_tokens: u32, source_len: u32) -> Program {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
@@ -566,3 +567,4 @@ mod tests {
         );
     }
 }
+

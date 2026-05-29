@@ -450,6 +450,7 @@ fn if_logical_not_double() {
 }
 
 #[test]
+
 fn if_unary_minus() {
     // -1 != 0 → true.
     assert_gpu_matches_cpu(b"#if -1\n", &[]);
@@ -542,3 +543,4 @@ fn other_directive_kinds_emit_zero_in_value_column() {
         "non-if/elif rows must emit 0; got {gpu_values:?}"
     );
 }
+

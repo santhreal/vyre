@@ -80,13 +80,15 @@ mod tests {
     #[test]
     fn broadcast_zero_elements_should_trap_or_be_consistent() {
         let program = broadcast("src", "dst", 0);
-        let result = vyre_reference::reference_eval(
+        let error = vyre_reference::reference_eval(
             &program,
             &[Value::from(u32_bytes(&[99u32])), Value::from(vec![0u8; 0])],
-        );
+        )
+        .expect_err("broadcast n=0 must trap instead of succeeding");
+        let msg = error.to_string();
         assert!(
-            result.is_err(),
-            "broadcast n=0 must trap instead of succeeding"
+            msg.contains("trap") || msg.contains("Fix:"),
+            "broadcast n=0 error must be actionable: {msg}"
         );
     }
 }

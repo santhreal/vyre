@@ -454,6 +454,7 @@ fn missing_include_fails_loudly() {
 }
 
 #[test]
+
 fn nested_includes_recurse() {
     let mut loader = MemLoader::new();
     loader
@@ -629,3 +630,4 @@ fn gnu_named_variadic_macro_substitutes_named_rest_parameter() {
         "macro invocation and named variadic parameter marker must not leak downstream; got {out_str:?}"
     );
 }
+

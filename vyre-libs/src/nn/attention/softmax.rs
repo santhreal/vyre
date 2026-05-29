@@ -371,6 +371,22 @@ mod tests {
     use vyre_reference::value::Value;
 
     #[test]
+    fn print_softmax_ptx() {
+        let program = softmax("input", "output", 4);
+        let descriptor = vyre_lower::lower(&program).unwrap();
+        let ptx = vyre_emit_ptx::emit_with_options(
+            &descriptor,
+            vyre_emit_ptx::PtxEmitOptions {
+                target: vyre_emit_ptx::ComputeCapability::SM_80,
+                subgroup_size: 32,
+                ulp_budget: Some(128),
+            },
+        ).unwrap();
+        println!("SOFTMAX PTX:\n{}", ptx);
+        panic!("Show me PTX!");
+    }
+
+    #[test]
     fn builder_rejects_dtype_mismatch() {
         let err = Softmax::new(TensorRef::u32_1d("in", 4), TensorRef::f32_1d("out", 4))
             .build()
@@ -448,6 +464,7 @@ mod tests {
                 ],
             )
             .expect("Fix: softmax program must execute in the reference interpreter.");
+
             decode_f32(&outputs[0].to_bytes())
         };
         let actual = run(softmax("input", "output", n));
@@ -572,3 +589,4 @@ mod tests {
         }
     }
 }
+

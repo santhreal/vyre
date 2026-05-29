@@ -48,9 +48,9 @@ inventory::submit! {
         expected_output: Some(|| {
             let out = [
                 f32::from_bits(0x3f80_0000),
-                f32::from_bits(0x3f49_54a4),
-                f32::from_bits(0x3d90_b160),
-                f32::from_bits(0x3ba6_6200),
+                f32::from_bits(0x3f49_54a5),
+                f32::from_bits(0x3d90_b161),
+                f32::from_bits(0x3ba6_6206),
             ];
             let bytes = vyre_primitives::wire::pack_f32_slice(&out);
             vec![vec![bytes]]

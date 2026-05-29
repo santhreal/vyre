@@ -448,6 +448,7 @@ mod tests {
         let batch = activation_batches.len() as u32;
         let rows = weights.len() as u32;
         let cols = weights.first().map_or(0, Vec::len) as u32;
+
         let weights_packed = pack_i4_matrix_rows(weights);
         let activations_packed = pack_i4_matrix_rows(activation_batches);
         let program = int4_batched_matmul_f32_scaled(
@@ -843,3 +844,4 @@ mod tests {
         );
     }
 }
+

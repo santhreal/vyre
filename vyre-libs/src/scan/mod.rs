@@ -258,7 +258,7 @@ pub use regex_compile::{
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub use regex_dfa::{build_regex_dfa_pipeline, RegexDfaError, RegexDfaPipeline};
 #[cfg(feature = "matching-substring")]
-pub use substring::substring_search;
+pub use substring::{substring_search, SCAN_SUBSTRING_OP_ID};
 // Re-export the cross-program fusion API at the matching layer so consumers
 // don't have to reach into `vyre-foundation` directly.
 pub use vyre_foundation::execution_plan::fusion::{fuse_programs, fuse_programs_vec, FusionError};

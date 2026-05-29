@@ -9,12 +9,12 @@
 //!   any_hit  = bitset_any(hits) → u32
 //! ```
 //!
-//! Downstream analyzer's `lower_binary_graph_predicate` emitted this composition
+//! Earlier lowering paths emitted this composition
 //! inline at every call site (~25 lines of boilerplate per call,
 //! plus a fresh accumulator buffer per invocation). Centralising it
 //! here as one fused Region:
 //!
-//! * cuts a program-analysis consumer's per-call lowering surface from ~5 sub-programs
+//! * cuts per-call lowering surface from ~5 sub-programs
 //!   merged via `merge_programs` to one helper invocation;
 //! * gives the optimizer one Region with a stable op id to fuse,
 //!   cache, and CSE across rules;
