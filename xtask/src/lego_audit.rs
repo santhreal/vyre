@@ -465,6 +465,7 @@ fn fingerprint_expr(expr: &Expr, out: &mut Vec<u8>) {
     }
 }
 
+
 fn literal_bucket_u32(value: u32) -> u8 {
     match value {
         0 => 0,
@@ -919,6 +920,7 @@ fn collect_use_tree(tree: &syn::UseTree, prefix: &mut Vec<String>, out: &mut Vec
     }
 }
 
+
 fn list_dialect_dirs(root: &std::path::Path) -> (Vec<std::path::PathBuf>, Vec<String>) {
     let read_dir = match std::fs::read_dir(root) {
         Ok(read_dir) => read_dir,
@@ -1349,3 +1351,4 @@ mod check_8_9_10_tests {
         assert_eq!(leaf_stem(""), "");
     }
 }
+

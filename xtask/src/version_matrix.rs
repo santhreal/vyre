@@ -451,6 +451,7 @@ fn release_tag_story() -> ReleaseTagStory {
     }
 }
 
+
 fn collect_lockfile_versions(
     path: &Path,
     packages: &mut Vec<LockfilePackageVersion>,
@@ -829,3 +830,4 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
+

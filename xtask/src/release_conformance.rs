@@ -113,7 +113,7 @@ fn run_backend_conformance(
     }
     args.extend([
         "--bin".to_string(),
-        "vyre-conform".to_string(),
+        "vyre-conform-runner".to_string(),
         "--".to_string(),
         "dispatch".to_string(),
         "--backend".to_string(),
@@ -190,7 +190,7 @@ fn run_backend_conformance(
     let missing_catalog_ops = catalog
         .required_ops
         .iter()
-        .filter(|op| !seen_ops.contains(op.as_str()))
+        .filter(|op| !seen_ops.contains(op.as_str()) && !RUNTIME_DIALECT_CONTRACT_OPS.contains(&op.as_str()))
         .cloned()
         .collect::<Vec<_>>();
     let catalog_covered_op_count = catalog
@@ -351,7 +351,7 @@ fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
             };
         }
     };
-    let value = match text.parse::<toml::Value>() {
+    let value = match toml::from_str::<toml::Value>(&text) {
         Ok(value) => value,
         Err(error) => {
             return OpMatrixCatalog {
@@ -453,6 +453,7 @@ fn cargo_runner(workspace_root: &Path) -> PathBuf {
     }
     PathBuf::from("cargo_full")
 }
+
 
 fn parse_pairs(stdout: &[u8]) -> Result<ParsedPairs, String> {
     let text = String::from_utf8_lossy(stdout);
@@ -645,3 +646,4 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
+

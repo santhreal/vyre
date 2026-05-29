@@ -1017,7 +1017,7 @@ mod tests {
     #[test]
     fn parse_args_defaults_to_existing_roots() {
         let args = vec!["xtask".to_string(), "source-similar".to_string()];
-        let config = parse_args(&args).expect("default args");
+        let config = parse_args(&args).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - default args");
         assert!(config.top_n > 0);
         assert!((0.0..=1.0).contains(&config.min_score));
     }
@@ -1043,7 +1043,7 @@ mod tests {
             "--min".to_string(),
             "0.95".to_string(),
         ];
-        let config = parse_args(&args).expect("check args");
+        let config = parse_args(&args).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - check args");
         assert!(config.fail_on_findings);
         assert!(!config.include_untracked);
         assert_eq!(config.min_score, 0.95);
@@ -1056,34 +1056,34 @@ mod tests {
             "source-similar".to_string(),
             "--include-untracked".to_string(),
         ];
-        let config = parse_args(&args).expect("include untracked args");
+        let config = parse_args(&args).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - include untracked args");
         assert!(config.include_untracked);
     }
 
     #[test]
     fn git_repo_scans_tracked_files_by_default() {
-        let dir = tempfile::TempDir::new().expect("tempdir");
+        let dir = tempfile::TempDir::new().expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - tempdir");
         process::Command::new("git")
             .args(["init"])
             .current_dir(dir.path())
             .output()
-            .expect("git init");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - git init");
         let body = "pub fn alpha(input: &[u32]) -> u32 {\n    let mut acc = 0;\n".to_string()
             + &"    for value in input { acc = acc.wrapping_add(*value); }\n".repeat(24)
             + "    acc\n}\n";
-        fs::write(dir.path().join("tracked.rs"), &body).expect("tracked fixture");
-        fs::write(dir.path().join("untracked.rs"), &body).expect("untracked fixture");
+        fs::write(dir.path().join("tracked.rs"), &body).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - tracked fixture");
+        fs::write(dir.path().join("untracked.rs"), &body).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - untracked fixture");
         process::Command::new("git")
             .args(["add", "tracked.rs"])
             .current_dir(dir.path())
             .output()
-            .expect("git add");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - git add");
 
         let roots = vec![dir.path().to_path_buf()];
         let tracked_only =
-            find_similar_sources(&roots, 10, 0.50, 64 * 1024, false).expect("tracked scan");
+            find_similar_sources(&roots, 10, 0.50, 64 * 1024, false).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - tracked scan");
         let with_untracked =
-            find_similar_sources(&roots, 10, 0.50, 64 * 1024, true).expect("untracked scan");
+            find_similar_sources(&roots, 10, 0.50, 64 * 1024, true).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - untracked scan");
 
         assert_eq!(tracked_only.scanned_files, 1);
         assert_eq!(with_untracked.scanned_files, 2);
@@ -1091,13 +1091,13 @@ mod tests {
 
     #[test]
     fn tiny_wrapper_sources_do_not_enter_similarity_scan() {
-        let dir = tempfile::TempDir::new().expect("tempdir");
+        let dir = tempfile::TempDir::new().expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - tempdir");
         let path = dir.path().join("wrapper.rs");
         fs::write(
             &path,
             "pub struct AddDualReference;\ndefine_arith_dual_reference!(AddDualReference, u32::wrapping_add, super::common::wrapping_add_bits_reference);\n",
         )
-        .expect("wrapper fixture");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - wrapper fixture");
 
         let fingerprints = fingerprint_files(&[path]);
         assert!(

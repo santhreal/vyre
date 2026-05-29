@@ -521,6 +521,7 @@ fn collect_feature_markers(
     markers
 }
 
+
 fn scan_hidden_fallback_language(
     workspace_root: &Path,
     blockers: &mut Vec<String>,
@@ -801,3 +802,4 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
+

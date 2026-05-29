@@ -1,0 +1,408 @@
+fn inspect_workload_benchmark_semantics(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    if value
+        .get("selected_backend")
+        .and_then(serde_json::Value::as_str)
+        != Some("cuda")
+    {
+        blockers.push(format!("{evidence}: selected_backend must be cuda"));
+    }
+    inspect_workload_benchmark_provenance(evidence, value, blockers);
+    let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
+        blockers.push(format!("{evidence}: missing cases array"));
+        return;
+    };
+    if cases.is_empty() {
+        blockers.push(format!("{evidence}: cases array is empty"));
+        return;
+    }
+    for case in cases {
+        let id = case
+            .get("id")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("<unknown>");
+        if case.get("backend_id").and_then(serde_json::Value::as_str) != Some("cuda") {
+            blockers.push(format!("{evidence}: case `{id}` backend_id must be cuda"));
+        }
+        if case.get("contract").is_none_or(serde_json::Value::is_null) {
+            blockers.push(format!("{evidence}: case `{id}` is missing a contract"));
+        }
+        if !case
+            .get("performance")
+            .and_then(|performance| performance.get("contract_passed"))
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false)
+        {
+            blockers.push(format!(
+                "{evidence}: case `{id}` must pass its performance contract"
+            ));
+        }
+        let metrics = case.get("metrics").and_then(serde_json::Value::as_object);
+        let wall = metrics.and_then(active_gpu_metric_p50);
+        let baseline = metrics.and_then(|metrics| metric_p50(metrics.get("baseline_wall_ns")));
+        let wall_samples = metrics
+            .and_then(|metrics| metric_samples(metrics.get("wall_ns")))
+            .unwrap_or(0);
+        if wall_samples < 30 {
+            blockers.push(format!(
+                "{evidence}: case `{id}` has {wall_samples} wall_ns sample(s), needs at least 30"
+            ));
+        }
+        let baseline_wall_samples = metrics
+            .and_then(|metrics| metric_samples(metrics.get("baseline_wall_ns")))
+            .unwrap_or(0);
+        if baseline_wall_samples < 30 {
+            blockers.push(format!(
+                "{evidence}: case `{id}` has {baseline_wall_samples} baseline_wall_ns sample(s), needs at least 30"
+            ));
+        }
+        require_benchmark_metric_percentiles(evidence, id, metrics, "wall_ns", blockers);
+        require_benchmark_metric_percentiles(evidence, id, metrics, "baseline_wall_ns", blockers);
+        match (wall, baseline) {
+            (Some(wall), Some(baseline)) if wall > 0.0 && baseline > wall => {}
+            (Some(wall), Some(baseline)) => blockers.push(format!(
+                "{evidence}: case `{id}` did not beat p50 CPU/SOTA baseline: wall={wall:.2}, baseline={baseline:.2}"
+            )),
+            _ => blockers.push(format!(
+                "{evidence}: case `{id}` must include p50 wall_ns and baseline_wall_ns"
+            )),
+        }
+        let speedup = case
+            .get("performance")
+            .and_then(|performance| performance.get("speedup_x"))
+            .and_then(serde_json::Value::as_f64)
+            .unwrap_or(0.0);
+        if speedup <= 1.0 {
+            blockers.push(format!(
+                "{evidence}: case `{id}` speedup_x must be greater than 1.0"
+            ));
+        }
+    }
+}
+
+fn inspect_workload_benchmark_provenance(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    if !has_nonempty_string_any(
+        value,
+        &[
+            "source_fingerprint",
+            "source_revision",
+            "source_artifact_fingerprint",
+            "commit_fingerprint",
+        ],
+    ) && !value
+        .get("source_artifacts")
+        .and_then(serde_json::Value::as_array)
+        .is_some_and(|items| !items.is_empty())
+        && !value
+            .get("git")
+            .is_some_and(|git| has_nonempty_string_any(git, &["commit"]))
+    {
+        blockers.push(format!(
+            "{evidence}: benchmark report must include source fingerprint or source artifact provenance"
+        ));
+    }
+    let environment = value.get("environment");
+    if !environment.is_some_and(|environment| {
+        has_nonempty_string_any(
+            environment,
+            &["host_cpu_model", "cpu_model", "host_cpu", "processor_model"],
+        )
+    }) {
+        blockers.push(format!(
+            "{evidence}: benchmark environment must include host CPU model provenance"
+        ));
+    }
+    let summary = value.get("summary");
+    if !summary.is_some_and(|summary| summary.get("cache_hit_rate").is_some()) {
+        blockers.push(format!(
+            "{evidence}: benchmark summary must include cache_hit_rate, even when null"
+        ));
+    }
+    let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
+        return;
+    };
+    for case in cases {
+        let id = case
+            .get("id")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("<unknown>");
+        if !has_nonempty_string_any(
+            case,
+            &[
+                "dataset_fingerprint",
+                "corpus_fingerprint",
+                "input_fingerprint",
+                "workload_fingerprint",
+            ],
+        ) && !case.get("contract").is_some_and(|contract| {
+            has_nonempty_string_any(
+                contract,
+                &[
+                    "dataset_fingerprint",
+                    "corpus_fingerprint",
+                    "input_fingerprint",
+                    "workload_fingerprint",
+                ],
+            )
+        }) {
+            blockers.push(format!(
+                "{evidence}: case `{id}` must include dataset/corpus/input fingerprint provenance"
+            ));
+        }
+        if !case
+            .get("correctness")
+            .is_some_and(|correctness| !correctness.is_null())
+            && !case.get("oracle").is_some_and(|oracle| !oracle.is_null())
+        {
+            blockers.push(format!(
+                "{evidence}: case `{id}` must include correctness oracle evidence"
+            ));
+        }
+        let metrics = case.get("metrics").and_then(serde_json::Value::as_object);
+        for (label, metric_names) in [
+            (
+                "cold compile or cold wall timing",
+                &["cold_compile_ns", "cold_wall_ns", "compile_ns"][..],
+            ),
+            (
+                "host-to-device transfer bytes",
+                &[
+                    "host_to_device_bytes",
+                    "h2d_bytes",
+                    "bytes_host_to_device",
+                    "bytes_h2d",
+                ][..],
+            ),
+            (
+                "device-to-host transfer bytes",
+                &[
+                    "device_to_host_bytes",
+                    "d2h_bytes",
+                    "bytes_device_to_host",
+                    "bytes_d2h",
+                ][..],
+            ),
+            (
+                "kernel launch count",
+                &["kernel_launches", "launch_count", "launches"][..],
+            ),
+        ] {
+            if !metrics_has_any(metrics, metric_names) {
+                blockers.push(format!(
+                    "{evidence}: case `{id}` must include {label} metric"
+                ));
+            }
+        }
+        if !case
+            .get("optimization_passes")
+            .and_then(serde_json::Value::as_array)
+            .is_some_and(|items| !items.is_empty())
+            && !case
+                .get("optimization_passes_applied")
+                .and_then(serde_json::Value::as_array)
+                .is_some_and(|items| !items.is_empty())
+        {
+            blockers.push(format!(
+                "{evidence}: case `{id}` must list optimization passes applied"
+            ));
+        }
+    }
+}
+
+fn has_nonempty_string_any(value: &serde_json::Value, fields: &[&str]) -> bool {
+    fields.iter().any(|field| {
+        value
+            .get(*field)
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(|text| !text.trim().is_empty())
+    })
+}
+
+fn metrics_has_any(
+    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
+    fields: &[&str],
+) -> bool {
+    metrics.is_some_and(|metrics| {
+        fields.iter().any(|field| {
+            metrics.get(*field).is_some_and(|value| {
+                metric_samples(Some(value)).is_some_and(|samples| samples > 0)
+                    || metric_p50(Some(value)).is_some_and(|sample| sample > 0.0)
+                    || value.as_u64().is_some()
+                    || value.as_f64().is_some_and(|number| number >= 0.0)
+            })
+        })
+    })
+}
+
+fn inspect_weir_readme_contract_semantics(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    inspect_schema_version_at_least(evidence, value, 2, blockers);
+    if value.get("exists").and_then(serde_json::Value::as_bool) != Some(true) {
+        blockers.push(format!("{evidence}: README.md must exist"));
+    }
+    if value
+        .get("source_bytes")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0)
+        == 0
+    {
+        blockers.push(format!("{evidence}: README.md is empty"));
+    }
+    if value
+        .get("missing_tokens")
+        .and_then(serde_json::Value::as_array)
+        .is_none_or(|tokens| !tokens.is_empty())
+    {
+        blockers.push(format!(
+            "{evidence}: missing_tokens must exist and be empty"
+        ));
+    }
+    if value
+        .get("example_count")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0)
+        == 0
+    {
+        blockers.push(format!(
+            "{evidence}: README.md must contain at least one Rust or TOML example"
+        ));
+    }
+    if value
+        .get("blockers")
+        .and_then(serde_json::Value::as_array)
+        .is_none_or(|items| !items.is_empty())
+    {
+        blockers.push(format!("{evidence}: blockers must exist and be empty"));
+    }
+}
+
+fn inspect_schema_version_at_least(
+    evidence: &str,
+    value: &serde_json::Value,
+    minimum: u64,
+    blockers: &mut Vec<String>,
+) {
+    let schema_version = value
+        .get("schema_version")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    if schema_version < minimum {
+        blockers.push(format!(
+            "{evidence}: schema_version is {schema_version}, expected >= {minimum}"
+        ));
+    }
+}
+
+fn inspect_c_parser_corpus_semantics(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let total = value
+        .get("total_files")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    let parsed = value
+        .get("parsed_files")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    let failed = value
+        .get("failed_files")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(u64::MAX);
+    let source_bytes = value
+        .get("total_source_bytes")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    let ast_bytes = value
+        .get("total_ast_bytes")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    let vast_bytes = value
+        .get("total_vast_bytes")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    let semantic_graph_bytes = value
+        .get("total_semantic_graph_bytes")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    if total < 250 {
+        blockers.push(format!(
+            "{evidence}: total_files {total} is below Linux subsystem floor 250"
+        ));
+    }
+    if parsed != total || failed != 0 {
+        blockers.push(format!(
+            "{evidence}: parsed_files={parsed}, total_files={total}, failed_files={failed}; full corpus parse required"
+        ));
+    }
+    if source_bytes < 4 * 1024 * 1024 {
+        blockers.push(format!(
+            "{evidence}: total_source_bytes {source_bytes} is below Linux subsystem floor 4194304"
+        ));
+    }
+    if value
+        .get("linux_subsystem_candidate")
+        .and_then(serde_json::Value::as_bool)
+        != Some(true)
+    {
+        blockers.push(format!(
+            "{evidence}: linux_subsystem_candidate must be true"
+        ));
+    }
+    if value
+        .get("corpus_root_canonical")
+        .and_then(serde_json::Value::as_str)
+        .is_none_or(str::is_empty)
+    {
+        blockers.push(format!("{evidence}: missing corpus_root_canonical"));
+    }
+    inspect_corpus_fingerprint(evidence, value, blockers);
+    inspect_linux_subsystem_provenance(evidence, value, blockers);
+    inspect_c_parser_collection_provenance(evidence, value, blockers);
+    for field in ["include_dirs", "macros"] {
+        if value
+            .get(field)
+            .and_then(serde_json::Value::as_array)
+            .is_none_or(Vec::is_empty)
+        {
+            blockers.push(format!(
+                "{evidence}: reproducibility field `{field}` must be non-empty"
+            ));
+        }
+    }
+    if ast_bytes == 0 || vast_bytes == 0 || semantic_graph_bytes == 0 {
+        blockers.push(format!(
+            "{evidence}: AST/VAST/semantic section bytes are incomplete: ast={ast_bytes}, vast={vast_bytes}, semantic={semantic_graph_bytes}"
+        ));
+    }
+    let file_entries = value
+        .get("files")
+        .and_then(serde_json::Value::as_array)
+        .map_or(0, Vec::len) as u64;
+    if file_entries != parsed {
+        blockers.push(format!(
+            "{evidence}: files array has {file_entries} entries, parsed_files is {parsed}"
+        ));
+    }
+    let failure_entries = value
+        .get("failures")
+        .and_then(serde_json::Value::as_array)
+        .map_or(usize::MAX, Vec::len) as u64;
+    if failure_entries != failed {
+        blockers.push(format!(
+            "{evidence}: failures array has {failure_entries} entries, failed_files is {failed}"
+        ));
+    }
+}
+

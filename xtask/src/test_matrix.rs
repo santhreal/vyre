@@ -456,6 +456,7 @@ fn write_suite_artifact(parent: &Path, suite: &str, artifact: &str, files: &[Tes
     );
 }
 
+
 fn release_surface_coverages(files: &[TestFileRecord]) -> Vec<SurfaceCoverage> {
     RELEASE_SURFACES
         .iter()
@@ -805,3 +806,4 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
+

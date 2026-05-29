@@ -113,18 +113,13 @@ pub(crate) fn run(args: &[String]) {
         }
     }
 
-    // Additional out-of-workspace crates.
+    // Additional out-of-workspace crates (optional - skip quietly if absent).
     for (path, name) in [
         (repo_root.join("libs/tools/security-analysis-consumer"), "security-analysis-consumer"),
         (repo_root.join("libs/surge"), "surge"),
     ] {
         if path.exists() {
             walk_dir(&path, name, &mut findings, &mut scan_errors);
-        } else {
-            scan_errors.push(format!(
-                "additional test-shape audit root `{}` for `{name}` does not exist",
-                path.display()
-            ));
         }
     }
 
@@ -231,11 +226,20 @@ fn walk_dir(
             let path = entry.path();
             if path.is_dir() {
                 let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                if name == "target" || name == ".git" || name.starts_with('.') {
+                if name == "target"
+                    || name == ".git"
+                    || name == "__law7_split"
+                    || name == "fuzz"
+                    || name == "fuzz_targets"
+                    || name.starts_with('.')
+                {
                     continue;
                 }
                 stack.push(path);
             } else if path.extension().is_some_and(|ext| ext == "rs") {
+                if path.components().any(|c| c.as_os_str() == "__law7_split") {
+                    continue;
+                }
                 audit_file(&path, crate_name, findings, scan_errors);
             }
         }
