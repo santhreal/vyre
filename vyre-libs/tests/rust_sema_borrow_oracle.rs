@@ -175,6 +175,26 @@ fn assert_matches_rustc(cases: u64, gen: impl Fn(u64) -> String) {
     );
 }
 
+/// The soundness gate: the sema borrow checks must never reject a program rustc
+/// accepts (no false positives). They may under-reject (miss conflicts rustc
+/// catches) where the simplified loan engine is incomplete; that is a sound gap,
+/// never a false rejection.
+fn assert_sound(cases: u64, gen: impl Fn(u64) -> String) {
+    let mut false_rejects = Vec::new();
+    for seed in 0..cases {
+        let src = gen(seed);
+        if rustc_accepts(&src) && !sema_accepts(&src) {
+            false_rejects.push(src);
+        }
+    }
+    assert!(
+        false_rejects.is_empty(),
+        "sema borrow checks rejected {} programs rustc accepts (false positives):\n{}",
+        false_rejects.len(),
+        false_rejects.join("\n")
+    );
+}
+
 #[test]
 fn sema_matches_rustc_on_straight_line_programs() {
     assert_matches_rustc(200, gen_straight);
@@ -188,6 +208,44 @@ fn sema_matches_rustc_on_branch_programs() {
 #[test]
 fn sema_matches_rustc_on_reborrow_programs() {
     assert_matches_rustc(150, gen_reborrow);
+}
+
+/// Deterministic coercion-reborrow program: a `mut` var, a `&mut` ref to it,
+/// then a sequence of reborrow coercions (`let rN: &mut i32 = rK;`, which
+/// reborrows `*rK` because the grammar forces the annotation) and deref-uses.
+/// Two live reborrows of one ref conflict (rustc E0499); a dead reborrow does
+/// not. There are no moves in the nano-subset (the annotation always coerces).
+fn gen_coercion_reborrow(seed: u64) -> String {
+    let mut state = seed ^ 0x6A09_E667_F3BC_C908;
+    let mut next = || {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (state >> 33) as u32
+    };
+    let mut s = String::from("fn f() { let mut x: i32 = 0; let r0: &mut i32 = &mut x;");
+    let mut refs = 1usize;
+    let mut uses = 0u32;
+    for _ in 0..(2 + next() % 6) {
+        if next() % 2 == 0 {
+            let k = (next() as usize) % refs;
+            s.push_str(&format!(" let r{refs}: &mut i32 = r{k};"));
+            refs += 1;
+        } else {
+            let k = (next() as usize) % refs;
+            s.push_str(&format!(" let u{uses}: i32 = *r{k};"));
+            uses += 1;
+        }
+    }
+    s.push_str(" }");
+    s
+}
+
+#[test]
+fn sema_sound_on_coercion_reborrow_programs() {
+    // Reborrow coercions are tracked as loans, so two live reborrows of one ref
+    // conflict (caught). A direct `*r` deref while a reborrow of `r` is live is
+    // a known sound gap (access-vs-loan invalidation is not modeled by the
+    // simplified loan-pair engine): it may under-reject, never false-reject.
+    assert_sound(150, gen_coercion_reborrow);
 }
 
 /// Programs with a real conflicting-borrow error: rustc rejects, and the sema
