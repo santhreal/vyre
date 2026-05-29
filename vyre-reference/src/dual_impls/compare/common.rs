@@ -1,10 +1,7 @@
 //! Shared compare dual-reference machinery.
 
 #[must_use]
-pub(crate) fn binary_direct_predicate(
-    input: &[u8],
-    op: impl FnOnce(u32, u32) -> bool,
-) -> Vec<u8> {
+pub(crate) fn binary_direct_predicate(input: &[u8], op: impl FnOnce(u32, u32) -> bool) -> Vec<u8> {
     let Some((left, right)) = read_two_words(input) else {
         return zero_word();
     };

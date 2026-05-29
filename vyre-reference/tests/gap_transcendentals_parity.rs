@@ -1,4 +1,4 @@
-//! Release gap #1 — reference completeness (deterministic transcendentals).
+//! Release gap #1 - reference completeness (deterministic transcendentals).
 //!
 //! See `contracts/release.md`. The CPU reference oracle must emit
 //! byte-identical f32 results for sin/cos/sqrt/exp/log across proptest

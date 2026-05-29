@@ -450,6 +450,7 @@ fn ensure_writable_buffer(memory: &mut Memory, program: &Program, name: &str) ->
     eval_expr::buffer_mut(memory, program, name).map(|_| ())
 }
 
+
 fn apply_async_transfer(
     transfer: AsyncTransfer,
     memory: &mut Memory,
@@ -645,3 +646,4 @@ mod tests {
         assert_eq!(bytes(&memory, "dst"), vec![0, 0, 0, 21, 22, 23, 24, 0]);
     }
 }
+

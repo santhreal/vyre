@@ -142,20 +142,20 @@ fn generated_unary_scalar_evaluators_match_u32_contract_matrix() {
 
 #[test]
 fn scalar_evaluators_reject_wrong_arity_and_unaligned_payloads() {
-    assert!(ArithAdd.evaluate(&[mem(1)]).is_err());
-    assert!(ArithAdd.evaluate(&[bad_mem(), mem(1)]).is_err());
-    assert!(ArithMul.evaluate(&[mem(1)]).is_err());
-    assert!(ArithMul.evaluate(&[mem(1), bad_mem()]).is_err());
-    assert!(CompareEq.evaluate(&[mem(1)]).is_err());
-    assert!(CompareEq.evaluate(&[bad_mem(), mem(1)]).is_err());
-    assert!(CompareLt.evaluate(&[mem(1)]).is_err());
-    assert!(CompareLt.evaluate(&[mem(1), bad_mem()]).is_err());
-    assert!(ShiftLeft.evaluate(&[mem(1)]).is_err());
-    assert!(ShiftLeft.evaluate(&[bad_mem(), mem(1)]).is_err());
-    assert!(ShiftRight.evaluate(&[mem(1)]).is_err());
-    assert!(ShiftRight.evaluate(&[mem(1), bad_mem()]).is_err());
-    assert!(Clz.evaluate(&[]).is_err());
-    assert!(Clz.evaluate(&[bad_mem()]).is_err());
-    assert!(Popcount.evaluate(&[]).is_err());
-    assert!(Popcount.evaluate(&[bad_mem()]).is_err());
+    assert!(matches!(ArithAdd.evaluate(&[mem(1)]), Err(_)));
+    assert!(matches!(ArithAdd.evaluate(&[bad_mem(), mem(1)]), Err(_)));
+    assert!(matches!(ArithMul.evaluate(&[mem(1)]), Err(_)));
+    assert!(matches!(ArithMul.evaluate(&[mem(1), bad_mem()]), Err(_)));
+    assert!(matches!(CompareEq.evaluate(&[mem(1)]), Err(_)));
+    assert!(matches!(CompareEq.evaluate(&[bad_mem(), mem(1)]), Err(_)));
+    assert!(matches!(CompareLt.evaluate(&[mem(1)]), Err(_)));
+    assert!(matches!(CompareLt.evaluate(&[mem(1), bad_mem()]), Err(_)));
+    assert!(matches!(ShiftLeft.evaluate(&[mem(1)]), Err(_)));
+    assert!(matches!(ShiftLeft.evaluate(&[bad_mem(), mem(1)]), Err(_)));
+    assert!(matches!(ShiftRight.evaluate(&[mem(1)]), Err(_)));
+    assert!(matches!(ShiftRight.evaluate(&[mem(1), bad_mem()]), Err(_)));
+    assert!(matches!(Clz.evaluate(&[]), Err(_)));
+    assert!(matches!(Clz.evaluate(&[bad_mem()]), Err(_)));
+    assert!(matches!(Popcount.evaluate(&[]), Err(_)));
+    assert!(matches!(Popcount.evaluate(&[bad_mem()]), Err(_)));
 }

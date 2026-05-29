@@ -35,11 +35,9 @@ fn quantized_scalar_load_store_preserves_raw_storage_bits() {
         (DataType::F8E4M3, vec![0x7F]),
         (DataType::F8E5M2, vec![0x7B]),
     ] {
-        assert_eq!(
-            run_single_load_store(ty.clone(), encoded.clone(), 0),
-            encoded,
-            "{ty} in-bounds load/store must be byte-exact"
-        );
+        let out = run_single_load_store(ty.clone(), encoded.clone(), 0);
+        assert_eq!(out.len(), encoded.len(), "{ty} output length must match input");
+        assert_eq!(out, encoded, "{ty} in-bounds load/store must be byte-exact");
     }
 }
 

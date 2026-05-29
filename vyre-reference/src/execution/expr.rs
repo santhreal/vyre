@@ -463,6 +463,7 @@ fn atomic_buffer_mut<'a>(
     }
 }
 
+
 fn buffer_decl<'a>(program: &'a Program, name: &str) -> Result<&'a BufferDecl, vyre::Error> {
     program.buffer(name).ok_or_else(|| {
         Error::interp(format!(
@@ -594,3 +595,4 @@ mod tests {
         }
     }
 }
+
