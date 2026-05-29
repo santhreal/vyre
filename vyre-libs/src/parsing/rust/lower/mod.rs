@@ -2,14 +2,15 @@
 //!
 //! Mirrors `vyre-libs::parsing::c::lower`: lowering a resolved language AST to a
 //! `vyre::ir::Program` is a Tier-3 concern and lives in the library, not the
-//! frontend driver. Lowering consumes the resolved module so it can use the
-//! binding table. Not yet implemented for the nano-subset; returns a loud error
-//! rather than a fake empty Program.
+//! frontend driver. Lowering borrows the AST plus its resolution. Not yet
+//! implemented for the nano-subset; returns a loud error rather than a fake
+//! empty Program.
 
 use thiserror::Error;
 use vyre::ir::Program;
 
-use super::sema::ResolvedModule;
+use super::parse::Module;
+use super::sema::Resolution;
 
 /// Errors from Rust to Vyre IR lowering.
 #[derive(Debug, Clone, Error)]
@@ -19,11 +20,11 @@ pub enum RustLowerError {
     LoweringUnavailable,
 }
 
-/// Lower a verified module to a Vyre IR program.
+/// Lower a resolved module to a Vyre IR program.
 ///
 /// # Errors
 /// Returns [`RustLowerError::LoweringUnavailable`] until lowering is wired.
-pub fn lower(module: &ResolvedModule) -> Result<Program, RustLowerError> {
-    let _ = module;
+pub fn lower(module: &Module, resolution: &Resolution) -> Result<Program, RustLowerError> {
+    let _ = (module, resolution);
     Err(RustLowerError::LoweringUnavailable)
 }

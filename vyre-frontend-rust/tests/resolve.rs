@@ -9,9 +9,9 @@ use std::collections::HashSet;
 
 use vyre_libs::parsing::rust::lex::lexer::core::lex;
 use vyre_libs::parsing::rust::parse::parse;
-use vyre_libs::parsing::rust::sema::{resolve, BindingId, ResolvedModule, RustSemaError};
+use vyre_libs::parsing::rust::sema::{resolve, BindingId, Resolution, RustSemaError};
 
-fn resolve_src(src: &str) -> Result<ResolvedModule, RustSemaError> {
+fn resolve_src(src: &str) -> Result<Resolution, RustSemaError> {
     let bytes = src.as_bytes();
     let tokens = lex(bytes).expect("Fix: test corpus must lex");
     let module = parse(bytes, &tokens).expect("Fix: test corpus must parse");
@@ -23,7 +23,6 @@ fn resolves_params_and_lets_in_order() {
     let r = resolve_src("fn add(a: i32, b: i32) -> i32 { let c: i32 = a + b; return c; }").unwrap();
     let names: Vec<&str> = r.bindings.iter().map(|b| b.name.as_str()).collect();
     assert_eq!(names, vec!["a", "b", "c"], "Fix: bindings must be params then lets, in declaration order");
-    // Three variable uses: `a` and `b` in the initializer, `c` in the return.
     assert_eq!(r.uses.len(), 3, "Fix: every variable use must resolve to a binding");
 }
 
@@ -47,8 +46,6 @@ fn rejects_undefined_name() {
 
 #[test]
 fn rhs_sees_outer_scope_before_shadowing() {
-    // In `let x = x + 1;` with an outer (param) x, the RHS x resolves to the
-    // OUTER binding; the new let then shadows it for the return.
     let r = resolve_src("fn f(x: i32) -> i32 { let x: i32 = x + 1; return x; }").unwrap();
     let x_ids: Vec<BindingId> = r
         .bindings
@@ -67,7 +64,6 @@ fn rhs_sees_outer_scope_before_shadowing() {
 
 #[test]
 fn block_scoped_binding_does_not_escape() {
-    // `y` is declared inside an if-block; using it afterwards must not resolve.
     let err = resolve_src("fn f() -> i32 { if true { let y: i32 = 1; }; return y; }").unwrap_err();
     assert!(
         matches!(err, RustSemaError::UnresolvedName { .. }),
@@ -86,7 +82,6 @@ fn rejects_unknown_function_call() {
 
 #[test]
 fn forward_function_reference_resolves() {
-    // `f` calls `g` which is defined later: forward references are allowed.
     let r = resolve_src("fn f() -> i32 { return g(); } fn g() -> i32 { return 1; }").unwrap();
     assert!(r.bindings.is_empty(), "Fix: neither function declares a binding");
 }
