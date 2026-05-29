@@ -89,6 +89,10 @@ const REJECT: &[&str] = &[
     "pub fn f() { let mut x: i32 = 0; let a: &mut i32 = &mut x; let b: &mut i32 = &mut x; if true { let _p: i32 = *a; } else { let _q: i32 = *b; } }",
     // Assign to a place while it is shared-borrowed and the borrow is later used.
     "pub fn f() { let mut x: i32 = 0; let a: &i32 = &x; x = 1; let _b: i32 = *a; }",
+    // Escape: return a reference to a local (E0515) - a region-outlives error.
+    "pub fn f() -> &'static i32 { let x: i32 = 0; &x }",
+    // Escape: a parameter ref does not outlive 'static (E0521).
+    "pub fn f(p: &i32) -> &'static i32 { p }",
 ];
 
 /// Deterministically generate a type- and name-correct borrow program from a
