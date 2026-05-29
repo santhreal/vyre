@@ -85,6 +85,38 @@ fn render_branch(
     s
 }
 
+/// Generate `fn f(p: &i32) -> &i32 { ... return <ref>; }` with a random chain of
+/// reference-typed lets (sourced from the param `p`, `&local`, `&*p`, or prior
+/// refs) and a random returned reference. All shared `&i32`, so the only
+/// verdict factor is escape (rustc E0597): returning a reference whose
+/// provenance is a call-local value is rejected, a parameter-derived one is not.
+fn render_escape(nlocals: usize, ref_inits: &[(u8, usize)], ret: (u8, usize)) -> String {
+    let mut s = String::from("fn f(p: &i32) -> &i32 {");
+    for i in 0..nlocals {
+        s.push_str(&format!(" let v{}: i32 = {};", i, i));
+    }
+    let mut nrefs = 0usize;
+    for &(kind, idx) in ref_inits {
+        let init = match kind % 5 {
+            0 => "p".to_string(),
+            1 => format!("&v{}", idx % nlocals),
+            2 => "&*p".to_string(),
+            3 => if nrefs > 0 { format!("r{}", idx % nrefs) } else { "p".to_string() },
+            _ => if nrefs > 0 { format!("&*r{}", idx % nrefs) } else { "&*p".to_string() },
+        };
+        s.push_str(&format!(" let r{}: &i32 = {};", nrefs, init));
+        nrefs += 1;
+    }
+    let ret_expr = match ret.0 % 4 {
+        0 => "p".to_string(),
+        1 => format!("&v{}", ret.1 % nlocals),
+        2 => "&*p".to_string(),
+        _ => if nrefs > 0 { format!("r{}", ret.1 % nrefs) } else { "p".to_string() },
+    };
+    s.push_str(&format!(" return {}; }}", ret_expr));
+    s
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 
@@ -116,6 +148,22 @@ proptest! {
         prop_assert_eq!(
             ours, rustc,
             "branch borrow-verdict mismatch (ours={}, rustc={}):\n  {}",
+            ours, rustc, src
+        );
+    }
+
+    #[test]
+    fn ours_matches_rustc_on_generated_escape_programs(
+        nlocals in 1usize..=2,
+        ref_inits in prop::collection::vec((any::<u8>(), any::<usize>()), 0..=5),
+        ret in (any::<u8>(), any::<usize>()),
+    ) {
+        let src = render_escape(nlocals, &ref_inits, ret);
+        let ours = ours_accepts(&src);
+        let rustc = rustc_accepts(&src);
+        prop_assert_eq!(
+            ours, rustc,
+            "escape borrow-verdict mismatch (ours={}, rustc={}):\n  {}",
             ours, rustc, src
         );
     }
