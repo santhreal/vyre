@@ -1,4 +1,4 @@
-//! Smoke tests for the Rust nano-subset parser.
+//! Smoke tests for the Rust nano-subset parser and pipeline boundary.
 
 use vyre_frontend_rust::api::parse_rust_bytes;
 use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
@@ -51,7 +51,10 @@ fn compile_pipeline_rejects_unwired_gpu_lex_without_silent_cpu_path() {
 }
 
 #[test]
-fn compile_pipeline_rejects_unwired_semantics_without_fake_program() {
+fn compile_pipeline_rejects_unwired_typeck_without_fake_program() {
+    // Resolution now succeeds; the meaningful boundary is type checking, which
+    // is unwired. compile_unit must fail loudly there, never return a success
+    // that skipped type checking.
     let pipeline = RustPipeline::new(RustPipelineConfig {
         gpu_lex: false,
         borrow_check: false,
@@ -60,10 +63,9 @@ fn compile_pipeline_rejects_unwired_semantics_without_fake_program() {
 
     let error = pipeline
         .compile_unit(b"fn main() { let x: i32 = 5; }")
-        .expect_err("Fix: compile_unit must not return success while name resolution/type checking are not wired.");
+        .expect_err("Fix: compile_unit must not return success while type checking is not wired.");
 
     let message = error.to_string();
     assert!(message.contains("unsupported construct"));
-    assert!(message.contains("name resolution is not wired"));
-    assert!(message.contains("parse-only"));
+    assert!(message.contains("type checking is not wired"));
 }
