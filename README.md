@@ -2,20 +2,23 @@
 
 Part of [Santh](https://santh.dev) - open source Rust security and infrastructure tooling. Follow [@SanthProject](https://x.com/SanthProject) on X.
 
-Vyre is a production-focused GPU compute stack for workloads that usually get
-pulled back to the CPU: parsing, graph traversal, fixed-point dataflow,
-rule evaluation, and other coordination-heavy programs.
+Vyre is a Rust GPU compute stack for workloads that usually get pulled back to
+the CPU: parsing, graph traversal, fixed-point dataflow, and rule-based
+reasoning workloads.
 
-The project is still young. The core IR, spec contracts, CPU reference path,
-CUDA path, WGPU path, PTX emitter, conformance crates, and primitive libraries
-are active. Some frontends and future backends are intentionally marked beta or
-planned below. The goal is to make that status obvious so contributors can pick
-useful work without guessing what is production-ready.
+The core IR, contracts, CPU reference path, CUDA path, WGPU path, PTX emitter,
+conformance system, and shared primitives are active. Some frontends and future
+backends remain beta or planned. That status split is intentionally explicit so
+contributors can decide what to use in production today.
 
-For the `0.4.2` line, the public semantic unit is `vyre::Program`: programs are
-constructed as IR, checked against frozen spec contracts, run through the CPU
-reference oracle, then validated against GPU backends. CUDA is the primary
-release path on NVIDIA systems; WGPU is the portable GPU fallback.
+For `0.4.2`, the release semantic unit is `vyre::Program`: programs are built as
+IR, validated against frozen specs, checked through the CPU reference oracle, and
+then parity-checked against GPU backends. CUDA is the release path on NVIDIA
+systems; WGPU is the portable GPU fallback.
+
+## Production Proven
+
+[KeyHog](https://github.com/santhsecurity/keyhog) is the first project to use Vyre in production for GPU-accelerated scanning, utilizing its high-throughput sequential matching logic on GPU compute backends.
 
 ## Workspace architecture
 
@@ -69,11 +72,10 @@ flowchart TB
       TestHarness["vyre-test-harness\nshared fixtures"]
     end
 
-    subgraph S4["Consumer-facing / experimental surfaces"]
+    subgraph S4["Consumer-facing / external roadmap"]
       FC["vyre-frontend-c\nC frontend pipeline"]
       FR["vyre-frontend-rust\nRust frontend pipeline"]
-      Ff["consumer-owned tools\nfuture frontend backends"]
-      Intg["consumer examples\noutside Vyre"]
+      Intg["Keyhog\nfirst public integration\n(consumer repo)"]
       MT["Metal backend\nplanned"]
       DX["DXIL/DirectX\nplanned"]
       WG["Wasm/WebGPU\nplanned"]
@@ -122,7 +124,6 @@ flowchart TB
     FC --> RT
     FR --> Libs
     FR --> RT
-    Ff --> FC
     Intg --> FC
 
     XTask -.-> MT
@@ -130,7 +131,7 @@ flowchart TB
     XTask -.-> WG
 
     class Vcore,Fnd,Spec,Macros,Intr,Ref,Primitives,Libs,SelfSS,Drv,Cuda,Wgpu,Spirv,Lower,EmitPtx,EmitNaga,EmitSpv,RefDrv,RT,Aot,Hs,Debug,Bench,Fuzz,Lints,XTask,ConSpec,ConGen,ConEnf,ConRun,TestHarness active
-    class FC,FR,Ff beta
+    class FC,FR beta
     class Intg stub
     class MT,DX,WG planned
 ```
@@ -142,10 +143,10 @@ and planned/stubbed surfaces.
 
 Legend:
 
-- `active`: part of the normal release and supported in the current `0.4.2` train.
-- `beta`: functional in repo but not yet on the release gate.
-- `stub`: explicit placeholders for future consumer surfaces.
-- `planned`: target architecture work not yet represented in code.
+- `active`: release-gated surface for the `0.4.2` train.
+- `beta`: implemented and usable but currently excluded from release gate status.
+- `planned`: target architecture work planned in repo docs and roadmap.
+- `stub`: docs-only references and external-facing placeholders.
 
 ## The 10-second pitch
 
@@ -203,10 +204,10 @@ real workloads, and docs that make rough edges visible instead of hiding them.
 | `vyre-test-harness` | active | Test harness support used by conformance crates |
 | `xtask` | active | Workspace task runner for release, audit, and policy checks |
 
-Planned but not shipped as first-class workspace crates yet: native Metal,
-DXIL/DirectX, and wasm/WebGPU packaging. They are roadmap targets, but they
-are not support claims until real backend code, parity evidence, and CI gates
-exist in the repository.
+Planned but not yet shipped as first-class workspace crates: native Metal,
+DXIL/DirectX, and WebGPU packaging. They are roadmap targets and not support
+claims until backend code, parity evidence, and CI gates exist in the
+repository.
 
 `vyre-frontend-c` and `vyre-frontend-rust` are intentionally beta because
 parser and type-front end parity is still maturing. `conform` and
@@ -225,7 +226,9 @@ production C compiler release.
 | `vyre-driver-wgpu@0.4.2` | `0.4.2` | Portable GPU fallback path for non-CUDA systems |
 | `dataflow-integration@0.0.1` | `0.0.1` | Dataflow and witness primitives over Vyre IR |
 
-`vyrec` and `vyre-frontend-c` are beta/active-development consumers of Vyre.
+Keyhog is the first public Vyre integration and is a useful end-to-end reference
+for contribution direction. `vyre-frontend-c` and `vyre-frontend-rust` are
+beta/active-development consumers of Vyre.
 They are included to show the intended compiler-front-end direction, but they
 are not the release gate for `0.4.2`, are not advertised as clang-parity, and
 must not be treated as production-ready C compiler components until their own
@@ -434,9 +437,11 @@ Composition-inlineable helpers live inside `vyre`'s own `ops::` tree alongside t
 ## Benchmarks
 
 The benchmark story is moving toward compiler-grade macro workloads on CUDA,
-not primitive element-wise crossover tables. Current benchmark snapshots cover
-13 macro workload families on an RTX 5090 with CUDA 12.8, using repeated
-wall-time and CPU-baseline samples per artifact.
+not primitive element-wise crossover tables. Our primary performance claims
+are backed by empirical runs recorded in [release/evidence/benchmarks/cuda-release-suite.json](release/evidence/benchmarks/cuda-release-suite.json),
+covering 13 macro workload families with a strict CPU-SOTA 100x contract for every family on an RTX 5090 with CUDA 12.8,
+using repeated wall-time and CPU-baseline samples per artifact.
+
 
 | workload family | case | input floor | measured CUDA speedup vs CPU-SOTA |
 |---|---|---:|---:|
@@ -522,9 +527,9 @@ Community knowledge that does not require Rust can be expressed as TOML rules. D
 
 ## Who uses vyre
 
-- **First public integration.** Follow our first public Vyre consumer to see end-to-end
-  usage in a working security workflow:
-  [Consumer showcase](docs/consumer-showcase.md).
+- **First public integration.** Start with Keyhog in action:
+  [Consumer showcase](docs/consumer-showcase.md), and jump to
+  [Keyhog on GitHub](https://github.com/santhsecurity/keyhog).
 
 - **Security and analysis tools.** Rule compilers can lower detector DSLs into
   Vyre programs and drive evaluation through the same reference/GPU parity

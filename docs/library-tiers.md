@@ -26,7 +26,7 @@ bespoke logic) is an **intrinsic**. Everything else is a **library op**.
 | 2 | `vyre-intrinsics` | Cat-C hardware intrinsics: ops that require dedicated Naga emission + dedicated interpreter handling. Current 0.6 surface: **9 ops** (see below). | Frozen surface; hand-audited. |
 | **2.5** | **`vyre-primitives` (feature-gated per domain: `text`, `matching`, `math`, `nn`, `hash`, `parsing`, `graph`)** | **Shared `fn(...) -> Program` primitives reused by ≥ 2 Tier-3 dialects. ONE concern per domain folder; no domain glue. The LEGO substrate.** | **Per-domain feature gate; single crate semver.** |
 | 3 | `vyre-libs-{nn,math,matching,hash,security,parse-c,parse-rust,…}` (currently the monolithic `vyre-libs`; splits in Phase K) | Domain-specific compositions over Tier 2.5 primitives. Public surface a downstream tool actually imports. | Per-dialect semver. |
-| 4 | `vyre-libs-extern` + `ExternDialect` (third-party packs) | Same Tier-3 op shape; published and versioned independently. | Community-governed. |
+| 4 | External extension packs | Same Tier-3 op shape; published and versioned independently. | Community-governed. |
 
 ## Tier 2  -  `vyre-intrinsics` (9 ops today)
 
@@ -100,9 +100,8 @@ crate can become a compatibility shim only after those checks exist.
 ## Tier 4  -  community packs
 
 Same mechanism as Tier 3, but the crate is **not** part of the main
-Vyre version train. It registers via `ExternDialect` (see
-`vyre-libs-extern`). The dialect name prefix (`vyre-libs-<name>`) tells
-downstream tools where an op was defined.
+version train. It registers through the extension interface and publishes a
+well-defined extension namespace for downstream consumers.
 
 ## Op ID naming  -  tier encoded in the prefix
 
@@ -151,8 +150,7 @@ the chain visible.
 | Legacy atomic helpers | `vyre-libs::math::atomic::*` | `Expr::Atomic` is an existing IR variant  -  library. |
 | Legacy composite hash helpers | `vyre-libs::hash::*` | Hash/checksum ops are pure compositions. |
 | `vyre-libs::crypto::*` | `vyre-libs::hash::*` | Consolidated per Migration 3. Old path is a deprecation shim. |
-| `vyre-libs-extern` | unchanged | Tier-4 registration mechanism. |
-| `vyre-libs-template` | unchanged | Template for Tier-3/4 packs. |
+| external extension packs | unchanged | Tier-4 registration mechanism. |
 
 ## Anti-patterns the rule rejects
 

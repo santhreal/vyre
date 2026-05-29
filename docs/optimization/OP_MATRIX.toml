@@ -4311,21 +4311,6 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/t
 bench_targets = []
 
 [[op]]
-family = "vyre-libs::matching::substring_search"
-tier = "libs"
-owners = ["vyre-libs/src/matching"]
-ops = ["vyre-libs::matching::substring_search"]
-registry_sources = ["vyre-harness"]
-reference = "supported"
-foundation_ir = "supported"
-cuda = "supported"
-wgpu = "supported"
-spirv = "experimental"
-release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
-bench_targets = []
-
-[[op]]
 family = "vyre-libs::math::algebra::bool_semiring_matmul"
 tier = "libs"
 owners = ["vyre-libs/src/math"]
@@ -5805,10 +5790,10 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/t
 bench_targets = []
 
 [[op]]
-family = "vyre-libs::parsing::c11_build_vast_nodes"
+family = "vyre-libs::parsing::c11_build_vast_nodes_v2"
 tier = "libs"
 owners = ["vyre-libs/src/parsing"]
-ops = ["vyre-libs::parsing::c11_build_vast_nodes"]
+ops = ["vyre-libs::parsing::c11_build_vast_nodes_v2"]
 registry_sources = ["vyre-harness"]
 reference = "supported"
 foundation_ir = "supported"
@@ -6499,6 +6484,21 @@ family = "vyre-libs::representation::unpack_4bit_f32"
 tier = "libs"
 owners = ["vyre-libs/src/representation"]
 ops = ["vyre-libs::representation::unpack_4bit_f32"]
+registry_sources = ["vyre-harness"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+bench_targets = []
+
+[[op]]
+family = "vyre-libs::scan::substring_search"
+tier = "libs"
+owners = ["vyre-libs/src/scan"]
+ops = ["vyre-libs::scan::substring_search"]
 registry_sources = ["vyre-harness"]
 reference = "supported"
 foundation_ir = "supported"
