@@ -3,7 +3,7 @@
 //!
 //! The dominance frontier of node `n` is the set of nodes `m` such
 //! that `n` dominates a predecessor of `m` but does NOT dominate `m`
-//! itself. SSA phi placement uses this directly; program-analysis consumer rules can
+//! itself. SSA phi placement uses this directly; rule pipelines can
 //! reach for it via the `vyre.graph.dominator_frontier.v1` ExternCall.
 //!
 //! Soundness: exact when the supplied dominator-tree CSR is
@@ -385,10 +385,8 @@ pub fn dominator_frontier(
     seed: &str,
     out: &str,
 ) -> Program {
-    match try_dominator_frontier(node_count, dom_edge_count, pred_edge_count, seed, out) {
-        Ok(program) => program,
-        Err(_) => inert_dominator_frontier_program(seed, out),
-    }
+    try_dominator_frontier(node_count, dom_edge_count, pred_edge_count, seed, out)
+        .unwrap_or_else(|err| panic!("{err}"))
 }
 
 /// Build a dominance-frontier Program with checked CSR launch-shape
@@ -585,60 +583,6 @@ pub fn try_dominator_frontier(
     ))
 }
 
-fn inert_dominator_frontier_program(seed: &str, out: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(
-                "dom_offsets",
-                DOMINATOR_FRONTIER_DOM_OFFSETS_BUFFER,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(1),
-            BufferDecl::storage(
-                "dom_targets",
-                DOMINATOR_FRONTIER_DOM_TARGETS_BUFFER,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(1),
-            BufferDecl::storage(
-                "pred_offsets",
-                DOMINATOR_FRONTIER_PRED_OFFSETS_BUFFER,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(1),
-            BufferDecl::storage(
-                "pred_targets",
-                DOMINATOR_FRONTIER_PRED_TARGETS_BUFFER,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(1),
-            BufferDecl::storage(
-                seed,
-                DOMINATOR_FRONTIER_SEED_BUFFER,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(1),
-            BufferDecl::storage(
-                out,
-                DOMINATOR_FRONTIER_OUT_BUFFER,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
-            .with_count(1),
-        ],
-        DOMINATOR_FRONTIER_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::return_()]),
-        }],
-    )
-}
 
 /// CPU oracle: returns the dominance-frontier bitset for the seed set.
 ///
@@ -662,7 +606,7 @@ pub fn cpu_ref(
         pred_targets,
         seed,
     )
-    .expect("dominator_frontier CPU oracle received malformed input or could not reserve output")
+    .expect("Fix: reject malformed oracle input via try_* APIs; do not call panicking wrappers on hostile data - dominator_frontier CPU oracle received malformed input or could not reserve output")
 }
 
 /// Fallible CPU oracle: returns the dominance-frontier bitset for the seed set.
@@ -714,7 +658,7 @@ pub fn cpu_ref_into(
         seed,
         frontier,
     )
-    .expect("dominator_frontier CPU oracle received malformed input or could not reserve output")
+    .expect("Fix: reject malformed oracle input via try_* APIs; do not call panicking wrappers on hostile data - dominator_frontier CPU oracle received malformed input or could not reserve output")
 }
 
 /// Fallible CPU oracle into caller-owned output storage.
@@ -1192,10 +1136,27 @@ mod tests {
     }
 
     #[test]
-    fn legacy_builder_does_not_panic_on_offset_count_overflow() {
-        let program = dominator_frontier(u32::MAX, 0, 0, "seed", "out");
+    fn legacy_builder_fails_fast_on_offset_count_overflow() {
+        let panic = std::panic::catch_unwind(|| {
+            let _ = dominator_frontier(u32::MAX, 0, 0, "seed", "out");
+        })
+        .expect_err("legacy dominator-frontier builder must fail fast on CSR offset overflow");
 
-        assert_eq!(program.workgroup_size, [1, 1, 1]);
+        let message = panic_payload_message(panic);
+        assert!(
+            message.contains("overflows CSR offset buffer count"),
+            "error should describe the CSR offset overflow: {message}"
+        );
+    }
+
+    fn panic_payload_message(payload: Box<dyn std::any::Any + Send>) -> String {
+        if let Some(message) = payload.downcast_ref::<&str>() {
+            message.to_string()
+        } else if let Some(message) = payload.downcast_ref::<String>() {
+            message.clone()
+        } else {
+            format!("{payload:?}")
+        }
     }
 
     #[test]
@@ -1208,9 +1169,10 @@ mod tests {
 
         assert!(
             production.contains("pub fn try_dominator_frontier(")
-                && !production.contains(concat!("panic", "!("))
-                && !production.contains(".unwrap_or_else("),
-            "Fix: dominator_frontier builder must expose checked release API and avoid production panics."
+                && !production.contains("inert_")
+                && !production.contains("Err(_) =>")
+                && !production.contains("Node::return_()"),
+            "Fix: dominator_frontier builder must expose checked release API and must not compile inert no-op kernels."
         );
     }
 

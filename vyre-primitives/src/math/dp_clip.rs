@@ -137,7 +137,7 @@ pub fn dp_clip_per_sample_cpu(
 ) -> Vec<f64> {
     let mut out = Vec::new();
     try_dp_clip_per_sample_cpu_into(grads, norms, clip_norm, b, d, &mut out)
-        .expect("dp_clip_per_sample_cpu failed: invalid batch/dimension shape");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - dp_clip_per_sample_cpu failed: invalid batch/dimension shape");
     out
 }
 
@@ -166,7 +166,7 @@ pub fn dp_clip_per_sample_cpu_into(
     out: &mut Vec<f64>,
 ) {
     try_dp_clip_per_sample_cpu_into(grads, norms, clip_norm, b, d, out)
-        .expect("dp_clip_per_sample_cpu_into failed: invalid batch/dimension shape");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - dp_clip_per_sample_cpu_into failed: invalid batch/dimension shape");
 }
 
 /// Fallible CPU reference into caller-owned output storage.

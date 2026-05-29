@@ -84,7 +84,7 @@ mod tests {
         // BufferWrite only.
         let sig = row_of(&[EffectKind::BufferWrite, EffectKind::Atomic]);
         let observed = EffectRow::single(EffectKind::BufferWrite);
-        assert!(check_effect_row(sig, observed).is_ok());
+        assert_eq!(check_effect_row(sig, observed), Ok(()));
     }
 
     #[test]

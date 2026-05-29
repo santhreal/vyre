@@ -8,17 +8,17 @@
 //!
 //! Two GPU scan kernels exist in vyre-libs today:
 //!
-//! * `classic_ac_bounded_ranges_program` — consumes [`CompiledDfa`], does ONE
+//! * `classic_ac_bounded_ranges_program` - consumes [`CompiledDfa`], does ONE
 //!   transition-table load per input byte (`transitions[state * 256 + byte]`).
 //!   O(1) per byte regardless of state count.
-//! * `nfa_scan_with_plan` — consumes the lane-major NFA bit-table, walks a
+//! * `nfa_scan_with_plan` - consumes the lane-major NFA bit-table, walks a
 //!   bit-vector state with ~LANES² subgroup_shuffle steps per byte. Necessary
 //!   when an NFA cannot be subset-constructed under budget (state explosion),
 //!   but expensive per byte.
 //!
 //! Regex sets (`compile_regex_set`) emit the second shape. For pattern sets
 //! whose subset construction stays under a reasonable state cap, lowering to
-//! the dense DFA lets the regex run through the dense kernel instead — same
+//! the dense DFA lets the regex run through the dense kernel instead - same
 //! throughput as a literal AC scan. This primitive is the bridge.
 //!
 //! # Algorithm
@@ -47,7 +47,7 @@ pub const OP_ID: &str = "vyre-primitives::matching::nfa_to_dfa";
 ///
 /// Contractually equal to `vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP`
 /// (= 32). Hard-coded here so `matching::nfa_to_dfa` can compile without
-/// the `feature = "nfa"` gate — this primitive only consumes the
+/// the `feature = "nfa"` gate - this primitive only consumes the
 /// lane-major bit-table layout, it doesn't invoke the NFA scan kernel.
 /// The `layout_matches_nfa_module` test asserts the equality so a future
 /// change in `subgroup_nfa::LANES_PER_SUBGROUP` produces a CI failure
@@ -137,7 +137,7 @@ pub struct NfaTables<'tables> {
 
 /// Compile an NFA into the dense [`CompiledDfa`] via subset construction.
 ///
-/// `max_dfa_states` is a hard cap on output state count — exceeding it
+/// `max_dfa_states` is a hard cap on output state count - exceeding it
 /// returns [`NfaToDfaError::StateExplosion`] rather than ballooning
 /// memory. Typical regex sets (literal-ish + bounded character classes
 /// + bounded repetition) produce a small constant multiple of the input
@@ -196,7 +196,7 @@ pub fn nfa_to_dfa(
     transitions.extend(std::iter::repeat_n(0u32, 256));
 
     // Worklist-driven BFS over DFA states. We push the start state, then
-    // for each unprocessed DFA state expand its 256 byte transitions —
+    // for each unprocessed DFA state expand its 256 byte transitions -
     // adding any newly-discovered DFA state to the worklist. Stops when
     // every produced state has had its transitions filled in.
     let mut next_to_process: usize = 0;
@@ -222,7 +222,7 @@ pub fn nfa_to_dfa(
             // the pattern's full state graph back together.
             let closed = closure_of_set(&target_set, &epsilon_closures);
             let next_dfa_state = if closed == EMPTY_SET {
-                // Reject — convention: state 0 is the start state and is
+                // Reject - convention: state 0 is the start state and is
                 // not a sink, so we model rejection as "stay at a dead
                 // state". Allocate one dead state lazily the first time
                 // it's needed.
@@ -494,6 +494,7 @@ impl DfaDedupTable {
     }
 }
 
+
 fn saved_wire_ppm(saved_wire_bytes: usize, input_wire_bytes: usize) -> u32 {
     if input_wire_bytes == 0 {
         return 0;
@@ -637,7 +638,7 @@ fn ensure_dead_state(
     index.insert(EMPTY_SET, dead_id);
     sets.push(EMPTY_SET);
     // Self-loops: every byte stays at the dead state. Use the id we
-    // just assigned (not 0 — 0 is the start state).
+    // just assigned (not 0 - 0 is the start state).
     transitions.extend(std::iter::repeat_n(dead_id, 256));
     Ok(dead_id)
 }
@@ -658,7 +659,7 @@ mod tests {
         assert_eq!(
             LANES,
             crate::nfa::subgroup_nfa::LANES_PER_SUBGROUP,
-            "nfa_to_dfa's local LANES must mirror subgroup_nfa::LANES_PER_SUBGROUP — a drift means the bit-table layout in this primitive no longer matches what `compile_regex_set` / `nfa_scan_with_plan` emit. Fix: update LANES here and re-run the matching test suite."
+            "nfa_to_dfa's local LANES must mirror subgroup_nfa::LANES_PER_SUBGROUP - a drift means the bit-table layout in this primitive no longer matches what `compile_regex_set` / `nfa_scan_with_plan` emit. Fix: update LANES here and re-run the matching test suite."
         );
     }
 
@@ -1158,7 +1159,7 @@ mod tests {
         let s_x = dfa.transitions[(s_ab as usize) * 256 + b'x' as usize];
         assert_eq!(
             dfa.accept[s_x as usize], 0,
-            "'abx' is not 'abc' — must not accept"
+            "'abx' is not 'abc' - must not accept"
         );
     }
 
@@ -1213,7 +1214,7 @@ mod tests {
 
     #[test]
     fn shape_mismatch_caught_before_construction() {
-        // num_states=4 declared but transition table sized for 1 — the
+        // num_states=4 declared but transition table sized for 1 - the
         // shape guard must catch this without panicking inside the loop.
         let transition = vec![0u32; 1 * 256 * LANES];
         let epsilon = vec![0u32; 1 * LANES];
@@ -1235,3 +1236,4 @@ mod tests {
         }
     }
 }
+

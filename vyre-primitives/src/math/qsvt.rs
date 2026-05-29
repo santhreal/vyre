@@ -372,7 +372,7 @@ mod tests {
         let capacity = out.capacity();
 
         let norm = try_qsvt_block_encode_cpu_into(&[3.0, 0.0, 0.0, 4.0], 2, &mut out)
-            .expect("QSVT block encode CPU oracle should reuse caller-owned output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - QSVT block encode CPU oracle should reuse caller-owned output");
 
         assert!(approx_eq(norm, 5.0));
         assert!(approx_eq(out[0], 0.6));
@@ -381,7 +381,7 @@ mod tests {
         assert_eq!(out.capacity(), capacity);
 
         let norm = try_qsvt_block_encode_cpu_into(&[2.0], 1, &mut out)
-            .expect("QSVT block encode CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - QSVT block encode CPU oracle should truncate stale output");
 
         assert!(approx_eq(norm, 2.0));
         assert_eq!(out, vec![1.0]);
@@ -448,6 +448,7 @@ mod tests {
             capacities,
             [
                 out.capacity(),
+
                 prev.capacity(),
                 curr.capacity(),
                 next.capacity()
@@ -464,7 +465,7 @@ mod tests {
             &mut curr,
             &mut next,
         )
-        .expect("QSVT apply CPU oracle should truncate stale output");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - QSVT apply CPU oracle should truncate stale output");
 
         assert_eq!(out, vec![6.0]);
         assert!(prev.is_empty());
@@ -531,7 +532,7 @@ mod tests {
             try_qsvt_apply_cpu_into(
                 &a_scaled, &v, &coeffs, n as u32, &mut out, &mut prev, &mut curr, &mut next,
             )
-            .expect("generated QSVT apply CPU oracle should evaluate");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated QSVT apply CPU oracle should evaluate");
             let expected = independent_qsvt_apply(&a_scaled, &v, &coeffs, n);
 
             assert_eq!(out.len(), n, "case {case}: output length");
@@ -596,3 +597,4 @@ mod tests {
         );
     }
 }
+

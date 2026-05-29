@@ -172,7 +172,7 @@ pub fn char_class(source: &str, classified: &str, n: u32) -> Program {
 ///
 /// Pure function, exposed for fixture generation + harness oracles.
 #[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
+#[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 pub fn reference_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
     source
         .iter()
@@ -256,7 +256,7 @@ mod tests {
         let production = src
             .split("#[cfg(test)]")
             .next()
-            .expect("production section must exist");
+            .expect("Fix: meta-test scans production sources; update fixture path if module moved - production section must exist");
         assert!(
             !production.contains(" as usize"),
             "byte lookup-table indices must use usize::from so the primitive has no narrowing casts"

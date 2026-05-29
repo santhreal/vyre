@@ -134,12 +134,13 @@ fn generated_validation_rejects_corrupted_csr_shapes() {
             }
         }
 
+        let err = persistent_bfs::validate_persistent_bfs_graph_layout(
+            node_count, &offsets, &targets, &masks,
+        )
+        .expect_err("corrupted generated graph should fail validation at seed {seed}");
         assert!(
-            persistent_bfs::validate_persistent_bfs_graph_layout(
-                node_count, &offsets, &targets, &masks
-            )
-            .is_err(),
-            "corrupted generated graph should fail validation at seed {seed}"
+            err.contains("Fix:"),
+            "validation error must be actionable at seed {seed}: {err}"
         );
     }
 }

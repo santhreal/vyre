@@ -284,7 +284,7 @@ pub mod serial_data {
     };
 }
 
-/// Curated prelude — the byte-pack/decode primitives every consumer
+/// Curated prelude - the byte-pack/decode primitives every consumer
 /// needs for GPU buffer construction and readback, plus the shared
 /// envelope types when vyre-foundation is in play.
 ///

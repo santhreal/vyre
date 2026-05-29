@@ -1,5 +1,5 @@
-//! Release sweep R2 — oracle matrix (handwritten reference, hostile corpus).
-//! Generated scaffold — oracle logic is explicit; do not reduce to `assert!(is_ok)`.
+//! Release sweep R2 - oracle matrix (handwritten reference, hostile corpus).
+//! Generated scaffold - oracle logic is explicit; do not reduce to `assert!(is_ok)`.
 #![forbid(unsafe_code)]
 
 use vyre_primitives::hash::fnv1a;

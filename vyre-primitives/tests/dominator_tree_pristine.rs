@@ -1,4 +1,4 @@
-//! Dominator-tree 10-tier pristine pipeline — tiers 1, 2, 4, 5, 6, 9.
+//! Dominator-tree 10-tier pristine pipeline - tiers 1, 2, 4, 5, 6, 9.
 //!
 //! Tier 1 : Positive truth   → 10+ hand-built CFG fixtures vs LT reference.
 //! Tier 2 : Negative precision → empty / single / disconnected degenerates.
@@ -42,7 +42,7 @@ fn reference_eval_idoms(
 }
 
 // ------------------------------------------------------------------
-// Tier 1 — Positive truth: 10+ canonical CFG fixtures
+// Tier 1 - Positive truth: 10+ canonical CFG fixtures
 // ------------------------------------------------------------------
 
 #[test]
@@ -179,7 +179,7 @@ fn t1_deep_chain() {
 }
 
 // ------------------------------------------------------------------
-// Tier 2 — Negative precision: degenerate behaviour
+// Tier 2 - Negative precision: degenerate behaviour
 // ------------------------------------------------------------------
 
 #[test]
@@ -225,7 +225,7 @@ fn t2_self_loop_single_node() {
 }
 
 // ------------------------------------------------------------------
-// Tier 4 — Cross-primitive: data flow with csr_forward / backward / df
+// Tier 4 - Cross-primitive: data flow with csr_forward / backward / df
 // ------------------------------------------------------------------
 
 #[test]
@@ -288,7 +288,7 @@ fn t4_idom_tree_to_forward_csr_roundtrip() {
 }
 
 // ------------------------------------------------------------------
-// Tier 5 — GPU vs CPU oracle: reference_eval parity
+// Tier 5 - GPU vs CPU oracle: reference_eval parity
 // ------------------------------------------------------------------
 
 fn gpu_idoms_via_reference(
@@ -392,7 +392,7 @@ fn t5_gpu_parity_irreducible() {
 }
 
 // ------------------------------------------------------------------
-// Tier 6 — Edge cases: irreducible, multi-entry, self-loops, cycles
+// Tier 6 - Edge cases: irreducible, multi-entry, self-loops, cycles
 // ------------------------------------------------------------------
 
 #[test]
@@ -451,10 +451,11 @@ fn t6_complete_graph_three_nodes() {
 }
 
 // ------------------------------------------------------------------
-// Tier 9 — Differential: LT vs CHK (external algorithm path)
+// Tier 9 - Differential: LT vs CHK (external algorithm path)
 // ------------------------------------------------------------------
 
 #[test]
+
 fn t9_differential_lt_vs_chk_all_fixtures() {
     let fixtures: Vec<(u32, u32, Vec<(u32, u32)>)> = vec![
         (0, 0, vec![]),
@@ -504,3 +505,4 @@ fn t9_differential_deterministic_stress() {
         assert_eq!(lt, chk, "LT/CHK mismatch on stress graph n={n}");
     }
 }
+

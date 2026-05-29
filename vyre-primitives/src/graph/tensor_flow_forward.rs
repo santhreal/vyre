@@ -448,6 +448,7 @@ mod tests {
                 for edge in 0..degree {
                     state = state.rotate_left(7) ^ edge.wrapping_mul(0x85EB_CA6B);
                     let target = match edge % 5 {
+
                         0 => state % node_count,
                         1 => node_count,
                         2 => u32::MAX,
@@ -501,7 +502,7 @@ mod tests {
                 field_limit,
                 allow_mask,
             )
-            .expect("generated tensor-flow CPU oracle case must be valid");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated tensor-flow CPU oracle case must be valid");
 
             assert_eq!(actual, expected, "generated tensor-flow case {case}");
         }
@@ -514,13 +515,13 @@ mod tests {
         let capacity = out.capacity();
 
         try_tensor_flow_forward_cpu_into(2, &[0, 1, 1], &[1], &[1], &[1], 1, 1, 1, &mut out)
-            .expect("valid tensor-flow CPU oracle should reuse output storage");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid tensor-flow CPU oracle should reuse output storage");
 
         assert_eq!(out, vec![0b10]);
         assert_eq!(out.capacity(), capacity);
 
         try_tensor_flow_forward_cpu_into(1, &[0, 0], &[], &[], &[1], 1, 1, 1, &mut out)
-            .expect("smaller tensor-flow CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - smaller tensor-flow CPU oracle should truncate stale output");
 
         assert_eq!(out, vec![0]);
         assert_eq!(out.capacity(), capacity);
@@ -567,3 +568,4 @@ mod tests {
         );
     }
 }
+

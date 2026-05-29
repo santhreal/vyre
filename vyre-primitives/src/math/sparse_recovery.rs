@@ -252,7 +252,7 @@ mod tests {
         let order_capacity = scratch.order.capacity();
 
         let threshold = try_iht_top_k_cpu_into(&z, 2, &mut out, &mut scratch)
-            .expect("IHT top-k CPU oracle should reuse caller-owned storage");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - IHT top-k CPU oracle should reuse caller-owned storage");
 
         assert!(approx_eq(threshold, 2.0));
         assert_eq!(out.len(), z.len());
@@ -264,7 +264,7 @@ mod tests {
         assert_eq!(scratch.order.capacity(), order_capacity);
 
         let threshold = try_iht_top_k_cpu_into(&[4.0], 1, &mut out, &mut scratch)
-            .expect("IHT top-k CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - IHT top-k CPU oracle should truncate stale output");
 
         assert!(approx_eq(threshold, 0.0));
         assert_eq!(out, vec![4.0]);
@@ -290,7 +290,7 @@ mod tests {
                 })
                 .collect();
             let actual_threshold = try_iht_top_k_cpu_into(&z, k, &mut out, &mut scratch)
-                .expect("generated IHT top-k CPU oracle should evaluate");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated IHT top-k CPU oracle should evaluate");
             let (expected, expected_threshold) = independent_iht_top_k(&z, k);
 
             assert_eq!(out.len(), expected.len(), "case {case}: output length");

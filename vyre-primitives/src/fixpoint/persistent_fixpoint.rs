@@ -181,7 +181,9 @@ where
         &mut current,
         &mut next,
     )
-    .expect("persistent_fixpoint cpu_ref must reserve scratch buffers");
+    .expect(
+        "Fix: caller must size scratch for node_count; use try_cpu_ref on hostile layouts",
+    );
     (current, iters)
 }
 
@@ -201,7 +203,9 @@ where
     F: FnMut(&[u32], &mut [u32]),
 {
     try_cpu_ref_into(seed, max_iterations, transfer_step, current, next)
-        .expect("persistent_fixpoint cpu_ref_into must reserve scratch buffers")
+        .expect(
+            "Fix: caller must size scratch for node_count; use try_cpu_ref_into on hostile layouts",
+        )
 }
 
 /// Fallible CPU oracle using caller-owned ping-pong buffers.

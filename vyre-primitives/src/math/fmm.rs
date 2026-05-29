@@ -458,6 +458,7 @@ pub fn try_p2m_zeroth_moment_cpu_into(
 /// zeroth-order primitive, this is just the local moment value.
 #[cfg(test)]
 #[must_use]
+
 pub fn l2p_zeroth_eval_cpu(local_moment: f64, _target_x: f64, _target_y: f64) -> f64 {
     local_moment
 }
@@ -510,14 +511,14 @@ mod tests {
         let ptr = moments.as_ptr();
         let capacity = moments.capacity();
         try_p2m_zeroth_moment_cpu_into(&charges, &cells, &mut moments)
-            .expect("FMM P2M CPU oracle should reuse caller-owned moment storage");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - FMM P2M CPU oracle should reuse caller-owned moment storage");
         assert!(approx_eq(moments[0], 6.0));
         assert!(approx_eq(moments[1], 60.0));
         assert_eq!(moments.as_ptr(), ptr);
         assert_eq!(moments.capacity(), capacity);
 
         try_p2m_zeroth_moment_cpu_into(&[5.0], &[0], &mut moments)
-            .expect("FMM P2M CPU oracle should truncate stale moments");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - FMM P2M CPU oracle should truncate stale moments");
         assert_eq!(moments, vec![5.0]);
         assert_eq!(moments.as_ptr(), ptr);
         assert_eq!(moments.capacity(), capacity);
@@ -537,7 +538,7 @@ mod tests {
                 .collect();
 
             try_p2m_zeroth_moment_cpu_into(&charges, &assignments, &mut moments)
-                .expect("generated FMM P2M CPU oracle should evaluate");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated FMM P2M CPU oracle should evaluate");
             let expected = independent_p2m(&charges, &assignments);
 
             assert_eq!(moments.len(), expected.len(), "case {case}: output length");
@@ -604,3 +605,4 @@ mod tests {
         assert!(p.stats().trap());
     }
 }
+

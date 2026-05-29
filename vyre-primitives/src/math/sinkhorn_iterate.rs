@@ -181,7 +181,7 @@ pub fn cpu_ref(
         &mut v_mut,
         &mut u_old,
     )
-    .expect("sinkhorn_iterate cpu_ref failed: invalid fixed-point Sinkhorn buffers");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sinkhorn_iterate cpu_ref failed: invalid fixed-point Sinkhorn buffers");
     (u, v_mut, iters)
 }
 
@@ -253,7 +253,7 @@ pub fn cpu_ref_into(
         v_out,
         u_old,
     )
-    .expect("sinkhorn_iterate cpu_ref_into failed: invalid fixed-point Sinkhorn buffers")
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sinkhorn_iterate cpu_ref_into failed: invalid fixed-point Sinkhorn buffers")
 }
 
 /// Fallible CPU reference for iterative Sinkhorn using caller-owned buffers.
@@ -458,6 +458,7 @@ pub fn sinkhorn_iterate_f64(
 
 /// Fallible tolerance-based Sinkhorn-Knopp iterative balancing in f64.
 #[cfg(any(test, feature = "cpu-parity"))]
+
 pub fn try_sinkhorn_iterate_f64(
     k: &[f64],
     a: &[f64],
@@ -636,3 +637,4 @@ pub fn sinkhorn_col_residual(k: &[f64], u: &[f64], v: &[f64], b: &[f64]) -> f64 
 
 #[cfg(test)]
 mod f64_tests;
+

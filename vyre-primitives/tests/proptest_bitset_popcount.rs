@@ -1,4 +1,4 @@
-//! Property gates for `bitset::popcount::cpu_ref` — per-word population count.
+//! Property gates for `bitset::popcount::cpu_ref` - per-word population count.
 #![cfg(all(feature = "bitset", feature = "cpu-parity"))]
 
 use proptest::prelude::*;

@@ -473,7 +473,9 @@ mod tests {
         // produces a non-empty Program for representative small sizes.
         for &n in &[1u32, 2, 64, 1023, 1024] {
             let prog = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", n);
-            assert!(!prog.buffers().is_empty(), "n={n} should produce non-empty");
+            let names: Vec<&str> = prog.buffers().iter().map(BufferDecl::name).collect();
+            assert!(names.contains(&"in_buf"), "n={n} must declare in_buf, got {names:?}");
+            assert!(names.contains(&"out_buf"), "n={n} must declare out_buf, got {names:?}");
         }
     }
 
@@ -503,6 +505,8 @@ mod tests {
         // n = 1_048_576 → num_blocks = 1024 → Pass B falls through to single
         // workgroup `prefix_scan` (1024 ≤ BLOCK_LANES). Verify build.
         let prog = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", SOFT_MAX_N);
-        assert!(!prog.buffers().is_empty());
+        let names: Vec<&str> = prog.buffers().iter().map(BufferDecl::name).collect();
+        assert!(names.contains(&"in_buf"));
+        assert!(names.contains(&"out_buf"));
     }
 }

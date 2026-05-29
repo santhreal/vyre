@@ -454,6 +454,7 @@ pub fn adaptive_traversal_graph_content_hash(
 
 /// In-session content hash for resident adaptive Four-Russians dense LUT uploads.
 #[must_use]
+
 pub fn adaptive_four_russians_graph_content_hash(node_count: u32, adj_rows_dense: &[u32]) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     node_count.hash(&mut hasher);
@@ -1003,6 +1004,7 @@ pub fn adaptive_dense_step(
 
 /// Source-byte tile count for Four-Russians dense graph traversal.
 #[must_use]
+
 pub const fn four_russians_source_tile_count(node_count: u32) -> u32 {
     node_count.div_ceil(8)
 }
@@ -1825,3 +1827,4 @@ mod tests {
         assert!(!plan.frontier.work.has_active_bits);
     }
 }
+

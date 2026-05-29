@@ -1,4 +1,4 @@
-//! Tier 10 — End-to-end CLI surface for `dominator_tree`.
+//! Tier 10 - End-to-end CLI surface for `dominator_tree`.
 //!
 //! Reads a tiny edge-list from stdin (or defaults to a diamond fixture) and
 //! prints the immediate-dominator array computed by the exact CPU oracle.

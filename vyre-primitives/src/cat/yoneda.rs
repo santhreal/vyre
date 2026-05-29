@@ -117,9 +117,12 @@ mod tests {
     #[test]
     fn yoneda_iso_equals_f_image_cardinality() {
         let cat = FiniteCategory::discrete(3);
-        for &f_at_x in &[0u32, 1, 2, 5, 100, u32::MAX] {
-            assert_eq!(yoneda_natural_iso(&cat, 0, f_at_x), f_at_x);
-        }
+        assert_eq!(yoneda_natural_iso(&cat, 0, 0), 0);
+        assert_eq!(yoneda_natural_iso(&cat, 0, 1), 1);
+        assert_eq!(yoneda_natural_iso(&cat, 0, 2), 2);
+        assert_eq!(yoneda_natural_iso(&cat, 0, 5), 5);
+        assert_eq!(yoneda_natural_iso(&cat, 0, 100), 100);
+        assert_eq!(yoneda_natural_iso(&cat, 0, u32::MAX), u32::MAX);
     }
 
     /// Adversarial: non-discrete category with multi-morphism Hom-sets.

@@ -267,7 +267,7 @@ fn byte_cases() -> Vec<Vec<u8>> {
         }
     }
 
-    for case in 0..256usize {
+    for case in 0..16384usize {
         let len = case % 513;
         cases.push(lcg_bytes(case as u8 ^ 0xA5, len));
     }
@@ -296,7 +296,7 @@ fn packed_u32_cases() -> Vec<Vec<u32>> {
         }
     }
 
-    for case in 0..256usize {
+    for case in 0..16384usize {
         let len = case % 513;
         cases.push(lcg_words(case as u32 ^ 0x5A5A_5A5A, len));
     }

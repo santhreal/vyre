@@ -73,7 +73,11 @@ fn cpu_step_mismatched_state_length_panics() {
         let eps = vec![0u32; 2 * LANES_PER_SUBGROUP];
         cpu_step(&state, b'a', &trans, &eps, 2)
     });
-    assert!(result.is_err());
+    let payload = result.expect_err("mismatched state length must panic");
+    assert!(
+        payload.downcast_ref::<&str>().is_some()
+            || payload.downcast_ref::<String>().is_some()
+    );
 }
 
 #[test]
@@ -84,7 +88,11 @@ fn cpu_step_mismatched_transition_length_panics() {
         let eps = vec![0u32; 2 * LANES_PER_SUBGROUP];
         cpu_step(&state, b'a', &trans, &eps, 2)
     });
-    assert!(result.is_err());
+    let payload = result.expect_err("mismatched transition length must panic");
+    assert!(
+        payload.downcast_ref::<&str>().is_some()
+            || payload.downcast_ref::<String>().is_some()
+    );
 }
 
 #[test]
@@ -95,7 +103,11 @@ fn cpu_step_mismatched_epsilon_length_panics() {
         let eps = vec![0u32; 2 * LANES_PER_SUBGROUP - 1];
         cpu_step(&state, b'a', &trans, &eps, 2)
     });
-    assert!(result.is_err());
+    let payload = result.expect_err("mismatched epsilon length must panic");
+    assert!(
+        payload.downcast_ref::<&str>().is_some()
+            || payload.downcast_ref::<String>().is_some()
+    );
 }
 
 #[test]

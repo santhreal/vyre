@@ -10,7 +10,7 @@ use vyre_primitives::graph::csr_bidirectional;
 
 #[test]
 fn csr_bidirectional_matches_independent_union_oracle_matrix() {
-    for case in 0..1024usize {
+    for case in 0..8192usize {
         let seed = case as u64 ^ 0xB1D1_0000_0000_0000;
         let (node_count, offsets, targets, masks, frontier, allow_mask) =
             generated_csr_frontier(seed);

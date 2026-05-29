@@ -193,7 +193,7 @@ pub fn semiring_gemm_cpu(
 ) -> Vec<u32> {
     let mut c = Vec::new();
     try_semiring_gemm_cpu_into(a, b, m, n, k, semiring, &mut c)
-        .expect("semiring_gemm_cpu failed: invalid GEMM shape");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - semiring_gemm_cpu failed: invalid GEMM shape");
     c
 }
 
@@ -228,7 +228,7 @@ pub fn semiring_gemm_cpu_into(
     c: &mut Vec<u32>,
 ) {
     try_semiring_gemm_cpu_into(a, b, m, n, k, semiring, c)
-        .expect("semiring_gemm_cpu_into failed: invalid GEMM shape");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - semiring_gemm_cpu_into failed: invalid GEMM shape");
 }
 
 /// Fallible CPU reference using a caller-owned output buffer.

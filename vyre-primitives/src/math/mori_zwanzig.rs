@@ -256,14 +256,14 @@ mod tests {
         let capacity = out.capacity();
 
         try_mz_project_step_cpu_into(&[1.0, 0.0, 0.0, 1.0], &[3.0, 5.0], 2, &mut out)
-            .expect("Mori-Zwanzig CPU oracle should reuse caller-owned output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - Mori-Zwanzig CPU oracle should reuse caller-owned output");
 
         assert_eq!(out, vec![3.0, 5.0]);
         assert_eq!(out.as_ptr(), ptr);
         assert_eq!(out.capacity(), capacity);
 
         try_mz_project_step_cpu_into(&[2.0], &[3.0], 1, &mut out)
-            .expect("Mori-Zwanzig CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - Mori-Zwanzig CPU oracle should truncate stale output");
 
         assert_eq!(out, vec![6.0]);
         assert_eq!(out.as_ptr(), ptr);
@@ -296,7 +296,7 @@ mod tests {
                 .collect();
 
             try_mz_project_step_cpu_into(&p, &f, n as u32, &mut out)
-                .expect("generated Mori-Zwanzig CPU oracle should evaluate");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated Mori-Zwanzig CPU oracle should evaluate");
             let expected = independent_mz_project(&p, &f, n);
 
             assert_eq!(out.len(), expected.len(), "case {case}: output length");

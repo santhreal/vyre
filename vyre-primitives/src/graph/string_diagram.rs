@@ -174,7 +174,7 @@ mod tests {
         let capacity = out.capacity();
 
         try_monoidal_compose_cpu_into(&[2.0, 3.0], &[5.0, 7.0, 11.0, 13.0], 1, 2, 2, &mut out)
-            .expect("checked CPU oracle should reuse caller-owned storage");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - checked CPU oracle should reuse caller-owned storage");
 
         assert_eq!(out.len(), 2);
         assert!(approx_eq(out[0], 43.0));
@@ -182,7 +182,7 @@ mod tests {
         assert_eq!(out.capacity(), capacity);
 
         try_monoidal_compose_cpu_into(&[4.0], &[6.0], 1, 1, 1, &mut out)
-            .expect("checked CPU oracle should truncate stale output cells");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - checked CPU oracle should truncate stale output cells");
 
         assert_eq!(out, vec![24.0]);
         assert_eq!(out.capacity(), capacity);

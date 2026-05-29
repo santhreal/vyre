@@ -341,7 +341,7 @@ mod tests {
                 n,
                 &mut out,
             )
-            .expect("generated matroid CPU oracle should reserve and evaluate");
+            .expect("Fix: caller must pre-size buffers; use fallible reserve or return ResourceExhausted - generated matroid CPU oracle should reserve and evaluate");
             let expected = independent_dense_bfs(&frontier_in, &exchange_adj, &visited, n);
 
             assert_eq!(out, expected.0, "case {case}: frontier_out mismatch");

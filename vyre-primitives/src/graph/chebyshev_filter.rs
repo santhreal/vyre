@@ -458,6 +458,7 @@ fn resize_chebyshev_cpu_vec<T: Clone>(
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
@@ -601,7 +602,7 @@ mod tests {
                 .collect();
 
             let actual = try_chebyshev_filter_cpu(&laplacian, &signal, &coeffs, n as u32, k_steps)
-                .expect("generated Chebyshev CPU oracle should reserve and evaluate");
+                .expect("Fix: caller must pre-size buffers; use fallible reserve or return ResourceExhausted - generated Chebyshev CPU oracle should reserve and evaluate");
             let expected =
                 independent_chebyshev_dense(&laplacian, &signal, &coeffs, n, k_steps as usize);
 
@@ -758,3 +759,4 @@ mod tests {
         );
     }
 }
+

@@ -290,7 +290,7 @@ mod tests {
         let capacity = out.capacity();
 
         try_softmax_cpu_into(&[1.0, 1.0], &mut out)
-            .expect("softmax CPU oracle should reuse caller-owned output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - softmax CPU oracle should reuse caller-owned output");
 
         assert_eq!(out.len(), 2);
         assert!(approx_eq(out[0], 0.5));
@@ -298,7 +298,7 @@ mod tests {
         assert_eq!(out.capacity(), capacity);
 
         try_softmax_cpu_into(&[1.0], &mut out)
-            .expect("softmax CPU oracle should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - softmax CPU oracle should truncate stale output");
 
         assert_eq!(out, vec![1.0]);
         assert_eq!(out.capacity(), capacity);

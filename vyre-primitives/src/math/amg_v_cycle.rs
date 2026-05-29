@@ -310,7 +310,7 @@ pub fn cpu_ref(
     n_coarse: u32,
 ) -> Vec<f64> {
     try_cpu_ref(a, b, x, r_mat, p_mat, a_c, omega, n_fine, n_coarse)
-        .expect("amg_v_cycle cpu_ref failed: invalid V-cycle dimensions")
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - amg_v_cycle cpu_ref failed: invalid V-cycle dimensions")
 }
 
 /// Fallible CPU reference: 2-level AMG V-cycle in f64.
@@ -375,7 +375,7 @@ pub fn cpu_ref_into(
     try_cpu_ref_into(
         a, b, x, r_mat, p_mat, a_c, omega, n_fine, n_coarse, scratch, out,
     )
-    .expect("amg_v_cycle cpu_ref_into failed: invalid V-cycle dimensions");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - amg_v_cycle cpu_ref_into failed: invalid V-cycle dimensions");
 }
 
 /// Fallible CPU reference: 2-level AMG V-cycle in f64, writing into caller-owned storage.
@@ -452,6 +452,7 @@ pub fn try_cpu_ref_into(
 }
 
 #[cfg(any(test, feature = "cpu-parity"))]
+
 fn checked_cpu_v_cycle_sizes(
     n_fine: u32,
     n_coarse: u32,
@@ -739,3 +740,4 @@ mod tests {
         assert_eq!(p.buffers().len(), 11);
     }
 }
+

@@ -10,7 +10,7 @@ use vyre_primitives::graph::motif::{self, count_witness_participants, MotifEdge}
 
 #[test]
 fn motif_csr_matches_independent_witness_oracle_matrix() {
-    for case in 0..1024usize {
+    for case in 0..8192usize {
         let seed = case as u64 ^ 0xA07F_CAFE_0000_0000;
         let (node_count, offsets, targets, masks) = generated_csr(seed);
         let motif_edges = generated_motif_edges(seed.rotate_left(13), node_count);

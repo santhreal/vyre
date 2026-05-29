@@ -466,6 +466,7 @@ fn validate_sum_product_evaluate_inputs(
 }
 
 #[cfg(any(test, feature = "cpu-parity"))]
+
 fn resize_sum_product_cpu_vec<T: Clone>(
     out: &mut Vec<T>,
     len: usize,
@@ -680,7 +681,7 @@ mod tests {
             &mut out,
             &mut scratch,
         )
-        .expect("scratch evaluator should reuse preallocated storage");
+        .expect("Fix: scratch allocation must succeed for declared sizes; shrink test fixture or return Err - scratch evaluator should reuse preallocated storage");
 
         assert_eq!(out.len(), 3);
         assert!(approx_eq(out[0], 2.0));
@@ -701,7 +702,7 @@ mod tests {
             &mut out,
             &mut scratch,
         )
-        .expect("scratch evaluator should truncate stale tail values");
+        .expect("Fix: scratch allocation must succeed for declared sizes; shrink test fixture or return Err - scratch evaluator should truncate stale tail values");
 
         assert_eq!(out, vec![2.0]);
         assert_eq!(scratch.values, vec![2.0]);
@@ -760,7 +761,7 @@ mod tests {
                 &mut out,
                 &mut scratch,
             )
-            .expect("generated sum-product CPU oracle should reserve and evaluate");
+            .expect("Fix: caller must pre-size buffers; use fallible reserve or return ResourceExhausted - generated sum-product CPU oracle should reserve and evaluate");
             let expected = independent_sum_product_evaluate(
                 &kinds,
                 &child_offsets,
@@ -906,3 +907,4 @@ mod tests {
         );
     }
 }
+

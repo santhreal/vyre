@@ -1,4 +1,4 @@
-//! Property gates for `bitset::not::cpu_ref` — bitwise NOT involution.
+//! Property gates for `bitset::not::cpu_ref` - bitwise NOT involution.
 #![cfg(all(feature = "bitset", feature = "cpu-parity"))]
 
 use proptest::prelude::*;

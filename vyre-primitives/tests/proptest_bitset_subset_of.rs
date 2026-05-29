@@ -1,4 +1,4 @@
-//! Property gates for `bitset::subset_of::cpu_ref` — subset predicate laws.
+//! Property gates for `bitset::subset_of::cpu_ref` - subset predicate laws.
 #![cfg(all(feature = "bitset", feature = "cpu-parity"))]
 
 use proptest::prelude::*;

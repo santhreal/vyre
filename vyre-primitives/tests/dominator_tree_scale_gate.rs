@@ -1,4 +1,4 @@
-//! Tier 8 — Scale gate: 10M+ node graph, no OOM, no panic, completes within budget.
+//! Tier 8 - Scale gate: 10M+ node graph, no OOM, no panic, completes within budget.
 #![cfg(feature = "graph")]
 #![cfg(feature = "cpu-parity")]
 
@@ -71,8 +71,8 @@ fn scale_gate_50k_nodes_sparse_random_chk() {
 fn scale_gate_program_builds_for_10m_without_panic() {
     let n = 10_000_000u32;
     let e = n * 2;
-    let p = try_dominator_tree_program(n, e, e, "idom");
-    assert!(p.is_ok(), "Program must build for 10M nodes without panic");
+    let p = try_dominator_tree_program(n, e, e, "idom").expect("10M-node program must build");
+    assert_eq!(p.buffers().len(), 4, "dominator tree program declares four CSR buffers");
 }
 
 #[test]

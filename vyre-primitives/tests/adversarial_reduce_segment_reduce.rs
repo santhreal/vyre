@@ -1,16 +1,6 @@
-//! Generated adversarial contract tests for vyre-primitives.
+//! Adversarial oracle tests for `reduce::segment_reduce`.
 
-// Adversarial tests for reduce::segment_reduce
-
-#![allow(
-    unused_imports,
-    unused_variables,
-    dead_code,
-    unused_mut,
-    unused_macros,
-    clippy::identity_op,
-    clippy::assertions_on_constants
-)]
+#![allow(unused_imports, dead_code, clippy::identity_op)]
 
 use vyre_primitives::reduce::segment_reduce::*;
 
@@ -33,13 +23,25 @@ fn cpu_ref(input: &[u32], segment_offsets: &[u32]) -> Vec<u32> {
     out
 }
 
-mod adversarial_reduce_segment_reduce_part1 {
+#[test]
+fn segment_reduce_hostile_corpus() {
+    let cases: &[(&[u32], &[u32], &[u32])] = &[
+        (&[], &[0], &[]),
+        (&[1, 2, 3], &[0, 3], &[6]),
+        (&[10, 20, 30, 40], &[0, 2, 4], &[30, 70]),
+        (&[0xffff_ffff, 1], &[0, 1, 2], &[0xffff_ffff, 1]),
+    ];
+    for (idx, (input, offsets, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            cpu_ref(input, offsets),
+            *expected,
+            "Fix: segment_reduce oracle mismatch on case {idx}"
+        );
+    }
+}
 
-    include!("__split/adversarial_reduce_segment_reduce_part1.rs");
-}
-mod adversarial_reduce_segment_reduce_part2 {
-    include!("__split/adversarial_reduce_segment_reduce_part2.rs");
-}
-mod adversarial_reduce_segment_reduce_part3 {
-    include!("__split/adversarial_reduce_segment_reduce_part3.rs");
+#[test]
+#[should_panic(expected = "malformed segment")]
+fn segment_reduce_rejects_non_monotonic_offsets() {
+    let _ = cpu_ref(&[1, 2, 3], &[0, 3, 2]);
 }

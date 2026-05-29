@@ -447,6 +447,7 @@ pub fn do_rule2_reverse_incoming_cpu(
 
 /// Fallible rule-2 CPU reference.
 #[cfg(any(test, feature = "cpu-parity"))]
+
 pub fn try_do_rule2_reverse_incoming_cpu(
     adjacency: &[u32],
     treatment_mask: &[u32],
@@ -664,13 +665,13 @@ mod fallible_cpu_reference_tests {
         let capacity = out.capacity();
 
         try_do_intervention_delete_incoming_cpu_into(&adjacency, &mask, 2, &mut out)
-            .expect("valid intervention matrix should reuse caller-owned output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid intervention matrix should reuse caller-owned output");
 
         assert_eq!(out, vec![0, 2, 0, 4]);
         assert_eq!(out.capacity(), capacity);
 
         try_do_intervention_delete_incoming_cpu_into(&[5], &[1], 1, &mut out)
-            .expect("smaller intervention matrix should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - smaller intervention matrix should truncate stale output");
 
         assert_eq!(out, vec![0]);
         assert_eq!(out.capacity(), capacity);
@@ -689,7 +690,7 @@ mod fallible_cpu_reference_tests {
             let mut out = vec![u32::MAX];
 
             try_do_intervention_delete_incoming_cpu_into(&adjacency, &mask, n as u32, &mut out)
-                .expect("generated valid intervention matrices must pass fallible oracle");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated valid intervention matrices must pass fallible oracle");
 
             assert_eq!(
                 out, legacy,
@@ -725,13 +726,13 @@ mod fallible_cpu_reference_tests {
         let capacity = out.capacity();
 
         try_do_rule2_reverse_incoming_cpu_into(&adjacency, &mask, 2, &mut out)
-            .expect("valid rule2 matrix should reuse caller-owned output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid rule2 matrix should reuse caller-owned output");
 
         assert_eq!(out, vec![0, 0, 1, 0]);
         assert_eq!(out.capacity(), capacity);
 
         try_do_rule2_reverse_incoming_cpu_into(&[7], &[1], 1, &mut out)
-            .expect("smaller rule2 matrix should truncate stale output");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - smaller rule2 matrix should truncate stale output");
 
         assert_eq!(out, vec![7]);
         assert_eq!(out.capacity(), capacity);
@@ -753,7 +754,7 @@ mod fallible_cpu_reference_tests {
             let mut out = vec![u32::MAX];
 
             try_do_rule2_reverse_incoming_cpu_into(&adjacency, &treatment_mask, n as u32, &mut out)
-                .expect("generated valid rule2 matrices must pass fallible oracle");
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated valid rule2 matrices must pass fallible oracle");
 
             assert_eq!(out, legacy, "fallible rule2 oracle diverged at n={n}");
         }
@@ -783,7 +784,7 @@ mod fallible_cpu_reference_tests {
         );
 
         let (valid_reduced, valid_kept) = try_do_rule3_subgraph_cpu(&[0, 1, 1, 0], &[1, 0], 2)
-            .expect("valid rule3 tuple oracle must succeed");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid rule3 tuple oracle must succeed");
         assert_eq!(valid_reduced, vec![0]);
         assert_eq!(valid_kept, vec![0]);
     }
@@ -901,6 +902,7 @@ mod rule2_tests {
 }
 
 #[cfg(test)]
+
 mod rule3_tests {
     use super::*;
 
@@ -1025,3 +1027,4 @@ mod rule3_tests {
         assert_eq!(kept, vec![1, 3]);
     }
 }
+

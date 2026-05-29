@@ -478,6 +478,7 @@ fn validate_ddnnf_evaluate_inputs(
 }
 
 #[cfg(any(test, feature = "cpu-parity"))]
+
 fn resize_ddnnf_cpu_vec<T: Clone>(
     out: &mut Vec<T>,
     len: usize,
@@ -660,7 +661,7 @@ mod tests {
             &mut out,
             &mut scratch,
         )
-        .expect("valid d-DNNF circuit must evaluate into reusable storage");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid d-DNNF circuit must evaluate into reusable storage");
 
         assert_eq!(out, vec![1, 1, 2]);
         assert_eq!(scratch.values, vec![1, 1, 2]);
@@ -676,7 +677,7 @@ mod tests {
             &mut out,
             &mut scratch,
         )
-        .expect("smaller d-DNNF circuit must reuse and truncate storage");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - smaller d-DNNF circuit must reuse and truncate storage");
 
         assert_eq!(out, vec![1]);
         assert_eq!(scratch.values, vec![1]);
@@ -735,7 +736,7 @@ mod tests {
                 &mut out,
                 &mut scratch,
             )
-            .expect("generated d-DNNF CPU oracle should reserve and evaluate");
+            .expect("Fix: caller must pre-size buffers; use fallible reserve or return ResourceExhausted - generated d-DNNF CPU oracle should reserve and evaluate");
             let expected =
                 independent_ddnnf_evaluate(&nodes, &node_var, &children, &assignments, &topo_order);
 
@@ -895,3 +896,4 @@ mod tests {
         );
     }
 }
+

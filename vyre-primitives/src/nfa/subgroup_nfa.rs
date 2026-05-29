@@ -448,6 +448,7 @@ mod tests {
     }
 
     #[test]
+
     fn epsilon_fanout() {
         let trans = build_transition(&[(0, b'a', vec![1])], 5);
         let eps = build_epsilon(&[(1, vec![2, 3, 4])], 5);
@@ -507,15 +508,16 @@ mod tests {
         let malformed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             cpu_step_into(&[1], b'a', &trans, &eps, 2, &mut acc, &mut scratch);
         }));
-        assert!(malformed.is_err());
+        malformed.expect_err("cpu_step_into with wrong state length must panic");
     }
 
     #[test]
     fn num_states_bound_enforced_at_max() {
         let program = nfa_step("s", "i", "t", "e", "o", 1024);
-        assert!(
-            !program.entry().is_empty(),
-            "max-bound NFA step must emit executable work"
+        assert_eq!(
+            program.buffers().len(),
+            5,
+            "max-bound NFA step must declare state/input/transition/epsilon/output buffers"
         );
     }
 
@@ -543,3 +545,4 @@ mod tests {
         assert_eq!(p.workgroup_size, [LANES_PER_SUBGROUP as u32, 1, 1]);
     }
 }
+

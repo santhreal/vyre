@@ -403,7 +403,7 @@ mod tests {
         let ptr = estimates.as_ptr();
 
         let got = try_count_sketch_query_cpu_into(&table, &hashes, &signs, d, w, &mut estimates)
-            .expect("valid sketch query must succeed");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid sketch query must succeed");
 
         assert_eq!(got, 5);
         assert_eq!(estimates.as_ptr(), ptr);

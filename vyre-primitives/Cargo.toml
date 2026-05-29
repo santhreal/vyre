@@ -272,6 +272,11 @@ path = "tests/sweep_hash_crc_oracle_matrix.rs"
 required-features = ["hash"]
 
 [[test]]
+name = "sweep_hash_fnv1a_oracle_matrix"
+path = "tests/sweep_hash_fnv1a_oracle_matrix.rs"
+required-features = ["hash"]
+
+[[test]]
 name = "sweep_toposort_oracle_matrix"
 path = "tests/sweep_toposort_oracle_matrix.rs"
 required-features = ["graph", "cpu-parity"]
@@ -305,3 +310,159 @@ required-features = ["graph", "cpu-parity"]
 name = "dominator_tree_e2e"
 path = "examples/dominator_tree_e2e.rs"
 required-features = ["graph", "cpu-parity"]
+[[test]]
+name = "sweep_hash_adler32_volume_oracle_matrix"
+path = "tests/sweep_hash_adler32_volume_oracle_matrix.rs"
+required-features = ["hash"]
+[[test]]
+name = "sweep_hash_multi_hash_volume_oracle_matrix"
+path = "tests/sweep_hash_multi_hash_volume_oracle_matrix.rs"
+required-features = ["hash"]
+[[test]]
+name = "sweep_hash_blake3_g_volume_oracle_matrix"
+path = "tests/sweep_hash_blake3_g_volume_oracle_matrix.rs"
+required-features = ["hash", "cpu-parity"]
+[[test]]
+name = "sweep_hash_blake3_round_volume_oracle_matrix"
+path = "tests/sweep_hash_blake3_round_volume_oracle_matrix.rs"
+required-features = ["hash", "cpu-parity"]
+[[test]]
+name = "sweep_graph_csr_forward_traverse_volume_oracle_matrix"
+path = "tests/sweep_graph_csr_forward_traverse_volume_oracle_matrix.rs"
+required-features = ["graph", "cpu-parity"]
+[[test]]
+name = "sweep_graph_csr_backward_traverse_volume_oracle_matrix"
+path = "tests/sweep_graph_csr_backward_traverse_volume_oracle_matrix.rs"
+required-features = ["graph", "cpu-parity"]
+[[test]]
+name = "sweep_graph_reachable_volume_oracle_matrix"
+path = "tests/sweep_graph_reachable_volume_oracle_matrix.rs"
+required-features = ["graph", "cpu-parity"]
+[[test]]
+name = "sweep_graph_csr_forward_or_changed_volume_oracle_matrix"
+path = "tests/sweep_graph_csr_forward_or_changed_volume_oracle_matrix.rs"
+required-features = ["graph", "cpu-parity"]
+[[test]]
+name = "sweep_graph_persistent_bfs_volume_oracle_matrix"
+path = "tests/sweep_graph_persistent_bfs_volume_oracle_matrix.rs"
+required-features = ["graph", "cpu-parity"]
+[[test]]
+name = "sweep_math_prefix_scan_inclusive_volume_oracle_matrix"
+path = "tests/sweep_math_prefix_scan_inclusive_volume_oracle_matrix.rs"
+required-features = ["math", "cpu-parity"]
+[[test]]
+name = "sweep_math_prefix_scan_exclusive_volume_oracle_matrix"
+path = "tests/sweep_math_prefix_scan_exclusive_volume_oracle_matrix.rs"
+required-features = ["math", "cpu-parity"]
+[[test]]
+name = "sweep_decode_hex_primitives_volume_oracle_matrix"
+path = "tests/sweep_decode_hex_primitives_volume_oracle_matrix.rs"
+required-features = ["decode"]
+[[test]]
+name = "sweep_decode_base64_volume_oracle_matrix"
+path = "tests/sweep_decode_base64_volume_oracle_matrix.rs"
+required-features = ["decode"]
+[[test]]
+name = "sweep_bitset_and_not_volume_oracle_matrix"
+path = "tests/sweep_bitset_and_not_volume_oracle_matrix.rs"
+required-features = ["bitset", "cpu-parity"]
+[[test]]
+name = "sweep_bitset_subset_of_volume_oracle_matrix"
+path = "tests/sweep_bitset_subset_of_volume_oracle_matrix.rs"
+required-features = ["bitset", "cpu-parity"]
+[[test]]
+name = "sweep_bitset_equal_volume_oracle_matrix"
+path = "tests/sweep_bitset_equal_volume_oracle_matrix.rs"
+required-features = ["bitset", "cpu-parity"]
+[[test]]
+name = "sweep_bitset_any_volume_oracle_matrix"
+path = "tests/sweep_bitset_any_volume_oracle_matrix.rs"
+required-features = ["bitset", "cpu-parity"]
+[[test]]
+name = "sweep_bitset_contains_volume_oracle_matrix"
+path = "tests/sweep_bitset_contains_volume_oracle_matrix.rs"
+required-features = ["bitset", "cpu-parity"]
+[[test]]
+name = "sweep_bitset_test_bit_volume_oracle_matrix"
+path = "tests/sweep_bitset_test_bit_volume_oracle_matrix.rs"
+required-features = ["bitset", "cpu-parity"]
+[[test]]
+name = "sweep_bitset_copy_volume_oracle_matrix"
+path = "tests/sweep_bitset_copy_volume_oracle_matrix.rs"
+required-features = ["bitset", "cpu-parity"]
+[[test]]
+name = "sweep_bitset_zero_volume_oracle_matrix"
+path = "tests/sweep_bitset_zero_volume_oracle_matrix.rs"
+required-features = ["bitset", "cpu-parity"]
+[[test]]
+name = "sweep_reduce_count_volume_oracle_matrix"
+path = "tests/sweep_reduce_count_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "sweep_reduce_count_non_zero_volume_oracle_matrix"
+path = "tests/sweep_reduce_count_non_zero_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "sweep_reduce_gather_volume_oracle_matrix"
+path = "tests/sweep_reduce_gather_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "sweep_reduce_scatter_volume_oracle_matrix"
+path = "tests/sweep_reduce_scatter_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "sweep_reduce_histogram_volume_oracle_matrix"
+path = "tests/sweep_reduce_histogram_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "sweep_reduce_range_counts_volume_oracle_matrix"
+path = "tests/sweep_reduce_range_counts_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "sweep_reduce_workgroup_any_volume_oracle_matrix"
+path = "tests/sweep_reduce_workgroup_any_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "sweep_reduce_multi_block_prefix_scan_volume_oracle_matrix"
+path = "tests/sweep_reduce_multi_block_prefix_scan_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "sweep_graph_scc_decompose_volume_oracle_matrix"
+path = "tests/sweep_graph_scc_decompose_volume_oracle_matrix.rs"
+required-features = ["graph", "cpu-parity"]
+[[test]]
+name = "sweep_bitset_popcount_unary_volume_oracle_matrix"
+path = "tests/sweep_bitset_popcount_unary_volume_oracle_matrix.rs"
+required-features = ["bitset", "cpu-parity"]
+[[test]]
+name = "sweep_bitset_not_unary_volume_oracle_matrix"
+path = "tests/sweep_bitset_not_unary_volume_oracle_matrix.rs"
+required-features = ["bitset", "cpu-parity"]
+[[test]]
+name = "sweep_bitset_stochastic_and_mul_volume_oracle_matrix"
+path = "tests/sweep_bitset_stochastic_and_mul_volume_oracle_matrix.rs"
+required-features = ["bitset", "cpu-parity"]
+[[test]]
+name = "sweep_reduce_sum_volume_oracle_matrix"
+path = "tests/sweep_reduce_sum_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "sweep_reduce_min_volume_oracle_matrix"
+path = "tests/sweep_reduce_min_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "sweep_reduce_max_volume_oracle_matrix"
+path = "tests/sweep_reduce_max_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]
+[[test]]
+name = "sweep_hash_crc32_volume_oracle_matrix"
+path = "tests/sweep_hash_crc32_volume_oracle_matrix.rs"
+required-features = ["hash"]
+[[test]]
+name = "sweep_hash_volume_oracle_matrix"
+path = "tests/sweep_hash_volume_oracle_matrix.rs"
+required-features = ["hash"]
+[[test]]
+name = "sweep_reduce_scalar_volume_oracle_matrix"
+path = "tests/sweep_reduce_scalar_volume_oracle_matrix.rs"
+required-features = ["reduce", "cpu-parity"]

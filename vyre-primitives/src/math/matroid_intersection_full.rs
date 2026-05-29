@@ -238,7 +238,7 @@ pub fn cpu_ref(
         &mut visited,
         &mut queue,
     )
-    .expect("matroid_intersection_full cpu_ref failed: invalid exchange-graph buffers");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - matroid_intersection_full cpu_ref failed: invalid exchange-graph buffers");
     out
 }
 
@@ -294,7 +294,7 @@ pub fn cpu_ref_into(
         visited,
         queue,
     )
-    .expect("matroid_intersection_full cpu_ref_into failed: invalid exchange-graph buffers");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - matroid_intersection_full cpu_ref_into failed: invalid exchange-graph buffers");
 }
 
 /// Fallible CPU reference using caller-owned BFS scratch.
@@ -448,6 +448,7 @@ mod tests {
         let queue_ptr = queue.as_ptr();
         cpu_ref_into(
             &adj,
+
             &src,
             &snk,
             &x,
@@ -605,3 +606,4 @@ mod tests {
         result
     }
 }
+

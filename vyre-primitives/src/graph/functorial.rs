@@ -158,9 +158,17 @@ inventory::submit! {
     crate::harness::OpEntry::new(
         OP_ID,
         || functor_apply("source_row", "mapping", "target_row", 4),
-        None,
         Some(|| {
-            vec![vec![crate::wire::pack_u32_slice(&[0; 4])]]
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            vec![vec![
+                to_bytes(&[10, 20, 30, 40]), // source_row
+                to_bytes(&[2, 0, 1, 3]),     // mapping
+                to_bytes(&[0, 0, 0, 0]),     // target_row
+            ]]
+        }),
+        Some(|| {
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            vec![vec![to_bytes(&[20, 30, 10, 40])]]
         }),
     )
 }
@@ -220,7 +228,7 @@ mod tests {
                 .collect();
 
             try_functor_apply_cpu_into(&source_row, &mapping, target_size, &mut out)
-                .expect("generated functor CPU oracle should reserve and evaluate");
+                .expect("Fix: caller must pre-size buffers; use fallible reserve or return ResourceExhausted - generated functor CPU oracle should reserve and evaluate");
             let expected = independent_functor_apply(&source_row, &mapping, target_size);
 
             assert_eq!(out, expected, "case {case}: functor CPU oracle mismatch");

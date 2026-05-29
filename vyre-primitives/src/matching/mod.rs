@@ -23,7 +23,7 @@ mod dfa_compile;
 /// NFA → CompiledDfa subset construction. Composes with
 /// `dfa_compile`'s output type so any consumer of the dense AC kernel
 /// (`vyre_libs::scan::classic_ac_bounded_ranges_program`) can scan
-/// regex pattern sets too — not just literal AC.
+/// regex pattern sets too - not just literal AC.
 pub mod nfa_to_dfa;
 
 #[cfg(any(test, feature = "cpu-parity"))]
