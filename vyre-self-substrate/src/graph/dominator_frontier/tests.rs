@@ -474,6 +474,7 @@ fn via_rejects_extra_outputs() {
 }
 
 #[test]
+
 fn via_rejects_trailing_frontier_bytes() {
     let dispatcher = DominatorDispatcher {
         outputs: vec![vec![0, 0, 0, 0, 1]],
@@ -530,3 +531,4 @@ fn release_via_path_uses_lazy_primitive_launch_plan() {
     assert!(!release_path.contains("plan_dominator_frontier_dispatch"));
     assert!(!release_path.contains("plan.program().clone()"));
 }
+

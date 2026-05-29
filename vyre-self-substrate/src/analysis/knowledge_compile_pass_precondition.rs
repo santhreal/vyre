@@ -448,6 +448,7 @@ mod tests {
         ];
         let node_var = vec![0u32, 1u32, 0u32];
         let children = vec![0u32, 1u32];
+
         let topo = vec![0u32, 1u32, 2u32];
 
         // both true.
@@ -652,3 +653,4 @@ mod tests {
         assert!(matches!(err, DispatchError::BadInputs(_)));
     }
 }
+

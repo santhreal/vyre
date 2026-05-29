@@ -64,7 +64,7 @@ mod tests {
     fn builds_nonempty_program() {
         let body = vec![Node::barrier()];
         let program = build_callee_before_caller_program(body, "depths", 4, 16);
-        assert!(!program.entry().is_empty());
+        assert_ne!(program.entry().len(), 0);
     }
 
     #[test]

@@ -8,7 +8,7 @@ use vyre_primitives::graph::exploded::{
     IFDS_CSR_INTER_SRC_BLOCK_BUFFER, IFDS_CSR_INTER_SRC_PROC_BUFFER,
     IFDS_CSR_INTRA_DST_BLOCK_BUFFER, IFDS_CSR_INTRA_PROC_BUFFER, IFDS_CSR_INTRA_SRC_BLOCK_BUFFER,
     IFDS_CSR_KILL_BLOCK_BUFFER, IFDS_CSR_KILL_FACT_BUFFER, IFDS_CSR_KILL_PROC_BUFFER,
-    IFDS_CSR_ROW_CURSOR_BUFFER, IFDS_CSR_ROW_PTR_BUFFER,
+    IFDS_CSR_KILLED_BUFFER, IFDS_CSR_ROW_CURSOR_BUFFER, IFDS_CSR_ROW_PTR_BUFFER,
 };
 
 use crate::graph::dispatch_bridge::{
@@ -202,6 +202,7 @@ pub fn build_ifds_csr_via_with_scratch_into(
                 plan.kill_field_words,
                 IFDS_CSR_KILL_FACT_BUFFER,
             ),
+            DispatchInput::zero_u32_words(plan.killed_words, IFDS_CSR_KILLED_BUFFER),
             DispatchInput::zero_u32_words(plan.row_ptr_words, IFDS_CSR_ROW_PTR_BUFFER),
             DispatchInput::zero_u32_words(plan.row_cursor_words, IFDS_CSR_ROW_CURSOR_BUFFER),
             DispatchInput::zero_u32_words(plan.col_idx_words, IFDS_CSR_COL_IDX_BUFFER),
@@ -266,18 +267,22 @@ fn refresh_ifds_csr_inputs(
         &[
             (
                 13,
-                DispatchInput::zero_u32_words(plan.row_ptr_words, IFDS_CSR_ROW_PTR_BUFFER),
+                DispatchInput::zero_u32_words(plan.killed_words, IFDS_CSR_KILLED_BUFFER),
             ),
             (
                 14,
-                DispatchInput::zero_u32_words(plan.row_cursor_words, IFDS_CSR_ROW_CURSOR_BUFFER),
+                DispatchInput::zero_u32_words(plan.row_ptr_words, IFDS_CSR_ROW_PTR_BUFFER),
             ),
             (
                 15,
-                DispatchInput::zero_u32_words(plan.col_idx_words, IFDS_CSR_COL_IDX_BUFFER),
+                DispatchInput::zero_u32_words(plan.row_cursor_words, IFDS_CSR_ROW_CURSOR_BUFFER),
             ),
             (
                 16,
+                DispatchInput::zero_u32_words(plan.col_idx_words, IFDS_CSR_COL_IDX_BUFFER),
+            ),
+            (
+                17,
                 DispatchInput::zero_u32_words(plan.col_len_words, IFDS_CSR_COL_LEN_BUFFER),
             ),
         ],

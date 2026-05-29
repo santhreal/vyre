@@ -459,6 +459,7 @@ pub fn dispatch_chebyshev_filter(
 
 /// Build a transitive-reachability dispatch composition.
 #[must_use]
+
 pub fn dispatch_reachable_program(
     node_count: u32,
     edge_count: u32,
@@ -580,3 +581,4 @@ pub fn dispatch_tensor_scc_fixpoint(
         iteration_limit,
     )
 }
+

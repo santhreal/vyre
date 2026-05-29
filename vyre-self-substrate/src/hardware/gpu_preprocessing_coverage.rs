@@ -459,6 +459,7 @@ fn preproc_number_field(
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
@@ -619,3 +620,4 @@ mod tests {
         }
     }
 }
+

@@ -448,6 +448,7 @@ mod tests {
     }
 
     #[test]
+
     fn fixed_via_rejects_shape_mismatch() {
         let err =
             coarsen_region_state_fixed_via(&MoriDispatcher, &[1, 0, 0], &[1, 1], 2).unwrap_err();
@@ -504,3 +505,4 @@ mod tests {
         assert!(!via_section.contains("reference_coarsen"));
     }
 }
+

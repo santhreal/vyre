@@ -467,6 +467,7 @@ pub fn reference_impact_subgraph_with_scratch(
 /// reaches `j`.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
+
 pub fn predict_impact_observation_form(adj: &[u32], observation_mask: &[u32], n: u32) -> Vec<u32> {
     use crate::observability::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
@@ -1015,3 +1016,4 @@ mod tests {
         assert!(matches!(err, DispatchError::BadInputs(_)));
     }
 }
+

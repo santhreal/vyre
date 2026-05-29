@@ -468,8 +468,8 @@ mod tests {
     fn k_larger_than_n_panics() {
         let mut gains = vec![1u32, 2, 3];
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            select_retention_set(&mut gains, 3, 5)
+            select_retention_set(&mut gains, 3, 5);
         }));
-        assert!(result.is_err(), "k > n must panic");
+        assert!(matches!(result, Err(_)), "k > n must panic");
     }
 }

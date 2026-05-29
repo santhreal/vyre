@@ -720,6 +720,7 @@ pub const RELEASE_VALIDATION_MATRIX: &[ReleaseValidationCommand] = &[
 ];
 
 /// Validate the release matrix shape before publishing.
+
 pub fn validate_release_validation_matrix() -> Result<(), String> {
     if GPU_PROBE_COMMAND != "nvidia-smi" {
         return Err(
@@ -1170,6 +1171,7 @@ fn require_area(area: &str) -> Result<(), String> {
     }
 }
 
+
 fn require_cuda_gates_probe_gpu() -> Result<(), String> {
     let missing = RELEASE_VALIDATION_MATRIX
         .iter()
@@ -1559,3 +1561,4 @@ mod tests {
         assert!(err.contains("missing manifest path"), "{err}");
     }
 }
+

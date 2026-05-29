@@ -449,6 +449,7 @@ mod tests {
                 "\"blockers\": [\"missing public API review\"]",
             );
 
+
         assert_eq!(
             validate_public_api_source_boundaries(
                 &surfaces,
@@ -524,3 +525,4 @@ mod tests {
         }
     }
 }
+

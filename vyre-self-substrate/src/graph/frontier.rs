@@ -84,7 +84,7 @@ mod tests {
 
                 let had_new_nodes =
                     absorb_new_frontier_bits(node_count, &mut visited, &neighbors, &mut next_wave)
-                        .expect("generated frontier shapes are valid");
+                        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated frontier shapes are valid");
 
                 let tail_index = words.saturating_sub(1);
                 let tail_mask = frontier_tail_mask(node_count);
@@ -132,23 +132,27 @@ mod tests {
 
             let mut long_visited = vec![0; words + 1];
             let neighbors = vec![0; words];
-            assert!(absorb_new_frontier_bits(
-                node_count,
-                &mut long_visited,
-                &neighbors,
-                &mut next_wave,
-            )
-            .is_err());
+            assert!(matches!(
+                absorb_new_frontier_bits(
+                    node_count,
+                    &mut long_visited,
+                    &neighbors,
+                    &mut next_wave,
+                ),
+                Err(_)
+            ));
 
             let mut visited = vec![0; words];
             let long_neighbors = vec![0; words + 1];
-            assert!(absorb_new_frontier_bits(
-                node_count,
-                &mut visited,
-                &long_neighbors,
-                &mut next_wave,
-            )
-            .is_err());
+            assert!(matches!(
+                absorb_new_frontier_bits(
+                    node_count,
+                    &mut visited,
+                    &long_neighbors,
+                    &mut next_wave,
+                ),
+                Err(_)
+            ));
         }
     }
 }

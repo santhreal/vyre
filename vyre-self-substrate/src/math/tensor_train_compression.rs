@@ -511,6 +511,7 @@ mod tests {
 /// product.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
+
 pub fn reference_compress_cost_tensor(
     tensor: &[f64],
     dims: &[u32],
@@ -525,3 +526,4 @@ pub fn reference_compress_cost_tensor(
         ranks: target_ranks.to_vec(),
     }
 }
+

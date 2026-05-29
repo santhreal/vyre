@@ -448,6 +448,7 @@ mod tests {
     use vyre_primitives::topology::betti_persistence::betti_persistence_cpu;
 
     #[test]
+
     fn empty_skeleton_below_threshold() {
         // 2 nodes at distance 1.0; ε = 0.5 yields no edges.
         let dist = vec![0.0, 1.0, 1.0, 0.0];
@@ -624,3 +625,4 @@ mod tests {
         assert!(births.is_empty());
     }
 }
+

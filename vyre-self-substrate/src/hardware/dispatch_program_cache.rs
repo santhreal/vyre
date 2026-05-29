@@ -136,7 +136,7 @@ mod tests {
         assert_eq!(
             *cache
                 .get_or_try_insert_with::<&'static str>(1, || Ok(10))
-                .expect("first build succeeds"),
+                .expect("Fix: cache warm-up must succeed for valid keys; return Err on corrupt cache config - first build succeeds"),
             10
         );
         assert_eq!(
@@ -146,7 +146,7 @@ mod tests {
         assert_eq!(
             *cache
                 .get_or_try_insert_with::<&'static str>(1, || Ok(99))
-                .expect("existing hot entry survives failed miss"),
+                .expect("Fix: failed miss must not evict valid hot entries; return cache miss Err - existing hot entry survives failed miss"),
             10
         );
 

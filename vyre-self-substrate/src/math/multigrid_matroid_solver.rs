@@ -448,6 +448,7 @@ mod tests {
                 let omega_res = ((omega as u64 * res as u64) >> 16) as u32;
                 out.push(x_in[i].saturating_add((((omega_res as u64) << 16) / diag as u64) as u32));
             }
+
             Ok(vec![u32_slice_to_le_bytes(&out)])
         }
     }
@@ -528,3 +529,4 @@ mod tests {
         assert!(!via_section.contains("reference_matroid"));
     }
 }
+

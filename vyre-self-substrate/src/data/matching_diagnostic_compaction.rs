@@ -357,7 +357,7 @@ fn split_regions(regions: &[RegionTriple]) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     let mut starts = Vec::with_capacity(regions.len());
     let mut ends = Vec::with_capacity(regions.len());
     split_regions_into(regions, &mut pids, &mut starts, &mut ends)
-        .expect("test fixture region split should reserve output columns");
+        .expect("Fix: caller must pre-size buffers; use fallible reserve or return ResourceExhausted - test fixture region split should reserve output columns");
     (pids, starts, ends)
 }
 
@@ -448,6 +448,7 @@ mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
+
 
     struct MatchingDispatcher;
 
@@ -655,3 +656,4 @@ mod tests {
             .contains("Fix: sort_regions_via requires at least one region"));
     }
 }
+

@@ -779,6 +779,7 @@ fn bin_op_body() -> Vec<Node> {
     ]
 }
 
+
 fn rewrite_program_with_folded_values(
     program: Program,
     arena: &ExprArenaEncoding,
@@ -1181,3 +1182,4 @@ mod tests {
         );
     }
 }
+

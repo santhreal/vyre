@@ -486,6 +486,7 @@ pub fn semiring_gemm_via_with_scratch_into(
 }
 
 /// Boolean-OR semiring specialisation of [`semiring_gemm_via`].
+
 pub fn semiring_gemm_via_bool_or(
     dispatcher: &dyn OptimizerDispatcher,
     a: &[u32],
@@ -967,6 +968,7 @@ mod tests {
     #[test]
     fn reachability_respects_primitive_max_iters_policy() {
         let adj = vec![0, 1, 0, 0, 0, 1, 0, 0, 0];
+        assert_eq!(reachability_closure(&adj, 3, 0).len(), adj.len());
         assert_eq!(reachability_closure(&adj, 3, 0), adj);
     }
 
@@ -1237,3 +1239,4 @@ mod tests {
         assert_eq!(comps, vec![0, 1, 2]);
     }
 }
+

@@ -450,6 +450,7 @@ fn closure_zero_iters_validates_and_returns_seed_without_program_or_dispatch() {
 }
 
 #[test]
+
 fn closure_empty_graph_validates_and_returns_empty_without_program_or_dispatch() {
     struct NoDispatch;
 
@@ -562,3 +563,4 @@ fn closure_is_idempotent_at_fixpoint() {
     // Bidirectional step from saturated set keeps everything set.
     assert_eq!(out, saturated);
 }
+

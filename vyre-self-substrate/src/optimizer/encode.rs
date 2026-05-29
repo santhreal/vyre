@@ -459,6 +459,7 @@ where
 /// Length of the prefix of `entry` up to and including the first
 /// `Node::Return`, or `entry.len()` if no Return is present. Mirrors
 /// `eliminate_unreachable` in the foundation CPU DCE.
+
 pub fn reachable_prefix_len(entry: &[Node]) -> usize {
     for (i, node) in entry.iter().enumerate() {
         if matches!(node, Node::Return) {
@@ -792,3 +793,4 @@ mod tests {
         );
     }
 }
+
