@@ -1,4 +1,11 @@
-#![forbid(unsafe_code)]
+// Crate policy: unsafe is DENIED by default (was `forbid`), so the crate stays
+// unsafe-free everywhere except call sites that carry an explicit
+// `#[allow(unsafe_code)]` plus a `// SAFETY:` proof. The sole current exception
+// is `wire::fill_le_words_into`, where eliminating a redundant pre-copy
+// zero-fill on the GPU-readback decode hot path is worth a single, audited
+// uninitialized-write. `deny` (not `forbid`) is required so that one annotated
+// exception can compile; every other `unsafe` in the crate still hard-errors.
+#![deny(unsafe_code)]
 //! `vyre-primitives`  -  compositional primitives for vyre.
 //!
 //! Shape (mirrors Linux kernel `fs/` / `mm/` / `net/`  -  subsystem

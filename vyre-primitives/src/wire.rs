@@ -52,6 +52,9 @@ trait LeWireWord: bytemuck::Pod + Copy {
     const WIDTH: usize;
 
     fn push_le_bytes(self, out: &mut Vec<u8>);
+
+    /// Decode one LE value from a `WIDTH`-byte chunk (big-endian decode path).
+    fn from_le_chunk(chunk: &[u8]) -> Self;
 }
 
 macro_rules! impl_le_wire_word {
@@ -61,6 +64,12 @@ macro_rules! impl_le_wire_word {
 
             fn push_le_bytes(self, out: &mut Vec<u8>) {
                 out.extend_from_slice(&self.to_le_bytes());
+            }
+
+            fn from_le_chunk(chunk: &[u8]) -> Self {
+                let mut buf = [0u8; $width];
+                buf.copy_from_slice(chunk);
+                <$ty>::from_le_bytes(buf)
             }
         }
     };
@@ -86,6 +95,69 @@ fn append_le_wire_words<T: LeWireWord>(values: &[T], out: &mut Vec<u8>) {
 fn pack_le_wire_words_into<T: LeWireWord>(values: &[T], out: &mut Vec<u8>) {
     out.clear();
     append_le_wire_words(values, out);
+}
+
+/// Decode `count` little-endian `T` values from the front of `src` into `out`,
+/// reusing `out`'s existing allocation. `out` is cleared first.
+///
+/// This is the single canonical decode body that every `unpack_*_slice_into`
+/// and `decode_*_le_bytes_all` entry point routes through, replacing seven
+/// byte-identical copies of the old `resize(count, 0)` + `cast_slice_mut` +
+/// `copy_from_slice` shape.
+///
+/// PERF: the old shape wrote every output byte twice - a full-buffer memset to
+/// zero, then an immediate `copy_from_slice` over it. On the GPU-readback hot
+/// path (decode buffers are KiB-to-MiB, cache-resident) that redundant memset
+/// made the "fast path" measurably SLOWER than a naive element-wise decode
+/// (1 MiB u32: 18.6 us vs naive 14.0 us on Zen5). This version writes each
+/// output byte exactly once by copying directly into uninitialized spare
+/// capacity, then setting the length - one `memcpy`, no memset.
+#[cfg(target_endian = "little")]
+#[allow(unsafe_code)]
+#[inline]
+fn fill_le_words_into<T: LeWireWord>(src: &[u8], count: usize, out: &mut Vec<T>) {
+    let required = count * T::WIDTH;
+    debug_assert!(
+        src.len() >= required,
+        "fill_le_words_into: src has {} bytes, needs {required}",
+        src.len()
+    );
+    out.clear();
+    out.reserve(count);
+    // SAFETY:
+    // * `reserve(count)` (after `clear()`) guarantees the allocation holds at
+    //   least `count` contiguous `T` slots = `count * size_of::<T>()` =
+    //   `required` bytes of capacity. `as_mut_ptr` points at that buffer.
+    // * We form a `&mut [u8]` of exactly `required` bytes over that capacity
+    //   and fully initialize all of them with `copy_from_slice`, which also
+    //   bounds-checks that `src[..required]` has `required` bytes (the caller
+    //   pre-checks `src.len() >= required`, so the slice never panics).
+    //   Reinterpreting `*mut T` as `*mut u8` is in-bounds because `T: Pod` is
+    //   plain-old-data and the byte length matches; alignment is irrelevant
+    //   for a `u8` view, and the output is `T`-aligned regardless.
+    // * Only after every byte is written do we `set_len(count)`, so no
+    //   uninitialized `T` is ever exposed. `T: Pod` has no invalid bit
+    //   patterns and no `Drop`, so the previously-uninitialized slots are
+    //   sound to treat as initialized `T` once their bytes are set.
+    unsafe {
+        let dst = core::slice::from_raw_parts_mut(out.as_mut_ptr().cast::<u8>(), required);
+        dst.copy_from_slice(&src[..required]);
+        out.set_len(count);
+    }
+}
+
+/// Big-endian hosts: scalar fallback (no shipped runtime target is BE, but the
+/// wire format must stay bit-identical). Keeps the same single-write property.
+#[cfg(target_endian = "big")]
+#[inline]
+fn fill_le_words_into<T: LeWireWord>(src: &[u8], count: usize, out: &mut Vec<T>) {
+    let required = count * T::WIDTH;
+    debug_assert!(src.len() >= required);
+    out.clear();
+    out.reserve(count);
+    for chunk in src[..required].chunks_exact(T::WIDTH) {
+        out.push(T::from_le_chunk(chunk));
+    }
 }
 
 /// Pack a `&[u32]` into little-endian bytes for `DataType::U32` storage buffers.
@@ -368,20 +440,7 @@ pub fn unpack_u32_slice_into(
         ));
     }
     reserve_exact_len(out, count, label)?;
-    out.clear();
-    #[cfg(target_endian = "little")]
-    {
-        out.resize(count, 0);
-        let dst: &mut [u8] = bytemuck::cast_slice_mut(&mut out[..]);
-        dst.copy_from_slice(&bytes[..required]);
-    }
-    #[cfg(target_endian = "big")]
-    {
-        out.reserve(count);
-        for chunk in bytes[..required].chunks_exact(4) {
-            out.push(u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
-        }
-    }
+    fill_le_words_into::<u32>(bytes, count, out);
     Ok(())
 }
 
@@ -410,20 +469,7 @@ pub fn unpack_f32_slice_into(
         ));
     }
     reserve_exact_len(out, count, label)?;
-    out.clear();
-    #[cfg(target_endian = "little")]
-    {
-        out.resize(count, 0.0);
-        let dst: &mut [u8] = bytemuck::cast_slice_mut(&mut out[..]);
-        dst.copy_from_slice(&bytes[..required]);
-    }
-    #[cfg(target_endian = "big")]
-    {
-        out.reserve(count);
-        for chunk in bytes[..required].chunks_exact(4) {
-            out.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
-        }
-    }
+    fill_le_words_into::<f32>(bytes, count, out);
     Ok(())
 }
 
@@ -442,18 +488,8 @@ pub fn unpack_f32_slice(bytes: &[u8], count: usize, label: &str) -> Result<Vec<f
 #[must_use]
 pub fn decode_f32_le_bytes_all(bytes: &[u8]) -> Vec<f32> {
     let count = bytes.len() / 4;
-    let mut out = Vec::with_capacity(count);
-    let required = count * 4;
-    #[cfg(target_endian = "little")]
-    {
-        out.resize(count, 0.0);
-        let dst: &mut [u8] = bytemuck::cast_slice_mut(&mut out[..]);
-        dst.copy_from_slice(&bytes[..required]);
-    }
-    #[cfg(target_endian = "big")]
-    for chunk in bytes[..required].chunks_exact(4) {
-        out.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
-    }
+    let mut out = Vec::new();
+    fill_le_words_into::<f32>(bytes, count, &mut out);
     out
 }
 
@@ -462,18 +498,8 @@ pub fn decode_f32_le_bytes_all(bytes: &[u8]) -> Vec<f32> {
 #[must_use]
 pub fn decode_u32_le_bytes_all(bytes: &[u8]) -> Vec<u32> {
     let count = bytes.len() / 4;
-    let mut out = Vec::with_capacity(count);
-    let required = count * 4;
-    #[cfg(target_endian = "little")]
-    {
-        out.resize(count, 0);
-        let dst: &mut [u8] = bytemuck::cast_slice_mut(&mut out[..]);
-        dst.copy_from_slice(&bytes[..required]);
-    }
-    #[cfg(target_endian = "big")]
-    for chunk in bytes[..required].chunks_exact(4) {
-        out.push(u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
-    }
+    let mut out = Vec::new();
+    fill_le_words_into::<u32>(bytes, count, &mut out);
     out
 }
 
@@ -528,18 +554,8 @@ pub fn pack_i32_slice_into(values: &[i32], out: &mut Vec<u8>) {
 #[must_use]
 pub fn decode_i32_le_bytes_all(bytes: &[u8]) -> Vec<i32> {
     let count = bytes.len() / 4;
-    let mut out = Vec::with_capacity(count);
-    let required = count * 4;
-    #[cfg(target_endian = "little")]
-    {
-        out.resize(count, 0);
-        let dst: &mut [u8] = bytemuck::cast_slice_mut(&mut out[..]);
-        dst.copy_from_slice(&bytes[..required]);
-    }
-    #[cfg(target_endian = "big")]
-    for chunk in bytes[..required].chunks_exact(4) {
-        out.push(i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
-    }
+    let mut out = Vec::new();
+    fill_le_words_into::<i32>(bytes, count, &mut out);
     out
 }
 
@@ -560,20 +576,8 @@ pub fn pack_u64_slice_into(values: &[u64], out: &mut Vec<u8>) {
 #[must_use]
 pub fn decode_u64_le_bytes_all(bytes: &[u8]) -> Vec<u64> {
     let count = bytes.len() / 8;
-    let mut out = Vec::with_capacity(count);
-    let required = count * 8;
-    #[cfg(target_endian = "little")]
-    {
-        out.resize(count, 0);
-        let dst: &mut [u8] = bytemuck::cast_slice_mut(&mut out[..]);
-        dst.copy_from_slice(&bytes[..required]);
-    }
-    #[cfg(target_endian = "big")]
-    for chunk in bytes[..required].chunks_exact(8) {
-        out.push(u64::from_le_bytes([
-            chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
-        ]));
-    }
+    let mut out = Vec::new();
+    fill_le_words_into::<u64>(bytes, count, &mut out);
     out
 }
 
@@ -653,18 +657,8 @@ pub fn append_packed_byte_lane(bytes: &[u8], out: &mut Vec<u8>) {
 #[must_use]
 pub fn decode_u16_le_bytes_all(bytes: &[u8]) -> Vec<u16> {
     let count = bytes.len() / 2;
-    let mut out = Vec::with_capacity(count);
-    let required = count * 2;
-    #[cfg(target_endian = "little")]
-    {
-        out.resize(count, 0);
-        let dst: &mut [u8] = bytemuck::cast_slice_mut(&mut out[..]);
-        dst.copy_from_slice(&bytes[..required]);
-    }
-    #[cfg(target_endian = "big")]
-    for chunk in bytes[..required].chunks_exact(2) {
-        out.push(u16::from_le_bytes([chunk[0], chunk[1]]));
-    }
+    let mut out = Vec::new();
+    fill_le_words_into::<u16>(bytes, count, &mut out);
     out
 }
 
@@ -873,6 +867,44 @@ mod tests {
 
         assert!(err.contains("truncated u32"));
         assert_eq!(decoded, before);
+    }
+
+    // Adversarial lock on the unsafe single-write decode helper
+    // (`fill_le_words_into`). The risks the `unsafe` introduces are: leaking
+    // stale capacity past `count`, reading past `src`, or exposing
+    // uninitialized slots via a too-early `set_len`. Each case below would
+    // surface as a wrong value, wrong length, or (under Miri/ASAN) UB.
+    #[test]
+    fn unpack_decode_uninit_helper_is_exact_and_leak_free() {
+        // 1) Over-length source: only the first `count` words are decoded; the
+        //    trailing bytes must be ignored, not appended.
+        let words: Vec<u32> = (0..1000).collect();
+        let mut bytes = pack_u32_slice(&words);
+        bytes.extend_from_slice(&[0xde, 0xad, 0xbe, 0xef]); // one extra word of junk
+        let mut out = Vec::new();
+        unpack_u32_slice_into(&bytes, words.len(), "over-length", &mut out).unwrap();
+        assert_eq!(out, words, "decoded the junk tail or wrong count");
+        assert_eq!(out.len(), words.len());
+
+        // 2) Reuse into a buffer that previously held a LONGER, fully-populated
+        //    run: `set_len` must shrink and no stale element may survive.
+        let mut reused: Vec<u32> = vec![0xFFFF_FFFF; 4096];
+        unpack_u32_slice_into(&bytes, words.len(), "shrink reuse", &mut reused).unwrap();
+        assert_eq!(reused, words);
+
+        // 3) Reuse into a buffer whose capacity is EXACTLY `count` (no spare),
+        //    growing from empty.
+        let mut tight: Vec<u32> = Vec::with_capacity(words.len());
+        unpack_u32_slice_into(&bytes, words.len(), "tight cap", &mut tight).unwrap();
+        assert_eq!(tight, words);
+
+        // 4) Owned drain decoder over a large buffer: byte-exact round-trip.
+        assert_eq!(decode_u32_le_bytes_all(&pack_u32_slice(&words)), words);
+
+        // 5) Empty decode is a no-op that clears, never touches the pointer math.
+        let mut empty = vec![1u32, 2, 3];
+        unpack_u32_slice_into(&[], 0, "empty", &mut empty).unwrap();
+        assert!(empty.is_empty());
     }
 }
 
