@@ -39,7 +39,11 @@ pub enum RustFrontendError {
         /// Token index.
         token_index: usize,
     },
-    /// The source contains constructs outside the nano-subset.
+    /// Name resolution failed (e.g. use of an undefined name; rustc E0425).
+    #[error("Rust frontend name resolution failed: {0}. Fix: declare the name before use or correct the identifier.")]
+    Resolve(String),
+    /// The source contains constructs outside the nano-subset, or a stage is not
+    /// yet wired (type checking, borrow checking, lowering).
     #[error("Rust frontend unsupported construct: {0}. Fix: simplify the source to the nano-subset.")]
     Unsupported(String),
     /// GPU backend unavailable.

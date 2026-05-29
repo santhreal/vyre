@@ -1,6 +1,7 @@
 //! Pipeline orchestration: lex -> parse -> resolve -> typeck -> borrow -> lower.
 
 use vyre_libs::parsing::rust::lex::lexer::plan::RustLexerPlan;
+use vyre_libs::parsing::rust::parse::Module;
 
 use crate::RustFrontendError;
 
@@ -27,10 +28,10 @@ pub struct RustPipelineConfig {
 
 impl Default for RustPipelineConfig {
     fn default() -> Self {
-        // The working envelope today is CPU lex + parse. GPU lexing, borrow
-        // checking, and lowering are unwired and fail loudly, so they are
-        // opt-in: the default pipeline reaches the meaningful boundary (name
-        // resolution is not wired) rather than dying at the GPU probe.
+        // The working envelope today is CPU lex + parse + name resolution. Type
+        // checking, borrow checking, and lowering are unwired and fail loudly,
+        // so they are opt-in; the default pipeline reaches the meaningful
+        // boundary (type checking is not wired) rather than the GPU probe.
         Self {
             gpu_lex: false,
             borrow_check: false,
@@ -54,17 +55,17 @@ impl RustPipeline {
         }
     }
 
-    /// Run the full pipeline on a single source buffer.
+    /// Run the pipeline on a single source buffer.
     ///
-    /// CPU lex + parse always run. Resolution and type checking are attempted
-    /// next; they currently return a loud error until the `vyre-libs` sema
-    /// substrate is implemented. Borrow checking and lowering are gated on the
-    /// config and likewise fail loudly until wired, so a caller never receives
-    /// a success that skipped a requested stage.
+    /// CPU lex, parse, and name resolution always run. Type checking is
+    /// attempted next and currently returns a loud error until the `vyre-libs`
+    /// sema substrate is implemented. Borrow checking and lowering are gated on
+    /// the config and likewise fail loudly until wired, so a caller never
+    /// receives a success that skipped a requested stage.
     pub fn compile_unit(&self, source: &[u8]) -> Result<CompilationUnit, RustFrontendError> {
         let tokens = self::lexer_dispatch::lex(source, &self.config, &self.lex_plan)?;
-        let module = self::parse_stage::parse(source, &tokens)?;
-        let resolved = self::resolve_stage::resolve(&module)?;
+        let module: Module = self::parse_stage::parse(source, &tokens)?;
+        let resolved = self::resolve_stage::resolve(&module, source)?;
         let typed = self::typeck_stage::typeck(&resolved)?;
         let verified = if self.config.borrow_check {
             self::borrow_stage::borrow_check(&typed)?
@@ -79,7 +80,7 @@ impl RustPipeline {
 
         Ok(CompilationUnit {
             token_count: tokens.len(),
-            module: verified,
+            module,
             program,
         })
     }
@@ -90,8 +91,8 @@ impl RustPipeline {
 pub struct CompilationUnit {
     /// Number of tokens lexed.
     pub token_count: usize,
-    /// Parsed and verified module.
-    pub module: vyre_libs::parsing::rust::parse::Module,
+    /// Parsed module.
+    pub module: Module,
     /// Lowered Vyre program (if lowering was enabled).
     pub program: Option<vyre::ir::Program>,
 }
