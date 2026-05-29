@@ -32,6 +32,6 @@ bracket match, function-shape, ABI layout, AST shunting yard, CFG
 construction, ELF lowering. Each stage references an op via TOML; new
 op coverage extends the spine without touching Rust.
 
-The grammar tables themselves come from `surgec-grammar-gen`, which
+The grammar tables themselves come from an external grammar-table generator, which
 emits TOML grammar files into `rules/grammar/`. Grammar additions are
 TOML-only.

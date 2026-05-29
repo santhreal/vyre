@@ -199,7 +199,7 @@ fn build_vyrecob1_lex_section_rejects_short_stream() {
     let short = vec![0u8; 8];
     let result = build_vyrecob1_lex_section(Path::new("test.c"), &short, &short, &short, 10);
     assert!(
-        result.is_err(),
+        matches!(result, Err(_)),
         "Fix: build_vyrecob1_lex_section must reject streams shorter than n_tokens."
     );
 }

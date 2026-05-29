@@ -51,24 +51,21 @@ fn linux_grade_gnu_c11_constructs_compile_on_gpu_frontend() {
     );
     object.assert_elf();
 
-    assert!(
-        !object.section(SECTION_LEX).is_empty(),
-        "lex section present"
-    );
-    assert!(
-        !object.section(SECTION_VAST).is_empty(),
-        "VAST section present"
-    );
-    assert!(
-        !object.section(SECTION_PROGRAM_GRAPH).is_empty(),
+    assert_ne!(object.section(SECTION_LEX).len(), 0, "lex section present");
+    assert_ne!(object.section(SECTION_VAST).len(), 0, "VAST section present");
+    assert_ne!(
+        object.section(SECTION_PROGRAM_GRAPH).len(),
+        0,
         "program graph section present"
     );
-    assert!(
-        !object.section(SECTION_SEMA_SCOPE).is_empty(),
+    assert_ne!(
+        object.section(SECTION_SEMA_SCOPE).len(),
+        0,
         "semantic scope section present"
     );
-    assert!(
-        !object.section(SECTION_EXPRESSION_SHAPE).is_empty(),
+    assert_ne!(
+        object.section(SECTION_EXPRESSION_SHAPE).len(),
+        0,
         "expression-shape section present"
     );
 }

@@ -4,10 +4,10 @@
 //! in `vyre-libs::parsing::rust`.
 //!
 //! Architecture:
-//! - `api/`     — public entry points (`parse_rust_bytes`)
-//! - `oracle/`  — differential testing against rustc
-//! - `pipeline/` — stage dispatch (lex → parse → resolve → typeck → borrow → lower)
-//! - `object/`  — evidence object emission
+//! - `api/`     - public entry points (`parse_rust_bytes`)
+//! - `oracle/`  - differential testing against rustc
+//! - `pipeline/` - stage dispatch (lex → parse → resolve → typeck → borrow → lower)
+//! - `object/`  - evidence object emission
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
