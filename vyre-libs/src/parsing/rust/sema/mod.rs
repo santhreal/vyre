@@ -148,6 +148,20 @@ fn ident_at(source: &[u8], offset: u32) -> String {
     String::from_utf8_lossy(&source[start..end]).into_owned()
 }
 
+/// Whether a value of type `found` is accepted where `expected` is required,
+/// allowing rustc's `&mut T -> &T` reference coercion (top-level only; the
+/// pointee type must match exactly, as references are invariant in it). A shared
+/// `&T` never coerces to `&mut T`.
+fn coerces(found: &Type, expected: &Type) -> bool {
+    match (found, expected) {
+        (
+            Type::Ref { mutable: fm, inner: fi },
+            Type::Ref { mutable: em, inner: ei },
+        ) => (fm == em || (*fm && !*em)) && fi == ei,
+        _ => found == expected,
+    }
+}
+
 /// Render a type for diagnostics, matching Rust surface syntax.
 fn type_str(ty: &Type) -> String {
     match ty {
@@ -401,7 +415,7 @@ impl TypeCk<'_> {
     }
 
     fn require(&self, found: &Type, expected: &Type, context: &str) -> Result<(), RustSemaError> {
-        if found == expected {
+        if coerces(found, expected) {
             Ok(())
         } else {
             Err(RustSemaError::TypeMismatch {

@@ -284,3 +284,24 @@ fn sema_accepts_what_rustc_accepts() {
         assert!(sema_accepts(src), "ACCEPT[{i}]: sema rejected what rustc accepts: {src}");
     }
 }
+
+/// rustc's `&mut T -> &T` reference coercion is accepted; the reverse is not.
+const COERCE_ACCEPT: &[&str] = &[
+    "fn f() { let mut x: i32 = 0; let m: &mut i32 = &mut x; let s: &i32 = m; let _p: i32 = *s; }",
+    "fn g(a: &i32) -> i32 { return *a; } fn f() { let mut x: i32 = 0; let m: &mut i32 = &mut x; let _z: i32 = g(m); }",
+];
+const COERCE_REJECT: &[&str] = &[
+    "fn f() { let x: i32 = 0; let s: &i32 = &x; let _m: &mut i32 = s; }",
+];
+
+#[test]
+fn sema_matches_rustc_on_reference_coercion() {
+    for (i, src) in COERCE_ACCEPT.iter().enumerate() {
+        assert!(rustc_accepts(src), "COERCE_ACCEPT[{i}] must compile under rustc: {src}");
+        assert!(sema_accepts(src), "COERCE_ACCEPT[{i}]: sema rejected a valid &mut->& coercion: {src}");
+    }
+    for (i, src) in COERCE_REJECT.iter().enumerate() {
+        assert!(!rustc_accepts(src), "COERCE_REJECT[{i}] must be rejected by rustc: {src}");
+        assert!(!sema_accepts(src), "COERCE_REJECT[{i}]: sema accepted an invalid &->&mut coercion: {src}");
+    }
+}
