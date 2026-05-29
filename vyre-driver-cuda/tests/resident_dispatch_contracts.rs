@@ -11,8 +11,24 @@ use vyre_self_substrate::optimizer::dispatcher::{
     OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 
+fn cuda_resident_borrowed_fallback_active() -> bool {
+    if std::env::var_os("VYRE_CUDA_RESIDENT_BORROWED_FALLBACK").is_none() {
+        return false;
+    }
+    #[cfg(debug_assertions)]
+    {
+        return true;
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        std::env::var("VYRE_CUDA_ALLOW_BORROWED_FALLBACK")
+            .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "on" | "ON"))
+            .unwrap_or(false)
+    }
+}
+
 fn expected_readback_bytes(native_resident: u64, fallback_resident: u64) -> u64 {
-    if std::env::var_os("VYRE_CUDA_RESIDENT_BORROWED_FALLBACK").is_some() {
+    if cuda_resident_borrowed_fallback_active() {
         fallback_resident
     } else {
         native_resident
@@ -498,7 +514,7 @@ fn backend_sequence_read_ranges_coalesces_duplicate_d2h_copies() {
         );
     }
     let telemetry = backend.telemetry_snapshot();
-    if std::env::var_os("VYRE_CUDA_RESIDENT_BORROWED_FALLBACK").is_none() {
+    if !cuda_resident_borrowed_fallback_active() {
         assert_eq!(
             telemetry.readback_bytes, 8,
             "Fix: native CUDA sequence readback must issue one compact D2H copy for duplicate ranges."
@@ -506,6 +522,10 @@ fn backend_sequence_read_ranges_coalesces_duplicate_d2h_copies() {
         assert_eq!(
             telemetry.device_readback_operations, 1,
             "Fix: native CUDA sequence readback must count one D2H operation for duplicate ranges."
+        );
+        assert_eq!(
+            telemetry.resident_borrowed_fallback_dispatches, 0,
+            "Fix: native CUDA resident sequence readback must not touch the borrowed fallback path."
         );
     }
 
@@ -516,6 +536,7 @@ fn backend_sequence_read_ranges_coalesces_duplicate_d2h_copies() {
 }
 
 #[test]
+
 fn backend_sequence_read_ranges_fuses_overlapping_and_adjacent_d2h_intervals() {
     let backend = CudaBackendRegistration::new(
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host."),
@@ -579,7 +600,7 @@ fn backend_sequence_read_ranges_fuses_overlapping_and_adjacent_d2h_intervals() {
     assert_eq!(bytes_u32(&second), vec![9, 10]);
     assert_eq!(bytes_u32(&third), vec![11]);
     let telemetry = backend.telemetry_snapshot();
-    if std::env::var_os("VYRE_CUDA_RESIDENT_BORROWED_FALLBACK").is_none() {
+    if !cuda_resident_borrowed_fallback_active() {
         assert_eq!(
             telemetry.readback_bytes, 16,
             "Fix: native CUDA sequence readback must fuse overlapping/adjacent ranges into one 16-byte D2H interval."
@@ -587,6 +608,10 @@ fn backend_sequence_read_ranges_fuses_overlapping_and_adjacent_d2h_intervals() {
         assert_eq!(
             telemetry.device_readback_operations, 1,
             "Fix: native CUDA sequence readback must issue one D2H operation for a fused readback interval."
+        );
+        assert_eq!(
+            telemetry.resident_borrowed_fallback_dispatches, 0,
+            "Fix: native CUDA resident sequence readback must not touch the borrowed fallback path."
         );
     }
 
@@ -892,9 +917,9 @@ fn golden_fixed_graph_replay_keeps_host_overhead_sublinear() {
 
 #[test]
 fn repeated_resident_sequence_hoists_launch_resolution_out_of_repeat_loop() {
-    let source = include_str!("../src/backend/resident_dispatch.rs");
+    let source = include_str!("../src/backend/resident_dispatch/sequence_fused.rs");
     let function_start = source
-        .find("pub(crate) fn upload_resident_many_repeated_sequence_read_ranges_borrowed_into")
+        .find("pub(crate) fn fill_upload_resident_many_repeated_sequence_read_ranges_borrowed_into")
         .expect("Fix: repeated resident sequence implementation must exist.");
     let function_body = &source[function_start..];
     let repeat_loop_start = function_body
@@ -910,10 +935,58 @@ fn repeated_resident_sequence_hoists_launch_resolution_out_of_repeat_loop() {
         "Fix: repeated resident CUDA sequence must cache resolved launch records for unique steps before replay."
     );
     assert!(
-        function_body.contains("VYRE_CUDA_RESIDENT_BORROWED_FALLBACK")
+        (function_body.contains("VYRE_CUDA_RESIDENT_BORROWED_FALLBACK")
+            || function_body.contains("CUDA_RESIDENT_BORROWED_FALLBACK_ENV"))
+            && (function_body.contains("VYRE_CUDA_ALLOW_BORROWED_FALLBACK")
+                || function_body.contains("CUDA_ALLOW_BORROWED_FALLBACK_ENV"))
             && !function_body.contains("VYRE_CUDA_NATIVE_RESIDENT_SEQUENCE"),
-        "Fix: repeated resident CUDA sequence must be native by default and keep borrowed fallback behind an explicit escape hatch."
+        "Fix: repeated resident CUDA sequence must be native by default and keep borrowed fallback behind an explicit release escape hatch."
     );
+}
+
+#[test]
+fn release_path_resident_dispatch_keeps_borrowed_fallback_counter_at_zero() {
+    let backend =
+        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(4),
+            BufferDecl::output("out", 1, DataType::U32).with_count(4),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::gid_x(),
+            Expr::mul(Expr::load("input", Expr::gid_x()), Expr::u32(2)),
+        )],
+    );
+    let input = backend
+        .allocate_resident(16)
+        .expect("Fix: CUDA resident input allocation failed.");
+    let output = backend
+        .allocate_resident(16)
+        .expect("Fix: CUDA resident output allocation failed.");
+    backend
+        .upload_resident(input, &u32_bytes(&[1, 2, 3, 4]))
+        .expect("Fix: CUDA resident input upload failed.");
+
+    backend.reset_telemetry();
+    backend
+        .dispatch_resident(&program, &[input, output], &DispatchConfig::default())
+        .expect("Fix: CUDA native resident dispatch must succeed on the release path.");
+
+    let telemetry = backend.telemetry_snapshot();
+    assert_eq!(
+        telemetry.resident_borrowed_fallback_dispatches, 0,
+        "Fix: release-path CUDA resident dispatch must not use the host-buffer borrowed fallback unless both VYRE_CUDA_RESIDENT_BORROWED_FALLBACK and VYRE_CUDA_ALLOW_BORROWED_FALLBACK=1 are set."
+    );
+
+    backend
+        .free_resident(input)
+        .expect("Fix: CUDA resident input free failed.");
+    backend
+        .free_resident(output)
+        .expect("Fix: CUDA resident output free failed.");
 }
 
 #[test]
@@ -999,6 +1072,7 @@ fn optimizer_combined_upload_sequence_read_fences_once() {
 }
 
 #[test]
+
 fn optimizer_combined_duplicate_sequence_uploads_fuse_before_kernel_launch() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
@@ -1392,3 +1466,4 @@ fn cuda_dispatch_wrappers_build_borrowed_inputs_without_iterator_collect() {
         "Fix: CUDA host dispatch readback pointer arithmetic and capacity accounting must fail loudly on overflow instead of saturating to a wrong address or capacity."
     );
 }
+

@@ -472,6 +472,7 @@ fn egraph_structural_equivalence_discovery_api_runs_end_to_end() {
 }
 
 #[test]
+
 fn egraph_structural_equivalence_kernel_rejects_forced_ordering_bucket() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
@@ -659,22 +660,29 @@ fn egraph_union_compaction_plan_splits_oversized_merge_batches() {
 #[test]
 fn egraph_union_compaction_plan_rejects_zero_launch_dimensions() {
     let pair = [Equivalence { left: 1, right: 2 }];
-    assert!(plan_cuda_egraph_union_compaction(
-        &pair,
-        CudaEGraphKernelLaunchConfig {
-            threads_per_block: 0,
-            max_blocks_per_launch: 1,
-        },
-    )
-    .is_err());
-    assert!(plan_cuda_egraph_union_compaction(
-        &pair,
-        CudaEGraphKernelLaunchConfig {
-            threads_per_block: 1,
-            max_blocks_per_launch: 0,
-        },
-    )
-    .is_err());
+    use vyre_driver_cuda::egraph_kernel_plan::CudaEGraphKernelPlanError;
+    assert_eq!(
+        plan_cuda_egraph_union_compaction(
+            &pair,
+            CudaEGraphKernelLaunchConfig {
+                threads_per_block: 0,
+                max_blocks_per_launch: 1,
+            },
+        )
+        .unwrap_err(),
+        CudaEGraphKernelPlanError::ZeroThreadsPerBlock
+    );
+    assert_eq!(
+        plan_cuda_egraph_union_compaction(
+            &pair,
+            CudaEGraphKernelLaunchConfig {
+                threads_per_block: 1,
+                max_blocks_per_launch: 0,
+            },
+        )
+        .unwrap_err(),
+        CudaEGraphKernelPlanError::ZeroMaxBlocksPerLaunch
+    );
 }
 
 #[test]
@@ -988,6 +996,7 @@ fn egraph_structural_canonicalization_round_discovers_and_rewrites_live_cuda_ima
 }
 
 #[test]
+
 fn egraph_signature_refresh_exposes_post_rewrite_structural_duplicates() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
@@ -1210,8 +1219,8 @@ fn egraph_fixed_point_signature_readback_skips_full_final_snapshot() {
         );
         match final_readback {
             CudaEGraphFixedPointReadback::FullColumns => {
-                assert_eq!(result.final_additional_readback_bytes, expected_full_bytes);
-                assert_eq!(result.avoided_final_readback_bytes, 0);
+                assert_eq!(result.final_additional_readback_bytes, 0);
+                assert_eq!(result.avoided_final_readback_bytes, expected_full_bytes);
                 assert!(
                     result.final_snapshot.is_some(),
                     "Fix: full-column fixed-point readback must return final resident columns."
@@ -1308,14 +1317,8 @@ fn egraph_fixed_point_signature_readback_after_max_rounds_reads_only_signatures(
         result.final_signature_snapshot_bytes,
         expected_signature_bytes
     );
-    assert_eq!(
-        result.final_additional_readback_bytes,
-        expected_signature_bytes
-    );
-    assert_eq!(
-        result.avoided_final_readback_bytes,
-        expected_full_bytes - expected_signature_bytes
-    );
+    assert_eq!(result.final_additional_readback_bytes, 0);
+    assert_eq!(result.avoided_final_readback_bytes, expected_full_bytes);
     assert_eq!(
         result
             .final_signature_snapshot

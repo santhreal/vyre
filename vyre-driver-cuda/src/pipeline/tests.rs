@@ -480,6 +480,7 @@ fn materialized_output_cache_evicts_oldest_entries_under_generated_pressure() {
 }
 
 #[test]
+
 fn materialized_output_cache_rejects_oversized_entries_without_polluting_cache() {
     let mut cache = MaterializedPipelineOutputCache::default();
     let input = b"oversized compiled CUDA graph replay input";
@@ -540,3 +541,4 @@ fn materialized_output_cache_preflights_oversized_entries_before_owning_bytes() 
         "Fix: materialized CUDA replay cache must compute admissibility before cloning input/output bytes."
     );
 }
+

@@ -448,6 +448,7 @@ impl CudaCompiledPipeline {
             );
         }
 
+
         let resident_dispatch = self
             .backend
             .dispatch_resident_batch_async_concrete_with_ptx_key(
@@ -858,3 +859,4 @@ impl CudaCompiledPipeline {
         Ok(())
     }
 }
+

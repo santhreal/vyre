@@ -520,6 +520,7 @@ fn cuda_resident_adaptive_auto_selects_sparse_queue_for_tiny_frontier() {
 }
 
 #[test]
+
 fn cuda_resident_adaptive_auto_selects_sparse_dense_for_dense_frontier() {
     let backend = live_dispatcher();
     let dispatcher = vyre_driver_cuda::CudaOptimizerDispatcher::new(&backend);

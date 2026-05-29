@@ -457,6 +457,7 @@ fn cuda_const_prop_simplifies_bool_eq_with_literal() {
 }
 
 #[test]
+
 fn cuda_const_prop_simplifies_bool_false_comparisons_to_logical_not() {
     use vyre::ir::model::types::UnOp;
     use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType};
@@ -551,3 +552,4 @@ fn cuda_const_prop_preserves_non_literal_var() {
         );
     }
 }
+

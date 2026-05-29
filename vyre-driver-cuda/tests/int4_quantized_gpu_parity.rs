@@ -459,6 +459,7 @@ fn cuda_dispatch_matches_packed_int4_batched_scaled_matvec_oracle() {
 }
 
 #[test]
+
 fn cuda_dispatch_matches_packed_int4_batched_scaled_matmul_oracle() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
@@ -898,3 +899,4 @@ fn generated_cuda_int4_release_parity_sweeps_boundary_shapes() {
         }
     }
 }
+

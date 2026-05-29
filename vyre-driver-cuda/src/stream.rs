@@ -509,6 +509,7 @@ pub(crate) struct CudaPendingDispatch {
     completed: AtomicBool,
 }
 
+
 impl CudaPendingDispatch {
     /// Build an already-completed pending dispatch.
     pub(crate) fn new_ready(
@@ -987,6 +988,7 @@ mod tests {
     }
 }
 
+
 impl Drop for CudaPendingDispatch {
     fn drop(&mut self) {
         if !self.completed.load(Ordering::Acquire) {
@@ -1012,3 +1014,4 @@ impl Drop for CudaPendingDispatch {
         self.host_transfers.take();
     }
 }
+

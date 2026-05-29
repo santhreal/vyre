@@ -942,6 +942,7 @@ impl CudaBackend {
 }
 
 #[cfg(test)]
+
 mod resident_budget_tests {
     use super::{cuda_resident_live_budget_bytes, cuda_resident_total_budget_bytes};
 
@@ -1057,3 +1058,4 @@ fn checked_resident_dst(
         },
     )
 }
+

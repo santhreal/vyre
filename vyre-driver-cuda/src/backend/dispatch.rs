@@ -448,6 +448,7 @@ impl CudaBackend {
                 .join(".cache")
                 .join("vyre")
                 .join("ptx-cache"));
+
         }
         Err(BackendError::InvalidProgram {
             fix: "Fix: CUDA PTX disk cache has no VYRE_PTX_CACHE_DIR, XDG_CACHE_HOME, or HOME. Configure a writable persistent cache root; temporary fallback is forbidden for production compile performance."
@@ -541,3 +542,4 @@ impl CudaBackend {
         ))
     }
 }
+

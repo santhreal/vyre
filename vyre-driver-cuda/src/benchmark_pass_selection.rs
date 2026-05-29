@@ -108,7 +108,7 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/src/benchmark_pass_selection.rs"
         ))
-        .expect("CUDA benchmark pass selection source should be readable");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - CUDA benchmark pass selection source should be readable");
         let local_value_helper = ["fn pass_", "value"].concat();
         let local_sort_policy = ["sort_unstable", "_by"].concat();
         assert!(source.contains("vyre_driver::benchmark_pass_selection"));

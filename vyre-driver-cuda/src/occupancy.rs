@@ -448,6 +448,7 @@ mod tests {
             shared_bytes_per_block: 96 * 1024,
         };
 
+
         let est = estimate_occupancy(&caps, usage, 256);
 
         assert_eq!(
@@ -624,3 +625,4 @@ mod tests {
         );
     }
 }
+

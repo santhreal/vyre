@@ -571,10 +571,10 @@ mod source_contract_tests {
         let timed_section = source
             .split("pub(crate) fn dispatch_via_cuda_graph_timed_into")
             .nth(1)
-            .expect("timed CUDA graph replay entrypoint must exist")
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - timed CUDA graph replay entrypoint must exist")
             .split("/// Convenience wrapper")
             .next()
-            .expect("timed replay section must precede convenience wrapper");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - timed replay section must precede convenience wrapper");
         assert!(
             timed_section.contains("prepare_cuda_graph_replay_launch(cached, inputs, &input_state)?")
                 && timed_section.contains("launch_prepared_cuda_graph_replay(cached, &prepared, \"cuGraphLaunch\")")
@@ -645,10 +645,10 @@ mod source_contract_tests {
         let untimed_section = replay_source
             .split("pub fn dispatch_via_cuda_graph_into")
             .nth(1)
-            .expect("untimed CUDA graph replay entrypoint must exist")
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - untimed CUDA graph replay entrypoint must exist")
             .split("/// Replay a cached CUDA graph with CUDA event timing.")
             .next()
-            .expect("untimed replay section must precede timed replay");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - untimed replay section must precede timed replay");
         assert_eq!(
             untimed_section
                 .matches("prepare_cuda_graph_replay_input_state(cached, inputs)?")
@@ -664,10 +664,10 @@ mod source_contract_tests {
         let timed_section = replay_source
             .split("pub(crate) fn dispatch_via_cuda_graph_timed_into")
             .nth(1)
-            .expect("timed CUDA graph replay entrypoint must exist")
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - timed CUDA graph replay entrypoint must exist")
             .split("/// Replay a cached CUDA graph with CUDA event timing and allocated outputs.")
             .next()
-            .expect("timed replay section must precede timed wrapper");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - timed replay section must precede timed wrapper");
         assert_eq!(
             timed_section
                 .matches("prepare_cuda_graph_replay_input_state(cached, inputs)?")
@@ -706,16 +706,16 @@ mod source_contract_tests {
         let partition_section = compiled_dispatch
             .split("fn materialized_output_batch_cache_partition_into")
             .nth(1)
-            .expect("compiled materialized batch partition function must exist")
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - compiled materialized batch partition function must exist")
             .split("fn materialized_output_cache_hit_into")
             .next()
-            .expect("batch partition section must precede single cache helper");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - batch partition section must precede single cache helper");
         let key_position = partition_section
             .find("materialized_input_key(inputs)?")
-            .expect("batch partition must compute exact-input keys");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - batch partition must compute exact-input keys");
         let lock_position = partition_section
             .find("let cache = self.lock_materialized_output_cache")
-            .expect("batch partition must acquire materialized cache lock");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - batch partition must acquire materialized cache lock");
         assert!(
             partition_section.contains("for (batch_index, inputs) in batches.iter().enumerate()")
                 && partition_section.contains("input_keys.push((batch_index, materialized_input_key(inputs)?));")

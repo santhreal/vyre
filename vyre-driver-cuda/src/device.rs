@@ -603,6 +603,7 @@ impl CudaDeviceCaps {
 }
 
 #[cfg(test)]
+
 mod tests {
     use crate::synthetic_device_caps::blackwell_sm120_caps_default;
 
@@ -710,3 +711,4 @@ mod tests {
         );
     }
 }
+

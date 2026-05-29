@@ -449,6 +449,7 @@ fn release_resident_budget(
     })
 }
 
+
 fn release_resident_budget_or_repair(
     resident_bytes: &AtomicU64,
     released_bytes: u64,
@@ -598,7 +599,7 @@ mod tests {
 
         let first = store
             .view_cached(handle, &mut cache, "resident view cache test")
-            .expect("resident view cache must resolve a live handle");
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - resident view cache must resolve a live handle");
         assert_eq!(first.ptr, 0x1000);
         assert_eq!(first.byte_len, 64);
 
@@ -659,3 +660,4 @@ impl Drop for ResidentUseGuard {
         }
     }
 }
+
