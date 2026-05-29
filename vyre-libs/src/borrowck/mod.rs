@@ -12,6 +12,11 @@
 //! fixpoint the weir GPU backend evaluates batched across a whole crate. The
 //! fact schema is modeled on the Polonius input facts and is extended over time
 //! (regions, moves, ...) without breaking the engine's dependents.
+//!
+//! The CPU [`analyze`] engine is the reference; [`gpu::analyze_batched`]
+//! computes the identical verdict on a device, batched across all loans.
+
+pub mod gpu;
 
 /// A program point in a function's control-flow graph (`0..point_count`).
 pub type Point = u32;
