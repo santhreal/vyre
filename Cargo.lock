@@ -3995,6 +3995,7 @@ dependencies = [
  "serde_json",
  "smallvec",
  "vyre-foundation",
+ "vyre-primitives",
 ]
 
 [[package]]
