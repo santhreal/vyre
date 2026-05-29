@@ -121,3 +121,34 @@ fn borrows_in_mutually_exclusive_branches_do_not_conflict() {
         "borrows confined to mutually exclusive branches must not conflict"
     );
 }
+
+#[test]
+fn scales_to_a_long_chain() {
+    // 2000-point straight chain; two &mut of one place issued early, both used
+    // at the end -> live across the whole chain -> one conflict, computed fast.
+    let n = 2000u32;
+    let cfg: Vec<(u32, u32)> = (0..n - 1).map(|i| (i, i + 1)).collect();
+    let f = facts(
+        n,
+        &cfg,
+        &[(0, LoanKind::Mut, 0, 10), (0, LoanKind::Mut, 1, 20)],
+        &[(0, n - 1), (1, n - 1)],
+    );
+    let c = analyze(&f);
+    assert_eq!(c.len(), 1, "got {c:?}");
+    assert_eq!(c[0].kind, ConflictKind::TwoMutable);
+}
+
+#[test]
+fn scales_with_many_distinct_place_loans() {
+    // 500 loans, each over a distinct place, used once along a chain: the
+    // O(loans^2) pairing short-circuits on the place check, no conflicts.
+    let count = 500u32;
+    let n = count + 1;
+    let cfg: Vec<(u32, u32)> = (0..n - 1).map(|i| (i, i + 1)).collect();
+    let loans: Vec<(u32, LoanKind, u32, u32)> =
+        (0..count).map(|i| (i, LoanKind::Mut, i, i * 4)).collect();
+    let uses: Vec<(u32, u32)> = (0..count).map(|i| (i, i + 1)).collect();
+    let f = facts(n, &cfg, &loans, &uses);
+    assert!(analyze(&f).is_empty(), "distinct-place loans never conflict");
+}
