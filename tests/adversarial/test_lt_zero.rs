@@ -4,7 +4,7 @@ use vyre_primitives::CompareLt;
 use vyre_reference::dual_impls::ReferenceEvaluator;
 use vyre_reference::workgroup::Memory;
 
-// FINDING-XXXX
+// FINDING-ADV-LT-ZERO - hostile zero-buffer compare must not panic (registry adversarial corpus).
 // Expected catastrophic failure: `lt` on all-zero memory buffers should gracefully return a boundary value
 // or an `EvalError` without panicking, crashing, or invoking UB.
 
