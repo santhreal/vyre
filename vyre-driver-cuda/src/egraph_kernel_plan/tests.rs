@@ -1,4 +1,7 @@
 use super::*;
+use crate::CudaEGraphDeviceKernelView;
+use vyre_foundation::optimizer::eqsat_gpu::{GpuEGraphDeviceImage, Equivalence};
+use crate::egraph_kernel_plan::args::{EGraphStructuralKernelArgs, EGraphCanonicalRewriteKernelArgs};
 use crate::plan_cuda_egraph_device_upload;
 use vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshot;
 
@@ -35,16 +38,16 @@ fn synthetic_view(rows: usize, children: usize, groups: usize) -> CudaEGraphDevi
         .map(|&(class, op, start, len)| (class, op, &child_storage[start..start + len]))
         .collect::<Vec<_>>();
     let snapshot = GpuEGraphSnapshot::build(build_rows);
-    let plan = plan_cuda_egraph_device_upload(&snapshot).expect("synthetic plan must pack");
+    let plan = plan_cuda_egraph_device_upload(&snapshot).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - synthetic plan must pack");
     CudaEGraphDeviceKernelView::from_checked_parts(0x1000, plan.byte_len(), plan.byte_layout())
-        .expect("synthetic view must be valid")
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - synthetic view must be valid")
 }
 
 fn view_for_image(image: &GpuEGraphDeviceImage) -> CudaEGraphDeviceKernelView {
     let plan = crate::plan_cuda_egraph_device_upload_from_image(image.clone())
-        .expect("packed egraph image must have a CUDA upload plan");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - packed egraph image must have a CUDA upload plan");
     CudaEGraphDeviceKernelView::from_checked_parts(0x4000, plan.byte_len(), plan.byte_layout())
-        .expect("upload plan must resolve to a checked kernel view")
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - upload plan must resolve to a checked kernel view")
 }
 
 #[test]
@@ -57,7 +60,7 @@ fn planner_emits_passes_in_row_child_group_order() {
             max_blocks_per_launch: 2,
         },
     )
-    .expect("valid egraph kernel plan");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph kernel plan");
 
     assert_eq!(plan.waves.len(), 3);
     assert_eq!(plan.waves[0].pass, CudaEGraphKernelPass::RowScan);
@@ -81,7 +84,7 @@ fn planner_splits_large_passes_into_bounded_waves() {
             max_blocks_per_launch: 2,
         },
     )
-    .expect("valid split egraph kernel plan");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid split egraph kernel plan");
 
     let items = plan
         .waves
@@ -142,7 +145,7 @@ fn signature_bucket_planner_groups_only_candidate_duplicate_rows() {
     ]);
     let image = snapshot
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
     let plan = plan_cuda_egraph_signature_buckets(
         &image,
         view_for_image(&image),
@@ -151,7 +154,7 @@ fn signature_bucket_planner_groups_only_candidate_duplicate_rows() {
             max_blocks_per_launch: 1,
         },
     )
-    .expect("signature bucket plan must build");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - signature bucket plan must build");
 
     let grouped_rows = plan
         .buckets
@@ -186,7 +189,7 @@ fn consuming_launch_artifact_matches_borrowed_artifact_without_plan_clone_contra
     ]);
     let image = snapshot
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
     let plan = plan_cuda_egraph_signature_buckets(
         &image,
         view_for_image(&image),
@@ -195,12 +198,12 @@ fn consuming_launch_artifact_matches_borrowed_artifact_without_plan_clone_contra
             max_blocks_per_launch: 1,
         },
     )
-    .expect("signature bucket plan must build");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - signature bucket plan must build");
 
     let borrowed = plan_cuda_egraph_structural_equivalence_launch_artifact(&plan)
-        .expect("borrowed launch artifact must build");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - borrowed launch artifact must build");
     let consumed = plan_cuda_egraph_structural_equivalence_launch_artifact_from_plan(plan)
-        .expect("consuming launch artifact must build");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - consuming launch artifact must build");
 
     assert_eq!(consumed, borrowed);
 }
@@ -215,17 +218,17 @@ fn resident_snapshot_try_constructors_match_infallible_snapshots() {
     ]);
     let image = snapshot
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
 
     let full = CudaEGraphResidentColumnSnapshot::try_from_device_image(&image)
-        .expect("fallible full snapshot should reserve");
+        .expect("Fix: caller must pre-size buffers; use fallible reserve or return ResourceExhausted - fallible full snapshot should reserve");
     let infallible_full = CudaEGraphResidentColumnSnapshot::from_device_image(&image);
     assert_eq!(full, infallible_full);
 
     let signatures = CudaEGraphResidentSignatureSnapshot::try_from_device_image(&image)
-        .expect("fallible signature snapshot should reserve");
+        .expect("Fix: caller must pre-size buffers; use fallible reserve or return ResourceExhausted - fallible signature snapshot should reserve");
     let from_full = CudaEGraphResidentSignatureSnapshot::try_from_column_snapshot(&full)
-        .expect("fallible signature snapshot from full columns should reserve");
+        .expect("Fix: caller must pre-size buffers; use fallible reserve or return ResourceExhausted - fallible signature snapshot from full columns should reserve");
     assert_eq!(signatures, from_full);
     assert_eq!(
         signatures,
@@ -468,6 +471,7 @@ fn egraph_warm_helpers_reuse_resolved_cuda_function_for_launch() {
 }
 
 #[test]
+
 fn egraph_kernel_args_into_reuses_capacity_and_preserves_abi_order() {
     let mut table = smallvec::SmallVec::<[*mut std::ffi::c_void; 8]>::new();
     let mut structural = EGraphStructuralKernelArgs {
@@ -535,7 +539,7 @@ fn signature_bucket_planner_splits_large_candidate_bucket() {
     ]);
     let image = snapshot
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
     let plan = plan_cuda_egraph_signature_buckets(
         &image,
         view_for_image(&image),
@@ -544,7 +548,7 @@ fn signature_bucket_planner_splits_large_candidate_bucket() {
             max_blocks_per_launch: 2,
         },
     )
-    .expect("signature bucket plan must build");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - signature bucket plan must build");
 
     assert_eq!(plan.buckets.len(), 1);
     assert_eq!(plan.buckets[0].row_count, 5);
@@ -590,7 +594,7 @@ fn signature_pair_ordinals_decode_to_row_pairs_without_materialized_pairs() {
     ]);
     let image = snapshot
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
     let plan = plan_cuda_egraph_signature_buckets(
         &image,
         view_for_image(&image),
@@ -599,7 +603,7 @@ fn signature_pair_ordinals_decode_to_row_pairs_without_materialized_pairs() {
             max_blocks_per_launch: 1,
         },
     )
-    .expect("signature bucket plan must build");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - signature bucket plan must build");
 
     let decoded = (0..plan.candidate_pair_count)
         .map(|ordinal| cuda_egraph_signature_pair_rows(&plan, 0, ordinal).unwrap())
@@ -627,13 +631,13 @@ fn signature_pair_decoder_rejects_out_of_bounds_ordinals() {
     let snapshot = GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])]);
     let image = snapshot
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
     let plan = plan_cuda_egraph_signature_buckets(
         &image,
         view_for_image(&image),
         CudaEGraphKernelLaunchConfig::default(),
     )
-    .expect("signature bucket plan must build");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - signature bucket plan must build");
 
     assert_eq!(
         cuda_egraph_signature_pair_rows(&plan, 0, 1)
@@ -659,7 +663,7 @@ fn signature_pair_decoder_rejects_malformed_bucket_row_ranges() {
     let snapshot = GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])]);
     let image = snapshot
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
     let plan = CudaEGraphSignatureBucketPlan {
         view: view_for_image(&image),
         buckets: vec![CudaEGraphSignatureBucket {
@@ -698,7 +702,7 @@ fn structural_equivalence_plan_emits_unique_exact_eclass_merges() {
     ]);
     let image = snapshot
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
 
     let plan = plan_cuda_egraph_structural_equivalences(
         &image,
@@ -708,7 +712,7 @@ fn structural_equivalence_plan_emits_unique_exact_eclass_merges() {
             max_blocks_per_launch: 1,
         },
     )
-    .expect("structural equivalence plan must build");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - structural equivalence plan must build");
 
     assert_eq!(
         plan.equivalences,
@@ -734,7 +738,7 @@ fn structural_equivalence_collection_filters_signature_collision_bucket() {
     let snapshot = GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "add", &[0u32][..])]);
     let image = snapshot
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
     let signature_plan = CudaEGraphSignatureBucketPlan {
         view: view_for_image(&image),
         buckets: vec![CudaEGraphSignatureBucket {
@@ -756,7 +760,7 @@ fn structural_equivalence_collection_filters_signature_collision_bucket() {
     };
 
     let plan = collect_cuda_egraph_structural_equivalences(&image, signature_plan)
-        .expect("collision-safe structural collection must complete");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - collision-safe structural collection must complete");
 
     assert!(plan.equivalences.is_empty());
     assert_eq!(plan.exact_pair_count, 0);
@@ -774,7 +778,7 @@ fn signature_bucket_device_image_packs_fixed_width_records() {
     ]);
     let image = snapshot
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
     let signature_plan = plan_cuda_egraph_signature_buckets(
         &image,
         view_for_image(&image),
@@ -783,10 +787,10 @@ fn signature_bucket_device_image_packs_fixed_width_records() {
             max_blocks_per_launch: 1,
         },
     )
-    .expect("signature bucket plan must build");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - signature bucket plan must build");
 
     let device_image = pack_cuda_egraph_signature_bucket_device_image(&signature_plan)
-        .expect("signature bucket device image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - signature bucket device image must pack");
 
     assert_eq!(device_image.bucket_count, 1);
     assert_eq!(device_image.bucket_record_words, 5);
@@ -808,7 +812,7 @@ fn structural_equivalence_launch_artifact_sizes_worst_case_output() {
     ]);
     let image = snapshot
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
     let signature_plan = plan_cuda_egraph_signature_buckets(
         &image,
         view_for_image(&image),
@@ -817,10 +821,10 @@ fn structural_equivalence_launch_artifact_sizes_worst_case_output() {
             max_blocks_per_launch: 1,
         },
     )
-    .expect("signature bucket plan must build");
+    .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - signature bucket plan must build");
 
     let artifact = plan_cuda_egraph_structural_equivalence_launch_artifact(&signature_plan)
-        .expect("structural equivalence launch artifact must build");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - structural equivalence launch artifact must build");
 
     assert_eq!(artifact.bucket_image.bucket_count, 1);
     assert_eq!(artifact.output.max_equivalences, 6);
@@ -834,7 +838,7 @@ fn structural_equivalence_launch_artifact_sizes_worst_case_output() {
 #[test]
 fn structural_equivalence_kernel_ptx_pins_entry_abi_and_target() {
     let kernel = cuda_egraph_structural_equivalence_kernel_ptx(90)
-        .expect("valid CUDA egraph structural-equivalence PTX must emit");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid CUDA egraph structural-equivalence PTX must emit");
 
     assert_eq!(kernel.target_sm, 90);
     assert_eq!(kernel.ptx_version, "8.0");
@@ -878,7 +882,7 @@ fn structural_equivalence_kernel_ptx_pins_entry_abi_and_target() {
 #[test]
 fn structural_equivalence_kernel_ptx_contains_non_stub_exact_compare_body() {
     let kernel = cuda_egraph_structural_equivalence_kernel_ptx(120)
-        .expect("valid CUDA egraph structural-equivalence PTX must emit");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid CUDA egraph structural-equivalence PTX must emit");
 
     assert_eq!(kernel.ptx_version, "8.7");
     for required in [
@@ -919,10 +923,11 @@ fn structural_equivalence_kernel_ptx_rejects_invalid_sm_target() {
 }
 
 #[test]
+
 fn signature_bucket_planner_rejects_mismatched_image_and_view() {
     let image = GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])])
         .try_pack_device_image()
-        .expect("valid egraph image must pack");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
     let mismatched_view = synthetic_view(1, 0, 1);
 
     assert_eq!(
@@ -939,3 +944,4 @@ fn signature_bucket_planner_rejects_mismatched_image_and_view() {
         }
     );
 }
+

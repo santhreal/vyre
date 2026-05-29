@@ -308,8 +308,9 @@ mod tests {
         // stream when byte_len is zero.
         let result = unsafe { h2d_async_checked(0, std::ptr::null(), 0, std::ptr::null_mut()) };
 
-        assert!(
-            result.is_ok(),
+        assert_eq!(
+            result,
+            Ok(()),
             "Fix: zero-byte H2D copies must not touch CUDA or require a live stream."
         );
     }
@@ -320,8 +321,9 @@ mod tests {
         // stream when byte_len is zero.
         let result = unsafe { d2h_async_checked(std::ptr::null_mut(), 0, 0, std::ptr::null_mut()) };
 
-        assert!(
-            result.is_ok(),
+        assert_eq!(
+            result,
+            Ok(()),
             "Fix: zero-byte D2H copies must not touch CUDA or require a live stream."
         );
     }
@@ -332,8 +334,9 @@ mod tests {
         // is zero.
         let result = unsafe { d2h_sync_checked(std::ptr::null_mut(), 0, 0) };
 
-        assert!(
-            result.is_ok(),
+        assert_eq!(
+            result,
+            Ok(()),
             "Fix: zero-byte synchronous D2H copies must not touch CUDA."
         );
     }
@@ -344,8 +347,9 @@ mod tests {
         // when byte_len is zero.
         let result = unsafe { memset_d8_async_checked(0, 0, 0, std::ptr::null_mut()) };
 
-        assert!(
-            result.is_ok(),
+        assert_eq!(
+            result,
+            Ok(()),
             "Fix: zero-byte CUDA memsets must not touch CUDA or require a live stream."
         );
     }

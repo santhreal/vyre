@@ -17,7 +17,7 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/src/input_identity.rs"
         ))
-        .expect("CUDA exact-input identity source should be readable");
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - CUDA exact-input identity source should be readable");
         let local_hasher = ["blake", "3::Hasher"].concat();
         assert!(source.contains("vyre_driver::input_identity"));
         assert!(!source.contains(&local_hasher));

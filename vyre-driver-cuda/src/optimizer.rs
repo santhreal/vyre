@@ -616,6 +616,7 @@ mod tests {
     }
 }
 
+
 fn cuda_optimizer_resident_pool_budget_bytes(total_memory_bytes: u64) -> u64 {
     total_memory_bytes / CUDA_OPTIMIZER_RESIDENT_POOL_BUDGET_DENOMINATOR
 }
@@ -1103,8 +1104,10 @@ impl<'a> OptimizerDispatcher for CudaOptimizerDispatcher<'a> {
     }
 }
 
+
 fn optimizer_usize_to_u64(value: usize, label: &'static str) -> Result<u64, DispatchError> {
     CUDA_NUMERIC
         .usize_to_u64(value, label)
         .map_err(|error| DispatchError::BackendError(error.to_string()))
 }
+

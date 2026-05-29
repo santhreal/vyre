@@ -449,6 +449,7 @@ mod tests {
         )
         .expect_err("Fix: CUDA launch helper must reject null function handles before FFI.");
 
+
         assert!(
             error.to_string().contains("null CUDA function handle"),
             "launch diagnostic must identify the invalid function handle: {error}"
@@ -538,3 +539,4 @@ mod tests {
         );
     }
 }
+

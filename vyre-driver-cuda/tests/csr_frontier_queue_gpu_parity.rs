@@ -556,6 +556,7 @@ fn cuda_resident_csr_queue_batch_runs_many_queries_with_one_sync() {
 }
 
 #[test]
+
 fn cuda_resident_csr_queue_budgeted_batch_shards_before_allocation() {
     let backend = live_backend();
     let dispatcher = CudaOptimizerDispatcher::new(&backend);
@@ -634,3 +635,4 @@ fn cuda_resident_csr_queue_budgeted_batch_shards_before_allocation() {
         .free(&dispatcher)
         .expect("Fix: budgeted resident CSR queue graph cleanup failed.");
 }
+

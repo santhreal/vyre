@@ -489,6 +489,7 @@ pub(crate) fn validate_cuda_transient_dispatch_budget(
     Ok(())
 }
 
+
 fn checked_dispatch_bytes_add(
     left: u64,
     right: u64,
@@ -563,8 +564,7 @@ mod tests {
                         role: BindingRole::Output,
                         element_size: 1,
                         preferred_alignment: 1,
-                        element_count: u32::try_from(static_output_bytes).expect(
-                            "test CUDA dispatch plan static output bytes must fit u32 element count",
+                        element_count: u32::try_from(static_output_bytes).expect("Fix: CUDA parity tests require backend dispatch; skip test if GPU unavailable, do not panic - test CUDA dispatch plan static output bytes must fit u32 element count",
                         ),
                         static_byte_len: Some(static_output_bytes),
                         input_index: None,
@@ -715,3 +715,4 @@ mod tests {
         );
     }
 }
+

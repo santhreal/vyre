@@ -447,6 +447,7 @@ fn cuda_graph_timed_replay_uses_exact_materialized_cache_without_device_work() {
 }
 
 #[test]
+
 fn compiled_pipeline_dispatch_into_uses_cached_cuda_graph() {
     let backend = CudaBackend::acquire()
         .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.");
@@ -850,3 +851,4 @@ fn cuda_graph_replay_uses_cached_telemetry_totals_without_per_replay_scans() {
         "Fix: CUDA graph recording must avoid iterator collect staging and saturating arithmetic while preparing sample inputs, telemetry totals, and raw device pointers."
     );
 }
+

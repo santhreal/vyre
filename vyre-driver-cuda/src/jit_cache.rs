@@ -43,7 +43,7 @@ static TEST_ENV_LOCK: Mutex<()> = Mutex::new(());
 fn lock_test_env() -> MutexGuard<'static, ()> {
     TEST_ENV_LOCK
         .lock()
-        .expect("CUDA JIT cache env test lock must not be poisoned")
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - CUDA JIT cache env test lock must not be poisoned")
 }
 
 /// Configure the CUDA driver JIT cache for this process. Call once at

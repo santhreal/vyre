@@ -448,6 +448,7 @@ mod tests {
         )
         .expect("Fix: frontier plan should build");
         let frontier_input = adapt_frontier_typed_ir_to_cuda(&frontier_plan, 8, 16, 8)
+
             .expect("Fix: frontier plan should adapt");
         let mut cache = CudaMegakernelPlanCache::new();
 
@@ -789,3 +790,4 @@ mod tests {
         }
     }
 }
+

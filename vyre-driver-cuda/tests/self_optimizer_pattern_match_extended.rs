@@ -451,6 +451,7 @@ fn cuda_bool_and_with_false_collapses_to_false() {
 }
 
 #[test]
+
 fn cuda_bool_or_with_true_collapses_to_true() {
     // (Var(b) || true) → true. Pick the then arm.
     let p = Program::wrapped(
@@ -793,3 +794,4 @@ fn cuda_bitxor_zero_collapses_to_left() {
         );
     }
 }
+

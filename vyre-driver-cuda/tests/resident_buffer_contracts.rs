@@ -489,6 +489,7 @@ fn resident_buffer_adjacent_partial_uploads_fuse_same_handle_h2d_copy() {
 }
 
 #[test]
+
 fn resident_buffer_overlapping_partial_uploads_preserve_later_write_and_fuse_bytes() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
@@ -706,3 +707,4 @@ fn resident_inflight_reference_counting_does_not_saturate_underflow() {
         "Fix: CUDA resident in-flight reference counting must fail loudly on underflow instead of hiding lifetime bugs."
     );
 }
+

@@ -632,6 +632,7 @@ mod tests {
 }
 
 #[cfg(test)]
+
 mod owned_diagnostic_allocation_tests {
     use super::*;
 
@@ -680,3 +681,4 @@ mod owned_diagnostic_allocation_tests {
         );
     }
 }
+

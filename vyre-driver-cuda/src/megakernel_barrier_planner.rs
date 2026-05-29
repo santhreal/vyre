@@ -448,6 +448,7 @@ mod tests {
                 && src.contains("StorageReserveFailed"),
             "Fix: CUDA megakernel barrier and frontier group staging must reserve through shared fallible CUDA staging instead of panicking under scale pressure."
         );
+
         assert!(
             !src.contains(concat!("Vec::with_capacity", "(wave_count)"))
                 && !src.contains(concat!("Vec::with_capacity", "(barriers.groups.len())"))
@@ -898,6 +899,7 @@ mod tests {
             CudaMegakernelScheduleSample {
                 dispatch_cost_ns: 1_000.0,
                 frontier_density: 0.90,
+
                 readback_bytes: 1 << 20,
             },
             CudaMegakernelGraphShape {
@@ -999,3 +1001,4 @@ mod tests {
         }
     }
 }
+

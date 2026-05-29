@@ -24,7 +24,7 @@ use super::staging_reserve::{reserve_smallvec, reserve_vec};
 use crate::backend::accounting::checked_sub_usize;
 
 /// Soft cap on loaded CUDA modules. Eviction drops the cache to half-capacity.
-const MODULE_CACHE_SOFT_CAP: usize = 256;
+const MODULE_CACHE_SOFT_CAP: usize = 2048;
 const MODULE_CACHE_RETAIN_AFTER_EVICTION: usize = MODULE_CACHE_SOFT_CAP / 2;
 /// Soft cap on lowered PTX source strings retained before module loading.
 const PTX_SOURCE_CACHE_SOFT_CAP: usize = 512;
@@ -467,6 +467,7 @@ fn load_ptx_from_disk(key: &PtxSourceCacheKey) -> Result<Option<String>, Backend
     }
 }
 
+
 fn validate_ptx_disk_cache_file_len(
     byte_len: u64,
     path: &std::path::Path,
@@ -624,8 +625,7 @@ mod tests {
     fn ptx_source_cache_temp_id_rebases_after_counter_overflow() {
         PTX_CACHE_TMP_COUNTER.store(u64::MAX, Ordering::Release);
 
-        let id = allocate_ptx_cache_tmp_id().expect(
-            "PTX temp-file id allocation must rebase instead of failing on counter overflow",
+        let id = allocate_ptx_cache_tmp_id().expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - PTX temp-file id allocation must rebase instead of failing on counter overflow",
         );
 
         assert_eq!(id, u64::MAX);
@@ -1041,6 +1041,7 @@ impl CudaModuleCache {
     }
 }
 
+
 fn release_cached_source_bytes(
     cached_source_bytes: &AtomicUsize,
     dropped_bytes: usize,
@@ -1416,3 +1417,4 @@ fn write_ptx_dump(
     })?;
     Ok(path)
 }
+

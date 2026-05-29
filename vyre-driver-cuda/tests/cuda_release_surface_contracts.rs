@@ -131,3 +131,33 @@ fn cuda_release_gate_evidence_matches_executable_gate() {
         "Fix: CUDA release evidence must record the latest local gate result."
     );
 }
+
+#[test]
+fn cuda_release_path_tracks_resident_borrowed_fallback_telemetry_gate() {
+    let instrumentation = include_str!("../src/instrumentation.rs");
+    let telemetry = include_str!("../src/backend/telemetry.rs");
+    let borrowed = include_str!("../src/backend/resident_dispatch/borrowed.rs");
+    let contracts = include_str!("resident_dispatch_contracts.rs");
+
+    assert!(
+        instrumentation.contains("VYRE_CUDA_ALLOW_BORROWED_FALLBACK")
+            && instrumentation.contains("VYRE_CUDA_RESIDENT_BORROWED_FALLBACK")
+            && instrumentation.contains("#[cfg(not(debug_assertions))]"),
+        "Fix: CUDA resident borrowed fallback must be refused on release builds unless an explicit allow env is set."
+    );
+    assert!(
+        telemetry.contains("resident_borrowed_fallback_dispatches")
+            && telemetry.contains("record_resident_borrowed_fallback_dispatch")
+            && telemetry.contains("vyre_cuda_resident_borrowed_fallback_dispatches_total"),
+        "Fix: CUDA release telemetry must expose a resident borrowed-fallback counter for perf gates."
+    );
+    assert!(
+        borrowed.contains("record_resident_borrowed_fallback_dispatch"),
+        "Fix: resident borrowed fallback must increment telemetry at the single borrowed dispatch entrypoint."
+    );
+    assert!(
+        contracts.contains("release_path_resident_dispatch_keeps_borrowed_fallback_counter_at_zero")
+            && contracts.contains("resident_borrowed_fallback_dispatches, 0"),
+        "Fix: CUDA release gate contracts must assert the resident borrowed-fallback counter stays zero on native dispatch."
+    );
+}

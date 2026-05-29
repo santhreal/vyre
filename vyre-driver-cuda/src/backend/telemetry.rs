@@ -60,6 +60,8 @@ pub struct CudaTelemetrySnapshot {
     pub scheduled_thread_slot_overflows: u64,
     /// Runtime telemetry counter additions that exceeded u64 counter width.
     pub telemetry_counter_overflows: u64,
+    /// Resident dispatches that took the host-buffer borrowed fallback path.
+    pub resident_borrowed_fallback_dispatches: u64,
     /// Aggregate logical element count submitted across kernel launches.
     pub launched_elements: u64,
     /// Aggregate scheduled CUDA thread slots that carried no logical element.
@@ -103,6 +105,7 @@ impl CudaTelemetrySnapshot {
                 "vyre_cuda_scheduled_thread_slots_total {}\n",
                 "vyre_cuda_scheduled_thread_slot_overflows_total {}\n",
                 "vyre_cuda_telemetry_counter_overflows_total {}\n",
+                "vyre_cuda_resident_borrowed_fallback_dispatches_total {}\n",
                 "vyre_cuda_launched_elements_total {}\n",
                 "vyre_cuda_wasted_thread_slots_total {}\n",
                 "vyre_cuda_logical_thread_utilization_bps {}\n",
@@ -134,6 +137,7 @@ impl CudaTelemetrySnapshot {
             self.scheduled_thread_slots,
             self.scheduled_thread_slot_overflows,
             self.telemetry_counter_overflows,
+            self.resident_borrowed_fallback_dispatches,
             self.launched_elements,
             self.wasted_thread_slots,
             self.logical_thread_utilization_bps,
@@ -171,6 +175,7 @@ pub(crate) struct CudaTelemetry {
     scheduled_thread_slots: AtomicU64,
     scheduled_thread_slot_overflows: AtomicU64,
     telemetry_counter_overflows: AtomicU64,
+    resident_borrowed_fallback_dispatches: AtomicU64,
     launched_elements: AtomicU64,
 }
 
@@ -221,6 +226,9 @@ impl CudaTelemetry {
                 .scheduled_thread_slot_overflows
                 .load(Ordering::Relaxed),
             telemetry_counter_overflows: self.telemetry_counter_overflows.load(Ordering::Relaxed),
+            resident_borrowed_fallback_dispatches: self
+                .resident_borrowed_fallback_dispatches
+                .load(Ordering::Relaxed),
             launched_elements,
             wasted_thread_slots,
             logical_thread_utilization_bps: utilization_bps(
@@ -268,7 +276,17 @@ impl CudaTelemetry {
         self.scheduled_thread_slot_overflows
             .store(0, Ordering::Relaxed);
         self.telemetry_counter_overflows.store(0, Ordering::Relaxed);
+        self.resident_borrowed_fallback_dispatches
+            .store(0, Ordering::Relaxed);
         self.launched_elements.store(0, Ordering::Relaxed);
+    }
+
+    pub(crate) fn record_resident_borrowed_fallback_dispatch(&self) {
+        self.add(
+            "resident_borrowed_fallback_dispatches",
+            &self.resident_borrowed_fallback_dispatches,
+            1,
+        );
     }
 
     pub(crate) fn record_host_to_device_bytes(&self, bytes: u64) {
@@ -455,6 +473,7 @@ fn scheduled_thread_slots(launch: &LaunchPlan) -> Option<u64> {
     let exact = exact?;
     u64::try_from(exact).ok()
 }
+
 
 fn utilization_bps(used: u64, scheduled: u64) -> u32 {
     crate::numeric::CUDA_NUMERIC
@@ -666,3 +685,4 @@ mod tests {
         );
     }
 }
+

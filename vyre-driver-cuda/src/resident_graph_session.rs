@@ -448,6 +448,7 @@ mod tests {
         })
         .expect("Fix: resident graph session should fit");
 
+
         let sample = resident_graph_session_speedup_sample(CudaResidentGraphSessionEvidence {
             backend_id: crate::CUDA_BACKEND_ID,
             device_ordinal: 0,
@@ -610,3 +611,4 @@ mod tests {
         }
     }
 }
+

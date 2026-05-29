@@ -500,6 +500,7 @@ impl CudaBackendRegistration {
     }
 }
 
+
 impl vyre_driver::backend::private::Sealed for CudaBackendRegistration {}
 
 impl VyreBackend for CudaBackendRegistration {
@@ -1027,6 +1028,7 @@ impl VyreBackend for CudaBackendRegistration {
 }
 
 /// Factory function for inventory registration.
+
 pub fn cuda_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
     let backend = CudaBackend::acquire().map_err(|e| BackendError::DispatchFailed {
         code: None,
@@ -1263,9 +1265,10 @@ mod tests {
         source
             .split(start)
             .nth(1)
-            .expect("method start must exist")
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - method start must exist")
             .split(end)
             .next()
-            .expect("method end must exist")
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - method end must exist")
     }
 }
+
