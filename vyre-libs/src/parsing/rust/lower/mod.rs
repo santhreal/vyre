@@ -52,7 +52,6 @@ pub fn lower(module: &Module, resolution: &Resolution) -> Result<Program, RustLo
         .bindings
         .iter()
         .enumerate()
-        .filter(|(_, b)| b.function == entry_index)
         .map(|(id, b)| (b.def_offset, id))
         .collect();
 
@@ -74,7 +73,7 @@ pub fn lower(module: &Module, resolution: &Resolution) -> Result<Program, RustLo
     let out_dtype = scalar_dtype(&func.ret)?;
     buffers.push(BufferDecl::output("out", func.params.len() as u32, out_dtype).with_count(1));
 
-    let ctx = LowerCtx { resolution, def_to_id: &def_to_id };
+    let ctx = LowerCtx { module, resolution, def_to_id: &def_to_id };
     entry_nodes.extend(ctx.lower_stmts(&func.body)?);
     Ok(Program::wrapped(buffers, [1, 1, 1], entry_nodes))
 }
@@ -90,6 +89,7 @@ fn scalar_dtype(ty: &Type) -> Result<DataType, RustLowerError> {
 }
 
 struct LowerCtx<'a> {
+    module: &'a Module,
     resolution: &'a Resolution,
     def_to_id: &'a HashMap<u32, BindingId>,
 }
@@ -103,10 +103,10 @@ impl LowerCtx<'_> {
                     let binding = self.def_to_id.get(name).copied().ok_or_else(|| {
                         RustLowerError::Unsupported("unresolved let binding".to_string())
                     })?;
-                    nodes.push(Node::let_bind(format!("v{binding}"), self.lower_expr(init)?));
+                    nodes.push(Node::let_bind(format!("v{binding}"), self.lower_value(init, None)?));
                 }
                 Stmt::Return(Some(expr)) => {
-                    nodes.push(Node::store("out", IrExpr::u32(0), self.lower_expr(expr)?));
+                    nodes.push(Node::store("out", IrExpr::u32(0), self.lower_value(expr, None)?));
                     return Ok(nodes);
                 }
                 Stmt::Return(None) => return Ok(nodes),
@@ -116,7 +116,7 @@ impl LowerCtx<'_> {
                         Some(block) => self.lower_stmts(block_stmts(block))?,
                         None => Vec::new(),
                     };
-                    nodes.push(Node::if_then_else(self.lower_expr(cond)?, then_nodes, else_nodes));
+                    nodes.push(Node::if_then_else(self.lower_value(cond, None)?, then_nodes, else_nodes));
                     let then_div = stmts_diverge(block_stmts(then_block));
                     let else_div = else_block.as_ref().is_some_and(|b| stmts_diverge(block_stmts(b)));
                     if then_div && else_div {
@@ -131,7 +131,14 @@ impl LowerCtx<'_> {
         Ok(nodes)
     }
 
-    fn lower_expr(&self, expr: &Expr) -> Result<IrExpr, RustLowerError> {
+    /// Lower a value expression. `subst` is `None` for the entry scope (a
+    /// variable lowers to its alpha-renamed local `v{id}`), or `Some(map)` while
+    /// inlining a callee (a callee variable lowers to its substituted argument).
+    fn lower_value(
+        &self,
+        expr: &Expr,
+        subst: Option<&HashMap<BindingId, IrExpr>>,
+    ) -> Result<IrExpr, RustLowerError> {
         match expr {
             Expr::LiteralInt(_, value) => Ok(IrExpr::i32(*value as i32)),
             Expr::LiteralBool(_, value) => Ok(IrExpr::bool(*value)),
@@ -139,11 +146,16 @@ impl LowerCtx<'_> {
                 let binding = self.resolution.uses.get(offset).copied().ok_or_else(|| {
                     RustLowerError::Unsupported("unresolved variable use".to_string())
                 })?;
-                Ok(IrExpr::var(format!("v{binding}")))
+                match subst {
+                    Some(map) => map.get(&binding).cloned().ok_or_else(|| {
+                        RustLowerError::Unsupported("callee variable not substituted".to_string())
+                    }),
+                    None => Ok(IrExpr::var(format!("v{binding}"))),
+                }
             }
             Expr::Binary { op, lhs, rhs } => {
-                let l = self.lower_expr(lhs)?;
-                let r = self.lower_expr(rhs)?;
+                let l = self.lower_value(lhs, subst)?;
+                let r = self.lower_value(rhs, subst)?;
                 Ok(match *op {
                     PLUS => IrExpr::add(l, r),
                     MINUS => IrExpr::sub(l, r),
@@ -154,13 +166,60 @@ impl LowerCtx<'_> {
                     other => return Err(RustLowerError::Unsupported(format!("binary operator {other}"))),
                 })
             }
+            Expr::Call { name, args } => self.lower_call(name, args, subst),
             Expr::Borrow { .. } => Err(RustLowerError::Unsupported("borrow expression".to_string())),
             Expr::Deref(_) => Err(RustLowerError::Unsupported("dereference expression".to_string())),
-            Expr::Call { .. } => Err(RustLowerError::Unsupported("function call".to_string())),
             Expr::Block(_) | Expr::If { .. } => {
                 Err(RustLowerError::Unsupported("block/if used as a value".to_string()))
             }
         }
+    }
+
+    /// Inline a call to a straight-line single-return callee: substitute its
+    /// parameters with the (caller-scope) argument expressions, fold its `let`
+    /// bindings, and return its lowered return expression. A callee with control
+    /// flow or no terminal return is a loud `Unsupported` (never miscompiled).
+    fn lower_call(
+        &self,
+        name: &u32,
+        args: &[Expr],
+        caller_subst: Option<&HashMap<BindingId, IrExpr>>,
+    ) -> Result<IrExpr, RustLowerError> {
+        let callee_index = self
+            .resolution
+            .calls
+            .get(name)
+            .copied()
+            .ok_or_else(|| RustLowerError::Unsupported("unresolved call".to_string()))?;
+        let callee = &self.module.functions[callee_index];
+        if args.len() != callee.params.len() {
+            return Err(RustLowerError::Unsupported("call arity mismatch".to_string()));
+        }
+        let mut subst: HashMap<BindingId, IrExpr> = HashMap::new();
+        for (i, (offset, _)) in callee.params.iter().enumerate() {
+            let binding = self.def_to_id.get(offset).copied().ok_or_else(|| {
+                RustLowerError::Unsupported("unresolved callee parameter".to_string())
+            })?;
+            subst.insert(binding, self.lower_value(&args[i], caller_subst)?);
+        }
+        for stmt in &callee.body {
+            match stmt {
+                Stmt::Let { name: offset, init, .. } => {
+                    let value = self.lower_value(init, Some(&subst))?;
+                    let binding = self.def_to_id.get(offset).copied().ok_or_else(|| {
+                        RustLowerError::Unsupported("unresolved callee binding".to_string())
+                    })?;
+                    subst.insert(binding, value);
+                }
+                Stmt::Return(Some(expr)) => return self.lower_value(expr, Some(&subst)),
+                _ => {
+                    return Err(RustLowerError::Unsupported(
+                        "call to a callee with control flow or no terminal return".to_string(),
+                    ))
+                }
+            }
+        }
+        Err(RustLowerError::Unsupported("call to a callee with no return".to_string()))
     }
 }
 

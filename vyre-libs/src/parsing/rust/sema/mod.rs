@@ -13,7 +13,7 @@
 //! implements the mutability rule (E0596) and reports the conflicting-borrow
 //! rules (E0499/E0502) as not-yet-wired rather than faking a complete pass.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use thiserror::Error;
 
@@ -46,6 +46,8 @@ pub struct Resolution {
     pub bindings: Vec<Binding>,
     /// Map from each variable-use source offset to its resolved binding.
     pub uses: HashMap<u32, BindingId>,
+    /// Map from each call's name source offset to the callee function index.
+    pub calls: HashMap<u32, usize>,
 }
 
 /// Errors from the Rust semantic-analysis stages.
@@ -180,9 +182,10 @@ fn type_str(ty: &Type) -> String {
 
 struct Resolver<'a> {
     source: &'a [u8],
-    fn_names: &'a HashSet<String>,
+    fn_index: &'a HashMap<String, usize>,
     bindings: Vec<Binding>,
     uses: HashMap<u32, BindingId>,
+    calls: HashMap<u32, usize>,
     scopes: Vec<HashMap<String, BindingId>>,
     function: usize,
 }
@@ -228,8 +231,11 @@ impl Resolver<'_> {
             Expr::Deref(inner) => self.resolve_expr(inner),
             Expr::Call { name, args } => {
                 let fname = ident_at(self.source, *name);
-                if !self.fn_names.contains(&fname) {
-                    return Err(RustSemaError::UnknownFunction { name: fname, offset: *name });
+                match self.fn_index.get(&fname) {
+                    Some(&idx) => {
+                        self.calls.insert(*name, idx);
+                    }
+                    None => return Err(RustSemaError::UnknownFunction { name: fname, offset: *name }),
                 }
                 for arg in args {
                     self.resolve_expr(arg)?;
@@ -280,14 +286,19 @@ impl Resolver<'_> {
 /// Returns [`RustSemaError::UnresolvedName`] or [`RustSemaError::UnknownFunction`]
 /// for a use with no in-scope definition.
 pub fn resolve(module: &Module, source: &[u8]) -> Result<Resolution, RustSemaError> {
-    let fn_names: HashSet<String> =
-        module.functions.iter().map(|f| ident_at(source, f.name)).collect();
+    let fn_index: HashMap<String, usize> = module
+        .functions
+        .iter()
+        .enumerate()
+        .map(|(i, f)| (ident_at(source, f.name), i))
+        .collect();
 
     let mut resolver = Resolver {
         source,
-        fn_names: &fn_names,
+        fn_index: &fn_index,
         bindings: Vec::new(),
         uses: HashMap::new(),
+        calls: HashMap::new(),
         scopes: Vec::new(),
         function: 0,
     };
@@ -302,7 +313,7 @@ pub fn resolve(module: &Module, source: &[u8]) -> Result<Resolution, RustSemaErr
         resolver.resolve_block(&func.body)?;
     }
 
-    Ok(Resolution { bindings: resolver.bindings, uses: resolver.uses })
+    Ok(Resolution { bindings: resolver.bindings, uses: resolver.uses, calls: resolver.calls })
 }
 
 // ----------------------------------------------------------------------------
