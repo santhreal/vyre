@@ -544,6 +544,7 @@ mod optimize_tests {
 }
 
 #[cfg(test)]
+
 mod optimize_cache_structure_tests {
     #[test]
     fn host_and_device_optimize_caches_share_one_bounded_shard_type() {
@@ -563,3 +564,4 @@ mod optimize_cache_structure_tests {
         );
     }
 }
+

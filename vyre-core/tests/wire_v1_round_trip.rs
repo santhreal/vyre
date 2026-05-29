@@ -58,5 +58,5 @@ fn wire_bytes_nonempty() {
     // body structure are verified exhaustively by
     // vyre-foundation/tests/terminal_wire_round_trip.rs.
     let bytes = empty_program().to_wire().expect("encode");
-    assert!(!bytes.is_empty(), "encoded wire bytes must be non-empty");
+    assert_ne!(bytes.len(), 0, "encoded wire bytes must be non-empty");
 }

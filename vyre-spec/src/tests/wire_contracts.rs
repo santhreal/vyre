@@ -482,6 +482,7 @@ fn data_type_wire_cases() -> Vec<(&'static str, DataType, u8)> {
     ]
 }
 
+
 fn assert_payload_independent_tag(name: &str, values: &[DataType], expected: u8) {
     for value in values {
         assert_eq!(
@@ -530,3 +531,4 @@ where
         "Fix: JSON round-trip drifted for representative contract value"
     );
 }
+
