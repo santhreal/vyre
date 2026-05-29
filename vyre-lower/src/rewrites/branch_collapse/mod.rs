@@ -448,6 +448,7 @@ mod tests {
     fn if_then_with_non_literal_cond_unchanged() {
         // tid; if(cond=tid) { Lit(7); }
         let desc = KernelDescriptor {
+
             id: "runtime_cond".into(),
             bindings: BindingLayout { slots: vec![] },
             dispatch: Dispatch::new(64, 1, 1),
@@ -898,6 +899,7 @@ mod tests {
                         ops: vec![KernelOp {
                             kind: KernelOpKind::Literal,
                             operands: vec![0],
+
                             result: Some(100),
                         }],
                         child_bodies: vec![],
@@ -934,3 +936,4 @@ mod tests {
         );
     }
 }
+

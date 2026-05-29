@@ -346,6 +346,6 @@ mod verify_then_optimize_tests {
             },
         };
         let f = verify_then_optimize(&desc).unwrap_err();
-        assert!(!f.errors().is_empty());
+        assert_ne!(f.errors().len(), 0);
     }
 }

@@ -469,6 +469,7 @@ fn min_operand_count(kind: &KernelOpKind) -> usize {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use crate::{
@@ -491,7 +492,7 @@ mod tests {
 
     #[test]
     fn empty_kernel_verifies() {
-        assert!(verify(&empty_desc(vec![], vec![])).is_ok());
+        assert!(matches!(verify(&empty_desc(vec![], vec![])), Ok(_)));
     }
 
     #[test]
@@ -1025,3 +1026,4 @@ mod tests {
             .any(|e| matches!(e.kind, VerifyErrorKind::WorkgroupBindingInHostRange { .. })));
     }
 }
+

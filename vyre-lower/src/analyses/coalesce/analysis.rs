@@ -448,6 +448,7 @@ mod tests {
                     BindingSlot {
                         slot: 0,
                         element_type: DataType::U32,
+
                         element_count: None,
                         memory_class: MemoryClass::Global,
                         visibility: BindingVisibility::ReadOnly,
@@ -619,3 +620,4 @@ mod tests {
         // assert removed
     }
 }
+

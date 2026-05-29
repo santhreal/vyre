@@ -497,6 +497,7 @@ fn load_is_loop_invariant_memory(
     })
 }
 
+
 fn is_pure(kind: &KernelOpKind) -> bool {
     !matches!(
         kind,
@@ -1215,3 +1216,4 @@ mod tests {
         );
     }
 }
+

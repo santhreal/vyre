@@ -200,25 +200,26 @@ fn every_descriptor_lowers_through_all_three_emitters() {
     for desc in descriptor_corpus() {
         let id = desc.id.clone();
 
-        let naga_result = vyre_emit_naga::emit_optimized(&desc);
+        let naga_module = vyre_emit_naga::emit_optimized(&desc)
+            .unwrap_or_else(|e| panic!("naga emit_optimized failed for `{id}`: {e:?}"));
         assert!(
-            naga_result.is_ok(),
-            "naga emit_optimized failed for `{id}`: {:?}",
-            naga_result.err()
+            !naga_module.entry_points.is_empty(),
+            "naga module for `{id}` must expose an entry point"
         );
 
-        let ptx_result = vyre_emit_ptx::emit_optimized(&desc);
+        let ptx = vyre_emit_ptx::emit_optimized(&desc)
+            .unwrap_or_else(|e| panic!("ptx emit_optimized failed for `{id}`: {e:?}"));
         assert!(
-            ptx_result.is_ok(),
-            "ptx emit_optimized failed for `{id}`: {:?}",
-            ptx_result.err()
+            ptx.contains(".version"),
+            "ptx for `{id}` must include a version directive"
         );
 
-        let spirv_result = vyre_emit_spirv::emit_optimized(&desc);
-        assert!(
-            spirv_result.is_ok(),
-            "spirv emit_optimized failed for `{id}`: {:?}",
-            spirv_result.err()
+        let spirv_words = vyre_emit_spirv::emit_optimized(&desc)
+            .unwrap_or_else(|e| panic!("spirv emit_optimized failed for `{id}`: {e:?}"));
+        assert_eq!(
+            spirv_words.first().copied(),
+            Some(vyre_emit_spirv::SPIRV_MAGIC),
+            "spirv for `{id}` must start with the SPIR-V magic word"
         );
     }
 }

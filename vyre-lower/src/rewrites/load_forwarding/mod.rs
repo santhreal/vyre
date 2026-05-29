@@ -448,6 +448,7 @@ mod tests {
                     KernelOp {
                         kind: KernelOpKind::Literal,
                         operands: vec![1],
+
                         result: Some(1),
                     },
                     KernelOp {
@@ -898,6 +899,7 @@ mod tests {
                         kind: KernelOpKind::Literal,
                         operands: vec![0],
                         result: Some(0),
+
                     },
                     KernelOp {
                         kind: KernelOpKind::Literal,
@@ -1231,3 +1233,4 @@ mod tests {
         assert_eq!(out.body.ops[5].operands, vec![0, 0, 1]);
     }
 }
+

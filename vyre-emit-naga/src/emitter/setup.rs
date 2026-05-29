@@ -451,6 +451,7 @@ fn descriptor_trap_sidecar_slot(desc: &KernelDescriptor) -> Result<Option<u32>, 
     Ok(Some(slot.slot))
 }
 
+
 fn descriptor_trap_tag_codes(body: &KernelBody) -> FxHashMap<vyre_lower::descriptor::Name, u32> {
     fn walk(
         body: &KernelBody,
@@ -527,3 +528,4 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
 // `lib.rs` calls into the cache layer first, then `emit_uncached` here.
 // Re-export the cache wrapper from this module so the `crate::emit`
 // boundary stays unchanged.
+

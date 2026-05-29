@@ -636,7 +636,7 @@ mod tests {
         for case in success_cases() {
             let errors = crate::verify(&case.descriptor);
             assert!(
-                errors.is_ok(),
+        matches!(errors, Ok(_)),
                 "Fix: adversarial case `{}` must verify before emit testing: {:?}",
                 case.id,
                 errors

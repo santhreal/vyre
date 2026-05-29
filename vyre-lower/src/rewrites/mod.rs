@@ -447,6 +447,7 @@ fn run_descriptor_passes(
 /// for the iterating wrapper. This exists so callers that want exactly
 /// one pass (e.g. for diagnostics) can have it.
 #[must_use]
+
 pub fn run_all_once(desc: &crate::KernelDescriptor) -> crate::KernelDescriptor {
     run_descriptor_passes(desc, canonical_rewrite_passes())
 }
@@ -1420,3 +1421,4 @@ mod tests {
         assert_eq!(stats.bindings_dropped(), 0);
     }
 }
+

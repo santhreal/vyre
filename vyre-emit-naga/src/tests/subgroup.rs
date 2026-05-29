@@ -25,7 +25,8 @@ fn subgroup_add_emits_collective_operation() {
         },
     };
     let module = emit(&desc).unwrap();
-    assert!(!module.entry_points.is_empty());
+    assert_eq!(module.entry_points.len(), 1);
+    assert_eq!(module.entry_points[0].name, "main");
 }
 
 #[test]
@@ -52,7 +53,8 @@ fn subgroup_ballot_emits_ballot_statement() {
         },
     };
     let module = emit(&desc).unwrap();
-    assert!(!module.entry_points.is_empty());
+    assert_eq!(module.entry_points.len(), 1);
+    assert_eq!(module.entry_points[0].name, "main");
 }
 
 #[test]

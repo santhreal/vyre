@@ -461,6 +461,7 @@ pub enum KernelOpKind {
 
 /// Heap-allocated payload for [`KernelOpKind::OpaqueExpr`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+
 pub struct OpaqueExprData {
     pub extension_id: u32,
     pub extension_kind: String,
@@ -1004,6 +1005,7 @@ mod desc_helper_tests {
             vec![],
         );
         assert!(!d.is_empty());
+        assert_eq!(d.total_ops(), 1);
     }
 
     #[test]
@@ -1019,6 +1021,7 @@ mod desc_helper_tests {
         };
         let d = build(vec![], vec![child]);
         assert!(!d.is_empty());
+        assert_eq!(d.total_ops(), 1);
     }
 
     #[test]
@@ -1273,6 +1276,7 @@ mod desc_helper_tests {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 
@@ -1587,3 +1591,4 @@ mod tests {
         assert_eq!(d.workgroup_size, [64, 4, 2]);
     }
 }
+

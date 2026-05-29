@@ -1055,6 +1055,7 @@ impl LowerCtx {
 ///
 /// Order is the deterministic order names are first observed during a
 /// pre-order walk, so the emitted op stream is stable across runs.
+
 fn collect_carrier_names(
     body: &[Node],
     incoming_scope: &scope::ScopeSnapshot,
@@ -1925,3 +1926,4 @@ mod tests {
         );
     }
 }
+
