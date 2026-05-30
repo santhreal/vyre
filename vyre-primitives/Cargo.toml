@@ -97,11 +97,11 @@ inventory = { workspace = true, optional = true }
 bytemuck.workspace = true
 
 [dev-dependencies]
-vyre-reference = { workspace = true }
-vyre-foundation.workspace = true
+vyre-reference = { path = "../vyre-reference" }
+vyre-foundation = { path = "../vyre-foundation" }
 proptest.workspace = true
-vyre-driver-cuda = { workspace = true }
-vyre-driver = { workspace = true }
+vyre-driver-cuda = { path = "../vyre-driver-cuda" }
+vyre-driver = { path = "../vyre-driver" }
 criterion.workspace = true
 
 [package.metadata.docs.rs]
