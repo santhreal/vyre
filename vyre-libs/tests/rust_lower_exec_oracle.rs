@@ -103,6 +103,16 @@ impl Ev<'_> {
                     let v = self.eval_int(value, env);
                     env.insert(self.resolution.uses[name], v);
                 }
+                Stmt::While { cond, body } => {
+                    let mut guard = 0u32;
+                    while self.eval_bool(cond, env) {
+                        if let Flow::Return(v) = self.exec(body, env) {
+                            return Flow::Return(v);
+                        }
+                        guard += 1;
+                        assert!(guard < 1_000_000, "oracle while loop did not terminate");
+                    }
+                }
                 Stmt::Expr(Expr::If { cond, then_block, else_block }) => {
                     let taken = if self.eval_bool(cond, env) {
                         Some(then_block.as_ref())
@@ -297,6 +307,48 @@ fn gen_inputs(seed: u64, n: usize) -> Vec<i32> {
     (0..n).map(|_| (g.next() % 19) as i32 - 9).collect() // -9..=9
 }
 
+/// Canonical counting-loop program: `let mut i = 0; let mut acc = <params>;
+/// while i < BOUND { acc = acc + <params,i>; i = i + 1; } return acc;`.
+/// The accumulator grows linearly (the body never reads `acc`), so no i32
+/// overflow, and the form is exactly what the lowering recognizes.
+fn gen_while_program(seed: u64) -> (String, usize) {
+    let mut g = Gen::new(seed ^ 0x5DEE_CE66_1357_9BDF);
+    let nparams = 1 + (g.next() % 2) as usize; // 1..=2
+    let i = nparams; // loop variable index
+    let acc = nparams + 1; // accumulator index
+    let bound = g.next() % 6 + 1; // 1..=6
+    let params: Vec<String> = (0..nparams).map(|p| format!("v{p}: i32")).collect();
+    let acc_init = g.expr(nparams, 1, false, false); // over params only
+    let body = g.expr(nparams + 1, 1, false, false); // over params + i (not acc)
+    (
+        format!(
+            "fn f({}) -> i32 {{ let mut v{i}: i32 = 0; let mut v{acc}: i32 = {acc_init}; \
+             while v{i} < {bound} {{ v{acc} = v{acc} + {body}; v{i} = v{i} + 1; }} return v{acc}; }}",
+            params.join(", ")
+        ),
+        nparams,
+    )
+}
+
+#[test]
+fn lowered_while_matches_ast_and_rustc() {
+    let mut checked = 0;
+    for seed in 0..400u64 {
+        let (src, nparams) = gen_while_program(seed);
+        let inputs = gen_inputs(seed.wrapping_mul(11).wrapping_add(2), nparams);
+        let ast = ast_interp(&src, &inputs);
+        let ir = ir_exec(&src, &inputs);
+        assert_eq!(ir, ast, "while: lowered IR diverged from AST interp:\n  {src}\n  inputs {inputs:?}");
+        if seed < 60 {
+            if let Some(rustc) = rustc_run(&src, &inputs) {
+                assert_eq!(ir, rustc, "while: lowered IR diverged from rustc:\n  {src}\n  inputs {inputs:?}");
+                checked += 1;
+            }
+        }
+    }
+    assert!(checked >= 30, "expected most while programs to compile+run under rustc, got {checked}");
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -344,6 +396,8 @@ fn curated_programs_execute_correctly() {
         ("fn f(a: i32, b: i32) -> i32 { if a == 0 || b == 0 { return 1; } else { return 0; } }", &[0, 7], 1),
         ("fn f(a: i32, b: i32) -> i32 { if !(a < b) { return 1; } else { return 0; } }", &[5, 2], 1),
         ("fn f(a: i32) -> i32 { let mut x: i32 = a; x = x + 1; x = x * 2; return x; }", &[3], 8),
+        ("fn f(n: i32) -> i32 { let mut i: i32 = 0; let mut acc: i32 = 0; while i < n { acc = acc + i; i = i + 1; } return acc; }", &[5], 10),
+        ("fn f(n: i32) -> i32 { let mut i: i32 = 0; let mut acc: i32 = 0; while i < n { acc = acc + i; i = i + 1; } return acc; }", &[0], 0),
     ];
     for (src, inputs, expected) in cases {
         assert_eq!(ir_exec(src, inputs), *expected, "{src} with {inputs:?}");

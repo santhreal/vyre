@@ -160,7 +160,7 @@ fn generate_branch_program(seed: u64) -> String {
         borrows += 1;
     }
     let mut uses = 0u32;
-    let mut arm = |s: &mut String, n: u32, next: &mut dyn FnMut() -> u32, uses: &mut u32| {
+    let arm = |s: &mut String, n: u32, next: &mut dyn FnMut() -> u32, uses: &mut u32| {
         for _ in 0..n {
             if borrows > 0 {
                 let bk = (next() as usize) % borrows;

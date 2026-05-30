@@ -77,6 +77,13 @@ pub enum Stmt {
     },
     /// Return statement.
     Return(Option<Expr>),
+    /// While loop (`while cond { body }`).
+    While {
+        /// Loop condition.
+        cond: Expr,
+        /// Loop body.
+        body: Vec<Stmt>,
+    },
 }
 
 /// Types in the nano-subset.
@@ -234,6 +241,12 @@ impl<'a> Parser<'a> {
         match self.peek().kind {
             KW_LET => self.parse_let(),
             KW_RETURN => self.parse_return(),
+            KW_WHILE => {
+                self.advance();
+                let cond = self.parse_expr()?;
+                let body = self.parse_block()?;
+                Ok(Stmt::While { cond, body })
+            }
             _ => {
                 let expr = self.parse_expr()?;
                 // `name = value;` is an assignment to an existing binding.

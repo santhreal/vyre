@@ -74,7 +74,7 @@ pub fn lower(module: &Module, resolution: &Resolution) -> Result<Program, RustLo
     buffers.push(BufferDecl::output("out", func.params.len() as u32, out_dtype).with_count(1));
 
     let ctx = LowerCtx { module, resolution, def_to_id: &def_to_id };
-    entry_nodes.extend(ctx.lower_stmts(&func.body)?);
+    entry_nodes.extend(ctx.lower_stmts(&func.body, None)?);
     Ok(Program::wrapped(buffers, [1, 1, 1], entry_nodes))
 }
 
@@ -98,7 +98,11 @@ struct LowerCtx<'a> {
 }
 
 impl LowerCtx<'_> {
-    fn lower_stmts(&self, stmts: &[Stmt]) -> Result<Vec<Node>, RustLowerError> {
+    fn lower_stmts(
+        &self,
+        stmts: &[Stmt],
+        subst: Option<&HashMap<BindingId, IrExpr>>,
+    ) -> Result<Vec<Node>, RustLowerError> {
         let mut nodes = Vec::new();
         for stmt in stmts {
             match stmt {
@@ -106,10 +110,10 @@ impl LowerCtx<'_> {
                     let binding = self.def_to_id.get(name).copied().ok_or_else(|| {
                         RustLowerError::Unsupported("unresolved let binding".to_string())
                     })?;
-                    nodes.push(Node::let_bind(format!("v{binding}"), self.lower_value(init, None)?));
+                    nodes.push(Node::let_bind(format!("v{binding}"), self.lower_value(init, subst)?));
                 }
                 Stmt::Return(Some(expr)) => {
-                    nodes.push(Node::store("out", IrExpr::u32(0), self.lower_value(expr, None)?));
+                    nodes.push(Node::store("out", IrExpr::u32(0), self.lower_value(expr, subst)?));
                     return Ok(nodes);
                 }
                 Stmt::Return(None) => return Ok(nodes),
@@ -117,27 +121,91 @@ impl LowerCtx<'_> {
                     let binding = self.resolution.uses.get(name).copied().ok_or_else(|| {
                         RustLowerError::Unsupported("unresolved assignment target".to_string())
                     })?;
-                    nodes.push(Node::assign(format!("v{binding}"), self.lower_value(value, None)?));
+                    nodes.push(Node::assign(format!("v{binding}"), self.lower_value(value, subst)?));
                 }
                 Stmt::Expr(Expr::If { cond, then_block, else_block }) => {
-                    let then_nodes = self.lower_stmts(block_stmts(then_block))?;
+                    let then_nodes = self.lower_stmts(block_stmts(then_block), subst)?;
                     let else_nodes = match else_block {
-                        Some(block) => self.lower_stmts(block_stmts(block))?,
+                        Some(block) => self.lower_stmts(block_stmts(block), subst)?,
                         None => Vec::new(),
                     };
-                    nodes.push(Node::if_then_else(self.lower_value(cond, None)?, then_nodes, else_nodes));
+                    nodes.push(Node::if_then_else(self.lower_value(cond, subst)?, then_nodes, else_nodes));
                     let then_div = stmts_diverge(block_stmts(then_block));
                     let else_div = else_block.as_ref().is_some_and(|b| stmts_diverge(block_stmts(b)));
                     if then_div && else_div {
                         return Ok(nodes);
                     }
                 }
-                // Pure expression statements (the nano-subset has no assignment)
-                // have no observable effect; drop them.
+                Stmt::While { cond, body } => {
+                    nodes.extend(self.lower_while(cond, body, subst)?);
+                }
+                // Pure expression statements have no observable effect; drop them.
                 Stmt::Expr(_) => {}
             }
         }
         Ok(nodes)
+    }
+
+    /// Lower `while i < BOUND { ...; i = i + 1; }` to a counted `Node::Loop`.
+    /// Only this exact counting form is supported; anything else (data-dependent
+    /// exit, mutated bound, `i` assigned outside the trailing increment) returns
+    /// a loud `Unsupported` rather than a miscompiled loop.
+    fn lower_while(
+        &self,
+        cond: &Expr,
+        body: &[Stmt],
+        subst: Option<&HashMap<BindingId, IrExpr>>,
+    ) -> Result<Vec<Node>, RustLowerError> {
+        let bad = || {
+            RustLowerError::Unsupported(
+                "while loop that is not a canonical `while i < BOUND { ...; i = i + 1; }` counting loop"
+                    .to_string(),
+            )
+        };
+        // cond must be `i < BOUND`.
+        let (i_off, bound) = match cond {
+            Expr::Binary { op, lhs, rhs } if *op == LT => match lhs.as_ref() {
+                Expr::Var(off) => (*off, rhs.as_ref()),
+                _ => return Err(bad()),
+            },
+            _ => return Err(bad()),
+        };
+        let b_i = self.resolution.uses.get(&i_off).copied().ok_or_else(bad)?;
+        // Trailing statement must be `i = i + 1`.
+        let Some((last, init_stmts)) = body.split_last() else {
+            return Err(bad());
+        };
+        let inc_ok = matches!(last, Stmt::Assign { name, value }
+            if self.resolution.uses.get(name).copied() == Some(b_i)
+            && matches!(value, Expr::Binary { op, lhs, rhs }
+                if *op == PLUS
+                && matches!(lhs.as_ref(), Expr::Var(o) if self.resolution.uses.get(o).copied() == Some(b_i))
+                && matches!(rhs.as_ref(), Expr::LiteralInt(_, 1))));
+        if !inc_ok {
+            return Err(bad());
+        }
+        // `i` must not be assigned anywhere except the trailing increment.
+        if stmts_assign_binding(init_stmts, b_i, self.resolution) {
+            return Err(bad());
+        }
+        // BOUND must be loop-invariant: none of its free variables are assigned
+        // in the body (so evaluating it once for the loop bound matches Rust).
+        for v in expr_var_bindings(bound, self.resolution) {
+            if stmts_assign_binding(body, v, self.resolution) {
+                return Err(bad());
+            }
+        }
+        let loop_var = format!("v{b_i}__w");
+        let mut inner = subst.cloned().unwrap_or_default();
+        inner.insert(b_i, IrExpr::var(loop_var.clone()));
+        let from = IrExpr::var(format!("v{b_i}"));
+        let to = self.lower_value(bound, subst)?;
+        let loop_body = self.lower_stmts(init_stmts, Some(&inner))?;
+        Ok(vec![
+            Node::loop_for(loop_var, from, to.clone(), loop_body),
+            // After `while i < n`, the induction variable equals n.
+            Node::assign(format!("v{b_i}"), to),
+        ])
     }
 
     /// Lower a value expression. `subst` is `None` for the entry scope (a
@@ -243,6 +311,49 @@ impl LowerCtx<'_> {
             }
         }
         Err(RustLowerError::Unsupported("call to a callee with no return".to_string()))
+    }
+}
+
+/// Whether any statement assigns binding `b` (recursing into if/while bodies).
+fn stmts_assign_binding(stmts: &[Stmt], b: BindingId, res: &Resolution) -> bool {
+    stmts.iter().any(|s| match s {
+        Stmt::Assign { name, .. } => res.uses.get(name).copied() == Some(b),
+        Stmt::Expr(Expr::If { then_block, else_block, .. }) => {
+            stmts_assign_binding(block_stmts(then_block), b, res)
+                || else_block.as_ref().is_some_and(|e| stmts_assign_binding(block_stmts(e), b, res))
+        }
+        Stmt::While { body, .. } => stmts_assign_binding(body, b, res),
+        _ => false,
+    })
+}
+
+/// Collect the binding ids of every variable read in `expr`.
+fn expr_var_bindings(expr: &Expr, res: &Resolution) -> Vec<BindingId> {
+    let mut out = Vec::new();
+    collect_var_bindings(expr, res, &mut out);
+    out
+}
+
+fn collect_var_bindings(expr: &Expr, res: &Resolution, out: &mut Vec<BindingId>) {
+    match expr {
+        Expr::Var(off) => {
+            if let Some(&id) = res.uses.get(off) {
+                out.push(id);
+            }
+        }
+        Expr::Binary { lhs, rhs, .. } => {
+            collect_var_bindings(lhs, res, out);
+            collect_var_bindings(rhs, res, out);
+        }
+        Expr::Borrow { expr, .. } => collect_var_bindings(expr, res, out),
+        Expr::Deref(inner) => collect_var_bindings(inner, res, out),
+        Expr::Not(inner) => collect_var_bindings(inner, res, out),
+        Expr::Call { args, .. } => {
+            for a in args {
+                collect_var_bindings(a, res, out);
+            }
+        }
+        _ => {}
     }
 }
 

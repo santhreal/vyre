@@ -287,6 +287,13 @@ impl Resolver<'_> {
                 }
                 Stmt::Return(Some(expr)) => self.resolve_expr(expr)?,
                 Stmt::Return(None) => {}
+                Stmt::While { cond, body } => {
+                    self.resolve_expr(cond)?;
+                    self.scopes.push(HashMap::new());
+                    let r = self.resolve_block(body);
+                    self.scopes.pop();
+                    r?;
+                }
             }
         }
         Ok(())
@@ -493,6 +500,13 @@ impl TypeCk<'_> {
                 Stmt::Return(None) => {
                     self.require(&Type::Unit, self.ret, "return value")?;
                 }
+                Stmt::While { cond, body } => {
+                    let ct = self.type_of(cond)?;
+                    if ct != Type::Bool {
+                        return Err(RustSemaError::NonBooleanCondition { found: type_str(&ct) });
+                    }
+                    self.check_block(body)?;
+                }
             }
         }
         Ok(())
@@ -545,6 +559,7 @@ fn stmt_diverges(stmt: &Stmt) -> bool {
         Stmt::Return(_) => true,
         Stmt::Expr(expr) => expr_diverges(expr),
         Stmt::Assign { .. } => false,
+        Stmt::While { .. } => false,
         Stmt::Let { init, .. } => expr_diverges(init),
     }
 }
@@ -603,6 +618,10 @@ fn check_mut_stmts(stmts: &[Stmt], resolution: &Resolution) -> Result<(), RustSe
             Stmt::Let { init, .. } => check_mut_expr(init, resolution)?,
             Stmt::Expr(expr) => check_mut_expr(expr, resolution)?,
             Stmt::Assign { value, .. } => check_mut_expr(value, resolution)?,
+            Stmt::While { cond, body } => {
+                check_mut_expr(cond, resolution)?;
+                check_mut_stmts(body, resolution)?;
+            }
             Stmt::Return(Some(expr)) => check_mut_expr(expr, resolution)?,
             Stmt::Return(None) => {}
         }
@@ -733,6 +752,10 @@ fn walk_escape(
             }
             Stmt::Assign { value, .. } => {
                 descend_escape(value, returns_ref, def_to_id, resolution, borrows_local)?;
+            }
+            Stmt::While { cond, body } => {
+                descend_escape(cond, returns_ref, def_to_id, resolution, borrows_local)?;
+                walk_escape(body, returns_ref, def_to_id, resolution, borrows_local)?;
             }
             Stmt::Return(Some(expr)) => {
                 if returns_ref {
@@ -926,6 +949,14 @@ impl FactBuilder<'_> {
                 }
                 Stmt::Assign { value, .. } => {
                     self.record_uses(value, point);
+                    cur = vec![point];
+                }
+                Stmt::While { cond, body } => {
+                    self.record_uses(cond, point);
+                    let out = self.build_block(body, &[point]);
+                    for &b in &out {
+                        self.facts.cfg_edges.push((b, point));
+                    }
                     cur = vec![point];
                 }
                 Stmt::Expr(Expr::If { cond, then_block, else_block }) => {
