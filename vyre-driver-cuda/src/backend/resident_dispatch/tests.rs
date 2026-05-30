@@ -14,6 +14,9 @@ fn resident_dispatch_production_source() -> String {
         include_str!("sequence_fused.rs"),
         include_str!("timed.rs"),
     ]
+    .iter()
+    .map(|s| s.split("#[cfg(test)]").next().unwrap_or(""))
+    .collect::<Vec<_>>()
     .join("\n")
 }
 
@@ -97,7 +100,7 @@ mod tests {
                 && production.contains("fn enqueue_optional_resident_h2d_copy")
                 && production.contains("fn enqueue_resident_upload_copies_on_stream")
                 && production
-                    .matches(concat!("super::copy::", "h2d_async_checked"))
+                    .matches(concat!("crate::backend::copy::", "h2d_async_checked"))
                     .count()
                     == 1,
             "Fix: resident dispatch parameter uploads, sequence uploads, and per-step parameter uploads must share one local H2D enqueue helper while preserving the caller-owned CUDA stream."
