@@ -1,10 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use serde_json::{json, Value};
 
 use super::args::parse_args;
-use super::metrics::write_json;
 use super::optimization::{write_optimization_benchmark_manifest, write_release_axes};
 use super::runner::{
     benchmark_artifact_is_reusable, copy_artifact, run_command, run_named_benchmark_if_needed,

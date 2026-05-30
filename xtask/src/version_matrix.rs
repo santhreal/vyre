@@ -94,12 +94,12 @@ struct ReleaseNoteTokenFinding {
 }
 
 const REQUIRED_RELEASE_PACKAGES: &[(&str, &str, &str)] = &[
-    ("vyre", "0.4.2", "vyre"),
-    ("vyre-driver-cuda", "0.4.2", "vyre"),
-    ("vyre-driver-wgpu", "0.4.2", "vyre"),
+    ("vyre", "0.6.1", "vyre"),
+    ("vyre-driver-cuda", "0.6.1", "vyre"),
+    ("vyre-driver-wgpu", "0.6.1", "vyre"),
     ("weir", "0.1.0", "weir"),
     ("vyrec", "0.1.0", "vyre"),
-    ("vyre-frontend-c", "0.4.2", "vyre"),
+    ("vyre-frontend-c", "0.6.1", "vyre"),
 ];
 
 pub(crate) fn run(args: &[String]) {
@@ -187,8 +187,8 @@ pub(crate) fn run(args: &[String]) {
             continue;
         }
         match krate.release_group {
-            "vyre" if krate.version != "0.4.2" => blockers.push(format!(
-                "{} is version {}, requested Vyre release is 0.4.2",
+            "vyre" if krate.version != "0.6.1" => blockers.push(format!(
+                "{} is version {}, requested Vyre release is 0.6.1",
                 krate.package, krate.version
             )),
             "weir" if krate.version != "0.1.0" => blockers.push(format!(
@@ -242,7 +242,7 @@ pub(crate) fn run(args: &[String]) {
 
     let matrix = VersionMatrix {
         schema_version: 1,
-        requested_vyre_release: "0.4.2",
+        requested_vyre_release: "0.6.1",
         requested_weir_release: "0.1.0",
         tag_story: release_tag_story(),
         required_release_packages: REQUIRED_RELEASE_PACKAGES
@@ -423,24 +423,24 @@ fn release_doc_paths(vyre_root: &Path, santh_root: &Path) -> Vec<PathBuf> {
 
 fn release_tag_story() -> ReleaseTagStory {
     ReleaseTagStory {
-        vyre_rc_tag: "vyre-v0.4.2-rc.1",
+        vyre_rc_tag: "vyre-v0.6.1-rc.1",
         weir_rc_tag: "weir-v0.1.0-rc.1",
-        combined_release_train_rc_tag: "vyre-0.4.2-weir-0.1.0-rc.1",
-        vyre_tag: "vyre-v0.4.2",
+        combined_release_train_rc_tag: "vyre-0.6.1-weir-0.1.0-rc.1",
+        vyre_tag: "vyre-v0.6.1",
         weir_tag: "weir-v0.1.0",
-        combined_release_train_tag: "vyre-0.4.2-weir-0.1.0",
-        policy: "Release packaging must use explicit product-scoped RC and final tags, not a bare v0.4.2 tag that could ambiguously refer to the root monorepo, Vyre-only crates, or Weir.",
+        combined_release_train_tag: "vyre-0.6.1-weir-0.1.0",
+        policy: "Release packaging must use explicit product-scoped RC and final tags, not a bare v0.6.1 tag that could ambiguously refer to the root monorepo, Vyre-only crates, or Weir.",
         required_in_release_notes: vec![
-            "vyre 0.4.2",
+            "vyre 0.6.1",
             "weir 0.1.0",
-            "vyre-driver-cuda@0.4.2",
-            "vyre-driver-wgpu@0.4.2",
-            "vyre-v0.4.2-rc.1",
+            "vyre-driver-cuda@0.6.1",
+            "vyre-driver-wgpu@0.6.1",
+            "vyre-v0.6.1-rc.1",
             "weir-v0.1.0-rc.1",
-            "vyre-0.4.2-weir-0.1.0-rc.1",
-            "vyre-v0.4.2",
+            "vyre-0.6.1-weir-0.1.0-rc.1",
+            "vyre-v0.6.1",
             "weir-v0.1.0",
-            "vyre-0.4.2-weir-0.1.0",
+            "vyre-0.6.1-weir-0.1.0",
         ],
         required_in_packaging: vec![
             "package versions align before tag creation",
@@ -628,7 +628,7 @@ fn expected_dependency_version(dependency: &str) -> Option<(&'static str, &'stat
         return None;
     }
     if dependency == "vyre" || dependency.starts_with("vyre-") {
-        return Some(("0.4.2", "vyre"));
+        return Some(("0.6.1", "vyre"));
     }
     None
 }

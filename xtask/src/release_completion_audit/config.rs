@@ -65,7 +65,7 @@ pub(crate) fn release_checklist() -> Vec<ChecklistItem> {
     vec![
         ChecklistItem {
             requirement_id: "version-story",
-            explicit_requirement: "Vyre manifests, dependency hints, lockfile path packages, docs, release notes, packaging, and product-scoped tags use the selected Vyre 0.4.2 / Weir 0.1.0 version story.",
+            explicit_requirement: "Vyre manifests, dependency hints, lockfile path packages, docs, release notes, packaging, and product-scoped tags use the selected Vyre 0.6.1 / Weir 0.1.0 version story.",
             required_artifacts_or_commands: vec![
                 "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json",
                 "release/evidence/version/version-matrix.json",

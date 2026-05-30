@@ -279,15 +279,15 @@ fn inspect_release_tag_plan_semantics(
     blockers: &mut Vec<String>,
 ) {
     for (field, expected) in [
-        ("vyre_rc_tag", "vyre-v0.4.2-rc.1"),
+        ("vyre_rc_tag", "vyre-v0.6.1-rc.1"),
         ("weir_rc_tag", "weir-v0.1.0-rc.1"),
         (
             "combined_release_train_rc_tag",
-            "vyre-0.4.2-weir-0.1.0-rc.1",
+            "vyre-0.6.1-weir-0.1.0-rc.1",
         ),
-        ("vyre_tag", "vyre-v0.4.2"),
+        ("vyre_tag", "vyre-v0.6.1"),
         ("weir_tag", "weir-v0.1.0"),
-        ("combined_release_train_tag", "vyre-0.4.2-weir-0.1.0"),
+        ("combined_release_train_tag", "vyre-0.6.1-weir-0.1.0"),
     ] {
         if value.get(field).and_then(serde_json::Value::as_str) != Some(expected) {
             blockers.push(format!("{evidence}: {field} must be `{expected}`"));
@@ -299,12 +299,12 @@ fn inspect_release_tag_plan_semantics(
         .cloned()
         .unwrap_or_default();
     for required in [
-        "vyre-v0.4.2-rc.1",
+        "vyre-v0.6.1-rc.1",
         "weir-v0.1.0-rc.1",
-        "vyre-0.4.2-weir-0.1.0-rc.1",
-        "vyre-v0.4.2",
+        "vyre-0.6.1-weir-0.1.0-rc.1",
+        "vyre-v0.6.1",
         "weir-v0.1.0",
-        "vyre-0.4.2-weir-0.1.0",
+        "vyre-0.6.1-weir-0.1.0",
     ] {
         if !order.iter().any(|entry| entry.as_str() == Some(required)) {
             blockers.push(format!(
@@ -317,9 +317,9 @@ fn inspect_release_tag_plan_semantics(
         .filter_map(serde_json::Value::as_str)
         .collect::<Vec<_>>();
     for (rc, final_tag) in [
-        ("vyre-v0.4.2-rc.1", "vyre-v0.4.2"),
+        ("vyre-v0.6.1-rc.1", "vyre-v0.6.1"),
         ("weir-v0.1.0-rc.1", "weir-v0.1.0"),
-        ("vyre-0.4.2-weir-0.1.0-rc.1", "vyre-0.4.2-weir-0.1.0"),
+        ("vyre-0.6.1-weir-0.1.0-rc.1", "vyre-0.6.1-weir-0.1.0"),
     ] {
         let rc_index = ordered_tags.iter().position(|tag| *tag == rc);
         let final_index = ordered_tags.iter().position(|tag| *tag == final_tag);

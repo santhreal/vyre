@@ -474,9 +474,9 @@ const REQUIRED_BENCHMARKED_OPTIMIZATION_FAMILIES: &[&str] = &[
     "A14-shared-mem-promote-fixture",
     "A15-bank-conflict-fixture",
     "A16-vec-pack-fixture",
-    "dataflow-analysis-dse",
-    "dataflow-analysis-loop-fusion",
-    "dataflow-analysis-loop-fission",
-    "dataflow-analysis-licm",
+    "weir-dataflow-dse",
+    "weir-dataflow-loop-fusion",
+    "weir-dataflow-loop-fission",
+    "weir-dataflow-licm",
 ];
 
