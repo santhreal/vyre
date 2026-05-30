@@ -170,18 +170,27 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
                 _ => None,
             }
         }
-        // Unsigned Mod-by-2^k → BitAnd (2^k - 1).
+        // Unsigned Mod-by-constant.
         BinOp::Mod => {
             let Expr::LitU32(value) = right.as_ref() else {
                 return None;
             };
+            // x % 1 → 0 for every unsigned x.
             if *value == 1 {
                 return Some(Expr::u32(0));
             }
-            if !value.is_power_of_two() {
-                return None;
+            // x % 2^k → x & (2^k - 1).
+            if value.is_power_of_two() {
+                return Some(Expr::bitand(left.as_ref().clone(), Expr::u32(value - 1)));
             }
-            Some(Expr::bitand(left.as_ref().clone(), Expr::u32(value - 1)))
+            // x % d (non-power-of-two constant) → x - (x / d) * d, reusing the
+            // Granlund-Montgomery exact u32 division. The (x / d) * d multiply
+            // strength-reduces to shift/add on the next fixpoint pass, so a
+            // ~40-90 cycle integer umod becomes mulhi + shift + mul + sub.
+            // d == 0 falls through here (granlund_montgomery_div guards d <= 1),
+            // leaving modulo-by-zero intact for the backend to trap.
+            granlund_montgomery_div(left.as_ref(), *value)
+                .map(|quotient| Expr::sub(left.as_ref().clone(), Expr::mul(quotient, Expr::u32(*value))))
         }
         // Float: x + 0.0 → x (additive identity).
         BinOp::Add => {
