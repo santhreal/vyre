@@ -169,8 +169,9 @@ impl BodyCtx<'_> {
         let Some(result) = op.result else {
             return false;
         };
-        let Some(consumer_idx) = facts.single_consumer_idx(result) else {
-            return false;
+        let consumer_idx = match facts.consumer_indices(result) {
+            Some([idx]) => *idx,
+            _ => return false,
         };
         let Some(consumer) = body.ops.get(consumer_idx) else {
             return false;
