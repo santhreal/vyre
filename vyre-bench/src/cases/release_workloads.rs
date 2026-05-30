@@ -618,7 +618,10 @@ fn string_bitmap_scatter_inputs(records: u32) -> StringBitmapScatterInputs {
         pattern_bitmap.push(row[0]);
         rule_bitmap.push(row[1]);
     }
+    let output_words = records.div_ceil(32);
+    let out_flags_init = vec![0u32; output_words as usize];
     let inputs = vec![
+        encode_u32_words(&out_flags_init),
         encode_u32_words(&pattern_bitmap),
         encode_u32_words(&rule_bitmap),
     ];
