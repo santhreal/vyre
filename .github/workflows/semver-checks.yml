@@ -20,5 +20,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
-          manifest-path: libs/performance/matching/vyre/Cargo.toml
+          manifest-path: Cargo.toml
           package: vyre,vyre-spec,vyre-macros,vyre-reference,vyre-driver,vyre-driver-wgpu,vyre-driver-spirv,vyre-driver-megakernel,vyre-foundation,vyre-primitives,vyre-libs,vyre-intrinsics,vyre-runtime,vyre-conform-spec,vyre-conform-generate,vyre-conform-enforce,vyre-conform-runner,vyre-test-harness

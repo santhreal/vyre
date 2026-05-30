@@ -22,4 +22,4 @@ jobs:
         with:
           command: check
           arguments: --all-features
-          manifest-path: libs/performance/matching/vyre/Cargo.toml
+          manifest-path: Cargo.toml

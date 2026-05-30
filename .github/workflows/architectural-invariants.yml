@@ -37,7 +37,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Pure-crate dependency invariant
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_architectural_invariants.sh
 
   law-a-closed-enums:
@@ -45,7 +44,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Law A  -  no closed IR enums
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_no_closed_ir_enums.sh
 
   law-b-string-wgsl:
@@ -53,7 +51,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Law B  -  no string-based WGSL emission
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_no_string_wgsl.sh
 
   law-b-shader-assets:
@@ -61,7 +58,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Law B  -  no shader asset files under op / dialect trees
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_no_shader_assets.sh
 
   law-c-capability-negotiation:
@@ -69,7 +65,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Law C  -  supported_ops + validate_program
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_capability_negotiation.sh
 
   law-d-unsafe-justifications:
@@ -77,7 +72,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Law D  -  every unsafe block has SAFETY justification
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_unsafe_justifications.sh
 
   dialect-coverage:
@@ -85,7 +79,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Every Category::C OpDef has a backend lowering
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_dialect_coverage.sh
 
   trait-freeze:
@@ -93,7 +86,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Frozen trait contracts still exist
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_trait_freeze.sh
 
   registry-consistency:
@@ -101,7 +93,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: DialectRegistry and OpDefRegistration inventories agree
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_registry_consistency.sh
 
   no-raw-unwrap:
@@ -109,7 +100,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Hard ban on raw unwrap() and expect()
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_no_raw_unwrap.sh
 
   no-hot-path-inventory:
@@ -117,7 +107,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: inventory::iter forbidden on dispatch hot path
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_no_hot_path_inventory.sh
 
   no-opspec-tokens:
@@ -125,7 +114,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Legacy OpSpec shim eradicated from source
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_no_opspec_tokens.sh
 
   error-codes-cataloged:
@@ -133,7 +121,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Every V### / E-* / W-* / B-* / C-* code in source is cataloged
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_error_codes_cataloged.sh
 
   consistency-contracts:
@@ -141,7 +128,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Op id uniqueness + dialect format invariants
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_consistency_contracts.sh
 
   no-deferred-work:
@@ -149,7 +135,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: No deferred-work markers in shipped source
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_no_deferred_work.sh
 
   base-monument:
@@ -162,7 +147,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: 9 monument-base prerequisites
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_base_monument.sh
 
   abstraction-gate:
@@ -171,7 +155,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Registered building-block abstraction
-        working-directory: libs/performance/matching/vyre
         run: bash scripts/check_abstraction.sh
 
   vyre-lints-raw-ir:
@@ -180,8 +163,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: vyre-lints  -  no raw IR construction in vyre-libs
-        working-directory: libs/performance/matching/vyre
-        run: ./cargo_full run -p vyre-lints --release --quiet -- --workspace-root .
+        run: cargo run -p vyre-lints --release --quiet -- --workspace-root .
 
   vyre-lints-allowlist-drift:
     runs-on: ubuntu-latest
@@ -191,24 +173,22 @@ jobs:
           fetch-depth: 0  # full history so git blame can age allowlist entries
       - uses: dtolnay/rust-toolchain@stable
       - name: vyre-lints  -  allowlist drift sentinel (≤14 days)
-        working-directory: libs/performance/matching/vyre
-        run: ./cargo_full run -p vyre-lints --release --quiet -- --check-drift --workspace-root .
+        run: cargo run -p vyre-lints --release --quiet -- --check-drift --workspace-root .
 
   op-matrix-coverage:
     runs-on: ubuntu-latest
     # ROADMAP S6: every registered op family must have an OP_MATRIX.toml
     # row. The matrix is generated from inventory registries plus manual
     # foundation rows; any drift between source and `OP_MATRIX.toml`
-    # fails this check. Run `./cargo_full run -p xtask -- op-matrix --write` locally to
+    # fails this check. Run `cargo run -p xtask -- op-matrix --write` locally to
     # regenerate when registries change.
     # ROADMAP S7: validate_records also enforces tier-vs-id consistency
     # so a Tier-2.5 row can't carry `vyre-libs::` ops or vice versa.
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: cargo_full run -p xtask -- op-matrix --check
-        working-directory: libs/performance/matching/vyre
-        run: ./cargo_full run -p xtask -- op-matrix --check
+      - name: cargo run -p xtask -- op-matrix --check
+        run: cargo run -p xtask -- op-matrix --check
 
   lego-audit:
     runs-on: ubuntu-latest
@@ -225,6 +205,5 @@ jobs:
         with:
           fetch-depth: 0  # check 7 (trend) needs the previous tag
       - uses: dtolnay/rust-toolchain@stable
-      - name: cargo_full run -p xtask -- lego-audit --with-repo
-        working-directory: libs/performance/matching/vyre
-        run: ./cargo_full run -p xtask -- lego-audit --with-repo
+      - name: cargo run -p xtask -- lego-audit --with-repo
+        run: cargo run -p xtask -- lego-audit --with-repo

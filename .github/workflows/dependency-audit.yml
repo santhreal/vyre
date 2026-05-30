@@ -18,7 +18,7 @@ on:
 
 jobs:
   machete:
-    name: ./cargo_full machete (unused deps)
+    name: cargo machete (unused deps)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache ./cargo_full registry
+      - name: Cache cargo registry
         uses: actions/cache@v4
         with:
           path: |
@@ -35,10 +35,9 @@ jobs:
           key: cargo-machete-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install cargo-machete
-        run: ./cargo_full install --locked cargo-machete
+        run: cargo install --locked cargo-machete
 
       - name: Run cargo-machete on workspace
         # --with-metadata is slower but catches dev-only / build-only deps
         # that a shallow parse would miss.
-        working-directory: libs/performance/matching/vyre
-        run: ./cargo_full machete --with-metadata
+        run: cargo machete --with-metadata
