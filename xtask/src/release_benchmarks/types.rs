@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 pub(super) const REQUIRED_CPU_SOTA_100X_CASES: &[&str] = &[
     "release.condition_eval.1m",

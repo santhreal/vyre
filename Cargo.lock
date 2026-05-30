@@ -272,7 +272,7 @@ dependencies = [
  "arrayvec",
  "cc",
  "cfg-if",
- "constant_time_eq 0.4.2",
+ "constant_time_eq",
  "cpufeatures 0.3.0",
 ]
 
@@ -506,12 +506,6 @@ name = "const-oid"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
-
-[[package]]
-name = "constant_time_eq"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
 
 [[package]]
 name = "constant_time_eq"
@@ -1478,16 +1472,6 @@ dependencies = [
  "allocator-api2",
  "equivalent",
  "foldhash 0.2.0",
-]
-
-[[package]]
-name = "hashkit"
-version = "0.1.0"
-dependencies = [
- "base64",
- "blake3",
- "constant_time_eq 0.3.1",
- "sha2 0.10.9",
 ]
 
 [[package]]
@@ -3419,7 +3403,6 @@ version = "0.6.1"
 dependencies = [
  "blake3",
  "brotli",
- "hashkit",
  "lzma-rs",
  "serde",
  "serde_json",
@@ -3822,6 +3805,7 @@ dependencies = [
  "vyre-foundation",
  "vyre-libs",
  "vyre-primitives",
+ "vyre-reference",
  "vyre-runtime",
 ]
 

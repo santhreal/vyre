@@ -36,9 +36,9 @@ pub(super) fn check(
         .get("requested_vyre_release")
         .and_then(serde_json::Value::as_str)
         .unwrap_or("");
-    if vyre_release != "0.4.2" {
+    if vyre_release != "0.6.1" {
         failures.push(format!(
-            "requirement `version-story` requested_vyre_release is `{vyre_release}`, expected `0.4.2`"
+            "requirement `version-story` requested_vyre_release is `{vyre_release}`, expected `0.6.1`"
         ));
     }
     let weir_release = matrix
@@ -56,7 +56,7 @@ pub(super) fn check(
         .is_none_or(|findings| !findings.is_empty())
     {
         failures.push(
-            "requirement `version-story` release docs must not contain bare v0.4.2 tag commands"
+            "requirement `version-story` release docs must not contain bare v0.6.1 tag commands"
                 .to_string(),
         );
     }
@@ -86,12 +86,12 @@ pub(super) fn check(
         .cloned()
         .unwrap_or_default();
     for required_package in [
-        "vyre@0.4.2",
-        "vyre-driver-cuda@0.4.2",
-        "vyre-driver-wgpu@0.4.2",
+        "vyre@0.6.1",
+        "vyre-driver-cuda@0.6.1",
+        "vyre-driver-wgpu@0.6.1",
         "weir@0.1.0",
         "vyrec@0.1.0",
-        "vyre-frontend-c@0.4.2",
+        "vyre-frontend-c@0.6.1",
     ] {
         if !required_release_packages
             .iter()
@@ -112,15 +112,15 @@ pub(super) fn check(
         return;
     };
     for (field, expected) in [
-        ("vyre_rc_tag", "vyre-v0.4.2-rc.1"),
+        ("vyre_rc_tag", "vyre-v0.6.1-rc.1"),
         ("weir_rc_tag", "weir-v0.1.0-rc.1"),
         (
             "combined_release_train_rc_tag",
-            "vyre-0.4.2-weir-0.1.0-rc.1",
+            "vyre-0.6.1-weir-0.1.0-rc.1",
         ),
-        ("vyre_tag", "vyre-v0.4.2"),
+        ("vyre_tag", "vyre-v0.6.1"),
         ("weir_tag", "weir-v0.1.0"),
-        ("combined_release_train_tag", "vyre-0.4.2-weir-0.1.0"),
+        ("combined_release_train_tag", "vyre-0.6.1-weir-0.1.0"),
     ] {
         let actual = tag_story
             .get(field)
@@ -133,16 +133,16 @@ pub(super) fn check(
         }
     }
     for required in [
-        "vyre 0.4.2",
+        "vyre 0.6.1",
         "weir 0.1.0",
-        "vyre-driver-cuda@0.4.2",
-        "vyre-driver-wgpu@0.4.2",
-        "vyre-v0.4.2-rc.1",
+        "vyre-driver-cuda@0.6.1",
+        "vyre-driver-wgpu@0.6.1",
+        "vyre-v0.6.1-rc.1",
         "weir-v0.1.0-rc.1",
-        "vyre-0.4.2-weir-0.1.0-rc.1",
-        "vyre-v0.4.2",
+        "vyre-0.6.1-weir-0.1.0-rc.1",
+        "vyre-v0.6.1",
         "weir-v0.1.0",
-        "vyre-0.4.2-weir-0.1.0",
+        "vyre-0.6.1-weir-0.1.0",
     ] {
         let present = tag_story
             .get("required_in_release_notes")
@@ -169,15 +169,15 @@ pub(super) fn check(
             ));
         }
         for (field, expected) in [
-            ("vyre_rc_tag", "vyre-v0.4.2-rc.1"),
+            ("vyre_rc_tag", "vyre-v0.6.1-rc.1"),
             ("weir_rc_tag", "weir-v0.1.0-rc.1"),
             (
                 "combined_release_train_rc_tag",
-                "vyre-0.4.2-weir-0.1.0-rc.1",
+                "vyre-0.6.1-weir-0.1.0-rc.1",
             ),
-            ("vyre_tag", "vyre-v0.4.2"),
+            ("vyre_tag", "vyre-v0.6.1"),
             ("weir_tag", "weir-v0.1.0"),
-            ("combined_release_train_tag", "vyre-0.4.2-weir-0.1.0"),
+            ("combined_release_train_tag", "vyre-0.6.1-weir-0.1.0"),
         ] {
             if tag_plan.get(field).and_then(serde_json::Value::as_str) != Some(expected) {
                 failures.push(format!(
@@ -211,9 +211,9 @@ pub(super) fn check(
             .filter_map(serde_json::Value::as_str)
             .collect::<Vec<_>>();
         for (rc, final_tag) in [
-            ("vyre-v0.4.2-rc.1", "vyre-v0.4.2"),
+            ("vyre-v0.6.1-rc.1", "vyre-v0.6.1"),
             ("weir-v0.1.0-rc.1", "weir-v0.1.0"),
-            ("vyre-0.4.2-weir-0.1.0-rc.1", "vyre-0.4.2-weir-0.1.0"),
+            ("vyre-0.6.1-weir-0.1.0-rc.1", "vyre-0.6.1-weir-0.1.0"),
         ] {
             let rc_index = ordered_tags.iter().position(|tag| *tag == rc);
             let final_index = ordered_tags.iter().position(|tag| *tag == final_tag);

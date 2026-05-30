@@ -1,15 +1,14 @@
 use std::fs;
 use std::path::Path;
 
-use serde::Serialize;
 use serde_json::Value;
 
 use super::metrics::{
-    max_metric_p50, max_observed_ulp, max_vram_mib, metric_p50_values, min_first_available_metric_p50,
+    max_metric_p50, max_observed_ulp, max_vram_mib, min_first_available_metric_p50,
     min_metric_p50, release_axis_blockers, write_json,
 };
 use super::suite_inspect::{
-    read_text_bounded, record_observed_metric_percentile, record_required_metric_percentile,
+    read_text_bounded, record_required_metric_percentile,
     suite_metric_percentile, suite_metric_samples,
 };
 use super::types::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
@@ -476,10 +475,10 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
             "lower.alias_aware_optimizations",
             "release/evidence/benchmarks/alias-aware-before-after.json",
             vec![
-                "dataflow-analysis-dse",
-                "dataflow-analysis-loop-fusion",
-                "dataflow-analysis-loop-fission",
-                "dataflow-analysis-licm",
+                "weir-dataflow-dse",
+                "weir-dataflow-loop-fusion",
+                "weir-dataflow-loop-fission",
+                "weir-dataflow-licm",
             ],
             vec![
                 "alias_pass_wins",
@@ -520,10 +519,10 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
         "A14-shared-mem-promote-fixture",
         "A15-bank-conflict-fixture",
         "A16-vec-pack-fixture",
-        "dataflow-analysis-dse",
-        "dataflow-analysis-loop-fusion",
-        "dataflow-analysis-loop-fission",
-        "dataflow-analysis-licm",
+        "weir-dataflow-dse",
+        "weir-dataflow-loop-fusion",
+        "weir-dataflow-loop-fission",
+        "weir-dataflow-licm",
     ];
     let required_case_count = specs.len();
     let mut blockers = Vec::new();

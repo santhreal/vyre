@@ -2,7 +2,7 @@
 
 use std::collections::BTreeSet;
 use std::fs;
-use std::io::{self, Read};
+use std::io::{self};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -63,7 +63,7 @@ mod config;
 mod paths;
 mod semantics;
 
-use config::{parse_args, release_checklist, Config};
+use config::{parse_args, release_checklist};
 use paths::{
     is_checklist_artifact, is_manifest_command_evidence, paths_equal, read_text_bounded,
     resolve_checklist_artifact_path, resolve_manifest_path,

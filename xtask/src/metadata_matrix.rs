@@ -60,19 +60,19 @@ const MAX_README_BYTES: u64 = 2_097_152;
 const REQUIRED_RELEASE_SURFACES: &[RequiredReleaseSurface] = &[
     RequiredReleaseSurface {
         name: "vyre",
-        expected_version: "0.4.2",
+        expected_version: "0.6.1",
         release_kind: Some("publishable-crate"),
         release_surface: "vyre-engine",
     },
     RequiredReleaseSurface {
         name: "vyre-driver-cuda",
-        expected_version: "0.4.2",
+        expected_version: "0.6.1",
         release_kind: Some("publishable-crate"),
         release_surface: "cuda-backend",
     },
     RequiredReleaseSurface {
         name: "vyre-driver-wgpu",
-        expected_version: "0.4.2",
+        expected_version: "0.6.1",
         release_kind: Some("publishable-crate"),
         release_surface: "wgpu-backend",
     },
@@ -90,7 +90,7 @@ const REQUIRED_RELEASE_SURFACES: &[RequiredReleaseSurface] = &[
     },
     RequiredReleaseSurface {
         name: "vyre-frontend-c",
-        expected_version: "0.4.2",
+        expected_version: "0.6.1",
         release_kind: Some("non-publishable-release-surface"),
         release_surface: "c-frontend",
     },
@@ -683,7 +683,7 @@ fn expected_version(name: &str, release_group: &str, release_kind: &str) -> Opti
         return Some(required.expected_version);
     }
     match release_group {
-        "vyre" => Some("0.4.2"),
+        "vyre" => Some("0.6.1"),
         "weir" => Some("0.1.0"),
         _ => None,
     }

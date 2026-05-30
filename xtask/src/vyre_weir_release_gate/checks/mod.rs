@@ -1,11 +1,9 @@
 //! Shared release-gate check helpers.
 
 use std::collections::BTreeSet;
-use std::fs;
-use std::io::{self, Read};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use super::types::{EvidenceManifest, Requirement, MAX_RELEASE_GATE_TEXT_BYTES};
+use super::types::Requirement;
 use super::paths::{read_text_bounded, resolve_artifact_path, resolve_manifest_path};
 
 include!("part1.rs");

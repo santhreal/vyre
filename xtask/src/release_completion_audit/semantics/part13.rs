@@ -335,10 +335,10 @@ fn inspect_version_matrix_semantics(
     if value
         .get("requested_vyre_release")
         .and_then(serde_json::Value::as_str)
-        != Some("0.4.2")
+        != Some("0.6.1")
     {
         blockers.push(format!(
-            "{evidence}: requested_vyre_release must be `0.4.2`"
+            "{evidence}: requested_vyre_release must be `0.6.1`"
         ));
     }
     if value
@@ -383,12 +383,12 @@ fn inspect_version_matrix_semantics(
         .cloned()
         .unwrap_or_default();
     for required_package in [
-        "vyre@0.4.2",
-        "vyre-driver-cuda@0.4.2",
-        "vyre-driver-wgpu@0.4.2",
+        "vyre@0.6.1",
+        "vyre-driver-cuda@0.6.1",
+        "vyre-driver-wgpu@0.6.1",
         "weir@0.1.0",
         "vyrec@0.1.0",
-        "vyre-frontend-c@0.4.2",
+        "vyre-frontend-c@0.6.1",
     ] {
         if !required_release_packages
             .iter()
@@ -407,15 +407,15 @@ fn inspect_version_matrix_semantics(
         return;
     };
     for (field, expected) in [
-        ("vyre_rc_tag", "vyre-v0.4.2-rc.1"),
+        ("vyre_rc_tag", "vyre-v0.6.1-rc.1"),
         ("weir_rc_tag", "weir-v0.1.0-rc.1"),
         (
             "combined_release_train_rc_tag",
-            "vyre-0.4.2-weir-0.1.0-rc.1",
+            "vyre-0.6.1-weir-0.1.0-rc.1",
         ),
-        ("vyre_tag", "vyre-v0.4.2"),
+        ("vyre_tag", "vyre-v0.6.1"),
         ("weir_tag", "weir-v0.1.0"),
-        ("combined_release_train_tag", "vyre-0.4.2-weir-0.1.0"),
+        ("combined_release_train_tag", "vyre-0.6.1-weir-0.1.0"),
     ] {
         if tag_story.get(field).and_then(serde_json::Value::as_str) != Some(expected) {
             blockers.push(format!(
@@ -424,16 +424,16 @@ fn inspect_version_matrix_semantics(
         }
     }
     for required in [
-        "vyre 0.4.2",
+        "vyre 0.6.1",
         "weir 0.1.0",
-        "vyre-driver-cuda@0.4.2",
-        "vyre-driver-wgpu@0.4.2",
-        "vyre-v0.4.2-rc.1",
+        "vyre-driver-cuda@0.6.1",
+        "vyre-driver-wgpu@0.6.1",
+        "vyre-v0.6.1-rc.1",
         "weir-v0.1.0-rc.1",
-        "vyre-0.4.2-weir-0.1.0-rc.1",
-        "vyre-v0.4.2",
+        "vyre-0.6.1-weir-0.1.0-rc.1",
+        "vyre-v0.6.1",
         "weir-v0.1.0",
-        "vyre-0.4.2-weir-0.1.0",
+        "vyre-0.6.1-weir-0.1.0",
     ] {
         let present = tag_story
             .get("required_in_release_notes")

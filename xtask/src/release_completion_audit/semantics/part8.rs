@@ -69,7 +69,7 @@ fn inspect_metadata_matrix_semantics(
     }
     if !packages.iter().any(|package| {
         package.get("name").and_then(serde_json::Value::as_str) == Some("vyre-frontend-c")
-            && package.get("version").and_then(serde_json::Value::as_str) == Some("0.4.2")
+            && package.get("version").and_then(serde_json::Value::as_str) == Some("0.6.1")
             && package.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
             && package
                 .get("release_kind")
@@ -81,7 +81,7 @@ fn inspect_metadata_matrix_semantics(
                 == Some("c-frontend")
     }) {
         blockers.push(format!(
-            "{evidence}: missing vyre-frontend-c 0.4.2 c-frontend non-publishable release-surface metadata with README.md"
+            "{evidence}: missing vyre-frontend-c 0.6.1 c-frontend non-publishable release-surface metadata with README.md"
         ));
     }
     for (package_name, backend_surface) in [
@@ -90,7 +90,7 @@ fn inspect_metadata_matrix_semantics(
     ] {
         if !packages.iter().any(|package| {
             package.get("name").and_then(serde_json::Value::as_str) == Some(package_name)
-                && package.get("version").and_then(serde_json::Value::as_str) == Some("0.4.2")
+                && package.get("version").and_then(serde_json::Value::as_str) == Some("0.6.1")
                 && package.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
                 && package
                     .get("release_kind")
@@ -102,7 +102,7 @@ fn inspect_metadata_matrix_semantics(
                     == Some(backend_surface)
         }) {
             blockers.push(format!(
-                "{evidence}: missing {package_name} 0.4.2 publishable {backend_surface} release-surface metadata with README.md"
+                "{evidence}: missing {package_name} 0.6.1 publishable {backend_surface} release-surface metadata with README.md"
             ));
         }
     }
@@ -251,7 +251,7 @@ fn inspect_package_readiness_semantics(
         .and_then(serde_json::Value::as_array)
         .cloned()
         .unwrap_or_default();
-    for required in ["vyre-macros@0.4.2", "vyre-spec@0.4.2", "vyre-lints@0.4.2"] {
+    for required in ["vyre-macros@0.6.1", "vyre-spec@0.6.1", "vyre-lints@0.6.1"] {
         if !verify_passed
             .iter()
             .any(|entry| entry.as_str() == Some(required))

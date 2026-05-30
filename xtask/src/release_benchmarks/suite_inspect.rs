@@ -1,7 +1,6 @@
 use std::fs;
 use std::path::Path;
 
-use serde::Serialize;
 use serde_json::{json, Value};
 
 use super::metrics::write_json;

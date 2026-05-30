@@ -98,7 +98,7 @@ pub(super) fn check(
         }
         if !entries.iter().any(|entry| {
             entry.get("name").and_then(serde_json::Value::as_str) == Some("vyre-frontend-c")
-                && entry.get("version").and_then(serde_json::Value::as_str) == Some("0.4.2")
+                && entry.get("version").and_then(serde_json::Value::as_str) == Some("0.6.1")
                 && entry.get("readme").and_then(serde_json::Value::as_str)
                     == Some("README.md")
                 && entry
@@ -111,7 +111,7 @@ pub(super) fn check(
                     == Some("c-frontend")
         }) {
             failures.push(
-                "requirement `crate-metadata` matrix must include vyre-frontend-c 0.4.2 as a c-frontend non-publishable release surface with README metadata"
+                "requirement `crate-metadata` matrix must include vyre-frontend-c 0.6.1 as a c-frontend non-publishable release surface with README metadata"
                     .to_string(),
             );
         }
@@ -122,7 +122,7 @@ pub(super) fn check(
             if !entries.iter().any(|entry| {
                 entry.get("name").and_then(serde_json::Value::as_str) == Some(package_name)
                     && entry.get("version").and_then(serde_json::Value::as_str)
-                        == Some("0.4.2")
+                        == Some("0.6.1")
                     && entry.get("readme").and_then(serde_json::Value::as_str)
                         == Some("README.md")
                     && entry
@@ -135,7 +135,7 @@ pub(super) fn check(
                         == Some(backend_surface)
             }) {
                 failures.push(format!(
-                    "requirement `crate-metadata` matrix must include {package_name} 0.4.2 as a publishable {backend_surface} release surface with README metadata"
+                    "requirement `crate-metadata` matrix must include {package_name} 0.6.1 as a publishable {backend_surface} release surface with README metadata"
                 ));
             }
         }

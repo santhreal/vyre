@@ -144,7 +144,7 @@ fn completion_marker_complete(path: &Path) -> bool {
             .get("release_train")
             .and_then(|train| train.get("vyre"))
             .and_then(serde_json::Value::as_str)
-            == Some("0.4.2")
+            == Some("0.6.1")
         && value
             .get("release_train")
             .and_then(|train| train.get("weir"))
@@ -164,7 +164,7 @@ fn completion_marker_complete(path: &Path) -> bool {
             .and_then(|git| git.get("tags"))
             .and_then(serde_json::Value::as_array)
             .is_some_and(|tags| {
-                ["vyre-v0.4.2", "weir-v0.1.0", "vyre-0.4.2-weir-0.1.0"]
+                ["vyre-v0.6.1", "weir-v0.1.0", "vyre-0.6.1-weir-0.1.0"]
                     .iter()
                     .all(|required| tags.iter().any(|tag| tag.as_str() == Some(required)))
             })
