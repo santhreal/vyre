@@ -5,7 +5,7 @@ use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 mod arithmetic;
 
 use arithmetic::{
-    granlund_montgomery_div, horner_quadratic_u32, power_of_two_shift, reciprocal_constant_fold,
+    granlund_montgomery_div, horner_polynomial_int, power_of_two_shift, reciprocal_constant_fold,
     shift_add_decompose, synthesize_fma_add, synthesize_fma_sub,
 };
 
@@ -56,7 +56,7 @@ impl StrengthReduce {
     reason = "strength-reduction table keeps algebraic rewrite precedence auditable"
 )]
 fn reduce_expr(expr: &Expr) -> Option<Expr> {
-    if let Some(reduced) = horner_quadratic_u32(expr) {
+    if let Some(reduced) = horner_polynomial_int(expr) {
         return Some(reduced);
     }
 
@@ -94,6 +94,20 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
             }
             if let Some(decomposed) = shift_add_decompose(right.as_ref(), left.as_ref()) {
                 return Some(decomposed);
+            }
+            // Signed multiply by a negative constant: x * (-C) → Negate(x * C).
+            // The positive product is strength-reduced to shifts on the next
+            // fixpoint iteration. Two's-complement i32 only; -1 is owned by
+            // const-fold and i32::MIN cannot be negated without overflow.
+            if let Expr::LitI32(c) = right.as_ref() {
+                if *c < -1 && *c != i32::MIN {
+                    return Some(Expr::negate(Expr::mul(left.as_ref().clone(), Expr::i32(-*c))));
+                }
+            }
+            if let Expr::LitI32(c) = left.as_ref() {
+                if *c < -1 && *c != i32::MIN {
+                    return Some(Expr::negate(Expr::mul(right.as_ref().clone(), Expr::i32(-*c))));
+                }
             }
             // Float: x * 2.0 → x + x (saves a mul, uses cheaper add).
             if matches!(right.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, 2.0)) {
