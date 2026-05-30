@@ -2,7 +2,7 @@ schema_version = 1
 plan_path = "../../../../../docs/vyre-weir-release-plan.md"
 
 [release]
-vyre = "0.4.2"
+vyre = "0.6.1"
 weir = "0.1.0"
 
 [[requirements]]

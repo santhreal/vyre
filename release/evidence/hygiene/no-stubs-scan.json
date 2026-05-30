@@ -1,6 +1,81 @@
 {
   "schema_version": 1,
   "scan": "no-stubs",
-  "findings": [],
-  "blockers": []
+  "findings": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
+      "line": 75,
+      "pattern": "placeholder_text",
+      "text": "/// `(origin, loan)`: origin is a placeholder (a universal/free region)."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
+      "line": 76,
+      "pattern": "placeholder_text",
+      "text": "pub placeholder: Vec<(Origin, Loan)>,"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
+      "line": 229,
+      "pattern": "placeholder_text",
+      "text": "let mut placeholder = Vec::new();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
+      "line": 234,
+      "pattern": "placeholder_text",
+      "text": "placeholder.push((origins.intern(f[0]), loans.intern(f[1])));"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
+      "line": 272,
+      "pattern": "placeholder_text",
+      "text": "placeholder,"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
+      "line": 379,
+      "pattern": "placeholder_text",
+      "text": "/// placeholder origins that is not a known/declared placeholder subset."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
+      "line": 387,
+      "pattern": "placeholder_text",
+      "text": "let placeholders: HashSet<Origin> = self.placeholder.iter().map(|&(o, _)| o).collect();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/lex/lexer/plan.rs",
+      "line": 16,
+      "pattern": "not_implemented_text",
+      "text": "/// **Not implemented:** returns an empty program. `vyre-frontend-rust` must"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/lower/mod.rs",
+      "line": 18,
+      "pattern": "not_implemented_text",
+      "text": "/// Lowering is not implemented for the nano-subset."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/analysis_family.rs",
+      "line": 127,
+      "pattern": "placeholder_text",
+      "text": "// This is a placeholder; real implementations will hard-code the"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/test_harness/fake_backend.rs",
+      "line": 1,
+      "pattern": "stub_text",
+      "text": "//! Stub fake backend for Weir tests."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/test_harness/ifds_builder.rs",
+      "line": 1,
+      "pattern": "stub_text",
+      "text": "//! Stub IFDS problem builder for Weir tests."
+    }
+  ],
+  "blockers": [
+    "12 `no-stubs` finding(s) remain"
+  ]
 }

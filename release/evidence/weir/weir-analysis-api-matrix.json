@@ -6,7 +6,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ssa.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 14338,
+      "source_bytes": 33703,
       "has_public_api": true,
       "required_api_items": [
         "SsaForm",
@@ -30,7 +30,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/def_use.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 5605,
+      "source_bytes": 7794,
       "has_public_api": true,
       "required_api_items": [
         "def_use_chain",
@@ -51,7 +51,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/reaching.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 5839,
+      "source_bytes": 2336,
       "has_public_api": true,
       "required_api_items": [
         "reaching_defs_step",
@@ -61,7 +61,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": true,
+      "inventory_registered": false,
       "unresolved_markers": []
     },
     {
@@ -69,7 +69,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/reaching_def.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 2668,
+      "source_bytes": 2822,
       "has_public_api": true,
       "required_api_items": [
         "reaching_def",
@@ -88,8 +88,8 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/points_to.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 15362,
-      "has_public_api": true,
+      "source_bytes": 2089,
+      "has_public_api": false,
       "required_api_items": [
         "andersen_points_to",
         "andersen_points_to_with_shape",
@@ -100,7 +100,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": true,
+      "inventory_registered": false,
       "unresolved_markers": []
     },
     {
@@ -108,7 +108,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/may_alias.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 3647,
+      "source_bytes": 3853,
       "has_public_api": true,
       "required_api_items": [
         "may_alias",
@@ -127,8 +127,8 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 8749,
-      "has_public_api": true,
+      "source_bytes": 2553,
+      "has_public_api": false,
       "required_api_items": [
         "ifds_reach_step",
         "ifds_reach_step_exploded",
@@ -138,7 +138,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": true,
+      "inventory_registered": false,
       "unresolved_markers": []
     },
     {
@@ -146,7 +146,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/ifds_gpu.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 22606,
+      "source_bytes": 6544,
       "has_public_api": true,
       "required_api_items": [
         "solve_cpu",
@@ -167,8 +167,8 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/callgraph.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 6312,
-      "has_public_api": true,
+      "source_bytes": 1681,
+      "has_public_api": false,
       "required_api_items": [
         "callgraph_build",
         "callgraph_build_with_count",
@@ -178,7 +178,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": true,
+      "inventory_registered": false,
       "unresolved_markers": []
     },
     {
@@ -186,7 +186,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/control_dependence.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 2827,
+      "source_bytes": 2972,
       "has_public_api": true,
       "required_api_items": [
         "control_dependence",
@@ -205,7 +205,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/cross_language.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 13674,
+      "source_bytes": 17546,
       "has_public_api": true,
       "required_api_items": [
         "EDGE_KIND_FFI",
@@ -226,8 +226,8 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/dominators.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 11187,
-      "has_public_api": true,
+      "source_bytes": 1730,
+      "has_public_api": false,
       "required_api_items": [
         "dominates",
         "cpu_ref",
@@ -239,7 +239,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": true,
+      "inventory_registered": false,
       "unresolved_markers": []
     },
     {
@@ -247,7 +247,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/escape.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 5872,
+      "source_bytes": 5844,
       "has_public_api": true,
       "required_api_items": [
         "escape_analyze",
@@ -266,7 +266,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/escapes.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 2604,
+      "source_bytes": 2796,
       "has_public_api": true,
       "required_api_items": [
         "escapes",
@@ -285,8 +285,8 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/live.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 3308,
-      "has_public_api": true,
+      "source_bytes": 1334,
+      "has_public_api": false,
       "required_api_items": [
         "live_step",
         "Liveness"
@@ -295,7 +295,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": true,
+      "inventory_registered": false,
       "unresolved_markers": []
     },
     {
@@ -303,7 +303,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/live_at.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 2541,
+      "source_bytes": 2689,
       "has_public_api": true,
       "required_api_items": [
         "live_at",
@@ -322,8 +322,8 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/slice.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 5570,
-      "has_public_api": true,
+      "source_bytes": 2330,
+      "has_public_api": false,
       "required_api_items": [
         "backward_slice",
         "backward_slice_with_shape",
@@ -333,7 +333,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": true,
+      "inventory_registered": false,
       "unresolved_markers": []
     },
     {
@@ -341,8 +341,8 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/summary.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 6599,
-      "has_public_api": true,
+      "source_bytes": 2009,
+      "has_public_api": false,
       "required_api_items": [
         "summarize_function",
         "summarize_function_with_count",
@@ -352,7 +352,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": true,
+      "inventory_registered": false,
       "unresolved_markers": []
     },
     {
@@ -360,8 +360,8 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/loop_sum.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 6718,
-      "has_public_api": true,
+      "source_bytes": 1715,
+      "has_public_api": false,
       "required_api_items": [
         "loop_summarize",
         "loop_summarize_with_count",
@@ -371,7 +371,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": true,
+      "inventory_registered": false,
       "unresolved_markers": []
     },
     {
@@ -379,7 +379,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/must_init.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 2778,
+      "source_bytes": 2971,
       "has_public_api": true,
       "required_api_items": [
         "must_init",
@@ -398,7 +398,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/post_dominates.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 2604,
+      "source_bytes": 2759,
       "has_public_api": true,
       "required_api_items": [
         "post_dominates",
@@ -417,8 +417,8 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/range.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 6294,
-      "has_public_api": true,
+      "source_bytes": 1963,
+      "has_public_api": false,
       "required_api_items": [
         "range_propagate",
         "range_propagate_with_count",
@@ -428,7 +428,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": true,
+      "inventory_registered": false,
       "unresolved_markers": []
     },
     {
@@ -436,7 +436,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/range_check.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 3496,
+      "source_bytes": 4004,
       "has_public_api": true,
       "required_api_items": [
         "range_check",
@@ -455,7 +455,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/reachability_witness.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 32068,
+      "source_bytes": 11701,
       "has_public_api": true,
       "required_api_items": [
         "PathSeed",
@@ -479,7 +479,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/scc_query.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 2652,
+      "source_bytes": 2797,
       "has_public_api": true,
       "required_api_items": [
         "scc_query",
@@ -498,7 +498,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/soundness.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 8776,
+      "source_bytes": 12950,
       "has_public_api": true,
       "required_api_items": [
         "Soundness",
@@ -528,7 +528,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/value_set.rs",
       "exists": true,
       "public_exported": true,
-      "source_bytes": 2456,
+      "source_bytes": 2607,
       "has_public_api": true,
       "required_api_items": [
         "value_set",
@@ -543,7 +543,7 @@
       "unresolved_markers": []
     }
   ],
-  "inventory_registered_count": 24,
+  "inventory_registered_count": 14,
   "required_api_item_count": 102,
   "missing_api_item_count": 0,
   "property_test_count": 16,
@@ -560,18 +560,18 @@
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/ifds_to_witness.rs",
       "exists": true,
-      "source_bytes": 2371,
+      "source_bytes": 2195,
       "read_error": null,
       "has_main": true,
       "uses_weir_crate": true,
       "has_serde_evidence": false,
-      "api_reference_count": 2,
+      "api_reference_count": 1,
       "unresolved_markers": []
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/serde_evidence.rs",
       "exists": true,
-      "source_bytes": 1238,
+      "source_bytes": 1231,
       "read_error": null,
       "has_main": true,
       "uses_weir_crate": true,
@@ -582,12 +582,12 @@
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/witness_many.rs",
       "exists": true,
-      "source_bytes": 3282,
+      "source_bytes": 2395,
       "read_error": null,
       "has_main": true,
       "uses_weir_crate": true,
       "has_serde_evidence": false,
-      "api_reference_count": 2,
+      "api_reference_count": 0,
       "unresolved_markers": []
     }
   ],
@@ -597,7 +597,7 @@
       "id": "adversarial_oracles",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_adversarial_oracles.rs",
       "exists": true,
-      "source_bytes": 3254,
+      "source_bytes": 3398,
       "has_test_entrypoint": true,
       "assertion_count": 20,
       "unresolved_markers": []
@@ -606,7 +606,7 @@
       "id": "anchor_bit_codegen",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_anchor_bit_codegen.rs",
       "exists": true,
-      "source_bytes": 5136,
+      "source_bytes": 5049,
       "has_test_entrypoint": true,
       "assertion_count": 2,
       "unresolved_markers": []
@@ -615,7 +615,7 @@
       "id": "cross_arm_raw_atomic",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_cross_arm_raw_atomic.rs",
       "exists": true,
-      "source_bytes": 6635,
+      "source_bytes": 6556,
       "has_test_entrypoint": true,
       "assertion_count": 2,
       "unresolved_markers": []
@@ -624,7 +624,7 @@
       "id": "construction_def_use",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_def_use.rs",
       "exists": true,
-      "source_bytes": 2285,
+      "source_bytes": 2503,
       "has_test_entrypoint": true,
       "assertion_count": 9,
       "unresolved_markers": []
@@ -633,7 +633,7 @@
       "id": "construction_dominators",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_dominators_construction.rs",
       "exists": true,
-      "source_bytes": 2650,
+      "source_bytes": 2706,
       "has_test_entrypoint": true,
       "assertion_count": 9,
       "unresolved_markers": []
@@ -642,7 +642,7 @@
       "id": "construction_ifds",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_ifds_construction.rs",
       "exists": true,
-      "source_bytes": 2088,
+      "source_bytes": 2145,
       "has_test_entrypoint": true,
       "assertion_count": 9,
       "unresolved_markers": []
@@ -651,7 +651,7 @@
       "id": "construction_live",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_live_construction.rs",
       "exists": true,
-      "source_bytes": 1956,
+      "source_bytes": 1955,
       "has_test_entrypoint": true,
       "assertion_count": 7,
       "unresolved_markers": []
@@ -660,7 +660,7 @@
       "id": "construction_may_alias",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_may_alias_construction.rs",
       "exists": true,
-      "source_bytes": 2274,
+      "source_bytes": 2323,
       "has_test_entrypoint": true,
       "assertion_count": 13,
       "unresolved_markers": []
@@ -678,7 +678,7 @@
       "id": "construction_range_check",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_range_check_construction.rs",
       "exists": true,
-      "source_bytes": 1535,
+      "source_bytes": 1586,
       "has_test_entrypoint": true,
       "assertion_count": 9,
       "unresolved_markers": []
@@ -687,7 +687,7 @@
       "id": "cross_language",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_cross_language.rs",
       "exists": true,
-      "source_bytes": 2272,
+      "source_bytes": 2319,
       "has_test_entrypoint": true,
       "assertion_count": 5,
       "unresolved_markers": []
@@ -696,7 +696,7 @@
       "id": "cross_primitive_composition",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_cross_primitive_composition.rs",
       "exists": true,
-      "source_bytes": 2951,
+      "source_bytes": 3011,
       "has_test_entrypoint": true,
       "assertion_count": 7,
       "unresolved_markers": []
@@ -714,7 +714,7 @@
       "id": "live_at_escapes",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_live_at_escapes.rs",
       "exists": true,
-      "source_bytes": 1719,
+      "source_bytes": 1830,
       "has_test_entrypoint": true,
       "assertion_count": 7,
       "unresolved_markers": []
@@ -723,7 +723,7 @@
       "id": "must_init_scc_query",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_must_init_scc_query.rs",
       "exists": true,
-      "source_bytes": 1972,
+      "source_bytes": 2061,
       "has_test_entrypoint": true,
       "assertion_count": 13,
       "unresolved_markers": []
@@ -732,7 +732,7 @@
       "id": "parity_exact_primitives",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_exact_primitives.rs",
       "exists": true,
-      "source_bytes": 6662,
+      "source_bytes": 6720,
       "has_test_entrypoint": true,
       "assertion_count": 2,
       "unresolved_markers": []
@@ -741,7 +741,7 @@
       "id": "parity_dominators",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_dominators.rs",
       "exists": true,
-      "source_bytes": 3478,
+      "source_bytes": 3427,
       "has_test_entrypoint": true,
       "assertion_count": 2,
       "unresolved_markers": []
@@ -750,16 +750,16 @@
       "id": "parity_inventory_sweep",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs",
       "exists": true,
-      "source_bytes": 4253,
+      "source_bytes": 29945,
       "has_test_entrypoint": true,
-      "assertion_count": 4,
+      "assertion_count": 28,
       "unresolved_markers": []
     },
     {
       "id": "parity_may_alias",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_may_alias.rs",
       "exists": true,
-      "source_bytes": 2841,
+      "source_bytes": 2847,
       "has_test_entrypoint": true,
       "assertion_count": 2,
       "unresolved_markers": []
@@ -768,16 +768,16 @@
       "id": "reachability_witness",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_reachability_witness.rs",
       "exists": true,
-      "source_bytes": 6635,
+      "source_bytes": 3353,
       "has_test_entrypoint": true,
-      "assertion_count": 11,
+      "assertion_count": 5,
       "unresolved_markers": []
     },
     {
       "id": "slice_reaching_def_control_dep",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_slice_reaching_def_control_dep.rs",
       "exists": true,
-      "source_bytes": 3259,
+      "source_bytes": 3313,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "unresolved_markers": []
@@ -795,7 +795,7 @@
       "id": "ssa_dominators",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_ssa_dominators.rs",
       "exists": true,
-      "source_bytes": 2600,
+      "source_bytes": 2599,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "unresolved_markers": []
@@ -804,7 +804,7 @@
       "id": "value_set_post_dominates",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_value_set_post_dominates.rs",
       "exists": true,
-      "source_bytes": 1789,
+      "source_bytes": 1900,
       "has_test_entrypoint": true,
       "assertion_count": 7,
       "unresolved_markers": []
@@ -813,7 +813,7 @@
       "id": "property_points_to",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_points_to.rs",
       "exists": true,
-      "source_bytes": 1951,
+      "source_bytes": 1954,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "unresolved_markers": []
@@ -822,7 +822,7 @@
       "id": "property_may_alias",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_may_alias.rs",
       "exists": true,
-      "source_bytes": 1632,
+      "source_bytes": 1661,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "unresolved_markers": []
@@ -831,7 +831,7 @@
       "id": "property_ifds",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_ifds.rs",
       "exists": true,
-      "source_bytes": 1849,
+      "source_bytes": 1901,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "unresolved_markers": []
@@ -840,7 +840,7 @@
       "id": "property_control_dependence",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_control_dependence.rs",
       "exists": true,
-      "source_bytes": 2193,
+      "source_bytes": 2220,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "unresolved_markers": []
@@ -849,7 +849,7 @@
       "id": "property_cross_language",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_cross_language.rs",
       "exists": true,
-      "source_bytes": 2809,
+      "source_bytes": 2829,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "unresolved_markers": []
@@ -858,7 +858,7 @@
       "id": "property_def_use",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_def_use.rs",
       "exists": true,
-      "source_bytes": 2476,
+      "source_bytes": 2813,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "unresolved_markers": []
@@ -867,7 +867,7 @@
       "id": "property_dominators",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_dominators.rs",
       "exists": true,
-      "source_bytes": 2573,
+      "source_bytes": 2600,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "unresolved_markers": []
@@ -876,7 +876,7 @@
       "id": "property_range_check",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_range_check.rs",
       "exists": true,
-      "source_bytes": 2545,
+      "source_bytes": 2574,
       "has_test_entrypoint": true,
       "assertion_count": 16,
       "unresolved_markers": []
@@ -885,7 +885,7 @@
       "id": "property_range_escape",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_range_escape.rs",
       "exists": true,
-      "source_bytes": 2239,
+      "source_bytes": 2242,
       "has_test_entrypoint": true,
       "assertion_count": 20,
       "unresolved_markers": []
@@ -894,7 +894,7 @@
       "id": "property_reachability_witness",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_reachability_witness.rs",
       "exists": true,
-      "source_bytes": 3746,
+      "source_bytes": 3765,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "unresolved_markers": []
@@ -903,7 +903,7 @@
       "id": "property_reaching_def_escapes",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_reaching_def_escapes.rs",
       "exists": true,
-      "source_bytes": 2354,
+      "source_bytes": 2439,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "unresolved_markers": []
@@ -912,7 +912,7 @@
       "id": "property_slice",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_slice_construction.rs",
       "exists": true,
-      "source_bytes": 2950,
+      "source_bytes": 2953,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "unresolved_markers": []
@@ -921,7 +921,7 @@
       "id": "property_ssa",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_ssa_dominators.rs",
       "exists": true,
-      "source_bytes": 2232,
+      "source_bytes": 2235,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "unresolved_markers": []
@@ -930,7 +930,7 @@
       "id": "property_summary_callgraph",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_summary_callgraph.rs",
       "exists": true,
-      "source_bytes": 2642,
+      "source_bytes": 2645,
       "has_test_entrypoint": true,
       "assertion_count": 30,
       "unresolved_markers": []
@@ -939,7 +939,7 @@
       "id": "property_value_set",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_value_set.rs",
       "exists": true,
-      "source_bytes": 1966,
+      "source_bytes": 1993,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "unresolved_markers": []
@@ -948,7 +948,7 @@
       "id": "property_bitset_oracles",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_property_bitset_oracles.rs",
       "exists": true,
-      "source_bytes": 2358,
+      "source_bytes": 2398,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "unresolved_markers": []
@@ -957,7 +957,7 @@
       "id": "fuzz_bitset_oracles",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_fuzz_bitset_oracles.rs",
       "exists": true,
-      "source_bytes": 1766,
+      "source_bytes": 1765,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "unresolved_markers": []
@@ -966,7 +966,7 @@
       "id": "gap_bitset_oracle_edges",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_gap_bitset_oracle_edges.rs",
       "exists": true,
-      "source_bytes": 1135,
+      "source_bytes": 1267,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "unresolved_markers": []
@@ -975,7 +975,7 @@
       "id": "resolve_family_node39",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_resolve_family_node39.rs",
       "exists": true,
-      "source_bytes": 3437,
+      "source_bytes": 3505,
       "has_test_entrypoint": true,
       "assertion_count": 1,
       "unresolved_markers": []
@@ -993,7 +993,7 @@
       "id": "three_arm_fusion",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_three_arm_fusion.rs",
       "exists": true,
-      "source_bytes": 9508,
+      "source_bytes": 9419,
       "has_test_entrypoint": true,
       "assertion_count": 3,
       "unresolved_markers": []
@@ -1002,20 +1002,42 @@
       "id": "perf_oracle",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_perf_oracle_throughput.rs",
       "exists": true,
-      "source_bytes": 2670,
+      "source_bytes": 5137,
       "has_test_entrypoint": true,
-      "assertion_count": 1,
+      "assertion_count": 3,
       "unresolved_markers": []
     },
     {
       "id": "scale_oracle",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_scale_oracle_no_oom.rs",
       "exists": true,
-      "source_bytes": 2788,
+      "source_bytes": 2785,
       "has_test_entrypoint": true,
       "assertion_count": 9,
       "unresolved_markers": []
     }
   ],
-  "blockers": []
+  "blockers": [
+    "Weir analysis `reaching` declares OP_ID but does not submit a vyre_harness::OpEntry",
+    "Weir analysis `points_to` exposes no public API item",
+    "Weir analysis `points_to` declares OP_ID but does not submit a vyre_harness::OpEntry",
+    "Weir analysis `ifds` exposes no public API item",
+    "Weir analysis `ifds` declares OP_ID but does not submit a vyre_harness::OpEntry",
+    "Weir analysis `callgraph` exposes no public API item",
+    "Weir analysis `callgraph` declares OP_ID but does not submit a vyre_harness::OpEntry",
+    "Weir analysis `dominators` exposes no public API item",
+    "Weir analysis `dominators` declares OP_ID but does not submit a vyre_harness::OpEntry",
+    "Weir analysis `live` exposes no public API item",
+    "Weir analysis `live` declares OP_ID but does not submit a vyre_harness::OpEntry",
+    "Weir analysis `slice` exposes no public API item",
+    "Weir analysis `slice` declares OP_ID but does not submit a vyre_harness::OpEntry",
+    "Weir analysis `summary` exposes no public API item",
+    "Weir analysis `summary` declares OP_ID but does not submit a vyre_harness::OpEntry",
+    "Weir analysis `loop_sum` exposes no public API item",
+    "Weir analysis `loop_sum` declares OP_ID but does not submit a vyre_harness::OpEntry",
+    "Weir analysis `range` exposes no public API item",
+    "Weir analysis `range` declares OP_ID but does not submit a vyre_harness::OpEntry",
+    "Weir standalone example /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/ifds_to_witness.rs references 1 dataflow API token(s); release requires at least 2",
+    "Weir standalone example /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/witness_many.rs references 0 dataflow API token(s); release requires at least 2"
+  ]
 }

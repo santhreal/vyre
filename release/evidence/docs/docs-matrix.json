@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 1,
   "curated_proof_docs_preserved": true,
   "docs": [
     {
@@ -13,8 +13,9 @@
         "libs/performance/matching/vyre/release/evidence/benchmarks/release-workload-matrix.json",
         "libs/performance/matching/vyre/release/evidence/version/release-tag-plan.json",
         "release/evidence/",
+        "release/evidence/**/*.json",
         "release/evidence/backends/backend-matrix.json",
-        "release/evidence/benchmarks/bench-release-axes.json",
+        "release/evidence/benchmarks/bench-legendary-axes.json",
         "release/evidence/benchmarks/release-workload-matrix.json",
         "release/evidence/conformance/conformance-matrix.json",
         "release/evidence/conformance/cuda-conformance.json",
@@ -30,6 +31,7 @@
         "release/evidence/optimization/optimization-corpus.json",
         "release/evidence/optimization/optimization-integration-matrix.json",
         "release/evidence/optimization/pass-family-benchmark-manifest.json",
+        "release/evidence/package/publish-readiness.json",
         "release/evidence/parser/c-parser-linux-subsystem.json",
         "release/evidence/parser/distributed-parser-map.json",
         "release/evidence/tests/test-matrix.json",
@@ -38,8 +40,11 @@
         "release/evidence/weir/weir-readme-contracts.json",
         "release/evidence/weir/weir-vyre-integration-tests.json"
       ],
-      "evidence_artifact_ref_count": 28,
-      "missing_evidence_artifact_refs": [],
+      "evidence_artifact_ref_count": 30,
+      "missing_evidence_artifact_refs": [
+        "release/evidence/**/*.json",
+        "release/evidence/benchmarks/bench-legendary-axes.json"
+      ],
       "required_topics": [
         "vyre",
         "weir",
@@ -49,7 +54,9 @@
         "conformance"
       ],
       "missing_topics": [],
-      "unresolved_markers": []
+      "unresolved_markers": [
+        "todo"
+      ]
     },
     {
       "id": "vyre-readme",
@@ -58,15 +65,9 @@
       "read_error": null,
       "contains_release_evidence_rule": true,
       "evidence_artifact_refs": [
-        "release/evidence/",
-        "release/evidence/backends/backend-matrix.json",
-        "release/evidence/benchmarks/release-workload-matrix.json",
-        "release/evidence/conformance/conformance-matrix.json",
-        "release/evidence/final/completion-audit.json",
-        "release/evidence/tests/test-matrix.json",
-        "release/evidence/version/version-matrix.json"
+        "release/evidence/benchmarks/cuda-release-suite.json"
       ],
-      "evidence_artifact_ref_count": 7,
+      "evidence_artifact_ref_count": 1,
       "missing_evidence_artifact_refs": [],
       "required_topics": [
         "vyre",
@@ -80,8 +81,13 @@
         "quickstart",
         "release/evidence"
       ],
-      "missing_topics": [],
-      "unresolved_markers": []
+      "missing_topics": [
+        "quickstart"
+      ],
+      "unresolved_markers": [
+        "placeholder",
+        "stub"
+      ]
     },
     {
       "id": "vyre-release",
@@ -148,7 +154,9 @@
         "cuda",
         "weir"
       ],
-      "missing_topics": [],
+      "missing_topics": [
+        "weir"
+      ],
       "unresolved_markers": []
     },
     {
@@ -170,7 +178,9 @@
         "evidence"
       ],
       "missing_topics": [],
-      "unresolved_markers": []
+      "unresolved_markers": [
+        "todo"
+      ]
     },
     {
       "id": "vyre-testing",
@@ -220,7 +230,9 @@
         "pass",
         "evidence"
       ],
-      "missing_topics": [],
+      "missing_topics": [
+        "gpu"
+      ],
       "unresolved_markers": []
     },
     {
@@ -244,7 +256,9 @@
         "semantic",
         "evidence"
       ],
-      "missing_topics": [],
+      "missing_topics": [
+        "semantic"
+      ],
       "unresolved_markers": []
     },
     {
@@ -277,10 +291,8 @@
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
-      "evidence_artifact_refs": [
-        "release/evidence/"
-      ],
-      "evidence_artifact_ref_count": 1,
+      "evidence_artifact_refs": [],
+      "evidence_artifact_ref_count": 0,
       "missing_evidence_artifact_refs": [],
       "required_topics": [
         "c",
@@ -297,13 +309,8 @@
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
-      "evidence_artifact_refs": [
-        "release/evidence/parser/",
-        "release/evidence/parser/c-parser-linux-subsystem.json",
-        "release/evidence/parser/distributed-parser-map.json",
-        "release/evidence/parser/vyrec-cli-contracts.json"
-      ],
-      "evidence_artifact_ref_count": 4,
+      "evidence_artifact_refs": [],
+      "evidence_artifact_ref_count": 0,
       "missing_evidence_artifact_refs": [],
       "required_topics": [
         "vyrec",
@@ -353,7 +360,9 @@
         "value-set",
         "witness"
       ],
-      "missing_topics": [],
+      "missing_topics": [
+        "range-check"
+      ],
       "unresolved_markers": []
     },
     {
@@ -405,5 +414,18 @@
     }
   ],
   "limitation_findings": [],
-  "blockers": []
+  "blockers": [
+    "required documentation `release-plan` references 2 missing release evidence artifact(s)",
+    "required documentation `release-plan` contains unresolved marker `todo`",
+    "required documentation `vyre-readme` does not cover required topic `quickstart`",
+    "required documentation `vyre-readme` contains unresolved marker `placeholder`",
+    "required documentation `vyre-readme` contains unresolved marker `stub`",
+    "required documentation `vyre-release-checklist` does not cover required topic `weir`",
+    "required documentation `vyre-publish-gate` contains unresolved marker `todo`",
+    "required documentation `vyre-optimization` does not cover required topic `gpu`",
+    "required documentation `vyre-conformance` does not cover required topic `semantic`",
+    "required documentation `vyre-frontend-c` does not reference concrete release evidence artifacts",
+    "required documentation `vyrec-readme` does not reference concrete release evidence artifacts",
+    "required documentation `weir-readme` does not cover required topic `range-check`"
+  ]
 }

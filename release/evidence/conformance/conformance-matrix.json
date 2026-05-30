@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
-  "op_count": 599,
-  "distinct_op_count": 599,
+  "op_count": 606,
+  "distinct_op_count": 606,
   "catalog_required_op_count": 604,
   "catalog_covered_op_count": 604,
   "missing_catalog_ops": [],
@@ -1834,8 +1834,8 @@
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
   "duplicate_op_ids": [],
-  "fixture_input_count": 599,
-  "expected_output_count": 599,
+  "fixture_input_count": 606,
+  "expected_output_count": 606,
   "dispatch_backends": [
     "cuda",
     "spirv",
@@ -5274,6 +5274,48 @@
     },
     {
       "id": "vyre-primitives::math::qsvt_block_encode",
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-primitives::math::quantized::i4x8_batched_matmul_f32_scaled",
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled",
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-primitives::math::quantized::i4x8_batched_matvec_f32_scaled",
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-primitives::math::quantized::i4x8_dot_f32_scaled",
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-primitives::math::quantized::i4x8_dot_i32",
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled",
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-primitives::math::quantized::unpack_i4x8",
       "has_test_inputs": true,
       "has_expected_output": true,
       "tolerance_ulp": 0

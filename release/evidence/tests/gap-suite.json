@@ -1,11 +1,56 @@
 {
   "schema_version": 1,
   "suite": "gap",
-  "file_count": 22,
-  "vyre_file_count": 20,
+  "file_count": 35,
+  "vyre_file_count": 33,
   "dataflow_consumer_file_count": 1,
   "vyrec_file_count": 1,
   "files": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/ast_parser_gap_gpu_e2e.rs",
+      "layers": [
+        "benchmark",
+        "gap",
+        "integration",
+        "unit"
+      ],
+      "lines": 46,
+      "has_test_entrypoint": true,
+      "assertion_count": 6,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/tests/gap_error_code_catalog.rs",
+      "layers": [
+        "benchmark",
+        "gap",
+        "integration",
+        "unit"
+      ],
+      "lines": 3,
+      "has_test_entrypoint": false,
+      "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/tests/gap_duplicate_op_id.rs",
+      "layers": [
+        "benchmark",
+        "gap",
+        "integration",
+        "unit"
+      ],
+      "lines": 3,
+      "has_test_entrypoint": false,
+      "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/__split/validation_contract_gaps_part1.rs",
       "layers": [
@@ -44,7 +89,7 @@
         "integration",
         "unit"
       ],
-      "lines": 100,
+      "lines": 96,
       "has_test_entrypoint": true,
       "assertion_count": 5,
       "oversized": false,
@@ -60,7 +105,22 @@
         "integration",
         "unit"
       ],
-      "lines": 26,
+      "lines": 25,
+      "has_test_entrypoint": false,
+      "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/gap_dispatch_preemption.rs",
+      "layers": [
+        "benchmark",
+        "gap",
+        "integration",
+        "unit"
+      ],
+      "lines": 3,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -92,9 +152,9 @@
         "integration",
         "unit"
       ],
-      "lines": 438,
+      "lines": 406,
       "has_test_entrypoint": true,
-      "assertion_count": 29,
+      "assertion_count": 28,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -121,14 +181,15 @@
       "layers": [
         "adversarial",
         "benchmark",
+        "conformance",
         "corpus",
         "gap",
         "integration",
         "unit"
       ],
-      "lines": 421,
+      "lines": 387,
       "has_test_entrypoint": true,
-      "assertion_count": 23,
+      "assertion_count": 21,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -137,12 +198,13 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_ast_semantic_gaps_linux_grade.rs",
       "layers": [
         "benchmark",
+        "conformance",
         "corpus",
         "gap",
         "integration",
         "unit"
       ],
-      "lines": 3,
+      "lines": 8,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -151,6 +213,21 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_ast_statement_construct_gaps_e2e.rs",
+      "layers": [
+        "benchmark",
+        "gap",
+        "integration",
+        "unit"
+      ],
+      "lines": 7,
+      "has_test_entrypoint": false,
+      "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/gap_determinism_contract.rs",
       "layers": [
         "benchmark",
         "gap",
@@ -173,7 +250,22 @@
         "integration",
         "unit"
       ],
-      "lines": 15,
+      "lines": 17,
+      "has_test_entrypoint": false,
+      "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/gap_device_lost_recovery.rs",
+      "layers": [
+        "benchmark",
+        "gap",
+        "integration",
+        "unit"
+      ],
+      "lines": 3,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -188,7 +280,7 @@
         "integration",
         "unit"
       ],
-      "lines": 202,
+      "lines": 204,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -203,7 +295,7 @@
         "integration",
         "unit"
       ],
-      "lines": 200,
+      "lines": 202,
       "has_test_entrypoint": false,
       "assertion_count": 18,
       "oversized": false,
@@ -219,7 +311,7 @@
         "integration",
         "unit"
       ],
-      "lines": 156,
+      "lines": 158,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -234,9 +326,26 @@
         "integration",
         "unit"
       ],
-      "lines": 433,
+      "lines": 435,
       "has_test_entrypoint": true,
       "assertion_count": 18,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/gap_transcendentals_parity.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "gap",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 99,
+      "has_test_entrypoint": true,
+      "assertion_count": 1,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -250,7 +359,7 @@
         "integration",
         "unit"
       ],
-      "lines": 49,
+      "lines": 53,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -291,6 +400,68 @@
       "recommended_split": []
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/gap_transcendentals_parity.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "gap",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 119,
+      "has_test_entrypoint": true,
+      "assertion_count": 4,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/test_matrix.rs",
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "corpus",
+        "fuzz",
+        "gap",
+        "property",
+        "unit"
+      ],
+      "lines": 809,
+      "has_test_entrypoint": true,
+      "assertion_count": 7,
+      "oversized": true,
+      "god_test_candidate": true,
+      "recommended_split": [
+        "extract backend/op parity cases into tests/conformance/",
+        "extract expected-failure coverage into tests/gap/",
+        "extract fixture-driven cases into tests/corpus/",
+        "extract hostile-input cases into tests/adversarial/",
+        "extract property invariants into tests/properties/",
+        "move timing-only checks into benches/ or release benchmark cases"
+      ]
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/__law7_split/test_matrix_part2.rs",
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "corpus",
+        "fuzz",
+        "gap",
+        "property",
+        "unit"
+      ],
+      "lines": 349,
+      "has_test_entrypoint": true,
+      "assertion_count": 7,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/gap/release_gap_contracts.rs",
       "layers": [
         "benchmark",
@@ -300,7 +471,7 @@
         "integration",
         "unit"
       ],
-      "lines": 23,
+      "lines": 25,
       "has_test_entrypoint": true,
       "assertion_count": 1,
       "oversized": false,
@@ -323,13 +494,62 @@
       "recommended_split": []
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-test-harness/tests/gap/release_gap_contracts.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "corpus",
+        "gap",
+        "integration",
+        "unit"
+      ],
+      "lines": 25,
+      "has_test_entrypoint": true,
+      "assertion_count": 1,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-test-harness/tests/gap_release_contracts.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "gap",
+        "integration",
+        "unit"
+      ],
+      "lines": 2,
+      "has_test_entrypoint": false,
+      "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/gap_cert_artifact.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "gap",
+        "integration",
+        "unit"
+      ],
+      "lines": 3,
+      "has_test_entrypoint": false,
+      "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_gap_bitset_oracle_edges.rs",
       "layers": [
         "gap",
         "integration",
         "unit"
       ],
-      "lines": 29,
+      "lines": 39,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -339,14 +559,13 @@
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/gap_cli_contracts.rs",
       "layers": [
-        "adversarial",
         "gap",
         "integration",
         "unit"
       ],
-      "lines": 28,
+      "lines": 6,
       "has_test_entrypoint": true,
-      "assertion_count": 4,
+      "assertion_count": 1,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []

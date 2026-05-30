@@ -1,26 +1,26 @@
 {
   "schema_version": 1,
-  "requested_vyre_release": "0.4.2",
+  "requested_vyre_release": "0.6.1",
   "requested_weir_release": "0.1.0",
   "tag_story": {
-    "vyre_rc_tag": "vyre-v0.4.2-rc.1",
+    "vyre_rc_tag": "vyre-v0.6.1-rc.1",
     "weir_rc_tag": "weir-v0.1.0-rc.1",
-    "combined_release_train_rc_tag": "vyre-0.4.2-weir-0.1.0-rc.1",
-    "vyre_tag": "vyre-v0.4.2",
+    "combined_release_train_rc_tag": "vyre-0.6.1-weir-0.1.0-rc.1",
+    "vyre_tag": "vyre-v0.6.1",
     "weir_tag": "weir-v0.1.0",
-    "combined_release_train_tag": "vyre-0.4.2-weir-0.1.0",
-    "policy": "Release packaging must use explicit product-scoped RC and final tags, not a bare v0.4.2 tag that could ambiguously refer to the root monorepo, Vyre-only crates, or Weir.",
+    "combined_release_train_tag": "vyre-0.6.1-weir-0.1.0",
+    "policy": "Release packaging must use explicit product-scoped RC and final tags, not a bare v0.6.1 tag that could ambiguously refer to the root monorepo, Vyre-only crates, or Weir.",
     "required_in_release_notes": [
-      "vyre 0.4.2",
+      "vyre 0.6.1",
       "weir 0.1.0",
-      "vyre-driver-cuda@0.4.2",
-      "vyre-driver-wgpu@0.4.2",
-      "vyre-v0.4.2-rc.1",
+      "vyre-driver-cuda@0.6.1",
+      "vyre-driver-wgpu@0.6.1",
+      "vyre-v0.6.1-rc.1",
       "weir-v0.1.0-rc.1",
-      "vyre-0.4.2-weir-0.1.0-rc.1",
-      "vyre-v0.4.2",
+      "vyre-0.6.1-weir-0.1.0-rc.1",
+      "vyre-v0.6.1",
       "weir-v0.1.0",
-      "vyre-0.4.2-weir-0.1.0"
+      "vyre-0.6.1-weir-0.1.0"
     ],
     "required_in_packaging": [
       "package versions align before tag creation",
@@ -30,221 +30,228 @@
     ]
   },
   "required_release_packages": [
-    "vyre@0.4.2",
-    "vyre-driver-cuda@0.4.2",
-    "vyre-driver-wgpu@0.4.2",
+    "vyre@0.6.1",
+    "vyre-driver-cuda@0.6.1",
+    "vyre-driver-wgpu@0.6.1",
     "weir@0.1.0",
     "vyrec@0.1.0",
-    "vyre-frontend-c@0.4.2"
+    "vyre-frontend-c@0.6.1"
   ],
   "missing_required_release_packages": [],
   "crates": [
     {
       "package": "vyre",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-core/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-aot",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-aot/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-bench",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "vyre-conform-enforce",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-enforce/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "vyre-conform-generate",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-generate/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "vyre-conform-runner",
-      "version": "0.1.0",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "vyre-conform-spec",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-spec/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "vyre-debug",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-driver",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-driver-cuda",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-driver-reference",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-reference/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-driver-spirv",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-spirv/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-driver-wgpu",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-emit-naga",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-emit-ptx",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-emit-spirv",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-foundation",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-frontend-c",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
+      "package": "vyre-frontend-rust",
+      "version": "0.6.1",
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-rust/Cargo.toml",
+      "release_group": "vyre",
+      "publishable": false
+    },
+    {
       "package": "vyre-harness",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-harness/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-intrinsics",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-lints",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-lower",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-macros",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-macros/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-primitives",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-reference",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-runtime",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-self-substrate",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-spec",
-      "version": "0.4.2",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-test-harness",
-      "version": "0.1.0",
+      "version": "0.6.1",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-test-harness/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
@@ -275,794 +282,388 @@
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/Cargo.toml",
       "dependency": "vyre-macros",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
-      "dependency": "vyre",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
-      "dependency": "vyre-driver",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
-      "dependency": "vyre-driver-cuda",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
       "dependency": "vyre-driver-wgpu",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
-      "dependency": "vyre-foundation",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
-      "dependency": "vyre-harness",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
-      "dependency": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/Cargo.toml",
-      "dependency": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-aot",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
+      "release_group": "vyre"
+    },
+    {
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
+      "dependency": "vyre-debug",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-driver",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-driver-cuda",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-driver-reference",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-driver-spirv",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-driver-wgpu",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-emit-naga",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-emit-ptx",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-emit-spirv",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-foundation",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
+      "release_group": "vyre"
+    },
+    {
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
+      "dependency": "vyre-frontend-c",
+      "version": "0.6.1",
+      "expected": "0.6.1",
+      "release_group": "vyre"
+    },
+    {
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
+      "dependency": "vyre-frontend-rust",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-harness",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-intrinsics",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-libs",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
+      "release_group": "vyre"
+    },
+    {
+      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
+      "dependency": "vyre-lints",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-lower",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-macros",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-reference",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-runtime",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-self-substrate",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
       "dependency": "vyre-spec",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.toml",
-      "dependency": "weir",
-      "version": "0.1.0",
-      "expected": "0.1.0",
-      "release_group": "weir"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-enforce/Cargo.toml",
-      "dependency": "vyre",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-spec/Cargo.toml",
-      "dependency": "vyre",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-aot/Cargo.toml",
-      "dependency": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/Cargo.toml",
-      "dependency": "vyre",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/Cargo.toml",
-      "dependency": "vyre-emit-naga",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/Cargo.toml",
-      "dependency": "vyre-foundation",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/Cargo.toml",
-      "dependency": "vyre-libs",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/Cargo.toml",
-      "dependency": "vyre-lower",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/Cargo.toml",
-      "dependency": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/Cargo.toml",
-      "dependency": "vyre-libs",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/Cargo.toml",
-      "dependency": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/Cargo.toml",
-      "dependency": "vyre-self-substrate",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/Cargo.toml",
-      "dependency": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/Cargo.toml",
-      "dependency": "vyre-runtime",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/Cargo.toml",
-      "dependency": "vyre-foundation",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/Cargo.toml",
-      "dependency": "vyre-reference",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/Cargo.toml",
-      "dependency": "vyre-foundation",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/Cargo.toml",
-      "dependency": "vyre-libs",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/Cargo.toml",
-      "dependency": "vyre-lower",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/Cargo.toml",
-      "dependency": "vyre-foundation",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/Cargo.toml",
-      "dependency": "vyre-driver",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/Cargo.toml",
-      "dependency": "vyre-foundation",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/Cargo.toml",
-      "dependency": "vyre-reference",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/Cargo.toml",
-      "dependency": "vyre-reference",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/Cargo.toml",
-      "dependency": "vyre",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/Cargo.toml",
-      "dependency": "vyre-foundation",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/Cargo.toml",
-      "dependency": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/Cargo.toml",
-      "dependency": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/Cargo.toml",
-      "dependency": "vyre-intrinsics",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/Cargo.toml",
-      "dependency": "vyre-lints",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/Cargo.toml",
-      "dependency": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/Cargo.toml",
-      "dependency": "vyre-reference",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     }
   ],
   "lockfile_packages": [
     {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-aot",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-debug",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-driver",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-driver-cuda",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-driver-reference",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-driver-spirv",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-driver-wgpu",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-emit-naga",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-emit-ptx",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-foundation",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-frontend-c",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-harness",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-intrinsics",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-libs",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-lower",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-macros",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-reference",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-runtime",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-self-substrate",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "vyre-spec",
-      "version": "0.4.2",
-      "expected": "0.4.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "/media/mukund-thiru/SanthData/Santh/Cargo.lock",
-      "package": "weir",
-      "version": "0.1.0",
-      "expected": "0.1.0",
-      "release_group": "weir"
-    },
-    {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-aot",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-conform-enforce",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-conform-generate",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-conform-spec",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-debug",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-driver",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-driver-cuda",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-driver-reference",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-driver-spirv",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-driver-wgpu",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-emit-naga",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-emit-ptx",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-emit-spirv",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-foundation",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-frontend-c",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
+      "release_group": "vyre"
+    },
+    {
+      "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
+      "package": "vyre-frontend-rust",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-harness",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-intrinsics",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-libs",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-lints",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-lower",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-macros",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-primitives",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-reference",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-runtime",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-self-substrate",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {
       "lockfile": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/Cargo.lock",
       "package": "vyre-spec",
-      "version": "0.4.2",
-      "expected": "0.4.2",
+      "version": "0.6.1",
+      "expected": "0.6.1",
       "release_group": "vyre"
     },
     {

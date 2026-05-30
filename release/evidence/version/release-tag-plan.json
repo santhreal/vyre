@@ -1,36 +1,21 @@
 {
   "schema_version": 1,
-  "vyre_rc_tag": "vyre-v0.4.2-rc.1",
+  "vyre_rc_tag": "vyre-v0.6.1-rc.1",
   "weir_rc_tag": "weir-v0.1.0-rc.1",
-  "dataflow_consumer_rc_tag": "weir-v0.1.0-rc.1",
-  "combined_release_train_rc_tag": "vyre-0.4.2-weir-0.1.0-rc.1",
-  "vyre_tag": "vyre-v0.4.2",
+  "combined_release_train_rc_tag": "vyre-0.6.1-weir-0.1.0-rc.1",
+  "vyre_tag": "vyre-v0.6.1",
   "weir_tag": "weir-v0.1.0",
-  "dataflow_consumer_tag": "weir-v0.1.0",
-  "combined_release_train_tag": "vyre-0.4.2-weir-0.1.0",
+  "combined_release_train_tag": "vyre-0.6.1-weir-0.1.0",
   "tag_creation_order": [
-    "vyre-v0.4.2-rc.1",
+    "vyre-v0.6.1-rc.1",
     "weir-v0.1.0-rc.1",
-    "vyre-0.4.2-weir-0.1.0-rc.1",
-    "vyre-v0.4.2",
+    "vyre-0.6.1-weir-0.1.0-rc.1",
+    "vyre-v0.6.1",
     "weir-v0.1.0",
-    "vyre-0.4.2-weir-0.1.0"
+    "vyre-0.6.1-weir-0.1.0"
   ],
-  "final_launch_order": [
-    "cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json",
-    "cargo_full run --bin xtask -- vyre-weir-release-gate",
-    "scripts/apply-branch-protection.sh main",
-    "cargo publish -p vyre",
-    "cargo publish -p weir",
-    "repository_visibility_action: public",
-    "git push origin release",
-    "git push --tags"
-  ],
-  "repository_visibility_action": "public",
-  "release_gate_command": "cargo_full run --bin xtask -- vyre-weir-release-gate",
-  "dataflow_consumer_publish_command": "cargo publish -p weir",
-  "required_gate_before_rc_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json && cargo_full run --bin xtask -- vyre-weir-release-gate && scripts/apply-branch-protection.sh main",
-  "required_gate_before_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json && cargo_full run --bin xtask -- vyre-weir-release-gate && scripts/apply-branch-protection.sh main",
+  "required_gate_before_rc_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
+  "required_gate_before_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
   "version_matrix_blocker_count": 0,
   "blockers": []
 }

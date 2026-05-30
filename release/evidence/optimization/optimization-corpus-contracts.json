@@ -3,11 +3,11 @@
   "required_min_cases": 4096,
   "generated_cases": 12288,
   "verified_cases": 12288,
-  "optimized_cases": 10780,
-  "dataflow_analysis_cases": 1024,
-  "dataflow_analysis_optimized_cases": 1024,
+  "optimized_cases": 10386,
+  "dataflow_cases": 1024,
+  "dataflow_optimized_cases": 1024,
   "non_converged_cases": 0,
   "total_ops_before": 48640,
-  "total_ops_after": 23337,
+  "total_ops_after": 25369,
   "blockers": []
 }

@@ -1,6 +1,1623 @@
 {
   "schema_version": 1,
   "scan": "public-docs",
-  "findings": [],
-  "blockers": []
+  "findings": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/src/naga_dump.rs",
+      "line": 4,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct NagaDump {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/src/dangling.rs",
+      "line": 7,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DanglingRef {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/src/carriers.rs",
+      "line": 7,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct UncarrieredAssign {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/src/carriers.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CarrierSummary {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/src/wgsl.rs",
+      "line": 5,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct WgslDump {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/src/descriptor_dump.rs",
+      "line": 5,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DescriptorDumpOptions {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/src/descriptor_dump.rs",
+      "line": 22,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DescriptorDump {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/src/naga_trace.rs",
+      "line": 6,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FailureTrace {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/src/descriptor_diff.rs",
+      "line": 6,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DescriptorDiff {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-debug/src/descriptor_diff.rs",
+      "line": 85,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RewriteBisectResult {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/pipeline/__law7_split/cache_part1.rs",
+      "line": 344,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PipelineFeatureFlags(pub u32);"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/pipeline/cache.rs",
+      "line": 344,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PipelineFeatureFlags(pub u32);"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/backend.rs",
+      "line": 65,
+      "pattern": "undocumented_public_api",
+      "text": "pub trait Sealed {}"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/enforce.rs",
+      "line": 17,
+      "pattern": "undocumented_public_api",
+      "text": "pub trait Sealed {}"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/security/mod.rs",
+      "line": 69,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct $marker;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/security/mod.rs",
+      "line": 131,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct $marker;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/src/bin_op.rs",
+      "line": 16,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum OpIntensity {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/allowlist.rs",
+      "line": 19,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Allowlist {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/lib.rs",
+      "line": 31,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Violation {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/lib.rs",
+      "line": 40,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum ViolationKind {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/compound_pipeline.rs",
+      "line": 34,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CompoundFusedFilter;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/optimizer_impact.rs",
+      "line": 8,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OptimizerImpact;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/histogram.rs",
+      "line": 7,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Histogram;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/elementwise.rs",
+      "line": 11,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ElementwiseBench;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/adaptive_routing.rs",
+      "line": 32,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct GpuResidentAdaptiveRouting;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/dataflow_baseline.rs",
+      "line": 16,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DataflowReachingDefBitset;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/dataflow_baseline.rs",
+      "line": 17,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DataflowIfdsStep;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/dataflow_baseline.rs",
+      "line": 18,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DataflowPointsToAliasStep;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/binary_search.rs",
+      "line": 23,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BinarySearchU32;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/synthetic.rs",
+      "line": 11,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FlakyCase;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/transpose.rs",
+      "line": 7,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Transpose;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/__law7_split/lower_rewrite_impact_part1.rs",
+      "line": 20,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LowerRewriteImpact;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/__law7_split/dataflow_baseline_part1.rs",
+      "line": 16,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DataflowReachingDefBitset;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/__law7_split/dataflow_baseline_part1.rs",
+      "line": 17,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DataflowIfdsStep;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/__law7_split/dataflow_baseline_part1.rs",
+      "line": 18,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DataflowPointsToAliasStep;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/__law7_split/alias_aware_optimizations_part1.rs",
+      "line": 25,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct AliasAwareOptimizations;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/__law7_split/megakernel_condition_part1.rs",
+      "line": 19,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MegakernelCondition;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SparseOutputCompactionCount;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CallgraphReachabilityStep;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
+      "line": 11,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MetadataConditionBatch;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/attention.rs",
+      "line": 8,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Attention;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/crypto.rs",
+      "line": 69,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct AesCtrEncrypt;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/alias_aware_optimizations.rs",
+      "line": 25,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct AliasAwareOptimizations;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/matmul.rs",
+      "line": 8,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Matmul;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/conditional_batch.rs",
+      "line": 31,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BatchedConditionalEval;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/hashtable.rs",
+      "line": 35,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct HashtableProbe;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/interpreter.rs",
+      "line": 41,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BytecodeDispatch;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/stencil.rs",
+      "line": 7,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Stencil;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/gather.rs",
+      "line": 7,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Gather;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/conditional_eval.rs",
+      "line": 36,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ConditionalEval;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/megakernel_latency.rs",
+      "line": 19,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MegakernelLatency;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/c_parser.rs",
+      "line": 20,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CParserLinuxDriverPipeline;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/c_parser.rs",
+      "line": 21,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CParserOnlyLinuxDriverPipeline;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/c_parser.rs",
+      "line": 22,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CParserSemaLinuxDriverCorpus100Pipeline;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/regex_bt.rs",
+      "line": 32,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RegexBacktracking;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/quantized_linear.rs",
+      "line": 37,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct QuantizedLinear4BitAffineGrouped;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/adversarial.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RegisterExhaustionCase;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/bigint.rs",
+      "line": 32,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BigintModexp;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/lower_rewrite_impact.rs",
+      "line": 20,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LowerRewriteImpact;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/megakernel_truth.rs",
+      "line": 14,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MegakernelTruth;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/megakernel_condition.rs",
+      "line": 19,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MegakernelCondition;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/reduce_sum.rs",
+      "line": 8,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReduceSumBench;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 12,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchId(pub String);"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum BenchLayer {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 27,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum WorkloadClass {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 35,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchMetadata {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 47,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum BaselineClass {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 53,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BaselineTarget {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 62,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PerformanceContract {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 112,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PerformanceEvaluation {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 119,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchRequirements {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 128,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum Correctness {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 142,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ScratchPool {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 146,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OptimizerPipeline {}"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 148,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CpuReference {}"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 167,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchContext {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 252,
+      "pattern": "undocumented_public_api",
+      "text": "pub type PreparedCase = Box<dyn std::any::Any>;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 255,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchRun {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 413,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum BenchError {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/__law7_split/case_part1.rs",
+      "line": 426,
+      "pattern": "undocumented_public_api",
+      "text": "pub trait BenchCase: Send + Sync {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/candidate.rs",
+      "line": 4,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum CandidateKind {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/candidate.rs",
+      "line": 16,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CandidateManifest {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/candidate.rs",
+      "line": 23,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Candidate {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 12,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchId(pub String);"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum BenchLayer {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 27,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum WorkloadClass {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 35,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchMetadata {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 47,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum BaselineClass {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 53,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BaselineTarget {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 62,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PerformanceContract {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 112,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PerformanceEvaluation {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 119,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchRequirements {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 128,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum Correctness {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 142,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ScratchPool {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 146,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OptimizerPipeline {}"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 148,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CpuReference {}"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 167,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchContext {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 252,
+      "pattern": "undocumented_public_api",
+      "text": "pub type PreparedCase = Box<dyn std::any::Any>;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 255,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchRun {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 413,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum BenchError {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
+      "line": 426,
+      "pattern": "undocumented_public_api",
+      "text": "pub trait BenchCase: Send + Sync {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/metric.rs",
+      "line": 4,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MetricStats {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/metric.rs",
+      "line": 20,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct GpuCounter {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/metric.rs",
+      "line": 26,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MetricPoint {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/metric.rs",
+      "line": 32,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchMetrics {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/suite.rs",
+      "line": 4,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum SuiteKind {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/score.rs",
+      "line": 4,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Penalty {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/score.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Score {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/release_matrix.rs",
+      "line": 35,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReleaseWorkloadMatrix {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/release_matrix.rs",
+      "line": 52,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReleaseWorkloadFamilyReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/evolve/server.rs",
+      "line": 7,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EvolveRequest {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/evolve/server.rs",
+      "line": 14,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EvolveResponse {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/__law7_split/release_matrix_part1.rs",
+      "line": 35,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReleaseWorkloadMatrix {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/__law7_split/release_matrix_part1.rs",
+      "line": 52,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReleaseWorkloadFamilyReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/probes/allocations.rs",
+      "line": 5,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TrackingAllocator;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/probes/allocations.rs",
+      "line": 29,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct AllocationSnapshot {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/probes/environment.rs",
+      "line": 7,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EnvironmentData {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/probes/environment.rs",
+      "line": 24,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct GpuDeviceInfo {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/runner/execute/mod.rs",
+      "line": 26,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RunConfig {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/report/json.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReportSchema {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/report/json.rs",
+      "line": 25,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CaseReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/report/json.rs",
+      "line": 59,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReportSummary {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/registry/mod.rs",
+      "line": 5,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BenchRegistry {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/__law7_split/eqsat_gpu_part2.rs",
+      "line": 1,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ApplyEquivalencesReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_licm.rs",
+      "line": 64,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopLicm;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_bound_tighten.rs",
+      "line": 59,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopBoundTighten;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_software_pipeline.rs",
+      "line": 77,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopSoftwarePipeline;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_var_range_fold.rs",
+      "line": 63,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopVarRangeFoldPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_redundant_bound_check_elide.rs",
+      "line": 60,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopRedundantBoundCheckElidePass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_trip_zero_eliminate.rs",
+      "line": 43,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopTripZeroEliminatePass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_unroll.rs",
+      "line": 22,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopUnroll;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_peel.rs",
+      "line": 35,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopPeelPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_fission_part1.rs",
+      "line": 57,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopFission;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_software_pipeline_part1.rs",
+      "line": 77,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopSoftwarePipeline;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_fusion_part1.rs",
+      "line": 60,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopFusion;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_lower_bound_normalize_part1.rs",
+      "line": 67,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopLowerBoundNormalize;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_licm_part1.rs",
+      "line": 64,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopLicm;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_redundant_bound_check_elide_part1.rs",
+      "line": 60,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopRedundantBoundCheckElidePass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_var_range_fold_part1.rs",
+      "line": 63,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopVarRangeFoldPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_strip_mine_part1.rs",
+      "line": 31,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopStripMine;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_unroll_part1.rs",
+      "line": 22,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopUnroll;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_fusion.rs",
+      "line": 60,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopFusion;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_lower_bound_normalize.rs",
+      "line": 67,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopLowerBoundNormalize;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_fission.rs",
+      "line": 57,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopFission;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/loop_strip_mine.rs",
+      "line": 31,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LoopStripMine;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/fusion_cse/__law7_split/fusion_part1.rs",
+      "line": 22,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Fusion;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/fusion_cse/fusion.rs",
+      "line": 22,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Fusion;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/rematerialize_cheap_let.rs",
+      "line": 69,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RematerializeCheapLetPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/noop_assign_eliminate.rs",
+      "line": 29,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct NoopAssignEliminatePass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/__law7_split/rematerialize_cheap_let_part1.rs",
+      "line": 69,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RematerializeCheapLetPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/region_fusion_hint.rs",
+      "line": 42,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RegionFusionHintPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/empty_block_collapse.rs",
+      "line": 41,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EmptyBlockCollapsePass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/region_promote_singleton_block.rs",
+      "line": 61,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RegionPromoteSingletonBlockPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/branch_value_hoist.rs",
+      "line": 51,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BranchValueHoistPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/if_constant_branch_eliminate.rs",
+      "line": 51,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct IfConstantBranchEliminatePass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/tail_duplication.rs",
+      "line": 37,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TailDuplicationPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/buffer_decl_sort.rs",
+      "line": 58,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BufferDeclSortPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/cleanup/branch_coalesce.rs",
+      "line": 64,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BranchCoalesce;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/algebraic/__law7_split/atomic_minimize_part1.rs",
+      "line": 32,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct AtomicMinimizePass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/algebraic/const_fold/__law7_split/reaching_def_propagate_part1.rs",
+      "line": 73,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReachingDefPropagatePass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/algebraic/const_fold/reaching_def_propagate.rs",
+      "line": 73,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReachingDefPropagatePass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/algebraic/const_fold/mod.rs",
+      "line": 46,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ConstFold;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/mod.rs",
+      "line": 22,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct StrengthReduce;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/algebraic/atomic_minimize.rs",
+      "line": 32,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct AtomicMinimizePass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/vectorization.rs",
+      "line": 16,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Vectorization;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/read_only_load_hoist.rs",
+      "line": 70,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReadOnlyLoadHoistPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/store_to_load_forward.rs",
+      "line": 58,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct StoreToLoadForward;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/__law7_split/dead_store_elim_part1.rs",
+      "line": 64,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DeadStoreElim;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/__law7_split/store_to_load_forward_part1.rs",
+      "line": 58,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct StoreToLoadForward;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/__law7_split/read_only_load_hoist_part1.rs",
+      "line": 70,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReadOnlyLoadHoistPass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/decode_scan_fuse.rs",
+      "line": 78,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DecodeScanFuse;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/dead_store_elim.rs",
+      "line": 64,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DeadStoreElim;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/memory/dead_buffer_elim.rs",
+      "line": 17,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DeadBufferElim;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/sync/barrier_coalesce.rs",
+      "line": 46,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BarrierCoalescePass;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/__law7_split/optimizer_part1.rs",
+      "line": 398,
+      "pattern": "undocumented_public_api",
+      "text": "pub trait Sealed {}"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/__law7_split/optimizer_part2.rs",
+      "line": 1,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ProgramPassKind(Box<dyn ProgramPass>);"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer.rs",
+      "line": 398,
+      "pattern": "undocumented_public_api",
+      "text": "pub trait Sealed {}"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/validate/options.rs",
+      "line": 14,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BackendCapabilities {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/dispatch/dialect_lookup.rs",
+      "line": 338,
+      "pattern": "undocumented_public_api",
+      "text": "pub trait Sealed {}"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-macros/src/ast_registry.rs",
+      "line": 232,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum #enum_name {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/config.rs",
+      "line": 4,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct WgpuBackendConfig {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-harness/src/lib.rs",
+      "line": 111,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OpEntry {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
+      "line": 33,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DeviceLimits {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
+      "line": 41,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum Violation {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
+      "line": 52,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ValidationReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/src/patterns/subgroup_capabilities/mod.rs",
+      "line": 44,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SubgroupCapabilityReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-spirv/src/lib.rs",
+      "line": 43,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum EmitError {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/error.rs",
+      "line": 4,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum EmitError {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
+      "line": 17,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DependencyChain {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
+      "line": 25,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SchedulingHints {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/vec_load_fusion/mod.rs",
+      "line": 55,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FusionPlan {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/vec_store_fusion/mod.rs",
+      "line": 26,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FusionCandidate {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/vec_store_fusion/mod.rs",
+      "line": 40,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FusionPlan {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
+      "line": 23,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum FragmentTile {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
+      "line": 51,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TensorCoreCandidate {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
+      "line": 62,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TensorCorePlan {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
+      "line": 22,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct AsyncCopyCandidate {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
+      "line": 34,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct AsyncCopyPlan {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
+      "line": 25,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PredicationCandidate {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
+      "line": 41,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PredicationPlan {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/markers.rs",
+      "line": 34,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct $name;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/src/harness.rs",
+      "line": 14,
+      "pattern": "undocumented_public_api",
+      "text": "pub type Fixture = Vec<Vec<u8>>;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/src/harness.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub type Fixtures = Vec<Fixture>;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/src/harness.rs",
+      "line": 16,
+      "pattern": "undocumented_public_api",
+      "text": "pub type InputsFn = fn() -> Fixtures;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/src/harness.rs",
+      "line": 17,
+      "pattern": "undocumented_public_api",
+      "text": "pub type ExpectedFn = fn() -> Fixtures;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/src/harness.rs",
+      "line": 20,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum HardwareSemantic {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/src/harness.rs",
+      "line": 31,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OpShape {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/src/harness.rs",
+      "line": 61,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OpEntry {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/error.rs",
+      "line": 6,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum LowerError {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/__law7_split/optimization_corpus_part1.rs",
+      "line": 60,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OptimizationFamilyCount {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/__law7_split/audit_part1.rs",
+      "line": 99,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Recommendation {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/__law7_split/audit_part1.rs",
+      "line": 111,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum RecommendationCategory {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/__law7_split/descriptor_part2.rs",
+      "line": 1,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OpaqueExprData {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/audit.rs",
+      "line": 99,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Recommendation {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/audit.rs",
+      "line": 111,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum RecommendationCategory {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/optimization_corpus.rs",
+      "line": 60,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OptimizationFamilyCount {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/layout_aos_to_soa/plan.rs",
+      "line": 7,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LayoutCandidate {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/layout_aos_to_soa/plan.rs",
+      "line": 18,
+      "pattern": "undocumented_public_api",
+      "text": "pub type LayoutTransformPlan = CandidatePlan<LayoutCandidate>;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/value_range/__law7_split/mod_part1.rs",
+      "line": 61,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ValueRangeReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/value_range/mod.rs",
+      "line": 61,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ValueRangeReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/access_kind.rs",
+      "line": 6,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum AccessKind {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/shared_mem_promote/plan.rs",
+      "line": 6,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PromotionCandidate {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/bank_conflict/report.rs",
+      "line": 8,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum BankConflictKind {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/bank_conflict/report.rs",
+      "line": 26,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum ConflictSeverity {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/bank_conflict/report.rs",
+      "line": 71,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BankConflictReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/op_histogram/__law7_split/mod_part1.rs",
+      "line": 25,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OpHistogram {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/op_histogram/mod.rs",
+      "line": 25,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OpHistogram {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/common_subexpr/__law7_split/mod_part1.rs",
+      "line": 26,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EquivalenceGroup {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/common_subexpr/__law7_split/mod_part1.rs",
+      "line": 34,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CommonSubexprReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/common_subexpr/mod.rs",
+      "line": 26,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EquivalenceGroup {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/common_subexpr/mod.rs",
+      "line": 34,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CommonSubexprReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/workgroup_uniform/report.rs",
+      "line": 6,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum BranchUniformity {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/workgroup_uniform/report.rs",
+      "line": 18,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BranchSite {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/workgroup_uniform/report.rs",
+      "line": 27,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum BranchEmitHint {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/workgroup_uniform/report.rs",
+      "line": 40,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BranchHint {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/workgroup_uniform/report.rs",
+      "line": 48,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct WorkgroupUniformReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/const_buffer_promote/mod.rs",
+      "line": 31,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ConstBufferCandidate {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/const_buffer_promote/mod.rs",
+      "line": 40,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ConstBufferPlan {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/dead_op/mod.rs",
+      "line": 21,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct DeadOpReport {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/texture_promote/plan.rs",
+      "line": 7,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TextureCandidate {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/texture_promote/plan.rs",
+      "line": 16,
+      "pattern": "undocumented_public_api",
+      "text": "pub type TexturePromotionPlan = CandidatePlan<TextureCandidate>;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/verify/__law7_split/mod_part1.rs",
+      "line": 41,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VerifyError {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/verify/__law7_split/mod_part1.rs",
+      "line": 48,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum VerifyErrorKind {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/verify/__law7_split/mod_part1.rs",
+      "line": 320,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum OperandClass {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/verify/mod.rs",
+      "line": 41,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VerifyError {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/verify/mod.rs",
+      "line": 48,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum VerifyErrorKind {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/verify/mod.rs",
+      "line": 320,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum OperandClass {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/tenant_part2.rs",
+      "line": 1,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TenantRegistry {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/__law7_split/ring_part1.rs",
+      "line": 41,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct io_sqring_offsets {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/__law7_split/ring_part1.rs",
+      "line": 55,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct io_cqring_offsets {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/__law7_split/ring_part1.rs",
+      "line": 69,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct io_uring_params {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/__law7_split/ring_part1.rs",
+      "line": 84,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct io_uring_sqe {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/__law7_split/ring_part1.rs",
+      "line": 103,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct io_uring_cqe {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/ring.rs",
+      "line": 41,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct io_sqring_offsets {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/ring.rs",
+      "line": 55,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct io_cqring_offsets {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/ring.rs",
+      "line": 69,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct io_uring_params {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/ring.rs",
+      "line": 84,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct io_uring_sqe {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/ring.rs",
+      "line": 103,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct io_uring_cqe {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/src/error.rs",
+      "line": 4,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum EmitError {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/src/program/types.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TrapTag {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/src/patterns/pipeline_prewarm/mod.rs",
+      "line": 19,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PrewarmHint {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/src/patterns/push_constant_inline/mod.rs",
+      "line": 27,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PushConstantCandidate {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/src/patterns/push_constant_inline/mod.rs",
+      "line": 34,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PushConstantPlan {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/src/patterns/bind_group_reuse/mod.rs",
+      "line": 20,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReuseGroup {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/src/patterns/bind_group_reuse/mod.rs",
+      "line": 27,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BindGroupReusePlan {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/src/patterns/vec_pack/plan.rs",
+      "line": 7,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum PackKind {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/src/patterns/vec_pack/plan.rs",
+      "line": 64,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PackingPlan {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-naga/src/lib.rs",
+      "line": 45,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BindResultEntry {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/analysis_family.rs",
+      "line": 43,
+      "pattern": "undocumented_public_api",
+      "text": "pub trait Sealed {}"
+    }
+  ],
+  "blockers": [
+    "269 `public-docs` finding(s) remain"
+  ]
 }

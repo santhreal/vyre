@@ -44,87 +44,87 @@
       "exists": true
     },
     {
-      "surface": "dataflow-analysis",
+      "surface": "weir",
       "layer": "fixtures",
-      "path": "external:dataflow-analysis/tests/fixtures",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/fixtures",
       "exists": true
     },
     {
-      "surface": "dataflow-analysis",
+      "surface": "weir",
       "layer": "contracts",
-      "path": "external:dataflow-analysis/tests/contracts",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/contracts",
       "exists": true
     },
     {
-      "surface": "dataflow-analysis",
+      "surface": "weir",
       "layer": "properties",
-      "path": "external:dataflow-analysis/tests/properties",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/properties",
       "exists": true
     },
     {
-      "surface": "dataflow-analysis",
+      "surface": "weir",
       "layer": "backends",
-      "path": "external:dataflow-analysis/tests/backends",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/backends",
       "exists": true
     },
     {
-      "surface": "dataflow-analysis",
+      "surface": "weir",
       "layer": "corpus",
-      "path": "external:dataflow-analysis/tests/corpus",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/corpus",
       "exists": true
     },
     {
-      "surface": "dataflow-analysis",
+      "surface": "weir",
       "layer": "bench",
-      "path": "external:dataflow-analysis/benches",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/benches",
       "exists": true
     },
     {
-      "surface": "dataflow-analysis",
+      "surface": "weir",
       "layer": "regression",
-      "path": "external:dataflow-analysis/tests/regression",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/regression",
       "exists": true
     },
     {
-      "surface": "parser-cli",
+      "surface": "vyrec",
       "layer": "fixtures",
-      "path": "external:parser-cli/tests/fixtures",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/fixtures",
       "exists": true
     },
     {
-      "surface": "parser-cli",
+      "surface": "vyrec",
       "layer": "contracts",
-      "path": "external:parser-cli/tests/contracts",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/contracts",
       "exists": true
     },
     {
-      "surface": "parser-cli",
+      "surface": "vyrec",
       "layer": "properties",
-      "path": "external:parser-cli/tests/properties",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/properties",
       "exists": true
     },
     {
-      "surface": "parser-cli",
+      "surface": "vyrec",
       "layer": "backends",
-      "path": "external:parser-cli/tests/backends",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/backends",
       "exists": true
     },
     {
-      "surface": "parser-cli",
+      "surface": "vyrec",
       "layer": "corpus",
-      "path": "external:parser-cli/tests/corpus",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/corpus",
       "exists": true
     },
     {
-      "surface": "parser-cli",
+      "surface": "vyrec",
       "layer": "bench",
-      "path": "external:parser-cli/benches",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/benches",
       "exists": true
     },
     {
-      "surface": "parser-cli",
+      "surface": "vyrec",
       "layer": "regression",
-      "path": "external:parser-cli/tests/regression",
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/regression",
       "exists": true
     }
   ],
