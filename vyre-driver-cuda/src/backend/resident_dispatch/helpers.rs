@@ -8,10 +8,8 @@ use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::HostTransferAllocations;
 use crate::backend::plan::CudaDispatchPlan;
-use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
-use crate::backend::resident_upload_fusion::{
-    fuse_resident_upload_copies, push_resident_upload_copy, ResidentUploadCopy,
-};
+use crate::backend::resident::CudaResidentBuffer;
+use crate::backend::resident_upload_fusion::ResidentUploadCopy;
 use crate::backend::staging_reserve::{
     reserve_hash_set, reserve_smallvec, reserve_vec, resize_vec_slots,
 };

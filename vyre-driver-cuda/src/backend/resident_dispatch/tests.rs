@@ -21,7 +21,7 @@ fn resident_dispatch_production_source() -> String {
 mod tests {
     use super::{
         borrow_resident_sequence_output_slots, prepare_resident_sequence_fills,
-        resident_dispatch_production_source, stage_resident_fill_payload,
+        stage_resident_fill_payload,
     };
     use crate::backend::resident::CudaResidentBuffer;
 
