@@ -4,7 +4,7 @@
 
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 
-use vyre_primitives::graph::{csr_forward_traverse, persistent_bfs};
+use vyre_primitives::graph::persistent_bfs;
 
 fn bitset_words(node_count: u32) -> usize {
     vyre_primitives::bitset::bitset_words(node_count) as usize
@@ -93,7 +93,7 @@ fn oracle_persistent(
         let mut step_changed = false;
         for wi in 0..words {
             let before = accum[wi];
-            accum[wi] |= step[{wi}];
+            accum[wi] |= step[wi];
             if accum[wi] != before {
                 step_changed = true;
             }

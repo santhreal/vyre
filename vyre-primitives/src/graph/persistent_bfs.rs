@@ -49,11 +49,10 @@ pub use validate::{
     validate_persistent_bfs_graph_layout, validate_persistent_bfs_inputs,
 };
 
-pub(crate) use cpu_ref::*;
-pub(crate) use dispatch_plan::*;
-pub(crate) use hash::*;
-pub(crate) use layout::*;
-pub(crate) use plan::*;
-pub(crate) use program::*;
-pub(crate) use resident_plan::*;
-pub(crate) use validate::*;
+#[cfg(test)]
+pub(crate) use {
+    cpu_ref::*, dispatch_plan::*, hash::*, layout::*, plan::*, program::*, resident_plan::*,
+    validate::*,
+};
+
+

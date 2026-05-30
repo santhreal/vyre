@@ -61,16 +61,11 @@ pub use program_dispatch::build_csr_forward_or_changed_dispatch_program;
 pub use program_serial::csr_forward_or_changed;
 pub use validate::{copy_csr_forward_seed_frontier_into, validate_csr_forward_or_changed_flag};
 
-pub(crate) use body::*;
-pub(crate) use cpu_ref::*;
-pub(crate) use dispatch_plan::*;
-pub(crate) use hash::*;
-pub(crate) use launch_plan::*;
-pub(crate) use layout::*;
-pub(crate) use plan::*;
-pub(crate) use program_dispatch::*;
-pub(crate) use program_parallel::*;
-pub(crate) use program_parallel_batch::*;
-pub(crate) use program_parallel_batch_global::*;
-pub(crate) use program_serial::*;
-pub(crate) use validate::*;
+#[cfg(test)]
+pub(crate) use {
+    body::*, cpu_ref::*, dispatch_plan::*, hash::*, launch_plan::*, layout::*, plan::*,
+    program_dispatch::*, program_parallel::*, program_parallel_batch::*,
+    program_parallel_batch_global::*, program_serial::*, validate::*,
+};
+
+
