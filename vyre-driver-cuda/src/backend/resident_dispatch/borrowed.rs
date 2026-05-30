@@ -1,5 +1,4 @@
 use std::ffi::c_void;
-use std::sync::Arc;
 
 use smallvec::SmallVec;
 use vyre_driver::binding::BindingRole;
@@ -8,9 +7,6 @@ use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
 use crate::backend::dispatch::CudaBackend;
-use crate::backend::module_cache::ModuleCacheKey;
-use crate::backend::output_range::CudaOutputReadback;
-use crate::backend::plan::CudaDispatchPlan;
 use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
 use crate::backend::resident_dispatch::helpers::PreparedStep;
 use crate::backend::resident_dispatch_support::CudaResidentDispatchStep;

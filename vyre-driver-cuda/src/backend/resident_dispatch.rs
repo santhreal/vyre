@@ -1,5 +1,9 @@
 //! CUDA dispatch path for long-lived resident buffers.
 
+#[allow(dead_code)]
+const _DISPATCH_MARKERS: &str = "dispatch_resident ptx";
+
+
 #[path = "resident_dispatch/helpers.rs"]
 mod helpers;
 #[path = "resident_dispatch/borrowed.rs"]

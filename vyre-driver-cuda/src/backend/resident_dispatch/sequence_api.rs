@@ -1,6 +1,5 @@
 use smallvec::SmallVec;
-use vyre_driver::{BackendError, DispatchConfig};
-use vyre_foundation::ir::Program;
+use vyre_driver::BackendError;
 
 use crate::backend::dispatch::CudaBackend;
 use crate::backend::output_range::CudaOutputReadback;
