@@ -82,6 +82,12 @@ tree-sitter-go = { workspace = true }
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+# build.rs reads this to stamp VYRE_NAGA_VERSION into the binary so the
+# pipeline-cache key invalidates when the shader frontend changes. Bump in
+# lockstep with the workspace `naga` dep.
+[package.metadata.vyre]
+naga_version = "25.0.0"
+
 [lints]
 workspace = true
 
