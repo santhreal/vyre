@@ -20,7 +20,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Run loom tests
-        working-directory: libs/performance/matching/vyre
         run: |
           # Only run tests named loom_* under cfg loom. If a crate has none, it is a no-op.
-          ./cargo_full test --workspace --release -- --test-threads=1 loom_
+          cargo test --workspace --release -- --test-threads=1 loom_

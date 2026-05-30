@@ -26,17 +26,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-fuzz
-        run: ./cargo_full install cargo-fuzz
+        run: cargo install cargo-fuzz
       - name: Run smoke fuzz
         run: |
-          cd libs/performance/matching/vyre/vyre-foundation/fuzz
-          ../../cargo_full fuzz run ${{ matrix.target }} --release -- -max_total_time=60
+          cd vyre-foundation/fuzz
+          ../.cargo fuzz run ${{ matrix.target }} --release -- -max_total_time=60
       - name: Upload crash artifact
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: crash-smoke-${{ matrix.target }}
-          path: libs/performance/matching/vyre/vyre-foundation/fuzz/artifacts/${{ matrix.target }}/
+          path: vyre-foundation/fuzz/artifacts/${{ matrix.target }}/
           if-no-files-found: ignore
 
   ci:
@@ -53,15 +53,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-fuzz
-        run: ./cargo_full install cargo-fuzz
+        run: cargo install cargo-fuzz
       - name: Run CI fuzz
         run: |
-          cd libs/performance/matching/vyre/vyre-foundation/fuzz
-          ../../cargo_full fuzz run ${{ matrix.target }} --release -- -max_total_time=600
+          cd vyre-foundation/fuzz
+          ../.cargo fuzz run ${{ matrix.target }} --release -- -max_total_time=600
       - name: Upload crash artifact
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: crash-ci-${{ matrix.target }}
-          path: libs/performance/matching/vyre/vyre-foundation/fuzz/artifacts/${{ matrix.target }}/
+          path: vyre-foundation/fuzz/artifacts/${{ matrix.target }}/
           if-no-files-found: ignore

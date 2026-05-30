@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
 
-defaults:
-  run:
-    working-directory: libs/performance/matching/vyre
-
 env:
   CARGO_TERM_COLOR: always
   WGPU_BACKEND: vulkan
@@ -25,14 +21,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Add cargo_full wrapper to PATH
-        shell: bash
-        run: |
-          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
-            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
-          else
-            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
-          fi
       - name: Verify NVIDIA GPU
         run: |
           if ! command -v nvidia-smi >/dev/null 2>&1; then
@@ -48,18 +36,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Add cargo_full wrapper to PATH
-        shell: bash
-        run: |
-          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
-            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
-          else
-            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
-          fi
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: capability + async dispatch contracts
-        run: cargo_full test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture
+        run: cargo test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture
 
   composition-parity-gpu:
     name: Composition parity on real GPU
@@ -68,18 +48,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Add cargo_full wrapper to PATH
-        shell: bash
-        run: |
-          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
-            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
-          else
-            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
-          fi
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run composition parity
-        run: cargo_full test -p vyre-libs --release --features vyre_wgpu --test op_pairwise pairwise_composition_parity -- --nocapture
+        run: cargo test -p vyre-libs --release --features vyre_wgpu --test op_pairwise pairwise_composition_parity -- --nocapture
 
   determinism-stress-gpu:
     name: Determinism stress on real GPU
@@ -88,18 +60,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Add cargo_full wrapper to PATH
-        shell: bash
-        run: |
-          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
-            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
-          else
-            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
-          fi
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run determinism stress
-        run: cargo_full test -p vyre-driver-wgpu --release --test gap_determinism_contract -- --nocapture
+        run: cargo test -p vyre-driver-wgpu --release --test gap_determinism_contract -- --nocapture
 
   mandatory-gpu-enforcer:
     name: Mandatory GPU enforcement
@@ -108,18 +72,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Add cargo_full wrapper to PATH
-        shell: bash
-        run: |
-          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
-            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
-          else
-            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
-          fi
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run GPU mandatory tests
-        run: cargo_full test -p vyre-conform-runner --release --features gpu --test parity_matrix --test ulp_audit -- --nocapture
+        run: cargo test -p vyre-conform-runner --release --features gpu --test parity_matrix --test ulp_audit -- --nocapture
 
   cuda-conformance-all-ops:
     name: CUDA conformance all ops
@@ -128,18 +84,10 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Add cargo_full wrapper to PATH
-        shell: bash
-        run: |
-          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
-            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
-          else
-            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
-          fi
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run vyre-conform against CUDA for every registered op
-        run: cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all
+        run: cargo run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all
 
   wgpu-conformance-all-ops:
     name: WGPU conformance all ops
@@ -148,18 +96,10 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Add cargo_full wrapper to PATH
-        shell: bash
-        run: |
-          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
-            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
-          else
-            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
-          fi
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run vyre-conform against WGPU for every registered op
-        run: cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all
+        run: cargo run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all
 
   release-conformance-artifacts:
     name: Release conformance artifacts
@@ -170,22 +110,14 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - name: Add cargo_full wrapper to PATH
-        shell: bash
-        run: |
-          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
-            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
-          else
-            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
-          fi
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Generate release conformance evidence artifacts
-        run: cargo_full run --release --bin xtask -- release-conformance --backend all
+        run: cargo run --release --bin xtask -- release-conformance --backend all
       - uses: actions/upload-artifact@v4
         with:
           name: vyre-release-conformance-evidence
-          path: libs/performance/matching/vyre/release/evidence/conformance/*.json
+          path: ./release/evidence/conformance/*.json
 
   weir-cuda-parity:
     name: Weir CUDA parity
@@ -194,21 +126,12 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: .
     steps:
       - uses: actions/checkout@v4
-      - name: Add cargo_full wrapper to PATH
-        shell: bash
-        run: |
-          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
-            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
-          else
-            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
-          fi
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run Weir CUDA parity inventory gate
-        run: cargo_full test -p weir every_weir_inventory_op_parity_holds -- --nocapture
+        run: cargo test -p weir every_weir_inventory_op_parity_holds -- --nocapture
 
   cuda-release-bench-evidence:
     name: CUDA release benchmark evidence
@@ -217,34 +140,26 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - name: Add cargo_full wrapper to PATH
-        shell: bash
-        run: |
-          if [ -x "$GITHUB_WORKSPACE/libs/performance/matching/vyre/cargo_full" ]; then
-            printf "%s\n" "$GITHUB_WORKSPACE/libs/performance/matching/vyre" >> "$GITHUB_PATH"
-          else
-            printf "%s\n" "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
-          fi
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Lower rewrite optimization evidence
-        run: cargo_full run -p vyre-bench --release -- run --suite release --case lower.rewrites.impact.corpus --format json --measured-samples 30
+        run: cargo run -p vyre-bench --release -- run --suite release --case lower.rewrites.impact.corpus --format json --measured-samples 30
       - name: CUDA PTX pattern evidence
-        run: cargo_full run -p vyre-bench --release -- run --suite release --case cuda.ptx.patterns.release.corpus --format json --measured-samples 30
+        run: cargo run -p vyre-bench --release -- run --suite release --case cuda.ptx.patterns.release.corpus --format json --measured-samples 30
       - name: Megakernel condition evidence
-        run: cargo_full run -p vyre-bench --release -- run --suite release --case runtime.megakernel.condition.64k --format json --backend cuda --measured-samples 30
+        run: cargo run -p vyre-bench --release -- run --suite release --case runtime.megakernel.condition.64k --format json --backend cuda --measured-samples 30
       - name: CPU-favorable conditional eval evidence
-        run: cargo_full run -p vyre-bench --release -- run --suite release --case conditions.yara_like.eval.1m --format json --backend cuda --measured-samples 30
+        run: cargo run -p vyre-bench --release -- run --suite release --case conditions.yara_like.eval.1m --format json --backend cuda --measured-samples 30
       - name: Batched conditional eval evidence
-        run: cargo_full run -p vyre-bench --release -- run --suite release --case conditions.yara_like.batch.16x64k --format json --backend cuda --measured-samples 30
+        run: cargo run -p vyre-bench --release -- run --suite release --case conditions.yara_like.batch.16x64k --format json --backend cuda --measured-samples 30
       - name: Generate release benchmark evidence artifacts
-        run: cargo_full run --release --bin xtask -- release-benchmarks --backend cuda --measured-samples 30
+        run: cargo run --release --bin xtask -- release-benchmarks --backend cuda --measured-samples 30
       - uses: actions/upload-artifact@v4
         with:
           name: vyre-release-benchmark-evidence
           path: |
-            libs/performance/matching/vyre/release/evidence/benchmarks/*.json
-            libs/performance/matching/vyre/release/evidence/optimization/*.json
+            ./release/evidence/benchmarks/*.json
+            ./release/evidence/optimization/*.json
 
   gpu-release-gate:
     name: GPU release gate
@@ -262,7 +177,6 @@ jobs:
     timeout-minutes: 5
     defaults:
       run:
-        working-directory: .
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
