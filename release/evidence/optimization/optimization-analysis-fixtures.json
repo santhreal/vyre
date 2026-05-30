@@ -9,7 +9,7 @@
   ],
   "missing_required_families": [],
   "total_fixture_cases": 1536,
-  "total_triggered_cases": 1536,
+  "total_triggered_cases": 1280,
   "families": [
     {
       "family": "A13-coalesce-fixture",
@@ -59,8 +59,8 @@
     {
       "family": "A16-vec-pack-fixture",
       "cases": 256,
-      "analysis_sites": 256,
-      "triggered_cases": 256,
+      "analysis_sites": 0,
+      "triggered_cases": 0,
       "coalesced_unit_stride_sites": 0,
       "strided_sites": 0,
       "broadcast_sites": 0,
@@ -68,9 +68,13 @@
       "shared_mem_tile_bytes": 0,
       "bank_conflict_sites": 0,
       "bank_conflict_critical_sites": 0,
-      "vec_pack_chains": 256,
-      "vec_pack_ops_eliminated": 768
+      "vec_pack_chains": 0,
+      "vec_pack_ops_eliminated": 0
     }
   ],
-  "blockers": []
+  "blockers": [
+    "analysis fixture family `A16-vec-pack-fixture` triggered 0/256 generated case(s); every hand-built A13-A16 fixture case must exercise its analysis",
+    "analysis fixture family `A16-vec-pack-fixture` produced 0 analysis site(s) for 256 case(s); release fixtures need at least one site per case",
+    "A16 vec-pack fixture produced no adjacent-load packing chains"
+  ]
 }

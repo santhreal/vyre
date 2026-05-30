@@ -1,9 +1,9 @@
 {
-  "schema_version": 2,
+  "schema_version": 1,
   "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/README.md",
   "exists": true,
   "read_error": null,
-  "source_bytes": 33742,
+  "source_bytes": 33130,
   "required_tokens": [
     "0.4.1",
     "vyre",
@@ -16,7 +16,11 @@
     "release/evidence",
     "cargo add vyre"
   ],
-  "missing_tokens": [],
+  "missing_tokens": [
+    "0.4.1"
+  ],
   "example_count": 4,
-  "blockers": []
+  "blockers": [
+    "Vyre README is missing required token `0.4.1`"
+  ]
 }

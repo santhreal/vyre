@@ -8,67 +8,67 @@
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/Cargo.toml",
       "exists": true,
       "read_error": null,
-      "source_bytes": 1500
+      "source_bytes": 641
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/src/main.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 6233
+      "source_bytes": 148
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/README.md",
       "exists": true,
       "read_error": null,
-      "source_bytes": 1530
+      "source_bytes": 1841
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/cli_contracts.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 1454
+      "source_bytes": 367
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/adversarial_cli_contracts.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 665
+      "source_bytes": 279
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/property_cli_contracts.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 604
+      "source_bytes": 363
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/corpus_linux_contracts.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 780
+      "source_bytes": 552
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/benchmark_cli_contracts.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 661
+      "source_bytes": 215
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/conformance_cli_contracts.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 629
+      "source_bytes": 253
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/gap_cli_contracts.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 968
+      "source_bytes": 264
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/fuzz_cli_contracts.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 1139
+      "source_bytes": 246
     }
   ],
   "required_terms": [
@@ -108,7 +108,7 @@
       "tree": "tests",
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests",
       "exists": true,
-      "source_bytes": 8810,
+      "source_bytes": 6153,
       "unreadable_file_count": 0
     },
     {

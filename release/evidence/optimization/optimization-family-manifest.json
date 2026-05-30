@@ -12,10 +12,10 @@
     "A14-shared-mem-promote-fixture",
     "A15-bank-conflict-fixture",
     "A16-vec-pack-fixture",
-    "dataflow-analysis-dse",
-    "dataflow-analysis-loop-fusion",
-    "dataflow-analysis-loop-fission",
-    "dataflow-analysis-licm"
+    "dataflow-dse",
+    "dataflow-loop-fusion",
+    "dataflow-loop-fission",
+    "dataflow-licm"
   ],
   "missing_required_families": [],
   "families": [
@@ -44,6 +44,22 @@
       "cases": 256
     },
     {
+      "family": "dataflow-dse",
+      "cases": 256
+    },
+    {
+      "family": "dataflow-licm",
+      "cases": 256
+    },
+    {
+      "family": "dataflow-loop-fission",
+      "cases": 256
+    },
+    {
+      "family": "dataflow-loop-fusion",
+      "cases": 256
+    },
+    {
       "family": "egraph",
       "cases": 1792
     },
@@ -58,22 +74,6 @@
     {
       "family": "vector-layout",
       "cases": 1024
-    },
-    {
-      "family": "dataflow-analysis-dse",
-      "cases": 256
-    },
-    {
-      "family": "dataflow-analysis-licm",
-      "cases": 256
-    },
-    {
-      "family": "dataflow-analysis-loop-fission",
-      "cases": 256
-    },
-    {
-      "family": "dataflow-analysis-loop-fusion",
-      "cases": 256
     }
   ],
   "blockers": []

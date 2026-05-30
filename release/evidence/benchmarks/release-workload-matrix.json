@@ -16,12 +16,13 @@
   ],
   "missing_required_cpu_sota_100x_families": [],
   "matched_required_families": 13,
-  "release_suite_case_count": 46,
-  "cpu_sota_contract_count": 32,
-  "cpu_sota_100x_contract_count": 14,
+  "release_suite_case_count": 52,
+  "cpu_sota_contract_count": 35,
+  "cpu_sota_100x_contract_count": 15,
   "cpu_sota_100x_contract_cases": [
     "conditions.yara_like.eval.1m",
     "frontend.c.parser.linux_driver_pipeline",
+    "nn.linear_4bit_affine_grouped.1m",
     "release.alias_reaching_def.1m",
     "release.c_ast_traversal.1m",
     "release.condition_eval.1m",
@@ -35,7 +36,7 @@
     "runtime.megakernel.condition.64k",
     "sparse.compaction.count.1m"
   ],
-  "cpu_sota_100x_family_count": 12,
+  "cpu_sota_100x_family_count": 13,
   "cpu_sota_100x_families": [
     "alias-reaching-def",
     "c-ast-traversal",
@@ -47,6 +48,7 @@
     "metadata-conditions",
     "offset-count-aggregation",
     "quantified-condition-loops",
+    "quantized-linear",
     "sparse-output-compaction",
     "string-bitmap-scatter"
   ],
@@ -322,7 +324,7 @@
         "LLVM-style sparse dataflow and alias analysis baseline"
       ],
       "cpu_sota_baseline_crates": [
-        "weir"
+        "vyre-bench"
       ],
       "cpu_sota_backend_ids": [
         "cuda"
@@ -356,7 +358,7 @@
         "optimized CPU graph reachability and witness extraction"
       ],
       "cpu_sota_baseline_crates": [
-        "weir"
+        "vyre-bench"
       ],
       "cpu_sota_backend_ids": [
         "cuda"
@@ -549,7 +551,7 @@
         "optimized CPU graph reachability and witness extraction"
       ],
       "cpu_sota_baseline_crates": [
-        "weir"
+        "vyre-primitives"
       ],
       "cpu_sota_backend_ids": [
         "cuda"
@@ -557,6 +559,104 @@
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
       "max_cpu_sota_min_speedup_x": 25.0
+    },
+    {
+      "id": "compound-fused-filter",
+      "title": "Compound resident literal/dataflow/score filtering",
+      "release_plan_workload": 14,
+      "required": false,
+      "dispatch_policy": "resident-fused-kernel",
+      "non_megakernel_justification": "architectural: compound filtering fuses independent matching, dataflow, score, and taint-class predicates into one resident pass without condition-slot queue orchestration",
+      "matched_cases": [
+        "compound.pipeline.fused_filter.1m"
+      ],
+      "evidence_artifact": "release/evidence/benchmarks/workload-14-compound-fused-filter.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case compound.pipeline.fused_filter.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-14-compound-fused-filter.json",
+      "bench_target_ids": [
+        "release.workload.compound_fused_filter"
+      ],
+      "cpu_sota_contracts": [
+        "compound.pipeline.fused_filter.1m => Rayon-parallel staged CPU filter with equivalent predicates 10x"
+      ],
+      "cpu_sota_100x_cases": [],
+      "cpu_sota_baseline_names": [
+        "Rayon-parallel staged CPU filter with equivalent predicates"
+      ],
+      "cpu_sota_baseline_crates": [
+        "rayon"
+      ],
+      "cpu_sota_backend_ids": [
+        "cuda"
+      ],
+      "fair_cpu_sota_baseline_count": 1,
+      "reproducible_cuda_command": true,
+      "max_cpu_sota_min_speedup_x": 10.0
+    },
+    {
+      "id": "adaptive-routing",
+      "title": "GPU-resident adaptive workload routing",
+      "release_plan_workload": 15,
+      "required": false,
+      "dispatch_policy": "resident-routing-kernel",
+      "non_megakernel_justification": "architectural: adaptive routing is GPU-side scheduling metadata generation rather than execution of a queued rule opcode stream",
+      "matched_cases": [
+        "runtime.adaptive_routing.gpu_resident.1m"
+      ],
+      "evidence_artifact": "release/evidence/benchmarks/workload-15-adaptive-routing.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case runtime.adaptive_routing.gpu_resident.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-15-adaptive-routing.json",
+      "bench_target_ids": [
+        "release.workload.adaptive_routing"
+      ],
+      "cpu_sota_contracts": [
+        "runtime.adaptive_routing.gpu_resident.1m => Rayon-parallel CPU scheduler over equivalent routing predicates 10x"
+      ],
+      "cpu_sota_100x_cases": [],
+      "cpu_sota_baseline_names": [
+        "Rayon-parallel CPU scheduler over equivalent routing predicates"
+      ],
+      "cpu_sota_baseline_crates": [
+        "rayon"
+      ],
+      "cpu_sota_backend_ids": [
+        "cuda"
+      ],
+      "fair_cpu_sota_baseline_count": 1,
+      "reproducible_cuda_command": true,
+      "max_cpu_sota_min_speedup_x": 10.0
+    },
+    {
+      "id": "quantized-linear",
+      "title": "Fused grouped INT4 linear inference",
+      "release_plan_workload": 16,
+      "required": false,
+      "dispatch_policy": "resident-fused-kernel",
+      "non_megakernel_justification": "architectural: grouped INT4 linear fuses packed weight decode, scale/zero-point sidecars, and accumulation in one inference kernel instead of queueing scalar condition opcodes",
+      "matched_cases": [
+        "nn.linear_4bit_affine_grouped.1m"
+      ],
+      "evidence_artifact": "release/evidence/benchmarks/workload-16-quantized-linear.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case nn.linear_4bit_affine_grouped.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-16-quantized-linear.json",
+      "bench_target_ids": [
+        "release.workload.quantized_linear"
+      ],
+      "cpu_sota_contracts": [
+        "nn.linear_4bit_affine_grouped.1m => Rayon-parallel packed INT4 affine dequantization oracle 100x"
+      ],
+      "cpu_sota_100x_cases": [
+        "nn.linear_4bit_affine_grouped.1m"
+      ],
+      "cpu_sota_baseline_names": [
+        "Rayon-parallel packed INT4 affine dequantization oracle"
+      ],
+      "cpu_sota_baseline_crates": [
+        "rayon"
+      ],
+      "cpu_sota_backend_ids": [
+        "cuda"
+      ],
+      "fair_cpu_sota_baseline_count": 1,
+      "reproducible_cuda_command": true,
+      "max_cpu_sota_min_speedup_x": 100.0
     }
   ],
   "blockers": []

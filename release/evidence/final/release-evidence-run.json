@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "total_commands": 13,
-  "successful_commands": 13,
-  "command_failures": 0,
+  "successful_commands": 3,
+  "command_failures": 10,
   "artifact_failures": 0,
   "command_count": 13,
   "required_command_count": 13,
@@ -36,31 +36,31 @@
         "release/evidence/docs/release-hygiene-proof.md",
         "release/evidence/docs/cpu-only-100x-proof.md"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/docs/docs-matrix.json",
           "exists": true,
-          "bytes": 14065,
+          "bytes": 14970,
           "read_error": null
         },
         {
           "path": "release/evidence/docs/vyre-readme-contracts.json",
           "exists": true,
-          "bytes": 432,
+          "bytes": 502,
           "read_error": null
         },
         {
           "path": "release/evidence/docs/release-notes-version-story.md",
           "exists": true,
-          "bytes": 2198,
+          "bytes": 2196,
           "read_error": null
         },
         {
           "path": "release/evidence/docs/cuda-release-path.md",
           "exists": true,
-          "bytes": 3197,
+          "bytes": 3195,
           "read_error": null
         },
         {
@@ -90,7 +90,7 @@
         {
           "path": "release/evidence/docs/c-parser-linux-proof.md",
           "exists": true,
-          "bytes": 2788,
+          "bytes": 2795,
           "read_error": null
         },
         {
@@ -108,7 +108,7 @@
         {
           "path": "release/evidence/docs/test-architecture.md",
           "exists": true,
-          "bytes": 1432,
+          "bytes": 1486,
           "read_error": null
         },
         {
@@ -126,19 +126,19 @@
         {
           "path": "release/evidence/docs/parser-doc-proof.md",
           "exists": true,
-          "bytes": 934,
+          "bytes": 943,
           "read_error": null
         },
         {
           "path": "release/evidence/docs/benchmark-doc-proof.md",
           "exists": true,
-          "bytes": 2539,
+          "bytes": 3019,
           "read_error": null
         },
         {
           "path": "release/evidence/docs/conformance-doc-proof.md",
           "exists": true,
-          "bytes": 4205,
+          "bytes": 4200,
           "read_error": null
         },
         {
@@ -156,7 +156,7 @@
         {
           "path": "release/evidence/docs/release-hygiene-proof.md",
           "exists": true,
-          "bytes": 3303,
+          "bytes": 3387,
           "read_error": null
         },
         {
@@ -176,19 +176,19 @@
         "release/evidence/version/version-matrix.json",
         "release/evidence/version/release-tag-plan.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/version/version-matrix.json",
           "exists": true,
-          "bytes": 40779,
+          "bytes": 29931,
           "read_error": null
         },
         {
           "path": "release/evidence/version/release-tag-plan.json",
           "exists": true,
-          "bytes": 1203,
+          "bytes": 4921,
           "read_error": null
         }
       ]
@@ -201,13 +201,13 @@
       "expected_artifacts": [
         "release/evidence/backends/backend-matrix.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/backends/backend-matrix.json",
           "exists": true,
-          "bytes": 13030,
+          "bytes": 13664,
           "read_error": null
         }
       ]
@@ -220,13 +220,13 @@
       "expected_artifacts": [
         "release/evidence/conformance/conformance-matrix.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/conformance/conformance-matrix.json",
           "exists": true,
-          "bytes": 154214,
+          "bytes": 229910,
           "read_error": null
         }
       ]
@@ -246,7 +246,7 @@
         {
           "path": "release/evidence/benchmarks/release-workload-matrix.json",
           "exists": true,
-          "bytes": 24048,
+          "bytes": 27776,
           "read_error": null
         }
       ]
@@ -267,43 +267,43 @@
         "release/evidence/hygiene/public-doc-scan.json",
         "release/evidence/hygiene/test-hygiene-scan.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/hygiene/hygiene-matrix.json",
           "exists": true,
-          "bytes": 1413,
+          "bytes": 446176,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/no-stubs-scan.json",
           "exists": true,
-          "bytes": 84,
+          "bytes": 3206,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/no-hidden-fallback-scan.json",
           "exists": true,
-          "bytes": 94,
+          "bytes": 1630,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/resource-bound-scan.json",
           "exists": true,
-          "bytes": 90,
+          "bytes": 6164,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/error-surface-scan.json",
           "exists": true,
-          "bytes": 89,
+          "bytes": 240854,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/cargo-wrapper-scan.json",
           "exists": true,
-          "bytes": 89,
+          "bytes": 28562,
           "read_error": null
         },
         {
@@ -315,13 +315,13 @@
         {
           "path": "release/evidence/hygiene/public-doc-scan.json",
           "exists": true,
-          "bytes": 87,
+          "bytes": 67484,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/test-hygiene-scan.json",
           "exists": true,
-          "bytes": 88,
+          "bytes": 96157,
           "read_error": null
         }
       ]
@@ -345,13 +345,13 @@
         "release/evidence/tests/gap-suite.json",
         "release/evidence/tests/fuzz-suite.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/tests/test-matrix.json",
           "exists": true,
-          "bytes": 5823,
+          "bytes": 212237,
           "read_error": null
         },
         {
@@ -363,61 +363,61 @@
         {
           "path": "release/evidence/tests/oversized-test-closure.json",
           "exists": true,
-          "bytes": 235,
+          "bytes": 206636,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/release-surface-suite-coverage.json",
           "exists": true,
-          "bytes": 1812,
+          "bytes": 1819,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/unit-suite.json",
           "exists": true,
-          "bytes": 418009,
+          "bytes": 1360105,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/adversarial-suite.json",
           "exists": true,
-          "bytes": 66389,
+          "bytes": 198004,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/property-suite.json",
           "exists": true,
-          "bytes": 29541,
+          "bytes": 83864,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/conformance-suite.json",
           "exists": true,
-          "bytes": 101050,
+          "bytes": 373481,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/corpus-suite.json",
           "exists": true,
-          "bytes": 38861,
+          "bytes": 87464,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/benchmark-suite.json",
           "exists": true,
-          "bytes": 394887,
+          "bytes": 1258390,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/gap-suite.json",
           "exists": true,
-          "bytes": 9912,
+          "bytes": 16122,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/fuzz-suite.json",
           "exists": true,
-          "bytes": 5940,
+          "bytes": 30026,
           "read_error": null
         }
       ]
@@ -436,7 +436,7 @@
         {
           "path": "release/evidence/metadata/metadata-matrix.json",
           "exists": true,
-          "bytes": 34423,
+          "bytes": 36985,
           "read_error": null
         }
       ]
@@ -449,13 +449,13 @@
       "expected_artifacts": [
         "release/evidence/metadata/feature-matrix.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/metadata/feature-matrix.json",
           "exists": true,
-          "bytes": 18879,
+          "bytes": 20780,
           "read_error": null
         }
       ]
@@ -478,31 +478,31 @@
         {
           "path": "release/evidence/optimization/optimization-corpus.json",
           "exists": true,
-          "bytes": 1310,
+          "bytes": 1280,
           "read_error": null
         },
         {
           "path": "release/evidence/optimization/optimization-corpus-contracts.json",
           "exists": true,
-          "bytes": 314,
+          "bytes": 304,
           "read_error": null
         },
         {
           "path": "release/evidence/optimization/optimization-family-manifest.json",
           "exists": true,
-          "bytes": 1490,
+          "bytes": 1450,
           "read_error": null
         },
         {
           "path": "release/evidence/optimization/optimization-analysis-fixtures.json",
           "exists": true,
-          "bytes": 2116,
+          "bytes": 2481,
           "read_error": null
         },
         {
           "path": "release/evidence/optimization/optimization-case-manifest.json",
           "exists": true,
-          "bytes": 2732784,
+          "bytes": 2722539,
           "read_error": null
         }
       ]
@@ -522,43 +522,43 @@
         "release/evidence/optimization/egraph-saturation-matrix.json",
         "release/evidence/optimization/egraph-semantic-contracts.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/optimization/optimization-integration-matrix.json",
           "exists": true,
-          "bytes": 20390,
+          "bytes": 25541,
           "read_error": null
         },
         {
           "path": "release/evidence/optimization/alias-aware-dse.json",
           "exists": true,
-          "bytes": 5402,
+          "bytes": 6500,
           "read_error": null
         },
         {
           "path": "release/evidence/optimization/alias-aware-stlf.json",
           "exists": true,
-          "bytes": 5461,
+          "bytes": 3595,
           "read_error": null
         },
         {
           "path": "release/evidence/optimization/alias-aware-licm.json",
           "exists": true,
-          "bytes": 2477,
+          "bytes": 2941,
           "read_error": null
         },
         {
           "path": "release/evidence/optimization/alias-aware-fusion-fission.json",
           "exists": true,
-          "bytes": 3930,
+          "bytes": 4724,
           "read_error": null
         },
         {
           "path": "release/evidence/optimization/weir-facts-pass-firing.json",
           "exists": true,
-          "bytes": 8991,
+          "bytes": 10843,
           "read_error": null
         },
         {
@@ -585,46 +585,46 @@
         "release/evidence/parser/vyre-frontend-c-contracts.json",
         "release/evidence/parser/vyrec-cli-contracts.json",
         "release/evidence/parser/weir-contracts.json",
-        "release/evidence/parser/surgec-contracts.json",
-        "release/evidence/parser/surgec-grammar-gen-contracts.json"
+        "release/evidence/parser/security-analysis-consumer-contracts.json",
+        "release/evidence/parser/security-grammar-gen-contracts.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/parser/distributed-parser-map.json",
           "exists": true,
-          "bytes": 12294,
+          "bytes": 17496,
           "read_error": null
         },
         {
           "path": "release/evidence/parser/vyre-frontend-c-contracts.json",
           "exists": true,
-          "bytes": 2125,
+          "bytes": 2127,
           "read_error": null
         },
         {
           "path": "release/evidence/parser/vyrec-cli-contracts.json",
           "exists": true,
-          "bytes": 3334,
+          "bytes": 3330,
           "read_error": null
         },
         {
           "path": "release/evidence/parser/weir-contracts.json",
           "exists": true,
-          "bytes": 1884,
+          "bytes": 1890,
           "read_error": null
         },
         {
-          "path": "release/evidence/parser/surgec-contracts.json",
+          "path": "release/evidence/parser/security-analysis-consumer-contracts.json",
           "exists": true,
-          "bytes": 1646,
+          "bytes": 5198,
           "read_error": null
         },
         {
-          "path": "release/evidence/parser/surgec-grammar-gen-contracts.json",
+          "path": "release/evidence/parser/security-grammar-gen-contracts.json",
           "exists": true,
-          "bytes": 1719,
+          "bytes": 4943,
           "read_error": null
         }
       ]
@@ -639,30 +639,41 @@
         "release/evidence/weir/weir-vyre-integration-tests.json",
         "release/evidence/weir/weir-readme-contracts.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/weir/weir-analysis-api-matrix.json",
           "exists": true,
-          "bytes": 31111,
+          "bytes": 32903,
           "read_error": null
         },
         {
           "path": "release/evidence/weir/weir-vyre-integration-tests.json",
           "exists": true,
-          "bytes": 14086,
+          "bytes": 14087,
           "read_error": null
         },
         {
           "path": "release/evidence/weir/weir-readme-contracts.json",
           "exists": true,
-          "bytes": 803,
+          "bytes": 1036,
           "read_error": null
         }
       ]
     }
   ],
-  "blockers": [],
+  "blockers": [
+    "`xtask docs-matrix` failed with exit status: 1",
+    "`xtask version-matrix` failed with exit status: 1",
+    "`xtask backend-matrix` failed with exit status: 1",
+    "`xtask conformance-matrix` failed with exit status: 1",
+    "`xtask hygiene-matrix` failed with exit status: 1",
+    "`xtask test-matrix` failed with exit status: 1",
+    "`xtask feature-matrix` failed with exit status: 1",
+    "`xtask optimization-matrix` failed with exit status: 1",
+    "`xtask parser-coherence` failed with exit status: 1",
+    "`xtask weir-matrix` failed with exit status: 1"
+  ],
   "reports": []
 }

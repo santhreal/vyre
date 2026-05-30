@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "alias-aware-licm",
-  "source_matrix": "release/evidence/optimization/optimization-integration-matrix.json",
+  "source_matrix": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/release/evidence/optimization/optimization-integration-matrix.json",
   "markers": [
     {
       "id": "alias-aware-licm-entrypoint",
@@ -9,19 +9,19 @@
       "marker": "licm_with_weir_alias_facts",
       "exists": true,
       "read_error": null,
-      "marker_present": true,
-      "marker_on_code_line": true,
+      "marker_present": false,
+      "marker_on_code_line": false,
       "unresolved_markers": [],
       "role": "LICM consumes Weir alias facts"
     },
     {
       "id": "reaching-def-licm-entrypoint",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/licm/mod.rs",
-      "marker": "licm_with_weir_dataflow_facts",
+      "marker": "licm_with_dataflow_analysis_facts",
       "exists": true,
       "read_error": null,
-      "marker_present": true,
-      "marker_on_code_line": true,
+      "marker_present": false,
+      "marker_on_code_line": false,
       "unresolved_markers": [],
       "role": "LICM consumes Weir reaching-definition facts"
     },
@@ -29,10 +29,10 @@
       "id": "weir-alias-analysis-api",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_alias/mod.rs",
       "marker": "AliasFactSet",
-      "exists": true,
+      "exists": false,
       "read_error": null,
-      "marker_present": true,
-      "marker_on_code_line": true,
+      "marker_present": false,
+      "marker_on_code_line": false,
       "unresolved_markers": [],
       "role": "Vyre-lower imports Weir alias facts through an explicit API"
     },
@@ -40,24 +40,30 @@
       "id": "weir-reaching-def-analysis-api",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_reaching_def/mod.rs",
       "marker": "import_descriptor_reaching_defs",
-      "exists": true,
+      "exists": false,
       "read_error": null,
-      "marker_present": true,
-      "marker_on_code_line": true,
+      "marker_present": false,
+      "marker_on_code_line": false,
       "unresolved_markers": [],
       "role": "Vyre-lower imports Weir reaching-def facts through an explicit API"
     },
     {
-      "id": "weir-dataflow-licm-firing-test",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/weir_dataflow_loop_rewrites.rs",
+      "id": "dataflow-analysis-licm-firing-test",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/dataflow_analysis_loop_rewrites.rs",
       "marker": "reaching_defs_unlock_alias_proven_licm_load_hoist",
-      "exists": true,
+      "exists": false,
       "read_error": null,
-      "marker_present": true,
-      "marker_on_code_line": true,
+      "marker_present": false,
+      "marker_on_code_line": false,
       "unresolved_markers": [],
       "role": "Integration test proves Weir facts unlock LICM load hoisting"
     }
   ],
-  "blockers": []
+  "blockers": [
+    "marker `alias-aware-licm-entrypoint` is not present on a non-comment code line",
+    "marker `reaching-def-licm-entrypoint` is not present on a non-comment code line",
+    "marker `weir-alias-analysis-api` is not present on a non-comment code line",
+    "marker `weir-reaching-def-analysis-api` is not present on a non-comment code line",
+    "marker `dataflow-analysis-licm-firing-test` is not present on a non-comment code line"
+  ]
 }

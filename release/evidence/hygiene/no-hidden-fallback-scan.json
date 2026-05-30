@@ -1,6 +1,45 @@
 {
   "schema_version": 1,
   "scan": "no-hidden-fallback",
-  "findings": [],
-  "blockers": []
+  "findings": [
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/production_cpu_fallbacks.rs",
+      "line": 1,
+      "pattern": "cpu_fallback",
+      "text": "//! Production CPU fallback guard."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/main.rs",
+      "line": 54,
+      "pattern": "cpu_fallback",
+      "text": "/// Run the production CPU fallback guard instead of the raw-IR lint."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/main.rs",
+      "line": 278,
+      "pattern": "cpu_fallback",
+      "text": ".context(\"running production CPU fallback guard\")?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/gpu_skip_guards.rs",
+      "line": 22,
+      "pattern": "gpu_unavailable_skip",
+      "text": "\"gpu unavailable, skipping\","
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/lib.rs",
+      "line": 84,
+      "pattern": "cpu_fallback",
+      "text": "/// Run the production CPU fallback guard over selected crate roots."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/src/lib.rs",
+      "line": 228,
+      "pattern": "cpu_fallback",
+      "text": "status: beta compile-evidence driver for active Vyre C compiler development; no CPU fallback\""
+    }
+  ],
+  "blockers": [
+    "6 `no-hidden-fallback` finding(s) remain"
+  ]
 }

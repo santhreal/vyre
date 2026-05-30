@@ -8,19 +8,19 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/Cargo.toml",
       "exists": true,
       "read_error": null,
-      "source_bytes": 1796
+      "source_bytes": 2726
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/lib.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 3167
+      "source_bytes": 3411
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/README.md",
       "exists": true,
       "read_error": null,
-      "source_bytes": 5417
+      "source_bytes": 5870
     }
   ],
   "required_terms": [
@@ -56,14 +56,14 @@
       "tree": "tests",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests",
       "exists": true,
-      "source_bytes": 873439,
+      "source_bytes": 1321752,
       "unreadable_file_count": 0
     },
     {
       "tree": "benches",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/benches",
       "exists": true,
-      "source_bytes": 4568,
+      "source_bytes": 12059,
       "unreadable_file_count": 0
     },
     {

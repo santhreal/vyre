@@ -1,34 +1,42 @@
 {
   "schema_version": 1,
-  "component_id": "surgec",
+  "component_id": "security-analysis-consumer",
   "role": "Security compiler consumer integration surface",
-  "root": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec",
+  "root": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer",
   "required_files": [
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/Cargo.toml",
-      "exists": true,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/Cargo.toml",
+      "exists": false,
       "read_error": null,
-      "source_bytes": 3524
+      "source_bytes": 0
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lib.rs",
-      "exists": true,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/src/lib.rs",
+      "exists": false,
       "read_error": null,
-      "source_bytes": 4311
+      "source_bytes": 0
     }
   ],
   "required_terms": [
     "surge",
     "compile"
   ],
-  "missing_terms": [],
+  "missing_terms": [
+    "surge",
+    "compile"
+  ],
   "required_contract_topics": [
     "consumer",
     "surge",
     "parser",
     "condition"
   ],
-  "missing_contract_topics": [],
+  "missing_contract_topics": [
+    "consumer",
+    "surge",
+    "parser",
+    "condition"
+  ],
   "required_test_categories": [
     "unit",
     "integration",
@@ -40,30 +48,67 @@
     "gap",
     "fuzz"
   ],
-  "missing_test_categories": [],
+  "missing_test_categories": [
+    "unit",
+    "integration",
+    "property",
+    "adversarial",
+    "corpus",
+    "benchmark",
+    "conformance",
+    "gap",
+    "fuzz"
+  ],
   "required_evidence_trees": [
     {
       "tree": "tests",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests",
-      "exists": true,
-      "source_bytes": 1099765,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/tests",
+      "exists": false,
+      "source_bytes": 0,
       "unreadable_file_count": 0
     },
     {
       "tree": "benches",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/benches",
-      "exists": true,
-      "source_bytes": 23380,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/benches",
+      "exists": false,
+      "source_bytes": 0,
       "unreadable_file_count": 0
     },
     {
       "tree": "fuzz",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz",
-      "exists": true,
-      "source_bytes": 5379,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/fuzz",
+      "exists": false,
+      "source_bytes": 0,
       "unreadable_file_count": 0
     }
   ],
   "unresolved_ownership_markers": [],
-  "blockers": []
+  "blockers": [
+    "parser component `security-analysis-consumer` is missing required file /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/Cargo.toml",
+    "parser component `security-analysis-consumer` is missing required file /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/src/lib.rs",
+    "parser component `security-analysis-consumer` is missing at /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer",
+    "parser component `security-analysis-consumer` required file /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/Cargo.toml is empty",
+    "parser component `security-analysis-consumer` required file /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/src/lib.rs is empty",
+    "parser component `security-analysis-consumer` is missing required term `surge`",
+    "parser component `security-analysis-consumer` is missing required term `compile`",
+    "parser component `security-analysis-consumer` is missing parser contract topic `consumer`",
+    "parser component `security-analysis-consumer` is missing parser contract topic `surge`",
+    "parser component `security-analysis-consumer` is missing parser contract topic `parser`",
+    "parser component `security-analysis-consumer` is missing parser contract topic `condition`",
+    "parser component `security-analysis-consumer` is missing test category `unit`",
+    "parser component `security-analysis-consumer` is missing test category `integration`",
+    "parser component `security-analysis-consumer` is missing test category `property`",
+    "parser component `security-analysis-consumer` is missing test category `adversarial`",
+    "parser component `security-analysis-consumer` is missing test category `corpus`",
+    "parser component `security-analysis-consumer` is missing test category `benchmark`",
+    "parser component `security-analysis-consumer` is missing test category `conformance`",
+    "parser component `security-analysis-consumer` is missing test category `gap`",
+    "parser component `security-analysis-consumer` is missing test category `fuzz`",
+    "parser component `security-analysis-consumer` is missing required `tests` evidence tree /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/tests",
+    "parser component `security-analysis-consumer` is missing required `benches` evidence tree /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/benches",
+    "parser component `security-analysis-consumer` is missing required `fuzz` evidence tree /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/fuzz",
+    "parser component `security-analysis-consumer` required `tests` evidence tree /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/tests is empty",
+    "parser component `security-analysis-consumer` required `benches` evidence tree /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/benches is empty",
+    "parser component `security-analysis-consumer` required `fuzz` evidence tree /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/fuzz is empty"
+  ]
 }
