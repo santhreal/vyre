@@ -4,7 +4,7 @@
 
 #![cfg(all(feature = "hash", feature = "cpu-parity"))]
 
-use vyre_primitives::hash::blake3::{cpu_blake3_g, cpu_blake3_round, MSG_SCHEDULE};
+use vyre_primitives::hash::blake3::{cpu_blake3_round, MSG_SCHEDULE};
 
 const CASES: usize = 16384;
 
