@@ -69,6 +69,57 @@ pub(super) fn ifds_skewed_baseline_metric_points(stats: IfdsSkewedStats) -> Vec<
     ]
 }
 
+pub(super) fn ifds_queue_metric_points(
+    stats: IfdsSkewedStats,
+    queue_capacity: u32,
+    baseline_wall_ns: u64,
+    wall_ns: u64,
+    resident_used: bool,
+    workgroup_size_x: u32,
+    parallel_materializer: bool,
+) -> Vec<MetricPoint> {
+    let mut metrics = ifds_queue_baseline_metric_points(stats, queue_capacity);
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_queue_resident_buffers".to_string(),
+        value: u64::from(resident_used),
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_queue_workgroup_size_x".to_string(),
+        value: u64::from(workgroup_size_x),
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_queue_parallel_materializer".to_string(),
+        value: u64::from(parallel_materializer),
+    });
+    if wall_ns > 0 {
+        metrics.push(MetricPoint {
+            name: "dataflow_ifds_queue_speedup_x1000".to_string(),
+            value: (u128::from(baseline_wall_ns) * 1000 / u128::from(wall_ns))
+                .min(u128::from(u64::MAX)) as u64,
+        });
+    }
+    metrics
+}
+
+pub(super) fn ifds_queue_baseline_metric_points(
+    stats: IfdsSkewedStats,
+    queue_capacity: u32,
+) -> Vec<MetricPoint> {
+    let mut metrics = ifds_skewed_baseline_metric_points(stats);
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_queue_capacity".to_string(),
+        value: u64::from(queue_capacity),
+    });
+    if queue_capacity > 0 {
+        metrics.push(MetricPoint {
+            name: "dataflow_ifds_queue_lane_reduction_x1000".to_string(),
+            value: (u128::from(stats.nodes) * 1000 / u128::from(queue_capacity))
+                .min(u128::from(u64::MAX)) as u64,
+        });
+    }
+    metrics
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn ifds_closure_metric_points(
     stats: IfdsSkewedStats,

@@ -24,6 +24,9 @@ use crate::bitset::bitset_words;
 
 /// Canonical op id for bitset-to-queue compaction.
 pub const FRONTIER_TO_QUEUE_OP_ID: &str = "vyre-primitives::graph::frontier_to_queue";
+/// Canonical op id for multi-workgroup bitset-to-queue compaction.
+pub const FRONTIER_TO_QUEUE_PARALLEL_OP_ID: &str =
+    "vyre-primitives::graph::frontier_to_queue_parallel";
 /// Canonical op id for device-side queue length initialization.
 pub const FRONTIER_QUEUE_LEN_INIT_OP_ID: &str = "vyre-primitives::graph::frontier_queue_len_init";
 /// Canonical op id for queue-driven CSR expansion.
@@ -149,6 +152,89 @@ pub fn frontier_to_queue(
         [256, 1, 1],
         vec![Node::Region {
             generator: Ident::from(FRONTIER_TO_QUEUE_OP_ID),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    )
+}
+
+/// Build a multi-workgroup GPU program that appends active frontier nodes to a queue.
+///
+/// The caller must clear `queue_len` before dispatch, for example with
+/// `frontier_queue_len_init` or a fused resident reset step. Unlike
+/// `frontier_to_queue`, this variant maps one lane to one source node and is
+/// the right materializer for large packed frontiers.
+#[must_use]
+pub fn frontier_to_queue_parallel(
+    frontier_in: &str,
+    active_queue: &str,
+    queue_len: &str,
+    node_count: u32,
+    queue_capacity: u32,
+) -> Program {
+    if node_count == 0 || queue_capacity == 0 {
+        return crate::invalid_output_program(
+            FRONTIER_TO_QUEUE_PARALLEL_OP_ID,
+            queue_len,
+            DataType::U32,
+            format!(
+                "Fix: frontier_to_queue_parallel requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
+            ),
+        );
+    }
+    let lane = Expr::InvocationId { axis: 0 };
+    let words = bitset_words(node_count);
+    let body = vec![
+        Node::let_bind("qp_src", lane),
+        Node::if_then(
+            Expr::lt(Expr::var("qp_src"), Expr::u32(node_count)),
+            vec![
+                Node::let_bind("qp_word_idx", Expr::shr(Expr::var("qp_src"), Expr::u32(5))),
+                Node::let_bind(
+                    "qp_bit_mask",
+                    Expr::shl(
+                        Expr::u32(1),
+                        Expr::bitand(Expr::var("qp_src"), Expr::u32(31)),
+                    ),
+                ),
+                Node::let_bind(
+                    "qp_src_word",
+                    Expr::load(frontier_in, Expr::var("qp_word_idx")),
+                ),
+                Node::if_then(
+                    Expr::ne(
+                        Expr::bitand(Expr::var("qp_src_word"), Expr::var("qp_bit_mask")),
+                        Expr::u32(0),
+                    ),
+                    vec![
+                        Node::let_bind(
+                            "qp_slot",
+                            Expr::atomic_add(queue_len, Expr::u32(0), Expr::u32(1)),
+                        ),
+                        Node::if_then(
+                            Expr::lt(Expr::var("qp_slot"), Expr::u32(queue_capacity)),
+                            vec![Node::store(
+                                active_queue,
+                                Expr::var("qp_slot"),
+                                Expr::var("qp_src"),
+                            )],
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ];
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(frontier_in, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(words),
+            BufferDecl::storage(active_queue, 1, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(queue_capacity),
+            BufferDecl::storage(queue_len, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+        ],
+        [256, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(FRONTIER_TO_QUEUE_PARALLEL_OP_ID),
             source_region: None,
             body: Arc::new(body),
         }],
@@ -735,6 +821,9 @@ mod tests {
         let queue = frontier_to_queue("frontier", "queue", "len", 64, 8);
         assert_eq!(queue.workgroup_size, [256, 1, 1]);
         assert_eq!(queue.buffers.len(), 3);
+        let parallel_queue = frontier_to_queue_parallel("frontier", "queue", "len", 64, 8);
+        assert_eq!(parallel_queue.workgroup_size, [256, 1, 1]);
+        assert_eq!(parallel_queue.buffers.len(), 3);
         let traverse = csr_queue_forward_traverse(
             "queue", "len", "offsets", "targets", "kinds", "out", 64, 7, 8, 1,
         );
@@ -818,4 +907,3 @@ mod tests {
         assert!(err.contains("queue_capacity > 0"));
     }
 }
-

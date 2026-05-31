@@ -1,3 +1,11 @@
+use super::fixture::{ifds_active_queue_inputs, ifds_queue_inputs};
+use super::queue::{
+    ifds_queue_reset_program, ifds_sparse_queue_capacity, prepare_ifds_skewed_active_queue_step,
+    prepare_ifds_skewed_queue_materialize_step, ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX,
+    ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX, ACTIVE_QUEUE_EDGE_TARGETS_INDEX,
+    ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX, QUEUE_ACTIVE_QUEUE_INDEX,
+    QUEUE_FRONTIER_IN_INDEX, QUEUE_FRONTIER_OUT_INDEX, QUEUE_LEN_INDEX,
+};
 use super::*;
 
 #[test]
@@ -35,6 +43,162 @@ fn ifds_skewed_prepare_builds_vyre_program_and_oracle() {
     assert_eq!(prepared.inputs.len(), 7);
     assert!(prepared.stats.filtered_edges_from_active > 0);
     assert!(prepared.input_bytes_total > u64::from(NODE_COUNT) * 20);
+}
+
+#[test]
+fn ifds_queue_inputs_preserve_sparse_frontier_and_device_scratch() {
+    let fixture = build_ifds_skewed_fixture(4096).unwrap();
+    let capacity = ifds_sparse_queue_capacity(fixture.stats.active_sources).unwrap();
+    let inputs = ifds_queue_inputs(&fixture, capacity).unwrap();
+
+    assert_eq!(inputs.len(), 7);
+    assert_eq!(
+        inputs[QUEUE_FRONTIER_IN_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in)
+    );
+    assert_eq!(
+        inputs[QUEUE_ACTIVE_QUEUE_INDEX].len(),
+        capacity as usize * std::mem::size_of::<u32>()
+    );
+    assert!(inputs[QUEUE_ACTIVE_QUEUE_INDEX]
+        .iter()
+        .all(|byte| *byte == 0));
+    assert_eq!(
+        inputs[QUEUE_LEN_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&[0])
+    );
+    assert_eq!(
+        inputs[QUEUE_FRONTIER_OUT_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed)
+    );
+}
+
+#[test]
+fn ifds_queue_inputs_reject_capacity_below_active_sources() {
+    let fixture = build_ifds_skewed_fixture(4096).unwrap();
+    let undersized = fixture.stats.active_sources.saturating_sub(1) as u32;
+
+    let err = ifds_queue_inputs(&fixture, undersized).unwrap_err();
+
+    assert!(
+        err.to_string().contains("queue_capacity >= active_sources"),
+        "queue fixture errors must name the capacity invariant, got: {err}"
+    );
+}
+
+#[test]
+fn ifds_active_queue_inputs_materialize_frontier_queue_once() {
+    let fixture = build_ifds_skewed_fixture(4096).unwrap();
+    let capacity = ifds_sparse_queue_capacity(fixture.stats.active_sources).unwrap();
+    let inputs = ifds_active_queue_inputs(&fixture, capacity).unwrap();
+    let mut active_queue = Vec::new();
+    vyre_primitives::wire::unpack_u32_slice_into(
+        &inputs[ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX],
+        capacity as usize,
+        "active queue test",
+        &mut active_queue,
+    )
+    .unwrap();
+    let mut queue_len = Vec::new();
+    vyre_primitives::wire::unpack_u32_slice_into(
+        &inputs[ACTIVE_QUEUE_LEN_INDEX],
+        1,
+        "active queue len test",
+        &mut queue_len,
+    )
+    .unwrap();
+
+    assert_eq!(inputs.len(), 6);
+    assert_eq!(queue_len, vec![fixture.stats.active_sources as u32]);
+    assert_eq!(
+        active_queue.len(),
+        capacity as usize,
+        "active queue buffer should be capacity-padded for stable resident dispatch"
+    );
+    assert_eq!(active_queue[0], 0);
+    assert!(
+        active_queue[..fixture.stats.active_sources as usize]
+            .windows(2)
+            .all(|pair| pair[0] < pair[1]),
+        "pre-materialized active queue should preserve source order"
+    );
+    assert_eq!(
+        inputs[ACTIVE_QUEUE_FRONTIER_OUT_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed)
+    );
+    assert_eq!(
+        inputs[ACTIVE_QUEUE_EDGE_OFFSETS_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets)
+    );
+    assert_eq!(
+        inputs[ACTIVE_QUEUE_EDGE_TARGETS_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets)
+    );
+    assert_eq!(
+        inputs[ACTIVE_QUEUE_EDGE_KIND_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask)
+    );
+}
+
+#[test]
+fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
+    let prepared = prepare_ifds_skewed_queue_materialize_step(None).unwrap();
+
+    assert_eq!(prepared.reset_program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(prepared.queue_program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(prepared.traverse_program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(prepared.stats.nodes, NODE_COUNT);
+    assert_eq!(prepared.inputs.len(), 7);
+    assert_eq!(
+        prepared.inputs[QUEUE_FRONTIER_IN_INDEX].len(),
+        FRONTIER_WORDS * 4
+    );
+    assert_eq!(
+        prepared.inputs[QUEUE_ACTIVE_QUEUE_INDEX].len(),
+        prepared.queue_capacity as usize * std::mem::size_of::<u32>()
+    );
+    assert_eq!(prepared.baseline_output.len(), FRONTIER_WORDS * 4);
+    assert!(u64::from(prepared.queue_capacity) >= prepared.stats.active_sources);
+    assert!(
+        prepared.queue_capacity < prepared.stats.nodes / 32,
+        "queue capacity should stay sparse relative to the full node-grid launch"
+    );
+    assert!(prepared.stats.allowed_edges_from_active > 0);
+    assert!(prepared.input_bytes_total > u64::from(NODE_COUNT) * 12);
+}
+
+#[test]
+fn ifds_active_queue_prepare_builds_sparse_traversal_program() {
+    let prepared = prepare_ifds_skewed_active_queue_step(None).unwrap();
+
+    assert_eq!(prepared.traverse_program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(prepared.stats.nodes, NODE_COUNT);
+    assert_eq!(prepared.inputs.len(), 6);
+    assert_eq!(
+        prepared.inputs[ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX].len(),
+        prepared.queue_capacity as usize * std::mem::size_of::<u32>()
+    );
+    assert_eq!(
+        prepared.inputs[ACTIVE_QUEUE_LEN_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&[prepared.stats.active_sources as u32])
+    );
+    assert_eq!(prepared.baseline_output.len(), FRONTIER_WORDS * 4);
+    assert!(u64::from(prepared.queue_capacity) >= prepared.stats.active_sources);
+    assert!(prepared.queue_capacity < prepared.stats.nodes / 32);
+    assert!(prepared.stats.allowed_edges_from_active > 0);
+}
+
+#[test]
+fn ifds_queue_reset_program_clears_len_and_frontier_out() {
+    let program = ifds_queue_reset_program(128);
+
+    assert_eq!(program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(program.buffers().len(), 2);
+    assert_eq!(program.buffers()[0].name.as_ref(), "queue_len");
+    assert_eq!(program.buffers()[0].binding, 0);
+    assert_eq!(program.buffers()[1].name.as_ref(), "frontier_out");
+    assert_eq!(program.buffers()[1].binding, 1);
+    assert_eq!(program.buffers()[1].count, 128);
 }
 
 #[test]

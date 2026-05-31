@@ -126,6 +126,76 @@ pub(super) fn ifds_skewed_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
     inputs
 }
 
+pub(super) fn ifds_queue_inputs(
+    fixture: &IfdsSkewedFixture,
+    queue_capacity: u32,
+) -> Result<Vec<Vec<u8>>, BenchError> {
+    if u64::from(queue_capacity) < fixture.stats.active_sources {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "IFDS queue fixture requires queue_capacity >= active_sources, got capacity={queue_capacity} active_sources={}. Fix: size the sparse frontier queue from fixture stats.",
+            fixture.stats.active_sources
+        )));
+    }
+    let queue_bytes = (queue_capacity as usize)
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            BenchError::EnvironmentInvalid(format!(
+                "IFDS queue fixture queue_capacity={queue_capacity} overflows host buffer sizing. Fix: split the frontier queue."
+            ))
+        })?;
+
+    Ok(vec![
+        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in),
+        vec![0_u8; queue_bytes],
+        vyre_primitives::wire::pack_u32_slice(&[0]),
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets),
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
+        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed),
+    ])
+}
+
+pub(super) fn ifds_active_queue_inputs(
+    fixture: &IfdsSkewedFixture,
+    queue_capacity: u32,
+) -> Result<Vec<Vec<u8>>, BenchError> {
+    if u64::from(queue_capacity) < fixture.stats.active_sources {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "IFDS active-queue fixture requires queue_capacity >= active_sources, got capacity={queue_capacity} active_sources={}. Fix: size the sparse frontier queue from fixture stats.",
+            fixture.stats.active_sources
+        )));
+    }
+    let capacity = queue_capacity as usize;
+    let mut active_queue = vec![0_u32; capacity];
+    let mut seen = 0_usize;
+    for src in 0..fixture.stats.nodes {
+        let word = (src / 32) as usize;
+        let bit = 1_u32 << (src % 32);
+        if fixture.frontier_in[word] & bit == 0 {
+            continue;
+        }
+        if seen < capacity {
+            active_queue[seen] = src;
+        }
+        seen = seen.saturating_add(1);
+    }
+    if seen != fixture.stats.active_sources as usize {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "IFDS active-queue fixture counted {seen} active sources but stats recorded {}. Fix: rebuild the fixture active frontier stats from the same bitset.",
+            fixture.stats.active_sources
+        )));
+    }
+
+    Ok(vec![
+        vyre_primitives::wire::pack_u32_slice(&active_queue),
+        vyre_primitives::wire::pack_u32_slice(&[fixture.stats.active_sources as u32]),
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets),
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
+        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed),
+    ])
+}
+
 pub(super) fn ifds_closure_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
     let mut inputs = ifds_graph_inputs(fixture);
     inputs.push(vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in));
