@@ -15,6 +15,7 @@ use vyre_self_substrate::csr_frontier_queue_resident::{
 };
 
 const NODE_COUNT: u32 = 32_897;
+const MANY_BLOCK_NODE_COUNT: u32 = 262_177;
 const QUEUE_CAPACITY: u32 = 4_096;
 const GENERATED_CASES: u32 = 512;
 const ALLOW_MASKS: [u32; 8] = [0, 1, 2, 4, 3, 5, 6, 7];
@@ -89,8 +90,8 @@ fn assert_multi_case_telemetry(backend: &CudaBackend) {
     let telemetry = backend.telemetry_snapshot();
     assert_eq!(
         telemetry.kernel_launches,
-        u64::from(GENERATED_CASES) * 5,
-        "Fix: generated multi-block word-prefix queue must stay at clear + word-scan + block-offset scan + queue-scatter + traverse per query."
+        u64::from(GENERATED_CASES) * 4,
+        "Fix: small multi-block word-prefix queue must stay at clear + word-scan + inline-offset queue-scatter + traverse per query."
     );
     assert_eq!(
         telemetry.sync_points,
@@ -110,6 +111,79 @@ fn assert_multi_case_telemetry(backend: &CudaBackend) {
         telemetry.readback_bytes, expected_frontier_bytes,
         "Fix: generated multi-block word-prefix queue must read back only frontier_out."
     );
+}
+
+#[test]
+fn generated_resident_csr_queue_many_block_word_prefix_uses_block_offset_scan_on_live_cuda() {
+    let backend = live_backend();
+    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    assert!(
+        bitset_words(MANY_BLOCK_NODE_COUNT) > 8 * 1024,
+        "Fix: this test must exercise the many-block word-prefix offset-scan path."
+    );
+    let (edge_offsets, edge_targets, edge_kind_mask) = generated_csr_graph(MANY_BLOCK_NODE_COUNT);
+    let graph = upload_resident_csr_queue_graph(
+        &dispatcher,
+        MANY_BLOCK_NODE_COUNT,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+    )
+    .expect("Fix: generated many-block resident CSR queue graph upload failed.");
+    let mut scratch = ResidentCsrQueueScratch::default();
+    let mut output = Vec::new();
+
+    backend.reset_telemetry();
+    for case_index in 0..16u32 {
+        let frontier = generated_frontier(MANY_BLOCK_NODE_COUNT, case_index);
+        let allow_mask = ALLOW_MASKS[(case_index as usize) % ALLOW_MASKS.len()];
+        let (expected_queue, expected_len) =
+            frontier_to_queue_cpu(&frontier, MANY_BLOCK_NODE_COUNT, QUEUE_CAPACITY as usize);
+        let expected_out = csr_queue_forward_traverse_cpu(
+            &expected_queue,
+            expected_len,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            MANY_BLOCK_NODE_COUNT,
+            allow_mask,
+        );
+
+        run_resident_csr_queue_query_into(
+            &dispatcher,
+            &graph,
+            &mut scratch,
+            &frontier,
+            QUEUE_CAPACITY,
+            allow_mask,
+            &mut output,
+        )
+        .unwrap_or_else(|error| {
+            panic!("Fix: generated many-block resident CSR queue case {case_index} failed: {error}")
+        });
+        assert_eq!(
+            bytes_u32(&output),
+            expected_out,
+            "Fix: generated many-block resident CSR queue case {case_index} diverged from CPU oracle for allow_mask={allow_mask:#x}."
+        );
+    }
+
+    let telemetry = backend.telemetry_snapshot();
+    assert_eq!(
+        telemetry.kernel_launches,
+        16 * 5,
+        "Fix: many-block word-prefix queue must run clear + word-scan + block-offset scan + queue-scatter + traverse per query."
+    );
+    assert_eq!(
+        telemetry.sync_points, 16,
+        "Fix: generated many-block word-prefix queue must fence once per resident query."
+    );
+    scratch
+        .free(&dispatcher)
+        .expect("Fix: generated many-block resident CSR queue scratch free failed.");
+    graph
+        .free(&dispatcher)
+        .expect("Fix: generated many-block resident CSR queue graph free failed.");
 }
 
 fn generated_csr_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {

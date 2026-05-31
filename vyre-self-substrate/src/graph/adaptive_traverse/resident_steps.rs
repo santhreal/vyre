@@ -6,7 +6,8 @@ use super::{
 
 use crate::dispatch_buffers::write_u32_slice_le_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
-    frontier_word_dispatch_grid, frontier_word_prefix_scratch, resident_csr_queue_materializer,
+    frontier_word_dispatch_grid, frontier_word_prefix_scratch,
+    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer,
     FrontierWordPrefixScratch, ResidentCsrQueueMaterializer,
 };
 use crate::graph::dispatch_bridge::{
@@ -445,7 +446,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                 },
             );
             let word_count_handles = [handles[0], word_partials, block_totals];
-            if word_prefix.block_count > 1 {
+            if frontier_word_prefix_uses_precomputed_offsets(word_prefix.block_count) {
                 let block_offsets_program = scratch.plan_cache.get_or_build(
                     AdaptiveTraversalPlanCacheKey::frontier_word_block_offsets(
                         graph.layout_hash,

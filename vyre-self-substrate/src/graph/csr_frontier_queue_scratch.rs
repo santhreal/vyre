@@ -8,6 +8,10 @@ const U32_BYTES: usize = std::mem::size_of::<u32>();
 /// to deterministic word-prefix queue materialization.
 pub(crate) const WORD_PREFIX_MIN_FRONTIER_WORDS: usize = 256;
 
+/// Maximum word-prefix scan blocks whose offsets are summed inside the scatter
+/// pass instead of paying a separate block-offset scan launch.
+pub(crate) const WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS: u32 = 8;
+
 /// Queue materializer selected for a resident CSR frontier query.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ResidentCsrQueueMaterializer {
@@ -60,6 +64,10 @@ pub(crate) fn frontier_word_prefix_scratch(
         partial_words,
         block_total_words,
     })
+}
+
+pub(crate) fn frontier_word_prefix_uses_precomputed_offsets(block_count: u32) -> bool {
+    block_count > WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS
 }
 
 pub(crate) fn frontier_word_dispatch_grid(frontier_words: usize) -> Result<[u32; 3], String> {
@@ -143,5 +151,18 @@ mod tests {
                 "partial scratch must cover every packed frontier word"
             );
         }
+    }
+
+    #[test]
+    fn small_word_prefix_block_counts_inline_offsets() {
+        for block_count in 1..=WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS {
+            assert!(
+                !frontier_word_prefix_uses_precomputed_offsets(block_count),
+                "block_count={block_count} should use in-scatter offsets"
+            );
+        }
+        assert!(frontier_word_prefix_uses_precomputed_offsets(
+            WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS + 1
+        ));
     }
 }

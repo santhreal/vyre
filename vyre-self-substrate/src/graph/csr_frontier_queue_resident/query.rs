@@ -11,7 +11,8 @@ use vyre_primitives::graph::csr_frontier_queue::{
 
 use crate::dispatch_buffers::u32_word_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
-    frontier_word_dispatch_grid, frontier_word_prefix_scratch, resident_csr_queue_materializer,
+    frontier_word_dispatch_grid, frontier_word_prefix_scratch,
+    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer,
     FrontierWordPrefixScratch, ResidentCsrQueueMaterializer,
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
@@ -119,7 +120,7 @@ pub fn run_resident_csr_queue_query_into(
                 )
             })?;
             let block_offsets_handles = [block_totals];
-            if word_prefix.block_count > 1 {
+            if frontier_word_prefix_uses_precomputed_offsets(word_prefix.block_count) {
                 let block_offsets_program =
                     scratch.word_block_offsets_program.as_ref().ok_or_else(|| {
                     DispatchError::BackendError(
@@ -318,7 +319,7 @@ fn ensure_programs(
                 "block_totals",
                 graph.node_count,
             ));
-            if word_prefix.block_count > 1 {
+            if frontier_word_prefix_uses_precomputed_offsets(word_prefix.block_count) {
                 scratch.word_block_offsets_program = Some(frontier_word_block_offsets_in_place(
                     "block_totals",
                     graph.node_count,
