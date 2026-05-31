@@ -12,7 +12,7 @@ use vyre_primitives::bitset::popcount::{bitset_popcount, cpu_ref as popcount_cpu
 use vyre_primitives::decode::rle_segment_lengths::{rle_segment_lengths, rle_segment_lengths_cpu};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::parsing::line_splice_classify::{
-    line_splice_classify, reference_line_splice_classify,
+    line_splice_classify, line_splice_classify_dispatch_grid, reference_line_splice_classify,
 };
 use vyre_primitives::parsing::planar_rewrite::{
     planar_rewrite_schedule, reference_planar_rewrite_schedule,
@@ -164,6 +164,9 @@ fn cuda_predicate_edge_kind_mask_skips() {
 
 fn pack_bytes(bytes: &[u8]) -> Vec<u32> {
     let mut padded = bytes.to_vec();
+    if padded.is_empty() {
+        padded.push(0);
+    }
     while padded.len() % 4 != 0 {
         padded.push(0);
     }
@@ -179,9 +182,7 @@ fn run_line_splice(source: &[u8]) -> Vec<u32> {
     let program = line_splice_classify(byte_count);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(&words), vec![0u8; byte_count.max(1) as usize * 4]];
     let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((byte_count + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
+    config.grid_override = Some(line_splice_classify_dispatch_grid(byte_count));
     let outputs = with_live_backend("line splice classify", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -210,6 +211,77 @@ fn cuda_line_splice_classify_drops_backslash_lf() {
     let cpu = reference_line_splice_classify(source);
     let gpu = run_line_splice(source);
     assert_eq!(gpu, cpu);
+}
+
+#[test]
+fn cuda_line_splice_classify_empty_input() {
+    let source = b"";
+    let cpu = reference_line_splice_classify(source);
+    let gpu = run_line_splice(source);
+    assert_eq!(gpu, cpu);
+    assert!(gpu.is_empty());
+}
+
+#[test]
+fn cuda_line_splice_classify_drops_backslash_cr_lf() {
+    let source = b"a\\\r\nb";
+    let cpu = reference_line_splice_classify(source);
+    let gpu = run_line_splice(source);
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, vec![1, 0, 0, 0, 1]);
+}
+
+#[test]
+fn cuda_line_splice_classify_crosses_packed_word_boundary() {
+    let source = b"abc\\\nz";
+    let cpu = reference_line_splice_classify(source);
+    let gpu = run_line_splice(source);
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, vec![1, 1, 1, 0, 0, 1]);
+}
+
+#[test]
+fn cuda_line_splice_classify_crosses_workgroup_boundary() {
+    let mut source = vec![b'x'; 260];
+    source[254] = b'\\';
+    source[255] = b'\r';
+    source[256] = b'\n';
+
+    let cpu = reference_line_splice_classify(&source);
+    let gpu = run_line_splice(&source);
+
+    assert_eq!(gpu, cpu);
+    assert_eq!(&gpu[252..258], &[1, 1, 0, 0, 0, 1]);
+}
+
+#[test]
+fn cuda_line_splice_classify_generated_multi_block_corpus() {
+    let mut source = Vec::with_capacity(4101);
+    while source.len() < 4101 {
+        let line = source.len() / 53;
+        match line % 6 {
+            0 => source.extend_from_slice(b"#define JOIN(a, b) \\\n  a ## b\n"),
+            1 => source.extend_from_slice(b"char slash = '\\\\';\n"),
+            2 => source.extend_from_slice(b"int crlf = 1;\\\r\nint next = 2;\n"),
+            3 => source.extend_from_slice(b"plain tokens with / at end /\n"),
+            4 => source.extend_from_slice(b"continued\\\rmac_style\n"),
+            _ => source.extend_from_slice(b"two\\\\\nslashes\n"),
+        }
+    }
+    source.truncate(4101);
+
+    let cpu = reference_line_splice_classify(&source);
+    let gpu = run_line_splice(&source);
+
+    assert_eq!(gpu, cpu);
+    assert!(
+        gpu.iter().any(|kept| *kept == 0),
+        "Fix: generated CUDA line-splice corpus must exercise deleted bytes."
+    );
+    assert!(
+        gpu.iter().any(|kept| *kept == 1),
+        "Fix: generated CUDA line-splice corpus must exercise kept bytes."
+    );
 }
 
 // ---------------------------------------------------------------------

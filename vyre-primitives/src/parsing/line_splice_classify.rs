@@ -46,6 +46,19 @@ pub const OP_ID: &str = "vyre-primitives::parsing::line_splice_classify";
 pub const BINDING_BYTES_IN: u32 = 0;
 /// Canonical binding index for the output kept-mask.
 pub const BINDING_KEPT_MASK_OUT: u32 = 1;
+/// Byte-lane workgroup used by the line-splice classifier.
+pub const LINE_SPLICE_CLASSIFY_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+
+/// Dispatch grid for classifying `byte_count` input bytes.
+#[must_use]
+pub const fn line_splice_classify_dispatch_grid(byte_count: u32) -> [u32; 3] {
+    let blocks = byte_count.div_ceil(LINE_SPLICE_CLASSIFY_WORKGROUP_SIZE[0]);
+    if blocks == 0 {
+        [1, 1, 1]
+    } else {
+        [blocks, 1, 1]
+    }
+}
 
 const BACKSLASH: u32 = 0x5C; // '\\'
 const LF: u32 = 0x0A; // '\n'
@@ -206,7 +219,7 @@ pub fn line_splice_classify(byte_count: u32) -> Program {
             )
             .with_count(byte_count.max(1)),
         ],
-        [256, 1, 1],
+        LINE_SPLICE_CLASSIFY_WORKGROUP_SIZE,
         body,
     )
     .with_entry_op_id(OP_ID)
@@ -383,6 +396,43 @@ mod tests {
     }
 
     #[test]
+    fn generated_c_like_corpus_classifies_byte_for_byte() {
+        let mut src = Vec::with_capacity(4099);
+        while src.len() < 4099 {
+            let line = src.len() / 41;
+            match line % 5 {
+                0 => src.extend_from_slice(b"#define VALUE(x) \\\n  ((x) + 1)\n"),
+                1 => src.extend_from_slice(b"const char *s = \"\\\\not a splice\";\n"),
+                2 => src.extend_from_slice(b"int y = 3;\\\r\nint z = y + 4;\n"),
+                3 => src.extend_from_slice(b"// lone slash at EOL is kept /\n"),
+                _ => src.extend_from_slice(b"token\\\rcontinuation\n"),
+            }
+        }
+        src.truncate(4099);
+        let mask = reference_line_splice_classify(&src);
+
+        assert_eq!(mask.len(), src.len());
+        assert!(
+            mask.iter().any(|kept| *kept == 0),
+            "generated corpus must exercise splice deletions"
+        );
+        assert!(
+            mask.iter().any(|kept| *kept == 1),
+            "generated corpus must keep non-splice bytes"
+        );
+        for i in 0..src.len() {
+            let b_m2 = i.checked_sub(2).map(|j| src[j]).unwrap_or(0);
+            let b_m1 = i.checked_sub(1).map(|j| src[j]).unwrap_or(0);
+            let b_0 = src[i];
+            let b_p1 = src.get(i + 1).copied().unwrap_or(0);
+            let dropped = (b_0 == b'\\' && matches!(b_p1, b'\n' | b'\r'))
+                || (b_m1 == b'\\' && matches!(b_0, b'\n' | b'\r'))
+                || (b_m2 == b'\\' && b_m1 == b'\r' && b_0 == b'\n');
+            assert_eq!(mask[i], u32::from(!dropped), "byte {i}");
+        }
+    }
+
+    #[test]
     fn double_backslash_before_newline_only_drops_the_pair() {
         // a\\\\\nb  -  `\\\\` is two backslashes; only the second `\\` and
         // the `\n` form a splice.
@@ -420,7 +470,16 @@ mod tests {
     fn build_program_returns_well_formed_program() {
         let p = line_splice_classify(64);
         assert_eq!(p.buffers().len(), 2, "bytes_in + kept_mask_out");
-        assert_eq!(p.workgroup_size(), [256, 1, 1]);
+        assert_eq!(p.workgroup_size(), LINE_SPLICE_CLASSIFY_WORKGROUP_SIZE);
+    }
+
+    #[test]
+    fn dispatch_grid_packs_byte_lanes_into_blocks() {
+        assert_eq!(line_splice_classify_dispatch_grid(0), [1, 1, 1]);
+        assert_eq!(line_splice_classify_dispatch_grid(1), [1, 1, 1]);
+        assert_eq!(line_splice_classify_dispatch_grid(256), [1, 1, 1]);
+        assert_eq!(line_splice_classify_dispatch_grid(257), [2, 1, 1]);
+        assert_eq!(line_splice_classify_dispatch_grid(4099), [17, 1, 1]);
     }
 
     #[test]
