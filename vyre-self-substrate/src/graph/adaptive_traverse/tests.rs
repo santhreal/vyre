@@ -200,6 +200,7 @@ fn sparse_dense_zero_frontier_returns_zero_without_resident_work_or_cache() {
     let graph = ResidentAdaptiveTraversalGraph {
         node_count: 33,
         edge_count: 0,
+        max_row_degree: 0,
         words: 2,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -263,6 +264,7 @@ fn sparse_queue_zero_frontier_returns_zero_without_queue_allocation_or_cache() {
     let graph = ResidentAdaptiveTraversalGraph {
         node_count: 33,
         edge_count: 0,
+        max_row_degree: 0,
         words: 2,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -383,6 +385,7 @@ fn auto_zero_frontier_returns_sparse_queue_without_resident_work_or_cache() {
     let graph = ResidentAdaptiveTraversalGraph {
         node_count: 33,
         edge_count: 128,
+        max_row_degree: 8,
         words: 2,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -420,6 +423,7 @@ fn sparse_dense_resident_step_does_not_upload_popcount_zero_seed() {
     let graph = ResidentAdaptiveTraversalGraph {
         node_count: 1,
         edge_count: 0,
+        max_row_degree: 0,
         words: 1,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -455,6 +459,7 @@ fn sparse_dense_resident_program_cache_reuses_same_shape_graphs() {
     let graph_a = ResidentAdaptiveTraversalGraph {
         node_count: 33,
         edge_count: 8,
+        max_row_degree: 2,
         words: 2,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -462,6 +467,7 @@ fn sparse_dense_resident_program_cache_reuses_same_shape_graphs() {
     let graph_b = ResidentAdaptiveTraversalGraph {
         node_count: 33,
         edge_count: 8,
+        max_row_degree: 2,
         words: 2,
         layout_hash: 99,
         handles: [201, 202, 203, 204],
@@ -507,6 +513,7 @@ fn sparse_queue_resident_step_initializes_queue_len_on_device() {
     let graph = ResidentAdaptiveTraversalGraph {
         node_count: 1,
         edge_count: 0,
+        max_row_degree: 0,
         words: 1,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -554,6 +561,7 @@ fn large_sparse_queue_resident_step_uses_word_prefix_materializer() {
     let graph = ResidentAdaptiveTraversalGraph {
         node_count,
         edge_count: 0,
+        max_row_degree: 0,
         words,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -619,6 +627,7 @@ fn small_multiblock_sparse_queue_resident_step_inlines_block_offsets() {
     let graph = ResidentAdaptiveTraversalGraph {
         node_count,
         edge_count: 0,
+        max_row_degree: 0,
         words,
         layout_hash: 11,
         handles: [101, 102, 103, 104],
@@ -692,6 +701,7 @@ fn many_block_sparse_queue_resident_step_scans_block_offsets_once() {
     let graph = ResidentAdaptiveTraversalGraph {
         node_count,
         edge_count: 0,
+        max_row_degree: 0,
         words,
         layout_hash: 11,
         handles: [101, 102, 103, 104],
@@ -770,6 +780,7 @@ fn generated_adaptive_resident_free_releases_each_handle_once_in_first_seen_orde
         let graph = ResidentAdaptiveTraversalGraph {
             node_count: 4,
             edge_count: 3,
+            max_row_degree: 1,
             words: 1,
             layout_hash: seed,
             handles: [base, base + 1, base + 2, base],
@@ -809,6 +820,7 @@ fn auto_step_rejects_bad_frontier_before_resident_allocation() {
     let graph = ResidentAdaptiveTraversalGraph {
         node_count: 33,
         edge_count: 0,
+        max_row_degree: 0,
         words: 2,
         layout_hash: 7,
         handles: [101, 102, 103, 104],

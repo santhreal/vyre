@@ -1347,6 +1347,8 @@ pub struct CsrQueueGraphLayout {
     pub node_count: u32,
     /// Exact physical edge count declared by `edge_offsets[node_count]`.
     pub edge_count: u32,
+    /// Largest CSR row degree in the graph.
+    pub max_row_degree: u32,
     /// Number of u32 words in each packed frontier bitset.
     pub words: usize,
     /// Number of u32 words to allocate/upload for edge target and kind arrays.
@@ -1395,6 +1397,7 @@ pub fn validate_csr_queue_graph(
             edge_offsets[0]
         ));
     }
+    let mut max_row_degree = 0u32;
     for (row, pair) in edge_offsets.windows(2).enumerate() {
         if pair[0] > pair[1] {
             return Err(format!(
@@ -1402,6 +1405,7 @@ pub fn validate_csr_queue_graph(
                 pair[0], pair[1]
             ));
         }
+        max_row_degree = max_row_degree.max(pair[1] - pair[0]);
     }
     let edge_count = edge_offsets[expected_offsets - 1] as usize;
     if edge_targets.len() != edge_count {
@@ -1424,6 +1428,7 @@ pub fn validate_csr_queue_graph(
     Ok(CsrQueueGraphLayout {
         node_count,
         edge_count,
+        max_row_degree,
         words: bitset_words(node_count) as usize,
         edge_storage_words: edge_targets.len().max(1),
     })
@@ -1593,6 +1598,7 @@ mod tests {
             CsrQueueGraphLayout {
                 node_count: 3,
                 edge_count: 0,
+                max_row_degree: 0,
                 words: 1,
                 edge_storage_words: 1,
             }
@@ -1602,6 +1608,7 @@ mod tests {
             CsrQueueGraphLayout {
                 node_count: 4,
                 edge_count: 3,
+                max_row_degree: 2,
                 words: 1,
                 edge_storage_words: 3,
             }

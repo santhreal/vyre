@@ -101,6 +101,9 @@ pub const CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const CSR_QUEUE_DELTA_ENQUEUE_OP_ID: &str = "vyre-primitives::graph::csr_queue_delta_enqueue";
 pub const CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const CSR_QUEUE_FORWARD_OP_ID: &str = "vyre-primitives::graph::csr_queue_forward_traverse";
+pub const CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE: u32 = 32;
+pub const CSR_QUEUE_STRIDED_FORWARD_OP_ID: &str =
+pub const CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const C_ALPHA: u32 = 3;
 pub const C_AMP: u32 = 23;
 pub const C_BACKSLASH: u32 = 28;
@@ -508,6 +511,7 @@ pub const fn csr_forward_or_changed_parallel_batch_grid(
 pub const fn csr_forward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
 pub const fn csr_frontier_degree_sum_dispatch_grid(node_count: u32) -> [u32; 3] {
 pub const fn csr_frontier_step_dispatch_grid(node_count: u32) -> [u32; 3] {
+pub const fn csr_queue_strided_forward_dispatch_grid(queue_capacity: u32) -> [u32; 3] {
 pub const fn ddnnf_evaluate_dispatch_grid(n_nodes: u32) -> [u32; 3] {
 pub const fn dispatch_grid(&self) -> [u32; 3] {
 pub const fn dom_target_words(&self) -> usize {
@@ -581,6 +585,7 @@ pub const fn program_key(&self) -> CsrForwardOrChangedProgramKey {
 pub const fn query_count(&self) -> usize {
 pub const fn query_count_u32(&self) -> u32 {
 pub const fn queue_forward(
+pub const fn queue_forward_strided(
 pub const fn queue_len_init(
 pub const fn region_dedup_dispatch_grid(count: u32) -> [u32; 3] {
 pub const fn rle_segment_lengths_dispatch_grid(segment_count: u32) -> [u32; 3] {
@@ -873,6 +878,8 @@ pub fn csr_queue_delta_enqueue(
 pub fn csr_queue_delta_enqueue_cpu(
 pub fn csr_queue_forward_traverse(
 pub fn csr_queue_forward_traverse_cpu(
+pub fn csr_queue_strided_forward_traverse(
+pub fn csr_queue_strided_forward_traverse_cpu(
 pub fn ddnnf_evaluate(
 pub fn ddnnf_evaluate_cpu(
 pub fn decode_bitstream(bs: &[u32], len_bits: usize) -> f64 {
@@ -1365,6 +1372,8 @@ pub fn try_csr_frontier_degree_sum_cpu(
 pub fn try_csr_queue_delta_enqueue_cpu_into(
 pub fn try_csr_queue_forward_traverse_cpu(
 pub fn try_csr_queue_forward_traverse_cpu_into(
+pub fn try_csr_queue_strided_forward_traverse_cpu(
+pub fn try_csr_queue_strided_forward_traverse_cpu_into(
 pub fn try_ddnnf_evaluate(
 pub fn try_ddnnf_evaluate_cpu(
 pub fn try_ddnnf_evaluate_cpu_into(
@@ -1595,6 +1604,7 @@ pub mod csr_forward_traverse;
 pub mod csr_frontier_degree_sum;
 pub mod csr_frontier_queue;
 pub mod csr_queue_delta;
+pub mod csr_queue_strided;
 pub mod decode;
 pub mod differentiable;
 pub mod dnnf;

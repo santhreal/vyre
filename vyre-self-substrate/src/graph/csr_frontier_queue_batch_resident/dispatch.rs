@@ -7,6 +7,7 @@ use vyre_primitives::graph::csr_frontier_queue::{
     frontier_word_block_offsets_to_queue_parallel, frontier_word_block_prefix_to_queue_parallel,
     frontier_word_counts_scan_pass_a, validate_frontier_queue_batch,
 };
+use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
 
 use crate::csr_frontier_queue_batch_memory::{
     plan_resident_csr_queue_batch_memory, ResidentCsrQueueBatchMemoryPlan,
@@ -16,7 +17,8 @@ use crate::dispatch_buffers::u32_word_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer,
-    FrontierWordPrefixScratch, ResidentCsrQueueMaterializer,
+    resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind, FrontierWordPrefixScratch,
+    ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
 use crate::hardware::scratch::reserve_vec as reserve_graph_vec;
@@ -89,6 +91,8 @@ pub fn run_resident_csr_queue_batch_into(
     })?;
 
     let mut steps = Vec::new();
+    let traverse_kind = resident_csr_queue_traverse_kind(graph.max_row_degree());
+    let traverse_grid = resident_csr_queue_traverse_grid(queue_capacity, traverse_kind);
     reserve_graph_vec(
         &mut steps,
         frontiers
@@ -116,7 +120,7 @@ pub fn run_resident_csr_queue_batch_into(
                 steps.push(ResidentDispatchStep {
                     program: traverse_program,
                     handle_ids: &scratch.traverse_handle_sets[query_index],
-                    grid_override: Some([queue_capacity.div_ceil(256).max(1), 1, 1]),
+                    grid_override: Some(traverse_grid),
                 });
             }
         }
@@ -161,7 +165,7 @@ pub fn run_resident_csr_queue_batch_into(
                 steps.push(ResidentDispatchStep {
                     program: traverse_program,
                     handle_ids: &scratch.traverse_handle_sets[query_index],
-                    grid_override: Some([queue_capacity.div_ceil(256).max(1), 1, 1]),
+                    grid_override: Some(traverse_grid),
                 });
             }
         }
@@ -360,6 +364,7 @@ fn ensure_batch_scratch(
     )?;
     let queue_len_bytes = u32_word_bytes(1, "resident CSR queue batch scratch queue_len")?;
     let materializer = resident_csr_queue_materializer(graph.words());
+    let traverse_kind = resident_csr_queue_traverse_kind(graph.max_row_degree());
     let shape = ResidentCsrQueueBatchShape {
         batch_len,
         frontier_bytes,
@@ -368,6 +373,7 @@ fn ensure_batch_scratch(
         node_count: graph.node_count(),
         edge_count: graph.edge_count(),
         materializer,
+        traverse_kind,
     };
     if matches!(
         scratch.shape,
@@ -379,6 +385,7 @@ fn ensure_batch_scratch(
                 && existing.node_count == graph.node_count()
                 && existing.edge_count == graph.edge_count()
                 && existing.materializer == materializer
+                && existing.traverse_kind == traverse_kind
     ) {
         return Ok(());
     }
@@ -509,18 +516,32 @@ fn ensure_batch_scratch(
             }
         }
     }
-    scratch.traverse_program = Some(csr_queue_forward_traverse(
-        "active_queue",
-        "queue_len",
-        "edge_offsets",
-        "edge_targets",
-        "edge_kind_mask",
-        "frontier_out",
-        graph.node_count(),
-        graph.edge_count(),
-        queue_capacity,
-        allow_mask,
-    ));
+    scratch.traverse_program = Some(match traverse_kind {
+        ResidentCsrQueueTraverseKind::RowSerial => csr_queue_forward_traverse(
+            "active_queue",
+            "queue_len",
+            "edge_offsets",
+            "edge_targets",
+            "edge_kind_mask",
+            "frontier_out",
+            graph.node_count(),
+            graph.edge_count(),
+            queue_capacity,
+            allow_mask,
+        ),
+        ResidentCsrQueueTraverseKind::RowStrided => csr_queue_strided_forward_traverse(
+            "active_queue",
+            "queue_len",
+            "edge_offsets",
+            "edge_targets",
+            "edge_kind_mask",
+            "frontier_out",
+            graph.node_count(),
+            graph.edge_count(),
+            queue_capacity,
+            allow_mask,
+        ),
+    });
     scratch.shape = Some(shape);
     Ok(())
 }

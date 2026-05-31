@@ -8,12 +8,14 @@ use vyre_primitives::graph::csr_frontier_queue::{
     frontier_word_block_offsets_to_queue_parallel, frontier_word_block_prefix_to_queue_parallel,
     frontier_word_counts_scan_pass_a, validate_frontier_queue_query,
 };
+use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
 
 use crate::dispatch_buffers::u32_word_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer,
-    FrontierWordPrefixScratch, ResidentCsrQueueMaterializer,
+    resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind, FrontierWordPrefixScratch,
+    ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
 use crate::optimizer::dispatcher::{
@@ -61,6 +63,10 @@ pub fn run_resident_csr_queue_query_into(
             "resident CSR queue traverse program is missing after ensure_programs. Fix: rebuild programs before resident CSR traverse dispatch.".to_string(),
         )
     })?;
+    let traverse_grid = resident_csr_queue_traverse_grid(
+        queue_capacity,
+        resident_csr_queue_traverse_kind(graph.max_row_degree),
+    );
     let read_ranges = [ResidentReadRange {
         handle_id: handles.frontier_out,
         byte_offset: 0,
@@ -88,7 +94,7 @@ pub fn run_resident_csr_queue_query_into(
                 ResidentDispatchStep {
                     program: traverse_program,
                     handle_ids: &traverse_handles,
-                    grid_override: Some([queue_capacity.div_ceil(256).max(1), 1, 1]),
+                    grid_override: Some(traverse_grid),
                 },
             ];
             dispatcher.upload_resident_many_sequence_read_ranges_into(
@@ -151,7 +157,7 @@ pub fn run_resident_csr_queue_query_into(
                     ResidentDispatchStep {
                         program: traverse_program,
                         handle_ids: &traverse_handles,
-                        grid_override: Some([queue_capacity.div_ceil(256).max(1), 1, 1]),
+                        grid_override: Some(traverse_grid),
                     },
                 ];
                 dispatcher.upload_resident_many_sequence_read_ranges_into(
@@ -180,7 +186,7 @@ pub fn run_resident_csr_queue_query_into(
                     ResidentDispatchStep {
                         program: traverse_program,
                         handle_ids: &traverse_handles,
-                        grid_override: Some([queue_capacity.div_ceil(256).max(1), 1, 1]),
+                        grid_override: Some(traverse_grid),
                     },
                 ];
                 dispatcher.upload_resident_many_sequence_read_ranges_into(
@@ -294,6 +300,7 @@ fn ensure_programs(
         queue_capacity,
         allow_mask,
         materializer: resident_csr_queue_materializer(graph.words),
+        traverse_kind: resident_csr_queue_traverse_kind(graph.max_row_degree),
     };
     if scratch.cached_shape == Some(shape) {
         return Ok(());
@@ -346,18 +353,32 @@ fn ensure_programs(
             }
         }
     }
-    scratch.traverse_program = Some(csr_queue_forward_traverse(
-        "active_queue",
-        "queue_len",
-        "edge_offsets",
-        "edge_targets",
-        "edge_kind_mask",
-        "frontier_out",
-        graph.node_count,
-        graph.edge_count,
-        queue_capacity,
-        allow_mask,
-    ));
+    scratch.traverse_program = Some(match shape.traverse_kind {
+        ResidentCsrQueueTraverseKind::RowSerial => csr_queue_forward_traverse(
+            "active_queue",
+            "queue_len",
+            "edge_offsets",
+            "edge_targets",
+            "edge_kind_mask",
+            "frontier_out",
+            graph.node_count,
+            graph.edge_count,
+            queue_capacity,
+            allow_mask,
+        ),
+        ResidentCsrQueueTraverseKind::RowStrided => csr_queue_strided_forward_traverse(
+            "active_queue",
+            "queue_len",
+            "edge_offsets",
+            "edge_targets",
+            "edge_kind_mask",
+            "frontier_out",
+            graph.node_count,
+            graph.edge_count,
+            queue_capacity,
+            allow_mask,
+        ),
+    });
     scratch.cached_shape = Some(shape);
     Ok(())
 }

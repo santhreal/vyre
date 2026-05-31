@@ -44,6 +44,8 @@ pub mod csr_frontier_queue;
 mod csr_frontier_step;
 /// Queue-to-queue sparse CSR delta expansion for GPU-resident fixpoint waves.
 pub mod csr_queue_delta;
+/// Row-strided queue-driven CSR expansion for high-degree active rows.
+pub mod csr_queue_strided;
 
 /// One BFS step over BOTH forward + backward edges.
 pub mod csr_bidirectional;

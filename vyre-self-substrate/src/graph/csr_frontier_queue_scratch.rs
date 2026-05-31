@@ -1,6 +1,7 @@
 //! Shared scratch planning for resident CSR frontier queues.
 
 use vyre_primitives::graph::csr_frontier_queue::FRONTIER_WORD_SCAN_BLOCK_LANES;
+use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid;
 
 const U32_BYTES: usize = std::mem::size_of::<u32>();
 
@@ -12,6 +13,9 @@ pub(crate) const WORD_PREFIX_MIN_FRONTIER_WORDS: usize = 256;
 /// pass instead of paying a separate block-offset scan launch.
 pub(crate) const WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS: u32 = 8;
 
+/// CSR rows at or above this degree use the row-strided queue consumer.
+pub(crate) const STRIDED_FORWARD_MIN_ROW_DEGREE: u32 = 1024;
+
 /// Queue materializer selected for a resident CSR frontier query.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ResidentCsrQueueMaterializer {
@@ -19,6 +23,15 @@ pub(crate) enum ResidentCsrQueueMaterializer {
     AtomicNodeScan,
     /// Packed words are popcount-scanned, then scattered into queue order.
     DeterministicWordPrefix,
+}
+
+/// Queue consumer selected for resident CSR traversal.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ResidentCsrQueueTraverseKind {
+    /// One lane consumes an entire queued source row.
+    RowSerial,
+    /// A fixed lane team consumes each queued source row.
+    RowStrided,
 }
 
 /// Scratch dimensions for deterministic word-prefix queue materialization.
@@ -36,6 +49,31 @@ pub(crate) fn resident_csr_queue_materializer(
         ResidentCsrQueueMaterializer::DeterministicWordPrefix
     } else {
         ResidentCsrQueueMaterializer::AtomicNodeScan
+    }
+}
+
+pub(crate) const fn resident_csr_queue_traverse_kind(
+    max_row_degree: u32,
+) -> ResidentCsrQueueTraverseKind {
+    if max_row_degree >= STRIDED_FORWARD_MIN_ROW_DEGREE {
+        ResidentCsrQueueTraverseKind::RowStrided
+    } else {
+        ResidentCsrQueueTraverseKind::RowSerial
+    }
+}
+
+pub(crate) const fn resident_csr_queue_traverse_grid(
+    queue_capacity: u32,
+    kind: ResidentCsrQueueTraverseKind,
+) -> [u32; 3] {
+    match kind {
+        ResidentCsrQueueTraverseKind::RowSerial => {
+            let blocks = queue_capacity.div_ceil(256);
+            [if blocks == 0 { 1 } else { blocks }, 1, 1]
+        }
+        ResidentCsrQueueTraverseKind::RowStrided => {
+            csr_queue_strided_forward_dispatch_grid(queue_capacity)
+        }
     }
 }
 
@@ -164,5 +202,25 @@ mod tests {
         assert!(frontier_word_prefix_uses_precomputed_offsets(
             WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS + 1
         ));
+    }
+
+    #[test]
+    fn high_degree_rows_select_strided_queue_consumer() {
+        assert_eq!(
+            resident_csr_queue_traverse_kind(STRIDED_FORWARD_MIN_ROW_DEGREE - 1),
+            ResidentCsrQueueTraverseKind::RowSerial
+        );
+        assert_eq!(
+            resident_csr_queue_traverse_kind(STRIDED_FORWARD_MIN_ROW_DEGREE),
+            ResidentCsrQueueTraverseKind::RowStrided
+        );
+        assert_eq!(
+            resident_csr_queue_traverse_grid(9, ResidentCsrQueueTraverseKind::RowSerial),
+            [1, 1, 1]
+        );
+        assert_eq!(
+            resident_csr_queue_traverse_grid(9, ResidentCsrQueueTraverseKind::RowStrided),
+            [2, 1, 1]
+        );
     }
 }

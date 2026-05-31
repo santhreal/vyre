@@ -59,6 +59,7 @@ pub fn upload_resident_adaptive_traversal_graph(
     Ok(ResidentAdaptiveTraversalGraph {
         node_count,
         edge_count: layout.edge_count,
+        max_row_degree: layout.max_row_degree,
         words: layout.words,
         layout_hash: adaptive_traversal_layout_hash(
             node_count,
@@ -108,6 +109,7 @@ pub fn upload_resident_adaptive_sparse_queue_graph(
     Ok(ResidentAdaptiveSparseQueueGraph {
         node_count,
         edge_count: layout.edge_count,
+        max_row_degree: layout.max_row_degree,
         words: layout.words,
         layout_hash: adaptive_sparse_queue_layout_hash(
             node_count,

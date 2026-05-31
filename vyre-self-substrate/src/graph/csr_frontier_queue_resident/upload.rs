@@ -36,6 +36,7 @@ pub fn upload_resident_csr_queue_graph(
     Ok(ResidentCsrQueueGraph {
         node_count: layout.node_count,
         edge_count: layout.edge_count,
+        max_row_degree: layout.max_row_degree,
         words: layout.words,
         edge_offsets_handle,
         edge_targets_handle,

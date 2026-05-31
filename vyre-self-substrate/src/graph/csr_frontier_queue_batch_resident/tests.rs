@@ -1,17 +1,21 @@
 use super::*;
 use crate::csr_frontier_queue_resident::upload_resident_csr_queue_graph;
-use crate::graph::csr_frontier_queue_scratch::ResidentCsrQueueMaterializer;
+use crate::graph::csr_frontier_queue_scratch::{
+    ResidentCsrQueueMaterializer, STRIDED_FORWARD_MIN_ROW_DEGREE,
+};
 use crate::optimizer::dispatcher::{
     DispatchError, OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 use std::cell::{Cell, RefCell};
 use vyre_foundation::ir::Program;
+use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid;
 
 #[derive(Default)]
 struct RecordingBatchDispatcher {
     next_handle: Cell<u64>,
     upload_handles: RefCell<Vec<Vec<u64>>>,
     step_handles: RefCell<Vec<Vec<Vec<u64>>>>,
+    step_grids: RefCell<Vec<Vec<Option<[u32; 3]>>>>,
     freed: RefCell<Vec<u64>>,
 }
 
@@ -50,6 +54,9 @@ impl OptimizerDispatcher for RecordingBatchDispatcher {
         self.step_handles
             .borrow_mut()
             .push(steps.iter().map(|step| step.handle_ids.to_vec()).collect());
+        self.step_grids
+            .borrow_mut()
+            .push(steps.iter().map(|step| step.grid_override).collect());
         outputs.clear();
         outputs.extend(read_ranges.iter().map(|range| vec![0u8; range.byte_len]));
         Ok(())
@@ -128,6 +135,60 @@ fn batch_queries_initialize_queue_len_on_device() {
         ]
     );
     assert_eq!(outputs, vec![vec![0; 4], vec![0; 4]]);
+}
+
+#[test]
+fn high_degree_batch_queries_use_row_strided_traverse_grid() {
+    let dispatcher = RecordingBatchDispatcher::default();
+    let node_count = 2u32;
+    let edge_offsets = vec![
+        0,
+        STRIDED_FORWARD_MIN_ROW_DEGREE,
+        STRIDED_FORWARD_MIN_ROW_DEGREE,
+    ];
+    let edge_targets = vec![1u32; STRIDED_FORWARD_MIN_ROW_DEGREE as usize];
+    let edge_kind_mask = vec![1u32; STRIDED_FORWARD_MIN_ROW_DEGREE as usize];
+    let graph = upload_resident_csr_queue_graph(
+        &dispatcher,
+        node_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+    )
+    .expect("Fix: high-degree resident CSR graph is valid");
+    let mut scratch = ResidentCsrQueueBatchScratch::default();
+    let first = [1u32];
+    let second = [1u32];
+    let frontiers: [&[u32]; 2] = [&first, &second];
+    let mut outputs = Vec::new();
+
+    run_resident_csr_queue_batch_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &frontiers,
+        9,
+        u32::MAX,
+        &mut outputs,
+    )
+    .expect("Fix: recording dispatcher should complete high-degree resident CSR queue batch");
+
+    let grids = dispatcher
+        .step_grids
+        .borrow()
+        .last()
+        .cloned()
+        .expect("Fix: expected one resident batch grid sequence");
+    assert_eq!(
+        grids[2],
+        Some(csr_queue_strided_forward_dispatch_grid(9)),
+        "first high-degree batch query must use row-strided traverse launch"
+    );
+    assert_eq!(
+        grids[5],
+        Some(csr_queue_strided_forward_dispatch_grid(9)),
+        "second high-degree batch query must use row-strided traverse launch"
+    );
 }
 
 #[test]

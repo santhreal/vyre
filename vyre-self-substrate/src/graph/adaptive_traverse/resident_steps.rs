@@ -8,7 +8,8 @@ use crate::dispatch_buffers::write_u32_slice_le_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer,
-    FrontierWordPrefixScratch, ResidentCsrQueueMaterializer,
+    resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind, FrontierWordPrefixScratch,
+    ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
 };
 use crate::graph::dispatch_bridge::{
     alloc_resident_buffers, resident_sequence_single_u32_output_into,
@@ -33,12 +34,14 @@ use vyre_primitives::graph::csr_frontier_queue::{
     frontier_word_block_prefix_to_queue_parallel as primitive_frontier_word_prefix_queue,
     frontier_word_counts_scan_pass_a as primitive_frontier_word_counts,
 };
+use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_traverse as primitive_csr_queue_strided_forward_traverse;
 use vyre_primitives::reduce::count::reduce_count;
 
 #[derive(Clone, Copy)]
 struct AdaptiveSparseQueueGraphView {
     node_count: u32,
     edge_count: u32,
+    max_row_degree: u32,
     layout_hash: u64,
     handles: [u64; 3],
 }
@@ -49,6 +52,7 @@ impl AdaptiveSparseQueueGraphView {
         Self {
             node_count: graph.node_count,
             edge_count: graph.edge_count,
+            max_row_degree: graph.max_row_degree,
             layout_hash: graph.layout_hash,
             handles: [handles[0], handles[1], handles[2]],
         }
@@ -58,6 +62,7 @@ impl AdaptiveSparseQueueGraphView {
         Self {
             node_count: graph.node_count,
             edge_count: graph.edge_count,
+            max_row_degree: graph.max_row_degree,
             layout_hash: graph.layout_hash,
             handles: graph.handles,
         }
@@ -322,9 +327,11 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
     let words_u32 = sparse_plan.frontier.work.layout.words_u32;
     let words = sparse_plan.frontier.work.layout.words;
     let queue_capacity = sparse_plan.queue_capacity;
+    let traverse_kind = resident_csr_queue_traverse_kind(graph.max_row_degree);
+    let traverse_grid = resident_csr_queue_traverse_grid(queue_capacity, traverse_kind);
     let device_features = dispatcher.device_feature_cache_key();
-    let traverse_program = scratch.plan_cache.get_or_build(
-        AdaptiveTraversalPlanCacheKey::queue_forward(
+    let traverse_key = match traverse_kind {
+        ResidentCsrQueueTraverseKind::RowSerial => AdaptiveTraversalPlanCacheKey::queue_forward(
             graph.layout_hash,
             graph.node_count,
             graph.edge_count,
@@ -333,8 +340,22 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
             allow_mask,
             device_features,
         ),
-        || {
-            primitive_csr_queue_forward_traverse(
+        ResidentCsrQueueTraverseKind::RowStrided => {
+            AdaptiveTraversalPlanCacheKey::queue_forward_strided(
+                graph.layout_hash,
+                graph.node_count,
+                graph.edge_count,
+                words_u32,
+                queue_capacity,
+                allow_mask,
+                device_features,
+            )
+        }
+    };
+    let traverse_program = scratch
+        .plan_cache
+        .get_or_build(traverse_key, || match traverse_kind {
+            ResidentCsrQueueTraverseKind::RowSerial => primitive_csr_queue_forward_traverse(
                 "active_queue",
                 "queue_len",
                 "edge_offsets",
@@ -345,9 +366,22 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                 graph.edge_count,
                 queue_capacity,
                 allow_mask,
-            )
-        },
-    );
+            ),
+            ResidentCsrQueueTraverseKind::RowStrided => {
+                primitive_csr_queue_strided_forward_traverse(
+                    "active_queue",
+                    "queue_len",
+                    "edge_offsets",
+                    "edge_targets",
+                    "edge_kind_mask",
+                    "frontier_out",
+                    graph.node_count,
+                    graph.edge_count,
+                    queue_capacity,
+                    allow_mask,
+                )
+            }
+        });
     let clear_frontier_out_program = scratch.plan_cache.get_or_build(
         AdaptiveTraversalPlanCacheKey::clear_frontier_out(
             graph.layout_hash,
@@ -405,7 +439,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                 ResidentDispatchStep {
                     program: &traverse_program,
                     handle_ids: &traverse_handles,
-                    grid_override: Some(sparse_plan.queue_grid),
+                    grid_override: Some(traverse_grid),
                 },
             ];
             resident_sequence_single_u32_output_into(
@@ -510,7 +544,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     ResidentDispatchStep {
                         program: &traverse_program,
                         handle_ids: &traverse_handles,
-                        grid_override: Some(sparse_plan.queue_grid),
+                        grid_override: Some(traverse_grid),
                     },
                 ];
                 resident_sequence_single_u32_output_into(
@@ -575,7 +609,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     ResidentDispatchStep {
                         program: &traverse_program,
                         handle_ids: &traverse_handles,
-                        grid_override: Some(sparse_plan.queue_grid),
+                        grid_override: Some(traverse_grid),
                     },
                 ];
                 resident_sequence_single_u32_output_into(

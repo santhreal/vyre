@@ -123,4 +123,5 @@ struct ResidentCsrQueueBatchShape {
     node_count: u32,
     edge_count: u32,
     materializer: ResidentCsrQueueMaterializer,
+    traverse_kind: crate::graph::csr_frontier_queue_scratch::ResidentCsrQueueTraverseKind,
 }

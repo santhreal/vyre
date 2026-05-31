@@ -24,6 +24,7 @@ use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 pub struct ResidentCsrQueueGraph {
     node_count: u32,
     edge_count: u32,
+    max_row_degree: u32,
     words: usize,
     edge_offsets_handle: u64,
     edge_targets_handle: u64,
@@ -41,6 +42,12 @@ impl ResidentCsrQueueGraph {
     #[must_use]
     pub fn edge_count(&self) -> u32 {
         self.edge_count
+    }
+
+    /// Largest CSR row degree.
+    #[must_use]
+    pub fn max_row_degree(&self) -> u32 {
+        self.max_row_degree
     }
 
     /// Number of u32 words in each frontier bitset.
@@ -153,4 +160,5 @@ struct ResidentCsrQueueProgramShape {
     queue_capacity: u32,
     allow_mask: u32,
     materializer: ResidentCsrQueueMaterializer,
+    traverse_kind: crate::graph::csr_frontier_queue_scratch::ResidentCsrQueueTraverseKind,
 }

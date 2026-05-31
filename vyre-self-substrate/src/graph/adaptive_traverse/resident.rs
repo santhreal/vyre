@@ -6,6 +6,7 @@ use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 pub struct ResidentAdaptiveTraversalGraph {
     pub(crate) node_count: u32,
     pub(crate) edge_count: u32,
+    pub(crate) max_row_degree: u32,
     pub(crate) words: usize,
     pub(crate) layout_hash: u64,
     pub(crate) handles: [u64; 4],
@@ -16,6 +17,7 @@ pub struct ResidentAdaptiveTraversalGraph {
 pub struct ResidentAdaptiveSparseQueueGraph {
     pub(crate) node_count: u32,
     pub(crate) edge_count: u32,
+    pub(crate) max_row_degree: u32,
     pub(crate) words: usize,
     pub(crate) layout_hash: u64,
     pub(crate) handles: [u64; 3],
@@ -78,6 +80,12 @@ impl ResidentAdaptiveSparseQueueGraph {
         self.edge_count
     }
 
+    /// Largest sparse CSR row degree.
+    #[must_use]
+    pub fn max_row_degree(&self) -> u32 {
+        self.max_row_degree
+    }
+
     /// Number of u32 words per frontier bitset.
     #[must_use]
     pub fn words(&self) -> usize {
@@ -122,6 +130,12 @@ impl ResidentAdaptiveTraversalGraph {
     #[must_use]
     pub fn edge_count(&self) -> u32 {
         self.edge_count
+    }
+
+    /// Largest sparse CSR row degree.
+    #[must_use]
+    pub fn max_row_degree(&self) -> u32 {
+        self.max_row_degree
     }
 
     /// Number of u32 words per frontier bitset.

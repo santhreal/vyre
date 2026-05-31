@@ -1,10 +1,13 @@
 use super::*;
-use crate::graph::csr_frontier_queue_scratch::ResidentCsrQueueMaterializer;
+use crate::graph::csr_frontier_queue_scratch::{
+    ResidentCsrQueueMaterializer, STRIDED_FORWARD_MIN_ROW_DEGREE,
+};
 use crate::optimizer::dispatcher::{
     DispatchError, OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
 use std::cell::{Cell, RefCell};
 use vyre_foundation::ir::Program;
+use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid;
 
 #[derive(Default)]
 struct RecordingResidentDispatcher {
@@ -13,6 +16,7 @@ struct RecordingResidentDispatcher {
     uploads: RefCell<Vec<Vec<u8>>>,
     sequence_upload_handles: RefCell<Vec<Vec<u64>>>,
     sequence_step_handles: RefCell<Vec<Vec<Vec<u64>>>>,
+    sequence_step_grids: RefCell<Vec<Vec<Option<[u32; 3]>>>>,
     freed: RefCell<Vec<u64>>,
 }
 
@@ -55,6 +59,9 @@ impl OptimizerDispatcher for RecordingResidentDispatcher {
         self.sequence_step_handles
             .borrow_mut()
             .push(steps.iter().map(|step| step.handle_ids.to_vec()).collect());
+        self.sequence_step_grids
+            .borrow_mut()
+            .push(steps.iter().map(|step| step.grid_override).collect());
         outputs.clear();
         outputs.extend(read_ranges.iter().map(|range| vec![0u8; range.byte_len]));
         Ok(())
@@ -98,6 +105,7 @@ fn resident_query_initializes_queue_len_on_device() {
     let graph = ResidentCsrQueueGraph {
         node_count: 1,
         edge_count: 0,
+        max_row_degree: 0,
         words: 1,
         edge_offsets_handle: 101,
         edge_targets_handle: 102,
@@ -150,6 +158,45 @@ fn resident_query_initializes_queue_len_on_device() {
 }
 
 #[test]
+fn high_degree_resident_query_uses_row_strided_traverse_grid() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let graph = ResidentCsrQueueGraph {
+        node_count: 1,
+        edge_count: STRIDED_FORWARD_MIN_ROW_DEGREE,
+        max_row_degree: STRIDED_FORWARD_MIN_ROW_DEGREE,
+        words: 1,
+        edge_offsets_handle: 101,
+        edge_targets_handle: 102,
+        edge_kind_mask_handle: 103,
+    };
+    let mut scratch = ResidentCsrQueueScratch::default();
+    let mut output = Vec::new();
+
+    run_resident_csr_queue_query_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &[1],
+        9,
+        u32::MAX,
+        &mut output,
+    )
+    .expect("Fix: recording dispatcher should complete high-degree resident CSR query");
+
+    let grids = dispatcher
+        .sequence_step_grids
+        .borrow()
+        .last()
+        .cloned()
+        .expect("Fix: expected one resident step grid sequence");
+    assert_eq!(
+        grids[2],
+        Some(csr_queue_strided_forward_dispatch_grid(9)),
+        "high-degree resident CSR queue traversal must launch one row-strided lane team per queue slot"
+    );
+}
+
+#[test]
 fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_order() {
     for seed in 0..4096_u64 {
         let dispatcher = RecordingResidentDispatcher::default();
@@ -157,6 +204,7 @@ fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_ord
         let graph = ResidentCsrQueueGraph {
             node_count: 4,
             edge_count: 3,
+            max_row_degree: 1,
             words: 1,
             edge_offsets_handle: base,
             edge_targets_handle: base + 1,
@@ -214,6 +262,7 @@ fn large_resident_query_uses_word_prefix_queue_materializer() {
     let graph = ResidentCsrQueueGraph {
         node_count,
         edge_count: 0,
+        max_row_degree: 0,
         words,
         edge_offsets_handle: 201,
         edge_targets_handle: 202,
@@ -282,6 +331,7 @@ fn small_multiblock_resident_query_inlines_block_offsets() {
     let graph = ResidentCsrQueueGraph {
         node_count,
         edge_count: 0,
+        max_row_degree: 0,
         words,
         edge_offsets_handle: 201,
         edge_targets_handle: 202,
@@ -347,6 +397,7 @@ fn many_block_resident_query_scans_block_offsets_once() {
     let graph = ResidentCsrQueueGraph {
         node_count,
         edge_count: 0,
+        max_row_degree: 0,
         words,
         edge_offsets_handle: 201,
         edge_targets_handle: 202,

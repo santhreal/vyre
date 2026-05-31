@@ -130,6 +130,8 @@ pub enum AdaptiveTraversalProgramKind {
     FrontierWordBlockOffsetsQueue,
     /// Consume a compacted active-source queue through CSR rows.
     QueueForward,
+    /// Consume a compacted active-source queue with lane teams for skewed rows.
+    QueueForwardStrided,
     /// Dense graph traversal through a reusable Four-Russians byte-tile LUT.
     FourRussiansDense,
 }
@@ -489,6 +491,37 @@ impl AdaptiveTraversalPlanCacheKey {
         )
     }
 
+    /// Cache key for row-strided queue-driven CSR traversal.
+    #[must_use]
+    pub const fn queue_forward_strided(
+        _layout_hash: u64,
+        node_count: u32,
+        edge_count: u32,
+        words: u32,
+        queue_capacity: u32,
+        allow_mask: u32,
+        device_features: u64,
+    ) -> Self {
+        let layout_hash = adaptive_traversal_program_layout_hash(
+            node_count,
+            edge_count,
+            words,
+            queue_capacity,
+            AdaptiveTraversalProgramKind::QueueForwardStrided,
+        );
+        Self::new(
+            layout_hash,
+            node_count,
+            edge_count,
+            words,
+            queue_capacity,
+            allow_mask,
+            0,
+            device_features,
+            AdaptiveTraversalProgramKind::QueueForwardStrided,
+        )
+    }
+
     /// Cache key for dense Four-Russians traversal through a resident LUT.
     #[must_use]
     pub const fn four_russians_dense(
@@ -531,6 +564,7 @@ const fn adaptive_traversal_program_kind_tag(kind: AdaptiveTraversalProgramKind)
         AdaptiveTraversalProgramKind::FrontierWordPrefixQueue => 9,
         AdaptiveTraversalProgramKind::FrontierWordBlockOffsets => 10,
         AdaptiveTraversalProgramKind::FrontierWordBlockOffsetsQueue => 11,
+        AdaptiveTraversalProgramKind::QueueForwardStrided => 12,
     }
 }
 
@@ -655,6 +689,8 @@ mod resident_content_hash_tests {
 pub struct AdaptiveTraversalLayout {
     /// Number of logical CSR edges.
     pub edge_count: u32,
+    /// Largest CSR row degree in the sparse graph.
+    pub max_row_degree: u32,
     /// Number of u32 words required by physical edge buffers after padding.
     pub edge_storage_words: usize,
     /// Number of u32 words in one frontier bitset.
@@ -861,6 +897,7 @@ pub fn validate_adaptive_traversal_layout(
             edge_targets.len()
         ));
     }
+    let mut max_row_degree = 0u32;
     for (row, pair) in edge_offsets.windows(2).enumerate() {
         if pair[0] > pair[1] {
             return Err(format!(
@@ -868,6 +905,7 @@ pub fn validate_adaptive_traversal_layout(
                 pair[0], pair[1]
             ));
         }
+        max_row_degree = max_row_degree.max(pair[1] - pair[0]);
     }
     for (idx, &target) in edge_targets.iter().enumerate() {
         if target >= node_count {
@@ -892,6 +930,7 @@ pub fn validate_adaptive_traversal_layout(
 
     Ok(AdaptiveTraversalLayout {
         edge_count,
+        max_row_degree,
         edge_storage_words: edge_targets.len().max(1),
         words,
         dense_words,
@@ -1859,6 +1898,16 @@ mod tests {
         );
         assert_eq!(queue_forward.queue_capacity, 64);
         assert_eq!(queue_forward.allow_mask, 0x55);
+        let queue_forward_strided =
+            AdaptiveTraversalPlanCacheKey::queue_forward_strided(7, 64, 9, 2, 64, 0x55, 0xA11CE);
+        assert_eq!(
+            queue_forward_strided.kind,
+            AdaptiveTraversalProgramKind::QueueForwardStrided
+        );
+        assert_ne!(
+            queue_forward, queue_forward_strided,
+            "serial and row-strided queue consumers must not alias in resident Program caches"
+        );
         assert_ne!(
             queue_forward,
             AdaptiveTraversalPlanCacheKey::frontier_to_queue(7, 64, 9, 2, 64, 0xA11CE)
@@ -1926,6 +1975,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(layout.edge_count, 2);
+        assert_eq!(layout.max_row_degree, 1);
         assert_eq!(layout.edge_storage_words, 2);
         assert_eq!(layout.words, 1);
         assert_eq!(layout.dense_words, 3);
