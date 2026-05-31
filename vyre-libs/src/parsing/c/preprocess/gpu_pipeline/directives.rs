@@ -1,14 +1,12 @@
 use crate::parsing::c::parse::gnu_builtins::gpu_builtin_hash_table_words;
 use crate::parsing::c::preprocess::gpu_define_parse::gpu_define_parse_u8;
-use crate::parsing::c::preprocess::gpu_if_expression::gpu_if_expression;
-use crate::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value;
+use crate::parsing::c::preprocess::gpu_if_expression::gpu_if_expression_u8;
+use crate::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value_u8;
 use crate::parsing::c::preprocess::gpu_include_parse::gpu_include_parse_u8;
 use crate::parsing::c::preprocess::gpu_undef_parse::gpu_undef_parse_u8;
 use vyre::execution_plan::fusion::fuse_programs;
 
-use super::buffers::{
-    bucket_pow2, pack_u32_words_into, pad_to_u32_words_into, unpack_u32_words_exact_into,
-};
+use super::buffers::{bucket_pow2, pack_u32_words_into, unpack_u32_words_exact_into};
 use super::tokenization::reject_invalid_if_expression_values;
 use super::{ClassifiedTokens, GpuDispatcher};
 
@@ -91,7 +89,6 @@ pub(super) struct DirectiveExtractionScratch {
     starts_b: Vec<u8>,
     lens_b: Vec<u8>,
     kinds_b: Vec<u8>,
-    src_pad: Vec<u8>,
     zero_init: Vec<u8>,
     macro_names: Vec<u8>,
     macro_offsets_b: Vec<u8>,
@@ -223,10 +220,10 @@ fn gpu_extract_directive_payloads_impl(
         }
         return Ok(vec![DirectivePayload::None; n]);
     }
-    // Bucket token-count output shapes only. Define/include/undef parsing now
-    // consumes the retained raw-U8 source bytes directly; conditional-value
-    // compatibility paths still pack source bytes only when snapshot values are
-    // requested.
+    // Bucket token-count output shapes only. Directive payload and compatibility
+    // condition evaluators consume the retained raw-U8 source bytes directly, so
+    // source length no longer specializes shader programs or requires host-side
+    // U32 repacking.
     let n_bucket = bucket_pow2(n.max(1), 64);
     let n_pad = n_bucket;
     let source_len = u32::try_from(classified.source.len()).map_err(|_| {
@@ -373,7 +370,6 @@ fn gpu_extract_directive_payloads_impl(
     // No more bucketing needed for these dimensions  -  one cold compile
     // per process for the ifdef/if-expression pair.
     if evaluate_condition_values {
-        pad_to_u32_words_into(&mut scratch.src_pad, &classified.source)?;
         // Pack defined_macros into the (names_packed, offsets, values)
         // layout only when the caller needs snapshot condition values. The
         // production driver skips this branch and re-evaluates reachable
@@ -447,12 +443,12 @@ fn gpu_extract_directive_payloads_impl(
                 .extend_from_slice(&value.to_le_bytes());
         }
 
-        let iv = gpu_ifdef_value(n_bucket as u32, source_len);
+        let iv = gpu_ifdef_value_u8(n_bucket as u32, source_len);
         let iv_inputs = [
             scratch.starts_b.as_slice(),
             scratch.lens_b.as_slice(),
             scratch.kinds_b.as_slice(),
-            scratch.src_pad.as_slice(),
+            classified.source.as_ref(),
             scratch.macro_names.as_slice(),
             scratch.macro_offsets_b.as_slice(),
             scratch.zero_init.as_slice(),
@@ -474,12 +470,12 @@ fn gpu_extract_directive_payloads_impl(
         )?;
 
         // ---- Dispatch 3: gpu_if_expression ----
-        let ie = gpu_if_expression(n_bucket as u32, source_len);
+        let ie = gpu_if_expression_u8(n_bucket as u32, source_len);
         let ie_inputs = [
             scratch.starts_b.as_slice(),
             scratch.lens_b.as_slice(),
             scratch.kinds_b.as_slice(),
-            scratch.src_pad.as_slice(),
+            classified.source.as_ref(),
             scratch.macro_names.as_slice(),
             scratch.macro_offsets_b.as_slice(),
             scratch.macro_values_b.as_slice(),

@@ -1,16 +1,12 @@
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+pub(super) use super::gpu_source_bytes::SourceByteLayout as DirectiveSourceLayout;
+
 pub(super) const DIRECTIVE_PARSE_WORKGROUP_SIZE: u32 = 256;
 pub(super) const MAX_DIRECTIVE_WS_PREFIX: u32 = 4;
 
 pub(super) fn packed_source_word_count(source_len: u32) -> u32 {
     source_len.div_ceil(4).max(1)
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum DirectiveSourceLayout {
-    PackedU32,
-    RawU8,
 }
 
 pub(super) fn directive_parse_input_buffers(
@@ -19,8 +15,14 @@ pub(super) fn directive_parse_input_buffers(
     source_layout: DirectiveSourceLayout,
 ) -> Vec<BufferDecl> {
     let (source_element, source_count) = match source_layout {
-        DirectiveSourceLayout::PackedU32 => (DataType::U32, packed_source_word_count(source_len)),
-        DirectiveSourceLayout::RawU8 => (DataType::U8, 0),
+        DirectiveSourceLayout::PackedU32 => (
+            super::gpu_source_bytes::source_buffer_element(source_layout),
+            packed_source_word_count(source_len),
+        ),
+        DirectiveSourceLayout::RawU8 => (
+            super::gpu_source_bytes::source_buffer_element(source_layout),
+            0,
+        ),
     };
     vec![
         BufferDecl::storage("tok_starts", 0, BufferAccess::ReadOnly, DataType::U32)
@@ -357,29 +359,16 @@ pub(super) fn push_bounded_byte_scan_until(
 }
 
 pub(super) fn source_byte_expr(source_layout: DirectiveSourceLayout, addr: Expr) -> Expr {
-    match source_layout {
-        DirectiveSourceLayout::PackedU32 => {
-            super::gpu_source_bytes::load_packed_byte_expr("source", addr)
-        }
-        DirectiveSourceLayout::RawU8 => Expr::bitand(
-            Expr::cast(DataType::U32, Expr::load("source", addr)),
-            Expr::u32(0xFF),
-        ),
-    }
+    super::gpu_source_bytes::load_source_layout_byte_expr("source", source_layout, addr)
 }
 
 pub(super) fn safe_source_byte_expr(source_layout: DirectiveSourceLayout, addr: Expr) -> Expr {
-    match source_layout {
-        DirectiveSourceLayout::PackedU32 => super::gpu_source_bytes::safe_load_source_byte_expr(
-            addr,
-            super::gpu_source_bytes::packed_source_byte_len_expr(),
-        ),
-        DirectiveSourceLayout::RawU8 => Expr::select(
-            Expr::lt(addr.clone(), Expr::buf_len("source")),
-            source_byte_expr(source_layout, addr),
-            Expr::u32(0),
-        ),
-    }
+    super::gpu_source_bytes::safe_load_source_layout_byte_expr(
+        "source",
+        source_layout,
+        addr,
+        super::gpu_source_bytes::source_byte_len_expr("source", source_layout),
+    )
 }
 
 pub(super) fn horizontal_ws_flag(byte: Expr) -> Expr {

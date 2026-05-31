@@ -12,7 +12,8 @@
 //!   - `tok_starts` (U32)  -  per-token byte offset into `source`.
 //!   - `tok_lens` (U32)  -  per-token byte length.
 //!   - `directive_kinds` (U32)  -  output of `gpu_directive_metadata`.
-//!   - `source` (U32 packed bytes; see real-GPU note).
+//!   - `source` (U32 packed bytes for `gpu_ifdef_value`, raw U8 bytes for
+//!     `gpu_ifdef_value_u8`).
 //!   - `macro_names_packed` (U32 packed bytes)  -  concatenated
 //!     defined-macro name bytes. Empty when no macros are defined.
 //!   - `macro_offsets` (U32)  -  start offsets of each macro name.
@@ -27,11 +28,11 @@
 //! ## Real-GPU lowering note
 //!
 //! Same conventions as the rest of the directive-classify family  -
-//! `source` and `macro_names_packed` declared as packed U32 so
-//! reference-eval and naga-emitted real GPU agree on word-indexed
-//! access; byte extraction is inline. The kernel is **straight-line**
-//! (no loops, no outer-scope mutables) to dodge the Q7 carrier-seed
-//! family bug in vyre-lower's region-scope phi-merge.
+//! byte extraction is inline. The packed entrypoint preserves the
+//! standalone ABI; the raw-U8 entrypoint is used by the preprocessing
+//! pipeline to avoid repacking retained source rows. The kernel is
+//! **straight-line** (no loops, no outer-scope mutables) to dodge the
+//! Q7 carrier-seed family bug in vyre-lower's region-scope phi-merge.
 //!
 //! The macro-table lookup is the only piece that previously relied
 //! on source-specific program construction. It is now a runtime loop
@@ -39,7 +40,10 @@
 //! check is bounded by the candidate macro-name length. One compiled
 //! program handles every macro-table size and identifier length.
 
-use super::gpu_source_bytes::{packed_source_byte_len_expr, safe_load_packed_byte_expr};
+use super::gpu_source_bytes::{
+    safe_load_packed_byte_expr, safe_load_source_layout_byte_expr, source_buffer_element,
+    source_byte_len_expr, SourceByteLayout,
+};
 use crate::parsing::c::lex::tokens::{TOK_PP_IFDEF, TOK_PP_IFNDEF};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -75,11 +79,32 @@ const MAX_WS_PREFIX: u32 = 4;
 /// every translation unit and macro table size.
 #[must_use]
 pub fn gpu_ifdef_value(num_tokens: u32, source_len: u32) -> Program {
+    gpu_ifdef_value_with_source_layout(num_tokens, source_len, SourceByteLayout::PackedU32)
+}
+
+/// Build the ifdef/ifndef evaluator over raw `DataType::U8` source bytes.
+///
+/// This preserves the same binding order and runtime-sized source shape as the
+/// packed ABI while letting pipeline callers pass retained source bytes without
+/// a host-side U32 repack.
+#[must_use]
+pub fn gpu_ifdef_value_u8(num_tokens: u32, source_len: u32) -> Program {
+    gpu_ifdef_value_with_source_layout(num_tokens, source_len, SourceByteLayout::RawU8)
+}
+
+fn gpu_ifdef_value_with_source_layout(
+    num_tokens: u32,
+    source_len: u32,
+    source_layout: SourceByteLayout,
+) -> Program {
     let _ = source_len;
     let t = Expr::var("t");
-    let source_byte_len = packed_source_byte_len_expr();
+    let source_byte_len = source_byte_len_expr("source", source_layout);
 
-    let safe_load = |buf: &'static str, addr: Expr, bound: Expr| -> Expr {
+    let safe_load_source = |addr: Expr| -> Expr {
+        safe_load_source_layout_byte_expr("source", source_layout, addr, source_byte_len.clone())
+    };
+    let safe_load_packed = |buf: &'static str, addr: Expr, bound: Expr| -> Expr {
         safe_load_packed_byte_expr(buf, addr, bound)
     };
     let is_ws = |b: Expr| -> Expr {
@@ -187,11 +212,7 @@ pub fn gpu_ifdef_value(num_tokens: u32, source_len: u32) -> Program {
     for p in 0..=MAX_WS_PREFIX {
         evaluate.push(Node::let_bind(
             format!("hs_{p}"),
-            safe_load(
-                "source",
-                Expr::add(Expr::var("tok_start"), Expr::u32(p)),
-                source_byte_len.clone(),
-            ),
+            safe_load_source(Expr::add(Expr::var("tok_start"), Expr::u32(p))),
         ));
     }
     for p in 0..=MAX_WS_PREFIX {
@@ -218,11 +239,7 @@ pub fn gpu_ifdef_value(num_tokens: u32, source_len: u32) -> Program {
     for q in 0..MAX_WS_PREFIX {
         evaluate.push(Node::let_bind(
             format!("kp_{q}"),
-            safe_load(
-                "source",
-                Expr::add(Expr::var("hash_idx"), Expr::u32(q + 1)),
-                source_byte_len.clone(),
-            ),
+            safe_load_source(Expr::add(Expr::var("hash_idx"), Expr::u32(q + 1))),
         ));
     }
     for q in 0..MAX_WS_PREFIX {
@@ -258,11 +275,7 @@ pub fn gpu_ifdef_value(num_tokens: u32, source_len: u32) -> Program {
     for q in 0..MAX_WS_PREFIX {
         evaluate.push(Node::let_bind(
             format!("ip_{q}"),
-            safe_load(
-                "source",
-                Expr::add(Expr::var("post_kw"), Expr::u32(q)),
-                source_byte_len.clone(),
-            ),
+            safe_load_source(Expr::add(Expr::var("post_kw"), Expr::u32(q))),
         ));
     }
     for q in 0..MAX_WS_PREFIX {
@@ -302,11 +315,10 @@ pub fn gpu_ifdef_value(num_tokens: u32, source_len: u32) -> Program {
             vec![
                 Node::let_bind(
                     "ident_byte",
-                    safe_load(
-                        "source",
-                        Expr::add(Expr::var("ident_start_val"), Expr::var("ident_i")),
-                        source_byte_len.clone(),
-                    ),
+                    safe_load_source(Expr::add(
+                        Expr::var("ident_start_val"),
+                        Expr::var("ident_i"),
+                    )),
                 ),
                 Node::let_bind(
                     "ident_byte_ok",
@@ -378,15 +390,14 @@ pub fn gpu_ifdef_value(num_tokens: u32, source_len: u32) -> Program {
                 vec![
                     Node::let_bind(
                         "ident_cmp_byte",
-                        safe_load(
-                            "source",
-                            Expr::add(Expr::var("ident_start_val"), Expr::var("name_k")),
-                            source_byte_len.clone(),
-                        ),
+                        safe_load_source(Expr::add(
+                            Expr::var("ident_start_val"),
+                            Expr::var("name_k"),
+                        )),
                     ),
                     Node::let_bind(
                         "macro_cmp_byte",
-                        safe_load(
+                        safe_load_packed(
                             "macro_names_packed",
                             Expr::add(Expr::var("m_start"), Expr::var("name_k")),
                             macro_names_byte_cap_runtime.clone(),
@@ -490,7 +501,7 @@ pub fn gpu_ifdef_value(num_tokens: u32, source_len: u32) -> Program {
                 "source",
                 BINDING_SOURCE,
                 BufferAccess::ReadOnly,
-                DataType::U32,
+                source_buffer_element(source_layout),
             )
             .with_count(0),
             // Runtime-sized: count=0 marks the buffer as runtime-bound,
@@ -529,6 +540,7 @@ pub fn gpu_ifdef_value(num_tokens: u32, source_len: u32) -> Program {
 
 mod tests {
     use super::*;
+    use vyre::ir::DataType;
 
     #[test]
     fn op_id_is_canonical_and_stable() {
@@ -565,5 +577,26 @@ mod tests {
             source.count, 0,
             "source must be runtime-sized so one ifdef evaluator program serves all source lengths"
         );
+    }
+
+    #[test]
+    fn source_buffer_layouts_preserve_packed_abi_and_raw_u8_variant() {
+        let packed = gpu_ifdef_value(8, 64);
+        let raw_u8 = gpu_ifdef_value_u8(8, 64);
+        let packed_source = packed
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == "source")
+            .expect("Fix: packed ifdef evaluator source buffer must exist");
+        let raw_u8_source = raw_u8
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == "source")
+            .expect("Fix: raw-U8 ifdef evaluator source buffer must exist");
+
+        assert_eq!(packed_source.element(), DataType::U32);
+        assert_eq!(packed_source.count(), 0);
+        assert_eq!(raw_u8_source.element(), DataType::U8);
+        assert_eq!(raw_u8_source.count(), 0);
     }
 }

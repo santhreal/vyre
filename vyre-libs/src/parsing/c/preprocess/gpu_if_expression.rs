@@ -29,7 +29,8 @@
 //!   - `tok_starts` (U32)  -  per-token byte offset.
 //!   - `tok_lens` (U32)  -  per-token byte length.
 //!   - `directive_kinds` (U32)  -  output of `gpu_directive_metadata`.
-//!   - `source` (U32 packed bytes)  -  original source bytes.
+//!   - `source` (U32 packed bytes for `gpu_if_expression`, raw U8 bytes for
+//!     `gpu_if_expression_u8`)  -  original source bytes.
 //!   - `macro_names_packed` (U32 packed bytes), `macro_offsets` (U32),
 //!     `macro_values` (U32)  -  GNU/Clang builtin perfect-hash table followed by
 //!     the defined object-like macro integer values.
@@ -71,7 +72,7 @@ mod stack;
 #[cfg(test)]
 mod tests;
 
-use super::gpu_source_bytes::packed_source_byte_len_expr;
+use super::gpu_source_bytes::{source_buffer_element, source_byte_len_expr, SourceByteLayout};
 use crate::scan::builders::load_packed_byte_expr;
 pub use abi::{
     BINDING_DIRECTIVE_KINDS, BINDING_DIRECTIVE_VALUES, BINDING_MACRO_NAMES_PACKED,
@@ -94,11 +95,30 @@ use vyre_primitives::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_update_byte_exp
 /// `Expr::buf_len("macro_names_packed")`. One program shape per process.
 #[must_use]
 pub fn gpu_if_expression(num_tokens: u32, source_len: u32) -> Program {
+    gpu_if_expression_with_source_layout(num_tokens, source_len, SourceByteLayout::PackedU32)
+}
+
+/// Build the `#if`/`#elif` evaluator over raw `DataType::U8` source bytes.
+///
+/// Binding order and runtime-sized buffer shape are identical to the packed ABI,
+/// but the source element type is `U8` so pipeline callers can avoid repacking
+/// retained source rows into U32 words.
+#[must_use]
+pub fn gpu_if_expression_u8(num_tokens: u32, source_len: u32) -> Program {
+    gpu_if_expression_with_source_layout(num_tokens, source_len, SourceByteLayout::RawU8)
+}
+
+fn gpu_if_expression_with_source_layout(
+    num_tokens: u32,
+    source_len: u32,
+    source_layout: SourceByteLayout,
+) -> Program {
     let _ = source_len;
-    let source_byte_len = packed_source_byte_len_expr();
+    let source_byte_len = source_byte_len_expr("source", source_layout);
     let t = Expr::var("t");
 
-    let safe_load_src = |addr: Expr| -> Expr { safe_load_src_expr(addr, source_byte_len.clone()) };
+    let safe_load_src =
+        |addr: Expr| -> Expr { safe_load_src_expr(source_layout, addr, source_byte_len.clone()) };
 
     let mut body: Vec<Node> = Vec::new();
     body.push(Node::let_bind("t", Expr::InvocationId { axis: 0 }));
@@ -1153,6 +1173,7 @@ pub fn gpu_if_expression(num_tokens: u32, source_len: u32) -> Program {
                                                     "bare_ident_base",
                                                     "tok_end",
                                                     "tok_len",
+                                                    source_layout,
                                                     source_byte_len.clone(),
                                                     "scan_pos",
                                                     "bare_found",
@@ -1658,7 +1679,7 @@ pub fn gpu_if_expression(num_tokens: u32, source_len: u32) -> Program {
                 "source",
                 BINDING_SOURCE,
                 BufferAccess::ReadOnly,
-                DataType::U32,
+                source_buffer_element(source_layout),
             )
             .with_count(0),
             // Runtime-sized: count=0 marks the buffer as runtime-bound,

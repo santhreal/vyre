@@ -27,12 +27,14 @@ impl GpuDispatcher for RefDispatcher {
 
 struct CountingDispatcher {
     fused_parse_source_elements: std::cell::RefCell<Vec<DataType>>,
+    condition_source_elements: std::cell::RefCell<Vec<DataType>>,
 }
 
 impl CountingDispatcher {
     fn new() -> Self {
         Self {
             fused_parse_source_elements: std::cell::RefCell::new(Vec::new()),
+            condition_source_elements: std::cell::RefCell::new(Vec::new()),
         }
     }
 }
@@ -44,12 +46,12 @@ impl GpuDispatcher for CountingDispatcher {
             .as_deref()
             .is_some_and(|op_id| op_id.contains("define_include_undef_parse_fused"))
         {
-            self.fused_parse_source_elements.borrow_mut().extend(
-                program
-                    .buffers()
-                    .iter()
-                    .filter_map(|buffer| (buffer.name() == "source").then_some(buffer.element())),
-            );
+            record_source_elements(program, &self.fused_parse_source_elements);
+        }
+        if program.entry_op_id.as_deref().is_some_and(|op_id| {
+            op_id.contains("gpu_ifdef_value") || op_id.contains("gpu_if_expression")
+        }) {
+            record_source_elements(program, &self.condition_source_elements);
         }
         RefDispatcher.dispatch(program, inputs)
     }
@@ -57,6 +59,15 @@ impl GpuDispatcher for CountingDispatcher {
     fn requires_output_inputs(&self) -> bool {
         true
     }
+}
+
+fn record_source_elements(program: &Program, out: &std::cell::RefCell<Vec<DataType>>) {
+    out.borrow_mut().extend(
+        program
+            .buffers()
+            .iter()
+            .filter_map(|buffer| (buffer.name() == "source").then_some(buffer.element())),
+    );
 }
 
 fn run(src: &[u8], macros: &[&[u8]]) -> Vec<DirectivePayload> {
@@ -76,6 +87,20 @@ fn assert_fused_payload_parse_source_is_u8(dispatcher: &CountingDispatcher) {
             .iter()
             .all(|element| matches!(element, DataType::U8)),
         "fused directive payload parser must consume raw U8 source buffers, got {elements:?}"
+    );
+}
+
+fn assert_condition_evaluator_source_is_u8(dispatcher: &CountingDispatcher) {
+    let elements = dispatcher.condition_source_elements.borrow();
+    assert!(
+        !elements.is_empty(),
+        "directive payload extraction must dispatch conditional evaluators"
+    );
+    assert!(
+        elements
+            .iter()
+            .all(|element| matches!(element, DataType::U8)),
+        "conditional directive evaluators must consume raw U8 source buffers, got {elements:?}"
     );
 }
 
@@ -266,6 +291,22 @@ fn fused_define_include_undef_parse_consumes_raw_u8_source() {
         .iter()
         .any(|payload| matches!(payload, DirectivePayload::Undef { .. })));
     assert_fused_payload_parse_source_is_u8(&dispatcher);
+}
+
+#[test]
+fn condition_evaluators_consume_raw_u8_source() {
+    let dispatcher = CountingDispatcher::new();
+    let classified = gpu_tokenize_and_classify(&dispatcher, b"#ifdef FOO\n#if defined(FOO) && 1\n")
+        .expect("tokenize_and_classify");
+    let payloads = gpu_extract_directive_payloads(&dispatcher, &classified, &[b"FOO"])
+        .expect("payload extraction");
+    assert!(payloads
+        .iter()
+        .any(|payload| matches!(payload, DirectivePayload::Ifdef { value: 1, .. })));
+    assert!(payloads
+        .iter()
+        .any(|payload| matches!(payload, DirectivePayload::IfExpr { value: 1, .. })));
+    assert_condition_evaluator_source_is_u8(&dispatcher);
 }
 
 #[test]
