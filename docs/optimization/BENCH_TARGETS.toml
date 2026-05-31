@@ -144,6 +144,7 @@ notes = "Links consumer dataflow analysis to more aggressive Vyre lowering passe
 
 [[target]]
 id = "release.workload.ifds_witness"
+bench_case_id = "dataflow.ifds.skewed.closure.1m"
 primitive = "IFDS reachability and witness extraction"
 suite = "release-workload"
 backend_focus = "cuda"

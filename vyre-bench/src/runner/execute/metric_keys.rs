@@ -135,6 +135,36 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
             Some("dataflow_ifds_skewed_workgroup_size_x")
         }
         ("", "dataflow_ifds_skewed_speedup_x1000") => Some("dataflow_ifds_skewed_speedup_x1000"),
+        ("", "dataflow_ifds_closure_nodes") => Some("dataflow_ifds_closure_nodes"),
+        ("", "dataflow_ifds_closure_edges") => Some("dataflow_ifds_closure_edges"),
+        ("", "dataflow_ifds_closure_frontier_words") => {
+            Some("dataflow_ifds_closure_frontier_words")
+        }
+        ("", "dataflow_ifds_closure_active_sources") => {
+            Some("dataflow_ifds_closure_active_sources")
+        }
+        ("", "dataflow_ifds_closure_output_words_set") => {
+            Some("dataflow_ifds_closure_output_words_set")
+        }
+        ("", "dataflow_ifds_closure_max_degree") => Some("dataflow_ifds_closure_max_degree"),
+        ("", "dataflow_ifds_closure_high_degree_sources") => {
+            Some("dataflow_ifds_closure_high_degree_sources")
+        }
+        ("", "dataflow_ifds_closure_iterations") => Some("dataflow_ifds_closure_iterations"),
+        ("", "dataflow_ifds_closure_changed") => Some("dataflow_ifds_closure_changed"),
+        ("", "dataflow_ifds_closure_fixpoint_iterations") => {
+            Some("dataflow_ifds_closure_fixpoint_iterations")
+        }
+        ("", "dataflow_ifds_closure_resident_buffers") => {
+            Some("dataflow_ifds_closure_resident_buffers")
+        }
+        ("", "dataflow_ifds_closure_resident_reset_bytes") => {
+            Some("dataflow_ifds_closure_resident_reset_bytes")
+        }
+        ("", "dataflow_ifds_closure_workgroup_size_x") => {
+            Some("dataflow_ifds_closure_workgroup_size_x")
+        }
+        ("", "dataflow_ifds_closure_speedup_x1000") => Some("dataflow_ifds_closure_speedup_x1000"),
         ("", "scan_ac_irregular_haystack_bytes") => Some("scan_ac_irregular_haystack_bytes"),
         ("", "scan_ac_irregular_packed_haystack_words") => {
             Some("scan_ac_irregular_packed_haystack_words")

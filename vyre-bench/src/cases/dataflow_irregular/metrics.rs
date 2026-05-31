@@ -68,3 +68,93 @@ pub(super) fn ifds_skewed_baseline_metric_points(stats: IfdsSkewedStats) -> Vec<
         },
     ]
 }
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn ifds_closure_metric_points(
+    stats: IfdsSkewedStats,
+    closure_iterations: u32,
+    closure_changed: u32,
+    baseline_wall_ns: u64,
+    wall_ns: u64,
+    resident_used: bool,
+    resident_reset_bytes: u64,
+    fixpoint_iterations: u32,
+    workgroup_size_x: u32,
+) -> Vec<MetricPoint> {
+    let mut metrics = ifds_closure_baseline_metric_points(
+        stats,
+        closure_iterations,
+        closure_changed,
+        fixpoint_iterations,
+    );
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_resident_buffers".to_string(),
+        value: u64::from(resident_used),
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_resident_reset_bytes".to_string(),
+        value: resident_reset_bytes,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_workgroup_size_x".to_string(),
+        value: u64::from(workgroup_size_x),
+    });
+    if wall_ns > 0 {
+        metrics.push(MetricPoint {
+            name: "dataflow_ifds_closure_speedup_x1000".to_string(),
+            value: (u128::from(baseline_wall_ns) * 1000 / u128::from(wall_ns))
+                .min(u128::from(u64::MAX)) as u64,
+        });
+    }
+    metrics
+}
+
+pub(super) fn ifds_closure_baseline_metric_points(
+    stats: IfdsSkewedStats,
+    closure_iterations: u32,
+    closure_changed: u32,
+    fixpoint_iterations: u32,
+) -> Vec<MetricPoint> {
+    vec![
+        MetricPoint {
+            name: "dataflow_ifds_closure_nodes".to_string(),
+            value: u64::from(stats.nodes),
+        },
+        MetricPoint {
+            name: "dataflow_ifds_closure_edges".to_string(),
+            value: u64::from(stats.edges),
+        },
+        MetricPoint {
+            name: "dataflow_ifds_closure_frontier_words".to_string(),
+            value: u64::from(stats.frontier_words),
+        },
+        MetricPoint {
+            name: "dataflow_ifds_closure_active_sources".to_string(),
+            value: stats.active_sources,
+        },
+        MetricPoint {
+            name: "dataflow_ifds_closure_output_words_set".to_string(),
+            value: stats.output_words_set,
+        },
+        MetricPoint {
+            name: "dataflow_ifds_closure_max_degree".to_string(),
+            value: u64::from(stats.max_degree),
+        },
+        MetricPoint {
+            name: "dataflow_ifds_closure_high_degree_sources".to_string(),
+            value: stats.high_degree_sources,
+        },
+        MetricPoint {
+            name: "dataflow_ifds_closure_iterations".to_string(),
+            value: u64::from(closure_iterations),
+        },
+        MetricPoint {
+            name: "dataflow_ifds_closure_changed".to_string(),
+            value: u64::from(closure_changed),
+        },
+        MetricPoint {
+            name: "dataflow_ifds_closure_fixpoint_iterations".to_string(),
+            value: u64::from(fixpoint_iterations),
+        },
+    ]
+}

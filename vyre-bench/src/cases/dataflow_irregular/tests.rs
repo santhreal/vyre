@@ -36,3 +36,38 @@ fn ifds_skewed_prepare_builds_vyre_program_and_oracle() {
     assert!(prepared.stats.filtered_edges_from_active > 0);
     assert!(prepared.input_bytes_total > u64::from(NODE_COUNT) * 20);
 }
+
+#[test]
+fn ifds_skewed_closure_oracle_expands_seed_frontier() {
+    let fixture = build_ifds_skewed_fixture(4096).unwrap();
+    let oracle = ifds_skewed_closure_oracle(&fixture, closure::CLOSURE_MAX_ITERS);
+
+    assert_eq!(oracle.output.len(), fixture.frontier_in.len());
+    assert_eq!(oracle.changed, 1);
+    assert!(oracle.iterations > 0);
+    assert!(oracle.iterations <= closure::CLOSURE_MAX_ITERS);
+    assert!(
+        oracle.output_words_set
+            >= fixture
+                .frontier_in
+                .iter()
+                .filter(|word| **word != 0)
+                .count() as u64
+    );
+}
+
+#[test]
+fn ifds_skewed_closure_prepare_builds_resident_fixpoint_program() {
+    let prepared = closure::prepare_ifds_skewed_closure(None).unwrap();
+
+    assert_eq!(prepared.program.workgroup_size(), [1, 1, 1]);
+    assert_eq!(prepared.stats.nodes, NODE_COUNT);
+    assert_eq!(prepared.inputs.len(), 7);
+    assert_eq!(prepared.seed_frontier_bytes.len(), FRONTIER_WORDS * 4);
+    assert_eq!(prepared.baseline_outputs.len(), 2);
+    assert_eq!(prepared.baseline_outputs[0].len(), FRONTIER_WORDS * 4);
+    assert_eq!(prepared.baseline_outputs[1].len(), 4);
+    assert_eq!(prepared.closure_changed, 1);
+    assert!(prepared.closure_iterations > 0);
+    assert!(prepared.input_bytes_total > u64::from(NODE_COUNT) * 20);
+}

@@ -15,6 +15,7 @@ fn benchmark_registry_contains_program_level_thesis_workloads() {
         "frontend.rust.lexer.batch_ir_execute",
         "frontend.rust.lexer.ir_execute",
         "frontend.rust.range_loop.ir_execute",
+        "dataflow.ifds.skewed.closure.1m",
         "dataflow.ifds.skewed.step.1m",
         "scan.ac.irregular_literals.4m",
         "foundation.dfa_match.256k",
