@@ -20,6 +20,7 @@ use vyre_libs::scan::dispatch_io::try_unpack_match_triples;
 use vyre_libs::scan::{pack_haystack_u32, pack_u32_slice};
 
 mod baseline;
+mod count;
 mod metrics;
 
 use baseline::cpu_aho_overlapping_matches;

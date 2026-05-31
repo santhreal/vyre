@@ -49,6 +49,28 @@ pub(super) fn scan_ac_metric_points(
     metrics
 }
 
+pub(super) fn scan_ac_count_metric_points(
+    stats: ScanAcStats,
+    baseline_wall_ns: u64,
+    wall_ns: u64,
+    resident_used: bool,
+    device_reset_sequence: bool,
+    workgroup_size_x: u32,
+) -> Vec<MetricPoint> {
+    let mut metrics = scan_ac_metric_points(
+        stats,
+        baseline_wall_ns,
+        wall_ns,
+        resident_used,
+        0,
+        device_reset_sequence,
+        workgroup_size_x,
+    );
+    metrics.push(metric("scan_ac_irregular_count_only", 1));
+    metrics.push(metric("scan_ac_irregular_count_readback_bytes", 4));
+    metrics
+}
+
 pub(super) fn scan_ac_baseline_metric_points(stats: ScanAcStats) -> Vec<MetricPoint> {
     vec![
         metric(

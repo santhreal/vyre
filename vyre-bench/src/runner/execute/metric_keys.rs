@@ -222,6 +222,16 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "scan_ac_irregular_output_records") => Some("scan_ac_irregular_output_records"),
         ("", "scan_ac_irregular_expected_matches") => Some("scan_ac_irregular_expected_matches"),
         ("", "scan_ac_irregular_max_matches") => Some("scan_ac_irregular_max_matches"),
+        ("", "scan_ac_irregular_match_readback_bytes") => {
+            Some("scan_ac_irregular_match_readback_bytes")
+        }
+        ("", "scan_ac_irregular_avoided_match_readback_bytes") => {
+            Some("scan_ac_irregular_avoided_match_readback_bytes")
+        }
+        ("", "scan_ac_irregular_count_only") => Some("scan_ac_irregular_count_only"),
+        ("", "scan_ac_irregular_count_readback_bytes") => {
+            Some("scan_ac_irregular_count_readback_bytes")
+        }
         ("", "scan_ac_irregular_planted_matches") => Some("scan_ac_irregular_planted_matches"),
         ("", "scan_ac_irregular_resident_buffers") => Some("scan_ac_irregular_resident_buffers"),
         ("", "scan_ac_irregular_resident_reset_bytes") => {

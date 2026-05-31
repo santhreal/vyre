@@ -17,6 +17,11 @@ use crate::region::wrap_anonymous;
 use crate::scan::builders::{append_match_subgroup, load_packed_byte};
 use crate::scan::dfa::{dfa_compile, CompiledDfa};
 
+#[path = "classic_ac/count_program.rs"]
+mod count_program;
+
+pub use count_program::{build_ac_bounded_count_program, classic_ac_bounded_count_program};
+
 /// A classic AC automaton with precomputed flat output links.
 ///
 /// Wraps a [`CompiledDfa`] and exposes the Reference oracle scan plus

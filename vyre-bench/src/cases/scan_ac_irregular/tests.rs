@@ -63,6 +63,26 @@ fn prepare_builds_cuda_compatible_bounded_ranges_program() {
 }
 
 #[test]
+fn count_prepare_builds_compact_cardinality_program() {
+    let prepared = count::prepare_scan_ac_irregular_count(None).unwrap();
+
+    assert_eq!(prepared.program.workgroup_size(), [128, 1, 1]);
+    assert_eq!(prepared.inputs.len(), 5);
+    assert_eq!(prepared.baseline_output.len(), 4);
+    assert_eq!(prepared.stats.haystack_bytes, HAYSTACK_BYTES as u32);
+    assert_eq!(prepared.stats.patterns, PATTERNS.len() as u32);
+    assert!(prepared.stats.expected_matches > 0);
+    assert_eq!(
+        selected_scan_output_bytes(prepared.stats),
+        4 + u64::from(prepared.stats.expected_matches) * 12
+    );
+    assert!(
+        prepared.input_bytes_total < prepare_scan_ac_irregular(None).unwrap().input_bytes_total,
+        "count-only preflight should avoid pattern length and match-output input surfaces"
+    );
+}
+
+#[test]
 fn aho_cpu_baseline_matches_classic_bounded_ranges_oracle() {
     let (haystack, _) = build_irregular_haystack(32 * 1024);
     let ac = classic_ac_compile(PATTERNS);
@@ -98,6 +118,48 @@ fn bounded_ranges_program_reference_eval_matches_cpu_oracle() {
     let actual = decode_scan_outputs(&outputs, "reference").unwrap();
 
     assert_eq!(actual, expected);
+}
+
+fn with_reference_dispatch_lanes(program: Program, lanes: u32) -> Program {
+    let buffers = program
+        .buffers()
+        .iter()
+        .cloned()
+        .map(|buffer| {
+            if buffer.name() == "match_count" {
+                buffer.with_count(lanes.max(1)).with_output_byte_range(0..4)
+            } else {
+                buffer
+            }
+        })
+        .collect();
+    program.with_rewritten_buffers(buffers)
+}
+
+#[test]
+fn bounded_count_program_reference_eval_matches_cpu_cardinality() {
+    let (haystack, _) = build_irregular_haystack(64 * 1024);
+    let ac = classic_ac_compile(PATTERNS);
+    let expected = cpu_aho_overlapping_matches(PATTERNS, &haystack)
+        .unwrap()
+        .len() as u32;
+    let program = with_reference_dispatch_lanes(
+        vyre_libs::scan::classic_ac::build_ac_bounded_count_program(&ac.dfa),
+        haystack.len() as u32,
+    );
+    let mut inputs = count::scan_ac_count_inputs(&ac, &haystack);
+    inputs[4] = vec![0_u8; haystack.len() * 4];
+    let values = inputs
+        .into_iter()
+        .map(vyre_reference::value::Value::from)
+        .collect::<Vec<_>>();
+    let outputs = vyre_reference::reference_eval(&program, &values)
+        .unwrap()
+        .into_iter()
+        .map(|value| value.to_bytes())
+        .collect::<Vec<_>>();
+
+    assert_eq!(outputs, vec![pack_u32_slice(&[expected])]);
 }
 
 #[test]
