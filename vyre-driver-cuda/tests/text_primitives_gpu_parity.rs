@@ -10,7 +10,10 @@ use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::{BufferAccess, Program};
 use vyre::DispatchConfig;
 use vyre_primitives::text::line_index::{line_index, reference_line_index};
-use vyre_primitives::text::utf8_validate::{reference_utf8_validate, utf8_validate};
+use vyre_primitives::text::utf8_validate::{
+    reference_utf8_validate, utf8_validate, utf8_validate_dispatch_grid, UTF8_CONT, UTF8_INVALID,
+    UTF8_LEAD_3, UTF8_LEAD_4,
+};
 
 fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
     source.iter().map(|&b| b as u32).collect()
@@ -139,9 +142,7 @@ fn run_utf8_validate(source: &[u8]) -> Vec<u32> {
     let program = utf8_validate("source", "classes", n);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(&bytes_to_u32_per_lane(source))];
     let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
+    config.grid_override = Some(utf8_validate_dispatch_grid(n));
     let outputs = with_live_backend("UTF-8 validate primitive", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -192,4 +193,22 @@ fn cuda_utf8_validate_lone_continuation() {
     let cpu = reference_utf8_validate(s);
     let gpu = run_utf8_validate(s);
     assert_eq!(gpu, cpu);
+}
+
+#[test]
+fn cuda_utf8_validate_mixed_input_past_first_workgroup() {
+    let mut s = vec![b'x'; 777];
+    s[254..258].copy_from_slice(&[0xF0, 0x9F, 0x98, 0x80]);
+    s[511..514].copy_from_slice(&[0xE2, 0x82, 0xAC]);
+    s[700] = 0xC0;
+
+    let cpu = reference_utf8_validate(&s);
+    let gpu = run_utf8_validate(&s);
+
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu[254], UTF8_LEAD_4);
+    assert_eq!(&gpu[255..258], &[UTF8_CONT, UTF8_CONT, UTF8_CONT]);
+    assert_eq!(gpu[511], UTF8_LEAD_3);
+    assert_eq!(&gpu[512..514], &[UTF8_CONT, UTF8_CONT]);
+    assert_eq!(gpu[700], UTF8_INVALID);
 }

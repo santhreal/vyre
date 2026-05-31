@@ -21,6 +21,18 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 /// Stable op id for the registered Tier 3 wrapper.
 pub const OP_ID: &str = "vyre-primitives::text::utf8_validate";
+/// Byte-lane workgroup used by the UTF-8 classifier.
+pub const UTF8_VALIDATE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+/// Dispatch grid for one UTF-8 validation pass over `n` bytes.
+#[must_use]
+pub const fn utf8_validate_dispatch_grid(n: u32) -> [u32; 3] {
+    let blocks = n.div_ceil(UTF8_VALIDATE_WORKGROUP_SIZE[0]);
+    if blocks == 0 {
+        [1, 1, 1]
+    } else {
+        [blocks, 1, 1]
+    }
+}
 
 /// 0x00..0x7F  -  single-byte ASCII.
 pub const UTF8_ASCII: u32 = 0;
@@ -92,7 +104,7 @@ pub fn utf8_validate(source: &str, classes: &str, n: u32) -> Program {
                 .with_count(n.max(1))
                 .with_output_byte_range(0..(n as usize).saturating_mul(4)),
         ],
-        [64, 1, 1],
+        UTF8_VALIDATE_WORKGROUP_SIZE,
         body,
     )
 }
@@ -452,6 +464,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn program_uses_block_sized_workgroup() {
+        let program = utf8_validate("source", "classes", 513);
+        assert_eq!(program.workgroup_size(), UTF8_VALIDATE_WORKGROUP_SIZE);
+    }
+
+    #[test]
+    fn dispatch_grid_packs_byte_lanes_into_blocks() {
+        assert_eq!(utf8_validate_dispatch_grid(0), [1, 1, 1]);
+        assert_eq!(utf8_validate_dispatch_grid(1), [1, 1, 1]);
+        assert_eq!(utf8_validate_dispatch_grid(256), [1, 1, 1]);
+        assert_eq!(utf8_validate_dispatch_grid(257), [2, 1, 1]);
+        assert_eq!(utf8_validate_dispatch_grid(513), [3, 1, 1]);
+    }
+
+    #[test]
     fn reference_ascii() {
         assert_eq!(reference_utf8_validate(b"Hello"), vec![UTF8_ASCII; 5]);
     }
@@ -540,4 +567,3 @@ mod tests {
         );
     }
 }
-
