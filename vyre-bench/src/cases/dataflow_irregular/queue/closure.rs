@@ -22,7 +22,10 @@ mod support;
 
 use metrics::{queue_closure_baseline_metric_points, queue_closure_metric_points};
 use sequence::dispatch_resident_queue_closure_sequence;
+#[cfg(not(test))]
 use support::ifds_skewed_queue_closure_oracle;
+#[cfg(test)]
+pub(in crate::cases::dataflow_irregular) use support::ifds_skewed_queue_closure_oracle;
 pub(in crate::cases::dataflow_irregular) use support::{
     ifds_queue_closure_inputs, ifds_queue_closure_reset_program,
 };
@@ -206,13 +209,20 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_closure(
     ctx: Option<&BenchContext>,
 ) -> Result<DataflowIfdsSkewedQueueClosurePrepared, BenchError> {
     let fixture = build_ifds_skewed_fixture(NODE_COUNT)?;
-    let queue_capacity = fixture.stats.nodes;
     let seed_queue_len = u32::try_from(fixture.stats.active_sources).map_err(|_| {
         BenchError::EnvironmentInvalid(format!(
             "IFDS queue closure active source count {} exceeds u32 indexing. Fix: split the seed queue.",
             fixture.stats.active_sources
         ))
     })?;
+    let baseline_start = Instant::now();
+    let oracle =
+        ifds_skewed_queue_closure_oracle(&fixture, CLOSURE_MAX_ITERS, fixture.stats.nodes)?;
+    let baseline_wall_ns = baseline_start
+        .elapsed()
+        .as_nanos()
+        .min(u128::from(u64::MAX)) as u64;
+    let queue_capacity = oracle.max_wave_queue_len.max(seed_queue_len).max(1);
     let reset_program = ifds_queue_closure_reset_program(
         fixture.stats.frontier_words,
         seed_queue_len,
@@ -235,12 +245,6 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_closure(
         IFDS_REACH_MASK,
     );
 
-    let baseline_start = Instant::now();
-    let oracle = ifds_skewed_queue_closure_oracle(&fixture, CLOSURE_MAX_ITERS, queue_capacity)?;
-    let baseline_wall_ns = baseline_start
-        .elapsed()
-        .as_nanos()
-        .min(u128::from(u64::MAX)) as u64;
     let full_oracle = ifds_skewed_closure_oracle(&fixture, CLOSURE_MAX_ITERS);
     if oracle.output != full_oracle.output {
         return Err(BenchError::CorrectnessViolation(

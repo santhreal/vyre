@@ -51,6 +51,11 @@ fn append_queue_closure_points(
         value: u64::from(prepared.queue_capacity),
     });
     metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_queue_capacity_reduction_x1000".to_string(),
+        value: (u128::from(prepared.stats.nodes) * 1000 / u128::from(prepared.queue_capacity))
+            .min(u128::from(u64::MAX)) as u64,
+    });
+    metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_seed_queue_len".to_string(),
         value: u64::from(prepared.seed_queue_len),
     });

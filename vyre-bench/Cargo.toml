@@ -65,6 +65,7 @@ external-baselines = ["dep:external-dataflow-engine"]
 
 [dev-dependencies]
 criterion = { workspace = true }
+proptest = { workspace = true }
 vyre-emit-naga = { workspace = true }
 vyre-emit-spirv = { workspace = true }
 

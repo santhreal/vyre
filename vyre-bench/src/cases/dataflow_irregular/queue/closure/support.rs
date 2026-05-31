@@ -4,12 +4,12 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use super::QUEUE_CLOSURE_WORKGROUP_SIZE;
 use crate::cases::dataflow_irregular::fixture::{IfdsSkewedFixture, IFDS_REACH_MASK};
 
-pub(super) struct QueueClosureOracle {
-    pub(super) output: Vec<u32>,
-    pub(super) iterations: u32,
-    pub(super) changed: u32,
-    pub(super) total_queue_pops: u64,
-    pub(super) max_wave_queue_len: u32,
+pub(in crate::cases::dataflow_irregular) struct QueueClosureOracle {
+    pub(in crate::cases::dataflow_irregular) output: Vec<u32>,
+    pub(in crate::cases::dataflow_irregular) iterations: u32,
+    pub(in crate::cases::dataflow_irregular) changed: u32,
+    pub(in crate::cases::dataflow_irregular) total_queue_pops: u64,
+    pub(in crate::cases::dataflow_irregular) max_wave_queue_len: u32,
 }
 
 pub(in crate::cases::dataflow_irregular) fn ifds_queue_closure_inputs(
@@ -114,7 +114,7 @@ pub(in crate::cases::dataflow_irregular) fn ifds_queue_closure_reset_program(
     )
 }
 
-pub(super) fn ifds_skewed_queue_closure_oracle(
+pub(in crate::cases::dataflow_irregular) fn ifds_skewed_queue_closure_oracle(
     fixture: &IfdsSkewedFixture,
     max_iters: u32,
     queue_capacity: u32,
