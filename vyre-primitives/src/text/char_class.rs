@@ -80,6 +80,19 @@ pub const C_OTHER: u32 = 31;
 
 /// Stable op id for the registered Tier 2.5 primitive.
 pub const CHAR_CLASS_OP_ID: &str = "vyre-primitives::text::char_class";
+/// Byte-lane workgroup used by the table-driven classifier.
+pub const CHAR_CLASS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+
+/// Dispatch grid for classifying `n` byte lanes.
+#[must_use]
+pub const fn char_class_dispatch_grid(n: u32) -> [u32; 3] {
+    let blocks = n.div_ceil(CHAR_CLASS_WORKGROUP_SIZE[0]);
+    if blocks == 0 {
+        [1, 1, 1]
+    } else {
+        [blocks, 1, 1]
+    }
+}
 
 /// Build the default ASCII byte-classification table.
 #[must_use]
@@ -163,7 +176,7 @@ pub fn char_class(source: &str, classified: &str, n: u32) -> Program {
             BufferDecl::storage("table", 1, BufferAccess::ReadOnly, DataType::U32).with_count(256),
             BufferDecl::output(classified, 2, DataType::U32).with_count(n),
         ],
-        [64, 1, 1],
+        CHAR_CLASS_WORKGROUP_SIZE,
         body,
     )
 }
@@ -239,6 +252,28 @@ mod tests {
             reference_char_class(b"A1 ", &table),
             vec![C_ALPHA, C_DIGIT, C_WS]
         );
+    }
+
+    #[test]
+    fn reference_covers_every_byte_value() {
+        let table = build_char_class_table();
+        let source: Vec<u8> = (0u8..=255).collect();
+        assert_eq!(reference_char_class(&source, &table), table.to_vec());
+    }
+
+    #[test]
+    fn program_uses_block_sized_workgroup() {
+        let program = char_class("source", "classified", 513);
+        assert_eq!(program.workgroup_size(), CHAR_CLASS_WORKGROUP_SIZE);
+    }
+
+    #[test]
+    fn dispatch_grid_packs_byte_lanes_into_blocks() {
+        assert_eq!(char_class_dispatch_grid(0), [1, 1, 1]);
+        assert_eq!(char_class_dispatch_grid(1), [1, 1, 1]);
+        assert_eq!(char_class_dispatch_grid(256), [1, 1, 1]);
+        assert_eq!(char_class_dispatch_grid(257), [2, 1, 1]);
+        assert_eq!(char_class_dispatch_grid(513), [3, 1, 1]);
     }
 
     #[test]

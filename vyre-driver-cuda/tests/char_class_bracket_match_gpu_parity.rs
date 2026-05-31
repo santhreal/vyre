@@ -10,7 +10,9 @@ use vyre::DispatchConfig;
 use vyre_primitives::matching::bracket_match::{
     bracket_match, cpu_ref as bracket_cpu, CLOSE_BRACE, MATCH_NONE, OPEN_BRACE, OTHER,
 };
-use vyre_primitives::text::char_class::{build_char_class_table, char_class, reference_char_class};
+use vyre_primitives::text::char_class::{
+    build_char_class_table, char_class, char_class_dispatch_grid, reference_char_class,
+};
 
 fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
     source.iter().map(|&b| b as u32).collect()
@@ -21,9 +23,7 @@ fn run_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
     let program = char_class("source", "classified", n);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(&bytes_to_u32_per_lane(source)), u32_bytes(table)];
     let mut config = DispatchConfig::default();
-    let workgroup_x = 64u32;
-    let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
+    config.grid_override = Some(char_class_dispatch_grid(n));
     let outputs = with_live_backend("char class", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -59,6 +59,19 @@ fn cuda_char_class_underscore_treated_as_alpha() {
     let cpu = reference_char_class(source, &table);
     let gpu = run_char_class(source, &table);
     assert_eq!(gpu, cpu);
+}
+
+#[test]
+fn cuda_char_class_all_byte_values_past_first_workgroup() {
+    let table = build_char_class_table();
+    let source: Vec<u8> = (0u8..=255).cycle().take(1029).collect();
+    let cpu = reference_char_class(&source, &table);
+    let gpu = run_char_class(&source, &table);
+
+    assert_eq!(gpu, cpu);
+    for (idx, byte) in source.iter().copied().enumerate() {
+        assert_eq!(gpu[idx], table[usize::from(byte)]);
+    }
 }
 
 fn run_bracket_match(kinds: &[u32], max_depth: u32) -> Vec<u32> {

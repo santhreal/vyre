@@ -32,11 +32,12 @@ pub use byte_histogram::{
 #[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 pub use char_class::reference_char_class;
 pub use char_class::{
-    build_char_class_table, char_class, pack_bytes_as_u32, pack_u32 as pack_classified_u32,
-    CHAR_CLASS_OP_ID, C_ALPHA, C_AMP, C_BACKSLASH, C_BANG, C_CARET, C_CLOSE_BRACE, C_CLOSE_BRACKET,
-    C_CLOSE_PAREN, C_COMMA, C_DIGIT, C_DOT, C_DQUOTE, C_EOF, C_EQUALS, C_GT, C_HASH, C_LT, C_MINUS,
-    C_NEWLINE, C_OPEN_BRACE, C_OPEN_BRACKET, C_OPEN_PAREN, C_OTHER, C_PERCENT, C_PIPE, C_PLUS,
-    C_QUOTE, C_SEMICOLON, C_SLASH, C_STAR, C_TILDE, C_WS,
+    build_char_class_table, char_class, char_class_dispatch_grid, pack_bytes_as_u32,
+    pack_u32 as pack_classified_u32, CHAR_CLASS_OP_ID, CHAR_CLASS_WORKGROUP_SIZE, C_ALPHA, C_AMP,
+    C_BACKSLASH, C_BANG, C_CARET, C_CLOSE_BRACE, C_CLOSE_BRACKET, C_CLOSE_PAREN, C_COMMA, C_DIGIT,
+    C_DOT, C_DQUOTE, C_EOF, C_EQUALS, C_GT, C_HASH, C_LT, C_MINUS, C_NEWLINE, C_OPEN_BRACE,
+    C_OPEN_BRACKET, C_OPEN_PAREN, C_OTHER, C_PERCENT, C_PIPE, C_PLUS, C_QUOTE, C_SEMICOLON,
+    C_SLASH, C_STAR, C_TILDE, C_WS,
 };
 #[cfg(feature = "reduce")]
 pub use encoding_classify::{
