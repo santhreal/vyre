@@ -1,5 +1,7 @@
 //! Lexer dispatch for the Rust frontend pipeline.
 
+mod batch;
+
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 
@@ -15,6 +17,8 @@ use vyre_driver_wgpu as _;
 use crate::pipeline::RustPipelineConfig;
 use crate::RustFrontendError;
 
+const RUST_GPU_LEXER_WORKGROUP_SIZE: u32 = 256;
+
 /// Lex source bytes, preferring GPU if configured and available.
 pub fn lex(
     source: &[u8],
@@ -28,6 +32,25 @@ pub fn lex(
     lex_cpu(source).map_err(RustFrontendError::Lex)
 }
 
+/// Lex many source buffers, sharing one GPU dispatch if configured.
+pub fn lex_batch(
+    sources: &[&[u8]],
+    config: &RustPipelineConfig,
+    plan: &RustLexerPlan,
+) -> Result<Vec<Result<Vec<Token>, RustFrontendError>>, RustFrontendError> {
+    if sources.is_empty() {
+        return Ok(Vec::new());
+    }
+    if config.gpu_lex {
+        return batch::lex_gpu_batch(sources, plan);
+    }
+
+    Ok(sources
+        .iter()
+        .map(|source| lex_cpu(source).map_err(RustFrontendError::Lex))
+        .collect())
+}
+
 fn lex_gpu(source: &[u8], plan: &RustLexerPlan) -> Result<Vec<Token>, RustFrontendError> {
     std::str::from_utf8(source).map_err(|error| RustFrontendError::Lex(error.valid_up_to()))?;
     let haystack_len =
@@ -36,7 +59,13 @@ fn lex_gpu(source: &[u8], plan: &RustLexerPlan) -> Result<Vec<Token>, RustFronte
     let inputs = lexer_inputs(source);
     let input_refs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
     let backend = shared_gpu_lexer_backend()?;
-    let outputs = dispatch_gpu_lexer_cached(backend.as_ref(), &program, &input_refs)?;
+    let outputs = dispatch_gpu_lexer_cached(
+        backend.as_ref(),
+        &program,
+        &input_refs,
+        [1, 1, 1],
+        "rust_frontend_gpu_lexer",
+    )?;
     decode_gpu_tokens(&outputs)
 }
 
@@ -91,13 +120,15 @@ fn dispatch_gpu_lexer_cached(
     backend: &dyn VyreBackend,
     program: &vyre::ir::Program,
     inputs: &[&[u8]],
+    grid: [u32; 3],
+    label: &str,
 ) -> Result<Vec<Vec<u8>>, RustFrontendError> {
     static PIPELINES: OnceLock<Mutex<HashMap<(String, [u8; 32]), Arc<dyn CompiledPipeline>>>> =
         OnceLock::new();
 
     let mut dispatch_config = DispatchConfig::default();
-    dispatch_config.grid_override = Some([1, 1, 1]);
-    dispatch_config.label = Some("rust_frontend_gpu_lexer".to_string());
+    dispatch_config.grid_override = Some(grid);
+    dispatch_config.label = Some(label.to_string());
 
     let key = (backend.id().to_string(), program.fingerprint());
     let cache = PIPELINES.get_or_init(|| Mutex::new(HashMap::new()));
@@ -201,19 +232,31 @@ fn decode_gpu_tokens(outputs: &[Vec<u8>]) -> Result<Vec<Token>, RustFrontendErro
         )));
     }
 
+    decode_token_window(&kinds, &starts, &lens, 0, count)
+}
+
+fn decode_token_window(
+    kinds: &[u32],
+    starts: &[u32],
+    lens: &[u32],
+    base: usize,
+    count: usize,
+) -> Result<Vec<Token>, RustFrontendError> {
     let mut tokens = Vec::with_capacity(count);
     for idx in 0..count {
-        let start = starts[idx];
-        if kinds[idx] == u32::from(ERROR) {
+        let out_idx = base + idx;
+        let start = starts[out_idx];
+        if kinds[out_idx] == u32::from(ERROR) {
             return Err(RustFrontendError::Lex(start as usize));
         }
-        let kind = u16::try_from(kinds[idx]).map_err(|_| {
+        let kind = u16::try_from(kinds[out_idx]).map_err(|_| {
             RustFrontendError::Backend(format!(
                 "Rust GPU lexer emitted token kind {} at token {idx}, which cannot fit u16",
-                kinds[idx]
+                kinds[out_idx]
             ))
         })?;
-        let len = u16::try_from(lens[idx]).map_err(|_| RustFrontendError::Lex(start as usize))?;
+        let len =
+            u16::try_from(lens[out_idx]).map_err(|_| RustFrontendError::Lex(start as usize))?;
         tokens.push(Token { kind, start, len });
     }
     if tokens.last().map(|token| token.kind) != Some(EOF) {

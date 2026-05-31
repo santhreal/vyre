@@ -1,5 +1,6 @@
 //! Pipeline orchestration: lex -> parse -> resolve -> typeck -> borrow -> lower.
 
+use vyre_libs::parsing::rust::lex::lexer::core::Token;
 use vyre_libs::parsing::rust::lex::lexer::plan::RustLexerPlan;
 use vyre_libs::parsing::rust::parse::Module;
 
@@ -72,6 +73,32 @@ impl RustPipeline {
     /// skipped or miscompiled a requested stage.
     pub fn compile_unit(&self, source: &[u8]) -> Result<CompilationUnit, RustFrontendError> {
         let tokens = self::lexer_dispatch::lex(source, &self.config, &self.lex_plan)?;
+        self.compile_unit_from_tokens(source, &tokens)
+    }
+
+    /// Run the pipeline on many source buffers, sharing the GPU lexer dispatch
+    /// when `gpu_lex` is enabled.
+    ///
+    /// The returned vector keeps source order. Each element is independent, so
+    /// a syntax, type, borrow, or lex error in one source does not discard
+    /// successful compilation results for neighboring sources.
+    pub fn compile_units(&self, sources: &[&[u8]]) -> Result<CompilationBatch, RustFrontendError> {
+        let token_results = self::lexer_dispatch::lex_batch(sources, &self.config, &self.lex_plan)?;
+        let mut units = Vec::with_capacity(sources.len());
+        for (source, tokens) in sources.iter().zip(token_results) {
+            units.push(tokens.and_then(|tokens| self.compile_unit_from_tokens(*source, &tokens)));
+        }
+        Ok(CompilationBatch {
+            units,
+            gpu_lex: self.config.gpu_lex,
+        })
+    }
+
+    fn compile_unit_from_tokens(
+        &self,
+        source: &[u8],
+        tokens: &[Token],
+    ) -> Result<CompilationUnit, RustFrontendError> {
         let module: Module = self::parse_stage::parse(source, &tokens)?;
         let resolution = self::resolve_stage::resolve(&module, source)?;
         self::typeck_stage::typeck(&module, source, &resolution)?;
@@ -105,4 +132,13 @@ pub struct CompilationUnit {
     pub module: Module,
     /// Lowered Vyre program (if lowering was enabled).
     pub program: Option<vyre::ir::Program>,
+}
+
+/// Result of compiling a batch of translation units.
+#[derive(Debug, Clone)]
+pub struct CompilationBatch {
+    /// Per-source compilation results in the same order as the input slice.
+    pub units: Vec<Result<CompilationUnit, RustFrontendError>>,
+    /// Whether the batch used the GPU lexer path.
+    pub gpu_lex: bool,
 }

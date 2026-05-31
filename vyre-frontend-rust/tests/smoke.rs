@@ -70,6 +70,73 @@ fn compile_pipeline_gpu_lex_surfaces_unknown_byte_as_lex_error() {
 }
 
 #[test]
+fn compile_pipeline_gpu_batch_lex_dispatches_many_sources() {
+    let pipeline = RustPipeline::new(RustPipelineConfig {
+        gpu_lex: true,
+        borrow_check: false,
+        lower: false,
+        lower_lane_count: None,
+    });
+    let sources: [&[u8]; 3] = [
+        b"fn a() { let x: i32 = 1; }",
+        b"fn b(n: i32) -> i32 { return n + 2; }",
+        b"fn c(flag: bool) -> bool { return !flag || false; }",
+    ];
+    let batch = pipeline
+        .compile_units(&sources)
+        .expect("Fix: gpu_lex=true compile_units must use one batched lexer dispatch");
+    assert!(batch.gpu_lex);
+    assert_eq!(batch.units.len(), sources.len());
+    for (source_idx, unit) in batch.units.iter().enumerate() {
+        let unit = unit
+            .as_ref()
+            .unwrap_or_else(|error| panic!("source {source_idx} failed: {error}"));
+        assert_eq!(unit.module.functions.len(), 1);
+        assert!(unit.token_count > 8);
+        assert!(unit.program.is_none());
+    }
+}
+
+#[test]
+fn compile_pipeline_gpu_batch_lex_isolates_bad_source() {
+    let pipeline = RustPipeline::new(RustPipelineConfig {
+        gpu_lex: true,
+        borrow_check: false,
+        lower: false,
+        lower_lane_count: None,
+    });
+    let sources: [&[u8]; 3] = [
+        b"fn good() { let x: i32 = 1; }",
+        b"fn bad() { @ }",
+        b"fn also_good() -> i32 { return 7; }",
+    ];
+    let batch = pipeline
+        .compile_units(&sources)
+        .expect("Fix: one bad source must not make batch dispatch fail globally");
+    assert!(batch.units[0].is_ok(), "source 0 should compile");
+    assert!(
+        matches!(&batch.units[1], Err(RustFrontendError::Lex(_))),
+        "source 1 should report its own lexer error"
+    );
+    assert!(batch.units[2].is_ok(), "source 2 should compile");
+}
+
+#[test]
+fn compile_units_cpu_returns_per_source_results() {
+    let pipeline = RustPipeline::new(RustPipelineConfig::default());
+    let sources: [&[u8]; 2] = [
+        b"fn ok() -> i32 { return 1; }",
+        b"fn bad() -> i32 { return true; }",
+    ];
+    let batch = pipeline
+        .compile_units(&sources)
+        .expect("Fix: CPU batch lexing should not need a global failure path");
+    assert!(!batch.gpu_lex);
+    assert!(batch.units[0].is_ok());
+    assert!(matches!(&batch.units[1], Err(RustFrontendError::Typeck(_))));
+}
+
+#[test]
 fn compile_unit_succeeds_on_well_typed_program() {
     let pipeline = RustPipeline::new(RustPipelineConfig::default());
     let unit = pipeline
