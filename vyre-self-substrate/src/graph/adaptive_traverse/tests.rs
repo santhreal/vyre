@@ -149,6 +149,8 @@ fn matches_primitive_directly_by_wiring_release_programs() {
         "primitive_adaptive_four_russians_dense_step(",
         "primitive_four_russians_dense_lut_from_adj_rows(",
         "primitive_frontier_to_queue(",
+        "primitive_frontier_word_counts(",
+        "primitive_frontier_word_prefix_queue(",
         "primitive_csr_queue_forward_traverse(",
     ] {
         assert!(
@@ -263,6 +265,8 @@ fn sparse_queue_zero_frontier_returns_zero_without_queue_allocation_or_cache() {
     assert_eq!(frontier_out, vec![0, 0]);
     assert!(scratch.handles.is_none());
     assert!(scratch.queue_handle.is_none());
+    assert!(scratch.word_partials_handle.is_none());
+    assert!(scratch.word_block_totals_handle.is_none());
     assert_eq!(
         scratch.plan_cache_snapshot(),
         AdaptiveTraversalPlanCacheSnapshot::default()
@@ -298,6 +302,8 @@ fn auto_zero_frontier_returns_sparse_queue_without_resident_work_or_cache() {
     assert_eq!(frontier_out, vec![0, 0]);
     assert!(scratch.handles.is_none());
     assert!(scratch.queue_handle.is_none());
+    assert!(scratch.word_partials_handle.is_none());
+    assert!(scratch.word_block_totals_handle.is_none());
     assert_eq!(
         scratch.plan_cache_snapshot(),
         AdaptiveTraversalPlanCacheSnapshot::default()
@@ -443,6 +449,71 @@ fn sparse_queue_resident_step_initializes_queue_len_on_device() {
 }
 
 #[test]
+fn large_sparse_queue_resident_step_uses_word_prefix_materializer() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let node_count = 8_193u32;
+    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let graph = ResidentAdaptiveTraversalGraph {
+        node_count,
+        edge_count: 0,
+        words,
+        layout_hash: 7,
+        handles: [101, 102, 103, 104],
+    };
+    let mut scratch = AdaptiveTraversalResidentScratch::default();
+    let mut frontier_in = vec![0u32; words];
+    frontier_in[0] = 1;
+    let mut frontier_out = Vec::new();
+
+    adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
+        &dispatcher,
+        &graph,
+        &frontier_in,
+        u32::MAX,
+        &mut scratch,
+        &mut frontier_out,
+    )
+    .expect("Fix: recording dispatcher should complete large resident sparse-queue sequence");
+
+    let scratch_handles = scratch
+        .handles
+        .expect("Fix: sparse-queue resident step must allocate frontier/queue-len handles");
+    let queue_handle = scratch
+        .queue_handle
+        .expect("Fix: sparse-queue resident step must allocate active queue");
+    let word_partials = scratch
+        .word_partials_handle
+        .expect("Fix: large sparse-queue step must allocate word partials");
+    let block_totals = scratch
+        .word_block_totals_handle
+        .expect("Fix: large sparse-queue step must allocate block totals");
+    assert_eq!(dispatcher.last_upload_handles(), vec![scratch_handles[0]]);
+    let steps = dispatcher.last_step_handles();
+    assert_eq!(
+        steps.len(),
+        4,
+        "large sparse-queue traversal should clear output, scan words, scatter queue, then traverse"
+    );
+    assert_eq!(steps[0], vec![scratch_handles[1]]);
+    assert_eq!(
+        steps[1],
+        vec![scratch_handles[0], word_partials, block_totals]
+    );
+    assert_eq!(
+        steps[2],
+        vec![
+            scratch_handles[0],
+            word_partials,
+            block_totals,
+            queue_handle,
+            scratch_handles[2],
+        ],
+        "large sparse-queue traversal must use deterministic word-prefix queue scatter"
+    );
+    assert_eq!(frontier_out, vec![0; words]);
+}
+
+#[test]
 fn generated_adaptive_resident_free_releases_each_handle_once_in_first_seen_order() {
     for seed in 0..4096_u64 {
         let dispatcher = RecordingResidentDispatcher::default();
@@ -464,14 +535,21 @@ fn generated_adaptive_resident_free_releases_each_handle_once_in_first_seen_orde
         let mut scratch = AdaptiveTraversalResidentScratch {
             handles: Some([base + 3, base + 4, base + 3]),
             queue_handle: Some(base + 4),
+            word_partials_handle: Some(base + 5),
+            word_block_totals_handle: Some(base + 5),
             frontier_bytes: 4,
             queue_bytes: 4,
+            word_partials_bytes: 4,
+            word_block_totals_bytes: 4,
             frontier_in_bytes: Vec::new(),
             readbacks: Vec::new(),
             plan_cache: AdaptiveTraversalPlanCache::default(),
         };
         scratch.free(&dispatcher).expect("Fix: scratch free dedup");
-        assert_eq!(dispatcher.freed.borrow().as_slice(), &[base + 3, base + 4]);
+        assert_eq!(
+            dispatcher.freed.borrow().as_slice(),
+            &[base + 3, base + 4, base + 5]
+        );
     }
 }
 
@@ -515,4 +593,3 @@ fn auto_step_rejects_bad_frontier_before_resident_allocation() {
         "failed validation must not mutate caller output storage"
     );
 }
-

@@ -30,6 +30,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Added a 256-lane parallel `bracket_match` path when parser depth caps cannot affect output, with CUDA parity for large nested token streams and retained bounded-stack fallback for overflow-capped shards.
 
+- Routed large adaptive sparse-queue traversal frontiers through the deterministic word-prefix queue materializer, with resident CUDA parity for a large sparse graph step and refreshed adaptive traversal program-cache identities.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

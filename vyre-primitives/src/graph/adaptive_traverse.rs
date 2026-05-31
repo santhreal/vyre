@@ -120,6 +120,10 @@ pub enum AdaptiveTraversalProgramKind {
     SparseDense,
     /// Compact active source ids from a frontier bitset into a queue.
     FrontierToQueue,
+    /// Compute per-word active-node prefix counts for packed-frontier queues.
+    FrontierWordCounts,
+    /// Scatter packed frontier words into a deterministic active-source queue.
+    FrontierWordPrefixQueue,
     /// Consume a compacted active-source queue through CSR rows.
     QueueForward,
     /// Dense graph traversal through a reusable Four-Russians byte-tile LUT.
@@ -332,6 +336,65 @@ impl AdaptiveTraversalPlanCacheKey {
         )
     }
 
+    /// Cache key for packed-frontier word-count scan.
+    #[must_use]
+    pub const fn frontier_word_counts(
+        _layout_hash: u64,
+        node_count: u32,
+        edge_count: u32,
+        words: u32,
+        device_features: u64,
+    ) -> Self {
+        let layout_hash = adaptive_traversal_program_layout_hash(
+            node_count,
+            edge_count,
+            words,
+            0,
+            AdaptiveTraversalProgramKind::FrontierWordCounts,
+        );
+        Self::new(
+            layout_hash,
+            node_count,
+            edge_count,
+            words,
+            0,
+            0,
+            0,
+            device_features,
+            AdaptiveTraversalProgramKind::FrontierWordCounts,
+        )
+    }
+
+    /// Cache key for deterministic packed-frontier queue scatter.
+    #[must_use]
+    pub const fn frontier_word_prefix_queue(
+        _layout_hash: u64,
+        node_count: u32,
+        edge_count: u32,
+        words: u32,
+        queue_capacity: u32,
+        device_features: u64,
+    ) -> Self {
+        let layout_hash = adaptive_traversal_program_layout_hash(
+            node_count,
+            edge_count,
+            words,
+            queue_capacity,
+            AdaptiveTraversalProgramKind::FrontierWordPrefixQueue,
+        );
+        Self::new(
+            layout_hash,
+            node_count,
+            edge_count,
+            words,
+            queue_capacity,
+            0,
+            0,
+            device_features,
+            AdaptiveTraversalProgramKind::FrontierWordPrefixQueue,
+        )
+    }
+
     /// Cache key for queue-driven CSR traversal.
     #[must_use]
     pub const fn queue_forward(
@@ -401,6 +464,8 @@ const fn adaptive_traversal_program_kind_tag(kind: AdaptiveTraversalProgramKind)
         AdaptiveTraversalProgramKind::FrontierToQueue => 5,
         AdaptiveTraversalProgramKind::QueueForward => 6,
         AdaptiveTraversalProgramKind::FourRussiansDense => 7,
+        AdaptiveTraversalProgramKind::FrontierWordCounts => 8,
+        AdaptiveTraversalProgramKind::FrontierWordPrefixQueue => 9,
     }
 }
 
@@ -1703,6 +1768,26 @@ mod tests {
         assert_ne!(
             queue_forward,
             AdaptiveTraversalPlanCacheKey::frontier_to_queue(7, 64, 9, 2, 64, 0xA11CE)
+        );
+        let word_counts =
+            AdaptiveTraversalPlanCacheKey::frontier_word_counts(7, 8_192, 9, 256, 0xA11CE);
+        assert_eq!(
+            word_counts.kind,
+            AdaptiveTraversalProgramKind::FrontierWordCounts
+        );
+        assert_eq!(word_counts.queue_capacity, 0);
+        let word_prefix = AdaptiveTraversalPlanCacheKey::frontier_word_prefix_queue(
+            7, 8_192, 9, 256, 8_192, 0xA11CE,
+        );
+        assert_eq!(
+            word_prefix.kind,
+            AdaptiveTraversalProgramKind::FrontierWordPrefixQueue
+        );
+        assert_eq!(word_prefix.queue_capacity, 8_192);
+        assert_ne!(
+            word_prefix,
+            AdaptiveTraversalPlanCacheKey::frontier_to_queue(7, 8_192, 9, 256, 8_192, 0xA11CE),
+            "deterministic word-prefix queue programs must not alias atomic queue builders"
         );
 
         let dense = AdaptiveTraversalPlanCacheKey::four_russians_dense(99, 128, 4, 0xA11CE);

@@ -4,9 +4,14 @@ use super::{
 };
 
 use crate::dispatch_buffers::write_u32_slice_le_bytes;
+use crate::graph::csr_frontier_queue_scratch::{
+    frontier_word_dispatch_grid, frontier_word_prefix_scratch, resident_csr_queue_materializer,
+    FrontierWordPrefixScratch, ResidentCsrQueueMaterializer,
+};
 use crate::graph::dispatch_bridge::{
     alloc_resident_buffers, resident_sequence_single_u32_output_into,
 };
+use crate::graph::resident_handles::free_unique_resident_handles;
 use crate::optimizer::dispatcher::{
     DispatchError, OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
@@ -21,6 +26,8 @@ use vyre_primitives::graph::adaptive_traverse::{
 use vyre_primitives::graph::csr_frontier_queue::{
     csr_queue_forward_traverse as primitive_csr_queue_forward_traverse, frontier_queue_len_init,
     frontier_to_queue as primitive_frontier_to_queue,
+    frontier_word_block_prefix_to_queue_parallel as primitive_frontier_word_prefix_queue,
+    frontier_word_counts_scan_pass_a as primitive_frontier_word_counts,
 };
 use vyre_primitives::reduce::count::reduce_count;
 
@@ -233,27 +240,9 @@ pub fn adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.frontier_in_bytes, frontier_in);
 
     let words_u32 = sparse_plan.frontier.work.layout.words_u32;
+    let words = sparse_plan.frontier.work.layout.words;
     let queue_capacity = sparse_plan.queue_capacity;
     let device_features = dispatcher.device_feature_cache_key();
-    let queue_program = scratch.plan_cache.get_or_build(
-        AdaptiveTraversalPlanCacheKey::frontier_to_queue(
-            graph.layout_hash,
-            graph.node_count,
-            graph.edge_count,
-            words_u32,
-            queue_capacity,
-            device_features,
-        ),
-        || {
-            primitive_frontier_to_queue(
-                "frontier_in",
-                "active_queue",
-                "queue_len",
-                graph.node_count,
-                queue_capacity,
-            )
-        },
-    );
     let traverse_program = scratch.plan_cache.get_or_build(
         AdaptiveTraversalPlanCacheKey::queue_forward(
             graph.layout_hash,
@@ -279,17 +268,6 @@ pub fn adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
             )
         },
     );
-    let queue_len_init_program = scratch.plan_cache.get_or_build(
-        AdaptiveTraversalPlanCacheKey::queue_len_init(
-            graph.layout_hash,
-            graph.node_count,
-            graph.edge_count,
-            words_u32,
-            queue_capacity,
-            device_features,
-        ),
-        || frontier_queue_len_init("queue_len"),
-    );
     let clear_frontier_out_program = scratch.plan_cache.get_or_build(
         AdaptiveTraversalPlanCacheKey::clear_frontier_out(
             graph.layout_hash,
@@ -301,9 +279,7 @@ pub fn adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
         || bitset_zero("frontier_out", words_u32),
     );
     let graph_handles = graph.handles;
-    let queue_len_init_handles = [handles[2]];
     let clear_handles = [handles[1]];
-    let queue_handles = [handles[0], queue_handle, handles[2]];
     let traverse_handles = [
         queue_handle,
         handles[2],
@@ -312,43 +288,167 @@ pub fn adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
         graph_handles[2],
         handles[1],
     ];
-    let uploads = [(handles[0], scratch.frontier_in_bytes.as_slice())];
-    let steps = [
-        ResidentDispatchStep {
-            program: &queue_len_init_program,
-            handle_ids: &queue_len_init_handles,
-            grid_override: Some([1, 1, 1]),
-        },
-        ResidentDispatchStep {
-            program: &clear_frontier_out_program,
-            handle_ids: &clear_handles,
-            grid_override: Some(sparse_plan.frontier.frontier_word_grid),
-        },
-        ResidentDispatchStep {
-            program: &queue_program,
-            handle_ids: &queue_handles,
-            grid_override: Some([1, 1, 1]),
-        },
-        ResidentDispatchStep {
-            program: &traverse_program,
-            handle_ids: &traverse_handles,
-            grid_override: Some(sparse_plan.queue_grid),
-        },
-    ];
-    resident_sequence_single_u32_output_into(
-        dispatcher,
-        &uploads,
-        &steps,
-        ResidentReadRange {
-            handle_id: handles[1],
-            byte_offset: 0,
-            byte_len: sparse_plan.frontier.frontier_bytes,
-        },
-        &mut scratch.readbacks,
-        sparse_plan.frontier.work.layout.words,
-        "adaptive_traverse_resident_graph_sparse_queue_step frontier_out",
-        frontier_out,
-    )
+    match resident_csr_queue_materializer(words) {
+        ResidentCsrQueueMaterializer::AtomicNodeScan => {
+            let uploads = [(handles[0], scratch.frontier_in_bytes.as_slice())];
+            let queue_program = scratch.plan_cache.get_or_build(
+                AdaptiveTraversalPlanCacheKey::frontier_to_queue(
+                    graph.layout_hash,
+                    graph.node_count,
+                    graph.edge_count,
+                    words_u32,
+                    queue_capacity,
+                    device_features,
+                ),
+                || {
+                    primitive_frontier_to_queue(
+                        "frontier_in",
+                        "active_queue",
+                        "queue_len",
+                        graph.node_count,
+                        queue_capacity,
+                    )
+                },
+            );
+            let queue_len_init_program = scratch.plan_cache.get_or_build(
+                AdaptiveTraversalPlanCacheKey::queue_len_init(
+                    graph.layout_hash,
+                    graph.node_count,
+                    graph.edge_count,
+                    words_u32,
+                    queue_capacity,
+                    device_features,
+                ),
+                || frontier_queue_len_init("queue_len"),
+            );
+            let queue_len_init_handles = [handles[2]];
+            let queue_handles = [handles[0], queue_handle, handles[2]];
+            let steps = [
+                ResidentDispatchStep {
+                    program: &queue_len_init_program,
+                    handle_ids: &queue_len_init_handles,
+                    grid_override: Some([1, 1, 1]),
+                },
+                ResidentDispatchStep {
+                    program: &clear_frontier_out_program,
+                    handle_ids: &clear_handles,
+                    grid_override: Some(sparse_plan.frontier.frontier_word_grid),
+                },
+                ResidentDispatchStep {
+                    program: &queue_program,
+                    handle_ids: &queue_handles,
+                    grid_override: Some([1, 1, 1]),
+                },
+                ResidentDispatchStep {
+                    program: &traverse_program,
+                    handle_ids: &traverse_handles,
+                    grid_override: Some(sparse_plan.queue_grid),
+                },
+            ];
+            resident_sequence_single_u32_output_into(
+                dispatcher,
+                &uploads,
+                &steps,
+                ResidentReadRange {
+                    handle_id: handles[1],
+                    byte_offset: 0,
+                    byte_len: sparse_plan.frontier.frontier_bytes,
+                },
+                &mut scratch.readbacks,
+                sparse_plan.frontier.work.layout.words,
+                "adaptive_traverse_resident_graph_sparse_queue_step frontier_out",
+                frontier_out,
+            )
+        }
+        ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
+            let word_prefix = adaptive_word_prefix_scratch(words)?;
+            let [word_partials, block_totals] =
+                ensure_word_prefix_handles(dispatcher, scratch, &word_prefix)?;
+            let uploads = [(handles[0], scratch.frontier_in_bytes.as_slice())];
+            let word_counts_program = scratch.plan_cache.get_or_build(
+                AdaptiveTraversalPlanCacheKey::frontier_word_counts(
+                    graph.layout_hash,
+                    graph.node_count,
+                    graph.edge_count,
+                    words_u32,
+                    device_features,
+                ),
+                || {
+                    primitive_frontier_word_counts(
+                        "frontier_in",
+                        "word_partials",
+                        "block_totals",
+                        graph.node_count,
+                    )
+                },
+            );
+            let queue_program = scratch.plan_cache.get_or_build(
+                AdaptiveTraversalPlanCacheKey::frontier_word_prefix_queue(
+                    graph.layout_hash,
+                    graph.node_count,
+                    graph.edge_count,
+                    words_u32,
+                    queue_capacity,
+                    device_features,
+                ),
+                || {
+                    primitive_frontier_word_prefix_queue(
+                        "frontier_in",
+                        "word_partials",
+                        "block_totals",
+                        "active_queue",
+                        "queue_len",
+                        graph.node_count,
+                        queue_capacity,
+                    )
+                },
+            );
+            let word_count_handles = [handles[0], word_partials, block_totals];
+            let queue_handles = [
+                handles[0],
+                word_partials,
+                block_totals,
+                queue_handle,
+                handles[2],
+            ];
+            let steps = [
+                ResidentDispatchStep {
+                    program: &clear_frontier_out_program,
+                    handle_ids: &clear_handles,
+                    grid_override: Some(sparse_plan.frontier.frontier_word_grid),
+                },
+                ResidentDispatchStep {
+                    program: &word_counts_program,
+                    handle_ids: &word_count_handles,
+                    grid_override: Some([word_prefix.block_count, 1, 1]),
+                },
+                ResidentDispatchStep {
+                    program: &queue_program,
+                    handle_ids: &queue_handles,
+                    grid_override: Some(adaptive_frontier_word_grid(words)?),
+                },
+                ResidentDispatchStep {
+                    program: &traverse_program,
+                    handle_ids: &traverse_handles,
+                    grid_override: Some(sparse_plan.queue_grid),
+                },
+            ];
+            resident_sequence_single_u32_output_into(
+                dispatcher,
+                &uploads,
+                &steps,
+                ResidentReadRange {
+                    handle_id: handles[1],
+                    byte_offset: 0,
+                    byte_len: sparse_plan.frontier.frontier_bytes,
+                },
+                &mut scratch.readbacks,
+                sparse_plan.frontier.work.layout.words,
+                "adaptive_traverse_resident_graph_sparse_queue_step frontier_out",
+                frontier_out,
+            )
+        }
+    }
 }
 
 /// Run one adaptive traversal step using the runtime mode selector.
@@ -452,4 +552,80 @@ fn ensure_queue_handle(
     scratch.queue_handle = Some(handle);
     scratch.queue_bytes = queue_bytes;
     Ok(handle)
+}
+
+fn ensure_word_prefix_handles(
+    dispatcher: &dyn OptimizerDispatcher,
+    scratch: &mut AdaptiveTraversalResidentScratch,
+    word_prefix: &FrontierWordPrefixScratch,
+) -> Result<[u64; 2], DispatchError> {
+    let word_partials_bytes =
+        adaptive_word_bytes(word_prefix.partial_words, "word-prefix partials")?;
+    let word_block_totals_bytes =
+        adaptive_word_bytes(word_prefix.block_total_words, "word-prefix block totals")?;
+    if scratch.word_partials_bytes == word_partials_bytes
+        && scratch.word_block_totals_bytes == word_block_totals_bytes
+    {
+        if let (Some(word_partials), Some(block_totals)) = (
+            scratch.word_partials_handle,
+            scratch.word_block_totals_handle,
+        ) {
+            return Ok([word_partials, block_totals]);
+        }
+    }
+    free_word_prefix_handles(dispatcher, scratch)?;
+    let [word_partials, block_totals] = alloc_resident_buffers(
+        dispatcher,
+        [word_partials_bytes, word_block_totals_bytes],
+        "adaptive traversal word-prefix queue scratch",
+    )?;
+    scratch.word_partials_handle = Some(word_partials);
+    scratch.word_block_totals_handle = Some(block_totals);
+    scratch.word_partials_bytes = word_partials_bytes;
+    scratch.word_block_totals_bytes = word_block_totals_bytes;
+    Ok([word_partials, block_totals])
+}
+
+fn free_word_prefix_handles(
+    dispatcher: &dyn OptimizerDispatcher,
+    scratch: &mut AdaptiveTraversalResidentScratch,
+) -> Result<(), DispatchError> {
+    let mut handles = [0_u64; 2];
+    let mut handle_count = 0;
+    if let Some(word_partials) = scratch.word_partials_handle.take() {
+        handles[handle_count] = word_partials;
+        handle_count += 1;
+    }
+    if let Some(block_totals) = scratch.word_block_totals_handle.take() {
+        handles[handle_count] = block_totals;
+        handle_count += 1;
+    }
+    scratch.word_partials_bytes = 0;
+    scratch.word_block_totals_bytes = 0;
+    if handle_count == 0 {
+        return Ok(());
+    }
+    free_unique_resident_handles(
+        dispatcher,
+        &handles[..handle_count],
+        "adaptive traversal word-prefix queue scratch",
+    )
+}
+
+fn adaptive_word_prefix_scratch(words: usize) -> Result<FrontierWordPrefixScratch, DispatchError> {
+    frontier_word_prefix_scratch(words).map_err(DispatchError::BackendError)
+}
+
+fn adaptive_frontier_word_grid(words: usize) -> Result<[u32; 3], DispatchError> {
+    frontier_word_dispatch_grid(words).map_err(DispatchError::BackendError)
+}
+
+fn adaptive_word_bytes(words: usize, label: &str) -> Result<usize, DispatchError> {
+    words
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            DispatchError::BackendError(format!(
+                "Fix: adaptive traversal {label} byte count overflows usize for {words} u32 word(s)."
+            ))
+        })
 }

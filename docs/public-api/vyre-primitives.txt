@@ -534,6 +534,8 @@ pub const fn from_row(handled: EffectRow) -> Self {
 pub const fn frontier_layout(&self) -> PersistentBfsFrontierLayout {
 pub const fn frontier_tail_mask(node_count: u32) -> u32 {
 pub const fn frontier_to_queue(
+pub const fn frontier_word_counts(
+pub const fn frontier_word_prefix_queue(
 pub const fn frontier_words(&self) -> usize {
 pub const fn frontier_words(node_count: u32) -> usize {
 pub const fn frontier_words_for_byte_tiles(tile_count: u32) -> u32 {
