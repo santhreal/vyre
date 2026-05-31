@@ -379,7 +379,10 @@ impl LowerCtx<'_> {
         // body arithmetic well-typed and stays correct even when `i0 < 0` — a
         // plain `cast(u32, i0)` loop bound would wrap a negative start to ~4.29e9
         // and iterate billions of times instead of matching Rust.
-        inner.insert(b_i, Self::counted_loop_induction(&IrExpr::var(format!("v{b_i}")), &loop_var));
+        inner.insert(
+            b_i,
+            Self::counted_loop_induction(&IrExpr::var(format!("v{b_i}")), &loop_var),
+        );
         let inner_subst = match subst {
             Subst::Inline(_) => Subst::Inline(&inner),
             Subst::Local(_) => Subst::Local(Some(&inner)),

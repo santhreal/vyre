@@ -20,7 +20,7 @@ vyre-driver-spirv = { workspace = true }
 vyre-driver-reference = { workspace = true }
 vyre-reference = { workspace = true }
 vyre-runtime = { workspace = true }
-vyre-libs = { workspace = true, features = ["nn-linear-4bit"] }
+vyre-libs = { workspace = true, features = ["nn-linear-4bit", "rust-parser"] }
 vyre-primitives = { workspace = true, features = ["bitset", "graph", "cpu-parity"] }
 vyre-intrinsics = { workspace = true }
 vyre-lower = { workspace = true }

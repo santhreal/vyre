@@ -12,6 +12,7 @@ fn benchmark_registry_contains_program_level_thesis_workloads() {
 
     for required_id in [
         "frontend.c.parser.linux_driver_pipeline",
+        "frontend.rust.lexer.ir_execute",
         "frontend.rust.range_loop.ir_execute",
         "foundation.dfa_match.256k",
         "primitives.graph.frontier_step.1m",

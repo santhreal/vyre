@@ -5,6 +5,8 @@ use crate::api::case::{
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
 
+mod lexer;
+
 pub struct RustRangeLoopPipeline;
 
 const LANE_COUNT: usize = 1 << 16;

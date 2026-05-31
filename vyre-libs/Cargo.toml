@@ -167,3 +167,8 @@ required-features = ["rust-parser"]
 name = "rust_sema_borrow_oracle"
 path = "tests/rust_sema_borrow_oracle.rs"
 required-features = ["rust-parser"]
+
+[[test]]
+name = "rust_gpu_lexer_plan"
+path = "tests/rust_gpu_lexer_plan.rs"
+required-features = ["rust-parser"]
