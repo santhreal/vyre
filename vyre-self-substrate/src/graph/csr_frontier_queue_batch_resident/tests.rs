@@ -140,12 +140,11 @@ fn batch_queries_initialize_queue_len_on_device() {
 #[test]
 fn high_degree_batch_queries_use_row_strided_traverse_grid() {
     let dispatcher = RecordingBatchDispatcher::default();
-    let node_count = 2u32;
-    let edge_offsets = vec![
-        0,
-        STRIDED_FORWARD_MIN_ROW_DEGREE,
-        STRIDED_FORWARD_MIN_ROW_DEGREE,
-    ];
+    let node_count = 16u32;
+    let mut edge_offsets = vec![0u32; node_count as usize + 1];
+    for offset in edge_offsets.iter_mut().skip(1) {
+        *offset = STRIDED_FORWARD_MIN_ROW_DEGREE;
+    }
     let edge_targets = vec![1u32; STRIDED_FORWARD_MIN_ROW_DEGREE as usize];
     let edge_kind_mask = vec![1u32; STRIDED_FORWARD_MIN_ROW_DEGREE as usize];
     let graph = upload_resident_csr_queue_graph(
@@ -157,8 +156,8 @@ fn high_degree_batch_queries_use_row_strided_traverse_grid() {
     )
     .expect("Fix: high-degree resident CSR graph is valid");
     let mut scratch = ResidentCsrQueueBatchScratch::default();
-    let first = [1u32];
-    let second = [1u32];
+    let first = [0x1ffu32];
+    let second = [0x1ffu32];
     let frontiers: [&[u32]; 2] = [&first, &second];
     let mut outputs = Vec::new();
 
@@ -167,7 +166,7 @@ fn high_degree_batch_queries_use_row_strided_traverse_grid() {
         &graph,
         &mut scratch,
         &frontiers,
-        9,
+        1024,
         u32::MAX,
         &mut outputs,
     )
@@ -181,13 +180,99 @@ fn high_degree_batch_queries_use_row_strided_traverse_grid() {
         .expect("Fix: expected one resident batch grid sequence");
     assert_eq!(
         grids[2],
-        Some(csr_queue_strided_forward_dispatch_grid(9)),
-        "first high-degree batch query must use row-strided traverse launch"
+        Some(csr_queue_strided_forward_dispatch_grid(16)),
+        "first high-degree batch query must use row-strided traverse launch at the sparse effective capacity"
     );
     assert_eq!(
         grids[5],
-        Some(csr_queue_strided_forward_dispatch_grid(9)),
-        "second high-degree batch query must use row-strided traverse launch"
+        Some(csr_queue_strided_forward_dispatch_grid(16)),
+        "second high-degree batch query must use row-strided traverse launch at the sparse effective capacity"
+    );
+}
+
+#[test]
+fn batch_queries_bucket_graph_sized_capacity_from_max_frontier_popcount() {
+    let dispatcher = RecordingBatchDispatcher::default();
+    let node_count = 4096u32;
+    let edge_offsets = vec![0u32; node_count as usize + 1];
+    let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
+        .expect("Fix: zero-edge resident CSR graph is valid");
+    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let mut first = vec![0u32; words];
+    first[0] = 1;
+    let mut second = vec![0u32; words];
+    for node in 0..257u32 {
+        second[(node / 32) as usize] |= 1 << (node % 32);
+    }
+    let frontiers: [&[u32]; 2] = [&first, &second];
+    let mut scratch = ResidentCsrQueueBatchScratch::default();
+    let mut outputs = Vec::new();
+
+    run_resident_csr_queue_batch_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &frontiers,
+        node_count,
+        u32::MAX,
+        &mut outputs,
+    )
+    .expect("Fix: recording dispatcher should complete bucketed resident CSR queue batch");
+
+    assert_eq!(
+        scratch
+            .shape
+            .expect("Fix: batch scratch shape should be retained")
+            .queue_capacity,
+        512,
+        "batch queue capacity should be bucketed from the max active frontier, not graph size"
+    );
+    let grids = dispatcher
+        .step_grids
+        .borrow()
+        .last()
+        .cloned()
+        .expect("Fix: expected one resident batch grid sequence");
+    assert_eq!(grids[2], Some([2, 1, 1]));
+    assert_eq!(grids[5], Some([2, 1, 1]));
+}
+
+#[test]
+fn budgeted_batch_memory_plan_uses_effective_queue_capacity() {
+    let dispatcher = RecordingBatchDispatcher::default();
+    let node_count = 4096u32;
+    let edge_offsets = vec![0u32; node_count as usize + 1];
+    let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
+        .expect("Fix: zero-edge resident CSR graph is valid");
+    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let mut one = vec![0u32; words];
+    one[0] = 1;
+    let frontiers: [&[u32]; 4] = [&one, &one, &one, &one];
+    let mut scratch = ResidentCsrQueueBatchScratch::default();
+    let mut outputs = Vec::new();
+
+    let plan = run_resident_csr_queue_batch_budgeted_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &frontiers,
+        node_count,
+        u32::MAX,
+        2 * (words * std::mem::size_of::<u32>() * 2 + 2 * std::mem::size_of::<u32>()),
+        &mut outputs,
+    )
+    .expect("Fix: sparse frontiers should fit a budget that graph-sized queues would exceed");
+
+    assert_eq!(plan.query_count, frontiers.len());
+    assert_eq!(
+        plan.bytes_per_query,
+        words * std::mem::size_of::<u32>() * 2 + 2 * std::mem::size_of::<u32>()
+    );
+    assert_eq!(plan.max_queries_per_dispatch, 2);
+    assert_eq!(plan.dispatch_batches, 2);
+    assert_eq!(
+        outputs,
+        vec![vec![0; words * std::mem::size_of::<u32>()]; 4]
     );
 }
 

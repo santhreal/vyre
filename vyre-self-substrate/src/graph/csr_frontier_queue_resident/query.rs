@@ -13,9 +13,10 @@ use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_travers
 use crate::dispatch_buffers::u32_word_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
-    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer,
-    resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind, FrontierWordPrefixScratch,
-    ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
+    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_effective_capacity,
+    resident_csr_queue_materializer, resident_csr_queue_traverse_grid,
+    resident_csr_queue_traverse_kind, FrontierWordPrefixScratch, ResidentCsrQueueMaterializer,
+    ResidentCsrQueueTraverseKind,
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
 use crate::optimizer::dispatcher::{
@@ -34,8 +35,11 @@ pub fn run_resident_csr_queue_query_into(
 ) -> Result<(), DispatchError> {
     validate_frontier_queue_query(graph.node_count, frontier_words, queue_capacity)
         .map_err(DispatchError::BadInputs)?;
-    ensure_scratch(dispatcher, scratch, graph.words, queue_capacity)?;
-    ensure_programs(scratch, graph, queue_capacity, allow_mask)?;
+    let effective_queue_capacity =
+        resident_csr_queue_effective_capacity(graph.node_count, &[frontier_words], queue_capacity)
+            .map_err(DispatchError::BadInputs)?;
+    ensure_scratch(dispatcher, scratch, graph.words, effective_queue_capacity)?;
+    ensure_programs(scratch, graph, effective_queue_capacity, allow_mask)?;
     scratch.frontier_bytes.clear();
     vyre_primitives::wire::append_u32_slice_le_bytes(frontier_words, &mut scratch.frontier_bytes);
     let frontier_bytes = u32_word_bytes(graph.words, "resident CSR queue query frontier")?;
@@ -64,7 +68,7 @@ pub fn run_resident_csr_queue_query_into(
         )
     })?;
     let traverse_grid = resident_csr_queue_traverse_grid(
-        queue_capacity,
+        effective_queue_capacity,
         resident_csr_queue_traverse_kind(graph.max_row_degree),
     );
     let read_ranges = [ResidentReadRange {
@@ -215,7 +219,7 @@ fn ensure_scratch(
         scratch.handles,
         Some(handles)
             if handles.frontier_bytes == frontier_bytes
-                && handles.queue_capacity == queue_capacity
+                && handles.queue_capacity >= queue_capacity
                 && handles.materializer == materializer
     ) {
         return Ok(());

@@ -1,5 +1,6 @@
 //! Shared scratch planning for resident CSR frontier queues.
 
+use vyre_primitives::bitset::frontier::frontier_tail_mask;
 use vyre_primitives::graph::csr_frontier_queue::FRONTIER_WORD_SCAN_BLOCK_LANES;
 use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid;
 
@@ -75,6 +76,53 @@ pub(crate) const fn resident_csr_queue_traverse_grid(
             csr_queue_strided_forward_dispatch_grid(queue_capacity)
         }
     }
+}
+
+pub(crate) fn resident_csr_queue_effective_capacity(
+    node_count: u32,
+    frontiers: &[&[u32]],
+    requested_capacity: u32,
+) -> Result<u32, String> {
+    if node_count == 0 {
+        return Err(
+            "Fix: resident CSR queue effective capacity requires node_count > 0.".to_string(),
+        );
+    }
+    if frontiers.is_empty() {
+        return Err(
+            "Fix: resident CSR queue effective capacity requires at least one frontier."
+                .to_string(),
+        );
+    }
+    if requested_capacity == 0 {
+        return Err(
+            "Fix: resident CSR queue effective capacity requires requested_capacity > 0."
+                .to_string(),
+        );
+    }
+
+    let final_word_mask = frontier_tail_mask(node_count);
+    let mut max_active = 0u32;
+    for (query_index, frontier) in frontiers.iter().enumerate() {
+        let mut active = 0u32;
+        for (word_index, &word) in frontier.iter().enumerate() {
+            let in_domain_word = if word_index + 1 == frontier.len() {
+                word & final_word_mask
+            } else {
+                word
+            };
+            active = active.checked_add(in_domain_word.count_ones()).ok_or_else(|| {
+                format!(
+                    "Fix: resident CSR queue query {query_index} frontier popcount overflowed u32 while sizing the active queue."
+                )
+            })?;
+        }
+        max_active = max_active.max(active);
+    }
+
+    let active_floor = max_active.max(1);
+    let bucketed_active = active_floor.checked_next_power_of_two().unwrap_or(u32::MAX);
+    Ok(requested_capacity.min(bucketed_active).max(1))
 }
 
 pub(crate) fn frontier_word_prefix_scratch(
@@ -222,5 +270,100 @@ mod tests {
             resident_csr_queue_traverse_grid(9, ResidentCsrQueueTraverseKind::RowStrided),
             [2, 1, 1]
         );
+    }
+
+    #[test]
+    fn effective_queue_capacity_buckets_active_frontiers_and_ignores_tail_bits() {
+        let first = [0b11_u32, u32::MAX & !0b111_u32];
+        let second = [0_u32, 0b101_u32];
+        let frontiers: [&[u32]; 2] = [&first, &second];
+
+        assert_eq!(
+            resident_csr_queue_effective_capacity(35, &frontiers, 1_024)
+                .expect("Fix: valid resident CSR queue frontiers should size"),
+            2,
+            "tail bits outside node_count must not inflate resident queue capacity"
+        );
+        let mut single = vec![0u32; vyre_primitives::bitset::bitset_words(1_000) as usize];
+        single[0] = 1;
+        assert_eq!(
+            resident_csr_queue_effective_capacity(1_000, &[&single], 1_024)
+                .expect("Fix: single active source should size"),
+            1
+        );
+        let dense = [u32::MAX; 9];
+        assert_eq!(
+            resident_csr_queue_effective_capacity(288, &[&dense], 257)
+                .expect("Fix: requested capacity remains a hard traversal cap"),
+            257
+        );
+    }
+
+    #[test]
+    fn generated_effective_queue_capacity_bounds_overlaunch() {
+        for seed in 0..10_000u32 {
+            let node_count = 1 + (mix32(seed) % 4_096);
+            let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+            let mut first = vec![0u32; words];
+            let mut second = vec![0u32; words];
+            for word_index in 0..words {
+                first[word_index] = mix32(seed ^ word_index as u32);
+                second[word_index] = mix32(seed.rotate_left(7) ^ word_index as u32);
+            }
+            let frontiers: [&[u32]; 2] = [&first, &second];
+            let requested_capacity = 1 + (mix32(seed ^ 0x7a5a_51ce_u32) % 8_192);
+            let effective =
+                resident_csr_queue_effective_capacity(node_count, &frontiers, requested_capacity)
+                    .expect("Fix: generated resident CSR queue frontiers should size");
+            let max_active = frontiers
+                .iter()
+                .map(|frontier| in_domain_popcount(node_count, frontier))
+                .max()
+                .unwrap_or(0);
+
+            assert!(effective >= 1);
+            assert!(effective <= requested_capacity);
+            if max_active == 0 {
+                assert_eq!(effective, 1);
+            } else if max_active > requested_capacity {
+                assert_eq!(effective, requested_capacity);
+            } else {
+                assert!(effective >= max_active);
+                assert!(
+                    effective <= max_active.next_power_of_two(),
+                    "capacity should only round active_count={max_active} to its bucket, got {effective}"
+                );
+                if max_active <= requested_capacity / 2 {
+                    assert!(
+                        effective <= max_active * 2,
+                        "uncapped sparse frontier should not overlaunch by more than one bucket: active={max_active} effective={effective}"
+                    );
+                }
+            }
+        }
+    }
+
+    fn in_domain_popcount(node_count: u32, frontier: &[u32]) -> u32 {
+        let final_word_mask = frontier_tail_mask(node_count);
+        frontier
+            .iter()
+            .enumerate()
+            .map(|(index, &word)| {
+                if index + 1 == frontier.len() {
+                    word & final_word_mask
+                } else {
+                    word
+                }
+                .count_ones()
+            })
+            .sum()
+    }
+
+    fn mix32(mut value: u32) -> u32 {
+        value ^= value >> 16;
+        value = value.wrapping_mul(0x7feb_352d);
+        value ^= value >> 15;
+        value = value.wrapping_mul(0x846c_a68b);
+        value ^ (value >> 16)
     }
 }

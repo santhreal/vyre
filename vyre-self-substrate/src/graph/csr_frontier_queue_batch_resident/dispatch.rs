@@ -16,9 +16,10 @@ use crate::csr_frontier_queue_resident::ResidentCsrQueueGraph;
 use crate::dispatch_buffers::u32_word_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
-    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer,
-    resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind, FrontierWordPrefixScratch,
-    ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
+    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_effective_capacity,
+    resident_csr_queue_materializer, resident_csr_queue_traverse_grid,
+    resident_csr_queue_traverse_kind, FrontierWordPrefixScratch, ResidentCsrQueueMaterializer,
+    ResidentCsrQueueTraverseKind,
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
 use crate::hardware::scratch::reserve_vec as reserve_graph_vec;
@@ -38,12 +39,15 @@ pub fn run_resident_csr_queue_batch_into(
 ) -> Result<(), DispatchError> {
     validate_frontier_queue_batch(graph.node_count(), frontiers, queue_capacity)
         .map_err(DispatchError::BadInputs)?;
+    let effective_queue_capacity =
+        resident_csr_queue_effective_capacity(graph.node_count(), frontiers, queue_capacity)
+            .map_err(DispatchError::BadInputs)?;
     ensure_batch_scratch(
         dispatcher,
         graph,
         scratch,
         frontiers.len(),
-        queue_capacity,
+        effective_queue_capacity,
         allow_mask,
     )?;
 
@@ -92,7 +96,7 @@ pub fn run_resident_csr_queue_batch_into(
 
     let mut steps = Vec::new();
     let traverse_kind = resident_csr_queue_traverse_kind(graph.max_row_degree());
-    let traverse_grid = resident_csr_queue_traverse_grid(queue_capacity, traverse_kind);
+    let traverse_grid = resident_csr_queue_traverse_grid(effective_queue_capacity, traverse_kind);
     reserve_graph_vec(
         &mut steps,
         frontiers
@@ -200,10 +204,15 @@ pub fn run_resident_csr_queue_batch_budgeted_into(
     max_scratch_bytes: usize,
     outputs: &mut Vec<Vec<u8>>,
 ) -> Result<ResidentCsrQueueBatchMemoryPlan, DispatchError> {
+    validate_frontier_queue_batch(graph.node_count(), frontiers, queue_capacity)
+        .map_err(DispatchError::BadInputs)?;
+    let effective_queue_capacity =
+        resident_csr_queue_effective_capacity(graph.node_count(), frontiers, queue_capacity)
+            .map_err(DispatchError::BadInputs)?;
     let plan = plan_resident_csr_queue_batch_memory(
         frontiers.len(),
         graph.words(),
-        queue_capacity,
+        effective_queue_capacity,
         max_scratch_bytes,
     )
     .map_err(|error| DispatchError::BadInputs(error.to_string()))?;
@@ -220,7 +229,7 @@ pub fn run_resident_csr_queue_batch_budgeted_into(
             graph,
             scratch,
             frontier_chunk,
-            queue_capacity,
+            effective_queue_capacity,
             allow_mask,
             &mut chunk_outputs,
         )?;
