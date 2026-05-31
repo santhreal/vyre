@@ -61,29 +61,40 @@ pub fn append_match(
     start: impl Into<Expr>,
     end: impl Into<Expr>,
 ) -> Node {
-    let slot = Expr::atomic_add(count_buffer, Expr::u32(0), Expr::u32(1));
     let max_hits = Expr::div(Expr::buf_len(hits_buffer), Expr::u32(3));
 
-    Node::if_then(
-        Expr::lt(slot.clone(), max_hits),
-        vec![
-            Node::store(
-                hits_buffer,
-                Expr::mul(slot.clone(), Expr::u32(3)),
-                tag.into(),
-            ),
-            Node::store(
-                hits_buffer,
-                Expr::add(Expr::mul(slot.clone(), Expr::u32(3)), Expr::u32(1)),
-                start.into(),
-            ),
-            Node::store(
-                hits_buffer,
-                Expr::add(Expr::mul(slot, Expr::u32(3)), Expr::u32(2)),
-                end.into(),
-            ),
-        ],
-    )
+    Node::Block(vec![
+        Node::let_bind(
+            "_vyre_match_slot",
+            Expr::atomic_add(count_buffer, Expr::u32(0), Expr::u32(1)),
+        ),
+        Node::if_then(
+            Expr::lt(Expr::var("_vyre_match_slot"), max_hits),
+            vec![
+                Node::store(
+                    hits_buffer,
+                    Expr::mul(Expr::var("_vyre_match_slot"), Expr::u32(3)),
+                    tag.into(),
+                ),
+                Node::store(
+                    hits_buffer,
+                    Expr::add(
+                        Expr::mul(Expr::var("_vyre_match_slot"), Expr::u32(3)),
+                        Expr::u32(1),
+                    ),
+                    start.into(),
+                ),
+                Node::store(
+                    hits_buffer,
+                    Expr::add(
+                        Expr::mul(Expr::var("_vyre_match_slot"), Expr::u32(3)),
+                        Expr::u32(2),
+                    ),
+                    end.into(),
+                ),
+            ],
+        ),
+    ])
 }
 
 /// Innovation I.17: Subgroup-Coalesced Match Append.

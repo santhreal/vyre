@@ -35,6 +35,7 @@ pub mod reduce_sum;
 pub mod regex_bt;
 pub mod release_workloads;
 pub mod rust_frontend;
+pub mod scan_ac_irregular;
 pub mod stencil;
 pub mod synthetic;
 pub mod transpose;
