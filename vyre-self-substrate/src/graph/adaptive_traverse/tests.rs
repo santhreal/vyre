@@ -150,6 +150,8 @@ fn matches_primitive_directly_by_wiring_release_programs() {
         "primitive_four_russians_dense_lut_from_adj_rows(",
         "primitive_frontier_to_queue(",
         "primitive_frontier_word_counts(",
+        "primitive_frontier_word_block_offsets(",
+        "primitive_frontier_word_block_offsets_queue(",
         "primitive_frontier_word_prefix_queue(",
         "primitive_csr_queue_forward_traverse(",
     ] {
@@ -509,6 +511,84 @@ fn large_sparse_queue_resident_step_uses_word_prefix_materializer() {
             scratch_handles[2],
         ],
         "large sparse-queue traversal must use deterministic word-prefix queue scatter"
+    );
+    assert_eq!(frontier_out, vec![0; words]);
+}
+
+#[test]
+fn multiblock_sparse_queue_resident_step_scans_block_offsets_once() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let node_count = 32_897u32;
+    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let graph = ResidentAdaptiveTraversalGraph {
+        node_count,
+        edge_count: 0,
+        words,
+        layout_hash: 11,
+        handles: [101, 102, 103, 104],
+    };
+    let mut scratch = AdaptiveTraversalResidentScratch::default();
+    let mut frontier_in = vec![0u32; words];
+    frontier_in[0] = 1;
+    frontier_in[1028] = 1;
+    let mut frontier_out = Vec::new();
+
+    adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
+        &dispatcher,
+        &graph,
+        &frontier_in,
+        u32::MAX,
+        &mut scratch,
+        &mut frontier_out,
+    )
+    .expect("Fix: recording dispatcher should complete multiblock resident sparse-queue sequence");
+
+    let scratch_handles = scratch
+        .handles
+        .expect("Fix: sparse-queue resident step must allocate frontier/queue-len handles");
+    let queue_handle = scratch
+        .queue_handle
+        .expect("Fix: sparse-queue resident step must allocate active queue");
+    let word_partials = scratch
+        .word_partials_handle
+        .expect("Fix: multiblock sparse-queue step must allocate word partials");
+    let block_totals = scratch
+        .word_block_totals_handle
+        .expect("Fix: multiblock sparse-queue step must allocate block totals");
+    let steps = dispatcher.last_step_handles();
+    assert_eq!(
+        steps.len(),
+        5,
+        "multiblock sparse-queue traversal should clear, count words, scan block offsets once, scatter, then traverse"
+    );
+    assert_eq!(steps[0], vec![scratch_handles[1]]);
+    assert_eq!(
+        steps[1],
+        vec![scratch_handles[0], word_partials, block_totals]
+    );
+    assert_eq!(
+        steps[2],
+        vec![block_totals],
+        "multiblock sparse-queue traversal must convert block totals into offsets once"
+    );
+    assert_eq!(
+        steps[3],
+        vec![
+            scratch_handles[0],
+            word_partials,
+            block_totals,
+            queue_handle,
+            scratch_handles[2],
+        ],
+        "multiblock sparse-queue traversal must scatter with precomputed block offsets"
+    );
+    assert_eq!(
+        scratch.plan_cache_snapshot(),
+        AdaptiveTraversalPlanCacheSnapshot {
+            entries: 5,
+            hits: 0,
+            misses: 5,
+        }
     );
     assert_eq!(frontier_out, vec![0; words]);
 }

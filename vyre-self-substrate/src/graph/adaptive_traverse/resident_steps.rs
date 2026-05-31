@@ -26,6 +26,8 @@ use vyre_primitives::graph::adaptive_traverse::{
 use vyre_primitives::graph::csr_frontier_queue::{
     csr_queue_forward_traverse as primitive_csr_queue_forward_traverse, frontier_queue_len_init,
     frontier_to_queue as primitive_frontier_to_queue,
+    frontier_word_block_offsets_in_place as primitive_frontier_word_block_offsets,
+    frontier_word_block_offsets_to_queue_parallel as primitive_frontier_word_block_offsets_queue,
     frontier_word_block_prefix_to_queue_parallel as primitive_frontier_word_prefix_queue,
     frontier_word_counts_scan_pass_a as primitive_frontier_word_counts,
 };
@@ -382,71 +384,154 @@ pub fn adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
                     )
                 },
             );
-            let queue_program = scratch.plan_cache.get_or_build(
-                AdaptiveTraversalPlanCacheKey::frontier_word_prefix_queue(
-                    graph.layout_hash,
-                    graph.node_count,
-                    graph.edge_count,
-                    words_u32,
-                    queue_capacity,
-                    device_features,
-                ),
-                || {
-                    primitive_frontier_word_prefix_queue(
-                        "frontier_in",
-                        "word_partials",
-                        "block_totals",
-                        "active_queue",
-                        "queue_len",
-                        graph.node_count,
-                        queue_capacity,
-                    )
-                },
-            );
             let word_count_handles = [handles[0], word_partials, block_totals];
-            let queue_handles = [
-                handles[0],
-                word_partials,
-                block_totals,
-                queue_handle,
-                handles[2],
-            ];
-            let steps = [
-                ResidentDispatchStep {
-                    program: &clear_frontier_out_program,
-                    handle_ids: &clear_handles,
-                    grid_override: Some(sparse_plan.frontier.frontier_word_grid),
-                },
-                ResidentDispatchStep {
-                    program: &word_counts_program,
-                    handle_ids: &word_count_handles,
-                    grid_override: Some([word_prefix.block_count, 1, 1]),
-                },
-                ResidentDispatchStep {
-                    program: &queue_program,
-                    handle_ids: &queue_handles,
-                    grid_override: Some(adaptive_frontier_word_grid(words)?),
-                },
-                ResidentDispatchStep {
-                    program: &traverse_program,
-                    handle_ids: &traverse_handles,
-                    grid_override: Some(sparse_plan.queue_grid),
-                },
-            ];
-            resident_sequence_single_u32_output_into(
-                dispatcher,
-                &uploads,
-                &steps,
-                ResidentReadRange {
-                    handle_id: handles[1],
-                    byte_offset: 0,
-                    byte_len: sparse_plan.frontier.frontier_bytes,
-                },
-                &mut scratch.readbacks,
-                sparse_plan.frontier.work.layout.words,
-                "adaptive_traverse_resident_graph_sparse_queue_step frontier_out",
-                frontier_out,
-            )
+            if word_prefix.block_count > 1 {
+                let block_offsets_program = scratch.plan_cache.get_or_build(
+                    AdaptiveTraversalPlanCacheKey::frontier_word_block_offsets(
+                        graph.layout_hash,
+                        graph.node_count,
+                        graph.edge_count,
+                        words_u32,
+                        device_features,
+                    ),
+                    || primitive_frontier_word_block_offsets("block_totals", graph.node_count),
+                );
+                let queue_program = scratch.plan_cache.get_or_build(
+                    AdaptiveTraversalPlanCacheKey::frontier_word_block_offsets_queue(
+                        graph.layout_hash,
+                        graph.node_count,
+                        graph.edge_count,
+                        words_u32,
+                        queue_capacity,
+                        device_features,
+                    ),
+                    || {
+                        primitive_frontier_word_block_offsets_queue(
+                            "frontier_in",
+                            "word_partials",
+                            "block_totals",
+                            "active_queue",
+                            "queue_len",
+                            graph.node_count,
+                            queue_capacity,
+                        )
+                    },
+                );
+                let block_offsets_handles = [block_totals];
+                let queue_handles = [
+                    handles[0],
+                    word_partials,
+                    block_totals,
+                    queue_handle,
+                    handles[2],
+                ];
+                let steps = [
+                    ResidentDispatchStep {
+                        program: &clear_frontier_out_program,
+                        handle_ids: &clear_handles,
+                        grid_override: Some(sparse_plan.frontier.frontier_word_grid),
+                    },
+                    ResidentDispatchStep {
+                        program: &word_counts_program,
+                        handle_ids: &word_count_handles,
+                        grid_override: Some([word_prefix.block_count, 1, 1]),
+                    },
+                    ResidentDispatchStep {
+                        program: &block_offsets_program,
+                        handle_ids: &block_offsets_handles,
+                        grid_override: Some([1, 1, 1]),
+                    },
+                    ResidentDispatchStep {
+                        program: &queue_program,
+                        handle_ids: &queue_handles,
+                        grid_override: Some(adaptive_frontier_word_grid(words)?),
+                    },
+                    ResidentDispatchStep {
+                        program: &traverse_program,
+                        handle_ids: &traverse_handles,
+                        grid_override: Some(sparse_plan.queue_grid),
+                    },
+                ];
+                resident_sequence_single_u32_output_into(
+                    dispatcher,
+                    &uploads,
+                    &steps,
+                    ResidentReadRange {
+                        handle_id: handles[1],
+                        byte_offset: 0,
+                        byte_len: sparse_plan.frontier.frontier_bytes,
+                    },
+                    &mut scratch.readbacks,
+                    sparse_plan.frontier.work.layout.words,
+                    "adaptive_traverse_resident_graph_sparse_queue_step frontier_out",
+                    frontier_out,
+                )
+            } else {
+                let queue_program = scratch.plan_cache.get_or_build(
+                    AdaptiveTraversalPlanCacheKey::frontier_word_prefix_queue(
+                        graph.layout_hash,
+                        graph.node_count,
+                        graph.edge_count,
+                        words_u32,
+                        queue_capacity,
+                        device_features,
+                    ),
+                    || {
+                        primitive_frontier_word_prefix_queue(
+                            "frontier_in",
+                            "word_partials",
+                            "block_totals",
+                            "active_queue",
+                            "queue_len",
+                            graph.node_count,
+                            queue_capacity,
+                        )
+                    },
+                );
+                let queue_handles = [
+                    handles[0],
+                    word_partials,
+                    block_totals,
+                    queue_handle,
+                    handles[2],
+                ];
+                let steps = [
+                    ResidentDispatchStep {
+                        program: &clear_frontier_out_program,
+                        handle_ids: &clear_handles,
+                        grid_override: Some(sparse_plan.frontier.frontier_word_grid),
+                    },
+                    ResidentDispatchStep {
+                        program: &word_counts_program,
+                        handle_ids: &word_count_handles,
+                        grid_override: Some([word_prefix.block_count, 1, 1]),
+                    },
+                    ResidentDispatchStep {
+                        program: &queue_program,
+                        handle_ids: &queue_handles,
+                        grid_override: Some(adaptive_frontier_word_grid(words)?),
+                    },
+                    ResidentDispatchStep {
+                        program: &traverse_program,
+                        handle_ids: &traverse_handles,
+                        grid_override: Some(sparse_plan.queue_grid),
+                    },
+                ];
+                resident_sequence_single_u32_output_into(
+                    dispatcher,
+                    &uploads,
+                    &steps,
+                    ResidentReadRange {
+                        handle_id: handles[1],
+                        byte_offset: 0,
+                        byte_len: sparse_plan.frontier.frontier_bytes,
+                    },
+                    &mut scratch.readbacks,
+                    sparse_plan.frontier.work.layout.words,
+                    "adaptive_traverse_resident_graph_sparse_queue_step frontier_out",
+                    frontier_out,
+                )
+            }
         }
     }
 }

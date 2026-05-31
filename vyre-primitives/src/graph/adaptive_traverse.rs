@@ -122,8 +122,12 @@ pub enum AdaptiveTraversalProgramKind {
     FrontierToQueue,
     /// Compute per-word active-node prefix counts for packed-frontier queues.
     FrontierWordCounts,
+    /// Convert packed-frontier block totals into exclusive block offsets.
+    FrontierWordBlockOffsets,
     /// Scatter packed frontier words into a deterministic active-source queue.
     FrontierWordPrefixQueue,
+    /// Scatter packed frontier words using precomputed block offsets.
+    FrontierWordBlockOffsetsQueue,
     /// Consume a compacted active-source queue through CSR rows.
     QueueForward,
     /// Dense graph traversal through a reusable Four-Russians byte-tile LUT.
@@ -365,6 +369,35 @@ impl AdaptiveTraversalPlanCacheKey {
         )
     }
 
+    /// Cache key for packed-frontier block-offset scan.
+    #[must_use]
+    pub const fn frontier_word_block_offsets(
+        _layout_hash: u64,
+        node_count: u32,
+        edge_count: u32,
+        words: u32,
+        device_features: u64,
+    ) -> Self {
+        let layout_hash = adaptive_traversal_program_layout_hash(
+            node_count,
+            edge_count,
+            words,
+            0,
+            AdaptiveTraversalProgramKind::FrontierWordBlockOffsets,
+        );
+        Self::new(
+            layout_hash,
+            node_count,
+            edge_count,
+            words,
+            0,
+            0,
+            0,
+            device_features,
+            AdaptiveTraversalProgramKind::FrontierWordBlockOffsets,
+        )
+    }
+
     /// Cache key for deterministic packed-frontier queue scatter.
     #[must_use]
     pub const fn frontier_word_prefix_queue(
@@ -392,6 +425,36 @@ impl AdaptiveTraversalPlanCacheKey {
             0,
             device_features,
             AdaptiveTraversalProgramKind::FrontierWordPrefixQueue,
+        )
+    }
+
+    /// Cache key for deterministic packed-frontier queue scatter with block offsets.
+    #[must_use]
+    pub const fn frontier_word_block_offsets_queue(
+        _layout_hash: u64,
+        node_count: u32,
+        edge_count: u32,
+        words: u32,
+        queue_capacity: u32,
+        device_features: u64,
+    ) -> Self {
+        let layout_hash = adaptive_traversal_program_layout_hash(
+            node_count,
+            edge_count,
+            words,
+            queue_capacity,
+            AdaptiveTraversalProgramKind::FrontierWordBlockOffsetsQueue,
+        );
+        Self::new(
+            layout_hash,
+            node_count,
+            edge_count,
+            words,
+            queue_capacity,
+            0,
+            0,
+            device_features,
+            AdaptiveTraversalProgramKind::FrontierWordBlockOffsetsQueue,
         )
     }
 
@@ -466,6 +529,8 @@ const fn adaptive_traversal_program_kind_tag(kind: AdaptiveTraversalProgramKind)
         AdaptiveTraversalProgramKind::FourRussiansDense => 7,
         AdaptiveTraversalProgramKind::FrontierWordCounts => 8,
         AdaptiveTraversalProgramKind::FrontierWordPrefixQueue => 9,
+        AdaptiveTraversalProgramKind::FrontierWordBlockOffsets => 10,
+        AdaptiveTraversalProgramKind::FrontierWordBlockOffsetsQueue => 11,
     }
 }
 
@@ -1776,6 +1841,14 @@ mod tests {
             AdaptiveTraversalProgramKind::FrontierWordCounts
         );
         assert_eq!(word_counts.queue_capacity, 0);
+        let block_offsets = AdaptiveTraversalPlanCacheKey::frontier_word_block_offsets(
+            7, 32_897, 9, 1_029, 0xA11CE,
+        );
+        assert_eq!(
+            block_offsets.kind,
+            AdaptiveTraversalProgramKind::FrontierWordBlockOffsets
+        );
+        assert_eq!(block_offsets.queue_capacity, 0);
         let word_prefix = AdaptiveTraversalPlanCacheKey::frontier_word_prefix_queue(
             7, 8_192, 9, 256, 8_192, 0xA11CE,
         );
@@ -1788,6 +1861,18 @@ mod tests {
             word_prefix,
             AdaptiveTraversalPlanCacheKey::frontier_to_queue(7, 8_192, 9, 256, 8_192, 0xA11CE),
             "deterministic word-prefix queue programs must not alias atomic queue builders"
+        );
+        let block_offset_queue = AdaptiveTraversalPlanCacheKey::frontier_word_block_offsets_queue(
+            7, 32_897, 9, 1_029, 32_897, 0xA11CE,
+        );
+        assert_eq!(
+            block_offset_queue.kind,
+            AdaptiveTraversalProgramKind::FrontierWordBlockOffsetsQueue
+        );
+        assert_eq!(block_offset_queue.queue_capacity, 32_897);
+        assert_ne!(
+            block_offset_queue, word_prefix,
+            "block-offset queue programs must not alias the previous-block-loop scatter"
         );
 
         let dense = AdaptiveTraversalPlanCacheKey::four_russians_dense(99, 128, 4, 0xA11CE);

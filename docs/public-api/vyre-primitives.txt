@@ -175,6 +175,8 @@ pub const FRONTIER_QUEUE_LEN_INIT_OP_ID: &str = "vyre-primitives::graph::frontie
 pub const FRONTIER_TO_QUEUE_OP_ID: &str = "vyre-primitives::graph::frontier_to_queue";
 pub const FRONTIER_TO_QUEUE_PARALLEL_OP_ID: &str =
 pub const FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID: &str =
+pub const FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID: &str =
+pub const FRONTIER_WORD_BLOCK_OFFSETS_TO_QUEUE_PARALLEL_OP_ID: &str =
 pub const FRONTIER_WORD_BLOCK_PREFIX_TO_QUEUE_PARALLEL_OP_ID: &str =
 pub const FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID: &str =
 pub const FRONTIER_WORD_SCAN_BLOCK_LANES: u32 = 1024;
@@ -534,6 +536,8 @@ pub const fn from_row(handled: EffectRow) -> Self {
 pub const fn frontier_layout(&self) -> PersistentBfsFrontierLayout {
 pub const fn frontier_tail_mask(node_count: u32) -> u32 {
 pub const fn frontier_to_queue(
+pub const fn frontier_word_block_offsets(
+pub const fn frontier_word_block_offsets_queue(
 pub const fn frontier_word_counts(
 pub const fn frontier_word_prefix_queue(
 pub const fn frontier_words(&self) -> usize {
@@ -961,6 +965,8 @@ pub fn frontier_size(frontier: &[u32]) -> u32 {
 pub fn frontier_to_queue(
 pub fn frontier_to_queue_cpu(
 pub fn frontier_to_queue_parallel(
+pub fn frontier_word_block_offsets_in_place(block_totals: &str, node_count: u32) -> Program {
+pub fn frontier_word_block_offsets_to_queue_parallel(
 pub fn frontier_word_block_prefix_to_queue_parallel(
 pub fn frontier_word_counts_scan_pass_a(
 pub fn frontier_words_to_queue_parallel(

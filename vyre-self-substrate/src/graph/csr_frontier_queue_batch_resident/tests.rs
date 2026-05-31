@@ -198,6 +198,76 @@ fn large_batch_queries_use_word_prefix_queue_materializer() {
 }
 
 #[test]
+fn multiblock_batch_queries_scan_block_offsets_once_per_query() {
+    let dispatcher = RecordingBatchDispatcher::default();
+    let node_count = 32_897u32;
+    let edge_offsets = vec![0u32; node_count as usize + 1];
+    let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
+        .expect("Fix: zero-edge multiblock resident CSR graph is valid");
+    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let mut first = vec![0u32; words];
+    first[0] = 1;
+    first[1028] = 1;
+    let second = vec![0u32; words];
+    let frontiers: [&[u32]; 2] = [&first, &second];
+    let mut scratch = ResidentCsrQueueBatchScratch::default();
+    let mut outputs = Vec::new();
+
+    run_resident_csr_queue_batch_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &frontiers,
+        8,
+        u32::MAX,
+        &mut outputs,
+    )
+    .expect("Fix: recording dispatcher should complete multiblock resident CSR queue batch");
+
+    assert_eq!(scratch.word_count_handle_sets.len(), frontiers.len());
+    assert_eq!(
+        scratch.word_block_offsets_handle_sets.len(),
+        frontiers.len()
+    );
+    assert_eq!(scratch.word_prefix_queue_handle_sets.len(), frontiers.len());
+    let steps = dispatcher
+        .step_handles
+        .borrow()
+        .last()
+        .cloned()
+        .expect("Fix: expected one resident step sequence");
+    assert_eq!(steps.len(), 10);
+    assert_eq!(steps[0], vec![scratch.handles[0].frontier_out]);
+    assert_eq!(steps[1], scratch.word_count_handle_sets[0].as_slice());
+    assert_eq!(
+        steps[2],
+        scratch.word_block_offsets_handle_sets[0].as_slice(),
+        "multiblock batch query must scan block offsets before scatter"
+    );
+    assert_eq!(
+        steps[3],
+        scratch.word_prefix_queue_handle_sets[0].as_slice()
+    );
+    assert_eq!(steps[5], vec![scratch.handles[1].frontier_out]);
+    assert_eq!(steps[6], scratch.word_count_handle_sets[1].as_slice());
+    assert_eq!(
+        steps[7],
+        scratch.word_block_offsets_handle_sets[1].as_slice()
+    );
+    assert_eq!(
+        steps[8],
+        scratch.word_prefix_queue_handle_sets[1].as_slice()
+    );
+    assert_eq!(
+        outputs,
+        vec![
+            vec![0; words * std::mem::size_of::<u32>()],
+            vec![0; words * std::mem::size_of::<u32>()],
+        ]
+    );
+}
+
+#[test]
 fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
     let dispatcher = RecordingBatchDispatcher::default();
     let graph = upload_resident_csr_queue_graph(&dispatcher, 4, &[0, 0, 0, 0, 0], &[], &[])
@@ -222,6 +292,7 @@ fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
         scratch.queue_len_init_handle_sets.capacity(),
         scratch.clear_handle_sets.capacity(),
         scratch.word_count_handle_sets.capacity(),
+        scratch.word_block_offsets_handle_sets.capacity(),
         scratch.queue_handle_sets.capacity(),
         scratch.word_prefix_queue_handle_sets.capacity(),
         scratch.traverse_handle_sets.capacity(),
@@ -244,6 +315,7 @@ fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
             scratch.queue_len_init_handle_sets.capacity(),
             scratch.clear_handle_sets.capacity(),
             scratch.word_count_handle_sets.capacity(),
+            scratch.word_block_offsets_handle_sets.capacity(),
             scratch.queue_handle_sets.capacity(),
             scratch.word_prefix_queue_handle_sets.capacity(),
             scratch.traverse_handle_sets.capacity(),
@@ -255,6 +327,7 @@ fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
     assert_eq!(scratch.queue_len_init_handle_sets.len(), frontiers.len());
     assert_eq!(scratch.clear_handle_sets.len(), frontiers.len());
     assert_eq!(scratch.word_count_handle_sets.len(), 0);
+    assert_eq!(scratch.word_block_offsets_handle_sets.len(), 0);
     assert_eq!(scratch.queue_handle_sets.len(), frontiers.len());
     assert_eq!(scratch.word_prefix_queue_handle_sets.len(), 0);
     assert_eq!(scratch.traverse_handle_sets.len(), frontiers.len());
@@ -266,6 +339,7 @@ fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
     assert!(scratch.queue_len_init_handle_sets.is_empty());
     assert!(scratch.clear_handle_sets.is_empty());
     assert!(scratch.word_count_handle_sets.is_empty());
+    assert!(scratch.word_block_offsets_handle_sets.is_empty());
     assert!(scratch.queue_handle_sets.is_empty());
     assert!(scratch.word_prefix_queue_handle_sets.is_empty());
     assert!(scratch.traverse_handle_sets.is_empty());

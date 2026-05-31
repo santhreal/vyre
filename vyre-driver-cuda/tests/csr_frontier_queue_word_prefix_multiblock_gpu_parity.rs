@@ -89,8 +89,8 @@ fn assert_multi_case_telemetry(backend: &CudaBackend) {
     let telemetry = backend.telemetry_snapshot();
     assert_eq!(
         telemetry.kernel_launches,
-        u64::from(GENERATED_CASES) * 4,
-        "Fix: generated multi-block word-prefix queue must stay at clear + word-scan + queue-scatter + traverse per query."
+        u64::from(GENERATED_CASES) * 5,
+        "Fix: generated multi-block word-prefix queue must stay at clear + word-scan + block-offset scan + queue-scatter + traverse per query."
     );
     assert_eq!(
         telemetry.sync_points,

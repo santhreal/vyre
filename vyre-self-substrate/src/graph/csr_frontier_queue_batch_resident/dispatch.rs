@@ -4,6 +4,7 @@ use super::{
 use vyre_primitives::bitset::zero::bitset_zero;
 use vyre_primitives::graph::csr_frontier_queue::{
     csr_queue_forward_traverse, frontier_queue_len_init, frontier_to_queue,
+    frontier_word_block_offsets_in_place, frontier_word_block_offsets_to_queue_parallel,
     frontier_word_block_prefix_to_queue_parallel, frontier_word_counts_scan_pass_a,
     validate_frontier_queue_batch,
 };
@@ -92,7 +93,7 @@ pub fn run_resident_csr_queue_batch_into(
         &mut steps,
         frontiers
             .len()
-            .checked_mul(4)
+            .checked_mul(5)
             .ok_or_else(|| DispatchError::BackendError(
                 "Fix: resident CSR queue batch step count overflowed while reserving dispatch sequence slots."
                     .to_string(),
@@ -136,6 +137,7 @@ pub fn run_resident_csr_queue_batch_into(
                     "batch CSR queue word-count scan program is missing after ensure_batch_scratch. Fix: rebuild batch scratch before resident CSR queue dispatch.".to_string(),
                 )
             })?;
+            let block_offsets_program = scratch.word_block_offsets_program.as_ref();
             for query_index in 0..frontiers.len() {
                 steps.push(ResidentDispatchStep {
                     program: clear_frontier_out_program,
@@ -147,6 +149,18 @@ pub fn run_resident_csr_queue_batch_into(
                     handle_ids: &scratch.word_count_handle_sets[query_index],
                     grid_override: Some([word_prefix.block_count, 1, 1]),
                 });
+                if word_prefix.block_count > 1 {
+                    let block_offsets_program = block_offsets_program.ok_or_else(|| {
+                        DispatchError::BackendError(
+                            "batch CSR queue block-offset scan program is missing after ensure_batch_scratch. Fix: rebuild batch scratch before resident CSR queue dispatch.".to_string(),
+                        )
+                    })?;
+                    steps.push(ResidentDispatchStep {
+                        program: block_offsets_program,
+                        handle_ids: &scratch.word_block_offsets_handle_sets[query_index],
+                        grid_override: Some([1, 1, 1]),
+                    });
+                }
                 steps.push(ResidentDispatchStep {
                     program: queue_program,
                     handle_ids: &scratch.word_prefix_queue_handle_sets[query_index],
@@ -236,6 +250,7 @@ fn prepare_batch_sequence_tables(
     scratch.queue_len_init_handle_sets.clear();
     scratch.clear_handle_sets.clear();
     scratch.word_count_handle_sets.clear();
+    scratch.word_block_offsets_handle_sets.clear();
     scratch.queue_handle_sets.clear();
     scratch.word_prefix_queue_handle_sets.clear();
     scratch.traverse_handle_sets.clear();
@@ -255,6 +270,11 @@ fn prepare_batch_sequence_tables(
         &mut scratch.word_count_handle_sets,
         batch_len,
         "resident CSR queue batch word-count handles",
+    )?;
+    reserve_graph_vec(
+        &mut scratch.word_block_offsets_handle_sets,
+        batch_len,
+        "resident CSR queue batch block-offset handles",
     )?;
     reserve_graph_vec(
         &mut scratch.queue_handle_sets,
@@ -291,6 +311,7 @@ fn prepare_batch_sequence_tables(
                     word_partials,
                     block_totals,
                 ]);
+                scratch.word_block_offsets_handle_sets.push([block_totals]);
                 scratch.word_prefix_queue_handle_sets.push([
                     handles.frontier,
                     word_partials,
@@ -448,6 +469,7 @@ fn ensure_batch_scratch(
     }
     scratch.queue_len_init_program = None;
     scratch.word_counts_program = None;
+    scratch.word_block_offsets_program = None;
     scratch.clear_frontier_out_program = Some(bitset_zero("frontier_out", graph.words() as u32));
     match materializer {
         ResidentCsrQueueMaterializer::AtomicNodeScan => {
@@ -461,21 +483,38 @@ fn ensure_batch_scratch(
             ));
         }
         ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
+            let word_prefix = word_prefix_scratch(graph.words())?;
             scratch.word_counts_program = Some(frontier_word_counts_scan_pass_a(
                 "frontier",
                 "word_partials",
                 "block_totals",
                 graph.node_count(),
             ));
-            scratch.queue_program = Some(frontier_word_block_prefix_to_queue_parallel(
-                "frontier",
-                "word_partials",
-                "block_totals",
-                "active_queue",
-                "queue_len",
-                graph.node_count(),
-                queue_capacity,
-            ));
+            if word_prefix.block_count > 1 {
+                scratch.word_block_offsets_program = Some(frontier_word_block_offsets_in_place(
+                    "block_totals",
+                    graph.node_count(),
+                ));
+                scratch.queue_program = Some(frontier_word_block_offsets_to_queue_parallel(
+                    "frontier",
+                    "word_partials",
+                    "block_totals",
+                    "active_queue",
+                    "queue_len",
+                    graph.node_count(),
+                    queue_capacity,
+                ));
+            } else {
+                scratch.queue_program = Some(frontier_word_block_prefix_to_queue_parallel(
+                    "frontier",
+                    "word_partials",
+                    "block_totals",
+                    "active_queue",
+                    "queue_len",
+                    graph.node_count(),
+                    queue_capacity,
+                ));
+            }
         }
     }
     scratch.traverse_program = Some(csr_queue_forward_traverse(

@@ -27,6 +27,7 @@ pub struct ResidentCsrQueueBatchScratch {
     queue_len_init_program: Option<Program>,
     clear_frontier_out_program: Option<Program>,
     word_counts_program: Option<Program>,
+    word_block_offsets_program: Option<Program>,
     queue_program: Option<Program>,
     traverse_program: Option<Program>,
     frontier_payloads: Vec<Vec<u8>>,
@@ -34,6 +35,7 @@ pub struct ResidentCsrQueueBatchScratch {
     queue_len_init_handle_sets: Vec<[u64; 1]>,
     clear_handle_sets: Vec<[u64; 1]>,
     word_count_handle_sets: Vec<[u64; 3]>,
+    word_block_offsets_handle_sets: Vec<[u64; 1]>,
     queue_handle_sets: Vec<[u64; 3]>,
     word_prefix_queue_handle_sets: Vec<[u64; 5]>,
     traverse_handle_sets: Vec<[u64; 6]>,
@@ -89,6 +91,7 @@ impl ResidentCsrQueueBatchScratch {
         self.queue_len_init_program = None;
         self.clear_frontier_out_program = None;
         self.word_counts_program = None;
+        self.word_block_offsets_program = None;
         self.queue_program = None;
         self.traverse_program = None;
         self.frontier_payloads.clear();
@@ -96,6 +99,7 @@ impl ResidentCsrQueueBatchScratch {
         self.queue_len_init_handle_sets.clear();
         self.clear_handle_sets.clear();
         self.word_count_handle_sets.clear();
+        self.word_block_offsets_handle_sets.clear();
         self.queue_handle_sets.clear();
         self.word_prefix_queue_handle_sets.clear();
         self.traverse_handle_sets.clear();

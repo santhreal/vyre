@@ -32,6 +32,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Routed large adaptive sparse-queue traversal frontiers through the deterministic word-prefix queue materializer, with resident CUDA parity for a large sparse graph step and refreshed adaptive traversal program-cache identities.
 
+- Replaced multi-block word-prefix queue scatter's per-word previous-block loop with an in-place block-offset scan and precomputed-offset scatter, with resident CSR/adaptive wiring and live CUDA coverage for generated multi-block frontier queries.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

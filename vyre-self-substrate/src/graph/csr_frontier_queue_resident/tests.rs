@@ -270,3 +270,73 @@ fn large_resident_query_uses_word_prefix_queue_materializer() {
     );
     assert_eq!(output, vec![0; words * std::mem::size_of::<u32>()]);
 }
+
+#[test]
+fn multiblock_resident_query_scans_block_offsets_once() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let node_count = 32_897u32;
+    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let graph = ResidentCsrQueueGraph {
+        node_count,
+        edge_count: 0,
+        words,
+        edge_offsets_handle: 201,
+        edge_targets_handle: 202,
+        edge_kind_mask_handle: 203,
+    };
+    let mut scratch = ResidentCsrQueueScratch::default();
+    let mut output = Vec::new();
+    let mut frontier = vec![0u32; words];
+    frontier[0] = 1;
+    frontier[1028] = 1;
+
+    run_resident_csr_queue_query_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &frontier,
+        8,
+        u32::MAX,
+        &mut output,
+    )
+    .expect("Fix: recording dispatcher should complete multiblock resident CSR queue query");
+
+    let handles = scratch
+        .handles
+        .expect("Fix: multiblock resident CSR queue query should allocate scratch handles");
+    let word_partials = handles
+        .word_partials
+        .expect("Fix: multiblock word-prefix query should allocate word_partials");
+    let block_totals = handles
+        .block_totals
+        .expect("Fix: multiblock word-prefix query should allocate block_totals");
+    let steps = dispatcher
+        .sequence_step_handles
+        .borrow()
+        .last()
+        .cloned()
+        .expect("Fix: expected one resident step sequence");
+
+    assert_eq!(steps.len(), 5);
+    assert_eq!(steps[0], vec![handles.frontier_out]);
+    assert_eq!(
+        steps[1],
+        vec![handles.frontier, word_partials, block_totals]
+    );
+    assert_eq!(
+        steps[2],
+        vec![block_totals],
+        "multiblock query must convert block totals into offsets once"
+    );
+    assert_eq!(
+        steps[3],
+        vec![
+            handles.frontier,
+            word_partials,
+            block_totals,
+            handles.active_queue,
+            handles.queue_len,
+        ]
+    );
+    assert_eq!(output, vec![0; words * std::mem::size_of::<u32>()]);
+}

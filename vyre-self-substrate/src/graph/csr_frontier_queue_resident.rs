@@ -90,6 +90,7 @@ pub struct ResidentCsrQueueScratch {
     queue_len_init_program: Option<Program>,
     clear_frontier_out_program: Option<Program>,
     word_counts_program: Option<Program>,
+    word_block_offsets_program: Option<Program>,
     queue_program: Option<Program>,
     traverse_program: Option<Program>,
     cached_shape: Option<ResidentCsrQueueProgramShape>,
@@ -106,6 +107,7 @@ impl ResidentCsrQueueScratch {
         self.queue_len_init_program = None;
         self.clear_frontier_out_program = None;
         self.word_counts_program = None;
+        self.word_block_offsets_program = None;
         self.queue_program = None;
         self.traverse_program = None;
         self.cached_shape = None;
