@@ -98,6 +98,29 @@ fn cuda_encoding_classify_zero_count_is_ascii() {
 }
 
 #[test]
+fn cuda_encoding_classify_rejects_wrapped_three_byte_shape_count() {
+    let mut histogram = [0u32; 256];
+    histogram[0xE0] = u32::MAX / 2 + 1;
+    let count = histogram[0xE0];
+    let cpu = classify_from_histogram(&histogram, count);
+    let gpu = run_classify(&histogram, count);
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, ENC_ISO8859_1);
+}
+
+#[test]
+fn cuda_encoding_classify_rejects_wrapped_four_byte_shape_count() {
+    let mut histogram = [0u32; 256];
+    histogram[0x80] = 2;
+    histogram[0xF0] = u32::MAX / 3 + 1;
+    let count = histogram[0x80] + histogram[0xF0];
+    let cpu = classify_from_histogram(&histogram, count);
+    let gpu = run_classify(&histogram, count);
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, ENC_ISO8859_1);
+}
+
+#[test]
 fn cuda_encoding_classify_constants_round_trip() {
     // Sanity: ENC_BINARY is 255, the unknown sentinel.
     assert_eq!(ENC_BINARY, 255);

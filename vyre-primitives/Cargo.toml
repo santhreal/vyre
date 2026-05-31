@@ -192,6 +192,11 @@ path = "tests/proptest_text_line_index.rs"
 required-features = ["text", "cpu-parity"]
 
 [[test]]
+name = "proptest_text_encoding_classify"
+path = "tests/proptest_text_encoding_classify.rs"
+required-features = ["text", "cpu-parity"]
+
+[[test]]
 name = "adversarial_text_utf8_validate"
 path = "tests/adversarial_text_utf8_validate.rs"
 required-features = ["text"]

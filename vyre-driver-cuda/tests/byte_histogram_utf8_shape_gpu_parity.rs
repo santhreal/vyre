@@ -153,3 +153,23 @@ fn cuda_utf8_shape_counts_ascii_only_zero() {
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, (0, 0));
 }
+
+#[test]
+fn cuda_utf8_shape_counts_saturates_three_byte_expected_count() {
+    let mut histogram = [0u32; 256];
+    histogram[0xE0] = u32::MAX / 2 + 1;
+    let cpu = reference_utf8_shape_counts(&histogram);
+    let gpu = run_shape_counts(&histogram);
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, (0, u32::MAX));
+}
+
+#[test]
+fn cuda_utf8_shape_counts_saturates_four_byte_expected_count() {
+    let mut histogram = [0u32; 256];
+    histogram[0xF0] = u32::MAX / 3 + 1;
+    let cpu = reference_utf8_shape_counts(&histogram);
+    let gpu = run_shape_counts(&histogram);
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, (0, u32::MAX));
+}
