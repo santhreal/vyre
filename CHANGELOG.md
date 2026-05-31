@@ -52,6 +52,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Moved `#ifdef`/`#ifndef` and `#if`/`#elif` compatibility evaluators in directive extraction and live conditional re-evaluation to raw `U8` source rows and macro-name tables while preserving packed standalone evaluator ABIs.
 
+- Removed the now-unused C GPU-preprocess U32 byte-padding staging helper so raw-byte directive and live conditional paths cannot route back through padded host macro-name buffers.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**
