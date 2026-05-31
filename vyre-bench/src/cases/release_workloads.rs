@@ -550,12 +550,11 @@ impl SyntheticCountWorkload {
             .dispatch_timed(program, &generated.inputs, &ctx.dispatch_config)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
         let baseline_start = std::time::Instant::now();
-        let mut baseline_words = vec![0u32; self.records.div_ceil(32) as usize];
-        for index in 0..self.records {
-            if string_bitmap_pattern_word(index) != 0 && string_bitmap_rule_word(index) != 0 {
-                baseline_words[(index / 32) as usize] |= 1u32 << (index & 31);
-            }
-        }
+        let baseline_words = string_bitmap_scatter_expected_words(
+            &generated.pattern_bitmap,
+            &generated.rule_bitmap,
+            self.records,
+        );
         let baseline_outputs = vec![encode_u32_words(&baseline_words)];
         let baseline_wall = baseline_start.elapsed().as_nanos() as u64;
         let mut run = bench_run_from_timed(
@@ -630,6 +629,20 @@ fn string_bitmap_scatter_inputs(records: u32) -> StringBitmapScatterInputs {
         pattern_bitmap,
         rule_bitmap,
     }
+}
+
+fn string_bitmap_scatter_expected_words(
+    pattern_bitmap: &[u32],
+    rule_bitmap: &[u32],
+    records: u32,
+) -> Vec<u32> {
+    let mut expected_words = vec![0u32; records.div_ceil(32) as usize];
+    for index in 0..records {
+        if pattern_bitmap[index as usize] != 0 && rule_bitmap[index as usize] != 0 {
+            expected_words[(index / 32) as usize] |= 1u32 << (index & 31);
+        }
+    }
+    expected_words
 }
 
 fn synthetic_count_program(pattern: SyntheticPattern, records: u32) -> Program {
@@ -2444,6 +2457,25 @@ fn release_macro_workloads() -> [&'static SyntheticCountWorkload; 10] {
     ]
 }
 
+fn release_macro_workload(id: &str) -> Option<&'static SyntheticCountWorkload> {
+    release_macro_workloads()
+        .into_iter()
+        .find(|workload| workload.id == id)
+}
+
+fn release_macro_program_spec(
+    workload: &SyntheticCountWorkload,
+    records: u32,
+) -> ReleaseMacroProgramSpec {
+    ReleaseMacroProgramSpec {
+        id: workload.id,
+        name: workload.name,
+        records,
+        input_buffers: pattern_input_count(workload.pattern),
+        min_speedup_x: workload.min_speedup_x as u32,
+    }
+}
+
 /// Return compiler-grade release macro workload descriptors used by Criterion
 /// and generated coverage tests.
 #[must_use]
@@ -2457,13 +2489,7 @@ pub fn release_macro_program_specs() -> Vec<ReleaseMacroProgramSpec> {
 pub fn release_macro_program_specs_for_records(records: u32) -> Vec<ReleaseMacroProgramSpec> {
     release_macro_workloads()
         .into_iter()
-        .map(|workload| ReleaseMacroProgramSpec {
-            id: workload.id,
-            name: workload.name,
-            records,
-            input_buffers: pattern_input_count(workload.pattern),
-            min_speedup_x: workload.min_speedup_x as u32,
-        })
+        .map(|workload| release_macro_program_spec(workload, records))
         .collect()
 }
 
@@ -2473,22 +2499,14 @@ pub fn release_count_macro_program_specs_for_records(records: u32) -> Vec<Releas
     release_macro_workloads()
         .into_iter()
         .filter(|workload| is_count_output_pattern(workload.pattern))
-        .map(|workload| ReleaseMacroProgramSpec {
-            id: workload.id,
-            name: workload.name,
-            records,
-            input_buffers: pattern_input_count(workload.pattern),
-            min_speedup_x: workload.min_speedup_x as u32,
-        })
+        .map(|workload| release_macro_program_spec(workload, records))
         .collect()
 }
 
 /// Build the IR program for a compiler-grade release macro workload.
 #[must_use]
 pub fn build_release_macro_program(id: &str) -> Option<Program> {
-    release_macro_workloads()
-        .into_iter()
-        .find(|workload| workload.id == id)
+    release_macro_workload(id)
         .map(|workload| build_synthetic_release_program(workload.pattern, workload.records))
 }
 
@@ -2496,45 +2514,69 @@ pub fn build_release_macro_program(id: &str) -> Option<Program> {
 /// caller-selected record count.
 #[must_use]
 pub fn build_release_macro_program_for_records(id: &str, records: u32) -> Option<Program> {
-    release_macro_workloads()
-        .into_iter()
-        .find(|workload| workload.id == id)
+    release_macro_workload(id)
         .map(|workload| build_synthetic_release_program(workload.pattern, records))
 }
 
 /// Build a reduced or stress-scale release macro case with generated hostile
-/// inputs and CPU-oracle count output.
+/// inputs and CPU-oracle outputs.
+#[must_use]
+pub fn build_release_macro_case_for_records(
+    id: &str,
+    records: u32,
+) -> Option<ReleaseMacroGeneratedCase> {
+    let workload = release_macro_workload(id)?;
+    let spec = release_macro_program_spec(workload, records);
+    let program = build_synthetic_release_program(workload.pattern, records);
+    let (inputs, expected_outputs) = match workload.pattern {
+        SyntheticPattern::StringBitmapScatter => {
+            let generated = string_bitmap_scatter_inputs(records);
+            let expected_words = string_bitmap_scatter_expected_words(
+                &generated.pattern_bitmap,
+                &generated.rule_bitmap,
+                records,
+            );
+            (generated.inputs, vec![encode_u32_words(&expected_words)])
+        }
+        SyntheticPattern::ConditionEval
+        | SyntheticPattern::OffsetCountAggregation
+        | SyntheticPattern::EntropyWindow
+        | SyntheticPattern::QuantifiedLoops
+        | SyntheticPattern::AliasReachingDef
+        | SyntheticPattern::IfdsWitness
+        | SyntheticPattern::CAstTraversal
+        | SyntheticPattern::MegakernelQueuedBatch
+        | SyntheticPattern::EgraphSaturation => {
+            let generated = synthetic_inputs(workload.pattern, records);
+            let expected = synthetic_cpu_count(workload.pattern, records);
+            assert_eq!(
+                generated.expected, expected,
+                "Fix: release macro generated input oracle diverged from CPU count oracle for {id}"
+            );
+            (generated.inputs, vec![expected.to_le_bytes().to_vec()])
+        }
+    };
+
+    Some(ReleaseMacroGeneratedCase {
+        spec,
+        program,
+        inputs,
+        expected_outputs,
+    })
+}
+
+/// Build a reduced or stress-scale release macro case whose output is one
+/// CPU-oracle count word.
 #[must_use]
 pub fn build_release_count_macro_case_for_records(
     id: &str,
     records: u32,
 ) -> Option<ReleaseMacroGeneratedCase> {
-    let workload = release_macro_workloads()
-        .into_iter()
-        .find(|workload| workload.id == id)?;
+    let workload = release_macro_workload(id)?;
     if !is_count_output_pattern(workload.pattern) {
         return None;
     }
-
-    let generated = synthetic_inputs(workload.pattern, records);
-    let expected = synthetic_cpu_count(workload.pattern, records);
-    assert_eq!(
-        generated.expected, expected,
-        "Fix: release macro generated input oracle diverged from CPU count oracle for {id}"
-    );
-
-    Some(ReleaseMacroGeneratedCase {
-        spec: ReleaseMacroProgramSpec {
-            id: workload.id,
-            name: workload.name,
-            records,
-            input_buffers: pattern_input_count(workload.pattern),
-            min_speedup_x: workload.min_speedup_x as u32,
-        },
-        program: build_synthetic_release_program(workload.pattern, records),
-        inputs: generated.inputs,
-        expected_outputs: vec![expected.to_le_bytes().to_vec()],
-    })
+    build_release_macro_case_for_records(id, records)
 }
 
 fn is_count_output_pattern(pattern: SyntheticPattern) -> bool {
