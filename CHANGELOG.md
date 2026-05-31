@@ -14,6 +14,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Added explicit RLE segment-length dispatch sizing and multi-block CPU/CUDA parity coverage for packed decode workloads.
 
+- Added explicit bigint add-carry dispatch sizing and multi-block CPU/CUDA carry-pattern coverage for large limb arrays.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

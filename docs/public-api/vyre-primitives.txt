@@ -28,6 +28,7 @@ pub const BATCHED_PATHS_BUFFER: &str = "batched_path_reconstruct paths";
 pub const BATCHED_PATH_TARGETS_BUFFER: &str = "batched_path_reconstruct targets";
 pub const BATCHED_WORKGROUP_SIZE: u32 = 256;
 pub const BATCH_OP_ID: &str = "vyre-primitives::graph::persistent_bfs_batch";
+pub const BIGINT_ADD_CARRY_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const BINARY: u32 = 7;
 pub const BINDING_A_IN: u32 = 0;
 pub const BINDING_BYTES_IN: u32 = 0;
@@ -466,6 +467,7 @@ pub const fn adler32_initial_b_state() -> u32 {
 pub const fn adler32_update_byte_state(a: u32, b: u32, byte: u8) -> (u32, u32) {
 pub const fn allow_mask(&self) -> u32 {
 pub const fn batch_layout(&self) -> PersistentBfsBatchLayout {
+pub const fn bigint_add_carry_dispatch_grid(limb_count: u32) -> [u32; 3] {
 pub const fn bit(self) -> u32 {
 pub const fn bits(self) -> u32 {
 pub const fn bitset_words(n: u32) -> u32 {
