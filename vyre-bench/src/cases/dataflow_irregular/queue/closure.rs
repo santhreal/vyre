@@ -7,9 +7,7 @@ use crate::api::resident::{input_bytes_total, ResidentInputSet};
 use crate::api::suite::SuiteKind;
 use std::time::Instant;
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::csr_frontier_queue::{
-    frontier_queue_len_init, frontier_to_queue_parallel,
-};
+use vyre_primitives::graph::csr_frontier_queue::frontier_queue_len_init;
 use vyre_primitives::graph::csr_queue_delta::csr_queue_delta_enqueue;
 
 use super::super::closure::CLOSURE_MAX_ITERS;
@@ -39,18 +37,19 @@ const QUEUE_CLOSURE_SUITES: &[SuiteKind] = &[
 const QUEUE_CLOSURE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_SEED_FRONTIER_INDEX: usize = 0;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_QUEUE_A_INDEX: usize = 1;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_LEN_A_INDEX: usize = 2;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_QUEUE_B_INDEX: usize = 3;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_LEN_B_INDEX: usize = 4;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_EDGE_OFFSETS_INDEX: usize = 5;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_EDGE_TARGETS_INDEX: usize = 6;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_EDGE_KIND_INDEX: usize = 7;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_ACCUMULATOR_INDEX: usize = 8;
+pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_SEED_QUEUE_INDEX: usize = 1;
+pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_SEED_LEN_INDEX: usize = 2;
+pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_QUEUE_A_INDEX: usize = 3;
+pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_LEN_A_INDEX: usize = 4;
+pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_QUEUE_B_INDEX: usize = 5;
+pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_LEN_B_INDEX: usize = 6;
+pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_EDGE_OFFSETS_INDEX: usize = 7;
+pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_EDGE_TARGETS_INDEX: usize = 8;
+pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_EDGE_KIND_INDEX: usize = 9;
+pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_ACCUMULATOR_INDEX: usize = 10;
 
 pub(in crate::cases::dataflow_irregular) struct DataflowIfdsSkewedQueueClosurePrepared {
     pub(in crate::cases::dataflow_irregular) reset_program: Program,
-    pub(in crate::cases::dataflow_irregular) seed_queue_program: Program,
     pub(in crate::cases::dataflow_irregular) clear_len_program: Program,
     pub(in crate::cases::dataflow_irregular) delta_program: Program,
     pub(in crate::cases::dataflow_irregular) inputs: Vec<Vec<u8>>,
@@ -59,6 +58,7 @@ pub(in crate::cases::dataflow_irregular) struct DataflowIfdsSkewedQueueClosurePr
     pub(in crate::cases::dataflow_irregular) baseline_wall_ns: u64,
     pub(in crate::cases::dataflow_irregular) stats: IfdsSkewedStats,
     pub(in crate::cases::dataflow_irregular) queue_capacity: u32,
+    pub(in crate::cases::dataflow_irregular) seed_queue_len: u32,
     pub(in crate::cases::dataflow_irregular) closure_iterations: u32,
     pub(in crate::cases::dataflow_irregular) closure_changed: u32,
     pub(in crate::cases::dataflow_irregular) total_queue_pops: u64,
@@ -66,7 +66,7 @@ pub(in crate::cases::dataflow_irregular) struct DataflowIfdsSkewedQueueClosurePr
     pub(in crate::cases::dataflow_irregular) resident: Option<ResidentInputSet>,
 }
 
-/// Queue-driven IFDS closure that never rescans the full node bitset after seeding.
+/// Queue-driven IFDS closure seeded from a sparse queue.
 struct DataflowIfdsSkewedQueueClosure;
 
 impl BenchCase for DataflowIfdsSkewedQueueClosure {
@@ -78,7 +78,7 @@ impl BenchCase for DataflowIfdsSkewedQueueClosure {
         BenchMetadata {
             id: self.id(),
             name: "Dataflow IFDS Skewed Queue Closure 1M".to_string(),
-            description: "Sparse-delta IFDS closure over a million-node skewed exploded-supergraph using GPU-resident ping-pong active queues".to_string(),
+            description: "Sparse-delta IFDS closure over a million-node skewed exploded-supergraph using a pre-materialized seed queue and GPU-resident ping-pong active queues".to_string(),
             tags: vec![
                 "dataflow".to_string(),
                 "ifds".to_string(),
@@ -86,6 +86,7 @@ impl BenchCase for DataflowIfdsSkewedQueueClosure {
                 "csr".to_string(),
                 "frontier-queue".to_string(),
                 "delta-queue".to_string(),
+                "seed-queue".to_string(),
                 "closure".to_string(),
                 "skewed-degree".to_string(),
                 "irregular".to_string(),
@@ -115,6 +116,7 @@ impl BenchCase for DataflowIfdsSkewedQueueClosure {
                 "skewed-csr".to_string(),
                 "frontier-queue".to_string(),
                 "delta-queue".to_string(),
+                "seed-queue".to_string(),
                 "resident-sequence".to_string(),
             ],
         }
@@ -205,12 +207,15 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_closure(
 ) -> Result<DataflowIfdsSkewedQueueClosurePrepared, BenchError> {
     let fixture = build_ifds_skewed_fixture(NODE_COUNT)?;
     let queue_capacity = fixture.stats.nodes;
-    let reset_program = ifds_queue_closure_reset_program(fixture.stats.frontier_words);
-    let seed_queue_program = frontier_to_queue_parallel(
-        "frontier_seed",
-        "active_queue",
-        "active_len",
-        fixture.stats.nodes,
+    let seed_queue_len = u32::try_from(fixture.stats.active_sources).map_err(|_| {
+        BenchError::EnvironmentInvalid(format!(
+            "IFDS queue closure active source count {} exceeds u32 indexing. Fix: split the seed queue.",
+            fixture.stats.active_sources
+        ))
+    })?;
+    let reset_program = ifds_queue_closure_reset_program(
+        fixture.stats.frontier_words,
+        seed_queue_len,
         queue_capacity,
     );
     let clear_len_program = frontier_queue_len_init("queue_len");
@@ -254,7 +259,6 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_closure(
 
     Ok(DataflowIfdsSkewedQueueClosurePrepared {
         reset_program,
-        seed_queue_program,
         clear_len_program,
         delta_program,
         inputs,
@@ -263,6 +267,7 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_closure(
         baseline_wall_ns,
         stats,
         queue_capacity,
+        seed_queue_len,
         closure_iterations: oracle.iterations,
         closure_changed: oracle.changed,
         total_queue_pops: oracle.total_queue_pops,

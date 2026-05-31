@@ -8,7 +8,8 @@ use super::queue::{
     QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
     QUEUE_CLOSURE_EDGE_OFFSETS_INDEX, QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX,
     QUEUE_CLOSURE_LEN_B_INDEX, QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX,
-    QUEUE_CLOSURE_SEED_FRONTIER_INDEX, QUEUE_FRONTIER_IN_INDEX, QUEUE_FRONTIER_OUT_INDEX,
+    QUEUE_CLOSURE_SEED_FRONTIER_INDEX, QUEUE_CLOSURE_SEED_LEN_INDEX,
+    QUEUE_CLOSURE_SEED_QUEUE_INDEX, QUEUE_FRONTIER_IN_INDEX, QUEUE_FRONTIER_OUT_INDEX,
     QUEUE_LEN_INDEX,
 };
 use super::*;
@@ -219,10 +220,28 @@ fn ifds_queue_closure_inputs_allocate_ping_pong_queues_and_seed_accumulator() {
     let fixture = build_ifds_skewed_fixture(4096).unwrap();
     let inputs = ifds_queue_closure_inputs(&fixture, fixture.stats.nodes).unwrap();
 
-    assert_eq!(inputs.len(), 9);
+    assert_eq!(inputs.len(), 11);
     assert_eq!(
         inputs[QUEUE_CLOSURE_SEED_FRONTIER_INDEX],
         vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in)
+    );
+    assert_eq!(
+        inputs[QUEUE_CLOSURE_SEED_LEN_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&[fixture.stats.active_sources as u32])
+    );
+    let mut seed_queue = Vec::new();
+    vyre_primitives::wire::unpack_u32_slice_into(
+        &inputs[QUEUE_CLOSURE_SEED_QUEUE_INDEX],
+        fixture.stats.active_sources as usize,
+        "queue closure seed queue test",
+        &mut seed_queue,
+    )
+    .unwrap();
+    assert_eq!(seed_queue.len(), fixture.stats.active_sources as usize);
+    assert_eq!(seed_queue[0], 0);
+    assert!(
+        seed_queue.windows(2).all(|pair| pair[0] < pair[1]),
+        "pre-materialized queue closure seed queue should preserve source order"
     );
     assert_eq!(
         inputs[QUEUE_CLOSURE_ACCUMULATOR_INDEX],
@@ -266,15 +285,20 @@ fn ifds_queue_closure_inputs_allocate_ping_pong_queues_and_seed_accumulator() {
 
 #[test]
 fn ifds_queue_closure_reset_program_restores_accumulator_and_clears_lengths() {
-    let program = ifds_queue_closure_reset_program(128);
+    let program = ifds_queue_closure_reset_program(128, 7, 256);
 
     assert_eq!(program.workgroup_size(), [256, 1, 1]);
-    assert_eq!(program.buffers().len(), 4);
+    assert_eq!(program.buffers().len(), 7);
     assert_eq!(program.buffers()[0].name.as_ref(), "frontier_seed");
-    assert_eq!(program.buffers()[1].name.as_ref(), "accumulator");
-    assert_eq!(program.buffers()[2].name.as_ref(), "queue_a_len");
-    assert_eq!(program.buffers()[3].name.as_ref(), "queue_b_len");
-    assert_eq!(program.buffers()[1].count, 128);
+    assert_eq!(program.buffers()[1].name.as_ref(), "seed_queue");
+    assert_eq!(program.buffers()[2].name.as_ref(), "seed_len");
+    assert_eq!(program.buffers()[3].name.as_ref(), "active_queue");
+    assert_eq!(program.buffers()[4].name.as_ref(), "accumulator");
+    assert_eq!(program.buffers()[5].name.as_ref(), "queue_a_len");
+    assert_eq!(program.buffers()[6].name.as_ref(), "queue_b_len");
+    assert_eq!(program.buffers()[1].count, 7);
+    assert_eq!(program.buffers()[3].count, 256);
+    assert_eq!(program.buffers()[4].count, 128);
 }
 
 #[test]
@@ -282,20 +306,27 @@ fn ifds_queue_closure_prepare_builds_delta_fixpoint_sequence() {
     let prepared = prepare_ifds_skewed_queue_closure(None).unwrap();
 
     assert_eq!(prepared.reset_program.workgroup_size(), [256, 1, 1]);
-    assert_eq!(prepared.seed_queue_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.clear_len_program.workgroup_size(), [1, 1, 1]);
     assert_eq!(prepared.delta_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(
-        prepared.seed_queue_program.buffers()[0].name.as_ref(),
+        prepared.reset_program.buffers()[0].name.as_ref(),
         "frontier_seed"
     );
     assert_eq!(
-        prepared.seed_queue_program.buffers()[0].count as usize,
+        prepared.reset_program.buffers()[0].count as usize,
         FRONTIER_WORDS
     );
     assert_eq!(prepared.stats.nodes, NODE_COUNT);
+    assert_eq!(
+        prepared.seed_queue_len,
+        prepared.stats.active_sources as u32
+    );
     assert_eq!(prepared.queue_capacity, NODE_COUNT);
-    assert_eq!(prepared.inputs.len(), 9);
+    assert_eq!(prepared.inputs.len(), 11);
+    assert_eq!(
+        prepared.inputs[QUEUE_CLOSURE_SEED_QUEUE_INDEX].len(),
+        prepared.seed_queue_len as usize * std::mem::size_of::<u32>()
+    );
     assert_eq!(
         prepared.inputs[QUEUE_CLOSURE_QUEUE_A_INDEX].len(),
         NODE_COUNT as usize * std::mem::size_of::<u32>()

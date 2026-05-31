@@ -51,6 +51,14 @@ fn append_queue_closure_points(
         value: u64::from(prepared.queue_capacity),
     });
     metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_seed_queue_len".to_string(),
+        value: u64::from(prepared.seed_queue_len),
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_dispatch_count".to_string(),
+        value: u64::from(1 + prepared.closure_iterations.saturating_mul(2)),
+    });
+    metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_total_queue_pops".to_string(),
         value: prepared.total_queue_pops,
     });
@@ -60,6 +68,10 @@ fn append_queue_closure_points(
     });
     metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_queue_delta".to_string(),
+        value: 1,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_seed_scan_elided".to_string(),
         value: 1,
     });
 }

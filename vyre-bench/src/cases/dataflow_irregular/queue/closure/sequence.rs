@@ -10,19 +10,18 @@ use super::{
     QUEUE_CLOSURE_EDGE_KIND_INDEX, QUEUE_CLOSURE_EDGE_OFFSETS_INDEX,
     QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX, QUEUE_CLOSURE_LEN_B_INDEX,
     QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX, QUEUE_CLOSURE_SEED_FRONTIER_INDEX,
-    QUEUE_CLOSURE_WORKGROUP_SIZE,
+    QUEUE_CLOSURE_SEED_LEN_INDEX, QUEUE_CLOSURE_SEED_QUEUE_INDEX, QUEUE_CLOSURE_WORKGROUP_SIZE,
 };
 
-const QUEUE_CLOSURE_RESET_RESOURCE_INDICES: [usize; 4] = [
+const QUEUE_CLOSURE_RESET_ACCUMULATOR_RESOURCE: usize = 4;
+const QUEUE_CLOSURE_RESET_RESOURCE_INDICES: [usize; 7] = [
     QUEUE_CLOSURE_SEED_FRONTIER_INDEX,
+    QUEUE_CLOSURE_SEED_QUEUE_INDEX,
+    QUEUE_CLOSURE_SEED_LEN_INDEX,
+    QUEUE_CLOSURE_QUEUE_A_INDEX,
     QUEUE_CLOSURE_ACCUMULATOR_INDEX,
     QUEUE_CLOSURE_LEN_A_INDEX,
     QUEUE_CLOSURE_LEN_B_INDEX,
-];
-const QUEUE_CLOSURE_SEED_QUEUE_RESOURCE_INDICES: [usize; 3] = [
-    QUEUE_CLOSURE_SEED_FRONTIER_INDEX,
-    QUEUE_CLOSURE_QUEUE_A_INDEX,
-    QUEUE_CLOSURE_LEN_A_INDEX,
 ];
 const QUEUE_CLOSURE_CLEAR_A_RESOURCE_INDICES: [usize; 1] = [QUEUE_CLOSURE_LEN_A_INDEX];
 const QUEUE_CLOSURE_CLEAR_B_RESOURCE_INDICES: [usize; 1] = [QUEUE_CLOSURE_LEN_B_INDEX];
@@ -63,10 +62,6 @@ pub(super) fn dispatch_resident_queue_closure_sequence(
         "IFDS queue closure reset",
     )?);
     resource_sets.push(resident.resources_for_indices(
-        &QUEUE_CLOSURE_SEED_QUEUE_RESOURCE_INDICES,
-        "IFDS queue closure seed queue",
-    )?);
-    resource_sets.push(resident.resources_for_indices(
         &QUEUE_CLOSURE_CLEAR_A_RESOURCE_INDICES,
         "IFDS queue closure clear queue A length",
     )?);
@@ -93,15 +88,7 @@ pub(super) fn dispatch_resident_queue_closure_sequence(
         prepared
             .stats
             .frontier_words
-            .div_ceil(QUEUE_CLOSURE_WORKGROUP_SIZE[0])
-            .max(1),
-        1,
-        1,
-    ];
-    let seed_grid = [
-        prepared
-            .stats
-            .nodes
+            .max(prepared.seed_queue_len)
             .div_ceil(QUEUE_CLOSURE_WORKGROUP_SIZE[0])
             .max(1),
         1,
@@ -115,20 +102,15 @@ pub(super) fn dispatch_resident_queue_closure_sequence(
         1,
         1,
     ];
-    let mut specs = Vec::with_capacity(2 + (prepared.closure_iterations as usize * 2));
+    let mut specs = Vec::with_capacity(1 + (prepared.closure_iterations as usize * 2));
     specs.push(StepSpec {
         program: &prepared.reset_program,
         resource_set: 0,
         grid: reset_grid,
     });
-    specs.push(StepSpec {
-        program: &prepared.seed_queue_program,
-        resource_set: 1,
-        grid: seed_grid,
-    });
     for iteration in 0..prepared.closure_iterations {
-        let clear_resource_set = if iteration & 1 == 0 { 3 } else { 2 };
-        let delta_resource_set = if iteration & 1 == 0 { 4 } else { 5 };
+        let clear_resource_set = if iteration & 1 == 0 { 2 } else { 1 };
+        let delta_resource_set = if iteration & 1 == 0 { 3 } else { 4 };
         specs.push(StepSpec {
             program: &prepared.clear_len_program,
             resource_set: clear_resource_set,
@@ -150,7 +132,7 @@ pub(super) fn dispatch_resident_queue_closure_sequence(
         })
         .collect::<Vec<_>>();
     let read_ranges = [ResidentReadRange {
-        resource: &resource_sets[0][1],
+        resource: &resource_sets[0][QUEUE_CLOSURE_RESET_ACCUMULATOR_RESOURCE],
         byte_offset: 0,
         byte_len: prepared.baseline_output.len(),
     }];
