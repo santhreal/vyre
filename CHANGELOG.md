@@ -12,6 +12,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Added explicit graph launch sizing for CSR frontier degree-sum and refreshed the public API snapshot for the current graph/dispatch surfaces.
 
+- Added explicit RLE segment-length dispatch sizing and multi-block CPU/CUDA parity coverage for packed decode workloads.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

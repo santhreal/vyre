@@ -425,6 +425,7 @@ pub const RANGE_COUNTS_U32_OP_ID: &str = "vyre-primitives::reduce::range_counts_
 pub const RESERVED_BTYPE_FIX: &str =
 pub const RESERVED_KEY: u32 = u32::MAX - 1;
 pub const RETURN: u32 = 1 << 2;
+pub const RLE_SEGMENT_LENGTHS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const RULE2_OP_ID: &str = "vyre-primitives::graph::do_rule2_reverse_incoming";
 pub const SCC_DECOMPOSE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const SIZE_ARG: u32 = 1 << 24;
@@ -562,6 +563,7 @@ pub const fn query_count(&self) -> usize {
 pub const fn query_count_u32(&self) -> u32 {
 pub const fn queue_forward(
 pub const fn queue_len_init(
+pub const fn rle_segment_lengths_dispatch_grid(segment_count: u32) -> [u32; 3] {
 pub const fn scalar(s: f64) -> Self {
 pub const fn scc_decompose_dispatch_grid(node_count: u32) -> [u32; 3] {
 pub const fn shape(&self) -> DominatorFrontierProgramShape {

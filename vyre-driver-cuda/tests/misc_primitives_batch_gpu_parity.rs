@@ -9,7 +9,10 @@ mod common;
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
 use vyre_primitives::bitset::popcount::{bitset_popcount, cpu_ref as popcount_cpu};
-use vyre_primitives::decode::rle_segment_lengths::{rle_segment_lengths, rle_segment_lengths_cpu};
+use vyre_primitives::decode::rle_segment_lengths::{
+    rle_segment_lengths, rle_segment_lengths_cpu, rle_segment_lengths_dispatch_grid,
+    MAX_SEGMENT_LENGTH,
+};
 use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::parsing::line_splice_classify::{
@@ -383,9 +386,7 @@ fn run_rle(segments: &[u32]) -> (Vec<u32>, Vec<u32>) {
         vec![0u8; count as usize * 4],
     ];
     let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((count + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
+    config.grid_override = Some(rle_segment_lengths_dispatch_grid(count));
     let outputs = with_live_backend("RLE segment lengths", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -419,4 +420,38 @@ fn cuda_rle_segment_lengths_zero_length() {
     assert_eq!(gpu_values, cpu_values);
     assert_eq!(gpu_lengths, vec![0, 1]);
     assert_eq!(gpu_values, vec![0, 0xFF]);
+}
+
+#[test]
+fn cuda_rle_segment_lengths_multi_block_mixed_runs() {
+    let count = 1025u32;
+    let mut segments = Vec::with_capacity(count as usize);
+    for idx in 0..count {
+        let length = match idx {
+            0 => MAX_SEGMENT_LENGTH,
+            255 => 0,
+            256 => 1,
+            511 => 4096,
+            512 => 7,
+            1024 => MAX_SEGMENT_LENGTH - 1,
+            _ => (idx.wrapping_mul(17) ^ idx.rotate_left(3)) & 0x1FFF,
+        };
+        let value = (idx.wrapping_mul(37) ^ idx.rotate_right(5)) & 0xFF;
+        segments.push((length << 8) | value);
+    }
+
+    let (cpu_lengths, cpu_values) = rle_segment_lengths_cpu(&segments);
+    let (gpu_lengths, gpu_values) = run_rle(&segments);
+
+    assert_eq!(rle_segment_lengths_dispatch_grid(count), [5, 1, 1]);
+    assert_eq!(gpu_lengths, cpu_lengths);
+    assert_eq!(gpu_values, cpu_values);
+    assert_eq!(gpu_lengths[0], MAX_SEGMENT_LENGTH);
+    assert_eq!(gpu_lengths[255], 0);
+    assert_eq!(gpu_lengths[256], 1);
+    assert_eq!(gpu_lengths[1024], MAX_SEGMENT_LENGTH - 1);
+    assert_eq!(
+        gpu_values[512],
+        (512u32.wrapping_mul(37) ^ 512u32.rotate_right(5)) & 0xFF
+    );
 }
