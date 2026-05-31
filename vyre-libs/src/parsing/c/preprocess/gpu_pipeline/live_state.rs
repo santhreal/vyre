@@ -7,8 +7,8 @@ use crate::parsing::c::preprocess::gpu_if_expression_abi::INVALID_EXPR_VALUE;
 use crate::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value_u8;
 
 use super::buffers::{
-    bucket_pow2, checked_gpu_u32, pack_u32_words, pack_u32_words_into, pad_to_u32_words,
-    read_u32_scalar_exact, unpack_u32_words_exact_into,
+    bucket_pow2, checked_gpu_u32, pack_u32_words, pack_u32_words_into, read_u32_scalar_exact,
+    unpack_u32_words_exact_into,
 };
 use super::live_conditional_cache::{LiveConditionalCache, LiveConditionalCacheKey};
 use super::macro_values;
@@ -34,20 +34,24 @@ mod live_conditional_program_tests {
     use super::*;
     use vyre::ir::{DataType, Program};
 
-    fn assert_source_is_raw_u8(program: &Program, label: &str) {
-        let source = program
-            .buffers()
-            .iter()
-            .find(|buffer| buffer.name() == "source")
-            .unwrap_or_else(|| panic!("Fix: {label} live conditional source buffer must exist"));
-        assert_eq!(source.element(), DataType::U8);
-        assert_eq!(source.count(), 0);
+    fn assert_byte_buffers_are_raw_u8(program: &Program, label: &str) {
+        for name in ["source", "macro_names_packed"] {
+            let buffer = program
+                .buffers()
+                .iter()
+                .find(|buffer| buffer.name() == name)
+                .unwrap_or_else(|| {
+                    panic!("Fix: {label} live conditional {name} buffer must exist")
+                });
+            assert_eq!(buffer.element(), DataType::U8);
+            assert_eq!(buffer.count(), 0);
+        }
     }
 
     #[test]
-    fn live_conditional_programs_consume_raw_u8_rows() {
-        assert_source_is_raw_u8(&live_ifdef_program(), "ifdef");
-        assert_source_is_raw_u8(&live_if_expression_program(), "if-expression");
+    fn live_conditional_programs_consume_raw_u8_byte_buffers() {
+        assert_byte_buffers_are_raw_u8(&live_ifdef_program(), "ifdef");
+        assert_byte_buffers_are_raw_u8(&live_if_expression_program(), "if-expression");
     }
 }
 
@@ -170,7 +174,10 @@ fn live_macro_name_buffers(macros: &[MacroDef]) -> Result<LiveMacroNameBuffers, 
     let values = macro_values::macro_integer_values_with_builtin_prefix(macros)?;
     let names_len = checked_gpu_u32("live conditional macro-name table byte length", names.len())?;
     let num_macros = checked_gpu_u32("live conditional macro definition count", macros.len())?;
-    let names = pad_to_u32_words(&names)?;
+    if names.is_empty() {
+        reserve_live_vec(&mut names, 1, "live macro-name sentinel byte")?;
+        names.push(0);
+    }
     let offsets = pack_u32_words(&offsets, offsets.len())?;
     let values = pack_u32_words(&values, values.len().max(1))?;
     let defined_fingerprint = live_macro_buffer_fingerprint(&[

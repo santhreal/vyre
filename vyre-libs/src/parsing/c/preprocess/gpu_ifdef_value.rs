@@ -14,8 +14,9 @@
 //!   - `directive_kinds` (U32)  -  output of `gpu_directive_metadata`.
 //!   - `source` (U32 packed bytes for `gpu_ifdef_value`, raw U8 bytes for
 //!     `gpu_ifdef_value_u8`).
-//!   - `macro_names_packed` (U32 packed bytes)  -  concatenated
-//!     defined-macro name bytes. Empty when no macros are defined.
+//!   - `macro_names_packed` (U32 packed bytes for `gpu_ifdef_value`, raw U8
+//!     bytes for `gpu_ifdef_value_u8`)  -  concatenated defined-macro name
+//!     bytes. Empty when no macros are defined.
 //!   - `macro_offsets` (U32)  -  start offsets of each macro name.
 //!     Length `num_macros + 1`; the final entry is the total
 //!     `macro_names_packed` length so each name's length is
@@ -41,8 +42,8 @@
 //! program handles every macro-table size and identifier length.
 
 use super::gpu_source_bytes::{
-    safe_load_packed_byte_expr, safe_load_source_layout_byte_expr, source_buffer_element,
-    source_byte_len_expr, SourceByteLayout,
+    safe_load_source_layout_byte_expr, source_buffer_element, source_byte_len_expr,
+    SourceByteLayout,
 };
 use crate::parsing::c::lex::tokens::{TOK_PP_IFDEF, TOK_PP_IFNDEF};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -79,33 +80,51 @@ const MAX_WS_PREFIX: u32 = 4;
 /// every translation unit and macro table size.
 #[must_use]
 pub fn gpu_ifdef_value(num_tokens: u32, source_len: u32) -> Program {
-    gpu_ifdef_value_with_source_layout(num_tokens, source_len, SourceByteLayout::PackedU32)
+    gpu_ifdef_value_with_byte_layouts(
+        num_tokens,
+        source_len,
+        SourceByteLayout::PackedU32,
+        SourceByteLayout::PackedU32,
+    )
 }
 
-/// Build the ifdef/ifndef evaluator over raw `DataType::U8` source bytes.
+/// Build the ifdef/ifndef evaluator over raw `DataType::U8` source and macro
+/// name bytes.
 ///
 /// This preserves the same binding order and runtime-sized source shape as the
-/// packed ABI while letting pipeline callers pass retained source bytes without
-/// a host-side U32 repack.
+/// packed ABI while letting pipeline callers pass retained byte strings without
+/// host-side U32 repacks.
 #[must_use]
 pub fn gpu_ifdef_value_u8(num_tokens: u32, source_len: u32) -> Program {
-    gpu_ifdef_value_with_source_layout(num_tokens, source_len, SourceByteLayout::RawU8)
+    gpu_ifdef_value_with_byte_layouts(
+        num_tokens,
+        source_len,
+        SourceByteLayout::RawU8,
+        SourceByteLayout::RawU8,
+    )
 }
 
-fn gpu_ifdef_value_with_source_layout(
+fn gpu_ifdef_value_with_byte_layouts(
     num_tokens: u32,
     source_len: u32,
     source_layout: SourceByteLayout,
+    macro_names_layout: SourceByteLayout,
 ) -> Program {
     let _ = source_len;
     let t = Expr::var("t");
     let source_byte_len = source_byte_len_expr("source", source_layout);
+    let macro_names_byte_len = source_byte_len_expr("macro_names_packed", macro_names_layout);
 
     let safe_load_source = |addr: Expr| -> Expr {
         safe_load_source_layout_byte_expr("source", source_layout, addr, source_byte_len.clone())
     };
-    let safe_load_packed = |buf: &'static str, addr: Expr, bound: Expr| -> Expr {
-        safe_load_packed_byte_expr(buf, addr, bound)
+    let safe_load_macro_name = |addr: Expr| -> Expr {
+        safe_load_source_layout_byte_expr(
+            "macro_names_packed",
+            macro_names_layout,
+            addr,
+            macro_names_byte_len.clone(),
+        )
     };
     let is_ws = |b: Expr| -> Expr {
         Expr::select(
@@ -348,14 +367,10 @@ fn gpu_ifdef_value_with_source_layout(
     // the host supplies. Candidate name comparison is also a runtime
     // loop over `m_len`, guarded by the equal-length check.
     //
-    // `macro_names_len` (the byte length of the packed names buffer)
-    // is also runtime  -  `Expr::buf_len("macro_names_packed") * 4`
-    // gives the padded byte capacity, which is >= the host-supplied
-    // real byte length. Looser bound is safe: all valid macros end
-    // strictly before the real length, and zero-padding past the
-    // real length never matches an identifier byte.
+    // `macro_names_len` (the byte length of the names buffer) is also runtime.
+    // The packed ABI maps words to byte capacity; the raw-U8 variant uses the
+    // actual bound byte-for-byte. Both are >= the final macro offset.
     let macro_count_runtime = Expr::sub(Expr::buf_len("macro_offsets"), Expr::u32(1));
-    let macro_names_byte_cap_runtime = Expr::mul(Expr::buf_len("macro_names_packed"), Expr::u32(4));
     evaluate.push(Node::let_bind("def_found", Expr::u32(0)));
     let compare_macro_body: Vec<Node> = vec![
         Node::let_bind(
@@ -397,11 +412,7 @@ fn gpu_ifdef_value_with_source_layout(
                     ),
                     Node::let_bind(
                         "macro_cmp_byte",
-                        safe_load_packed(
-                            "macro_names_packed",
-                            Expr::add(Expr::var("m_start"), Expr::var("name_k")),
-                            macro_names_byte_cap_runtime.clone(),
-                        ),
+                        safe_load_macro_name(Expr::add(Expr::var("m_start"), Expr::var("name_k"))),
                     ),
                     Node::if_then(
                         Expr::ne(Expr::var("ident_cmp_byte"), Expr::var("macro_cmp_byte")),
@@ -512,7 +523,7 @@ fn gpu_ifdef_value_with_source_layout(
                 "macro_names_packed",
                 BINDING_MACRO_NAMES_PACKED,
                 BufferAccess::ReadOnly,
-                DataType::U32,
+                source_buffer_element(macro_names_layout),
             )
             .with_count(0),
             BufferDecl::storage(
@@ -583,20 +594,22 @@ mod tests {
     fn source_buffer_layouts_preserve_packed_abi_and_raw_u8_variant() {
         let packed = gpu_ifdef_value(8, 64);
         let raw_u8 = gpu_ifdef_value_u8(8, 64);
-        let packed_source = packed
-            .buffers()
-            .iter()
-            .find(|buffer| buffer.name() == "source")
-            .expect("Fix: packed ifdef evaluator source buffer must exist");
-        let raw_u8_source = raw_u8
-            .buffers()
-            .iter()
-            .find(|buffer| buffer.name() == "source")
-            .expect("Fix: raw-U8 ifdef evaluator source buffer must exist");
+        for name in ["source", "macro_names_packed"] {
+            let packed_buffer = packed
+                .buffers()
+                .iter()
+                .find(|buffer| buffer.name() == name)
+                .unwrap_or_else(|| panic!("Fix: packed ifdef evaluator {name} buffer must exist"));
+            let raw_u8_buffer = raw_u8
+                .buffers()
+                .iter()
+                .find(|buffer| buffer.name() == name)
+                .unwrap_or_else(|| panic!("Fix: raw-U8 ifdef evaluator {name} buffer must exist"));
 
-        assert_eq!(packed_source.element(), DataType::U32);
-        assert_eq!(packed_source.count(), 0);
-        assert_eq!(raw_u8_source.element(), DataType::U8);
-        assert_eq!(raw_u8_source.count(), 0);
+            assert_eq!(packed_buffer.element(), DataType::U32);
+            assert_eq!(packed_buffer.count(), 0);
+            assert_eq!(raw_u8_buffer.element(), DataType::U8);
+            assert_eq!(raw_u8_buffer.count(), 0);
+        }
     }
 }

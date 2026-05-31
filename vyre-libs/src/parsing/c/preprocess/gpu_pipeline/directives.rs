@@ -132,19 +132,6 @@ fn directive_word_bytes(word_count: usize, label: &'static str) -> Result<usize,
     })
 }
 
-fn directive_padded_u32_bytes(byte_len: usize, label: &'static str) -> Result<usize, String> {
-    byte_len
-        .checked_add(3)
-        .and_then(|value| value.checked_div(4))
-        .and_then(|words| words.checked_mul(4))
-        .map(|bytes| bytes.max(4))
-        .ok_or_else(|| {
-            format!(
-                "gpu directive parse {label} byte length {byte_len} overflows u32 padding. Fix: shard preprocessing before directive payload extraction."
-            )
-        })
-}
-
 fn reserve_directive_vec<T>(
     out: &mut Vec<T>,
     additional: usize,
@@ -364,16 +351,16 @@ fn gpu_extract_directive_payloads_impl(
     // showed the merged shader compiles substantially slower, so the
     // release path keeps them as separate dispatches until compile-cache
     // telemetry proves fusion wins end-to-end.
-    // gpu_ifdef_value and gpu_if_expression now read num_macros and
-    // macro_names_len at runtime via Expr::buf_len, so the kernel
-    // program shape is independent of how many macros the host packs.
+    // gpu_ifdef_value_u8 and gpu_if_expression_u8 now read num_macros and
+    // macro-name byte capacity at runtime via Expr::buf_len, so the kernel
+    // program shape is independent of how many macros the host supplies.
     // No more bucketing needed for these dimensions  -  one cold compile
     // per process for the ifdef/if-expression pair.
     if evaluate_condition_values {
-        // Pack defined_macros into the (names_packed, offsets, values)
-        // layout only when the caller needs snapshot condition values. The
-        // production driver skips this branch and re-evaluates reachable
-        // conditionals against the live macro table instead.
+        // Build defined_macros into raw name bytes plus offsets only when the
+        // caller needs snapshot condition values. The production driver skips
+        // this branch and re-evaluates reachable conditionals against the live
+        // macro table instead.
         let macro_name_bytes =
             defined_macros
                 .iter()
@@ -403,18 +390,10 @@ fn gpu_extract_directive_payloads_impl(
                 )
             })?);
         }
-        let padded = directive_padded_u32_bytes(scratch.macro_names.len(), "macro names")?;
-        let macro_name_padding = padded
-            .checked_sub(scratch.macro_names.len())
-            .ok_or_else(|| {
-                "gpu directive parse macro-name padded length underflowed. Fix: repair directive padding sizing.".to_string()
-            })?;
-        reserve_directive_vec(
-            &mut scratch.macro_names,
-            macro_name_padding,
-            "macro-name padding bytes",
-        )?;
-        scratch.macro_names.resize(padded, 0);
+        if scratch.macro_names.is_empty() {
+            reserve_directive_vec(&mut scratch.macro_names, 1, "macro-name sentinel byte")?;
+            scratch.macro_names.push(0);
+        }
         pack_u32_words_into(
             &mut scratch.macro_offsets_b,
             &macro_offsets,
@@ -692,20 +671,6 @@ mod tests {
         assert!(
             directive_word_bytes(usize::MAX, "test").is_err(),
             "Fix: directive word-to-byte sizing must reject usize overflow"
-        );
-        assert_eq!(
-            directive_padded_u32_bytes(0, "test")
-                .expect("Fix: empty macro-name table should pad to one u32"),
-            4
-        );
-        assert_eq!(
-            directive_padded_u32_bytes(5, "test")
-                .expect("Fix: small macro-name table should pad to u32 bytes"),
-            8
-        );
-        assert!(
-            directive_padded_u32_bytes(usize::MAX, "test").is_err(),
-            "Fix: directive padding must reject usize overflow"
         );
 
         let mut scratch = DirectiveExtractionScratch::default();
