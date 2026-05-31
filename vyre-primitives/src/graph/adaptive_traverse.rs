@@ -1018,13 +1018,22 @@ pub fn plan_adaptive_resident_frontier_step(
 /// # Errors
 ///
 /// Returns frontier-shape diagnostics or queue/frontier byte-size overflow
-/// diagnostics.
+/// diagnostics. The active queue is sized from the host-visible frontier
+/// popcount and rounded to a power-of-two bucket so sparse frontiers do not pay
+/// full-graph queue allocation or launch width.
 pub fn plan_adaptive_resident_sparse_queue_step(
     node_count: u32,
     frontier_in: &[u32],
 ) -> Result<AdaptiveResidentSparseQueuePlan, String> {
-    let frontier = plan_adaptive_resident_frontier_step(node_count, frontier_in)?;
-    let queue_capacity = node_count.max(1);
+    let layout = validate_adaptive_frontier(node_count, frontier_in)?;
+    let frontier_popcount =
+        adaptive_frontier_popcount(frontier_in, "adaptive resident sparse queue step")?;
+    let work = AdaptiveFrontierWorkPlan {
+        layout,
+        has_active_bits: frontier_popcount != 0,
+    };
+    let frontier = adaptive_resident_frontier_plan_from_work(node_count, work)?;
+    let queue_capacity = adaptive_sparse_queue_capacity(node_count, frontier_popcount);
     let queue_bytes = adaptive_u32_byte_len(
         queue_capacity as usize,
         "adaptive traversal resident active-source queue",
@@ -1035,6 +1044,14 @@ pub fn plan_adaptive_resident_sparse_queue_step(
         queue_bytes,
         queue_grid: adaptive_linear_grid(queue_capacity),
     })
+}
+
+fn adaptive_sparse_queue_capacity(node_count: u32, frontier_popcount: u32) -> u32 {
+    let active = frontier_popcount.min(node_count).max(1);
+    active
+        .checked_next_power_of_two()
+        .unwrap_or(u32::MAX)
+        .min(node_count.max(1))
 }
 
 /// Validate, count, and select resident traversal mode in one primitive-owned plan.
@@ -2093,9 +2110,52 @@ mod tests {
             .expect("Fix: resident sparse-queue plan should accept a correctly shaped frontier");
 
         assert_eq!(plan.frontier.work.layout.words, 17);
-        assert_eq!(plan.queue_capacity, 513);
-        assert_eq!(plan.queue_bytes, 513 * std::mem::size_of::<u32>());
-        assert_eq!(plan.queue_grid, [3, 1, 1]);
+        assert_eq!(plan.queue_capacity, 32);
+        assert_eq!(plan.queue_bytes, 32 * std::mem::size_of::<u32>());
+        assert_eq!(plan.queue_grid, [1, 1, 1]);
+    }
+
+    #[test]
+    fn resident_sparse_queue_plan_sizes_queue_from_active_frontier() {
+        let node_count = 1_000_000u32;
+        let mut frontier = vec![0u32; bitset_words(node_count) as usize];
+        frontier[0] = 1;
+
+        let single = plan_adaptive_resident_sparse_queue_step(node_count, &frontier)
+            .expect("Fix: resident sparse-queue plan should accept a single active source");
+
+        assert_eq!(single.queue_capacity, 1);
+        assert_eq!(single.queue_bytes, std::mem::size_of::<u32>());
+        assert_eq!(single.queue_grid, [1, 1, 1]);
+
+        for node in 1..257u32 {
+            frontier[(node / 32) as usize] |= 1 << (node % 32);
+        }
+        let bucketed = plan_adaptive_resident_sparse_queue_step(node_count, &frontier)
+            .expect("Fix: resident sparse-queue plan should accept a sparse active frontier");
+
+        assert_eq!(bucketed.queue_capacity, 512);
+        assert_eq!(bucketed.queue_bytes, 512 * std::mem::size_of::<u32>());
+        assert_eq!(bucketed.queue_grid, [2, 1, 1]);
+    }
+
+    #[test]
+    fn generated_sparse_queue_capacity_covers_active_count_without_graph_sized_overlaunch() {
+        for seed in 0..10_000u32 {
+            let node_count = 1 + (mix32(seed) % 1_000_000);
+            let frontier_popcount = mix32(seed ^ 0xA57A_5A7A);
+            let active = frontier_popcount.min(node_count);
+            let capacity = adaptive_sparse_queue_capacity(node_count, frontier_popcount);
+
+            assert!(capacity >= active.max(1));
+            assert!(capacity <= node_count);
+            if active <= node_count / 2 && active > 0 {
+                assert!(
+                    capacity <= active.saturating_mul(2),
+                    "Fix: sparse queue capacity should bucket active_count={active} tightly, got {capacity}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -2121,5 +2181,13 @@ mod tests {
         assert_eq!(plan.frontier_popcount, 0);
         assert_eq!(plan.mode, AdaptiveTraversalMode::SparseQueue);
         assert!(!plan.frontier.work.has_active_bits);
+    }
+
+    fn mix32(mut value: u32) -> u32 {
+        value ^= value >> 16;
+        value = value.wrapping_mul(0x7feb_352d);
+        value ^= value >> 15;
+        value = value.wrapping_mul(0x846c_a68b);
+        value ^ (value >> 16)
     }
 }

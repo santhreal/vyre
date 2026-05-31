@@ -716,7 +716,7 @@ fn ensure_queue_handle(
     scratch: &mut AdaptiveTraversalResidentScratch,
     queue_bytes: usize,
 ) -> Result<u64, DispatchError> {
-    if scratch.queue_bytes == queue_bytes {
+    if scratch.queue_bytes >= queue_bytes {
         if let Some(handle) = scratch.queue_handle {
             return Ok(handle);
         }
