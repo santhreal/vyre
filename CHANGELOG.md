@@ -34,6 +34,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Replaced multi-block word-prefix queue scatter's per-word previous-block loop with an in-place block-offset scan and precomputed-offset scatter, with resident CSR/adaptive wiring and live CUDA coverage for generated multi-block frontier queries.
 
+- Added a CSR-only resident adaptive sparse-queue graph upload and step path so sparse-queue workloads avoid dense adjacency allocation/upload, with live CUDA telemetry coverage and generated sparse-queue matrix coverage on the no-dense path.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

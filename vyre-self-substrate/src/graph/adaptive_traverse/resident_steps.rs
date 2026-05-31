@@ -1,6 +1,7 @@
 use super::state::AdaptiveTraversalResidentScratch;
 use super::{
-    AdaptiveTraversalMode, ResidentAdaptiveFourRussiansDenseGraph, ResidentAdaptiveTraversalGraph,
+    AdaptiveTraversalMode, ResidentAdaptiveFourRussiansDenseGraph,
+    ResidentAdaptiveSparseQueueGraph, ResidentAdaptiveTraversalGraph,
 };
 
 use crate::dispatch_buffers::write_u32_slice_le_bytes;
@@ -32,6 +33,35 @@ use vyre_primitives::graph::csr_frontier_queue::{
     frontier_word_counts_scan_pass_a as primitive_frontier_word_counts,
 };
 use vyre_primitives::reduce::count::reduce_count;
+
+#[derive(Clone, Copy)]
+struct AdaptiveSparseQueueGraphView {
+    node_count: u32,
+    edge_count: u32,
+    layout_hash: u64,
+    handles: [u64; 3],
+}
+
+impl AdaptiveSparseQueueGraphView {
+    fn from_full_graph(graph: &ResidentAdaptiveTraversalGraph) -> Self {
+        let handles = graph.handles;
+        Self {
+            node_count: graph.node_count,
+            edge_count: graph.edge_count,
+            layout_hash: graph.layout_hash,
+            handles: [handles[0], handles[1], handles[2]],
+        }
+    }
+
+    fn from_sparse_queue_graph(graph: &ResidentAdaptiveSparseQueueGraph) -> Self {
+        Self {
+            node_count: graph.node_count,
+            edge_count: graph.edge_count,
+            layout_hash: graph.layout_hash,
+            handles: graph.handles,
+        }
+    }
+}
 
 /// Run one adaptive sparse/dense traversal step over resident graph buffers.
 ///
@@ -226,6 +256,53 @@ pub fn adaptive_traverse_resident_graph_four_russians_dense_step_with_scratch_in
 pub fn adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
     dispatcher: &dyn OptimizerDispatcher,
     graph: &ResidentAdaptiveTraversalGraph,
+    frontier_in: &[u32],
+    allow_mask: u32,
+    scratch: &mut AdaptiveTraversalResidentScratch,
+    frontier_out: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    adaptive_traverse_sparse_queue_step_with_graph_view_into(
+        dispatcher,
+        AdaptiveSparseQueueGraphView::from_full_graph(graph),
+        frontier_in,
+        allow_mask,
+        scratch,
+        frontier_out,
+    )
+}
+
+/// Run one queue-driven adaptive sparse traversal step over CSR-only resident graph buffers.
+///
+/// The active queue is built and consumed on the GPU. This path uploads and
+/// retains only CSR graph buffers, avoiding dense adjacency residency for
+/// sparse-queue workloads.
+///
+/// # Errors
+///
+/// Propagates resident dispatch failures and malformed frontier/readback shapes.
+#[allow(clippy::too_many_arguments)]
+pub fn adaptive_traverse_resident_sparse_queue_step_with_scratch_into(
+    dispatcher: &dyn OptimizerDispatcher,
+    graph: &ResidentAdaptiveSparseQueueGraph,
+    frontier_in: &[u32],
+    allow_mask: u32,
+    scratch: &mut AdaptiveTraversalResidentScratch,
+    frontier_out: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    adaptive_traverse_sparse_queue_step_with_graph_view_into(
+        dispatcher,
+        AdaptiveSparseQueueGraphView::from_sparse_queue_graph(graph),
+        frontier_in,
+        allow_mask,
+        scratch,
+        frontier_out,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
+    dispatcher: &dyn OptimizerDispatcher,
+    graph: AdaptiveSparseQueueGraphView,
     frontier_in: &[u32],
     allow_mask: u32,
     scratch: &mut AdaptiveTraversalResidentScratch,

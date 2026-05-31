@@ -7,8 +7,8 @@ mod common;
 use common::live_dispatcher;
 use vyre_driver_cuda::{CudaBackend, CudaOptimizerDispatcher};
 use vyre_self_substrate::adaptive_traverse::{
-    adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into,
-    upload_resident_adaptive_traversal_graph, AdaptiveTraversalPlanCacheSnapshot,
+    adaptive_traverse_resident_sparse_queue_step_with_scratch_into,
+    upload_resident_adaptive_sparse_queue_graph, AdaptiveTraversalPlanCacheSnapshot,
     AdaptiveTraversalResidentScratch,
 };
 
@@ -37,15 +37,13 @@ fn run_generated_sparse_queue_matrix(
     node_count: u32,
     materializer_name: &str,
 ) {
-    let (edge_offsets, edge_targets, edge_kind_mask, adj_rows_dense) =
-        generated_sparse_graph(node_count);
-    let graph = upload_resident_adaptive_traversal_graph(
+    let (edge_offsets, edge_targets, edge_kind_mask) = generated_sparse_graph(node_count);
+    let graph = upload_resident_adaptive_sparse_queue_graph(
         dispatcher,
         node_count,
         &edge_offsets,
         &edge_targets,
         &edge_kind_mask,
-        &adj_rows_dense,
     )
     .unwrap_or_else(|error| {
         panic!("Fix: generated {materializer_name} sparse queue graph upload failed: {error}")
@@ -66,7 +64,7 @@ fn run_generated_sparse_queue_matrix(
             allow_mask,
         );
 
-        adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
+        adaptive_traverse_resident_sparse_queue_step_with_scratch_into(
             dispatcher,
             &graph,
             &frontier_in,
@@ -133,7 +131,7 @@ fn bitset_words(node_count: u32) -> u32 {
     node_count.div_ceil(32).max(1)
 }
 
-fn generated_sparse_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>) {
+fn generated_sparse_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
     let mut edge_targets = Vec::new();
     let mut edge_kind_mask = Vec::new();
@@ -153,8 +151,7 @@ fn generated_sparse_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>, Vec
         }
         edge_offsets.push(edge_targets.len() as u32);
     }
-    let adj_rows_dense = vec![0_u32; node_count as usize * bitset_words(node_count) as usize];
-    (edge_offsets, edge_targets, edge_kind_mask, adj_rows_dense)
+    (edge_offsets, edge_targets, edge_kind_mask)
 }
 
 fn generated_frontier(node_count: u32, case_index: u32) -> Vec<u32> {

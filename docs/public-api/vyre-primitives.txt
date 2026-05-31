@@ -646,6 +646,7 @@ pub fn adaptive_four_russians_dense_step(
 pub fn adaptive_four_russians_graph_content_hash(node_count: u32, adj_rows_dense: &[u32]) -> u64 {
 pub fn adaptive_frontier_popcount(frontier_in: &[u32], context: &str) -> Result<u32, String> {
 pub fn adaptive_sparse_dense_step(
+pub fn adaptive_sparse_queue_graph_content_hash(
 pub fn adaptive_traversal_graph_content_hash(
 pub fn adler32(bytes: &[u8]) -> u32 {
 pub fn adler32_chunk(bytes: &[u8]) -> Adler32Chunk {

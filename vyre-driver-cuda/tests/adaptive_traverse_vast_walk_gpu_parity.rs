@@ -18,9 +18,10 @@ use vyre_primitives::reduce::count::reduce_count;
 use vyre_self_substrate::adaptive_traverse::{
     adaptive_traverse_resident_graph_auto_step_with_scratch_into,
     adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into,
-    adaptive_traverse_resident_graph_step_with_scratch_into, adaptive_traverse_step,
-    upload_resident_adaptive_traversal_graph, AdaptiveTraversalMode,
-    AdaptiveTraversalPlanCacheSnapshot, AdaptiveTraversalResidentScratch,
+    adaptive_traverse_resident_graph_step_with_scratch_into,
+    adaptive_traverse_resident_sparse_queue_step_with_scratch_into, adaptive_traverse_step,
+    upload_resident_adaptive_sparse_queue_graph, upload_resident_adaptive_traversal_graph,
+    AdaptiveTraversalMode, AdaptiveTraversalPlanCacheSnapshot, AdaptiveTraversalResidentScratch,
 };
 
 fn bitset_words(node_count: u32) -> u32 {
@@ -535,6 +536,65 @@ fn cuda_resident_adaptive_sparse_queue_path_uses_self_substrate_api() {
     graph
         .free(&dispatcher)
         .expect("resident adaptive graph free");
+}
+
+#[test]
+fn cuda_resident_adaptive_sparse_queue_csr_only_upload_skips_dense_rows() {
+    let backend = live_dispatcher();
+    let dispatcher = vyre_driver_cuda::CudaOptimizerDispatcher::new(&backend);
+    let node_count = 8u32;
+    let edge_offsets = vec![0, 2, 2, 2, 5, 5, 5, 5, 5];
+    let edge_targets = vec![1, 2, 4, 5, 6];
+    let edge_kind_mask = vec![1, 2, 1, 1, 2];
+
+    backend.reset_telemetry();
+    let graph = upload_resident_adaptive_sparse_queue_graph(
+        &dispatcher,
+        node_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+    )
+    .expect("resident adaptive sparse queue CSR-only graph upload");
+    let upload_telemetry = backend.telemetry_snapshot();
+    assert_eq!(
+        upload_telemetry.host_to_device_bytes,
+        ((edge_offsets.len() + edge_targets.len() + edge_kind_mask.len())
+            * std::mem::size_of::<u32>()) as u64,
+        "Fix: CSR-only adaptive sparse queue upload must not upload dense adjacency rows."
+    );
+
+    let frontier_in = pack_nodes(&[0, 3], node_count);
+    let expected = pack_nodes(&[1, 4, 5], node_count);
+    let mut scratch = AdaptiveTraversalResidentScratch::default();
+    let mut out = Vec::new();
+
+    backend.reset_telemetry();
+    adaptive_traverse_resident_sparse_queue_step_with_scratch_into(
+        &dispatcher,
+        &graph,
+        &frontier_in,
+        1,
+        &mut scratch,
+        &mut out,
+    )
+    .expect("resident adaptive sparse queue CSR-only path");
+    assert_eq!(out, expected);
+    let telemetry = backend.telemetry_snapshot();
+    assert_eq!(telemetry.kernel_launches, 4);
+    assert_eq!(
+        telemetry
+            .host_to_device_bytes
+            .saturating_sub(telemetry.param_upload_bytes),
+        (frontier_in.len() * std::mem::size_of::<u32>()) as u64,
+        "Fix: CSR-only adaptive sparse queue step must upload only the packed frontier."
+    );
+    scratch
+        .free(&dispatcher)
+        .expect("resident adaptive scratch free");
+    graph
+        .free(&dispatcher)
+        .expect("resident adaptive sparse queue graph free");
 }
 
 #[test]

@@ -11,6 +11,7 @@ use vyre_foundation::ir::Program;
 struct RecordingResidentDispatcher {
     next_handle: Cell<u64>,
     alloc_count: Cell<usize>,
+    resident_uploads: RefCell<Vec<(u64, usize)>>,
     upload_handles: RefCell<Vec<Vec<u64>>>,
     step_handles: RefCell<Vec<Vec<Vec<u64>>>>,
     freed: RefCell<Vec<u64>>,
@@ -31,6 +32,14 @@ impl RecordingResidentDispatcher {
             .last()
             .cloned()
             .expect("Fix: test dispatcher expected at least one resident dispatch sequence")
+    }
+
+    fn resident_upload_lengths(&self) -> Vec<usize> {
+        self.resident_uploads
+            .borrow()
+            .iter()
+            .map(|(_, bytes)| *bytes)
+            .collect()
     }
 
     fn assert_no_resident_work(&self) {
@@ -75,6 +84,13 @@ impl OptimizerDispatcher for RecordingResidentDispatcher {
 
     fn free_resident(&self, handle: u64) -> Result<(), DispatchError> {
         self.freed.borrow_mut().push(handle);
+        Ok(())
+    }
+
+    fn upload_resident(&self, handle: u64, bytes: &[u8]) -> Result<(), DispatchError> {
+        self.resident_uploads
+            .borrow_mut()
+            .push((handle, bytes.len()));
         Ok(())
     }
 
@@ -274,6 +290,91 @@ fn sparse_queue_zero_frontier_returns_zero_without_queue_allocation_or_cache() {
         AdaptiveTraversalPlanCacheSnapshot::default()
     );
     dispatcher.assert_no_resident_work();
+}
+
+#[test]
+fn sparse_queue_graph_upload_skips_dense_adjacency_rows() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let node_count = 4u32;
+    let edge_offsets = [0, 1, 1, 1, 1];
+    let edge_targets = [2];
+    let edge_kind_mask = [1];
+
+    let graph = upload_resident_adaptive_sparse_queue_graph(
+        &dispatcher,
+        node_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+    )
+    .expect("Fix: CSR-only adaptive sparse-queue graph upload should accept canonical CSR");
+
+    assert_eq!(graph.node_count(), node_count);
+    assert_eq!(graph.edge_count(), 1);
+    assert_eq!(graph.words(), 1);
+    assert_eq!(dispatcher.alloc_count.get(), 3);
+    assert_eq!(
+        dispatcher.resident_upload_lengths(),
+        vec![
+            edge_offsets.len() * std::mem::size_of::<u32>(),
+            edge_targets.len() * std::mem::size_of::<u32>(),
+            edge_kind_mask.len() * std::mem::size_of::<u32>(),
+        ],
+        "CSR-only sparse-queue upload must not allocate or upload dense adjacency rows"
+    );
+}
+
+#[test]
+fn sparse_queue_step_accepts_csr_only_resident_graph() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let node_count = 4u32;
+    let edge_offsets = [0, 1, 1, 1, 1];
+    let edge_targets = [2];
+    let edge_kind_mask = [1];
+    let graph = upload_resident_adaptive_sparse_queue_graph(
+        &dispatcher,
+        node_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+    )
+    .expect("Fix: CSR-only adaptive sparse-queue graph upload should accept canonical CSR");
+    let graph_handles = graph.handles();
+    let mut scratch = AdaptiveTraversalResidentScratch::default();
+    let frontier_in = [1u32];
+    let mut frontier_out = Vec::new();
+
+    adaptive_traverse_resident_sparse_queue_step_with_scratch_into(
+        &dispatcher,
+        &graph,
+        &frontier_in,
+        1,
+        &mut scratch,
+        &mut frontier_out,
+    )
+    .expect("Fix: CSR-only adaptive sparse-queue resident step should dispatch");
+
+    let scratch_handles = scratch
+        .handles
+        .expect("Fix: sparse queue step should allocate frontier scratch");
+    let queue_handle = scratch
+        .queue_handle
+        .expect("Fix: sparse queue step should allocate active queue");
+    let steps = dispatcher.last_step_handles();
+    assert_eq!(steps.len(), 4);
+    assert_eq!(
+        steps[3],
+        vec![
+            queue_handle,
+            scratch_handles[2],
+            graph_handles[0],
+            graph_handles[1],
+            graph_handles[2],
+            scratch_handles[1],
+        ],
+        "CSR-only sparse queue traversal must bind only CSR graph handles"
+    );
+    assert_eq!(frontier_out, vec![0]);
 }
 
 #[test]

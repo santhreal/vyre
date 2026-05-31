@@ -582,6 +582,22 @@ pub fn adaptive_traversal_graph_content_hash(
     hasher.finish()
 }
 
+/// In-session content hash for resident adaptive sparse-queue CSR uploads.
+#[must_use]
+pub fn adaptive_sparse_queue_graph_content_hash(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    node_count.hash(&mut hasher);
+    edge_offsets.hash(&mut hasher);
+    edge_targets.hash(&mut hasher);
+    edge_kind_mask.hash(&mut hasher);
+    hasher.finish()
+}
+
 /// In-session content hash for resident adaptive Four-Russians dense LUT uploads.
 #[must_use]
 
@@ -610,6 +626,19 @@ mod resident_content_hash_tests {
 
         assert_ne!(baseline, changed_mask);
         assert_ne!(baseline, changed_dense);
+    }
+
+    #[test]
+    fn sparse_queue_content_hash_tracks_csr_without_dense_rows() {
+        let offsets = [0, 1, 1];
+        let targets = [1];
+        let masks = [7];
+        let baseline = adaptive_sparse_queue_graph_content_hash(2, &offsets, &targets, &masks);
+        let changed_mask = adaptive_sparse_queue_graph_content_hash(2, &offsets, &targets, &[3]);
+        let changed_target = adaptive_sparse_queue_graph_content_hash(2, &offsets, &[0], &masks);
+
+        assert_ne!(baseline, changed_mask);
+        assert_ne!(baseline, changed_target);
     }
 
     #[test]
