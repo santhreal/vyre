@@ -22,10 +22,28 @@ fn prepare_builds_cuda_compatible_bounded_ranges_program() {
 
     assert_eq!(prepared.program.workgroup_size(), [128, 1, 1]);
     assert_eq!(prepared.inputs.len(), 7);
+    assert_eq!(MATCH_COUNT_INPUT_INDEX, prepared.inputs.len() - 1);
+    assert_eq!(
+        match_triples_output_bytes(MAX_MATCHES).unwrap(),
+        MAX_MATCHES as usize * 12
+    );
     assert_eq!(prepared.stats.haystack_bytes, HAYSTACK_BYTES as u32);
     assert_eq!(prepared.stats.patterns, PATTERNS.len() as u32);
     assert!(prepared.stats.expected_matches > 0);
     assert!(prepared.stats.expected_matches <= prepared.stats.max_matches);
+}
+
+#[test]
+fn aho_cpu_baseline_matches_classic_bounded_ranges_oracle() {
+    let (haystack, _) = build_irregular_haystack(32 * 1024);
+    let ac = classic_ac_compile(PATTERNS);
+    let pattern_lengths = pattern_lengths().unwrap();
+    let mut classic = cpu_bounded_range_matches(&ac, &pattern_lengths, &haystack);
+    classic.sort_unstable();
+
+    let aho = cpu_aho_overlapping_matches(PATTERNS, &haystack).unwrap();
+
+    assert_eq!(aho, classic);
 }
 
 #[test]

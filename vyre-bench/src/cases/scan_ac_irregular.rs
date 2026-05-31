@@ -2,7 +2,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::BenchMetrics;
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
@@ -10,17 +10,27 @@ use crate::api::suite::SuiteKind;
 use vyre_foundation::ir::Program;
 use vyre_foundation::match_result::Match;
 use vyre_libs::scan::classic_ac::{
-    classic_ac_bounded_ranges_scan, classic_ac_compile, try_build_ac_bounded_ranges_program_ext,
-    ClassicAcAutomaton,
+    classic_ac_compile, try_build_ac_bounded_ranges_program_ext, ClassicAcAutomaton,
 };
 use vyre_libs::scan::dispatch_io::try_unpack_match_triples;
 use vyre_libs::scan::{pack_haystack_u32, pack_u32_slice};
+
+mod baseline;
+mod metrics;
+
+use baseline::cpu_aho_overlapping_matches;
+#[cfg(test)]
+use baseline::cpu_bounded_range_matches;
+use metrics::{scan_ac_baseline_metric_points, scan_ac_metric_points, ScanAcStats};
 
 #[cfg(test)]
 mod tests;
 
 const HAYSTACK_BYTES: usize = 4 * 1024 * 1024;
 const MAX_MATCHES: u32 = 65_536;
+const MATCH_COUNT_INPUT_INDEX: usize = 6;
+const MATCH_COUNT_RESET_BYTES: &[u8] = &[0, 0, 0, 0];
+const MATCH_TRIPLE_WORDS: usize = 3;
 const SUITES: &[SuiteKind] = &[
     SuiteKind::Smoke,
     SuiteKind::Release,
@@ -58,19 +68,6 @@ struct ScanAcIrregularPrepared {
     baseline_wall_ns: u64,
     stats: ScanAcStats,
     resident: Option<ResidentInputSet>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-struct ScanAcStats {
-    haystack_bytes: u32,
-    packed_haystack_words: u32,
-    patterns: u32,
-    dfa_states: u32,
-    max_pattern_len: u32,
-    output_records: u32,
-    expected_matches: u32,
-    max_matches: u32,
-    planted_matches: u32,
 }
 
 impl BenchCase for ScanAcIrregularLiterals {
@@ -121,7 +118,7 @@ impl BenchCase for ScanAcIrregularLiterals {
         Some(PerformanceContract::cpu_sota_min_speedup(
             "Packed-byte Aho-Corasick irregular literal scan",
             "vyre-libs",
-            "single-thread CPU Aho-Corasick oracle with flat output links",
+            "aho-corasick 1.1 overlapping CPU automaton",
             1.0,
         ))
     }
@@ -175,6 +172,9 @@ impl BenchCase for ScanAcIrregularLiterals {
             1,
         ]);
 
+        if let Some(resident) = prepared.resident.as_ref() {
+            reset_resident_match_count(resident)?;
+        }
         let dispatch = dispatch_program_timed(
             ctx,
             &prepared.program,
@@ -185,6 +185,7 @@ impl BenchCase for ScanAcIrregularLiterals {
         let resident_used = dispatch.resident_used;
         let timed = dispatch.timed;
         let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let resident_reset_bytes = u64::from(resident_used) * MATCH_COUNT_RESET_BYTES.len() as u64;
         let accounting =
             transfer_accounting(prepared.input_bytes_total, output_bytes, resident_used);
 
@@ -194,14 +195,19 @@ impl BenchCase for ScanAcIrregularLiterals {
                 dispatch_ns: timed.device_ns,
                 input_bytes: Some(prepared.input_bytes_total),
                 output_bytes: Some(output_bytes),
-                bytes_read: Some(accounting.bytes_read),
+                bytes_read: Some(accounting.bytes_read.saturating_add(resident_reset_bytes)),
                 bytes_written: Some(accounting.bytes_written),
-                bytes_touched: Some(accounting.bytes_touched),
+                bytes_touched: Some(
+                    accounting
+                        .bytes_touched
+                        .saturating_add(resident_reset_bytes),
+                ),
                 custom: scan_ac_metric_points(
                     prepared.stats,
                     prepared.baseline_wall_ns,
                     timed.wall_ns,
                     resident_used,
+                    resident_reset_bytes,
                     workgroup[0],
                 ),
                 ..Default::default()
@@ -246,7 +252,7 @@ impl BenchCase for ScanAcIrregularLiterals {
 }
 
 fn prepare_scan_ac_irregular(
-    _ctx: Option<&BenchContext>,
+    ctx: Option<&BenchContext>,
 ) -> Result<ScanAcIrregularPrepared, BenchError> {
     let (haystack, planted_matches) = build_irregular_haystack(HAYSTACK_BYTES);
     let ac = classic_ac_compile(PATTERNS);
@@ -260,7 +266,7 @@ fn prepare_scan_ac_irregular(
     .map_err(BenchError::ExecutionFailed)?;
 
     let baseline_start = std::time::Instant::now();
-    let expected_matches = cpu_bounded_range_matches(&ac, &pattern_lengths, &haystack);
+    let expected_matches = cpu_aho_overlapping_matches(PATTERNS, &haystack)?;
     let baseline_wall_ns = baseline_start
         .elapsed()
         .as_nanos()
@@ -274,7 +280,18 @@ fn prepare_scan_ac_irregular(
 
     let inputs = scan_ac_inputs(&ac, &pattern_lengths, &haystack);
     let input_bytes_total = input_bytes_total(&inputs);
-    let resident = None;
+    let resident_output_sizes = [match_triples_output_bytes(MAX_MATCHES)?];
+    let resident = ctx
+        .map(|ctx| {
+            ResidentInputSet::upload_with_zeroed_outputs_optional(
+                ctx,
+                &inputs,
+                &resident_output_sizes,
+                "irregular AC scan",
+            )
+        })
+        .transpose()?
+        .flatten();
     let baseline_outputs = vec![
         pack_u32_slice(&[expected_matches.len() as u32]),
         encode_match_triples(&expected_matches),
@@ -329,17 +346,6 @@ fn pattern_lengths() -> Result<Vec<u32>, BenchError> {
                 )
             })
         })
-        .collect()
-}
-
-fn cpu_bounded_range_matches(
-    ac: &ClassicAcAutomaton,
-    pattern_lengths: &[u32],
-    haystack: &[u8],
-) -> Vec<Match> {
-    classic_ac_bounded_ranges_scan(ac, pattern_lengths, haystack)
-        .into_iter()
-        .map(|(pattern_id, start, end)| Match::new(pattern_id, start, end))
         .collect()
 }
 
@@ -402,72 +408,24 @@ fn encode_match_triples(matches: &[Match]) -> Vec<u8> {
     encoded
 }
 
-fn scan_ac_metric_points(
-    stats: ScanAcStats,
-    baseline_wall_ns: u64,
-    wall_ns: u64,
-    resident_used: bool,
-    workgroup_size_x: u32,
-) -> Vec<MetricPoint> {
-    let mut metrics = scan_ac_baseline_metric_points(stats);
-    metrics.push(metric(
-        "scan_ac_irregular_resident_buffers",
-        u64::from(resident_used),
-    ));
-    metrics.push(metric(
-        "scan_ac_irregular_workgroup_size_x",
-        u64::from(workgroup_size_x),
-    ));
-    if wall_ns > 0 {
-        metrics.push(metric(
-            "scan_ac_irregular_speedup_x1000",
-            (u128::from(baseline_wall_ns) * 1000 / u128::from(wall_ns)).min(u128::from(u64::MAX))
-                as u64,
-        ));
-    }
-    metrics
+fn match_triples_output_bytes(max_matches: u32) -> Result<usize, BenchError> {
+    usize::try_from(max_matches)
+        .ok()
+        .and_then(|matches| matches.checked_mul(MATCH_TRIPLE_WORDS))
+        .and_then(|words| words.checked_mul(std::mem::size_of::<u32>()))
+        .ok_or_else(|| {
+            BenchError::EnvironmentInvalid(format!(
+                "irregular AC scan max_matches={max_matches} overflows resident output byte sizing. Fix: split the scan output into smaller shards."
+            ))
+        })
 }
 
-fn scan_ac_baseline_metric_points(stats: ScanAcStats) -> Vec<MetricPoint> {
-    vec![
-        metric(
-            "scan_ac_irregular_haystack_bytes",
-            u64::from(stats.haystack_bytes),
-        ),
-        metric(
-            "scan_ac_irregular_packed_haystack_words",
-            u64::from(stats.packed_haystack_words),
-        ),
-        metric("scan_ac_irregular_patterns", u64::from(stats.patterns)),
-        metric("scan_ac_irregular_dfa_states", u64::from(stats.dfa_states)),
-        metric(
-            "scan_ac_irregular_max_pattern_len",
-            u64::from(stats.max_pattern_len),
-        ),
-        metric(
-            "scan_ac_irregular_output_records",
-            u64::from(stats.output_records),
-        ),
-        metric(
-            "scan_ac_irregular_expected_matches",
-            u64::from(stats.expected_matches),
-        ),
-        metric(
-            "scan_ac_irregular_max_matches",
-            u64::from(stats.max_matches),
-        ),
-        metric(
-            "scan_ac_irregular_planted_matches",
-            u64::from(stats.planted_matches),
-        ),
-    ]
-}
-
-fn metric(name: &str, value: u64) -> MetricPoint {
-    MetricPoint {
-        name: name.to_string(),
-        value,
-    }
+fn reset_resident_match_count(resident: &ResidentInputSet) -> Result<(), BenchError> {
+    resident.upload_resource(
+        MATCH_COUNT_INPUT_INDEX,
+        MATCH_COUNT_RESET_BYTES,
+        "irregular AC scan match_count reset",
+    )
 }
 
 fn mix32(mut value: u32) -> u32 {

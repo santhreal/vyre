@@ -147,6 +147,9 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "scan_ac_irregular_max_matches") => Some("scan_ac_irregular_max_matches"),
         ("", "scan_ac_irregular_planted_matches") => Some("scan_ac_irregular_planted_matches"),
         ("", "scan_ac_irregular_resident_buffers") => Some("scan_ac_irregular_resident_buffers"),
+        ("", "scan_ac_irregular_resident_reset_bytes") => {
+            Some("scan_ac_irregular_resident_reset_bytes")
+        }
         ("", "scan_ac_irregular_workgroup_size_x") => Some("scan_ac_irregular_workgroup_size_x"),
         ("", "scan_ac_irregular_speedup_x1000") => Some("scan_ac_irregular_speedup_x1000"),
         ("", "sparse_items") => Some("sparse_items"),

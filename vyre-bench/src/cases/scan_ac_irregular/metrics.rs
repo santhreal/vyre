@@ -1,0 +1,87 @@
+use crate::api::metric::MetricPoint;
+
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct ScanAcStats {
+    pub(super) haystack_bytes: u32,
+    pub(super) packed_haystack_words: u32,
+    pub(super) patterns: u32,
+    pub(super) dfa_states: u32,
+    pub(super) max_pattern_len: u32,
+    pub(super) output_records: u32,
+    pub(super) expected_matches: u32,
+    pub(super) max_matches: u32,
+    pub(super) planted_matches: u32,
+}
+
+pub(super) fn scan_ac_metric_points(
+    stats: ScanAcStats,
+    baseline_wall_ns: u64,
+    wall_ns: u64,
+    resident_used: bool,
+    resident_reset_bytes: u64,
+    workgroup_size_x: u32,
+) -> Vec<MetricPoint> {
+    let mut metrics = scan_ac_baseline_metric_points(stats);
+    metrics.push(metric(
+        "scan_ac_irregular_resident_buffers",
+        u64::from(resident_used),
+    ));
+    metrics.push(metric(
+        "scan_ac_irregular_resident_reset_bytes",
+        resident_reset_bytes,
+    ));
+    metrics.push(metric(
+        "scan_ac_irregular_workgroup_size_x",
+        u64::from(workgroup_size_x),
+    ));
+    if wall_ns > 0 {
+        metrics.push(metric(
+            "scan_ac_irregular_speedup_x1000",
+            (u128::from(baseline_wall_ns) * 1000 / u128::from(wall_ns)).min(u128::from(u64::MAX))
+                as u64,
+        ));
+    }
+    metrics
+}
+
+pub(super) fn scan_ac_baseline_metric_points(stats: ScanAcStats) -> Vec<MetricPoint> {
+    vec![
+        metric(
+            "scan_ac_irregular_haystack_bytes",
+            u64::from(stats.haystack_bytes),
+        ),
+        metric(
+            "scan_ac_irregular_packed_haystack_words",
+            u64::from(stats.packed_haystack_words),
+        ),
+        metric("scan_ac_irregular_patterns", u64::from(stats.patterns)),
+        metric("scan_ac_irregular_dfa_states", u64::from(stats.dfa_states)),
+        metric(
+            "scan_ac_irregular_max_pattern_len",
+            u64::from(stats.max_pattern_len),
+        ),
+        metric(
+            "scan_ac_irregular_output_records",
+            u64::from(stats.output_records),
+        ),
+        metric(
+            "scan_ac_irregular_expected_matches",
+            u64::from(stats.expected_matches),
+        ),
+        metric(
+            "scan_ac_irregular_max_matches",
+            u64::from(stats.max_matches),
+        ),
+        metric(
+            "scan_ac_irregular_planted_matches",
+            u64::from(stats.planted_matches),
+        ),
+    ]
+}
+
+fn metric(name: &str, value: u64) -> MetricPoint {
+    MetricPoint {
+        name: name.to_string(),
+        value,
+    }
+}

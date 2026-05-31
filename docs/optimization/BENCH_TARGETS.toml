@@ -66,6 +66,17 @@ gpu_competitor = "wgpu_vyre_scatter"
 notes = "Measures the scatter stage feeding condition evaluation; host copies are tracked separately."
 
 [[target]]
+id = "scan.ac.irregular_literals.4m"
+primitive = "packed-byte Aho-Corasick irregular literal scan"
+suite = "smoke"
+backend_focus = "cuda"
+metric = "dispatch_ns_p50"
+min_speedup_over_cpu_sota = 1.0
+cpu_baseline = "aho-corasick crate overlapping multi-pattern CPU scan"
+gpu_competitor = "none_recorded"
+notes = "Tracks real unaligned security/parser literal scanning with output-only match triples kept resident between samples."
+
+[[target]]
 id = "release.workload.offset_count_aggregation"
 primitive = "count/offset/length aggregation"
 suite = "release-workload"
