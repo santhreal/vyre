@@ -115,6 +115,26 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "graph_csr_skewed_speedup_x1000") => Some("graph_csr_skewed_speedup_x1000"),
         ("", "dataflow_ifds_step") => Some("dataflow_ifds_step"),
         ("", "dataflow_points_to_alias_step") => Some("dataflow_points_to_alias_step"),
+        ("", "dataflow_ifds_skewed_nodes") => Some("dataflow_ifds_skewed_nodes"),
+        ("", "dataflow_ifds_skewed_edges") => Some("dataflow_ifds_skewed_edges"),
+        ("", "dataflow_ifds_skewed_frontier_words") => Some("dataflow_ifds_skewed_frontier_words"),
+        ("", "dataflow_ifds_skewed_active_sources") => Some("dataflow_ifds_skewed_active_sources"),
+        ("", "dataflow_ifds_skewed_allowed_edges") => Some("dataflow_ifds_skewed_allowed_edges"),
+        ("", "dataflow_ifds_skewed_filtered_edges") => Some("dataflow_ifds_skewed_filtered_edges"),
+        ("", "dataflow_ifds_skewed_output_words_set") => {
+            Some("dataflow_ifds_skewed_output_words_set")
+        }
+        ("", "dataflow_ifds_skewed_max_degree") => Some("dataflow_ifds_skewed_max_degree"),
+        ("", "dataflow_ifds_skewed_high_degree_sources") => {
+            Some("dataflow_ifds_skewed_high_degree_sources")
+        }
+        ("", "dataflow_ifds_skewed_resident_buffers") => {
+            Some("dataflow_ifds_skewed_resident_buffers")
+        }
+        ("", "dataflow_ifds_skewed_workgroup_size_x") => {
+            Some("dataflow_ifds_skewed_workgroup_size_x")
+        }
+        ("", "dataflow_ifds_skewed_speedup_x1000") => Some("dataflow_ifds_skewed_speedup_x1000"),
         ("", "sparse_items") => Some("sparse_items"),
         ("", "callgraph_nodes") => Some("callgraph_nodes"),
         ("", "metadata_records") => Some("metadata_records"),

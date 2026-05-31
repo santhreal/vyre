@@ -13,6 +13,7 @@ pub mod conditional_eval;
 pub mod cpu_baselines;
 pub mod crypto;
 pub mod cuda_ptx_patterns;
+pub mod dataflow_irregular;
 pub mod dfa_match;
 pub mod egraph_saturation;
 pub mod elementwise;
