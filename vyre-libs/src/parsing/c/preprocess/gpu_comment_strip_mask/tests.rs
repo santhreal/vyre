@@ -23,12 +23,12 @@ fn build_program_returns_well_formed_program() {
 }
 
 #[test]
-fn u8_program_declares_one_byte_per_source_element() {
+fn u8_program_declares_runtime_sized_source_buffer() {
     let p = gpu_comment_strip_mask_u8(64);
     assert_eq!(p.buffers().len(), 2);
     assert_eq!(p.buffers()[0].name(), "bytes_in");
     assert_eq!(p.buffers()[0].element(), DataType::U8);
-    assert_eq!(p.buffers()[0].count(), 64);
+    assert_eq!(p.buffers()[0].count(), 0);
     assert_eq!(p.buffers()[1].name(), "comment_mask_out");
     assert_eq!(p.buffers()[1].element(), DataType::U32);
     assert_eq!(p.buffers()[1].count(), 64);

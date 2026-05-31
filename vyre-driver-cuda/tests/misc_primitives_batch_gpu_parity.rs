@@ -240,17 +240,14 @@ fn run_line_splice(source: &[u8]) -> Vec<u32> {
 fn run_line_splice_u8(source: &[u8]) -> Vec<u32> {
     let byte_count = source.len() as u32;
     let program = line_splice_classify_u8(byte_count);
-    let cap = byte_count.max(1) as usize;
-    let mut input = source.to_vec();
-    input.resize(cap, 0);
-    let inputs: Vec<Vec<u8>> = vec![input, vec![0u8; cap * 4]];
+    let inputs: Vec<Vec<u8>> = vec![source.to_vec(), vec![0u8; byte_count.max(1) as usize * 4]];
     let mut config = DispatchConfig::default();
     config.grid_override = Some(line_splice_classify_dispatch_grid(byte_count));
-    let outputs = with_live_backend("packed-u8 line splice classify", |backend| {
+    let outputs = with_live_backend("raw-u8 line splice classify", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
             .unwrap_or_else(|error| {
-                panic!("Fix: CUDA packed-u8 line-splice classify dispatch failed: {error}")
+                panic!("Fix: CUDA raw-u8 line-splice classify dispatch failed: {error}")
             })
     });
     let mut out = bytes_u32(&outputs[0]);
@@ -421,7 +418,7 @@ fn cuda_line_splice_classify_u8_generated_matrix_matches_cpu() {
     let mut config = DispatchConfig::default();
     config.grid_override = Some(line_splice_classify_dispatch_grid(byte_count));
 
-    with_live_backend("packed-u8 generated line-splice matrix", |backend| {
+    with_live_backend("raw-u8 generated line-splice matrix", |backend| {
         let mut checked = 0usize;
         for case in 0..128u32 {
             let source = generated_line_splice_u8_source(case, len);
@@ -429,21 +426,21 @@ fn cuda_line_splice_classify_u8_generated_matrix_matches_cpu() {
             let outputs = backend
                 .dispatch(&program, &inputs, &config)
                 .unwrap_or_else(|error| {
-                    panic!("Fix: CUDA packed-u8 line-splice generated case {case} failed: {error}")
+                    panic!("Fix: CUDA raw-u8 line-splice generated case {case} failed: {error}")
                 });
             let mut gpu = bytes_u32(&outputs[0]);
             gpu.truncate(len);
             assert_eq!(
                 gpu,
                 reference_line_splice_classify(&source),
-                "Fix: packed-u8 CUDA line-splice mismatch on generated case {case}"
+                "Fix: raw-u8 CUDA line-splice mismatch on generated case {case}"
             );
             checked += gpu.len();
         }
         assert_eq!(
             checked,
             128 * len,
-            "Fix: generated packed-u8 CUDA line-splice matrix must compare every byte lane."
+            "Fix: generated raw-u8 CUDA line-splice matrix must compare every byte lane."
         );
     });
 }

@@ -40,7 +40,6 @@ pub(super) fn gpu_filter_simple_block_comments(
     dispatcher: &dyn GpuDispatcher,
     raw: &[u8],
     bytes_in: &[u8],
-    fallback_splice_input: &mut Vec<u8>,
     n_bucket: u32,
     cap_bucket: usize,
     byte_buf_pad: usize,
@@ -116,11 +115,10 @@ pub(super) fn gpu_filter_simple_block_comments(
         "simple block comments topology invalid flag",
     )? != 0
     {
-        super::prepare_splice_input(fallback_splice_input, raw, cap_bucket)?;
         return gpu_filter_full_comment_state(
             dispatcher,
             raw,
-            fallback_splice_input.as_slice(),
+            raw,
             n_bucket,
             cap_bucket,
             byte_buf_pad,

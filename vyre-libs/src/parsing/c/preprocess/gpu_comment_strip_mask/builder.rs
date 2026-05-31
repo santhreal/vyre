@@ -7,8 +7,8 @@ pub fn gpu_comment_strip_mask(byte_count: u32) -> Program {
     gpu_comment_strip_mask_with_source_type(byte_count, DataType::U32)
 }
 
-/// Build the 17b.5 comment-strip-mask `Program` over raw `DataType::U8`
-/// source bytes.
+/// Build the 17b.5 comment-strip-mask `Program` over runtime-sized raw
+/// `DataType::U8` source bytes.
 #[must_use]
 pub fn gpu_comment_strip_mask_u8(byte_count: u32) -> Program {
     gpu_comment_strip_mask_with_source_type(byte_count, DataType::U8)
@@ -17,17 +17,41 @@ pub fn gpu_comment_strip_mask_u8(byte_count: u32) -> Program {
 fn gpu_comment_strip_mask_with_source_type(byte_count: u32, source_type: DataType) -> Program {
     let safe_load = |addr: Expr| -> Expr {
         if source_type == DataType::U8 {
-            Expr::select(
-                Expr::lt(addr.clone(), Expr::u32(byte_count)),
-                Expr::bitand(
-                    Expr::cast(DataType::U32, Expr::load("bytes_in", addr)),
-                    Expr::u32(0xFF),
-                ),
-                Expr::u32(0),
-            )
+            let buf_len = Expr::buf_len("bytes_in");
+            let logical_len = Expr::u32(byte_count);
+            let bound = Expr::select(
+                Expr::lt(buf_len.clone(), logical_len.clone()),
+                buf_len,
+                logical_len,
+            );
+            let in_bounds = Expr::lt(addr.clone(), bound.clone());
+            let safe_addr = Expr::select(
+                in_bounds.clone(),
+                addr,
+                Expr::saturating_sub(bound, Expr::u32(1)),
+            );
+            let byte = Expr::bitand(
+                Expr::cast(DataType::U32, Expr::load("bytes_in", safe_addr)),
+                Expr::u32(0xFF),
+            );
+            Expr::select(in_bounds, byte, Expr::u32(0))
         } else {
             safe_load_packed_byte_expr("bytes_in", addr, Expr::u32(byte_count))
         }
+    };
+    let first_comment_fixup = if byte_count >= 2 {
+        Node::if_then(
+            Expr::and(
+                Expr::eq(safe_load(Expr::u32(0)), Expr::u32(b'/' as u32)),
+                Expr::or(
+                    Expr::eq(safe_load(Expr::u32(1)), Expr::u32(b'*' as u32)),
+                    Expr::eq(safe_load(Expr::u32(1)), Expr::u32(b'/' as u32)),
+                ),
+            ),
+            vec![Node::store("comment_mask_out", Expr::u32(0), Expr::u32(2))],
+        )
+    } else {
+        Node::let_bind("comment_mask_short_input", Expr::u32(0))
     };
 
     // One GPU lane walks the byte stream
@@ -466,19 +490,7 @@ fn gpu_comment_strip_mask_with_source_type(byte_count: u32, source_type: DataTyp
                     Node::assign("i", Expr::add(Expr::var("i"), Expr::u32(1))),
                 ],
             ),
-            Node::if_then(
-                Expr::and(
-                    Expr::ge(Expr::u32(byte_count), Expr::u32(2)),
-                    Expr::and(
-                        Expr::eq(safe_load(Expr::u32(0)), Expr::u32(b'/' as u32)),
-                        Expr::or(
-                            Expr::eq(safe_load(Expr::u32(1)), Expr::u32(b'*' as u32)),
-                            Expr::eq(safe_load(Expr::u32(1)), Expr::u32(b'/' as u32)),
-                        ),
-                    ),
-                ),
-                vec![Node::store("comment_mask_out", Expr::u32(0), Expr::u32(2))],
-            ),
+            first_comment_fixup,
         ],
     )];
 
@@ -491,7 +503,7 @@ fn gpu_comment_strip_mask_with_source_type(byte_count: u32, source_type: DataTyp
                 source_type.clone(),
             )
             .with_count(if source_type == DataType::U8 {
-                byte_count.max(1)
+                0
             } else {
                 byte_count.div_ceil(4).max(1)
             }),

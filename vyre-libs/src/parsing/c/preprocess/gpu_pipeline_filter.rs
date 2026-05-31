@@ -38,7 +38,6 @@ pub struct FilteredBytes {
 
 #[derive(Default)]
 pub(super) struct FilterScratch {
-    splice_input: Vec<u8>,
     n_real_buf: Vec<u8>,
     preflight_zero: Vec<u8>,
     preflight_outputs: Vec<Vec<u8>>,
@@ -57,21 +56,6 @@ impl FilterScratch {
     fn prepare_preflight_zero(&mut self, byte_len: usize) -> Result<(), String> {
         scratch::write_zero_bytes(&mut self.preflight_zero, byte_len, "filter preflight zero")
     }
-}
-
-fn prepare_splice_input(out: &mut Vec<u8>, raw: &[u8], target_len: usize) -> Result<(), String> {
-    out.clear();
-    if out.capacity() < target_len {
-        out.try_reserve_exact(target_len - out.capacity())
-            .map_err(|e| {
-                format!(
-                    "filter splice input: could not reserve {target_len} padded source bytes. Fix: reduce batch size or increase host memory: {e}"
-                )
-            })?;
-    }
-    out.extend_from_slice(raw);
-    out.resize(target_len, 0);
-    Ok(())
 }
 
 /// Orchestrate the GPU byte-filter stages over raw C source bytes.
@@ -164,7 +148,6 @@ pub(super) fn gpu_filter_source_bytes_with_scratch(
             dispatcher,
             raw,
             raw,
-            &mut scratch.splice_input,
             n_bucket,
             cap_bucket,
             byte_buf_pad,
@@ -175,11 +158,10 @@ pub(super) fn gpu_filter_source_bytes_with_scratch(
         );
     }
 
-    prepare_splice_input(&mut scratch.splice_input, raw, cap_bucket)?;
     full_comment::gpu_filter_full_comment_state(
         dispatcher,
         raw,
-        &scratch.splice_input,
+        raw,
         n_bucket,
         cap_bucket,
         byte_buf_pad,

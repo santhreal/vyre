@@ -1,5 +1,5 @@
 //! `line_splice_classify` reference roundtrip  -  validates the packed-word
-//! compatibility program and the packed-byte program against real C-shaped
+//! compatibility program and the raw-byte program against real C-shaped
 //! inputs. Catches IR-level bugs (wrong opcode, bad operand wiring, missing
 //! buffer binding) without needing the GPU driver.
 
@@ -56,13 +56,12 @@ fn run_program(source: &[u8]) -> Vec<u32> {
 fn run_program_u8(source: &[u8]) -> Vec<u32> {
     let n = source.len();
     let program = line_splice_classify_u8(n as u32);
-    let cap = n.max(1);
-    let mut input = source.to_vec();
-    input.resize(cap, 0);
-    let zero_mask = vec![0u8; cap * 4];
-    let outputs =
-        vyre_reference::reference_eval(&program, &[Value::from(input), Value::from(zero_mask)])
-            .expect("packed-u8 line_splice_classify reference evaluation must succeed");
+    let zero_mask = vec![0u8; n.max(1) * 4];
+    let outputs = vyre_reference::reference_eval(
+        &program,
+        &[Value::from(source.to_vec()), Value::from(zero_mask)],
+    )
+    .expect("raw-u8 line_splice_classify reference evaluation must succeed");
     let mut mask = unpack_mask(&outputs[0].to_bytes());
     mask.truncate(n);
     mask
@@ -159,14 +158,14 @@ fn ir_program_matches_cpu_reference_on_dense_splice_pattern() {
 }
 
 #[test]
-fn u8_program_declares_one_byte_per_source_element() {
+fn u8_program_declares_runtime_sized_source_buffer() {
     let program = line_splice_classify_u8(64);
     let bytes = &program.buffers()[0];
     let mask = &program.buffers()[1];
 
     assert_eq!(bytes.name(), "bytes_in");
     assert_eq!(bytes.element(), DataType::U8);
-    assert_eq!(bytes.count(), 64);
+    assert_eq!(bytes.count(), 0);
     assert_eq!(mask.name(), "kept_mask_out");
     assert_eq!(mask.element(), DataType::U32);
     assert_eq!(mask.count(), 64);

@@ -38,14 +38,13 @@ fn run(source: &[u8]) -> Vec<u32> {
 
 fn run_u8(source: &[u8]) -> Vec<u32> {
     let n = source.len();
-    let cap = n.max(1);
-    let mut input = source.to_vec();
-    input.resize(cap, 0);
-    let out_init = vec![0u8; cap * 4];
+    let out_init = vec![0u8; n.max(1) * 4];
     let prog = gpu_comment_strip_mask_u8(n as u32);
-    let outputs =
-        vyre_reference::reference_eval(&prog, &[Value::from(input), Value::from(out_init)])
-            .expect("packed-u8 gpu_comment_strip_mask reference eval");
+    let outputs = vyre_reference::reference_eval(
+        &prog,
+        &[Value::from(source.to_vec()), Value::from(out_init)],
+    )
+    .expect("raw-u8 gpu_comment_strip_mask reference eval");
     let mut mask = unpack(&outputs[0].to_bytes());
     mask.truncate(n);
     mask

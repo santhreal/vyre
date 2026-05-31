@@ -20,8 +20,8 @@
 //! Inputs:
 //!   - `bytes_in`  -  compatibility [`line_splice_classify`] expects packed
 //!     little-endian `DataType::U32` words, four source bytes per word.
-//!     [`line_splice_classify_u8`] expects one `DataType::U8` element per
-//!     source byte.
+//!     [`line_splice_classify_u8`] expects a runtime-sized `DataType::U8`
+//!     source-byte buffer.
 //!
 //! Outputs:
 //!   - `kept_mask_out`  -  `DataType::U32`, one entry per input byte. `1`
@@ -88,7 +88,8 @@ pub fn line_splice_classify(byte_count: u32) -> Program {
     line_splice_classify_with_source_type(byte_count, DataType::U32)
 }
 
-/// Build the line-splice classifier over packed `DataType::U8` source bytes.
+/// Build the line-splice classifier over runtime-sized raw `DataType::U8`
+/// source bytes.
 ///
 /// This emits the same per-byte kept mask as [`line_splice_classify`] while
 /// removing the packed-word byte extraction from the source path.
@@ -108,10 +109,24 @@ fn line_splice_classify_with_source_type(byte_count: u32, source_type: DataType)
     // constants type-cleanly.
     let load_byte = |addr: Expr| -> Expr {
         if source_type == DataType::U8 {
-            Expr::bitand(
-                Expr::cast(DataType::U32, Expr::load("bytes_in", addr)),
+            let buf_len = Expr::buf_len("bytes_in");
+            let logical_len = Expr::u32(byte_count);
+            let bound = Expr::select(
+                Expr::lt(buf_len.clone(), logical_len.clone()),
+                buf_len,
+                logical_len,
+            );
+            let in_bounds = Expr::lt(addr.clone(), bound.clone());
+            let safe_addr = Expr::select(
+                in_bounds.clone(),
+                addr,
+                Expr::saturating_sub(bound, Expr::u32(1)),
+            );
+            let byte = Expr::bitand(
+                Expr::cast(DataType::U32, Expr::load("bytes_in", safe_addr)),
                 Expr::u32(0xFF),
-            )
+            );
+            Expr::select(in_bounds, byte, Expr::u32(0))
         } else {
             let word_idx = Expr::div(addr.clone(), Expr::u32(4));
             let byte_in_word = Expr::rem(addr, Expr::u32(4));
@@ -147,7 +162,7 @@ fn line_splice_classify_with_source_type(byte_count: u32, source_type: DataType)
         }
     };
     let input_count = if source_type == DataType::U8 {
-        byte_count.max(1)
+        0
     } else {
         byte_count.div_ceil(4).max(1)
     };

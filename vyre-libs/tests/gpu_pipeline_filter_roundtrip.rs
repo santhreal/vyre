@@ -208,6 +208,7 @@ fn nested_block_marker_falls_back_to_full_comment_state_machine() {
             .any(|op| op.contains("gpu_comment_strip_mask")),
         "nested block marker topology must use the full comment-state machine"
     );
+    assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 }
 
 #[test]
@@ -224,6 +225,7 @@ fn stray_block_close_falls_back_to_full_comment_state_machine() {
             .any(|op| op.contains("gpu_comment_strip_mask")),
         "stray block close topology must use the full comment-state machine"
     );
+    assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 }
 
 #[test]
@@ -264,6 +266,7 @@ fn dense_mixed_pattern() {
     let out = gpu_filter_source_bytes(&dispatcher, src).expect("gpu_filter_source_bytes");
     assert_eq!(out.bytes, reference_filter_source_bytes(src));
     assert_byte_source_dispatches_are_u8(&dispatcher);
+    assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 }
 
 #[test]

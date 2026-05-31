@@ -37,7 +37,7 @@ impl FullCommentScratch {
 pub(super) fn gpu_filter_full_comment_state(
     dispatcher: &dyn GpuDispatcher,
     raw: &[u8],
-    splice_input: &[u8],
+    bytes_in: &[u8],
     n_bucket: u32,
     cap_bucket: usize,
     byte_buf_pad: usize,
@@ -61,7 +61,7 @@ pub(super) fn gpu_filter_full_comment_state(
     dispatcher
         .dispatch_borrowed_into(
             &splice_prog,
-            &[splice_input, scratch.zero_words.as_slice()],
+            &[bytes_in, scratch.zero_words.as_slice()],
             &mut scratch.splice_out,
         )
         .map_err(|e| format!("filter line_splice_classify: {e}"))?;
@@ -74,7 +74,7 @@ pub(super) fn gpu_filter_full_comment_state(
     dispatcher
         .dispatch_borrowed_into(
             &comment_prog,
-            &[splice_input, scratch.zero_words.as_slice()],
+            &[bytes_in, scratch.zero_words.as_slice()],
             &mut scratch.comment_out,
         )
         .map_err(|e| format!("filter gpu_comment_strip_mask: {e}"))?;
@@ -133,7 +133,7 @@ pub(super) fn gpu_filter_full_comment_state(
         .dispatch_borrowed_into(
             &compact_prog,
             &[
-                splice_input,
+                bytes_in,
                 scratch.combine_out[0].as_slice(),
                 scratch.comment_out[0].as_slice(),
                 scratch.offsets_bytes.as_slice(),
