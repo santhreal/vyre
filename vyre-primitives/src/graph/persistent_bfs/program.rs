@@ -4,10 +4,12 @@ use super::layout::{
     BATCH_OP_ID, BINDING_CHANGED, BINDING_FRONTIER_IN, BINDING_FRONTIER_OUT, OP_ID,
     PERSISTENT_BFS_WORKGROUP_SIZE,
 };
+use crate::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_snapshot_child_prefixed;
 use crate::graph::persistent_bfs_step::persistent_bfs_step_child_prefixed_with_active;
 use crate::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::MemoryOrdering;
 
 /// Words needed to hold a bitset over `node_count` nodes.
 #[must_use]
@@ -26,6 +28,25 @@ pub const fn bitset_words(node_count: u32) -> u32 {
 /// a new reachable node.
 #[must_use]
 pub fn persistent_bfs(
+    shape: ProgramGraphShape,
+    frontier_in: &str,
+    frontier_out: &str,
+    edge_kind_mask: u32,
+    max_iters: u32,
+) -> Program {
+    if shape.node_count > PERSISTENT_BFS_WORKGROUP_SIZE[0] {
+        return persistent_bfs_grid_sync_parallel(
+            shape,
+            frontier_in,
+            frontier_out,
+            edge_kind_mask,
+            max_iters,
+        );
+    }
+    persistent_bfs_single_workgroup(shape, frontier_in, frontier_out, edge_kind_mask, max_iters)
+}
+
+fn persistent_bfs_single_workgroup(
     shape: ProgramGraphShape,
     frontier_in: &str,
     frontier_out: &str,
@@ -167,6 +188,91 @@ pub fn persistent_bfs(
             body: Arc::new(entry),
         }],
     )
+}
+
+fn persistent_bfs_grid_sync_parallel(
+    shape: ProgramGraphShape,
+    frontier_in: &str,
+    frontier_out: &str,
+    edge_kind_mask: u32,
+    max_iters: u32,
+) -> Program {
+    let words = bitset_words(shape.node_count);
+    let t = Expr::gid_x();
+    let mut entry: Vec<Node> = vec![
+        Node::if_then(
+            Expr::lt(t.clone(), Expr::u32(words)),
+            vec![Node::store(
+                frontier_out,
+                t.clone(),
+                Expr::load(frontier_in, t.clone()),
+            )],
+        ),
+        Node::if_then(
+            Expr::eq(t, Expr::u32(0)),
+            vec![Node::store("changed", Expr::u32(0), Expr::u32(0))],
+        ),
+    ];
+
+    if max_iters > 0 {
+        entry.push(grid_sync_barrier());
+    }
+    for iter in 0..max_iters {
+        entry.push(csr_forward_or_changed_parallel_snapshot_child_prefixed(
+            OP_ID,
+            shape,
+            frontier_out,
+            "changed",
+            edge_kind_mask,
+            &format!("grid_iter_{iter}"),
+        ));
+        if iter + 1 < max_iters {
+            entry.push(grid_sync_barrier());
+        }
+    }
+
+    let mut buffers = shape.read_only_buffers();
+    buffers.push(
+        BufferDecl::storage(
+            frontier_in,
+            BINDING_FRONTIER_IN,
+            BufferAccess::ReadOnly,
+            DataType::U32,
+        )
+        .with_count(words.max(1)),
+    );
+    buffers.push(
+        BufferDecl::storage(
+            frontier_out,
+            BINDING_FRONTIER_OUT,
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )
+        .with_count(words.max(1)),
+    );
+    buffers.push(
+        BufferDecl::storage(
+            "changed",
+            BINDING_CHANGED,
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )
+        .with_count(1),
+    );
+
+    Program::wrapped(
+        buffers,
+        PERSISTENT_BFS_WORKGROUP_SIZE,
+        vec![Node::Region {
+            generator: Ident::from(OP_ID),
+            source_region: None,
+            body: Arc::new(entry),
+        }],
+    )
+}
+
+fn grid_sync_barrier() -> Node {
+    Node::barrier_with_ordering(MemoryOrdering::GridSync)
 }
 
 /// Build a batched persistent-BFS Program.
@@ -408,4 +514,3 @@ fn checked_batch_frontier_words(
         )
     })
 }
-

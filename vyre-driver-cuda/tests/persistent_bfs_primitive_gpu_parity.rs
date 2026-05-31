@@ -6,7 +6,9 @@ mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
-use vyre_primitives::graph::persistent_bfs::{cpu_ref, persistent_bfs};
+use vyre_primitives::graph::persistent_bfs::{
+    cpu_ref, persistent_bfs, persistent_bfs_single_dispatch_grid,
+};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
 fn run(
@@ -42,7 +44,7 @@ fn run(
         vec![0u8; 4],
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some([1, 1, 1]);
+    config.grid_override = Some(persistent_bfs_single_dispatch_grid(node_count));
     let outputs = with_live_backend("persistent BFS primitive", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -148,4 +150,93 @@ fn cuda_persistent_bfs_isolated_seed_unchanged() {
     assert_eq!(gpu, cpu);
     assert_eq!(gpu.0, vec![0b001u32]);
     assert_eq!(gpu.1, 0);
+}
+
+#[test]
+fn cuda_persistent_bfs_large_graph_crosses_workgroup_boundary() {
+    let n = 513u32;
+    let mut edge_offsets = vec![0u32; n as usize + 1];
+    let mut edge_targets = Vec::new();
+    let mut edge_kind_mask = Vec::new();
+    for src in 0..n {
+        edge_offsets[src as usize] = edge_targets.len() as u32;
+        if src == 256 {
+            edge_targets.push(512);
+            edge_kind_mask.push(1);
+        }
+    }
+    edge_offsets[n as usize] = edge_targets.len() as u32;
+    let mut frontier = vec![0u32; ((n + 31) / 32) as usize];
+    frontier[8] = 1;
+
+    let cpu = cpu_ref(
+        n,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        &frontier,
+        0xFFFF_FFFF,
+        1,
+    );
+    let gpu = run(
+        n,
+        edge_targets.len() as u32,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        &frontier,
+        0xFFFF_FFFF,
+        1,
+    );
+
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu.0[8], 1);
+    assert_eq!(gpu.0[16], 1);
+    assert_eq!(gpu.1, 1);
+}
+
+#[test]
+fn cuda_persistent_bfs_large_chain_honors_one_step_cap() {
+    let n = 513u32;
+    let mut edge_offsets = Vec::with_capacity(n as usize + 1);
+    let mut edge_targets = Vec::with_capacity(n as usize - 1);
+    let mut edge_kind_mask = Vec::with_capacity(n as usize - 1);
+    edge_offsets.push(0);
+    for src in 0..n {
+        if src + 1 < n {
+            edge_targets.push(src + 1);
+            edge_kind_mask.push(1);
+        }
+        edge_offsets.push(edge_targets.len() as u32);
+    }
+    let mut frontier = vec![0u32; ((n + 31) / 32) as usize];
+    frontier[0] = 1;
+
+    let cpu = cpu_ref(
+        n,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        &frontier,
+        0xFFFF_FFFF,
+        1,
+    );
+    let gpu = run(
+        n,
+        edge_targets.len() as u32,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        &frontier,
+        0xFFFF_FFFF,
+        1,
+    );
+
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu.0[0], 0b11);
+    assert!(
+        gpu.0[1..].iter().all(|word| *word == 0),
+        "Fix: one persistent-BFS iteration must not cascade past node 1 on a long chain."
+    );
+    assert_eq!(gpu.1, 1);
 }
