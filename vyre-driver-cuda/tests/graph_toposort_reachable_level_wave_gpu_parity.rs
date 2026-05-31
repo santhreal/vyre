@@ -9,7 +9,9 @@ use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::graph::level_wave::{cpu_ref as level_wave_cpu, level_wave_program};
+use vyre_primitives::graph::level_wave::{
+    cpu_ref as level_wave_cpu, level_wave_dispatch_grid, level_wave_program,
+};
 use vyre_primitives::graph::reachable::{reachable, reachable_program};
 use vyre_primitives::graph::toposort::{toposort, toposort_program};
 
@@ -323,9 +325,58 @@ fn run_level_wave(backend: &CudaBackend, depths: &[u32], max_depth: u32) -> Vec<
 
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(depths), vec![0u8; lane_count as usize * 4]];
     let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((lane_count + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
+    config.grid_override = Some(level_wave_dispatch_grid(lane_count));
+    let outputs = backend
+        .dispatch(&program, &inputs, &config)
+        .expect("dispatch");
+    let mut out = bytes_u32(&outputs[0]);
+    out.truncate(lane_count as usize);
+    out
+}
+
+fn run_level_wave_cross_block_dependency(
+    backend: &CudaBackend,
+    depths: &[u32],
+    max_depth: u32,
+) -> Vec<u32> {
+    let lane = Expr::InvocationId { axis: 0 };
+    let lane_count = depths.len() as u32;
+    let depth = Expr::load("depths", lane.clone());
+    let step = vec![
+        Node::if_then(
+            Expr::eq(depth.clone(), Expr::u32(0)),
+            vec![Node::store("counter", lane.clone(), Expr::u32(1))],
+        ),
+        Node::if_then(
+            Expr::and(
+                Expr::eq(depth, Expr::u32(1)),
+                Expr::ge(lane.clone(), Expr::u32(256)),
+            ),
+            vec![Node::store(
+                "counter",
+                lane.clone(),
+                Expr::add(
+                    Expr::load("counter", Expr::sub(lane.clone(), Expr::u32(256))),
+                    Expr::u32(1),
+                ),
+            )],
+        ),
+    ];
+    let inner = level_wave_program(step, "depths", max_depth, lane_count);
+    let mut buffers: Vec<BufferDecl> = inner.buffers().to_vec();
+    buffers.push(
+        BufferDecl::storage(
+            "counter",
+            buffers.len() as u32,
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )
+        .with_count(lane_count),
+    );
+    let program = Program::wrapped(buffers, inner.workgroup_size, inner.entry().to_vec());
+    let inputs: Vec<Vec<u8>> = vec![u32_bytes(depths), vec![0u8; lane_count as usize * 4]];
+    let mut config = DispatchConfig::default();
+    config.grid_override = Some(level_wave_dispatch_grid(lane_count));
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -368,4 +419,29 @@ fn cuda_level_wave_skips_lanes_outside_max_depth() {
         assert_eq!(gpu, cpu);
         assert_eq!(gpu, vec![1, 1, 0, 0, 1]);
     });
+}
+
+#[test]
+fn cuda_level_wave_multi_block_orders_cross_block_dependencies() {
+    with_live_backend(
+        "cuda_level_wave_multi_block_orders_cross_block_dependencies",
+        |backend| {
+            let mut depths = vec![2u32; 513];
+            for lane in 0..256 {
+                depths[lane] = 0;
+                depths[lane + 256] = 1;
+            }
+            let gpu = run_level_wave_cross_block_dependency(backend, &depths, 2);
+            assert!(
+                gpu[..256].iter().all(|&value| value == 1),
+                "depth-0 producer lanes must fire before dependent wave: {:?}",
+                &gpu[..256]
+            );
+            assert!(
+                gpu[256..512].iter().all(|&value| value == 2),
+                "depth-1 lanes in block 1 must see block-0 depth-0 writes"
+            );
+            assert_eq!(gpu[512], 0);
+        },
+    );
 }
