@@ -443,6 +443,7 @@ pub const TOPOSORT_OFFSETS_BUFFER: &str = "toposort offsets";
 pub const TOPOSORT_ORDER_OUT_BUFFER: &str = "toposort order_out";
 pub const TOPOSORT_QUEUE_SCRATCH_BUFFER: &str = "toposort queue_scratch";
 pub const TOPOSORT_TARGETS_BUFFER: &str = "toposort targets";
+pub const UNION_FIND_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const UNPACK_I4_OP_ID: &str = "vyre-primitives::math::quantized::unpack_i4x8";
 pub const UPDATE_OP_ID: &str = "vyre-primitives::hash::count_sketch_update";
 pub const UPPER_BOUND: u32 = 1 << 13;
@@ -576,6 +577,7 @@ pub const fn static_input_key(&self) -> PersistentBfsStaticInputKey {
 pub const fn tensor_words(node_count: u32, context_limit: u32, field_limit: u32) -> u32 {
 pub const fn total_words(&self) -> usize {
 pub const fn union(self, other: Self) -> Self {
+pub const fn union_find_dispatch_grid(edge_count: u32) -> [u32; 3] {
 pub const fn uses_changed_history(&self) -> bool {
 pub const fn utf8_validate_dispatch_grid(n: u32) -> [u32; 3] {
 pub const fn vector(x: f64, y: f64) -> Self {

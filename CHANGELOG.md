@@ -16,6 +16,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Added explicit bigint add-carry dispatch sizing and multi-block CPU/CUDA carry-pattern coverage for large limb arrays.
 
+- Added explicit union-find dispatch sizing through the self-substrate path and multi-block CUDA coverage for large edge batches.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**
