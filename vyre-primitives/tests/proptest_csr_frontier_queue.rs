@@ -129,6 +129,7 @@ proptest! {
             CsrQueueGraphLayout {
                 node_count,
                 edge_count: graph.edge_targets.len() as u32,
+                max_row_degree: max_row_degree(&graph.edge_offsets),
                 words: bitset_words(node_count) as usize,
                 edge_storage_words: graph.edge_targets.len().max(1),
             }
@@ -239,6 +240,14 @@ fn active_nodes(frontier: &[u32], node_count: u32) -> Vec<u32> {
     (0..node_count)
         .filter(|&node| frontier_has_node(frontier, node))
         .collect()
+}
+
+fn max_row_degree(edge_offsets: &[u32]) -> u32 {
+    edge_offsets
+        .windows(2)
+        .map(|pair| pair[1] - pair[0])
+        .max()
+        .unwrap_or(0)
 }
 
 fn queue_forward_oracle(
