@@ -7,6 +7,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
+use vyre::ir::{BufferAccess, Program};
 use vyre::DispatchConfig;
 use vyre_primitives::text::line_index::{line_index, reference_line_index};
 use vyre_primitives::text::utf8_validate::{reference_utf8_validate, utf8_validate};
@@ -15,18 +16,57 @@ fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
     source.iter().map(|&b| b as u32).collect()
 }
 
+fn inputs_for_program(program: &Program, source: &[u8]) -> Vec<Vec<u8>> {
+    program
+        .buffers()
+        .iter()
+        .filter_map(|buffer| {
+            let backend_allocated = buffer.is_output() || buffer.is_pipeline_live_out();
+            let needs_input = matches!(
+                buffer.access(),
+                BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
+            ) && !backend_allocated
+                && buffer.access() != BufferAccess::Workgroup;
+            if !needs_input {
+                return None;
+            }
+            if buffer.name() == "source" {
+                Some(u32_bytes(&bytes_to_u32_per_lane(source)))
+            } else {
+                Some(vec![0u8; buffer.count().max(1) as usize * 4])
+            }
+        })
+        .collect()
+}
+
+fn output_index(program: &Program, name: &str) -> usize {
+    program
+        .buffers()
+        .iter()
+        .filter(|buffer| {
+            buffer.is_output()
+                || buffer.is_pipeline_live_out()
+                || matches!(
+                    buffer.access(),
+                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
+                )
+        })
+        .position(|buffer| buffer.name() == name)
+        .expect("Fix: CUDA text primitive output buffer must be declared")
+}
+
 fn run_line_index(source: &[u8]) -> Vec<u32> {
     let n = source.len() as u32;
     let program = line_index("source", "lines", n);
-    let inputs: Vec<Vec<u8>> = vec![u32_bytes(&bytes_to_u32_per_lane(source))];
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some([1, 1, 1]);
+    let inputs = inputs_for_program(&program, source);
+    let config = DispatchConfig::default();
+    let lines_index = output_index(&program, "lines");
     let outputs = with_live_backend("line index primitive", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
             .unwrap_or_else(|error| panic!("Fix: CUDA line-index dispatch failed: {error}"))
     });
-    let mut out = bytes_u32(&outputs[0]);
+    let mut out = bytes_u32(&outputs[lines_index]);
     out.truncate(n as usize);
     out
 }
@@ -74,6 +114,24 @@ fn cuda_line_index_back_to_back_lf() {
     let gpu = run_line_index(s);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0, 0, 1, 2]);
+}
+
+#[test]
+fn cuda_line_index_multi_block_mixed_newlines() {
+    let mut s = Vec::with_capacity(4099);
+    for i in 0..4099u32 {
+        let byte = match i % 17 {
+            0 => b'\n',
+            5 => b'\r',
+            6 => b'\n',
+            11 => b'\r',
+            _ => b'a' + (i % 23) as u8,
+        };
+        s.push(byte);
+    }
+    let cpu = reference_line_index(&s);
+    let gpu = run_line_index(&s);
+    assert_eq!(gpu, cpu);
 }
 
 fn run_utf8_validate(source: &[u8]) -> Vec<u32> {

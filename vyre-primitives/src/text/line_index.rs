@@ -1,9 +1,10 @@
 //! Tier 2.5 line-index  -  write a per-byte line number into `lines[i]`.
 //!
 //! Every parser dialect that reports diagnostics needs line numbers.
-//! This op walks the source serially (single invocation) maintaining a
-//! line counter that increments on every `\n` (`0x0A`). The current
-//! line number is written to every byte position.
+//! This op is a GPU-native flag/scan/finalize pipeline. The first pass
+//! marks bytes that terminate a line, the reduce substrate computes an
+//! inclusive prefix sum of those marks, and the final pass writes the
+//! line number for every byte position.
 //!
 //! Carriage-return handling: `\r` alone (Mac classic), `\r\n` (Windows),
 //! and bare `\n` (Unix) are all normalized  -  `\r` does NOT increment
@@ -17,96 +18,184 @@
 //! line-start representation.
 
 use std::sync::Arc;
+
+use crate::reduce::multi_block_prefix_scan::{multi_block_prefix_scan_sum_u32, BLOCK_LANES};
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for the registered Tier 3 wrapper.
 pub const OP_ID: &str = "vyre-primitives::text::line_index";
+const FLAG_OP_ID: &str = "vyre-primitives::text::line_index::break_flags";
+const FINALIZE_OP_ID: &str = "vyre-primitives::text::line_index::finalize";
 
 /// Build a Program that writes `lines[i] = line_number_of(source[i])`.
 ///
-/// Single-invocation serial scan  -  bytes are read in order, the line
-/// counter starts at 0 and increments on each `\n` byte. The increment
-/// is applied AFTER the assignment for the newline byte itself, so
-/// `lines[idx_of_newline]` reads the line that contained the newline.
+/// Newline bytes belong to the line they terminate, so the generated
+/// pipeline computes an inclusive prefix of per-byte line-break flags
+/// and subtracts the current byte's own flag before storing `lines[i]`.
 #[must_use]
 pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
-    let body = vec![Node::Region {
-        generator: Ident::from(OP_ID),
-        source_region: None,
-        body: Arc::new(vec![Node::if_then(
-            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
-            vec![
-                Node::let_bind("line", Expr::u32(0)),
-                Node::let_bind("prev_was_cr", Expr::u32(0)),
-                Node::loop_for(
-                    "i",
-                    Expr::u32(0),
-                    Expr::u32(n),
-                    vec![
-                        Node::let_bind(
-                            "byte",
-                            Expr::bitand(Expr::load(source, Expr::var("i")), Expr::u32(0xFF)),
-                        ),
-                        // Lone-CR catch-up: if the previous byte was a
-                        // bare '\r' and the current byte is NOT '\n',
-                        // the current byte belongs to the next line.
-                        // Apply the increment BEFORE storing so the
-                        // current byte records its new line. (CPU
-                        // does the same  -  see reference_line_index lines 112-114.)
-                        Node::if_then(
-                            Expr::and(
-                                Expr::eq(Expr::var("prev_was_cr"), Expr::u32(1)),
-                                Expr::ne(Expr::var("byte"), Expr::u32(0x0A)),
-                            ),
-                            vec![
-                                Node::assign("line", Expr::add(Expr::var("line"), Expr::u32(1))),
-                                Node::assign("prev_was_cr", Expr::u32(0)),
-                            ],
-                        ),
-                        // Write the current line number after applying
-                        // the lone-CR catch-up but before any increment
-                        // induced by the current byte itself.
-                        Node::store(lines, Expr::var("i"), Expr::var("line")),
-                        // Increment when we see '\n' (0x0A) regardless
-                        // of prev_was_cr  -  '\r\n' increments only once
-                        // because the prior '\r' did NOT increment.
-                        Node::if_then_else(
-                            Expr::eq(Expr::var("byte"), Expr::u32(0x0A)),
-                            vec![
-                                Node::assign("line", Expr::add(Expr::var("line"), Expr::u32(1))),
-                                Node::assign("prev_was_cr", Expr::u32(0)),
-                            ],
-                            vec![Node::if_then_else(
-                                Expr::eq(Expr::var("byte"), Expr::u32(0x0D)),
-                                vec![
-                                    // '\r' marks state but doesn't yet
-                                    // increment  -  wait until we see what
-                                    // follows.
-                                    Node::assign("prev_was_cr", Expr::u32(1)),
-                                ],
-                                vec![
-                                    // Any other byte: prev_was_cr is
-                                    // already cleared by the catch-up
-                                    // above.
-                                    Node::assign("prev_was_cr", Expr::u32(0)),
-                                ],
-                            )],
-                        ),
-                    ],
-                ),
-            ],
-        )]),
-    }];
+    match try_line_index(source, lines, n) {
+        Ok(program) => program,
+        Err(error) => crate::invalid_output_program(OP_ID, lines, DataType::U32, error),
+    }
+}
 
+fn try_line_index(source: &str, lines: &str, n: u32) -> Result<Program, String> {
+    if n == 0 {
+        return Ok(empty_line_index_program(source, lines));
+    }
+
+    let flags = format!("__{lines}_line_break_flags");
+    let prefix = format!("__{lines}_line_break_prefix");
+
+    let flag_pass = line_break_flags_program(source, &flags, n)?;
+    let scan_pass = multi_block_prefix_scan_sum_u32(&flags, &prefix, n);
+    if scan_pass.stats().trap() {
+        return Err(format!(
+            "line_index n={n} could not build its prefix-scan pass. Fix: shard the source before line indexing or repair reduce::multi_block_prefix_scan sizing."
+        ));
+    }
+    let finalize_pass = line_index_finalize_program(&flags, &prefix, lines, n)?;
+
+    vyre_foundation::execution_plan::fusion::fuse_programs(&[flag_pass, scan_pass, finalize_pass])
+        .map(|program| demote_intermediate_outputs(program, lines))
+        .map_err(|error| {
+            format!(
+                "line_index fusion failed for n={n}: {error}. Fix: repair flag/scan/finalize fusion instead of falling back to a serial lane-0 loop."
+            )
+        })
+}
+
+fn empty_line_index_program(source: &str, lines: &str) -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::storage(source, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(lines, 1, DataType::U32).with_count(n),
+            BufferDecl::storage(source, 0, BufferAccess::ReadOnly, DataType::U32).with_count(0),
+            BufferDecl::output(lines, 1, DataType::U32)
+                .with_count(0)
+                .with_output_byte_range(0..0),
         ],
         [1, 1, 1],
-        body,
+        vec![Node::Region {
+            generator: Ident::from(OP_ID),
+            source_region: None,
+            body: Arc::new(Vec::new()),
+        }],
     )
+}
+
+fn output_byte_range(words: u32, context: &str) -> Result<usize, String> {
+    usize::try_from(words)
+        .ok()
+        .and_then(|count| count.checked_mul(4))
+        .ok_or_else(|| {
+            format!(
+                "{context} words={words} overflows output byte range. Fix: shard the source before GPU line indexing."
+            )
+        })
+}
+
+fn line_break_flags_program(source: &str, flags: &str, n: u32) -> Result<Program, String> {
+    let t = Expr::InvocationId { axis: 0 };
+    let next_idx = Expr::add(t.clone(), Expr::u32(1));
+    let output_bytes = output_byte_range(n, "line_index break-flags output")?;
+
+    let lane_body = vec![
+        Node::let_bind(
+            "byte",
+            Expr::bitand(Expr::load(source, t.clone()), Expr::u32(0xFF)),
+        ),
+        Node::let_bind("next_byte", Expr::u32(0)),
+        Node::if_then(
+            Expr::lt(next_idx.clone(), Expr::u32(n)),
+            vec![Node::assign(
+                "next_byte",
+                Expr::bitand(Expr::load(source, next_idx), Expr::u32(0xFF)),
+            )],
+        ),
+        Node::let_bind("flag", Expr::u32(0)),
+        Node::if_then(
+            Expr::eq(Expr::var("byte"), Expr::u32(0x0A)),
+            vec![Node::assign("flag", Expr::u32(1))],
+        ),
+        Node::if_then(
+            Expr::and(
+                Expr::eq(Expr::var("byte"), Expr::u32(0x0D)),
+                Expr::and(
+                    Expr::lt(Expr::add(t.clone(), Expr::u32(1)), Expr::u32(n)),
+                    Expr::ne(Expr::var("next_byte"), Expr::u32(0x0A)),
+                ),
+            ),
+            vec![Node::assign("flag", Expr::u32(1))],
+        ),
+        Node::store(flags, t.clone(), Expr::var("flag")),
+    ];
+
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(source, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::storage(flags, 1, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(n)
+                .with_pipeline_live_out(true)
+                .with_output_byte_range(0..output_bytes),
+        ],
+        [BLOCK_LANES, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(FLAG_OP_ID),
+            source_region: None,
+            body: Arc::new(vec![Node::if_then(Expr::lt(t, Expr::u32(n)), lane_body)]),
+        }],
+    ))
+}
+
+fn line_index_finalize_program(
+    flags: &str,
+    prefix: &str,
+    lines: &str,
+    n: u32,
+) -> Result<Program, String> {
+    let t = Expr::InvocationId { axis: 0 };
+    let output_bytes = output_byte_range(n, "line_index lines output")?;
+    let body = vec![Node::if_then(
+        Expr::lt(t.clone(), Expr::u32(n)),
+        vec![Node::store(
+            lines,
+            t.clone(),
+            Expr::sub(Expr::load(prefix, t.clone()), Expr::load(flags, t)),
+        )],
+    )];
+
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(flags, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::storage(prefix, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::output(lines, 2, DataType::U32)
+                .with_count(n)
+                .with_output_byte_range(0..output_bytes),
+        ],
+        [BLOCK_LANES, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(FINALIZE_OP_ID),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    ))
+}
+
+fn demote_intermediate_outputs(program: Program, final_output: &str) -> Program {
+    let buffers = program
+        .buffers()
+        .iter()
+        .map(|buffer| {
+            let mut buffer = buffer.clone();
+            if buffer.name() != final_output && buffer.is_output() {
+                buffer.is_output = false;
+                buffer.pipeline_live_out = true;
+            }
+            buffer
+        })
+        .collect();
+    program.with_rewritten_buffers(buffers)
 }
 
 /// Reference oracle: same line-counting semantics as the GPU kernel.
@@ -142,11 +231,12 @@ inventory::submit! {
         Some(|| {
             vec![vec![
                 vec![0x61, 0x00, 0x00, 0x00, 0x62, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x63, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00],
-                vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
             ]]
         }),
         Some(|| {
             vec![vec![
+                vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+                vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00],
                 vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00],
             ]]
         }),
@@ -190,5 +280,29 @@ mod tests {
     fn reference_trailing_lone_cr_does_not_increment_after_eof() {
         // "ab\r" → lines [0, 0, 0]; we don't see a follow-up byte.
         assert_eq!(reference_line_index(b"ab\r"), vec![0, 0, 0]);
+    }
+
+    #[test]
+    fn builder_uses_parallel_scan_pipeline() {
+        let program = line_index("source", "lines", BLOCK_LANES + 17);
+        assert_eq!(program.workgroup_size(), [BLOCK_LANES, 1, 1]);
+        assert!(program
+            .buffers()
+            .iter()
+            .any(|buffer| buffer.name() == "__lines_line_break_flags"
+                && buffer.is_pipeline_live_out()));
+        assert!(program
+            .buffers()
+            .iter()
+            .any(|buffer| buffer.name() == "__lines_line_break_prefix"
+                && buffer.is_pipeline_live_out()));
+        assert_eq!(
+            program
+                .buffers()
+                .iter()
+                .filter(|buffer| buffer.is_output())
+                .count(),
+            1
+        );
     }
 }

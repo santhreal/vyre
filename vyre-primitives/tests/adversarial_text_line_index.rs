@@ -1,7 +1,49 @@
 //! Adversarial oracle tests for `text::line_index`.
 
+use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_primitives::text::line_index::{line_index, reference_line_index};
 use vyre_reference::value::Value;
+
+fn output_index(program: &Program, name: &str) -> usize {
+    program
+        .buffers()
+        .iter()
+        .filter(|buffer| {
+            buffer.is_output()
+                || buffer.is_pipeline_live_out()
+                || matches!(
+                    buffer.access(),
+                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
+                )
+        })
+        .position(|buffer| buffer.name() == name)
+        .expect("Fix: line_index final output buffer must be declared")
+}
+
+fn output_names(program: &Program) -> Vec<&str> {
+    program
+        .buffers()
+        .iter()
+        .filter(|buffer| {
+            buffer.is_output()
+                || buffer.is_pipeline_live_out()
+                || matches!(
+                    buffer.access(),
+                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
+                )
+        })
+        .map(|buffer| buffer.name())
+        .collect()
+}
+
+fn unpack_u32s(bytes: &[u8]) -> Vec<u32> {
+    bytes
+        .chunks_exact(4)
+        .map(|chunk| {
+            u32::from_le_bytes(chunk.try_into().expect("Fix: u32 chunk conversion failed"))
+        })
+        .collect()
+}
 
 fn run_program(source: &[u8]) -> Vec<u32> {
     let n = source.len();
@@ -14,15 +56,12 @@ fn run_program(source: &[u8]) -> Vec<u32> {
     while input_bytes.len() < cap * 4 {
         input_bytes.extend_from_slice(&0u32.to_le_bytes());
     }
-    let zero_lines = vec![0u8; cap * 4];
-    let outputs =
-        vyre_reference::reference_eval(&program, &[Value::from(input_bytes), Value::from(zero_lines)])
-            .expect("Fix: line_index reference evaluation must succeed");
-    let out_bytes = outputs[0].to_bytes();
+    let lines_index = output_index(&program, "lines");
+    let outputs = vyre_reference::reference_eval(&program, &[Value::from(input_bytes)])
+        .expect("Fix: line_index reference evaluation must succeed");
+    let out_bytes = outputs[lines_index].to_bytes();
     let mut out_u32s = Vec::with_capacity(cap);
-    for chunk in out_bytes.chunks_exact(4) {
-        out_u32s.push(u32::from_le_bytes(chunk.try_into().expect("Fix: u32 chunk conversion failed")));
-    }
+    out_u32s.extend(unpack_u32s(&out_bytes));
     out_u32s.truncate(n);
     out_u32s
 }
@@ -48,4 +87,29 @@ fn line_index_hostile_corpus() {
             "Fix: line_index compiled program mismatch on case {idx}"
         );
     }
+}
+
+#[test]
+fn line_index_pipeline_intermediates_match_registered_fixture_shape() {
+    let source = b"ab\ncd";
+    let program = line_index("source", "lines", source.len() as u32);
+    assert_eq!(
+        output_names(&program),
+        vec![
+            "__lines_line_break_flags",
+            "__lines_line_break_prefix",
+            "lines"
+        ]
+    );
+
+    let mut input_bytes = Vec::with_capacity(source.len() * 4);
+    for &byte in source {
+        input_bytes.extend_from_slice(&(byte as u32).to_le_bytes());
+    }
+    let outputs = vyre_reference::reference_eval(&program, &[Value::from(input_bytes)])
+        .expect("Fix: line_index pipeline fixture reference evaluation must succeed");
+
+    assert_eq!(unpack_u32s(&outputs[0].to_bytes()), vec![0, 0, 1, 0, 0]);
+    assert_eq!(unpack_u32s(&outputs[1].to_bytes()), vec![0, 0, 1, 1, 1]);
+    assert_eq!(unpack_u32s(&outputs[2].to_bytes()), vec![0, 0, 0, 1, 1]);
 }

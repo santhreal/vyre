@@ -1,19 +1,17 @@
 //! Multi-block parallel prefix sum  -  bridges the gap between
-//! `vyre_primitives::math::prefix_scan` (single workgroup, ≤1024 lanes)
-//! and `prefix_scan_large` (single-thread sequential).
+//! the single-workgroup scan shape (≤1024 lanes) and arbitrary-length
+//! scans that used to fall back to a single-thread sequential loop.
 //!
 //! # Why
 //!
-//! `prefix_scan` is fast but only handles 1024-element inputs.
-//! `prefix_scan_large` accepts arbitrary `n` but its body is
-//! `if InvocationId == 0 { for i in 0..n { ... } }`  -  single-thread
-//! sequential, the antithesis of the parallel substrate this crate
-//! exists for. Real workloads (lex compaction over a 3 MB C TU,
-//! histogram CDFs over millions of bins, etc.) need both: arbitrary
-//! `n` AND O(log N) wall-clock.
+//! Small scans are handled by the same 1024-lane guarded workgroup
+//! primitive used as the recursive bottom-out. Large scans compose that
+//! primitive into a three-pass multi-block chain. Real workloads (lex
+//! compaction over a 3 MB C TU, histogram CDFs over millions of bins,
+//! etc.) need both: arbitrary `n` AND O(log N) wall-clock.
 //!
-//! This module composes the two existing primitives plus a Pass-C
-//! offset broadcast into a 3-pass Blelloch-style chain:
+//! This module composes local guarded scans plus a Pass-C offset
+//! broadcast into a 3-pass Blelloch-style chain:
 //!
 //! ```text
 //!   Pass A: per-block local Hillis-Steele scan.
@@ -21,7 +19,7 @@
 //!   GridSync barrier (substrate splits the dispatch here).
 //!   Pass B: scan of per-block totals.
 //!           recursive  -  this fn calls itself with the totals as input.
-//!           Bottoms out at `prefix_scan` (≤1024 element single-workgroup).
+//!           Bottoms out at the guarded single-workgroup scan.
 //!   GridSync barrier.
 //!   Pass C: per-element offset add.
 //!           thread t: out[t] = partials[t] + scanned_block_totals[block_id(t) - 1].
@@ -39,22 +37,18 @@ use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::MemoryOrdering;
 
-use crate::math::prefix_scan::{prefix_scan_with_op_id, ScanKind};
-
 /// Canonical op id for inclusive sum-scan over arbitrary `n`.
 pub const OP_ID_INCLUSIVE_SUM: &str =
     "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum";
 
-/// Lanes per Pass-A block. Must equal the workgroup size used by
-/// `prefix_scan`'s Hillis-Steele implementation. 1024 is the universal
-/// max-workgroup-size on every GPU vyre targets.
+/// Lanes per Pass-A block. 1024 is the universal max-workgroup-size on every
+/// GPU vyre targets.
 pub const BLOCK_LANES: u32 = 1024;
 
-/// Maximum input size handled directly without falling back to the
-/// existing serial `prefix_scan_large`. `BLOCK_LANES * BLOCK_LANES`
-/// = 1,048,576 elements  -  Pass B (which scans `num_blocks`) recurses
-/// into this same function and bottoms out at `prefix_scan` once
-/// `num_blocks ≤ BLOCK_LANES`.
+/// Historical direct-scan threshold retained for callers/tests that size
+/// around one level of block-total recursion. The implementation recurses and
+/// bottoms out at the guarded single-workgroup scan once
+/// `num_blocks <= BLOCK_LANES`.
 pub const SOFT_MAX_N: u32 = BLOCK_LANES * BLOCK_LANES;
 
 fn output_byte_range(words: u32, context: &str) -> Result<usize, String> {
@@ -78,9 +72,9 @@ fn total_partial_words(num_blocks: u32, context: &str) -> Result<u32, String> {
 
 /// Build an inclusive parallel prefix-sum Program over arbitrary `n`.
 ///
-/// Backed by `prefix_scan` for `n ≤ BLOCK_LANES`; otherwise a 3-pass
-/// Blelloch chain (Pass A local scan + per-block totals → Pass B scan
-/// of totals → Pass C broadcast offsets).
+/// Backed by the guarded single-workgroup scan for `n ≤ BLOCK_LANES`;
+/// otherwise a 3-pass Blelloch chain (Pass A local scan + per-block
+/// totals → Pass B scan of totals → Pass C broadcast offsets).
 ///
 /// `n == 0` returns an empty Program.
 #[must_use]
@@ -102,13 +96,7 @@ fn try_multi_block_prefix_scan_sum_u32(
         return Ok(Program::empty());
     }
     if n <= BLOCK_LANES {
-        return Ok(prefix_scan_with_op_id(
-            input,
-            output,
-            n,
-            ScanKind::InclusiveSum,
-            OP_ID_INCLUSIVE_SUM,
-        ));
+        return try_guarded_single_block_scan(input, output, n);
     }
 
     try_multi_block_prefix_scan_chain(input, output, n)
@@ -683,11 +671,12 @@ mod tests {
 
     #[test]
     fn small_n_falls_through_to_single_block_path() {
-        // n ≤ BLOCK_LANES routes to existing prefix_scan; verify the builder
-        // produces a non-empty Program for representative small sizes.
+        // n ≤ BLOCK_LANES routes to the guarded single-block path; verify the
+        // builder produces a non-empty Program for representative small sizes.
         for &n in &[1u32, 2, 64, 1023, 1024] {
             let prog = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", n);
             let names: Vec<&str> = prog.buffers().iter().map(BufferDecl::name).collect();
+            assert_eq!(prog.workgroup_size(), [BLOCK_LANES, 1, 1]);
             assert!(
                 names.contains(&"in_buf"),
                 "n={n} must declare in_buf, got {names:?}"

@@ -36,7 +36,7 @@ vyre-foundation = ["dep:vyre-foundation"]
 # Per-domain Tier 2.5 feature flags. See docs/primitives-tier.md.
 # Every domain pulls vyre-foundation  -  every primitive ships CPU
 # reference + GPU `fn(...) -> Program` builder together.
-text = ["vyre-foundation"]
+text = ["vyre-foundation", "reduce"]
 matching = ["vyre-foundation"]
 decode = ["vyre-foundation"]
 # Subgroup-cooperative NFA step (G1). Composes bitset + matching.
@@ -185,6 +185,11 @@ required-features = ["text"]
 name = "adversarial_text_line_index"
 path = "tests/adversarial_text_line_index.rs"
 required-features = ["text"]
+
+[[test]]
+name = "proptest_text_line_index"
+path = "tests/proptest_text_line_index.rs"
+required-features = ["text", "cpu-parity"]
 
 [[test]]
 name = "adversarial_text_utf8_validate"
