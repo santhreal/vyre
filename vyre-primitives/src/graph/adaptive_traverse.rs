@@ -524,6 +524,9 @@ pub struct AdaptiveFrontierWorkPlan {
 
 /// Workgroup lane count used by resident linear adaptive traversal kernels.
 pub const ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_LANES: u32 = 256;
+/// Workgroup shape for node- and word-linear adaptive traversal kernels.
+pub const ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE: [u32; 3] =
+    [ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_LANES, 1, 1];
 /// Byte length of one resident u32 popcount scalar.
 pub const ADAPTIVE_TRAVERSAL_POPCOUNT_BYTES: usize = std::mem::size_of::<u32>();
 
@@ -879,7 +882,7 @@ fn adaptive_resident_frontier_plan_from_work(
         frontier_bytes,
         popcount_bytes: ADAPTIVE_TRAVERSAL_POPCOUNT_BYTES,
         frontier_word_grid,
-        node_grid: [node_count, 1, 1],
+        node_grid: adaptive_node_dispatch_grid(node_count),
     })
 }
 
@@ -898,6 +901,12 @@ const fn adaptive_linear_grid(items: u32) -> [u32; 3] {
     } else {
         [groups, 1, 1]
     }
+}
+
+/// Dispatch grid for adaptive traversal kernels that process one node per lane.
+#[must_use]
+pub const fn adaptive_node_dispatch_grid(node_count: u32) -> [u32; 3] {
+    adaptive_linear_grid(node_count)
 }
 
 /// Build the GPU Program for one dense step. Invocation `d`
@@ -990,7 +999,7 @@ pub fn adaptive_dense_step(
             BufferDecl::storage(adj_rows_dense, 2, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(adj_count_u32),
         ],
-        [1, 1, 1],
+        ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE,
         vec![Node::Region {
             generator: Ident::from(OP_ID),
             source_region: None,
@@ -1342,7 +1351,7 @@ pub fn adaptive_sparse_dense_step(
             BufferDecl::storage(adj_rows_dense, 6, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(adj_count as u32),
         ],
-        [1, 1, 1],
+        ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE,
         vec![Node::Region {
             generator: Ident::from(HYBRID_OP_ID),
             source_region: None,
@@ -1560,7 +1569,7 @@ mod tests {
     #[test]
     fn emitted_program_has_expected_shape() {
         let p = adaptive_dense_step("fin", "fout", "adj", 64);
-        assert_eq!(p.workgroup_size, [1, 1, 1]);
+        assert_eq!(p.workgroup_size, ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE);
         let names: Vec<&str> = p.buffers.iter().map(|b| b.name()).collect();
         assert_eq!(names, vec!["fin", "fout", "adj"]);
         let find = |name: &str| p.buffers.iter().find(|b| b.name() == name).unwrap().count;
@@ -1575,7 +1584,7 @@ mod tests {
         let p = adaptive_sparse_dense_step(
             "fin", "fout", "count", "offs", "tgts", "kinds", "adj", 64, 7, 1, 25,
         );
-        assert_eq!(p.workgroup_size, [1, 1, 1]);
+        assert_eq!(p.workgroup_size, ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE);
         let names: Vec<&str> = p.buffers.iter().map(|b| b.name()).collect();
         assert_eq!(
             names,
@@ -1788,7 +1797,45 @@ mod tests {
         assert_eq!(plan.frontier_bytes, 257 * std::mem::size_of::<u32>());
         assert_eq!(plan.popcount_bytes, std::mem::size_of::<u32>());
         assert_eq!(plan.frontier_word_grid, [2, 1, 1]);
-        assert_eq!(plan.node_grid, [8_193, 1, 1]);
+        assert_eq!(plan.node_grid, [33, 1, 1]);
+    }
+
+    #[test]
+    fn adaptive_node_dispatch_grid_packs_node_lanes_into_blocks() {
+        assert_eq!(adaptive_node_dispatch_grid(0), [1, 1, 1]);
+        assert_eq!(adaptive_node_dispatch_grid(1), [1, 1, 1]);
+        assert_eq!(adaptive_node_dispatch_grid(256), [1, 1, 1]);
+        assert_eq!(adaptive_node_dispatch_grid(257), [2, 1, 1]);
+        assert_eq!(adaptive_node_dispatch_grid(513), [3, 1, 1]);
+    }
+
+    #[test]
+    fn generated_adaptive_node_dispatch_grid_covers_all_shapes_to_8192() {
+        for node_count in 0..=8_192 {
+            let grid = adaptive_node_dispatch_grid(node_count);
+            assert_eq!(
+                grid[1], 1,
+                "Fix: adaptive node grid y dimension drifted at node_count={node_count}"
+            );
+            assert_eq!(
+                grid[2], 1,
+                "Fix: adaptive node grid z dimension drifted at node_count={node_count}"
+            );
+            assert!(
+                grid[0] >= 1,
+                "Fix: adaptive node grid must keep empty traversal launchable"
+            );
+            assert!(
+                grid[0] * ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_LANES >= node_count.max(1),
+                "Fix: adaptive node grid under-covers node_count={node_count}"
+            );
+            assert!(
+                grid[0] == 1
+                    || (grid[0] - 1) * ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_LANES
+                        < node_count.max(1),
+                "Fix: adaptive node grid over-launches an avoidable extra block at node_count={node_count}"
+            );
+        }
     }
 
     #[test]
@@ -1827,4 +1874,3 @@ mod tests {
         assert!(!plan.frontier.work.has_active_bits);
     }
 }
-

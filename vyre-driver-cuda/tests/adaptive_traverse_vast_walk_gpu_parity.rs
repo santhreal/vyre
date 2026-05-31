@@ -10,7 +10,8 @@ use vyre::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::vast::{walk_preorder_indices, VastNode, NODE_STRIDE_U32, SENTINEL};
 use vyre_primitives::graph::adaptive_traverse::{
-    adaptive_dense_step, adaptive_sparse_dense_step, cpu_dense_step, cpu_sparse_dense_step,
+    adaptive_dense_step, adaptive_node_dispatch_grid, adaptive_sparse_dense_step, cpu_dense_step,
+    cpu_sparse_dense_step,
 };
 use vyre_primitives::graph::vast_tree_walk::ast_walk_preorder;
 use vyre_primitives::reduce::count::reduce_count;
@@ -40,8 +41,7 @@ fn run_dense_step(
         u32_bytes(adj_rows_dense),
     ];
     let mut config = DispatchConfig::default();
-    // workgroup [1,1,1]; one workgroup per source node.
-    config.grid_override = Some([node_count.max(1), 1, 1]);
+    config.grid_override = Some(adaptive_node_dispatch_grid(node_count));
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -113,7 +113,7 @@ fn run_sparse_dense_step(
         u32_bytes(adj_rows_dense),
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some([node_count.max(1), 1, 1]);
+    config.grid_override = Some(adaptive_node_dispatch_grid(node_count));
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("adaptive hybrid dispatch");
@@ -174,6 +174,20 @@ fn cuda_adaptive_dense_step_full_frontier_reaches_all_with_any_pred() {
     assert_eq!(gpu, cpu);
     // Only nodes 0 and 1 see a hit because nodes 2,3 have no preds.
     assert_eq!(gpu, vec![0b0011u32]);
+}
+
+#[test]
+fn cuda_adaptive_dense_step_covers_node_past_first_workgroup() {
+    let backend = live_dispatcher();
+    let node_count = 513u32;
+    let adj = build_dense_adj(&[(300, 512), (301, 400)], node_count);
+    let frontier_in = pack_nodes(&[300], node_count);
+
+    let cpu = cpu_dense_step(&frontier_in, &adj, node_count);
+    let gpu = run_dense_step(&backend, &frontier_in, &adj, node_count);
+
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, pack_nodes(&[512], node_count));
 }
 
 #[test]
@@ -250,6 +264,87 @@ fn cuda_adaptive_sparse_dense_dense_branch_uses_rows_from_gpu_popcount() {
     );
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, pack_nodes(&[5], node_count));
+}
+
+#[test]
+fn cuda_adaptive_sparse_dense_sparse_branch_covers_source_past_first_workgroup() {
+    let backend = live_dispatcher();
+    let node_count = 513u32;
+    let frontier_in = pack_nodes(&[300], node_count);
+    let count_bytes = run_reduce_count(&backend, &frontier_in);
+    let selector_count = bytes_u32(&count_bytes)[0];
+    let mut edge_offsets = vec![0u32; node_count as usize + 1];
+    for src in 301..=node_count {
+        edge_offsets[src as usize] = 1;
+    }
+    let edge_targets = vec![512];
+    let edge_kind_mask = vec![1];
+    let adj = build_dense_adj(&[], node_count);
+
+    let cpu = cpu_sparse_dense_step(
+        &frontier_in,
+        selector_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        &adj,
+        node_count,
+        1,
+        100,
+    );
+    let gpu = run_sparse_dense_step(
+        &backend,
+        &frontier_in,
+        count_bytes,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        &adj,
+        node_count,
+        100,
+    );
+
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, pack_nodes(&[512], node_count));
+}
+
+#[test]
+fn cuda_adaptive_sparse_dense_dense_branch_covers_node_past_first_workgroup() {
+    let backend = live_dispatcher();
+    let node_count = 513u32;
+    let frontier_in = pack_nodes(&[300], node_count);
+    let count_bytes = run_reduce_count(&backend, &frontier_in);
+    let selector_count = bytes_u32(&count_bytes)[0];
+    let edge_offsets = vec![0u32; node_count as usize + 1];
+    let edge_targets = vec![0];
+    let edge_kind_mask = vec![0];
+    let adj = build_dense_adj(&[(300, 512), (301, 400)], node_count);
+
+    let cpu = cpu_sparse_dense_step(
+        &frontier_in,
+        selector_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        &adj,
+        node_count,
+        1,
+        0,
+    );
+    let gpu = run_sparse_dense_step(
+        &backend,
+        &frontier_in,
+        count_bytes,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        &adj,
+        node_count,
+        0,
+    );
+
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, pack_nodes(&[512], node_count));
 }
 
 #[test]
