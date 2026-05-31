@@ -21,6 +21,8 @@ mod scratch;
 mod simple_block;
 #[path = "gpu_filter/simple_line.rs"]
 mod simple_line;
+#[path = "gpu_filter/splice_only.rs"]
+mod splice_only;
 
 const TRANSFORM_LINE_COMMENT: u32 = 1;
 const TRANSFORM_BLOCK_COMMENT: u32 = 2;
@@ -44,6 +46,7 @@ pub(super) struct FilterScratch {
     full_comment: full_comment::FullCommentScratch,
     simple_line: simple_line::SimpleLineScratch,
     simple_block: simple_block::SimpleBlockScratch,
+    splice_only: splice_only::SpliceOnlyScratch,
     scan: PrefixScanScratch,
 }
 
@@ -140,6 +143,37 @@ pub(super) fn gpu_filter_source_bytes_with_scratch(
             byte_buf_pad,
             &scratch.n_real_buf,
             &mut scratch.simple_line,
+            &mut scratch.scan,
+        );
+    }
+    if transform_flags == TRANSFORM_LINE_SPLICE {
+        if splice_only::line_splices_can_create_comment(
+            dispatcher,
+            raw,
+            n_bucket,
+            &scratch.n_real_buf,
+            &mut scratch.splice_only,
+        )? {
+            return full_comment::gpu_filter_full_comment_state(
+                dispatcher,
+                raw,
+                raw,
+                n_bucket,
+                cap_bucket,
+                byte_buf_pad,
+                &scratch.n_real_buf,
+                &mut scratch.full_comment,
+                &mut scratch.scan,
+            );
+        }
+        return splice_only::gpu_filter_line_splices(
+            dispatcher,
+            raw,
+            raw,
+            n_bucket,
+            byte_buf_pad,
+            &scratch.n_real_buf,
+            &mut scratch.splice_only,
             &mut scratch.scan,
         );
     }

@@ -149,6 +149,56 @@ fn line_splice_only() {
 }
 
 #[test]
+fn line_splice_only_bypasses_serial_comment_state_machine() {
+    let src = b"int x = \\\n42;\nint y = 1 + \\\r\n2;\n";
+    let dispatcher = CountingDispatcher::new();
+    let out = gpu_filter_source_bytes(&dispatcher, src).expect("gpu_filter_source_bytes");
+    assert_eq!(out.bytes, reference_filter_source_bytes(src));
+    assert!(
+        dispatcher
+            .op_ids
+            .borrow()
+            .iter()
+            .all(|op| !op.contains("gpu_comment_strip_mask")),
+        "line-splice-only inputs must not dispatch the serial comment-strip state machine"
+    );
+    assert_byte_source_dispatches_are_u8(&dispatcher);
+    assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
+}
+
+#[test]
+fn spliced_line_comment_delimiter_uses_full_comment_state_machine() {
+    let src = b"int x = 1; /\\\n/ hidden\nint y = 2;\n";
+    let dispatcher = CountingDispatcher::new();
+    let out = gpu_filter_source_bytes(&dispatcher, src).expect("gpu_filter_source_bytes");
+    assert_eq!(out.bytes, reference_filter_source_bytes(src));
+    assert!(
+        dispatcher
+            .op_ids
+            .borrow()
+            .iter()
+            .any(|op| op.contains("gpu_comment_strip_mask")),
+        "spliced line-comment delimiters must use the full comment-state machine"
+    );
+}
+
+#[test]
+fn spliced_block_comment_delimiter_uses_full_comment_state_machine() {
+    let src = b"int x = 1; /\\\n* hidden *\\\n/ int y = 2;\n";
+    let dispatcher = CountingDispatcher::new();
+    let out = gpu_filter_source_bytes(&dispatcher, src).expect("gpu_filter_source_bytes");
+    assert_eq!(out.bytes, reference_filter_source_bytes(src));
+    assert!(
+        dispatcher
+            .op_ids
+            .borrow()
+            .iter()
+            .any(|op| op.contains("gpu_comment_strip_mask")),
+        "spliced block-comment delimiters must use the full comment-state machine"
+    );
+}
+
+#[test]
 fn line_comment_only() {
     let src = b"int x = 1; // trailing comment\nint y = 2;\n";
     assert_eq!(run(src).bytes, reference_filter_source_bytes(src));
@@ -311,6 +361,30 @@ fn large_simple_line_comments_bypass_serial_comment_state_machine() {
             .iter()
             .all(|op| !op.contains("gpu_comment_strip_mask")),
         "large simple line comments must not dispatch the serial comment-strip state machine"
+    );
+}
+
+#[test]
+fn large_line_splice_only_bypasses_serial_comment_state_machine() {
+    let mut src = Vec::new();
+    for i in 0..192u32 {
+        if i % 2 == 0 {
+            src.extend_from_slice(format!("int joined_{i} = {i} + \\\n{};\n", i + 1).as_bytes());
+        } else {
+            src.extend_from_slice(format!("int joined_{i} = {i} + \\\r\n{};\n", i + 1).as_bytes());
+        }
+    }
+    assert!(src.len() > 1024, "fixture must exceed one workgroup");
+    let dispatcher = CountingDispatcher::new();
+    let out = gpu_filter_source_bytes(&dispatcher, &src).expect("gpu_filter_source_bytes");
+    assert_eq!(out.bytes, reference_filter_source_bytes(&src));
+    assert!(
+        dispatcher
+            .op_ids
+            .borrow()
+            .iter()
+            .all(|op| !op.contains("gpu_comment_strip_mask")),
+        "large line-splice-only inputs must not dispatch the serial comment-strip state machine"
     );
 }
 

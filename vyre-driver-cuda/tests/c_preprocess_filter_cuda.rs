@@ -67,6 +67,24 @@ fn generated_c_source(case: u32, min_len: usize) -> Vec<u8> {
     source
 }
 
+fn generated_line_splice_only_source(case: u32, min_len: usize) -> Vec<u8> {
+    let mut source = Vec::with_capacity(min_len + 128);
+    let mut line = 0u32;
+    while source.len() < min_len {
+        if (case + line) % 2 == 0 {
+            source.extend_from_slice(
+                format!("int splice_{case}_{line} = {line} + \\\n{};\n", line + 1).as_bytes(),
+            );
+        } else {
+            source.extend_from_slice(
+                format!("int splice_{case}_{line} = {line} + \\\r\n{};\n", line + 1).as_bytes(),
+            );
+        }
+        line += 1;
+    }
+    source
+}
+
 #[test]
 fn cuda_c_preprocess_filter_u8_generated_corpus_matches_reference() {
     with_live_backend("c preprocess filter u8 generated corpus", |backend| {
@@ -92,6 +110,36 @@ fn cuda_c_preprocess_filter_u8_generated_corpus_matches_reference() {
         assert!(
             checked_output > 32_768,
             "Fix: generated CUDA C filter matrix must compare substantial compacted output."
+        );
+    });
+}
+
+#[test]
+fn cuda_c_preprocess_filter_line_splice_only_matrix_matches_reference() {
+    with_live_backend("c preprocess filter line-splice-only matrix", |backend| {
+        let dispatcher = CudaFilterDispatcher(backend);
+        let mut checked_input = 0usize;
+        let mut checked_output = 0usize;
+        for case in 0..16u32 {
+            let source = generated_line_splice_only_source(case, 4097);
+            let filtered = gpu_filter_source_bytes(&dispatcher, &source).unwrap_or_else(|error| {
+                panic!("Fix: CUDA C line-splice-only filter case {case} failed: {error}")
+            });
+            let expected = reference_filter_source_bytes(&source);
+            assert_eq!(
+                filtered.bytes, expected,
+                "Fix: CUDA C line-splice-only filter mismatch on case {case}"
+            );
+            checked_input += source.len();
+            checked_output += filtered.bytes.len();
+        }
+        assert!(
+            checked_input > 65_536,
+            "Fix: generated CUDA line-splice-only matrix must cross many workgroups."
+        );
+        assert!(
+            checked_output > 32_768,
+            "Fix: generated CUDA line-splice-only matrix must compare substantial compacted output."
         );
     });
 }
