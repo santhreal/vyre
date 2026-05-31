@@ -18,9 +18,10 @@
 //! ## Wire layout
 //!
 //! Inputs:
-//!   - `bytes_in`  -  `DataType::Bytes` buffer holding one input byte per
-//!     element. Out-of-range loads (past `byte_count`) are guarded by an
-//!     `if_then` and never speculate.
+//!   - `bytes_in`  -  compatibility [`line_splice_classify`] expects packed
+//!     little-endian `DataType::U32` words, four source bytes per word.
+//!     [`line_splice_classify_u8`] expects one `DataType::U8` element per
+//!     source byte.
 //!
 //! Outputs:
 //!   - `kept_mask_out`  -  `DataType::U32`, one entry per input byte. `1`
@@ -84,6 +85,19 @@ const CR: u32 = 0x0D; // '\r'
 /// `byte_count` is the number of input bytes. Workgroup size is 256.
 #[must_use]
 pub fn line_splice_classify(byte_count: u32) -> Program {
+    line_splice_classify_with_source_type(byte_count, DataType::U32)
+}
+
+/// Build the line-splice classifier over packed `DataType::U8` source bytes.
+///
+/// This emits the same per-byte kept mask as [`line_splice_classify`] while
+/// removing the packed-word byte extraction from the source path.
+#[must_use]
+pub fn line_splice_classify_u8(byte_count: u32) -> Program {
+    line_splice_classify_with_source_type(byte_count, DataType::U8)
+}
+
+fn line_splice_classify_with_source_type(byte_count: u32, source_type: DataType) -> Program {
     let i = Expr::var("i");
 
     // ±2-byte neighbor reads. The ±N forms guard `i ± N` against
@@ -92,42 +106,50 @@ pub fn line_splice_classify(byte_count: u32) -> Program {
     // u8 load is widened to u32 so the Select arms have matching types
     // (V029) and so equality compares against the u32 BACKSLASH/LF/CR
     // constants type-cleanly.
-    // Real-GPU note: U8 storage buffers emit as `array<u32>`; load
-    // returns the u32 word at index `addr`. Reference-eval is byte-
-    // addressed. Declaring `bytes_in` as packed U32 below makes both
-    // backends agree; this helper extracts the byte explicitly.
-    let load_u32 = |addr: Expr| -> Expr {
-        let word_idx = Expr::div(addr.clone(), Expr::u32(4));
-        let byte_in_word = Expr::rem(addr, Expr::u32(4));
-        let word = Expr::cast(DataType::U32, Expr::load("bytes_in", word_idx));
-        let shift = Expr::mul(byte_in_word, Expr::u32(8));
-        Expr::bitand(Expr::shr(word, shift), Expr::u32(0xFF))
+    let load_byte = |addr: Expr| -> Expr {
+        if source_type == DataType::U8 {
+            Expr::bitand(
+                Expr::cast(DataType::U32, Expr::load("bytes_in", addr)),
+                Expr::u32(0xFF),
+            )
+        } else {
+            let word_idx = Expr::div(addr.clone(), Expr::u32(4));
+            let byte_in_word = Expr::rem(addr, Expr::u32(4));
+            let word = Expr::cast(DataType::U32, Expr::load("bytes_in", word_idx));
+            let shift = Expr::mul(byte_in_word, Expr::u32(8));
+            Expr::bitand(Expr::shr(word, shift), Expr::u32(0xFF))
+        }
     };
     let load = |off: i32| -> Expr {
         match off {
-            0 => load_u32(i.clone()),
+            0 => load_byte(i.clone()),
             1 => Expr::select(
                 Expr::lt(Expr::add(i.clone(), Expr::u32(1)), Expr::u32(byte_count)),
-                load_u32(Expr::add(i.clone(), Expr::u32(1))),
+                load_byte(Expr::add(i.clone(), Expr::u32(1))),
                 Expr::u32(0),
             ),
             2 => Expr::select(
                 Expr::lt(Expr::add(i.clone(), Expr::u32(2)), Expr::u32(byte_count)),
-                load_u32(Expr::add(i.clone(), Expr::u32(2))),
+                load_byte(Expr::add(i.clone(), Expr::u32(2))),
                 Expr::u32(0),
             ),
             -1 => Expr::select(
                 Expr::ge(i.clone(), Expr::u32(1)),
-                load_u32(Expr::sub(i.clone(), Expr::u32(1))),
+                load_byte(Expr::sub(i.clone(), Expr::u32(1))),
                 Expr::u32(0),
             ),
             -2 => Expr::select(
                 Expr::ge(i.clone(), Expr::u32(2)),
-                load_u32(Expr::sub(i.clone(), Expr::u32(2))),
+                load_byte(Expr::sub(i.clone(), Expr::u32(2))),
                 Expr::u32(0),
             ),
             _ => unreachable!("line_splice_classify only uses offsets in [-2, 2]"),
         }
+    };
+    let input_count = if source_type == DataType::U8 {
+        byte_count.max(1)
+    } else {
+        byte_count.div_ceil(4).max(1)
     };
 
     let body = vec![
@@ -208,9 +230,9 @@ pub fn line_splice_classify(byte_count: u32) -> Program {
                 "bytes_in",
                 BINDING_BYTES_IN,
                 BufferAccess::ReadOnly,
-                DataType::U32,
+                source_type,
             )
-            .with_count(byte_count.div_ceil(4).max(1)),
+            .with_count(input_count),
             BufferDecl::storage(
                 "kept_mask_out",
                 BINDING_KEPT_MASK_OUT,

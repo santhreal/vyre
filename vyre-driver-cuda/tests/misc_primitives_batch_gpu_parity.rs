@@ -16,7 +16,8 @@ use vyre_primitives::decode::rle_segment_lengths::{
 use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::parsing::line_splice_classify::{
-    line_splice_classify, line_splice_classify_dispatch_grid, reference_line_splice_classify,
+    line_splice_classify, line_splice_classify_dispatch_grid, line_splice_classify_u8,
+    reference_line_splice_classify,
 };
 use vyre_primitives::parsing::planar_rewrite::{
     planar_rewrite_schedule, reference_planar_rewrite_schedule,
@@ -236,13 +237,37 @@ fn run_line_splice(source: &[u8]) -> Vec<u32> {
     out
 }
 
+fn run_line_splice_u8(source: &[u8]) -> Vec<u32> {
+    let byte_count = source.len() as u32;
+    let program = line_splice_classify_u8(byte_count);
+    let cap = byte_count.max(1) as usize;
+    let mut input = source.to_vec();
+    input.resize(cap, 0);
+    let inputs: Vec<Vec<u8>> = vec![input, vec![0u8; cap * 4]];
+    let mut config = DispatchConfig::default();
+    config.grid_override = Some(line_splice_classify_dispatch_grid(byte_count));
+    let outputs = with_live_backend("packed-u8 line splice classify", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA packed-u8 line-splice classify dispatch failed: {error}")
+            })
+    });
+    let mut out = bytes_u32(&outputs[0]);
+    out.truncate(byte_count as usize);
+    out
+}
+
 #[test]
 fn cuda_line_splice_classify_keeps_plain_text() {
     let source = b"abcd";
     let cpu = reference_line_splice_classify(source);
     let gpu = run_line_splice(source);
+    let gpu_u8 = run_line_splice_u8(source);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert_eq!(gpu, vec![1u32, 1, 1, 1]);
+    assert_eq!(gpu_u8, vec![1u32, 1, 1, 1]);
 }
 
 #[test]
@@ -251,7 +276,9 @@ fn cuda_line_splice_classify_drops_backslash_lf() {
     let source = b"ab\\\ncd";
     let cpu = reference_line_splice_classify(source);
     let gpu = run_line_splice(source);
+    let gpu_u8 = run_line_splice_u8(source);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
 }
 
 #[test]
@@ -259,8 +286,11 @@ fn cuda_line_splice_classify_empty_input() {
     let source = b"";
     let cpu = reference_line_splice_classify(source);
     let gpu = run_line_splice(source);
+    let gpu_u8 = run_line_splice_u8(source);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert!(gpu.is_empty());
+    assert!(gpu_u8.is_empty());
 }
 
 #[test]
@@ -268,8 +298,11 @@ fn cuda_line_splice_classify_drops_backslash_cr_lf() {
     let source = b"a\\\r\nb";
     let cpu = reference_line_splice_classify(source);
     let gpu = run_line_splice(source);
+    let gpu_u8 = run_line_splice_u8(source);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert_eq!(gpu, vec![1, 0, 0, 0, 1]);
+    assert_eq!(gpu_u8, vec![1, 0, 0, 0, 1]);
 }
 
 #[test]
@@ -277,8 +310,11 @@ fn cuda_line_splice_classify_crosses_packed_word_boundary() {
     let source = b"abc\\\nz";
     let cpu = reference_line_splice_classify(source);
     let gpu = run_line_splice(source);
+    let gpu_u8 = run_line_splice_u8(source);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert_eq!(gpu, vec![1, 1, 1, 0, 0, 1]);
+    assert_eq!(gpu_u8, vec![1, 1, 1, 0, 0, 1]);
 }
 
 #[test]
@@ -290,9 +326,12 @@ fn cuda_line_splice_classify_crosses_workgroup_boundary() {
 
     let cpu = reference_line_splice_classify(&source);
     let gpu = run_line_splice(&source);
+    let gpu_u8 = run_line_splice_u8(&source);
 
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert_eq!(&gpu[252..258], &[1, 1, 0, 0, 0, 1]);
+    assert_eq!(&gpu_u8[252..258], &[1, 1, 0, 0, 0, 1]);
 }
 
 #[test]
@@ -313,8 +352,10 @@ fn cuda_line_splice_classify_generated_multi_block_corpus() {
 
     let cpu = reference_line_splice_classify(&source);
     let gpu = run_line_splice(&source);
+    let gpu_u8 = run_line_splice_u8(&source);
 
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert!(
         gpu.iter().any(|kept| *kept == 0),
         "Fix: generated CUDA line-splice corpus must exercise deleted bytes."
@@ -323,6 +364,88 @@ fn cuda_line_splice_classify_generated_multi_block_corpus() {
         gpu.iter().any(|kept| *kept == 1),
         "Fix: generated CUDA line-splice corpus must exercise kept bytes."
     );
+}
+
+fn generated_line_splice_u8_source(case: u32, len: usize) -> Vec<u8> {
+    let mut state = 0xc2b2_ae35_u32 ^ case.wrapping_mul(0x27d4_eb2d);
+    let mut source = Vec::with_capacity(len);
+    for index in 0..len {
+        state = state
+            .rotate_left(7)
+            .wrapping_mul(0x85eb_ca6b)
+            .wrapping_add(index as u32);
+        let byte = match state % 29 {
+            0 => b'\\',
+            1 => b'\n',
+            2 => b'\r',
+            3 => 0,
+            4 => 0xFF,
+            _ => b'a' + ((state >> 8) % 26) as u8,
+        };
+        source.push(byte);
+    }
+
+    for &offset in &[0usize, 1, 2, 254, 255, 256, 510, 511, 768, 1023] {
+        if offset + 3 <= source.len() {
+            match (case + offset as u32) % 4 {
+                0 => {
+                    source[offset] = b'\\';
+                    source[offset + 1] = b'\n';
+                }
+                1 => {
+                    source[offset] = b'\\';
+                    source[offset + 1] = b'\r';
+                    source[offset + 2] = b'\n';
+                }
+                2 => {
+                    source[offset] = b'\\';
+                    source[offset + 1] = b'\r';
+                    source[offset + 2] = b'x';
+                }
+                _ => {
+                    source[offset] = b'\\';
+                    source[offset + 1] = b'\\';
+                    source[offset + 2] = b'\n';
+                }
+            }
+        }
+    }
+    source
+}
+
+#[test]
+fn cuda_line_splice_classify_u8_generated_matrix_matches_cpu() {
+    let len = 1025usize;
+    let byte_count = len as u32;
+    let program = line_splice_classify_u8(byte_count);
+    let mut config = DispatchConfig::default();
+    config.grid_override = Some(line_splice_classify_dispatch_grid(byte_count));
+
+    with_live_backend("packed-u8 generated line-splice matrix", |backend| {
+        let mut checked = 0usize;
+        for case in 0..128u32 {
+            let source = generated_line_splice_u8_source(case, len);
+            let inputs: Vec<Vec<u8>> = vec![source.clone(), vec![0u8; len * 4]];
+            let outputs = backend
+                .dispatch(&program, &inputs, &config)
+                .unwrap_or_else(|error| {
+                    panic!("Fix: CUDA packed-u8 line-splice generated case {case} failed: {error}")
+                });
+            let mut gpu = bytes_u32(&outputs[0]);
+            gpu.truncate(len);
+            assert_eq!(
+                gpu,
+                reference_line_splice_classify(&source),
+                "Fix: packed-u8 CUDA line-splice mismatch on generated case {case}"
+            );
+            checked += gpu.len();
+        }
+        assert_eq!(
+            checked,
+            128 * len,
+            "Fix: generated packed-u8 CUDA line-splice matrix must compare every byte lane."
+        );
+    });
 }
 
 // ---------------------------------------------------------------------
