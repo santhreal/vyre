@@ -20,7 +20,11 @@ use crate::scan::dfa::{dfa_compile, CompiledDfa};
 #[path = "classic_ac/count_program.rs"]
 mod count_program;
 
-pub use count_program::{build_ac_bounded_count_program, classic_ac_bounded_count_program};
+pub use count_program::{
+    build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
+    classic_ac_bounded_count_prefilter_program, classic_ac_bounded_count_program,
+    classic_ac_candidate_end_byte_mask_words,
+};
 
 /// A classic AC automaton with precomputed flat output links.
 ///

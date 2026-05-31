@@ -72,12 +72,17 @@ fn count_prepare_builds_compact_cardinality_program() {
     assert_eq!(prepared.stats.haystack_bytes, HAYSTACK_BYTES as u32);
     assert_eq!(prepared.stats.patterns, PATTERNS.len() as u32);
     assert!(prepared.stats.expected_matches > 0);
+    assert_eq!(prepared.program.buffers()[4].name(), "match_count");
     assert_eq!(
         selected_scan_output_bytes(prepared.stats),
         4 + u64::from(prepared.stats.expected_matches) * 12
     );
-    assert!(
-        prepared.input_bytes_total < prepare_scan_ac_irregular(None).unwrap().input_bytes_total,
+    let full_scan = prepare_scan_ac_irregular(None).unwrap();
+    let removed_emit_tables =
+        u64::from(full_scan.stats.output_records + full_scan.stats.patterns) * 4;
+    assert_eq!(
+        prepared.input_bytes_total,
+        full_scan.input_bytes_total - removed_emit_tables,
         "count-only preflight should avoid pattern length and match-output input surfaces"
     );
 }
