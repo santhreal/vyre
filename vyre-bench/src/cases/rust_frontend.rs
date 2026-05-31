@@ -36,6 +36,7 @@ impl BenchCase for RustRangeLoopPipeline {
                 "parser".to_string(),
                 "control-flow".to_string(),
                 "range-loop".to_string(),
+                "gpu-lexer".to_string(),
                 "public-pipeline".to_string(),
                 "ir-lowering".to_string(),
                 "release".to_string(),
@@ -64,6 +65,7 @@ impl BenchCase for RustRangeLoopPipeline {
             min_input_bytes: Some((LANE_COUNT * std::mem::size_of::<i32>()) as u64),
             feature_set: vec![
                 "rust-parser".to_string(),
+                "gpu-lexer".to_string(),
                 "batched-lowering".to_string(),
                 "range-loop".to_string(),
                 "ir-lowering".to_string(),
@@ -201,7 +203,7 @@ fn f(n: i32) -> i32 {
 
 fn lower_rust_source(source: &str) -> Result<vyre::ir::Program, BenchError> {
     let pipeline = RustPipeline::new(RustPipelineConfig {
-        gpu_lex: false,
+        gpu_lex: true,
         borrow_check: true,
         lower: true,
         lower_lane_count: Some(LANE_COUNT as u32),

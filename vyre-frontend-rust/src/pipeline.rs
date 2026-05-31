@@ -15,8 +15,8 @@ pub mod typeck_stage;
 /// Configuration for the Rust frontend pipeline.
 #[derive(Debug, Clone)]
 pub struct RustPipelineConfig {
-    /// Whether to attempt GPU lexing. Off by default: GPU lexer dispatch is not
-    /// wired yet and fails loudly when enabled.
+    /// Whether to dispatch the Rust lexer IR on a GPU backend. Off by default
+    /// so library users can run the host parser without requiring a GPU.
     pub gpu_lex: bool,
     /// Whether to run borrow checking (E0596/E0597/E0499/E0502). Off by
     /// default; when enabled it runs the full nano-subset borrow check (CFG NLL
@@ -35,10 +35,9 @@ pub struct RustPipelineConfig {
 
 impl Default for RustPipelineConfig {
     fn default() -> Self {
-        // The working envelope today is CPU lex + parse + resolve + typeck.
-        // Borrow checking and lowering are opt-in (both wired and verified:
-        // borrow check is rustc-differential; lowering executes the nano-subset
-        // on the reference interpreter, unsupported constructs fail loudly).
+        // The default keeps host parser users off the GPU dispatch path.
+        // GPU lexing, borrow checking, and lowering are opt-in wired stages:
+        // requested work either runs or fails loudly with stage context.
         Self {
             gpu_lex: false,
             borrow_check: false,

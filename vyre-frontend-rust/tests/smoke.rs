@@ -34,7 +34,29 @@ fn parse_borrow() {
 }
 
 #[test]
-fn compile_pipeline_rejects_unwired_gpu_lex_without_silent_cpu_path() {
+fn compile_pipeline_gpu_lex_dispatches_real_lexer_ir() {
+    let pipeline = RustPipeline::new(RustPipelineConfig {
+        gpu_lex: true,
+        borrow_check: false,
+        lower: false,
+        lower_lane_count: None,
+    });
+    let unit = pipeline
+        .compile_unit(b"fn main() { let x: i32 = 5; }")
+        .expect("Fix: gpu_lex=true must dispatch the Rust lexer IR and feed parser/typeck");
+    assert_eq!(unit.module.functions.len(), 1);
+    assert!(
+        unit.token_count > 8,
+        "Fix: GPU lexer must return a real token stream, not an empty placeholder"
+    );
+    assert!(
+        unit.program.is_none(),
+        "lowering is off in this smoke path, so gpu_lex must not fabricate a Program"
+    );
+}
+
+#[test]
+fn compile_pipeline_gpu_lex_surfaces_unknown_byte_as_lex_error() {
     let pipeline = RustPipeline::new(RustPipelineConfig {
         gpu_lex: true,
         borrow_check: false,
@@ -42,12 +64,9 @@ fn compile_pipeline_rejects_unwired_gpu_lex_without_silent_cpu_path() {
         lower_lane_count: None,
     });
     let error = pipeline
-        .compile_unit(b"fn main() { let x: i32 = 5; }")
-        .expect_err("Fix: GPU lexing must fail loudly until Rust GPU lexer dispatch is wired.");
-    let message = error.to_string();
-    assert!(message.contains("GPU backend unavailable"));
-    assert!(message.contains("not wired yet"));
-    assert!(message.contains("silently"));
+        .compile_unit(b"fn main() { @ }")
+        .expect_err("Fix: GPU lexer ERROR tokens must become frontend lex errors");
+    assert!(matches!(error, RustFrontendError::Lex(_)), "got {error:?}");
 }
 
 #[test]
