@@ -46,6 +46,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Moved the sparse C tokenizer pipeline to a raw `U8` haystack while preserving packed and expanded compatibility entrypoints, with reference-eval ABI checks and live CUDA generated-corpus parity for token and directive columns.
 
+- Moved the C directive-metadata stage used by the preprocessing pipeline to raw `U8` source bytes while preserving the packed standalone ABI, eliminating another source repack between tokenization and directive classification.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

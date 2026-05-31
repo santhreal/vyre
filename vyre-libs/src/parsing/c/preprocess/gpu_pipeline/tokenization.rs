@@ -1,7 +1,6 @@
 use super::buffers::{
-    bucket_pow2, checked_gpu_u32, pack_u32_words_into, pad_to_u32_words_into,
-    read_u32_scalar_exact, reserve_gpu_staging_bytes, u32_word_byte_len,
-    unpack_u32_words_prefix_exact,
+    bucket_pow2, checked_gpu_u32, pack_u32_words_into, read_u32_scalar_exact,
+    reserve_gpu_staging_bytes, u32_word_byte_len, unpack_u32_words_prefix_exact,
 };
 use super::dispatch::GpuDispatcher;
 use super::scan::{inclusive_prefix_scan_u32_into, PrefixScanScratch};
@@ -10,7 +9,7 @@ use crate::parsing::c::lex::lexer::{
     c11_lexer_regular_sparse_u8_haystack_with_flags,
 };
 use crate::parsing::c::lex::tokens::{TOK_PP_ELIF, TOK_PP_IF};
-use crate::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata;
+use crate::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata_u8;
 use crate::parsing::c::preprocess::gpu_if_expression_abi::INVALID_EXPR_VALUE;
 use std::sync::Arc;
 
@@ -127,7 +126,6 @@ pub(super) struct TokenizationScratch {
     tok_types_b: Vec<u8>,
     tok_starts_b: Vec<u8>,
     tok_lens_b: Vec<u8>,
-    raw_words: Vec<u8>,
     directive_zero: Vec<u8>,
     directive_outputs: Vec<Vec<u8>>,
     raw_padded: Vec<u8>,
@@ -226,13 +224,12 @@ pub(super) fn gpu_tokenize_and_classify_with_scratch(
     // pipeline cache across files. Source bytes are runtime-sized now, so they
     // are passed exactly and no longer drive shader shape or padding copies.
     let n_bucket = bucket_pow2(n_tokens.max(1), 64);
-    let dm_prog = gpu_directive_metadata(n_bucket as u32, 0);
+    let dm_prog = gpu_directive_metadata_u8(n_bucket as u32, 0);
     let n_pad = n_bucket;
     let _ = n_bytes;
     pack_u32_words_into(&mut scratch.tok_types_b, &tok_types, n_pad)?;
     pack_u32_words_into(&mut scratch.tok_starts_b, &tok_starts, n_pad)?;
     pack_u32_words_into(&mut scratch.tok_lens_b, &tok_lens, n_pad)?;
-    pad_to_u32_words_into(&mut scratch.raw_words, raw)?;
     TokenizationScratch::prepare_zero(
         &mut scratch.directive_zero,
         u32_word_byte_len(n_pad, "directive metadata zero staging")?,
@@ -241,7 +238,7 @@ pub(super) fn gpu_tokenize_and_classify_with_scratch(
         scratch.tok_types_b.as_slice(),
         scratch.tok_starts_b.as_slice(),
         scratch.tok_lens_b.as_slice(),
-        scratch.raw_words.as_slice(),
+        raw,
         scratch.directive_zero.as_slice(),
         scratch.directive_zero.as_slice(),
     ];

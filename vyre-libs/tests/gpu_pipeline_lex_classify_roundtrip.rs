@@ -29,12 +29,14 @@ impl GpuDispatcher for RefDispatcher {
 
 struct CountingDispatcher {
     haystack_elements: std::cell::RefCell<Vec<DataType>>,
+    source_elements: std::cell::RefCell<Vec<DataType>>,
 }
 
 impl CountingDispatcher {
     fn new() -> Self {
         Self {
             haystack_elements: std::cell::RefCell::new(Vec::new()),
+            source_elements: std::cell::RefCell::new(Vec::new()),
         }
     }
 }
@@ -47,12 +49,32 @@ impl GpuDispatcher for CountingDispatcher {
                 .iter()
                 .filter_map(|buffer| (buffer.name() == "haystack").then_some(buffer.element())),
         );
+        self.source_elements.borrow_mut().extend(
+            program
+                .buffers()
+                .iter()
+                .filter_map(|buffer| (buffer.name() == "source").then_some(buffer.element())),
+        );
         RefDispatcher.dispatch(program, inputs)
     }
 
     fn requires_output_inputs(&self) -> bool {
         true
     }
+}
+
+fn assert_directive_source_dispatches_are_u8(dispatcher: &CountingDispatcher) {
+    let elements = dispatcher.source_elements.borrow();
+    assert!(
+        !elements.is_empty(),
+        "tokenization path must dispatch directive metadata over source bytes"
+    );
+    assert!(
+        elements
+            .iter()
+            .all(|element| matches!(element, DataType::U8)),
+        "directive metadata must consume raw U8 source buffers in the pipeline, got {elements:?}"
+    );
 }
 
 fn assert_sparse_haystack_dispatches_are_u8(dispatcher: &CountingDispatcher) {
@@ -161,6 +183,7 @@ fn mixed_code_and_directives_only_directive_rows_have_kinds() {
     // contributes only non-PREPROC tokens (zero in directive_kinds).
     assert_eq!(kinds, vec![TOK_PP_DEFINE, TOK_PP_DEFINE]);
     assert_sparse_haystack_dispatches_are_u8(&dispatcher);
+    assert_directive_source_dispatches_are_u8(&dispatcher);
 }
 
 #[test]
