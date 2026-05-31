@@ -217,6 +217,12 @@ pub fn stats(&self) -> WgpuBackendStats {
 pub fn stats(&self, key: u64) -> Option<crate::runtime::cache::AccessStats> {
 pub fn submit_readback(
 pub fn touch(&mut self, key: K) {
+pub fn try_new(
+pub fn try_new() -> Result<Self, vyre_driver::BackendError> {
+pub fn try_new(tiers: Vec<CacheTier>) -> Result<Self, vyre_driver::BackendError> {
+pub fn try_with_capacity(capacity: usize) -> Result<Self, vyre_driver::BackendError> {
+pub fn try_with_policy(
+pub fn try_with_reserved_capacity(capacity: usize) -> Result<Self, vyre_driver::BackendError> {
 pub fn update_peak(&self, current: u64) {
 pub fn upload(
 pub fn upload_wgpu_device_buffer(
@@ -225,6 +231,7 @@ pub fn with_cap(cap: usize) -> Self {
 pub fn with_capacity(capacity: usize) -> Self {
 pub fn with_mapped_ticket<R>(
 pub fn with_policy(tiers: Vec<CacheTier>, policy: LruPolicy) -> Self {
+pub fn with_requested_slots(raw_slots: Option<&str>) -> Self {
 pub fn with_reserved_capacity(capacity: usize) -> Self {
 pub fn with_tiering(
 pub mod adapter_caps_probe;

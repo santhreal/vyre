@@ -1,3 +1,9 @@
+pub const ABSORB_NEW_BITS_OP_ID: &str = "vyre-primitives::bitset::frontier_absorb_new_bits";
+pub const ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_LANES: u32 = 256;
+pub const ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE: [u32; 3] =
+pub const ADAPTIVE_TRAVERSAL_POPCOUNT_BYTES: usize = std::mem::size_of::<u32>();
+pub const ADLER32_MOD: u32 = 65_521;
+pub const ADLER32_OP_ID: &str = "vyre-primitives::hash::adler32";
 pub const ALIAS: u32 = 1 << 5;
 pub const ALIAS_UNION_OP_ID: &str = "vyre-primitives::graph::alias_union";
 pub const AND_NODE: u32 = 3;
@@ -12,9 +18,14 @@ pub const ATTENTION_MAX_PASS_OP_ID: &str = "vyre-primitives::nn::attention_max_p
 pub const ATTENTION_SUM_PASS_OP_ID: &str = "vyre-primitives::nn::attention_sum_pass";
 pub const ATTENTION_WRITE_PASS_OP_ID: &str = "vyre-primitives::nn::attention_write_pass";
 pub const BASE64_DECODE_OP_ID: &str = "vyre-primitives::decode::base64_decode";
+pub const BASE64_DECODE_TABLE_WORDS: u32 = 256;
+pub const BASE64_WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
 pub const BASE: u32 = 1 << 11;
 pub const BASIC_BLOCK: u32 = 6;
+pub const BATCHED_LENS_BUFFER: &str = "batched_path_reconstruct lens";
 pub const BATCHED_OP_ID: &str = "vyre-primitives::graph::batched_path_reconstruct";
+pub const BATCHED_PATHS_BUFFER: &str = "batched_path_reconstruct paths";
+pub const BATCHED_PATH_TARGETS_BUFFER: &str = "batched_path_reconstruct targets";
 pub const BATCHED_WORKGROUP_SIZE: u32 = 256;
 pub const BATCH_OP_ID: &str = "vyre-primitives::graph::persistent_bfs_batch";
 pub const BINARY: u32 = 7;
@@ -47,6 +58,8 @@ pub const BLOCK_BITS: u32 = 10;
 pub const BLOCK_LANES: u32 = 1024;
 pub const BUNDLE_OP_ID: &str = "vyre-primitives::hash::hypervector_majority_bundle";
 pub const BYTE_HISTOGRAM_256_OP_ID: &str = "vyre-primitives::text::byte_histogram_256";
+pub const BYTE_TILE_STATES: u32 = 256;
+pub const BYTE_TILE_WIDTH: u32 = 8;
 pub const CALL: u32 = 2;
 pub const CALL_ARG: u32 = 1 << 1;
 pub const CALL_ARG_0: u32 = CALL_ARG_SLOT_BASE;
@@ -61,11 +74,30 @@ pub const CALL_ARG_MAX_SLOT: u32 = 7;
 pub const CALL_ARG_SLOT_BASE: u32 = 1 << 16;
 pub const CELL_STRIDE: u32 = 4;
 pub const CHAR_CLASS_OP_ID: &str = "vyre-primitives::text::char_class";
+pub const CHAR_CLASS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const CLOSE_BRACE: u32 = 2;
 pub const CONTROL: u32 = 1 << 9;
+pub const CRC32_CHUNK_OP_ID: &str = "vyre-primitives::hash::crc32_chunk";
 pub const CRC32_INIT: u32 = 0xFFFF_FFFF;
 pub const CRC32_OP_ID: &str = "vyre-primitives::hash::crc32";
+pub const CRC32_PAIR_REDUCE_OP_ID: &str = "vyre-primitives::hash::crc32_pair_reduce";
 pub const CRC32_POLY: u32 = 0xEDB8_8320;
+pub const CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+pub const CSR_BIDIRECTIONAL_EDGE_KIND_BUFFER: &str = "csr_bidirectional edge_kind_mask";
+pub const CSR_BIDIRECTIONAL_FRONTIER_IN_BUFFER: &str = "csr_bidirectional frontier_in";
+pub const CSR_BIDIRECTIONAL_FRONTIER_OUT_BUFFER: &str = "csr_bidirectional frontier_out";
+pub const CSR_BIDIRECTIONAL_NODES_BUFFER: &str = "csr_bidirectional nodes";
+pub const CSR_BIDIRECTIONAL_NODE_TAGS_BUFFER: &str = "csr_bidirectional node_tags";
+pub const CSR_BIDIRECTIONAL_OFFSETS_BUFFER: &str = "csr_bidirectional edge_offsets";
+pub const CSR_BIDIRECTIONAL_TARGETS_BUFFER: &str = "csr_bidirectional edge_targets";
+pub const CSR_FORWARD_OR_CHANGED_CHANGED_BUFFER: u32 = BINDING_PRIMITIVE_START + 1;
+pub const CSR_FORWARD_OR_CHANGED_FRONTIER_BUFFER: u32 = BINDING_PRIMITIVE_START;
+pub const CSR_FORWARD_OR_CHANGED_HISTORY_FAST_PATH_MAX_ITERS: u32 = 64;
+pub const CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+pub const CSR_FORWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
+pub const CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+pub const CSR_QUEUE_DELTA_ENQUEUE_OP_ID: &str = "vyre-primitives::graph::csr_queue_delta_enqueue";
+pub const CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const CSR_QUEUE_FORWARD_OP_ID: &str = "vyre-primitives::graph::csr_queue_forward_traverse";
 pub const C_ALPHA: u32 = 3;
 pub const C_AMP: u32 = 23;
@@ -100,12 +132,21 @@ pub const C_STAR: u32 = 12;
 pub const C_TILDE: u32 = 26;
 pub const C_WS: u32 = 1;
 pub const DEFAULT_DFA_BUDGET_BYTES: usize = 16 * 1024 * 1024;
+pub const DENSE_MATVEC_OP_ID: &str = "vyre-primitives::bitset::four_russians_dense_matvec_byte_lut";
 pub const DENSE_THRESHOLD_PCT: u32 = 25;
 pub const DIVISOR_FLOOR: u32 = 1;
 pub const DOMINANCE: u32 = 1 << 4;
+pub const DOMINATOR_FRONTIER_DOM_OFFSETS_BUFFER: u32 = 0;
+pub const DOMINATOR_FRONTIER_DOM_TARGETS_BUFFER: u32 = 1;
+pub const DOMINATOR_FRONTIER_OUT_BUFFER: u32 = 5;
+pub const DOMINATOR_FRONTIER_PRED_OFFSETS_BUFFER: u32 = 2;
+pub const DOMINATOR_FRONTIER_PRED_TARGETS_BUFFER: u32 = 3;
+pub const DOMINATOR_FRONTIER_SEED_BUFFER: u32 = 4;
+pub const DOMINATOR_FRONTIER_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const DYNAMIC_HUFFMAN_REJECT: &str = "Fix: vyre-primitives::decode::inflate_stored accepts raw DEFLATE stored blocks only; route BTYPE=2 input to a dynamic-Huffman decoder.";
 pub const EMPTY_KEY: u32 = u32::MAX;
 pub const ENCODING_CLASSIFY_OP_ID: &str = "vyre-primitives::text::encoding_classify";
+pub const ENCODING_CLASSIFY_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 pub const ENC_ASCII: u32 = 0;
 pub const ENC_BINARY: u32 = 255;
 pub const ENC_ISO8859_1: u32 = 4;
@@ -124,17 +165,56 @@ pub const FNV1A64_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
 pub const FNV1A64_OP_ID: &str = "vyre-primitives::hash::fnv1a64";
 pub const FNV1A64_PRIME: u64 = 0x0000_0100_0000_01b3;
 pub const FORMAT_STRING_ARG: u32 = 1 << 14;
+pub const FOUR_RUSSIANS_DENSE_OP_ID: &str =
+pub const FRONTIER_QUEUE_LEN_INIT_OP_ID: &str = "vyre-primitives::graph::frontier_queue_len_init";
 pub const FRONTIER_TO_QUEUE_OP_ID: &str = "vyre-primitives::graph::frontier_to_queue";
+pub const FRONTIER_TO_QUEUE_PARALLEL_OP_ID: &str =
+pub const FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID: &str =
+pub const FRONTIER_WORD_BLOCK_PREFIX_TO_QUEUE_PARALLEL_OP_ID: &str =
+pub const FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID: &str =
+pub const FRONTIER_WORD_SCAN_BLOCK_LANES: u32 = 1024;
 pub const FUNCTION: u32 = 1 << 0;
 pub const FUNCTION_DECL: u32 = 8;
 pub const GENERATOR_G: u32 = 3;
+pub const HEX_DECODE_OP_ID: &str = "vyre-primitives::decode::hex_decode";
+pub const HEX_DECODE_TABLE_WORDS: u32 = 256;
+pub const HEX_WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
 pub const HYBRID_OP_ID: &str = "vyre-primitives::graph::adaptive_traverse_sparse_dense";
+pub const I4_BATCHED_MATMUL_F32_SCALED_OP_ID: &str =
+pub const I4_BATCHED_MATMUL_TOP1_F32_SCALED_OP_ID: &str =
+pub const I4_BATCHED_MATVEC_F32_SCALED_OP_ID: &str =
+pub const I4_DOT_F32_SCALED_OP_ID: &str = "vyre-primitives::math::quantized::i4x8_dot_f32_scaled";
+pub const I4_DOT_I32_OP_ID: &str = "vyre-primitives::math::quantized::i4x8_dot_i32";
+pub const I4_LANES_PER_WORD: u32 = 8;
+pub const I4_MATVEC_F32_SCALED_OP_ID: &str =
 pub const IDENTITY: Self = Self {
 pub const IDOM_NONE: u32 = u32::MAX;
+pub const IFDS_CSR_COL_IDX_BUFFER: &str = "exploded_ifds_csr col_idx";
+pub const IFDS_CSR_COL_LEN_BUFFER: &str = "exploded_ifds_csr col_len";
+pub const IFDS_CSR_EMPTY_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
+pub const IFDS_CSR_GEN_BLOCK_BUFFER: &str = "exploded_ifds_csr gen_block";
+pub const IFDS_CSR_GEN_FACT_BUFFER: &str = "exploded_ifds_csr gen_fact";
+pub const IFDS_CSR_GEN_PROC_BUFFER: &str = "exploded_ifds_csr gen_proc";
+pub const IFDS_CSR_INTER_DST_BLOCK_BUFFER: &str = "exploded_ifds_csr inter_dst_block";
+pub const IFDS_CSR_INTER_DST_PROC_BUFFER: &str = "exploded_ifds_csr inter_dst_proc";
+pub const IFDS_CSR_INTER_SRC_BLOCK_BUFFER: &str = "exploded_ifds_csr inter_src_block";
+pub const IFDS_CSR_INTER_SRC_PROC_BUFFER: &str = "exploded_ifds_csr inter_src_proc";
+pub const IFDS_CSR_INTRA_DST_BLOCK_BUFFER: &str = "exploded_ifds_csr intra_dst_block";
+pub const IFDS_CSR_INTRA_PROC_BUFFER: &str = "exploded_ifds_csr intra_proc";
+pub const IFDS_CSR_INTRA_SRC_BLOCK_BUFFER: &str = "exploded_ifds_csr intra_src_block";
+pub const IFDS_CSR_KILLED_BUFFER: &str = "exploded_ifds_csr killed";
+pub const IFDS_CSR_KILL_BLOCK_BUFFER: &str = "exploded_ifds_csr kill_block";
+pub const IFDS_CSR_KILL_FACT_BUFFER: &str = "exploded_ifds_csr kill_fact";
+pub const IFDS_CSR_KILL_PROC_BUFFER: &str = "exploded_ifds_csr kill_proc";
+pub const IFDS_CSR_ROW_CURSOR_BUFFER: &str = "exploded_ifds_csr row_cursor";
+pub const IFDS_CSR_ROW_PTR_BUFFER: &str = "exploded_ifds_csr row_ptr";
+pub const IFDS_CSR_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 pub const IMPORT: u32 = 3;
 pub const INDEX: u32 = 1 << 10;
 pub const INDUCTION_VARIABLE: u32 = 1 << 12;
+pub const INFLATE_STORED_HEADER_WORDS: u32 = 5;
 pub const INFLATE_STORED_OP_ID: &str = "vyre-primitives::decode::inflate_stored";
+pub const INFLATE_STORED_WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
 pub const INVALID: u32 = 0xFF;
 pub const KIND_LEAF: u32 = 0;
 pub const KIND_PRODUCT: u32 = 2;
@@ -142,6 +222,8 @@ pub const KIND_SUM: u32 = 1;
 pub const L2P_OP_ID: &str = "vyre-primitives::math::fmm_l2p_step";
 pub const L2P_ZEROTH_F32_OP_ID: &str = "vyre-primitives::math::fmm_l2p_zeroth_f32_step";
 pub const LANES_PER_SUBGROUP: usize = 32;
+pub const LEVEL_WAVE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+pub const LINE_SPLICE_CLASSIFY_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const LITERAL: u32 = 4;
 pub const LITERAL_FALSE: u32 = 2;
 pub const LITERAL_TRUE: u32 = 1;
@@ -149,6 +231,7 @@ pub const M2L_OP_ID: &str = "vyre-primitives::math::fmm_m2l_step";
 pub const M2L_ZEROTH_F32_OP_ID: &str = "vyre-primitives::math::fmm_m2l_zeroth_f32_step";
 pub const MATCH_NONE: u32 = u32::MAX;
 pub const MAX_BLOCK_ID: u32 = (1 << BLOCK_BITS) - 1;
+pub const MAX_BLOCK_SIZE: usize = 4 * 1024 * 1024;
 pub const MAX_EPSILON_ITERS: u32 = MAX_STATES_PER_SUBGROUP as u32;
 pub const MAX_F32_OP_ID: &str = "vyre-primitives::reduce::workgroup_max_f32";
 pub const MAX_FACT_ID: u32 = (1 << FACT_BITS) - 1;
@@ -158,11 +241,17 @@ pub const MAX_PROC_ID: u32 = (1 << PROC_BITS) - 1;
 pub const MAX_RADIUS: u32 = 64;
 pub const MAX_SEGMENT_LENGTH: u32 = (1 << 24) - 1;
 pub const MAX_SEGMENT_VALUE: u32 = 0xFF;
+pub const MAX_SEQUENCES_PER_BLOCK: usize = 100_000;
 pub const MAX_STATES_PER_SUBGROUP: usize = 1024;
 pub const MEM_LOAD: u32 = 1 << 7;
 pub const MEM_STORE: u32 = 1 << 6;
 pub const MISS_VALUE: u32 = u32::MAX;
+pub const MOTIF_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
+pub const MOTIF_HITS_BUFFER: u32 = BINDING_PRIMITIVE_START;
+pub const MOTIF_WITNESS_OUT_BUFFER: u32 = BINDING_PRIMITIVE_START + 1;
+pub const MOTIF_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 pub const MSG_SCHEDULE: [[usize; 16]; 7] = [
+pub const MULTI_HASH_OP_ID: &str = "vyre-primitives::hash::multi_hash";
 pub const MUT_REF: u32 = 1 << 8;
 pub const MV_COMPONENTS: u32 = 4;
 pub const NAME_ADJ_ROWS_DENSE: &str = "adap_adj_rows_dense";
@@ -186,28 +275,21 @@ pub const NAME_TRANSITION: &str = "nfa_transition";
 pub const NAME_WARM_SEED: &str = "fp_warm_seed";
 pub const NO_WINNER: u32 = u32::MAX;
 pub const OPEN_BRACE: u32 = 1;
-pub const OP_ID: &str = "vyre-primitives::bitset::and";
-pub const OP_ID: &str = "vyre-primitives::bitset::and_into";
 pub const OP_ID: &str = "vyre-primitives::bitset::and_not";
-pub const OP_ID: &str = "vyre-primitives::bitset::and_not_into";
 pub const OP_ID: &str = "vyre-primitives::bitset::any";
-pub const OP_ID: &str = "vyre-primitives::bitset::clear_bit";
 pub const OP_ID: &str = "vyre-primitives::bitset::contains";
 pub const OP_ID: &str = "vyre-primitives::bitset::copy";
 pub const OP_ID: &str = "vyre-primitives::bitset::equal";
 pub const OP_ID: &str = "vyre-primitives::bitset::four_russians_apply_byte_lut";
 pub const OP_ID: &str = "vyre-primitives::bitset::not";
-pub const OP_ID: &str = "vyre-primitives::bitset::or";
-pub const OP_ID: &str = "vyre-primitives::bitset::or_into";
 pub const OP_ID: &str = "vyre-primitives::bitset::popcount";
 pub const OP_ID: &str = "vyre-primitives::bitset::select1_query";
-pub const OP_ID: &str = "vyre-primitives::bitset::set_bit";
 pub const OP_ID: &str = "vyre-primitives::bitset::stochastic_and_mul";
 pub const OP_ID: &str = "vyre-primitives::bitset::subset_of";
 pub const OP_ID: &str = "vyre-primitives::bitset::test_bit";
-pub const OP_ID: &str = "vyre-primitives::bitset::xor";
-pub const OP_ID: &str = "vyre-primitives::bitset::xor_into";
+pub const OP_ID: &str = "vyre-primitives::bitset::zero";
 pub const OP_ID: &str = "vyre-primitives::decode::rle_segment_lengths";
+pub const OP_ID: &str = "vyre-primitives::decode::ziftsieve_literal_copy";
 pub const OP_ID: &str = "vyre-primitives::fixpoint::bitset_fixpoint";
 pub const OP_ID: &str = "vyre-primitives::fixpoint::persistent_fixpoint";
 pub const OP_ID: &str = "vyre-primitives::geom::clifford2_geometric_product";
@@ -292,23 +374,14 @@ pub const OP_ID: &str = "vyre-primitives::parsing::planar_rewrite_schedule";
 pub const OP_ID: &str = "vyre-primitives::parsing::ssa_dominance_scan";
 pub const OP_ID: &str = "vyre-primitives::parsing::whitespace_classify_word";
 pub const OP_ID: &str = "vyre-primitives::predicate::arg_of";
-pub const OP_ID: &str = "vyre-primitives::predicate::call_to";
 pub const OP_ID: &str = "vyre-primitives::predicate::edge";
-pub const OP_ID: &str = "vyre-primitives::predicate::in_file";
-pub const OP_ID: &str = "vyre-primitives::predicate::in_function";
-pub const OP_ID: &str = "vyre-primitives::predicate::in_package";
 pub const OP_ID: &str = "vyre-primitives::predicate::literal_of";
 pub const OP_ID: &str = "vyre-primitives::predicate::node_kind_eq";
-pub const OP_ID: &str = "vyre-primitives::predicate::return_value_of";
 pub const OP_ID: &str = "vyre-primitives::predicate::size_argument_of";
-pub const OP_ID: &str = "vyre-primitives::reduce::all";
-pub const OP_ID: &str = "vyre-primitives::reduce::any";
 pub const OP_ID: &str = "vyre-primitives::reduce::count";
 pub const OP_ID: &str = "vyre-primitives::reduce::count_non_zero";
 pub const OP_ID: &str = "vyre-primitives::reduce::gather";
 pub const OP_ID: &str = "vyre-primitives::reduce::histogram";
-pub const OP_ID: &str = "vyre-primitives::reduce::max";
-pub const OP_ID: &str = "vyre-primitives::reduce::min";
 pub const OP_ID: &str = "vyre-primitives::reduce::radix_sort";
 pub const OP_ID: &str = "vyre-primitives::reduce::scatter";
 pub const OP_ID: &str = "vyre-primitives::reduce::segment_reduce_sum";
@@ -318,6 +391,7 @@ pub const OP_ID: &str = "vyre-primitives::text::utf8_validate";
 pub const OP_ID: &str = "vyre-primitives::topology::simplicial_triangle_message";
 pub const OP_ID: &str = "vyre-primitives::topology::vietoris_rips_edge_filter";
 pub const OP_ID: &str = "vyre-primitives::visual::packed_rgba_map";
+pub const OP_ID: &str = $op_id;
 pub const OP_ID_EXCLUSIVE_SUM: &str = "vyre-primitives::math::prefix_scan_exclusive_sum";
 pub const OP_ID_INCLUSIVE_SUM: &str =
 pub const OP_ID_INCLUSIVE_SUM: &str = "vyre-primitives::math::prefix_scan_inclusive_sum";
@@ -329,7 +403,14 @@ pub const P2M_ZEROTH_F32_OP_ID: &str = "vyre-primitives::math::fmm_p2m_zeroth_f3
 pub const PACKAGE: u32 = 1 << 2;
 pub const PAD: u32 = b'=' as u32;
 pub const PARTICLE_STRIDE: u32 = 4;
+pub const PATH_LEN_BUFFER: &str = "path_reconstruct path_len";
+pub const PATH_OUT_BUFFER: &str = "path_reconstruct path_out";
+pub const PATH_PARENT_BUFFER: &str = "path_reconstruct parent";
+pub const PATH_RECONSTRUCT_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
+pub const PATH_TARGET_BUFFER: &str = "path_reconstruct target";
+pub const PERSISTENT_BFS_SINGLE_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
 pub const PERSISTENT_BFS_STEP_OP_ID: &str = "vyre-primitives::graph::persistent_bfs_step";
+pub const PERSISTENT_BFS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const PHI: u32 = 1 << 3;
 pub const POLY5_F32_OP_ID: &str = "vyre-primitives::math::newton_schulz_poly5_f32";
 pub const POSTORDER_OP_ID: &str = "vyre-primitives::graph::vast_walk_postorder";
@@ -345,6 +426,7 @@ pub const RESERVED_BTYPE_FIX: &str =
 pub const RESERVED_KEY: u32 = u32::MAX - 1;
 pub const RETURN: u32 = 1 << 2;
 pub const RULE2_OP_ID: &str = "vyre-primitives::graph::do_rule2_reverse_incoming";
+pub const SCC_DECOMPOSE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const SIZE_ARG: u32 = 1 << 24;
 pub const SOFT_MAX_N: u32 = BLOCK_LANES * BLOCK_LANES;
 pub const SSA: u32 = 5;
@@ -353,6 +435,13 @@ pub const STANDARD_DIM_WORDS: u32 = STANDARD_DIM_BITS / 32;
 pub const STORED_HEADER_FIX: &str =
 pub const SUM_F32_OP_ID: &str = "vyre-primitives::reduce::workgroup_sum_f32";
 pub const SUM_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_sum_u32";
+pub const TOPOSORT_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
+pub const TOPOSORT_INDEGREE_SCRATCH_BUFFER: &str = "toposort indeg_scratch";
+pub const TOPOSORT_OFFSETS_BUFFER: &str = "toposort offsets";
+pub const TOPOSORT_ORDER_OUT_BUFFER: &str = "toposort order_out";
+pub const TOPOSORT_QUEUE_SCRATCH_BUFFER: &str = "toposort queue_scratch";
+pub const TOPOSORT_TARGETS_BUFFER: &str = "toposort targets";
+pub const UNPACK_I4_OP_ID: &str = "vyre-primitives::math::quantized::unpack_i4x8";
 pub const UPDATE_OP_ID: &str = "vyre-primitives::hash::count_sketch_update";
 pub const UPPER_BOUND: u32 = 1 << 13;
 pub const UTF8_ASCII: u32 = 0;
@@ -362,74 +451,194 @@ pub const UTF8_LEAD_2: u32 = 1;
 pub const UTF8_LEAD_3: u32 = 2;
 pub const UTF8_LEAD_4: u32 = 3;
 pub const UTF8_SHAPE_COUNTS_OP_ID: &str = "vyre-primitives::text::utf8_shape_counts";
+pub const UTF8_VALIDATE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const VARIABLE: u32 = 1;
 pub const VFS_RESOLVE_OP_ID: &str = "vyre-primitives::vfs::resolve";
+pub const WHITESPACE_CLASSIFY_WORD_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const WORKGROUP_ANY_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_any_u32";
+pub const WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
+pub const fn adaptive_node_dispatch_grid(node_count: u32) -> [u32; 3] {
+pub const fn adaptive_traversal_program_layout_hash(
+pub const fn adler32_finalize_state(a: u32, b: u32) -> u32 {
+pub const fn adler32_initial_a_state() -> u32 {
+pub const fn adler32_initial_b_state() -> u32 {
+pub const fn adler32_update_byte_state(a: u32, b: u32, byte: u8) -> (u32, u32) {
+pub const fn allow_mask(&self) -> u32 {
+pub const fn batch_layout(&self) -> PersistentBfsBatchLayout {
 pub const fn bit(self) -> u32 {
 pub const fn bits(self) -> u32 {
 pub const fn bitset_words(n: u32) -> u32 {
 pub const fn bitset_words(node_count: u32) -> u32 {
+pub const fn cache_key(
+pub const fn cache_key(&self, device_features: u64) -> PersistentBfsPlanCacheKey {
 pub const fn call_arg_slot(n: u32) -> u32 {
+pub const fn can_dispatch_edge_buffers_without_padding(
 pub const fn category(&self) -> Option<&'static str> {
+pub const fn changed_slot_value(&self, iteration: u32) -> Option<u32> {
+pub const fn changed_slots(&self) -> u32 {
+pub const fn changed_words(&self) -> usize {
+pub const fn char_class_dispatch_grid(n: u32) -> [u32; 3] {
 pub const fn check_effect_row(
 pub const fn check_linear_use(
+pub const fn clear_frontier_out(
 pub const fn contains(&self, other: &ByteRange) -> bool {
 pub const fn contains(self, kind: EffectKind) -> bool {
+pub const fn crc32_chunk_count(n: u32, chunk_size: u32) -> u32 {
+pub const fn crc32_chunk_output_words(n: u32, chunk_size: u32) -> Option<u32> {
+pub const fn crc32_finalize_state(crc: u32) -> u32 {
+pub const fn crc32_initial_state() -> u32 {
+pub const fn crc32_pair_reduce_output_pairs(pair_count: u32) -> u32 {
+pub const fn csr_backward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
+pub const fn csr_forward_or_changed_parallel_batch_grid(
+pub const fn csr_forward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
+pub const fn csr_frontier_degree_sum_dispatch_grid(node_count: u32) -> [u32; 3] {
+pub const fn csr_frontier_step_dispatch_grid(node_count: u32) -> [u32; 3] {
+pub const fn dispatch_grid(&self) -> [u32; 3] {
+pub const fn dom_target_words(&self) -> usize {
+pub const fn dominator_frontier_dispatch_grid(node_count: u32) -> [u32; 3] {
+pub const fn edge_buffers_can_dispatch_unpadded(
+pub const fn edge_offset_words(&self) -> usize {
+pub const fn edge_storage_words(&self) -> usize {
 pub const fn empty() -> Self {
 pub const fn ends_before(&self, other: &ByteRange) -> bool {
 pub const fn fits_signature(signature: EffectRow, observed: EffectRow) -> bool {
 pub const fn flip(self) -> Self {
+pub const fn fnv1a32_const(bytes: &[u8]) -> u32 {
+pub const fn fnv1a32_initial_state() -> u32 {
+pub const fn fnv1a32_mul_xor_word_state(hash: u32, word: u32) -> u32 {
+pub const fn fnv1a32_update_byte(hash: u32, byte: u8) -> u32 {
+pub const fn fnv1a64_initial_state() -> u64 {
+pub const fn fnv1a64_update_byte(hash: u64, byte: u8) -> u64 {
 pub const fn forbids_drop(self) -> bool {
 pub const fn forbids_reuse(self) -> bool {
+pub const fn four_russians_dense(
+pub const fn four_russians_frontier_words(node_count: u32) -> u32 {
+pub const fn four_russians_source_tile_count(node_count: u32) -> u32 {
 pub const fn from_bits(bits: u32) -> Self {
+pub const fn from_layout(layout: &IfdsCsrLayout) -> Self {
 pub const fn from_row(handled: EffectRow) -> Self {
+pub const fn frontier_layout(&self) -> PersistentBfsFrontierLayout {
+pub const fn frontier_tail_mask(node_count: u32) -> u32 {
+pub const fn frontier_to_queue(
+pub const fn frontier_words(&self) -> usize {
+pub const fn frontier_words(node_count: u32) -> usize {
+pub const fn frontier_words_for_byte_tiles(tile_count: u32) -> u32 {
 pub const fn handled(self) -> EffectRow {
 pub const fn handler_apply(row: EffectRow, handler: Handler) -> EffectRow {
 pub const fn handler_compose(a: Handler, b: Handler) -> Handler {
+pub const fn hex_decoded_capacity(input_len: u32) -> u32 {
+pub const fn i4_packed_words(lane_count: u32) -> u32 {
+pub const fn ifds_csr_dispatch_grid(_intra_count: u32, _total_nodes: u32) -> [u32; 3] {
 pub const fn is_empty(&self) -> bool {
 pub const fn is_empty(self) -> bool {
 pub const fn is_structural_whitespace(byte: u8) -> bool {
+pub const fn launch(&self) -> CsrForwardOrChangedLaunchPlan {
+pub const fn layout(&self) -> CsrForwardOrChangedLayout {
+pub const fn layout(&self) -> DominatorFrontierLayout {
+pub const fn layout(&self) -> MotifLayout {
+pub const fn layout(&self) -> PersistentBfsLayout {
+pub const fn layout_hash(&self) -> u64 {
 pub const fn len(&self) -> u32 {
+pub const fn level_wave_dispatch_grid(lane_count: u32) -> [u32; 3] {
+pub const fn line_splice_classify_dispatch_grid(byte_count: u32) -> [u32; 3] {
 pub const fn mask(self) -> u32 {
 pub const fn new(
 pub const fn new() -> Self {
 pub const fn new(pid: u32, start: u32, end: u32) -> Self {
 pub const fn new(tag: u32, start: u32, end: u32) -> Self {
+pub const fn node_words(&self) -> usize {
+pub const fn output_words(&self) -> usize {
 pub const fn pack_bytes_le(b0: u8, b1: u8, b2: u8, b3: u8) -> u32 {
 pub const fn packed_dispatch_table_len(entries_len: usize) -> usize {
+pub const fn persistent_bfs_batch_dispatch_grid(node_count: u32, query_count: u32) -> [u32; 3] {
+pub const fn persistent_bfs_single_dispatch_grid(node_count: u32) -> [u32; 3] {
+pub const fn popcount(
+pub const fn pred_target_words(&self) -> usize {
+pub const fn program(&self) -> &Program {
+pub const fn program_cache_key(&self) -> IfdsCsrProgramCacheKey {
+pub const fn program_key(&self) -> CsrBidirectionalProgramKey {
+pub const fn program_key(&self) -> CsrForwardOrChangedProgramKey {
+pub const fn query_count(&self) -> usize {
+pub const fn query_count_u32(&self) -> u32 {
+pub const fn queue_forward(
+pub const fn queue_len_init(
 pub const fn scalar(s: f64) -> Self {
+pub const fn scc_decompose_dispatch_grid(node_count: u32) -> [u32; 3] {
+pub const fn shape(&self) -> DominatorFrontierProgramShape {
 pub const fn single(kind: EffectKind) -> Self {
+pub const fn sparse_dense(
+pub const fn static_input_key(
+pub const fn static_input_key(&self) -> PersistentBfsStaticInputKey {
 pub const fn tensor_words(node_count: u32, context_limit: u32, field_limit: u32) -> u32 {
+pub const fn total_words(&self) -> usize {
 pub const fn union(self, other: Self) -> Self {
+pub const fn uses_changed_history(&self) -> bool {
+pub const fn utf8_validate_dispatch_grid(n: u32) -> [u32; 3] {
 pub const fn vector(x: f64, y: f64) -> Self {
+pub const fn whitespace_classify_word_dispatch_grid(word_count: u32) -> [u32; 3] {
 pub const fn with_category(mut self, category: &'static str) -> Self {
+pub const fn words_per_query(&self) -> u32 {
+pub const fn words_u32(&self) -> u32 {
 pub enum AdaptiveTraversalMode {
+pub enum AdaptiveTraversalProgramKind {
+pub enum Base64DecodeReferenceError {
 pub enum BigIntAddCarryError {
 pub enum BooleanTileOp {
 pub enum CombineOp {
+pub enum CountSketchError {
+pub enum Crc32MapReduceStepKind {
+pub enum DenseTraversalKernel {
 pub enum DfaCompileError {
 pub enum DfaWireError {
 pub enum DnnfGate {
 pub enum DominatorTreeError {
 pub enum EffectKind {
+pub enum FrontierError {
 pub enum GraphValidationError {
 pub enum LinearDiscipline {
 pub enum LinearTypeError {
 pub enum NfaToDfaError {
 pub enum PackError {
+pub enum PersistentBfsPlanCacheKind {
+pub enum ReachableError {
 pub enum ScanKind {
 pub enum ShapeFormula {
 pub enum ToposortCsrError {
 pub enum ToposortError {
+pub enum VastWalkOrder {
 pub enum WorkgroupReductionScope {
 pub enum ZxColor {
+pub fn $fn_name(lhs: &str, rhs: &str, out: &str, words: u32) -> Program {
+pub fn $fn_name(target: &str, bit_idx: u32, words: u32) -> vyre_foundation::ir::Program {
+pub fn $fn_name(target: &str, operand: &str, words: u32) -> Program {
+pub fn $fn_name(values: &str, out: &str, count: u32) -> vyre_foundation::ir::Program {
+pub fn $function(
+pub fn $function(node_tags: &str, nodeset_out: &str, node_count: u32) -> Program {
+pub fn absorb_new_frontier_bits(
 pub fn adaptive_dense_step(
+pub fn adaptive_four_russians_dense_step(
+pub fn adaptive_four_russians_graph_content_hash(node_count: u32, adj_rows_dense: &[u32]) -> u64 {
+pub fn adaptive_frontier_popcount(frontier_in: &[u32], context: &str) -> Result<u32, String> {
 pub fn adaptive_sparse_dense_step(
+pub fn adaptive_traversal_graph_content_hash(
+pub fn adler32(bytes: &[u8]) -> u32 {
+pub fn adler32_chunk(bytes: &[u8]) -> Adler32Chunk {
+pub fn adler32_combine_chunks(left: Adler32Chunk, right: Adler32Chunk) -> Adler32Chunk {
+pub fn adler32_combine_state(a: u32, b: u32, chunk: Adler32Chunk) -> (u32, u32) {
+pub fn adler32_finalize_expr(a: Expr, b: Expr) -> Expr {
+pub fn adler32_initial_a_expr() -> Expr {
+pub fn adler32_initial_b_expr() -> Expr {
+pub fn adler32_program(input: &str, out: &str, n: u32) -> Program {
+pub fn adler32_update_byte_nodes(a_var: &str, b_var: &str, byte: Expr) -> [Node; 2] {
 pub fn alias_union() -> Self {
 pub fn alias_union_registered(registry: &AliasRegistry) -> bool {
 pub fn all_entries() -> impl Iterator<Item = &'static OpEntry> {
 pub fn amari_alpha_step_cpu(p: &[f64], q: &[f64], alpha: f64, t: f64) -> Vec<f64> {
+pub fn amari_alpha_step_cpu_into(p: &[f64], q: &[f64], alpha: f64, t: f64, out: &mut Vec<f64>) {
 pub fn amg_v_cycle(
+pub fn append_f32_slice_le_bytes(values: &[f32], out: &mut Vec<u8>) {
+pub fn append_packed_byte_lane(bytes: &[u8], out: &mut Vec<u8>) {
+pub fn append_u32_slice_le_bytes(words: &[u32], out: &mut Vec<u8>) {
 pub fn apply(&self, c: u32) -> u32 {
 pub fn apply_color_change(diagram: &mut ZxDiagram, v: u32) {
 pub fn apply_identity_removal(mut diagram: ZxDiagram) -> ZxDiagram {
@@ -464,48 +673,46 @@ pub fn bigint_add_carry_cpu(
 pub fn bigint_add_carry_cpu_into(
 pub fn binary_byte_lut(op: BooleanTileOp) -> Vec<u32> {
 pub fn bit_reverse<T: Copy>(a: &mut [T]) {
-pub fn bitset_and(lhs: &str, rhs: &str, out: &str, words: u32) -> Program {
-pub fn bitset_and_into(target: &str, mask: &str, words: u32) -> Program {
 pub fn bitset_and_not(lhs: &str, rhs: &str, out: &str, words: u32) -> Program {
-pub fn bitset_and_not_into(target: &str, subtrahend: &str, words: u32) -> Program {
 pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
-pub fn bitset_clear_bit(target: &str, bit_idx: u32, words: u32) -> Program {
 pub fn bitset_contains(input: &str, index_buffer: &str, out: &str, words: u32) -> Program {
 pub fn bitset_copy(target: &str, source: &str, words: u32) -> Program {
 pub fn bitset_equal(lhs: &str, rhs: &str, out_scalar: &str, words: u32) -> Program {
 pub fn bitset_fixpoint(current: &str, next: &str, changed: &str, words: u32) -> Program {
 pub fn bitset_fixpoint_warm_start(
 pub fn bitset_not(input: &str, out: &str, words: u32) -> Program {
-pub fn bitset_or(lhs: &str, rhs: &str, out: &str, words: u32) -> Program {
-pub fn bitset_or_into(target: &str, addend: &str, words: u32) -> Program {
 pub fn bitset_popcount(input: &str, count_words: &str, words: u32) -> Program {
-pub fn bitset_set_bit(target: &str, bit_idx: u32, words: u32) -> Program {
 pub fn bitset_subset_of(lhs: &str, rhs: &str, out_scalar: &str, words: u32) -> Program {
 pub fn bitset_test_bit(buf: &str, bit_idx: u32, out_scalar: &str) -> Program {
-pub fn bitset_xor(lhs: &str, rhs: &str, out: &str, words: u32) -> Program {
-pub fn bitset_xor_into(target: &str, addend: &str, words: u32) -> Program {
+pub fn bitset_zero(target: &str, words: u32) -> Program {
 pub fn blake3_g(a: usize, b: usize, c: usize, d: usize, mx: &str, my: &str) -> Vec<Node> {
 pub fn blake3_g_program(state: &str, message: &str, out: &str) -> Program {
 pub fn blake3_round(round_idx: usize, perm: &[usize; 16]) -> Vec<Node> {
 pub fn blake3_round_program(state: &str, message: &str, out: &str) -> Program {
+pub fn bounded_exp_arg(value: Expr) -> Expr {
+pub fn bounded_score(value: Expr) -> Expr {
 pub fn bracket_match(
 pub fn build_char_class_table() -> [u32; 256] {
 pub fn build_cpu_reference(
+pub fn build_csr_forward_or_changed_dispatch_program(
 pub fn build_ifds_csr_program(
 pub fn build_table() -> [u32; 256] {
 pub fn byte_histogram_256(input: &str, histogram: &str, count: u32) -> Program {
 pub fn byte_histogram_256_body(input: &str, histogram: &str, count: u32) -> Vec<Node> {
 pub fn byte_histogram_256_child(
+pub fn cache_key(&self) -> &MotifProgramCacheKey {
 pub fn cached_binary_byte_lut(op: BooleanTileOp) -> &'static [u32] {
-pub fn call_to(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> Program {
 pub fn canonical_wire_bytes(&self) -> usize {
 pub fn canonicalize_csr_within_rows(row_ptr: &[u32], col_idx: &[u32]) -> (Vec<u32>, Vec<u32>) {
 pub fn canonicalize_csr_within_rows_in_place(
+pub fn changed_read_index(&self, iteration: u32) -> Result<usize, String> {
 pub fn char_class(source: &str, classified: &str, n: u32) -> Program {
 pub fn chebyshev_filter(
 pub fn chebyshev_filter_cpu(
 pub fn chebyshev_filter_cpu_into(
+pub fn checked_frontier_popcount(frontier: &[u32]) -> Result<u32, FrontierError> {
 pub fn classify_from_histogram(histogram: &[u32; 256], count: u32) -> u32 {
+pub fn clear(&mut self) {
 pub fn clifford2_product(lhs: &str, rhs: &str, out: &str, n_pairs: u32) -> Program {
 pub fn clifford2_product_cpu(a: Cl2Mv, b: Cl2Mv) -> Cl2Mv {
 pub fn compile_dnnf(clauses: &[Vec<(u32, bool)>], num_vars: u32, max_depth: u32) -> DnnfDag {
@@ -516,6 +723,9 @@ pub fn contains(&self, op_id: &str) -> bool {
 pub fn conv1d_node(input: &str, output: &str, weights: &str, params: &str) -> Node {
 pub fn conv1d_program(count: u32, radius: u32) -> Program {
 pub fn cooper_harvey_kennedy_idoms(
+pub fn copy_csr_forward_seed_frontier_into<E>(
+pub fn copy_persistent_bfs_batch_seed_and_clear_changed_into<E, MapError>(
+pub fn copy_persistent_bfs_seed_frontier_into<E, MapError>(
 pub fn core_delimiter_match(
 pub fn count_sketch_query_cpu(table: &[u32], hashes: &[u32], signs: &[i32], d: u32, w: u32) -> i32 {
 pub fn count_sketch_query_cpu_into(
@@ -527,10 +737,13 @@ pub fn cpu_base64_table() -> [u32; 256] {
 pub fn cpu_blake3_g(
 pub fn cpu_blake3_round(state: &mut [u32; 16], message: &[u32; 16], perm: &[usize; 16]) {
 pub fn cpu_conv1d(input: &[u32], weights: &[u32], stride: u32) -> Vec<u32> {
+pub fn cpu_conv1d_into(input: &[u32], weights: &[u32], stride: u32, output: &mut Vec<u32>) {
 pub fn cpu_dense_step(frontier_in: &[u32], adj_rows_dense: &[u32], node_count: u32) -> Vec<u32> {
+pub fn cpu_four_russians_dense_step(
 pub fn cpu_inflate_stored(input: &[u32]) -> Option<CpuInflateResult> {
 pub fn cpu_interval_merge(
 pub fn cpu_ref(
+pub fn cpu_ref(a: &[u32], b: &[u32]) -> Vec<u32> {
 pub fn cpu_ref(bitset: &[u32]) -> u32 {
 pub fn cpu_ref(blocks_in: &[f32], num_blocks: u32, n: u32) -> Vec<f32> {
 pub fn cpu_ref(buf: &[u32], bit_idx: u32) -> u32 {
@@ -558,11 +771,10 @@ pub fn cpu_ref(restriction_diag: &[f64], v_init: &[f64], iterations: u32) -> (f6
 pub fn cpu_ref(src: &[u32], indices: &[u32]) -> Vec<u32> {
 pub fn cpu_ref(src: &[u32], indices: &[u32], dst_len: usize) -> Vec<u32> {
 pub fn cpu_ref(state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32) -> (Vec<u32>, u32) {
-pub fn cpu_ref(target: &mut [u32], addend: &[u32]) {
+pub fn cpu_ref(target: &mut [u32]) {
 pub fn cpu_ref(target: &mut [u32], bit_idx: u32) {
-pub fn cpu_ref(target: &mut [u32], mask: &[u32]) {
+pub fn cpu_ref(target: &mut [u32], operand: &[u32]) {
 pub fn cpu_ref(target: &mut [u32], source: &[u32]) {
-pub fn cpu_ref(target: &mut [u32], subtrahend: &[u32]) {
 pub fn cpu_ref(tensor: &[f64], dims: &[u32], target_ranks: &[u32]) -> Vec<Vec<f64>> {
 pub fn cpu_ref(values: &[u32]) -> u32 {
 pub fn cpu_ref<F>(depths: &[u32], max_depth: u32, mut step_for_lane: F)
@@ -572,6 +784,7 @@ pub fn cpu_ref_closure(
 pub fn cpu_ref_closure_into(
 pub fn cpu_ref_closure_into_with_step_hook<F>(
 pub fn cpu_ref_into(
+pub fn cpu_ref_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) {
 pub fn cpu_ref_into(input: &[u32], bits: u32, out: &mut Vec<u32>, scratch: &mut Vec<u32>) {
 pub fn cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) {
 pub fn cpu_ref_into(input: &[u32], num_bins: u32, out: &mut Vec<u32>) {
@@ -581,6 +794,7 @@ pub fn cpu_ref_into(lhs: &[u32], rhs: &[u32], lut: &[u32], out: &mut Vec<u32>) {
 pub fn cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) {
 pub fn cpu_ref_into(node_tags: &[u32], family_mask: u32, out: &mut Vec<u32>) {
 pub fn cpu_ref_into(nodes: &[u32], kind: u32, out: &mut Vec<u32>) {
+pub fn cpu_ref_into(nodes: &[u32], out: &mut Vec<u32>) {
 pub fn cpu_ref_into(payloads: &[u32], flags: &[u32], compacted: &mut Vec<u32>) -> u32 {
 pub fn cpu_ref_into(src: &[u32], indices: &[u32], dst_len: usize, dst: &mut Vec<u32>) {
 pub fn cpu_ref_into(src: &[u32], indices: &[u32], out: &mut Vec<u32>) {
@@ -588,11 +802,27 @@ pub fn cpu_ref_into<F>(
 pub fn cpu_ref_matches(
 pub fn cpu_ref_participation_count(
 pub fn cpu_ref_slot(
+pub fn cpu_ref_slot_into(
 pub fn cpu_sparse_dense_step(
 pub fn cpu_step(
 pub fn cpu_step_into(
 pub fn crc32(bytes: &[u8]) -> u32 {
+pub fn crc32_chunk(bytes: &[u8]) -> Crc32Chunk {
+pub fn crc32_chunk_program(input: &str, out: &str, n: u32, chunk_size: NonZeroU32) -> Program {
+pub fn crc32_combine(left_crc: u32, right_crc: u32, right_len: u64) -> u32 {
+pub fn crc32_combine_chunks(left: Crc32Chunk, right: Crc32Chunk) -> Option<Crc32Chunk> {
+pub fn crc32_finalize_expr(crc: Expr) -> Expr {
+pub fn crc32_initial_expr() -> Expr {
+pub fn crc32_map_reduce_plan(input_len: u32, chunk_size: NonZeroU32) -> Option<Crc32MapReducePlan> {
+pub fn crc32_pack_chunks_u32(chunks: &[Crc32Chunk]) -> Option<Vec<u32>> {
+pub fn crc32_pair_reduce_chunk_words(words: &[u32]) -> Option<Vec<u32>> {
+pub fn crc32_pair_reduce_chunks(chunks: &[Crc32Chunk]) -> Option<Vec<Crc32Chunk>> {
+pub fn crc32_pair_reduce_program(input: &str, out: &str, pair_count: NonZeroU32) -> Program {
 pub fn crc32_program(input: &str, out: &str, n: u32) -> Program {
+pub fn crc32_table() -> &'static [u32; 256] {
+pub fn crc32_unpack_chunks_u32(words: &[u32]) -> Option<Vec<Crc32Chunk>> {
+pub fn crc32_update_byte_nodes(crc_var: &str, bit_var: &str, byte: Expr) -> Vec<Node> {
+pub fn crc32_update_byte_state(crc: u32, table: &[u32; 256], byte: u8) -> u32 {
 pub fn csr_backward_or_changed_parallel(
 pub fn csr_backward_traverse(
 pub fn csr_bidirectional(
@@ -605,20 +835,39 @@ pub fn csr_forward_or_changed_parallel(
 pub fn csr_forward_or_changed_parallel_batch(
 pub fn csr_forward_or_changed_parallel_batch_global(
 pub fn csr_forward_or_changed_parallel_batch_global_slot(
+pub fn csr_forward_or_changed_parallel_body_prefixed(
+pub fn csr_forward_or_changed_parallel_child_prefixed(
+pub fn csr_forward_or_changed_parallel_snapshot_body_prefixed(
+pub fn csr_forward_or_changed_parallel_snapshot_child_prefixed(
 pub fn csr_forward_traverse(
 pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
 pub fn csr_frontier_degree_sum_cpu(
+pub fn csr_queue_delta_enqueue(
+pub fn csr_queue_delta_enqueue_cpu(
 pub fn csr_queue_forward_traverse(
 pub fn csr_queue_forward_traverse_cpu(
 pub fn ddnnf_evaluate(
 pub fn ddnnf_evaluate_cpu(
 pub fn decode_bitstream(bs: &[u32], len_bits: usize) -> f64 {
+pub fn decode_f32_le_bytes_all(bytes: &[u8]) -> Vec<f32> {
+pub fn decode_i32_le_bytes_all(bytes: &[u8]) -> Vec<i32> {
 pub fn decode_node(node_id: u32) -> (u32, u32, u32) {
+pub fn decode_standard_packed_reference(input: &[u8]) -> (Vec<u32>, u32) {
+pub fn decode_standard_packed_reference_into(input: &[u8], out: &mut Vec<u32>) -> u32 {
+pub fn decode_u16_le_bytes_all(bytes: &[u8]) -> Vec<u16> {
+pub fn decode_u32_le_bytes_all(bytes: &[u8]) -> Vec<u32> {
+pub fn decode_u32x8_le_bytes(bytes: &[u8; 32]) -> [u32; 8] {
+pub fn decode_u64_le_bytes_all(bytes: &[u8]) -> Vec<u64> {
 pub fn decoded_capacity(input_len: u32) -> u32 {
 pub fn dedup_regions_cpu(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
 pub fn dedup_regions_flag_program(
 pub fn dedup_regions_inplace(input: &mut Vec<RegionTriple>) {
 pub fn default_alias_registry() -> AliasRegistry {
+pub fn dense_matvec_byte_lut(columns: &[u32], tile_count: u32, dst_words: u32) -> Vec<u32> {
+pub fn dense_matvec_byte_lut_into(
+pub fn dense_matvec_byte_lut_words(tile_count: u32, dst_words: u32) -> u32 {
+pub fn dense_matvec_cpu_ref(
+pub fn dense_matvec_cpu_ref_into(
 pub fn dense_to_encoded(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -> Option<u32> {
 pub fn describe(&self) -> String {
 pub fn dfa_compile(patterns: &[&[u8]]) -> CompiledDfa {
@@ -637,11 +886,13 @@ pub fn do_rule2_reverse_incoming_cpu_into(
 pub fn do_rule3_subgraph_cpu(adjacency: &[u32], keep_mask: &[u32], n: u32) -> (Vec<u32>, Vec<u32>) {
 pub fn do_rule3_subgraph_cpu_into(
 pub fn dominator_frontier(
+pub fn dominator_frontier_slice_fingerprint(words: &[u32]) -> DominatorFrontierSliceFingerprint {
 pub fn dominator_tree_program(
 pub fn dot_partial(
 pub fn dot_partial_program(q_buffer: &str, k_buffer: &str, out: &str, d: u32) -> Program {
 pub fn dp_clip_per_sample(
 pub fn dp_clip_per_sample_cpu(
+pub fn dp_clip_per_sample_cpu_into(
 pub fn edge(
 pub fn empty() -> Self {
 pub fn encode_bitstream(p: f64, len_bits: usize, seed: u32) -> Vec<u32> {
@@ -655,27 +906,48 @@ pub fn evaluate(&self, count: u32) -> bool {
 pub fn evaluate(formula: &ShapeFormula, count: u32) -> bool {
 pub fn extract_edges_cpu(edge_mask: &[u32], n: u32) -> Vec<(u32, u32)> {
 pub fn find_root_body(
+pub fn finite_or(value: Expr, replacement: Expr) -> Expr {
 pub fn fisher_rao_distance_cpu(p: &[f64], q: &[f64]) -> f64 {
 pub fn fits(proc_id: u32, block_id: u32, fact_id: u32) -> bool {
+pub fn flush_tiny(value: Expr) -> Expr {
 pub fn fnv1a32(bytes: &[u8]) -> u32 {
+pub fn fnv1a32_initial_expr() -> Expr {
+pub fn fnv1a32_mix_word_expr(hash: Expr, word: Expr) -> Expr {
+pub fn fnv1a32_mul_xor_word_expr(hash: Expr, word: Expr) -> Expr {
+pub fn fnv1a32_packed_u32_low8(words: &[u32]) -> u32 {
 pub fn fnv1a32_program(input: &str, out: &str, n: u32) -> Program {
 pub fn fnv1a32_program_dyn(input: &str, out: &str) -> Program {
+pub fn fnv1a32_update_byte_expr(hash: Expr, byte: Expr) -> Expr {
+pub fn fnv1a32_update_byte_node(hash_var: &str, byte: Expr) -> Node {
 pub fn fnv1a64(bytes: &[u8]) -> u64 {
 pub fn fnv1a64_program(input: &str, out: &str) -> Program {
 pub fn fnv1a64_program_n(input: &str, out: &str, n: u32) -> Program {
 pub fn four_russians_apply_byte_lut(
+pub fn four_russians_dense_columns_from_adj_rows(
+pub fn four_russians_dense_lut_from_adj_rows(
+pub fn four_russians_dense_lut_words(node_count: u32) -> u32 {
+pub fn four_russians_dense_matvec_byte_lut(
 pub fn fractional_derivative_cpu(f: &[f64], alpha: f64, step: f64) -> Vec<f64> {
 pub fn fractional_derivative_cpu_into(
 pub fn from_bytes(bytes: &[u8]) -> Result<Self, DfaWireError> {
+pub fn from_rules(
+pub fn frontier_absorb_new_bits_for_node_count_program(
+pub fn frontier_absorb_new_bits_program(
+pub fn frontier_queue_len_init(queue_len: &str) -> Program {
 pub fn frontier_size(frontier: &[u32]) -> u32 {
 pub fn frontier_to_queue(
 pub fn frontier_to_queue_cpu(
+pub fn frontier_to_queue_parallel(
+pub fn frontier_word_block_prefix_to_queue_parallel(
+pub fn frontier_word_counts_scan_pass_a(
+pub fn frontier_words_to_queue_parallel(
 pub fn functor_apply(source_row: &str, mapping: &str, target_row: &str, n_cols: u32) -> Program {
 pub fn functor_apply_cpu(source_row: &[u32], mapping: &[u32], target_size: u32) -> Vec<u32> {
 pub fn functor_apply_sized(
 pub fn gather(src: &str, indices: &str, dst: &str, count: u32) -> Program {
 pub fn gaussian_rdp_step(alpha: &str, sigma_squared: &str, out: &str, count: u32) -> Program {
 pub fn gaussian_rdp_step_cpu(alpha: &[f64], sigma_squared: &[f64]) -> Vec<f64> {
+pub fn gaussian_rdp_step_cpu_into(alpha: &[f64], sigma_squared: &[f64], out: &mut Vec<f64>) {
 pub fn gaussian_weights(radius: u32, sigma: f32) -> Vec<u32> {
 pub fn get(&self, index: usize) -> Option<&CompiledDfa> {
 pub fn get(&self, op_id: &str) -> Option<&AliasOpDescriptor> {
@@ -687,6 +959,13 @@ pub fn hash_insert(
 pub fn hash_lookup(
 pub fn hensel_lift_step(x: &str, f_x: &str, inv_f_prime: &str, out: &str, n: u32) -> Program {
 pub fn hensel_lift_step_cpu(x: f64, f_x: f64, inv_f_prime: f64) -> f64 {
+pub fn hex_decode(input: &str, output: &str, table: &str, input_len: u32) -> Program {
+pub fn hex_decode_body(input: &str, output: &str, table: &str, input_len: u32) -> Vec<Node> {
+pub fn hex_decode_child(
+pub fn hex_decode_pair_expr(input: &str, table: &str, pair: Expr) -> Expr {
+pub fn hex_decode_reference_packed(input: &[u8]) -> Vec<u32> {
+pub fn hex_decode_table() -> [u32; 256] {
+pub fn hex_decode_table_ref() -> &'static [u32; 256] {
 pub fn histogram(input: &str, output: &str, count: u32, num_bins: u32) -> Program {
 pub fn histogram_atomic_scatter(input: &str, output: &str, count: u32, num_bins: u32) -> Program {
 pub fn hom(&self, source: u32, target: u32) -> u32 {
@@ -694,23 +973,41 @@ pub fn homotopy_euler_predictor(
 pub fn homotopy_euler_predictor_cpu(x_curr: &[f64], v: &[f64], dt: f64) -> Vec<f64> {
 pub fn hypervector_majority_bundle(stacked: &str, out: &str, dim_words: u32, k: u32) -> Program {
 pub fn hypervector_xor_bind(a: &str, b: &str, out: &str, dim_words: u32) -> Program {
+pub fn i4x8_batched_matmul_f32_scaled(
+pub fn i4x8_batched_matmul_f32_scaled_cpu(
+pub fn i4x8_batched_matmul_top1_f32_scaled(
+pub fn i4x8_batched_matmul_top1_f32_scaled_cpu(
+pub fn i4x8_batched_matvec_f32_scaled(
+pub fn i4x8_batched_matvec_f32_scaled_cpu(
+pub fn i4x8_dot_f32_scaled(
+pub fn i4x8_dot_f32_scaled_cpu(
+pub fn i4x8_dot_i32(lhs_packed: &str, rhs_packed: &str, out: &str, lane_count: u32) -> Program {
+pub fn i4x8_dot_i32_cpu(lhs_packed: &[u32], rhs_packed: &[u32], lane_count: u32) -> i32 {
+pub fn i4x8_matvec_f32_scaled(
+pub fn i4x8_matvec_f32_scaled_cpu(
 pub fn identity(n: u32) -> Self {
 pub fn idoms_to_dominator_sets(idoms: &[Option<u32>], node_count: u32) -> Vec<Vec<u32>> {
 pub fn ifds_node_count_checked(
 pub fn ifds_node_count_saturating(
+pub fn ifds_program_cache_key_from_program(
 pub fn iht_threshold(z: &str, threshold: &str, out: &str, n: u32) -> Program {
 pub fn iht_top_k_cpu(z: &[f64], k: usize) -> (Vec<f64>, f64) {
-pub fn in_file(node_tags: &str, nodeset_out: &str, node_count: u32) -> Program {
-pub fn in_function(node_tags: &str, nodeset_out: &str, node_count: u32) -> Program {
-pub fn in_package(node_tags: &str, nodeset_out: &str, node_count: u32) -> Program {
 pub fn inflate_stored(
 pub fn inflate_stored_body(input: &str, output: &str, inflated_len_buffer: &str) -> Vec<Node> {
 pub fn inflate_stored_child(
+pub fn inflate_stored_header_nodes(input: &str) -> Vec<Node> {
+pub fn inflate_stored_invalid_len_trap_node() -> Node {
+pub fn inflate_stored_len_is_valid_expr() -> Expr {
+pub fn inflate_stored_non_stored_trap_nodes() -> [Node; 3] {
+pub fn inflate_stored_payload_expr(input: &str, index: Expr) -> Expr {
+pub fn inflate_stored_reference_bytes(input: &[u8]) -> Result<CpuInflateResult, &'static str> {
+pub fn inflate_stored_reference_words(input: &[u32]) -> Result<CpuInflateResult, &'static str> {
 pub fn insert(&mut self, dfa: CompiledDfa) -> DfaDedupResult {
 pub fn insert_many<I>(&mut self, dfas: I) -> DfaDedupBatch
 pub fn interval_merge_body(
 pub fn interval_merge_program(
 pub fn is_adjoint_pair(
+pub fn is_bitset_equal_program(program: &Program) -> bool {
 pub fn is_empty(&self) -> bool {
 pub fn is_psd_cpu(matrix: &[f64], n: u32) -> bool {
 pub fn jacobi_smooth_step(
@@ -736,6 +1033,7 @@ pub fn m2l_zeroth_f32_step(
 pub fn m2l_zeroth_translate_cpu(source_moment: f64, distance: f64) -> f64 {
 pub fn majority_bundle_cpu(hvs: &[Vec<u32>]) -> Vec<u32> {
 pub fn majority_bundle_cpu_into(hvs: &[Vec<u32>], out: &mut Vec<u32>) {
+pub fn mask_frontier_tail_bits(node_count: u32, frontier: &mut [u32]) {
 pub fn matroid_exchange_bfs_step(
 pub fn matroid_exchange_bfs_step_cpu(
 pub fn matroid_intersection_full(
@@ -756,14 +1054,18 @@ pub fn monoidal_compose_cpu_into(f: &[f64], g: &[f64], a: u32, b: u32, c: u32, o
 pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -> Program {
 pub fn mp_edge_clip(eigenvalues: &str, mp_edge: &str, out: &str, n: u32) -> Program {
 pub fn mp_edge_clip_cpu(eigenvalues: &[f64], edge: f64) -> Vec<f64> {
+pub fn mp_edge_clip_cpu_into(eigenvalues: &[f64], edge: f64, out: &mut Vec<f64>) {
 pub fn mp_upper_edge(m: u32, n: u32, sigma_sq: f64) -> f64 {
 pub fn multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> Program {
+pub fn multi_hash_program(input: &str, out: &str, n: u32) -> Program {
+pub fn multi_hash_reference(bytes: &[u8]) -> (u32, u32, u32) {
 pub fn mz_project_step(p_matrix: &str, f_vec: &str, out: &str, n: u32) -> Program {
 pub fn mz_project_step_cpu(p_matrix: &[f64], f_vec: &[f64], n: u32) -> Vec<f64> {
 pub fn mz_project_step_cpu_into(p_matrix: &[f64], f_vec: &[f64], n: u32, out: &mut Vec<f64>) {
 pub fn natural_gradient_block_apply(
 pub fn natural_gradient_block_apply_cpu(m_inv_sqrt: &[f64], grad: &[f64], n: u32) -> Vec<f64> {
 pub fn natural_gradient_block_apply_cpu_into(
+pub fn new() -> Self {
 pub fn new(node_count: u32, edge_count: u32) -> Self {
 pub fn newton_schulz_inverse_sqrt_cpu(m: &[f64], n: usize, iters: u32) -> Vec<f64> {
 pub fn newton_schulz_inverse_sqrt_cpu_into(
@@ -777,23 +1079,39 @@ pub fn node_kind_eq(nodes: &str, nodeset_out: &str, node_count: u32, kind: u32) 
 pub fn ntt_butterfly_stage(data: &str, twiddles: &str, n: u32, stage_log: u32) -> Program {
 pub fn ntt_forward_cpu(a: &mut [u32]) {
 pub fn ntt_inverse_cpu(a: &mut [u32]) {
+pub fn outer_capacities(&self) -> [usize; 10] {
 pub fn p2m_step(
 pub fn p2m_zeroth_f32_step(
 pub fn p2m_zeroth_moment_cpu(charges: &[f64], cell_assignment: &[u32]) -> Vec<f64> {
 pub fn p2m_zeroth_moment_cpu_into(
 pub fn pack_bytes_as_u32(bytes: &[u8]) -> Vec<u8> {
 pub fn pack_bytes_as_u32_slice(bytes: &[u8]) -> Vec<u8> {
+pub fn pack_bytes_as_u32_slice_into(bytes: &[u8], out: &mut Vec<u8>) {
+pub fn pack_bytes_as_u32_slice_min_words(
+pub fn pack_bytes_as_u32_slice_min_words_into(
 pub fn pack_dispatch_table(entries: &[OpcodeHandlerEntry]) -> Result<Vec<u32>, PackError> {
 pub fn pack_dispatch_table_into(
+pub fn pack_entry(entry: OpcodeHandlerEntry) -> u32 {
 pub fn pack_f32_slice(values: &[f32]) -> Vec<u8> {
 pub fn pack_f32_slice_into(values: &[f32], out: &mut Vec<u8>) {
+pub fn pack_f32_slice_into_uninit(values: &[f32]) -> Vec<u8> {
+pub fn pack_i32_slice(values: &[i32]) -> Vec<u8> {
+pub fn pack_i32_slice_into(values: &[i32], out: &mut Vec<u8>) {
+pub fn pack_i4x8_cpu(values: &[i32]) -> Vec<u32> {
+pub fn pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) {
 pub fn pack_params(count: u32, stride: u32, radius: u32) -> Vec<u32> {
 pub fn pack_rle_segments(segments: &[(u32, u8)]) -> Result<Vec<u32>, PackError> {
 pub fn pack_rle_segments_into(segments: &[(u32, u8)], out: &mut Vec<u32>) -> Result<(), PackError> {
+pub fn pack_u16_slice(values: &[u16]) -> Vec<u8> {
+pub fn pack_u16_slice_into(values: &[u16], out: &mut Vec<u8>) {
 pub fn pack_u32(words: &[u32]) -> Vec<u8> {
+pub fn pack_u32_iter<I>(words: I) -> Vec<u8>
 pub fn pack_u32_slice(words: &[u32]) -> Vec<u8> {
 pub fn pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) {
+pub fn pack_u32_slice_into_uninit(words: &[u32]) -> Vec<u8> {
 pub fn pack_u32_slice_min_words_into(
+pub fn pack_u64_slice(values: &[u64]) -> Vec<u8> {
+pub fn pack_u64_slice_into(values: &[u64], out: &mut Vec<u8>) {
 pub fn packed_rgba_map(input: &str, output: &str, count: u32) -> Program {
 pub fn packed_rgba_map_node(input: &str, output: &str, count: u32) -> Node {
 pub fn pass_a_local_scan(
@@ -802,6 +1120,7 @@ pub fn path_reconstruct(
 pub fn persistent_bfs(
 pub fn persistent_bfs_batch(
 pub fn persistent_bfs_layout_hash(
+pub fn persistent_bfs_program_layout_hash(
 pub fn persistent_bfs_step(
 pub fn persistent_bfs_step_body(
 pub fn persistent_bfs_step_body_prefixed(
@@ -809,12 +1128,40 @@ pub fn persistent_bfs_step_child(
 pub fn persistent_bfs_step_child_prefixed(
 pub fn persistent_bfs_step_child_prefixed_with_active(
 pub fn persistent_fixpoint(
+pub fn plan_adaptive_frontier_work(
+pub fn plan_adaptive_resident_auto_step(
+pub fn plan_adaptive_resident_frontier_step(
+pub fn plan_adaptive_resident_sparse_queue_step(
+pub fn plan_batched_path_reconstruct_dispatch(
+pub fn plan_csr_bidirectional_step(
+pub fn plan_csr_forward_or_changed_dispatch(
+pub fn plan_csr_forward_or_changed_launch(
+pub fn plan_dominator_frontier_dispatch(
+pub fn plan_dominator_frontier_launch(
+pub fn plan_ifds_csr_dispatch(
+pub fn plan_motif_dispatch(
+pub fn plan_motif_launch(
+pub fn plan_path_reconstruct_dispatch(
+pub fn plan_persistent_bfs_dispatch(
+pub fn plan_persistent_bfs_resident_batch_dispatch(
+pub fn plan_persistent_bfs_resident_dispatch(
+pub fn plan_toposort_csr_dispatch(
 pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k: u32) -> Program {
+pub fn positive_denominator(value: Expr) -> Expr {
+pub fn positive_finite_or_min(value: Expr) -> Expr {
 pub fn predict_interval(y: u32, q_hat: u32) -> (u32, u32) {
 pub fn prefix_scan(in_buf: &str, out_buf: &str, n: u32, kind: ScanKind) -> Program {
 pub fn prefix_scan_large(in_buf: &str, out_buf: &str, n: u32) -> Program {
 pub fn prefix_scan_large_with_op_id(
 pub fn prefix_scan_with_op_id(
+pub fn prepare(
+pub fn program(&self) -> Program {
+pub fn program(&self) -> Result<Program, String> {
+pub fn program(&self, frontier_in: &str, frontier_out: &str) -> Program {
+pub fn program(&self, frontier_in: &str, frontier_out: &str, changed: &str) -> Program {
+pub fn program(&self, seed_buffer: &str, out_buffer: &str) -> Result<Program, String> {
+pub fn program_cache_key(&self, device_features: u64) -> PersistentBfsPlanCacheKey {
+pub fn program_shape(&self) -> ProgramGraphShape {
 pub fn proves_non_empty(&self) -> bool {
 pub fn qsvt_apply_cpu(a_scaled: &[f64], v: &[f64], coeffs: &[f64], n: u32) -> Vec<f64> {
 pub fn qsvt_apply_cpu_into(
@@ -838,12 +1185,9 @@ pub fn rdp_to_dp(rdp: f64, alpha: f64, delta: f64) -> f64 {
 pub fn reachable(
 pub fn reachable_program(
 pub fn read_only_buffers(&self) -> Vec<BufferDecl> {
-pub fn reduce_all(values: &str, out: &str, count: u32) -> Program {
-pub fn reduce_any(values: &str, out: &str, count: u32) -> Program {
+pub fn read_u32_le_word(bytes: &[u8], word_index: usize, label: &str) -> Result<u32, String> {
 pub fn reduce_count(bitset: &str, out: &str, words: u32) -> Program {
 pub fn reduce_count_non_zero(values: &str, out: &str, count: u32) -> Program {
-pub fn reduce_max(values: &str, out: &str, count: u32) -> Program {
-pub fn reduce_min(values: &str, out: &str, count: u32) -> Program {
 pub fn reduce_sum(values: &str, out: &str, count: u32) -> Program {
 pub fn reference_byte_histogram(bytes: &[u8]) -> [u32; 256] {
 pub fn reference_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
@@ -860,12 +1204,14 @@ pub fn reference_whitespace_classify_word_into(words_in: &[u32], out: &mut Vec<u
 pub fn region_sort_program(
 pub fn register(&mut self, op_id: &'static str, descriptor: AliasOpDescriptor) {
 pub fn register_alias_ops(registry: &mut AliasRegistry) {
+pub fn registered_op_ids(&self) -> Vec<&'static str> {
+pub fn reserve_outer_for_test(&mut self, hint: usize, bucket_hint: usize) {
 pub fn resolve_carry_chain_cpu(
 pub fn resolve_carry_chain_cpu_into(
 pub fn resolve_family(
-pub fn return_value_of(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> Program {
 pub fn rk4_step(
 pub fn rk4_step_cpu(
+pub fn rk4_step_cpu_into(
 pub fn rle_decode_cpu(segments_in: &[u32]) -> Vec<u8> {
 pub fn rle_decode_cpu_into(segments_in: &[u32], output: &mut Vec<u8>) {
 pub fn rle_segment_lengths(segment_count: u32) -> Program {
@@ -874,6 +1220,7 @@ pub fn rle_segment_lengths_cpu_into(
 pub fn rle_segment_start_offsets_cpu(segment_lengths: &[u32]) -> (Vec<u32>, u32) {
 pub fn rle_segment_start_offsets_cpu_into(segment_lengths: &[u32], offsets: &mut Vec<u32>) -> u32 {
 pub fn root(&self) -> u32 {
+pub fn run_csr_bidirectional_closure_plan_with_step<E, MapError, Step>(
 pub fn saved_wire_ppm(&self) -> u32 {
 pub fn scallop_join(
 pub fn scallop_join_wide(
@@ -881,9 +1228,11 @@ pub fn scatter(src: &str, indices: &str, dst: &str, count: u32) -> Program {
 pub fn scc_decompose(
 pub fn score_denoise_step(
 pub fn score_denoise_step_cpu(
+pub fn score_denoise_step_cpu_into(
 pub fn segment_reduce_sum(
 pub fn select1_query(
 pub fn select_adaptive_traversal_mode(
+pub fn select_dense_traversal_kernel(
 pub fn semiring_gemm(
 pub fn semiring_gemm_cpu(
 pub fn semiring_gemm_cpu_into(
@@ -913,8 +1262,14 @@ pub fn sos_gram_construct_cpu(monomial_pairs: &[u32], p_coeffs: &[u32], m: u32) 
 pub fn sos_gram_construct_cpu_into(
 pub fn sparse_fft_bin_hash(signal: &str, bins: &str, a: u32, c: u32, b: u32, n: u32) -> Program {
 pub fn sparse_fft_bin_hash_cpu(signal: &[u32], a: u32, c: u32, b: u32) -> Vec<u32> {
+pub fn sparse_fft_bin_hash_cpu_into(signal: &[u32], a: u32, c: u32, b: u32, bins: &mut Vec<u32>) {
+pub fn split_ifds_rule_quads_into(
+pub fn split_ifds_rule_triples_into(
 pub fn ssa_dominance_scan(
 pub fn ssa_dominance_scan_program(num_nodes: u32, phi_words: u32) -> Program {
+pub fn standard_decode_table() -> [u32; 256] {
+pub fn standard_decode_table_ref() -> &'static [u32; 256] {
+pub fn static_input_key(
 pub fn stochastic_and_mul(a: &str, b: &str, out: &str, n_words: u32) -> Program {
 pub fn stream_compact(
 pub fn sum_f32_child(
@@ -924,34 +1279,169 @@ pub fn sum_u32_child(
 pub fn tensor_flow_forward(
 pub fn tensor_scc_fixpoint(
 pub fn tensor_train_decompose_step(
+pub fn test_pred_row(&self, node: usize) -> &[usize] {
+pub fn test_pred_row_capacity(&self, node: usize) -> usize {
+pub fn test_succ_row(&self, node: usize) -> &[usize] {
+pub fn test_succ_row_capacity(&self, node: usize) -> usize {
 pub fn tfn_scalar_mix(
 pub fn tfn_scalar_mix_cpu(
 pub fn tn_pair_contract(a: &str, b: &str, c: &str, m: u32, k: u32, n: u32) -> Program {
 pub fn tn_pair_contract_cpu(a: &[f64], b: &[f64], m: u32, k: u32, n: u32) -> Vec<f64> {
+pub fn tn_pair_contract_cpu_into(a: &[f64], b: &[f64], m: u32, k: u32, n: u32, c: &mut Vec<f64>) {
 pub fn to_bytes(&self) -> Result<Vec<u8>, DfaWireError> {
 pub fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, ToposortError> {
 pub fn toposort_csr(
 pub fn toposort_csr_into(
+pub fn toposort_csr_into_with_scratch(
+pub fn toposort_csr_slice_fingerprint(values: &[u32]) -> u64 {
 pub fn toposort_program(
+pub fn try_amari_alpha_step_cpu_into(
+pub fn try_ast_walk_order(
+pub fn try_ast_walk_plan(
 pub fn try_ast_walk_postorder(
 pub fn try_ast_walk_preorder(
+pub fn try_betti_persistence_cpu(mask: &[u32], n: u32) -> Result<(u32, u32, u32), String> {
+pub fn try_build_cpu_reference(
+pub fn try_build_cpu_reference_into(
 pub fn try_chebyshev_filter(
+pub fn try_chebyshev_filter_cpu(
+pub fn try_chebyshev_filter_cpu_into(
 pub fn try_conformal_rank(n: u32, alpha: f64) -> Option<u32> {
+pub fn try_count_sketch_query_cpu_into(
+pub fn try_cpu_ref(
+pub fn try_cpu_ref(input: &[u32], kind: ScanKind) -> Result<Vec<u32>, String> {
+pub fn try_cpu_ref_batched(
+pub fn try_cpu_ref_batched_with_scratch(
+pub fn try_cpu_ref_closure(
+pub fn try_cpu_ref_closure_into(
+pub fn try_cpu_ref_closure_into_with_step_hook<F>(
+pub fn try_cpu_ref_into(
+pub fn try_cpu_ref_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
+pub fn try_cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) -> Result<(), String> {
+pub fn try_cpu_ref_into(input: &[u32], num_bins: u32, out: &mut Vec<u32>) -> Result<(), String> {
+pub fn try_cpu_ref_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
+pub fn try_cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
+pub fn try_cpu_ref_into(src: &[u32], indices: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
+pub fn try_cpu_ref_into<F>(
+pub fn try_cpu_ref_into_with_scratch(
+pub fn try_cpu_ref_participation_count(
+pub fn try_cpu_ref_participation_count_with_scratch(
 pub fn try_csr_forward_or_changed_parallel_batch(
+pub fn try_csr_forward_or_changed_parallel_batch_global_dynamic_slot(
 pub fn try_csr_forward_or_changed_parallel_batch_global_slot(
 pub fn try_csr_frontier_degree_sum_cpu(
+pub fn try_csr_queue_delta_enqueue_cpu_into(
+pub fn try_csr_queue_forward_traverse_cpu(
+pub fn try_csr_queue_forward_traverse_cpu_into(
 pub fn try_ddnnf_evaluate(
 pub fn try_ddnnf_evaluate_cpu(
+pub fn try_ddnnf_evaluate_cpu_into(
+pub fn try_ddnnf_evaluate_cpu_into_with_scratch(
+pub fn try_decode_standard_packed_reference(
+pub fn try_decode_standard_packed_reference_into(
+pub fn try_dense_matvec_byte_lut_into(
+pub fn try_dense_matvec_cpu_ref_into(
+pub fn try_differentiable_argmax_cpu_into(
 pub fn try_do_intervention_delete_incoming(
+pub fn try_do_intervention_delete_incoming_cpu(
+pub fn try_do_intervention_delete_incoming_cpu_into(
 pub fn try_do_rule2_reverse_incoming(
+pub fn try_do_rule2_reverse_incoming_cpu(
+pub fn try_do_rule2_reverse_incoming_cpu_into(
+pub fn try_do_rule3_subgraph_cpu(
+pub fn try_do_rule3_subgraph_cpu_into(
 pub fn try_dominator_frontier(
 pub fn try_dominator_tree_program(
+pub fn try_dp_clip_per_sample_cpu(
+pub fn try_dp_clip_per_sample_cpu_into(
+pub fn try_encode_bitstream_into(
+pub fn try_extract_edges_cpu_into(
+pub fn try_fractional_derivative_cpu_into(
+pub fn try_frontier_to_queue_cpu(
+pub fn try_frontier_to_queue_cpu_into(
+pub fn try_functor_apply_cpu(
+pub fn try_functor_apply_cpu_into(
+pub fn try_gaussian_rdp_step_cpu_into(
+pub fn try_greedy_contract_order_cpu_into(
+pub fn try_grunwald_letnikov_kernel_into(
+pub fn try_idoms_to_dominator_sets(
+pub fn try_iht_top_k_cpu(z: &[f64], k: usize) -> Result<(Vec<f64>, f64), String> {
+pub fn try_iht_top_k_cpu_into(
+pub fn try_jacobi_smooth_step(
+pub fn try_jacobi_smooth_step_cpu(
+pub fn try_jacobi_smooth_step_cpu_into(
+pub fn try_kernel_to_fixed_16_16_into(
+pub fn try_lengauer_tarjan_idoms(
+pub fn try_lengauer_tarjan_idoms_into(
+pub fn try_majority_bundle_cpu_into(hvs: &[Vec<u32>], out: &mut Vec<u32>) -> Result<(), String> {
 pub fn try_matroid_exchange_bfs_step(
+pub fn try_matroid_exchange_bfs_step_cpu(
+pub fn try_matroid_exchange_bfs_step_cpu_into(
+pub fn try_merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> Result<bool, String> {
+pub fn try_modified_gram_schmidt_cpu(y: &[f64], m: u32, l: u32) -> Result<Vec<f64>, String> {
+pub fn try_modified_gram_schmidt_cpu_into(
 pub fn try_monoidal_compose(
+pub fn try_monoidal_compose_cpu(
+pub fn try_monoidal_compose_cpu_into(
+pub fn try_mp_edge_clip_cpu_into(
+pub fn try_mz_project_step(
+pub fn try_mz_project_step_cpu_into(
+pub fn try_natural_gradient_block_apply(
+pub fn try_natural_gradient_block_apply_cpu_into(
+pub fn try_newton_schulz_y_step_cpu_into(
+pub fn try_p2m_zeroth_moment_cpu_into(
+pub fn try_pack_bytes_as_u32_slice_into(bytes: &[u8], out: &mut Vec<u8>) -> Result<(), String> {
+pub fn try_pack_f32_slice_into(values: &[f32], out: &mut Vec<u8>) -> Result<(), String> {
+pub fn try_pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) -> Result<(), String> {
+pub fn try_pack_rle_segments_into(
+pub fn try_pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) -> Result<(), String> {
 pub fn try_persistent_bfs_batch(
+pub fn try_qsvt_apply_cpu(
+pub fn try_qsvt_apply_cpu_into(
+pub fn try_qsvt_block_encode(
+pub fn try_qsvt_block_encode_cpu_into(
+pub fn try_randomized_projection_step(
+pub fn try_randomized_projection_step_cpu(
+pub fn try_randomized_projection_step_cpu_into(
+pub fn try_reachable(
 pub fn try_read_only_buffers(&self) -> Result<Vec<BufferDecl>, String> {
+pub fn try_reference_line_splice_classify_into(
+pub fn try_reference_whitespace_classify_word_into(
+pub fn try_rk4_step_cpu_into(
+pub fn try_rle_decode_cpu_into(segments_in: &[u32], output: &mut Vec<u8>) -> Result<(), String> {
+pub fn try_rle_segment_lengths_cpu_into(
+pub fn try_rle_segment_start_offsets_cpu_into(
+pub fn try_score_denoise_step_cpu_into(
+pub fn try_semiring_gemm_cpu(
+pub fn try_semiring_gemm_cpu_into(
 pub fn try_sheaf_diffusion_step(
+pub fn try_sheaf_diffusion_step_cpu(
+pub fn try_sheaf_diffusion_step_cpu_into(
+pub fn try_sinkhorn_iter_cpu_into(
+pub fn try_sinkhorn_iterate_f64(
+pub fn try_sinkhorn_iterate_f64_into(
+pub fn try_softmax_cpu_into(x: &[f64], out: &mut Vec<f64>) -> Result<(), String> {
+pub fn try_sos_gram_construct_cpu(
+pub fn try_sos_gram_construct_cpu_into(
+pub fn try_sparse_fft_bin_hash_cpu_into(
 pub fn try_sum_product_evaluate(
+pub fn try_sum_product_evaluate_cpu(
+pub fn try_sum_product_evaluate_cpu_into(
+pub fn try_sum_product_evaluate_cpu_into_with_scratch(
+pub fn try_tensor_flow_forward(
+pub fn try_tensor_flow_forward_cpu(
+pub fn try_tensor_flow_forward_cpu_into(
+pub fn try_tensor_words(
+pub fn try_tn_pair_contract(
+pub fn try_tn_pair_contract_cpu(
+pub fn try_tn_pair_contract_cpu_into(
+pub fn try_tt_contract_step_cpu(
+pub fn try_tt_contract_step_cpu_into(
+pub fn try_tt_full_chain_cpu_with_scratch(
+pub fn try_unpack_i4x8_cpu_into(
+pub fn try_vietoris_rips_edge_filter_cpu_into(
+pub fn try_voting_recovery_cpu_into(
+pub fn try_xor_bind_cpu_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
 pub fn tt_contract_step(
 pub fn tt_contract_step_cpu(
 pub fn tt_contract_step_cpu_into(
@@ -960,6 +1450,11 @@ pub fn tt_full_chain_cpu_with_scratch(
 pub fn union_find_program(
 pub fn union_roots_body(
 pub fn unpack_entry(packed: u32) -> OpcodeHandlerEntry {
+pub fn unpack_f32_slice(bytes: &[u8], count: usize, label: &str) -> Result<Vec<f32>, String> {
+pub fn unpack_f32_slice_into(
+pub fn unpack_i4x8(packed_words: &str, out_lanes: &str, lane_count: u32) -> Program {
+pub fn unpack_i4x8_cpu(packed: &[u32], lane_count: u32) -> Vec<i32> {
+pub fn unpack_i4x8_cpu_into(packed: &[u32], lane_count: u32, out: &mut Vec<i32>) {
 pub fn unpack_u32_slice_into(
 pub fn utf8_shape_counts(histogram: &str, out: &str) -> Program {
 pub fn utf8_shape_counts_body(
@@ -968,6 +1463,8 @@ pub fn utf8_validate(source: &str, classes: &str, n: u32) -> Program {
 pub fn validate_adaptive_frontier(
 pub fn validate_adaptive_traversal_layout(
 pub fn validate_batched_path_reconstruct_layout(
+pub fn validate_batched_path_reconstruct_readback(
+pub fn validate_csr_forward_or_changed_flag(changed: u32) -> Result<(), String> {
 pub fn validate_csr_inputs(
 pub fn validate_csr_queue_graph(
 pub fn validate_csr_shape(
@@ -975,10 +1472,15 @@ pub fn validate_dominator_frontier_inputs(
 pub fn validate_dominator_tree_inputs(
 pub fn validate_frontier_queue_batch(
 pub fn validate_frontier_queue_query(
+pub fn validate_frontier_shape(
 pub fn validate_ifds_csr_inputs(
 pub fn validate_ifds_csr_layout(
+pub fn validate_ifds_csr_readback(
 pub fn validate_motif_inputs(
+pub fn validate_motif_witness(layout: MotifLayout, witness: &[u32]) -> Result<(), String> {
+pub fn validate_path_reconstruct_readback(
 pub fn validate_persistent_bfs_batch_frontiers(
+pub fn validate_persistent_bfs_changed_flag(changed: u32) -> Result<(), String> {
 pub fn validate_persistent_bfs_frontier(
 pub fn validate_persistent_bfs_graph_layout(
 pub fn validate_persistent_bfs_inputs(
@@ -990,6 +1492,7 @@ pub fn vfs_resolve_dma(
 pub fn vietoris_rips_edge_filter(
 pub fn vietoris_rips_edge_filter_cpu(dist_matrix: &[f64], epsilon: f64, n: u32) -> Vec<u32> {
 pub fn voting_recovery_cpu(
+pub fn voting_recovery_cpu_into(
 pub fn whitespace_classify_word(word_count: u32) -> Program {
 pub fn workgroup_any_u32(values: &str, out: &str, count: u32) -> Program {
 pub fn workgroup_any_u32_body(values: &str, out_var: &str, count: u32) -> Vec<Node> {
@@ -1003,22 +1506,29 @@ pub fn xor_bind_cpu(a: &[u32], b: &[u32]) -> Vec<u32> {
 pub fn xor_bind_cpu_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) {
 pub fn yoneda_embedding(category: &FiniteCategory, x: u32) -> Vec<u32> {
 pub fn yoneda_natural_iso(_category: &FiniteCategory, _x: u32, f_at_x: u32) -> u32 {
+pub fn ziftsieve_literal_copy(
+pub fn ziftsieve_literal_copy_body(
+pub fn ziftsieve_literal_copy_with_op_id(
+pub fn ziftsieve_reference_extract_literals(
+pub mod $module {
 pub mod adaptive_traverse;
 pub mod adjoint;
 pub mod adjustment_set;
+pub mod adler32;
 pub mod alias_registry;
 pub mod all;
 pub mod amg_v_cycle;
-pub mod and;
-pub mod and_into;
+pub mod and {
+pub mod and_into {
 pub mod and_not;
-pub mod and_not_into;
+pub mod and_not_into {
 pub mod any;
 pub mod arg_of;
 pub mod ast_cse_constant_fold;
 pub mod ast_cse_structural_hash;
 pub mod ast_ops;
 pub mod attention_passes;
+pub mod attention_stability;
 pub mod base64;
 pub mod bellman_shortest_path;
 pub mod betti_persistence;
@@ -1030,11 +1540,10 @@ pub mod bracket_match {
 pub mod bracket_match;
 pub mod byte_histogram;
 pub mod bytecode_dispatch_table_pack;
-pub mod call_to;
 pub mod cat;
 pub mod char_class;
 pub mod chebyshev_filter;
-pub mod clear_bit;
+pub mod clear_bit {
 pub mod clifford;
 pub mod compile;
 pub mod conformal;
@@ -1052,6 +1561,7 @@ pub mod csr_forward_or_changed;
 pub mod csr_forward_traverse;
 pub mod csr_frontier_degree_sum;
 pub mod csr_frontier_queue;
+pub mod csr_queue_delta;
 pub mod decode;
 pub mod differentiable;
 pub mod dnnf;
@@ -1067,11 +1577,13 @@ pub mod effects;
 pub mod encoding_classify;
 pub mod equal;
 pub mod exploded;
+pub mod f32_stability;
 pub mod fixpoint;
 pub mod fmm;
 pub mod fnv1a;
 pub mod four_russians;
 pub mod fractional;
+pub mod frontier;
 pub mod functorial;
 pub mod gather;
 pub mod geom;
@@ -1080,12 +1592,10 @@ pub mod handler_apply;
 pub mod handler_compose;
 pub mod harness;
 pub mod hash;
+pub mod hex;
 pub mod histogram;
 pub mod homotopy;
 pub mod hypervector;
-pub mod in_file;
-pub mod in_function;
-pub mod in_package;
 pub mod inflate;
 pub mod info_geometry;
 pub mod interval;
@@ -1107,6 +1617,7 @@ pub mod min;
 pub mod mori_zwanzig;
 pub mod motif;
 pub mod multi_block_prefix_scan;
+pub mod multi_hash;
 pub mod multigrid;
 pub mod natural_gradient;
 pub mod nfa;
@@ -1119,8 +1630,8 @@ pub mod ntt;
 pub mod ode_step;
 pub mod ops;
 pub mod opt;
-pub mod or;
-pub mod or_into;
+pub mod or {
+pub mod or_into {
 pub mod packed_rgba_map;
 pub mod padic;
 pub mod parsing;
@@ -1133,8 +1644,10 @@ pub mod popcount;
 pub mod preconditioner;
 pub mod predicate;
 pub mod prefix_scan;
+pub mod prelude {
 pub mod program_graph;
 pub mod qsvt;
+pub mod quantized;
 pub mod quest_paging_passes;
 pub mod radix_sort;
 pub mod randomized_svd;
@@ -1145,7 +1658,6 @@ pub mod reduce;
 pub mod region;
 pub mod resolve;
 pub mod resolve_family;
-pub mod return_value_of;
 pub mod rewrite;
 pub mod rle_segment_lengths;
 pub mod scallop_join;
@@ -1157,7 +1669,7 @@ pub mod segment_reduce;
 pub mod select;
 pub mod semiring_gemm;
 pub mod serial_data {
-pub mod set_bit;
+pub mod set_bit {
 pub mod shape_smt;
 pub mod sheaf;
 pub mod sheaf_laplacian_eigenvalue;
@@ -1204,58 +1716,111 @@ pub mod whitespace_classify_word;
 pub mod wire;
 pub mod workgroup_any;
 pub mod workgroup_tree;
-pub mod xor;
-pub mod xor_into;
+pub mod xor {
+pub mod xor_into {
 pub mod yoneda;
+pub mod zero;
+pub mod ziftsieve;
 pub mod zx;
 pub struct $name;
 pub struct AdaptiveFrontierLayout {
+pub struct AdaptiveFrontierWorkPlan {
+pub struct AdaptiveResidentAutoStepPlan {
+pub struct AdaptiveResidentFrontierPlan {
+pub struct AdaptiveResidentSparseQueuePlan {
 pub struct AdaptiveTraversalLayout {
+pub struct AdaptiveTraversalPlanCacheKey {
 pub struct AdjointPair {
+pub struct Adler32Chunk {
 pub struct AliasOpDescriptor {
 pub struct AliasRegistry {
 pub struct AmgVcycleScratch {
 pub struct AttentionWritePassProgramSpec<'a> {
+pub struct BatchedPathReconstructDispatchPlan {
 pub struct BatchedPathReconstructLayout {
 pub struct ByteRange {
 pub struct Cl2Mv {
 pub struct CompiledDfa {
 pub struct CpuInflateResult {
+pub struct Crc32Chunk {
+pub struct Crc32MapReducePlan {
+pub struct Crc32MapReduceStep {
+pub struct CsrBidirectionalDispatchPlan {
 pub struct CsrBidirectionalLayout {
+pub struct CsrBidirectionalProgramKey {
+pub struct CsrBidirectionalStaticInputKey {
+pub struct CsrForwardOrChangedDispatchPlan {
+pub struct CsrForwardOrChangedLaunchPlan {
 pub struct CsrForwardOrChangedLayout {
+pub struct CsrForwardOrChangedProgramKey {
+pub struct CsrForwardOrChangedStaticInputKey {
 pub struct CsrQueueGraphLayout {
+pub struct DdnnfCpuScratch {
 pub struct DfaDedupBatch {
 pub struct DfaDedupResult {
 pub struct DfaDedupStats {
 pub struct DfaDedupTable {
 pub struct DnnfDag {
+pub struct DominatorFrontierDispatchPlan {
+pub struct DominatorFrontierLaunchPlan {
 pub struct DominatorFrontierLayout {
+pub struct DominatorFrontierProgramShape {
+pub struct DominatorFrontierSliceFingerprint {
+pub struct DominatorFrontierStaticInputKey {
+pub struct DominatorTreeCpuScratch {
 pub struct DominatorTreeLayout {
 pub struct EffectRow(u32);
 pub struct EffectTypeError {
+pub struct ExplodedIfdsCpuScratch {
 pub struct FiniteCategory {
 pub struct FiniteFunctor {
+pub struct FrontierAbsorbSummary {
 pub struct Handler {
+pub struct IfdsCsrDispatchPlan {
 pub struct IfdsCsrLayout {
+pub struct IfdsCsrProgramCacheKey {
+pub struct IfdsCsrRuleColumns {
+pub struct IfdsCsrRuleInputFingerprint {
+pub struct IfdsCsrStaticInputKey {
+pub struct IhtTopKScratch {
+pub struct MotifCpuScratch {
+pub struct MotifDispatchPlan {
 pub struct MotifEdge {
+pub struct MotifLaunchPlan {
 pub struct MotifLayout {
+pub struct MotifProgramCacheKey {
+pub struct MotifStaticInputKey {
 pub struct NewtonSchulzScratch {
 pub struct NfaTables<'tables> {
 pub struct OpEntry {
 pub struct OpcodeHandlerEntry {
+pub struct PathReconstructDispatchPlan {
+pub struct PathReconstructStaticInputKey {
 pub struct PatternMatchDfa {
 pub struct PatternMatchLiteral {
 pub struct PersistentBfsBatchLayout {
+pub struct PersistentBfsCpuScratch {
+pub struct PersistentBfsDispatchPlan {
 pub struct PersistentBfsFrontierLayout {
 pub struct PersistentBfsLayout {
+pub struct PersistentBfsPlanCacheKey {
+pub struct PersistentBfsResidentBatchDispatchPlan {
+pub struct PersistentBfsResidentDispatchPlan {
+pub struct PersistentBfsStaticInputKey {
 pub struct ProgramGraphShape {
 pub struct Reduce {
 pub struct RegionId(pub u32);
 pub struct RegionTriple {
 pub struct Scan {
+pub struct SumProductCpuScratch {
+pub struct TensorTrainCpuScratch {
+pub struct ToposortCsrDispatchPlan {
 pub struct ToposortCsrLayout {
+pub struct ToposortCsrScratch {
+pub struct ToposortCsrStaticInputKey {
 pub struct UnionFindLayout {
 pub struct UnknownNode {
+pub struct VastTreeWalkProgramPlan {
 pub struct ZxDiagram {
 pub struct ZxSpider {
 pub type ExpectedFn = fn() -> Vec<Vec<Vec<u8>>>;

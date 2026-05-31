@@ -15,6 +15,8 @@ pub const fn id(&self) -> &'static str {
 pub const fn identity(self) -> u32 {
 pub const fn is_extension(self) -> bool {
 pub const fn is_float_family(&self) -> bool {
+pub const fn is_quantized(&self) -> bool {
+pub const fn is_quantized_storage(&self) -> bool {
 pub const fn layer_description(&self) -> &'static str {
 pub const fn max_bytes(&self) -> Option<usize> {
 pub const fn min_bytes(&self) -> usize {
@@ -43,6 +45,8 @@ pub enum MetadataCategory {
 pub enum MonotonicDirection {
 pub enum OpIntensity {
 pub enum PgNodeKind {
+pub enum QuantizationScale {
+pub enum QuantizationZeroPoint {
 pub enum Semiring {
 pub enum SideEffectClass {
 pub enum TernaryOp {
@@ -74,7 +78,9 @@ pub fn new(backend: impl Into<BackendId>, name: &'static str) -> Self {
 pub fn new(id: impl Into<BackendId>) -> Self {
 pub fn new(name: impl Into<Arc<str>>) -> Self {
 pub fn new(name: impl Into<String>) -> Self {
+pub fn packed_size_bytes(&self, element_count: usize) -> Result<Option<usize>, String> {
 pub fn unclassified() -> Self {
+pub fn validate_layout(&self) -> Result<(), String> {
 pub fn witness_count(&self) -> Option<u64> {
 pub mod adversarial_input;
 pub mod algebraic_law;

@@ -76,18 +76,25 @@ pub const fn bits(self) -> u32 {
 pub const fn bool(value: bool) -> Self {
 pub const fn bv(value: u64, bits: u32) -> Self {
 pub const fn bytes_extractor(
+pub const fn child_count(&self) -> usize {
+pub const fn children(&self) -> GpuEGraphDeviceSpan {
 pub const fn conservative() -> Self {
 pub const fn contains(&self, other: &ByteRange) -> bool {
 pub const fn contains(self, other: Self) -> bool {
+pub const fn context(&self) -> &'static str {
 pub const fn default_worker_count(&self) -> u32 {
 pub const fn default_worker_groups_from_limits(
 pub const fn dispatch_grid_for(
+pub const fn eclass_group_count(&self) -> usize {
 pub const fn empty() -> Self {
 pub const fn empty(candidate_count: usize, threshold: usize) -> Self {
 pub const fn ends_before(&self, other: &ByteRange) -> bool {
 pub const fn forbids_drop(self) -> bool {
 pub const fn forbids_reuse(self) -> bool {
 pub const fn fused_over_dispatch_multiplier(&self) -> u64 {
+pub const fn group_eclass_ids(&self) -> GpuEGraphDeviceSpan {
+pub const fn group_offsets(&self) -> GpuEGraphDeviceSpan {
+pub const fn group_rows(&self) -> GpuEGraphDeviceSpan {
 pub const fn high_end() -> Self {
 pub const fn id(&self) -> &'static str {
 pub const fn introduced_since(self, previous: Self) -> Self {
@@ -99,8 +106,10 @@ pub const fn is_valid_for_barrier(self) -> bool {
 pub const fn join(self, other: Soundness) -> Soundness {
 pub const fn kind_bit(kind: NodeKind) -> u32 {
 pub const fn kind_mask(kind: NodeKind) -> u32 {
+pub const fn layout(&self) -> GpuEGraphDeviceLayout {
 pub const fn legal_workgroup_x_ceiling(&self, caps: &AdapterCaps) -> u32 {
 pub const fn len(&self) -> u32 {
+pub const fn len(&self) -> usize {
 pub const fn new(
 pub const fn new(capacity_bytes: u32) -> Self {
 pub const fn new(dialect: &'static str, op_id: &'static str) -> Self {
@@ -110,12 +119,20 @@ pub const fn new(op_id: &'static str, soundness: Soundness) -> Self {
 pub const fn new(pattern_id: u32, start: u32, end: u32) -> Self {
 pub const fn new(row: u32, col: u32) -> Self {
 pub const fn new(tag: u32, start: u32, end: u32) -> Self {
+pub const fn offset(&self) -> usize {
 pub const fn padded_slot_count(&self, slot_count: u32, workgroup_size_x: u32) -> u32 {
 pub const fn recommend_autotune(&self, node_count: usize) -> bool {
 pub const fn requires_grid_sync(self) -> bool {
 pub const fn reset(&mut self) {
 pub const fn return_() -> Self {
 pub const fn route(&self, node_count: usize, static_bytes: u64) -> PolicyRoute {
+pub const fn row(&self) -> usize {
+pub const fn row_children_lens(&self) -> GpuEGraphDeviceSpan {
+pub const fn row_children_offsets(&self) -> GpuEGraphDeviceSpan {
+pub const fn row_count(&self) -> usize {
+pub const fn row_eclass_ids(&self) -> GpuEGraphDeviceSpan {
+pub const fn row_language_op_ids(&self) -> GpuEGraphDeviceSpan {
+pub const fn row_signatures(&self) -> GpuEGraphDeviceSpan {
 pub const fn select_unroll_depth(
 pub const fn select_vector_pack_bits(&self, element_bits: u32, caps: &AdapterCaps) -> u32 {
 pub const fn sort(&self) -> ProofSort {
@@ -125,6 +142,8 @@ pub const fn use_cpu_fast_path(&self, _node_count: usize, _static_bytes: u64) ->
 pub const fn use_persistent_megakernel(&self, _node_count: usize) -> bool {
 pub const fn use_persistent_runtime(&self, _node_count: usize) -> bool {
 pub const fn used_bytes(&self) -> u32 {
+pub const fn value(&self) -> u32 {
+pub const fn value(&self) -> usize {
 pub const fn wire_tag(self) -> u8 {
 pub const fn with_sanitizer_filter(mut self) -> Self {
 pub const fn worker_workgroup_size(&self, worker_count: u32, max_workgroup_size_x: u32) -> u32 {
@@ -146,6 +165,7 @@ pub enum Diff {
 pub enum DispatchGroup {
 pub enum DispatchStrategy {
 pub enum DominatorTreeError {
+pub enum EGraphError {
 pub enum EdgeKind {
 pub enum EffectLevel {
 pub enum EnvelopeError {
@@ -156,6 +176,7 @@ pub enum ExternVerifyError {
 pub enum FlatExpr {
 pub enum FusionError {
 pub enum FusionStrategy {
+pub enum GpuEGraphDeviceImageError {
 pub enum GraphValidateError {
 pub enum IdentityReplacement {
 pub enum InnovationTrack {
@@ -196,17 +217,18 @@ pub enum VastError {
 pub enum VisitOrder {
 pub enum VisitorWalkError {
 pub enum WireEncodeErr {
+pub fn $name(left: Expr, right: Expr) -> Expr {
+pub fn $name(operand: Expr) -> Expr {
 pub fn $push(buf: &mut Vec<u8>, value: $ty) {
 pub fn $read(bytes: &[u8]) -> Result<($ty, &[u8]), OpaquePayloadTruncated> {
-pub fn abs(operand: Expr) -> Expr {
-pub fn abs_diff(left: Expr, right: Expr) -> Expr {
 pub fn accepts(self, metadata: PassMetadata) -> bool {
 pub fn access(&self) -> BufferAccess {
 pub fn access_count(&self, buffer: &Ident) -> usize {
 pub fn add(&mut self, node: L) -> EClassId {
-pub fn add(left: Expr, right: Expr) -> Expr {
 pub fn align_words(size_bytes: u32) -> Result<u32, TypedArenaError> {
+pub fn all_gather(&self) -> usize {
 pub fn all_ops() -> Vec<&'static ExternOp> {
+pub fn all_reduce(&self) -> usize {
 pub fn alloc(&mut self, size_bytes: u32) -> Result<u32, TypedArenaError> {
 pub fn alloc(&self, expr: Expr) -> ExprRef {
 pub fn alloc_program(arena: &str, out_offset: &str, size_words: u32) -> Program {
@@ -214,7 +236,6 @@ pub fn allowed_effect_additions(&self) -> crate::lower::effects::ProgramEffects 
 pub fn analyse_precision(program: &Program, hints: &PrecisionHints) -> usize {
 pub fn analyze(&self, program: &Program) -> PassAnalysis {
 pub fn analyze_program_expr_arena(program: &Program) -> ExprArenaStats {
-pub fn and(left: Expr, right: Expr) -> Expr {
 pub fn and(values: impl IntoIterator<Item = Self>) -> Self {
 pub fn any_descendant<P>(node: &Node, pred: &mut P) -> bool
 pub fn append_data_type_fingerprint(buf: &mut Vec<u8>, value: &DataType) -> Result<(), String> {
@@ -253,13 +274,10 @@ pub fn bf16(&self) -> bool {
 pub fn binding(&self) -> u32 {
 pub fn binop_adjoints(
 pub fn binop_identity_replacement(
-pub fn bitand(left: Expr, right: Expr) -> Expr {
-pub fn bitnot(operand: Expr) -> Expr {
-pub fn bitor(left: Expr, right: Expr) -> Expr {
-pub fn bitxor(left: Expr, right: Expr) -> Expr {
 pub fn block(nodes: Vec<Self>) -> Self {
 pub fn bool(value: bool) -> Self {
 pub fn brace_depth_prefix(bytes: &[u8]) -> Result<Vec<u32>> {
+pub fn broadcast(&self) -> usize {
 pub fn buf_len(buffer: impl Into<Ident>) -> Self {
 pub fn buffer(&self, name: &str) -> Option<&BufferDecl> {
 pub fn buffer(&self, name: &str) -> Option<&super::BufferDecl> {
@@ -291,7 +309,6 @@ pub fn cast(target: DataType, value: Self) -> Self {
 pub fn causal_adjacency(&self) -> &[u32] {
 pub fn causal_edges(&self) -> &[DerivedPassEdge] {
 pub fn causal_safe_pair_checks(&self) -> usize {
-pub fn ceil(operand: Expr) -> Expr {
 pub fn check_backend_capabilities(
 pub fn check_expr_depth(depth: usize, errors: &mut Vec<ValidationError>) -> bool {
 pub fn check_limits(limits: &mut LimitState, depth: usize, errors: &mut Vec<ValidationError>) {
@@ -299,11 +316,11 @@ pub fn check_linear_types(program: &Program) -> Vec<ValidationError> {
 pub fn check_shape_predicates(program: &Program) -> Vec<ValidationError> {
 pub fn child(&self) -> Self {
 pub fn child_count(&self) -> usize {
+pub fn children(&self) -> &[u32] {
 pub fn children_of(&self, row_idx: usize) -> Option<&[u32]> {
 pub fn class(&self, id: EClassId) -> Option<&EClass<L>> {
 pub fn class_count(&self) -> usize {
 pub fn clear(&mut self) {
-pub fn clz(operand: Expr) -> Expr {
 pub fn collect_call_op_ids(program: &Program) -> Vec<Arc<str>> {
 pub fn collective_transport_plan(program: &Program) -> CollectiveTransportPlan {
 pub fn compose(producer: EffectLevel, consumer: EffectLevel) -> Result<EffectLevel, RefusalReason> {
@@ -316,14 +333,12 @@ pub fn conflict_starts_next_parallel_run() {
 pub fn consume_step_program(
 pub fn contains_key<Q>(&self, key: &Q) -> bool
 pub fn content_hash(&self) -> [u8; 32] {
-pub fn cos(operand: Expr) -> Expr {
 pub fn cost_monotone_enforcement(&self) -> bool {
 pub fn count(&self) -> u32 {
 pub fn count_opportunities(program: &Program) -> usize {
 pub fn cse(program: Program) -> Program {
 pub fn cse_into(program: Program, ctx: &mut CseCtx) -> Program {
 pub fn cse_savings(before: &[Program], after: &Program) -> usize {
-pub fn ctz(operand: Expr) -> Expr {
 pub fn dce(program: Program) -> Program {
 pub fn declared_edges(&self) -> &[DerivedPassEdge] {
 pub fn decode(bytes: &[u8]) -> Result<Self, VastError> {
@@ -348,7 +363,6 @@ pub fn dialects() -> Vec<&'static ExternDialect> {
 pub fn dimensions_increased_over(&self, other: &Self) -> Vec<&'static str> {
 pub fn dispatch_count(&self, region_generator: &str) -> u64 {
 pub fn distributed_collectives(&self) -> bool {
-pub fn div(left: Expr, right: Expr) -> Expr {
 pub fn dominant_index_axis(&self, buffer: &Ident) -> Option<u8> {
 pub fn dominates_or_equal(&self, other: &Self) -> bool {
 pub fn duplicate_self_exclusive_regions(nodes: &[Node]) -> Vec<String> {
@@ -363,7 +377,6 @@ pub fn entry(&self) -> &[Node] {
 pub fn entry_arc(&self) -> &Arc<Vec<Node>> {
 pub fn entry_mut(&mut self) -> &mut Vec<Node> {
 pub fn entry_op_id(&self) -> Option<&str> {
-pub fn eq(left: Expr, right: Expr) -> Expr {
 pub fn eq(left: Self, right: Self) -> Self {
 pub fn equivalence(
 pub fn error(msg: impl Into<String>) -> Self {
@@ -388,7 +401,6 @@ pub fn fingerprint(&self) -> [u8; 32] {
 pub fn fingerprint_program(program: &Program) -> u64 {
 pub fn finish(self) -> PerfMeasurement {
 pub fn fix_hint(&self) -> &'static str {
-pub fn floor(operand: Expr) -> Expr {
 pub fn fma(a: Self, b: Self, c: Self) -> Self {
 pub fn fma_adjoints(a: &Expr, b: &Expr, c: &Expr, adjoint: &Expr) -> Vec<AdjointContrib> {
 pub fn fmt_u64(prefix: &str, value: u64, suffix: &str) -> Self {
@@ -429,6 +441,8 @@ pub fn from_wire(bytes: &[u8]) -> Result<Self, crate::error::Error> {
 pub fn from_wire_tag(tag: u8) -> Result<Self, String> {
 pub fn functor_apply_cpu(source_row: &[u32], mapping: &[u32], target_size: u32) -> Vec<u32> {
 pub fn fusable_pairs(adj: &[u32], n: u32, max_iters: u32) -> Vec<u32> {
+pub fn fusable_pairs_into(adj: &[u32], n: u32, max_iters: u32, out: &mut Vec<u32>) {
+pub fn fusable_pairs_with_scratch_into(
 pub fn fusable_pass_pairs(&self) -> Vec<(&'static str, &'static str)> {
 pub fn fusable_subset(&self, seed: &[u32], max_iters: u32) -> Vec<u32> {
 pub fn fuse_cse(mut programs: Vec<Program>) -> Option<Program> {
@@ -437,7 +451,7 @@ pub fn fuse_programs_vec(mut programs: Vec<Program>) -> Result<Program, FusionEr
 pub fn fusion_friendly_order(passes: &[&'static ProgramPassRegistration]) -> Vec<usize> {
 pub fn fusion_order_cost(dimensions: &[u32], order: &[usize]) -> u64 {
 pub fn fusion_pressure(&self, costs: &[f64], steps: u32, dt: f64) -> Vec<f64> {
-pub fn ge(left: Expr, right: Expr) -> Expr {
+pub fn fusion_score(adj: &[u32], n: u32, max_iters: u32) -> u32 {
 pub fn get(&self, expr_ref: ExprRef) -> Option<&Expr> {
 pub fn get(&self, id: ExprId) -> &FlatExpr {
 pub fn get(&self, id: NodeId) -> Result<Value, EvalError> {
@@ -448,9 +462,12 @@ pub fn get_metrics() -> HashMap<&'static str, u64> {
 pub fn gid_x() -> Self {
 pub fn gid_y() -> Self {
 pub fn gid_z() -> Self {
+pub fn gpu_egraph_row_signature(language_op_id: u32, children_len: u32, children: &[u32]) -> u32 {
 pub fn grad(
 pub fn grad_with_pullback(
-pub fn gt(left: Expr, right: Expr) -> Expr {
+pub fn group_eclass_ids(&self) -> &[u32] {
+pub fn group_offsets(&self) -> &[u32] {
+pub fn group_rows(&self) -> &[u32] {
 pub fn has_any_kind_in_mask(&self, mask: u32) -> bool {
 pub fn has_any_node_kind(&self, mask: u32) -> bool {
 pub fn has_batches(&self) -> bool {
@@ -509,7 +526,6 @@ pub fn invalidate_shape(&mut self) {
 pub fn invalidate_type_map(&mut self) {
 pub fn invalidate_use_facts(&mut self) {
 pub fn invalidation_closure(&self) -> Vec<u32> {
-pub fn inverse_sqrt(operand: Expr) -> Expr {
 pub fn invocation_local_x() -> Self {
 pub fn invocation_local_y() -> Self {
 pub fn invocation_local_z() -> Self {
@@ -523,15 +539,12 @@ pub fn is_empty(&self) -> bool {
 pub fn is_explicit_noop(&self) -> bool {
 pub fn is_fallback_cpu_ref(f: CpuFn) -> bool {
 pub fn is_false(self) -> bool {
-pub fn is_finite(operand: Expr) -> Expr {
 pub fn is_fixed_at(predicate: &ShapePredicate, n: u32) -> bool {
 pub fn is_fresh_for(&self, program: &Program) -> bool {
 pub fn is_hot(&self, region_generator: &str) -> bool {
-pub fn is_inf(operand: Expr) -> Expr {
 pub fn is_integer_zero(self) -> bool {
 pub fn is_multiple_of(predicate: &ShapePredicate, factor: u32) -> bool {
 pub fn is_name_rebound(&self, name: &str) -> bool {
-pub fn is_nan(operand: Expr) -> Expr {
 pub fn is_non_composable_with_self(&self) -> bool {
 pub fn is_non_empty(&self) -> bool {
 pub fn is_numeric_one(self) -> bool {
@@ -560,17 +573,18 @@ pub fn kind_at(&self, idx: NodeIndex) -> NodeKind {
 pub fn kinds_present(&self) -> u32 {
 pub fn lattice_join(a: EffectLevel, b: EffectLevel) -> EffectLevel {
 pub fn laws_for_op(op_id: &str) -> &'static [&'static AlgebraicLaw] {
-pub fn le(left: Expr, right: Expr) -> Expr {
 pub fn len(&self) -> usize {
 pub fn let_bind(name: impl Into<Ident>, value: Expr) -> Self {
 pub fn let_sites_of(&self, name: &str) -> &[NodeIndex] {
 pub fn lets(&self) -> &[(NodeIndex, Ident)] {
 pub fn lineage_closure(adj: &[u32], n: u32, max_iters: u32) -> Vec<u32> {
+pub fn lineage_closure_into(
 pub fn linear_homotopy_cpu(g_x: &[f64], f_x: &[f64], t: f64) -> Vec<f64> {
 pub fn linear_type(&self) -> LinearType {
 pub fn linear_type_enforcement(&self) -> bool {
 pub fn load(buffer: impl Into<Ident>, index: Self) -> Self {
 pub fn load(name: &'static str, path: &Path) -> std::io::Result<Self> {
+pub fn local_ops(&self) -> CollectiveOpCounts {
 pub fn local_single_rank_collectives(&self) -> usize {
 pub fn local_x() -> Self {
 pub fn local_y() -> Self {
@@ -583,7 +597,6 @@ pub fn loop_vars(&self) -> &[(NodeIndex, Ident)] {
 pub fn lower_single_rank_collectives(
 pub fn lower_subgroup_reductions(program: Program, caps: &AdapterCaps) -> Program {
 pub fn lowering(message: impl Into<String>) -> Self {
-pub fn lt(left: Expr, right: Expr) -> Expr {
 pub fn map_body<F>(node: Node, f: &mut F) -> Node
 pub fn map_children<F>(node: Node, f: &mut F) -> Node
 pub fn map_entry<F: FnOnce(Vec<Node>) -> Vec<Node>>(self, f: F) -> Self {
@@ -593,27 +606,24 @@ pub fn mark_validated(&self) {
 pub fn mark_validated_on(&self, backend_id: &str) {
 pub fn matroid_exchange_bfs_step_cpu(
 pub fn matroid_solve_step(a: &[f64], b: &[f64], x: &[f64], weight: f64, n: u32) -> Vec<f64> {
-pub fn max(left: Expr, right: Expr) -> Expr {
+pub fn matroid_solve_step_into(
 pub fn max_call_depth(_op_id: &str, depth: usize) -> Result<usize, usize> {
 pub fn max_count(predicate: &ShapePredicate) -> Option<u32> {
 pub fn max_fusion_subset(seed: &[u32], exchange_adj: &[u32], n: usize, max_items: u32) -> Vec<u32> {
 pub fn mean_bytes(&self) -> u64 {
 pub fn mean_kernel_ns(&self) -> u64 {
 pub fn mean_kernel_ns(&self, region_generator: &str) -> u64 {
+pub fn merge_min_changed(current: &mut [u32], next: &[u32]) -> bool {
+pub fn merge_or_changed(current: &mut [u32], next: &[u32]) -> bool {
 pub fn message(&self) -> &str {
 pub fn message(&self) -> String {
 pub fn metadata(&self) -> &[PassMetadata] {
 pub fn metadata(&self) -> PassMetadata {
-pub fn min(left: Expr, right: Expr) -> Expr {
 pub fn min_bytes_at_least(&self, bytes: u64) -> bool {
 pub fn min_count(predicate: &ShapePredicate) -> u32 {
 pub fn monoidal_compose_cpu(
-pub fn mul(left: Expr, right: Expr) -> Expr {
-pub fn mulhi(left: Expr, right: Expr) -> Expr {
 pub fn name(&self) -> &str {
 pub fn name_of(&self, id: u32) -> Option<&str> {
-pub fn ne(left: Expr, right: Expr) -> Expr {
-pub fn negate(operand: Expr) -> Expr {
 pub fn nested_depth_prefix(bytes: &[u8]) -> Result<Vec<u32>> {
 pub fn new(
 pub fn new() -> Self {
@@ -639,7 +649,6 @@ pub fn nodes(&self) -> &[DerivedPassNode] {
 pub fn nodes_subtree_hash(body: &[Node]) -> Result<[u8; 32], String> {
 pub fn non_escaping(&self) -> &FxHashSet<Ident> {
 pub fn none() -> Self {
-pub fn not(operand: Expr) -> Expr {
 pub fn not_(value: Self) -> Self {
 pub fn op(op_id: impl Into<String>) -> Self {
 pub fn opaque(node: impl ExprNode) -> Self {
@@ -650,12 +659,12 @@ pub fn operand(&self, index: usize) -> Result<Value, EvalError> {
 pub fn operands(&self) -> &[NodeId] {
 pub fn ops_in_dialect(dialect: &str) -> Vec<&'static ExternOp> {
 pub fn optimal_fusion_order(dimensions: &[u32]) -> Vec<usize> {
+pub fn optimal_fusion_order_into(dimensions: &[u32], order: &mut Vec<usize>) {
 pub fn optimization_catalog() -> Result<Vec<OptimizationCatalogEntry>, OptimizerError> {
 pub fn optimization_catalog_for_profile(
 pub fn optimize(program: Program) -> Program {
 pub fn optimize(program: Program) -> Result<Program, OptimizerError> {
 pub fn optimize_with_hot_path_hints(
-pub fn or(left: Expr, right: Expr) -> Expr {
 pub fn or(values: impl IntoIterator<Item = Self>) -> Self {
 pub fn ordering_cost(passes: &[&'static ProgramPassRegistration], order: &[usize]) -> u64 {
 pub fn ordering_is_safe(adj: &[u32], treatment: u32, outcome: u32, n: u32) -> bool {
@@ -663,6 +672,7 @@ pub fn output(name: &str, binding: u32, element: DataType) -> Self {
 pub fn output_buffer<'a>(op_id: &str, program: &'a Program) -> Result<&'a BufferDecl> {
 pub fn output_buffer_indices(&self) -> &[u32] {
 pub fn output_byte_range(&self) -> Option<Range<usize>> {
+pub fn pack_device_image(&self) -> GpuEGraphDeviceImage {
 pub fn pack_spine_vast(node_kinds: &[u32]) -> Vec<u8> {
 pub fn pair_commutes(&self, pass_a: &str, pass_b: &str) -> bool {
 pub fn pair_count(&self) -> usize {
@@ -684,7 +694,6 @@ pub fn plan_for_adapter(
 pub fn plan_with_options(
 pub fn plan_with_options_for_adapter(
 pub fn planar_rewrite_schedule_mask(
-pub fn popcount(operand: Expr) -> Expr {
 pub fn postorder(
 pub fn predecessors(
 pub fn preserves(&self) -> &'static [&'static str] {
@@ -712,6 +721,7 @@ pub fn put_u32(out: &mut Vec<u8>, value: u32) {
 pub fn put_u8(out: &mut Vec<u8>, value: u8) {
 pub fn raw(self) -> u32 {
 pub fn reachability_closure(adj: &[u32], n: u32, max_iters: u32) -> Vec<u32> {
+pub fn reachability_closure_into(
 pub fn reaches(&self, from: &str, to: &str) -> bool {
 pub fn read(name: &str, binding: u32, element: DataType) -> Self {
 pub fn read_after_write_serialised() {
@@ -723,12 +733,12 @@ pub fn read_words(&mut self) -> Result<Vec<u32>, EnvelopeError> {
 pub fn read_write(name: &str, binding: u32, element: DataType) -> Self {
 pub fn rebuild(&mut self) -> usize {
 pub fn rebuild(&self, id: ExprId) -> Expr {
-pub fn reciprocal(operand: Expr) -> Expr {
 pub fn reconcile_runnable_top_level(self) -> Self {
 pub fn record(&self, digest: ExprDigest, hint: PrecisionHint) {
 pub fn record(&self, region_generator: &str, kernel_ns: u64, bytes_touched: u64) {
 pub fn record_for(&self, region_generator: &str) -> Option<RegionRecord> {
 pub fn recyclable_for(&self, arm_generator: &str) -> &FxHashSet<Ident> {
+pub fn reduce_scatter(&self) -> usize {
 pub fn referenced_buffers(program: &Program) -> HashSet<Ident> {
 pub fn region(&self, id: RegionId) -> Result<&[u8], EvalError> {
 pub fn region_at(&self, idx: NodeIndex) -> Option<&RegionMeta> {
@@ -743,7 +753,6 @@ pub fn registered_passes() -> Result<Vec<ProgramPassKind>, OptimizerError> {
 pub fn registered_passes_for_profile(
 pub fn registered_passes_for_profile_and_program(
 pub fn relax_step_program(
-pub fn rem(left: Expr, right: Expr) -> Expr {
 pub fn requires_collective_transport(program: &Program) -> bool {
 pub fn requires_subgroup_ops(&self) -> bool {
 pub fn requires_transport(&self) -> bool {
@@ -754,9 +763,12 @@ pub fn resolve_bin_op(id: ExtensionBinOpId) -> Option<&'static dyn ExtensionBinO
 pub fn resolve_data_type(id: ExtensionDataTypeId) -> Option<&'static dyn ExtensionDataType> {
 pub fn resolve_un_op(id: ExtensionUnOpId) -> Option<&'static dyn ExtensionUnOp> {
 pub fn resume(tag: impl Into<Ident>) -> Self {
-pub fn reverse_bits(operand: Expr) -> Expr {
 pub fn reverse_postorder(
-pub fn round(operand: Expr) -> Expr {
+pub fn row_children_lens(&self) -> &[u32] {
+pub fn row_children_offsets(&self) -> &[u32] {
+pub fn row_eclass_ids(&self) -> &[u32] {
+pub fn row_language_op_ids(&self) -> &[u32] {
+pub fn row_signatures(&self) -> &[u32] {
 pub fn rows_by_eclass(&self) -> FxHashMap<u32, Vec<usize>> {
 pub fn run(&self, program: Program) -> Result<Program, OptimizerError> {
 pub fn run(program: Program) -> Program {
@@ -776,6 +788,7 @@ pub fn select_workgroup_tile(
 pub fn select_workgroup_x(
 pub fn self_exclusive_region_key(generator: &str) -> Option<&str> {
 pub fn semiring_gemm_cpu(
+pub fn semiring_gemm_cpu_into(
 pub fn set(&mut self, id: NodeId, value: Value) {
 pub fn set_operands<I>(&mut self, operands: I)
 pub fn set_parallel_region_size(&mut self, parallel_region_size: [u32; 3]) {
@@ -785,17 +798,13 @@ pub fn shape_predicate(&self) -> Option<&ShapePredicate> {
 pub fn shape_predicate_enforcement(&self) -> bool {
 pub fn shared_text(&self) -> Arc<str> {
 pub fn shipped_obligations() -> Vec<RewriteProofObligation> {
-pub fn shl(left: Expr, right: Expr) -> Expr {
 pub fn shortest_path_closure(adj: &[u32], n: u32, max_iters: u32) -> Vec<u32> {
+pub fn shortest_path_closure_into(
 pub fn should_batch(&self) -> bool {
-pub fn shr(left: Expr, right: Expr) -> Expr {
-pub fn sign(operand: Expr) -> Expr {
-pub fn sin(operand: Expr) -> Expr {
 pub fn smooth_pass_system(&self, b: &[f64], x_in: &[f64], weight: f64) -> Vec<f64> {
 pub fn source() -> Option<&'static str> {
 pub fn source(op: &str) -> Option<&'static str> {
 pub fn span(name: &'static str) -> SpanGuard {
-pub fn sqrt(operand: Expr) -> Expr {
 pub fn start(_crate_name: &'static str, name: &'static str) -> Self {
 pub fn stats(&self) -> &ProgramStats {
 pub fn storage(name: &str, binding: u32, access: BufferAccess, element: DataType) -> Self {
@@ -803,7 +812,6 @@ pub fn store(buffer: impl Into<Ident>, index: Expr, value: Expr) -> Self {
 pub fn strength_reduce_power_of_two_shift(value: u32) -> Option<u32> {
 pub fn structural_eq(&self, other: &Self) -> bool {
 pub fn structured_intrinsic_cpu(input: &[u8], output: &mut Vec<u8>) {
-pub fn sub(left: Expr, right: Expr) -> Expr {
 pub fn subgroup_add(value: Self) -> Self {
 pub fn subgroup_ballot(cond: Self) -> Self {
 pub fn subgroup_local_id() -> Self {
@@ -825,6 +833,7 @@ pub fn to_wire_into(&self, dst: &mut Vec<u8>) -> Result<(), crate::error::Error>
 pub fn to_wire_into(program: &Program, dst: &mut Vec<u8>) -> Result<(), String> {
 pub fn to_wire_with_buffer_order_into(
 pub fn top_level_region_violation(&self) -> Option<String> {
+pub fn total(&self) -> usize {
 pub fn total_byte_len(self) -> Option<usize> {
 pub fn track_active(&self, track: InnovationTrack) -> bool {
 pub fn transform(&self, program: Program) -> PassResult {
@@ -833,20 +842,42 @@ pub fn transform(program: Program) -> PassResult {
 pub fn transform_for_adapter(program: Program, caps: &AdapterCaps) -> PassResult {
 pub fn transitive_dependents(&self, pass_name: &str) -> Vec<&'static str> {
 pub fn transport_collectives(&self) -> usize {
+pub fn transport_ops(&self) -> CollectiveOpCounts {
 pub fn trap(&self) -> bool {
 pub fn trap(address: Expr, tag: impl Into<Ident>) -> Self {
 pub fn triple_associates(&self, pass_a: &str, pass_b: &str, pass_c: &str) -> Option<bool> {
-pub fn trunc(operand: Expr) -> Expr {
+pub fn try_add(&mut self, node: L) -> Result<EClassId, EGraphError> {
 pub fn try_batch_apply(&self, program: Program) -> Result<PassResult, RefusalReason> {
+pub fn try_build(program: &Program) -> Result<Self, String> {
+pub fn try_build<'a, I>(rows: I) -> Result<Self, GpuEGraphSnapshotError>
+pub fn try_class(&self, id: EClassId) -> Result<Option<&EClass<L>>, EGraphError> {
 pub fn try_default() -> Result<Self, OptimizerError> {
+pub fn try_extract_best<L: ENodeLang>(
+pub fn try_find(&mut self, id: EClassId) -> Result<EClassId, EGraphError> {
 pub fn try_find_extension(
+pub fn try_find_immut(&self, id: EClassId) -> Result<EClassId, EGraphError> {
+pub fn try_from_egraph_with<L, F, S>(
+pub fn try_intern(&mut self, name: &str) -> Result<u32, GpuEGraphSnapshotError> {
 pub fn try_into_program(self) -> Result<Program, GraphValidateError> {
+pub fn try_pack_device_image(&self) -> Result<GpuEGraphDeviceImage, GpuEGraphDeviceImageError> {
+pub fn try_rebuild(&mut self) -> Result<usize, EGraphError> {
 pub fn try_registered_extensions() -> Result<Vec<&'static ExtensionRegistration>, String> {
+pub fn try_reserve_binary_heap_to_capacity<T>(
+pub fn try_reserve_hash_map_to_capacity<K, V, S>(
+pub fn try_reserve_hash_set_to_capacity<T, S>(
+pub fn try_reserve_smallvec_to_capacity<A>(
+pub fn try_reserve_string_to_capacity(
+pub fn try_reserve_vec_to_capacity<T>(
 pub fn try_resolve_atomic_op(
 pub fn try_resolve_bin_op(
 pub fn try_resolve_data_type(
 pub fn try_resolve_un_op(
+pub fn try_saturate<L: ENodeLang>(
+pub fn try_saturate_per_family<L: ENodeLang>(
 pub fn try_transform(&self, program: Program) -> Result<PassResult, RefusalReason> {
+pub fn try_union(&mut self, a: EClassId, b: EClassId) -> Result<EClassId, EGraphError> {
+pub fn try_with_capacity(class_capacity: usize) -> Result<Self, EGraphError> {
+pub fn try_with_passes(passes: Vec<ProgramPassKind>) -> Result<Self, PassSchedulingError> {
 pub fn u32(value: u32) -> Self {
 pub fn u64(value: u64) -> Expr {
 pub fn unchanged(program: Program) -> Self {
@@ -866,6 +897,7 @@ pub fn validate(&self) -> crate::error::Result<()> {
 pub fn validate(&self, plan: &MemoryPlan) -> Result<MemoryBudgetReport, PlanError> {
 pub fn validate(program: &Program) -> Vec<ValidationError> {
 pub fn validate_graph(
+pub fn validate_integrity(&self) -> Result<(), GpuEGraphSnapshotIntegrityError> {
 pub fn validate_pipeline(
 pub fn validate_prefix_input(byte_len: usize) -> Result<()> {
 pub fn validate_primitive(
@@ -929,6 +961,7 @@ pub fn with_shadowing(mut self, allow_shadowing: bool) -> Self {
 pub fn with_shape_predicate(mut self, predicate: ShapePredicate) -> Self {
 pub fn with_shape_predicate_enforcement(mut self, enforce: bool) -> Self {
 pub fn with_threshold(mut self, threshold: usize) -> Self {
+pub fn words(&self) -> &[u32] {
 pub fn workgroup(name: &str, count: u32, element: DataType) -> Self {
 pub fn workgroup_size(&self) -> [u32; 3] {
 pub fn workgroup_x() -> Self {
@@ -950,6 +983,7 @@ pub mod algebra;
 pub mod algebraic;
 pub mod algebraic_law_registry;
 pub mod algebraic_rules;
+pub mod allocation;
 pub mod analysis;
 pub mod arena;
 pub mod atomic_minimize;
@@ -958,7 +992,7 @@ pub mod atomic_op_tag;
 pub mod autodiff;
 pub mod autotune;
 pub mod barrier_coalesce;
-pub mod bin_op_from_tag;
+pub mod bin_op_from_tag {
 pub mod bin_op_tag;
 pub mod binding;
 pub mod branch_coalesce;
@@ -1144,7 +1178,7 @@ pub mod transform;
 pub mod type_key;
 pub mod typed_arena;
 pub mod types;
-pub mod un_op_from_tag;
+pub mod un_op_from_tag {
 pub mod un_op_tag;
 pub mod validate;
 pub mod validation_error;
@@ -1174,6 +1208,7 @@ pub struct BufferPlan {
 pub struct BufferShapeFacts {
 pub struct ByteRange {
 pub struct Canonicalize;
+pub struct CollectiveOpCounts {
 pub struct CollectiveTransportPlan {
 pub struct CompilerPrimitiveShader {
 pub struct ConstBuffer {
@@ -1227,7 +1262,12 @@ pub struct FusionOverDispatchError {
 pub struct FusionPlan {
 pub struct FusionSelfAliasingError {
 pub struct GeneratorRef {
+pub struct GpuEGraphDeviceImage {
+pub struct GpuEGraphDeviceLayout {
+pub struct GpuEGraphDeviceSpan {
 pub struct GpuEGraphSnapshot {
+pub struct GpuEGraphSnapshotError {
+pub struct GpuEGraphSnapshotIntegrityError {
 pub struct GraphNode {
 pub struct HotPathHints {
 pub struct Ident {

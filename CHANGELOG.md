@@ -10,6 +10,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Added a million-node graph frontier benchmark to `vyre-bench`, with exact CPU-oracle verification and release-suite thesis coverage contracts so benchmark evidence cannot regress to element-wise-only workloads.
 
+- Added explicit graph launch sizing for CSR frontier degree-sum and refreshed the public API snapshot for the current graph/dispatch surfaces.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

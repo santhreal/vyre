@@ -1,4 +1,5 @@
 pub const ASYNC_COMPUTE: Self = Self(1 << 4);
+pub const BASIS_POINTS_DENOMINATOR: u32 = 10_000;
 pub const BF16: Self = Self(1 << 2);
 pub const BINDLESS_RESOURCE_COUNT_THRESHOLD: u32 = 24;
 pub const BUILTIN_BLACKWELL_120: &'static str =
@@ -39,6 +40,7 @@ pub const TRACE_JIT_MIN_CONFIDENCE_BPS: u32 = 6_000; // 60%
 pub const WORKGROUP_CANDIDATES: &[u32] = &[32, 64, 128, 256, 512, 1024];
 pub const fn adapter_caps(self) -> AdapterCaps {
 pub const fn all() -> &'static [SubgroupOp] {
+pub const fn backend(self) -> &'static str {
 pub const fn bits(self) -> u32 {
 pub const fn cold_upload(upload_bytes: u64) -> Self {
 pub const fn conservative(backend: &'static str) -> Self {
@@ -57,7 +59,10 @@ pub const fn large_inline_default() -> Self {
 pub const fn mode(&self) -> Mode {
 pub const fn native(subgroup_size: u32) -> Self {
 pub const fn new(
+pub const fn new(backend: &'static str) -> Self {
 pub const fn new(code: &'static str) -> Self {
+pub const fn new(context: &'static str, fix: &'static str) -> Self {
+pub const fn new(domain: &'static str, fix_action: &'static str) -> Self {
 pub const fn new(major: u32, minor: u32, patch: u32) -> Self {
 pub const fn new(op: fn() -> OpDef) -> Self {
 pub const fn new(op_id: &'static str, deprecated_since: Semver, note: &'static str) -> Self {
@@ -80,21 +85,34 @@ pub enum ArmIndependenceVerdict {
 pub enum AttrValue {
 pub enum BackendError {
 pub enum BackendLayoutClass {
+pub enum BenchmarkPassSelectionError {
+pub enum BenchmarkPassSkipReason {
 pub enum BindingRole {
 pub enum BindlessDecision {
 pub enum BindlessSupport {
 pub enum CommandReuseDecision {
 pub enum ConformanceError {
+pub enum ConvergenceReadbackPolicy {
 pub enum CopyOverlapDecision {
 pub enum CrossPipelineConflict {
 pub enum CrossPipelineFusionDecision {
+pub enum DeviceConvergencePlanError {
+pub enum DeviceWorkQueueDrainStrategy {
+pub enum DeviceWorkQueueError {
+pub enum DiagnosticAggregationError {
 pub enum DispatchExecutionMode {
 pub enum EnforceVerdict {
 pub enum ErrorCode {
 pub enum FusionDecision {
+pub enum LaunchFusionError {
 pub enum LoweredExpr {
+pub enum MegakernelBarrierPlanError {
+pub enum MegakernelExecutionTopology {
+pub enum MegakernelFrontierMemoryPlanError {
+pub enum MegakernelMemoryError {
 pub enum MigrationError {
 pub enum Mode {
+pub enum MultiQueryExecutionError {
 pub enum MutationClass {
 pub enum NaturalGradientTuningError {
 pub enum ParamInliningDecision {
@@ -102,7 +120,9 @@ pub enum PersistentKernelDecision {
 pub enum PersistentThreadMode {
 pub enum PrecisionLoweringPlan {
 pub enum ResidentGraphReuseTelemetryError {
+pub enum ResidentUploadBytes<'a> {
 pub enum Resource {
+pub enum ResultCompactionError {
 pub enum Severity {
 pub enum SortBackend {
 pub enum SpecValue {
@@ -112,9 +132,19 @@ pub enum SpeculativeVariantKind {
 pub enum SubgroupOp {
 pub enum Target {
 pub enum TraceJitDecision {
+pub enum WorkQueueHostSync {
 pub fn acquire(&self) -> Result<Box<dyn VyreBackend>, BackendError> {
 pub fn acquire(id: &str) -> Result<Box<dyn VyreBackend>, BackendError> {
 pub fn acquire_preferred_dispatch_backend() -> Result<Box<dyn VyreBackend>, BackendError> {
+pub fn add_bytes(self, total: &mut u64, bytes: usize, label: &str) -> Result<(), BackendError> {
+pub fn add_copy_count(self, total: &mut usize, label: &str) -> Result<(), BackendError> {
+pub fn add_copy_slots(
+pub fn add_operation(self, total: &mut u64, label: &str) -> Result<(), BackendError> {
+pub fn add_u64_counter(
+pub fn add_usize_capacity(
+pub fn add_usize_counter(
+pub fn align_up_u64(
+pub fn align_up_usize(
 pub fn allocate(backend_id: &'static str, byte_len: usize) -> Box<dyn DeviceBuffer> {
 pub fn aot_target_id(self) -> &'static str {
 pub fn apply_chain(
@@ -126,6 +156,7 @@ pub fn as_pipeline_f64(&self) -> f64 {
 pub fn as_slice(&self) -> &[u8] {
 pub fn as_str(&self) -> &str {
 pub fn assert_exhaustive_byte_identity(
+pub fn atomic_max_u64(counter: &AtomicU64, value: u64, order: Ordering) -> u64 {
 pub fn attempted_tiles(&self) -> u64 {
 pub fn auto_grid(
 pub fn backend_dispatches(id: &str) -> bool {
@@ -133,8 +164,12 @@ pub fn backend_precedence(id: &str) -> u32 {
 pub fn best_of<T: BackendTimer>(
 pub fn best_of_natural_gradient<T: BackendTimer>(
 pub fn binding_plans_share_layout(a: &BindingPlan, b: &BindingPlan) -> bool {
+pub fn borrowed_input_batch_shapes_match(batches: &[&[&[u8]]]) -> bool {
+pub fn borrowed_input_shapes_match(left: &[&[u8]], right: &[&[u8]]) -> bool {
+pub fn borrowed_input_slices<'a>(
 pub fn build(program: &Program) -> Result<Self, BackendError> {
 pub fn builtins() -> Result<Self, String> {
+pub fn bytes_to_u64(self, bytes: usize, label: &str) -> Result<u64, BackendError> {
 pub fn cache_hash(&self) -> u64 {
 pub fn cache_key(self, program_digest: [u8; 32]) -> [u8; 32] {
 pub fn cache_path_for_adapter(adapter_fp: &str) -> PathBuf {
@@ -145,9 +180,51 @@ pub fn cases(&self) -> &[ConformanceCase] {
 pub fn certify_op(
 pub fn certify_op_borrowed(
 pub fn checked_add(self, rhs: Self) -> Result<Self, ResidentGraphReuseTelemetryError> {
+pub fn checked_add_u32_count<E>(lhs: u32, rhs: u32, field: &'static str) -> Result<u32, E>
+pub fn checked_add_u32_value<E>(lhs: u32, rhs: u32, error: E) -> Result<u32, E> {
+pub fn checked_add_u64_count<E>(lhs: u64, rhs: u64, field: &'static str) -> Result<u64, E>
+pub fn checked_add_u64_lazy<E>(lhs: u64, rhs: u64, error: impl FnOnce() -> E) -> Result<u64, E> {
+pub fn checked_add_u64_usize_offset_lazy<E>(
+pub fn checked_add_u64_value<E>(lhs: u64, rhs: u64, error: E) -> Result<u64, E> {
+pub fn checked_add_usize_count<E>(lhs: usize, rhs: usize, field: &'static str) -> Result<usize, E>
+pub fn checked_add_usize_lazy<E>(
+pub fn checked_add_usize_value<E>(lhs: usize, rhs: usize, error: E) -> Result<usize, E> {
+pub fn checked_atomic_add_u64(
+pub fn checked_atomic_add_u64_guarded_with_order<E>(
+pub fn checked_atomic_add_u64_with_order<E>(
+pub fn checked_atomic_add_usize(
+pub fn checked_atomic_add_usize_guarded_with_order<E>(
+pub fn checked_atomic_add_usize_with_order<E>(
+pub fn checked_atomic_next_u64_with_order<E>(
+pub fn checked_atomic_sub_u64(
+pub fn checked_atomic_sub_u64_with_order<E>(
+pub fn checked_atomic_sub_usize(
+pub fn checked_atomic_sub_usize_with_order<E>(
+pub fn checked_atomic_update_u32_with_order<E>(
+pub fn checked_atomic_update_u64_with_order<E>(
+pub fn checked_ceil_div_u64(self, value: u64, divisor: u64) -> Option<u64> {
+pub fn checked_ceil_div_u64(value: u64, divisor: u64) -> Option<u64> {
+pub fn checked_compose_basis_points_u64(left: u64, right: u64) -> Option<u64> {
 pub fn checked_delta_since(
+pub fn checked_dim_product_u32(dims: [u32; 3]) -> Option<u32> {
+pub fn checked_dim_product_u32(self, dims: [u32; 3]) -> Option<u32> {
+pub fn checked_dim_product_u64(dims: [u32; 3]) -> Option<u64> {
+pub fn checked_dim_product_u64(self, dims: [u32; 3]) -> Option<u64> {
+pub fn checked_mul_u32_value<E>(lhs: u32, rhs: u32, error: E) -> Result<u32, E> {
+pub fn checked_mul_u64_count<E>(lhs: u64, rhs: u64, field: &'static str) -> Result<u64, E>
+pub fn checked_mul_u64_lazy<E>(lhs: u64, rhs: u64, error: impl FnOnce() -> E) -> Result<u64, E> {
+pub fn checked_mul_u64_value<E>(lhs: u64, rhs: u64, error: E) -> Result<u64, E> {
+pub fn checked_mul_usize_lazy<E>(
+pub fn checked_sub_u64_count<E>(lhs: u64, rhs: u64, field: &'static str) -> Result<u64, E>
+pub fn checked_sub_u64_lazy<E>(lhs: u64, rhs: u64, error: impl FnOnce() -> E) -> Result<u64, E> {
+pub fn checked_sub_u64_value<E>(lhs: u64, rhs: u64, error: E) -> Result<u64, E> {
+pub fn checked_sub_usize_lazy<E>(
+pub fn checked_usize_byte_range_end_lazy<E>(
+pub fn checked_usize_to_u64_lazy<E>(value: usize, error: impl FnOnce() -> E) -> Result<u64, E> {
 pub fn claim(&self) -> Option<PersistentWorkItem> {
+pub fn clear(&mut self) {
 pub fn clear(&self) -> Result<(), BackendError> {
+pub fn clear_vec_slots<T>(slots: &mut [Vec<T>]) {
 pub fn code(&self) -> ErrorCode {
 pub fn coerce_to_pow2_with_tail_mask(element_count: u32) -> TailMaskPolicy {
 pub fn commit_rate_pct(&self) -> u32 {
@@ -158,6 +235,8 @@ pub fn compile_owned_with_telemetry(
 pub fn compile_shared(
 pub fn compile_shared_with_telemetry(
 pub fn compile_with_telemetry(
+pub fn compose_basis_points_u32(left: u32, right: u32, label: &str, backend: &str) -> u32 {
+pub fn compose_basis_points_u32(self, left: u32, right: u32, label: &str) -> u32 {
 pub fn conservative_total_ns(&self) -> u128 {
 pub fn contains(&self, fingerprint: &ShapeFingerprint) -> bool {
 pub fn contains(&self, slot: &u32) -> bool {
@@ -180,17 +259,21 @@ pub fn default_supported_ops() -> &'static std::collections::HashSet<OpId> {
 pub fn default_supported_ops_with_trap() -> &'static std::collections::HashSet<OpId> {
 pub fn default_threshold() -> Self {
 pub fn default_validator() -> bool {
+pub fn dependency_capacity(&self) -> usize {
 pub fn deprecation(&self, op_id: &str) -> Option<&'static Deprecation> {
 pub fn deprecation_diagnostic(dep: &Deprecation) -> Diagnostic {
 pub fn device_aware_cost<L, B, H>(
+pub fn diagnostic_compression_ratio_bps(
 pub fn diagnostics(&self) -> &[Diagnostic] {
 pub fn dialect(&self, id: &str) -> Option<&DialectManifest> {
 pub fn dialect_and_language_supported_ops() -> &'static HashSet<OpId> {
 pub fn dialect_only_supported_ops() -> &'static HashSet<OpId> {
+pub fn dispatch_configs_share_launch_shape(
 pub fn dispatch_element_count(bindings: &[Binding]) -> u32 {
 pub fn dispatch_element_count_for_program(program: &Program, bindings: &[Binding]) -> u32 {
 pub fn dispatch_param_words(bindings: &[Binding], element_count: u32) -> Vec<u32> {
 pub fn dispatch_param_words_into(bindings: &[Binding], element_count: u32, words: &mut Vec<u32>) {
+pub fn dispatch_policy_cache_digest(config: &DispatchConfig) -> [u8; 32] {
 pub fn dispatch_policy_cache_string(config: &DispatchConfig) -> String {
 pub fn dispatch_prefilter_confirm<B, F>(
 pub fn dispatch_resident_with_grid_sync_split_timed(
@@ -198,6 +281,9 @@ pub fn dispatch_with_grid_sync_split(
 pub fn dispatch_with_grid_sync_split_into(
 pub fn dispatch_with_grid_sync_split_timed(
 pub fn distribution(&self, call_site: &str) -> Option<Distribution> {
+pub fn domain_separated_exact_input_key(
+pub fn elapsed_nanos_u64(
+pub fn elapsed_nanos_u64(self, started: Instant, label: &str) -> Result<u64, BackendError> {
 pub fn element_size_bytes(data_type: &DataType) -> Result<usize, BackendError> {
 pub fn emit_aot_launcher_target(
 pub fn emit_aot_target(
@@ -205,10 +291,12 @@ pub fn empty() -> Self {
 pub fn encode_counter_tail(report: SpeculationReport) -> [u8; COUNTER_TAIL_BYTES] {
 pub fn enforce_actual_output_budget(
 pub fn enqueue(&self, item: PersistentWorkItem) -> Result<u32, QueueFull> {
+pub fn ensure_vec_slots_at_least<T>(
 pub fn entries_to_evict(
 pub fn error(code: &'static str, message: impl Into<Cow<'static, str>>) -> Self {
 pub fn evaluate_dispatch_policy(inputs: &DispatchPolicyInputs) -> DispatchPolicyVerdict {
 pub fn eviction_basis_points(dropped_entries: usize, total_entries: usize) -> u32 {
+pub fn exact_input_key(inputs: &[&[u8]]) -> Result<ExactInputKey, BackendError> {
 pub fn extension(self) -> &'static str {
 pub fn extract_best_for_device<L, B, H>(
 pub fn extract_best_for_devices<'a, L, B, H>(
@@ -216,6 +304,13 @@ pub fn fastest_backend(&self, op_id: &str) -> Option<&str> {
 pub fn find_architecture_generation(&self, generation: u32) -> Option<&DeviceSignature> {
 pub fn find_device_name(&self, device_name: &str) -> Option<&DeviceSignature> {
 pub fn find_indirect_dispatch(program: &Program) -> Result<Option<IndirectDispatch>, BackendError> {
+pub fn finite_f64_ratio_basis_points_round(
+pub fn finite_f64_ratio_basis_points_trunc(
+pub fn finite_f64_to_u32_round(self, value: f64, label: &str) -> u32 {
+pub fn finite_f64_to_u32_round(value: f64, label: &str, backend: &str) -> u32 {
+pub fn finite_f64_to_u32_trunc(self, value: f64, label: &str) -> u32 {
+pub fn finite_f64_to_u32_trunc(value: f64, label: &str, backend: &str) -> u32 {
+pub fn finite_f64_unit_basis_points_trunc(
 pub fn flush(&self) -> std::io::Result<()> {
 pub fn forget(&mut self, key: &AutotuneKey) -> bool {
 pub fn from_backend(backend: &dyn VyreBackend) -> Self {
@@ -224,6 +319,7 @@ pub fn from_bindings(
 pub fn from_borrowed_inputs(program: &Program, inputs: &[&[u8]]) -> Result<Self, BackendError> {
 pub fn from_bytes(backend_id: &'static str, bytes: Vec<u8>) -> Box<dyn DeviceBuffer> {
 pub fn from_counts(committed: u32, rolled: u32) -> Self {
+pub fn from_entries(
 pub fn from_env() -> Self {
 pub fn from_input_lengths(
 pub fn from_parts(vendor: u32, device: u32, revision: &str, revision_extra: &str) -> Self {
@@ -231,6 +327,8 @@ pub fn from_plan(plan: &BindingPlan) -> Self {
 pub fn from_program(program: &Program, inputs: &[Vec<u8>]) -> Result<Self, BackendError> {
 pub fn from_program(program: &Program, shape: StaticProgramShape) -> Self {
 pub fn from_toml_str(source: &str) -> Result<Self, String> {
+pub fn fuse_resident_transfer_intervals(
+pub fn fuse_resident_upload_copies<'a>(
 pub fn get(&self, id: &str) -> Option<&DeviceSignature> {
 pub fn get(&self, key: &AutotuneKey) -> Option<&AutotuneRecord> {
 pub fn get(&self, key: &str) -> Option<&AttrValue> {
@@ -241,11 +339,14 @@ pub fn get_or_validate(
 pub fn get_or_validate_backend<B>(
 pub fn global() -> &'static MigrationRegistry {
 pub fn global() -> Guard<Arc<Self>> {
+pub fn group_index_capacity(&self) -> usize {
+pub fn grouped_query_capacity(&self) -> usize {
 pub fn head(&self) -> u32 {
 pub fn head_counter(&self) -> u64 {
 pub fn heat(&self, current_time_s: f64) -> f64 {
 pub fn hex_encode(bytes: &[u8]) -> String {
 pub fn hex_short(bytes: &[u8; 32]) -> String {
+pub fn id_capacity(&self) -> usize {
 pub fn identity_fisher_q16(candidate_count: usize) -> Vec<u32> {
 pub fn identity_fisher_q16_into(candidate_count: usize, out: &mut Vec<u32>) {
 pub fn impacted_entries(
@@ -257,6 +358,7 @@ pub fn inputs(&self) -> &[Vec<u8>] {
 pub fn insert(&mut self, key: impl Into<String>, value: AttrValue) -> Option<AttrValue> {
 pub fn insert(&mut self, name: impl Into<String>, value: SpecValue) {
 pub fn insert(&mut self, slot: u32) -> bool {
+pub fn insert_seen(&mut self, key: K) -> bool {
 pub fn install(new: Self) {
 pub fn intern_op(&self, name: &str) -> InternedOpId {
 pub fn intersects(&self, other: &Self) -> bool {
@@ -270,6 +372,7 @@ pub fn is_inline(&self) -> bool {
 pub fn iter(&self) -> impl Iterator<Item = &'static OpDef> + '_ {
 pub fn iter(&self) -> impl Iterator<Item = (&str, &AttrValue)> {
 pub fn iter(&self) -> impl Iterator<Item = (&str, &SpecValue)> {
+pub fn iter_is_monotonic_by_key<I, K, F>(items: I, mut key: F) -> bool
 pub fn label(&self) -> &str {
 pub fn latest(&self) -> Option<&ShapeFingerprint> {
 pub fn len(&self) -> usize {
@@ -284,6 +387,7 @@ pub fn mark_done(&self, slot_idx: u32) -> Result<(), String> {
 pub fn matches_architecture_generation(&self, generation: u32) -> bool {
 pub fn matches_device_name(&self, device_name: &str) -> bool {
 pub fn message(&self) -> String {
+pub fn mul_usize_capacity(
 pub fn natural_gradient_step(
 pub fn new(
 pub fn new() -> Self {
@@ -308,6 +412,9 @@ pub fn observe_sort_u32(
 pub fn op(op_id: impl Into<Cow<'static, str>>) -> Self {
 pub fn open(root: impl Into<std::path::PathBuf>) -> std::io::Result<Self> {
 pub fn ops_in(&self, dialect: &str) -> &[OpManifest] {
+pub fn ordered_index_capacity(&self) -> usize {
+pub fn ordered_indices(&self) -> &[usize] {
+pub fn ordered_indices_mut(&mut self) -> &mut Vec<usize> {
 pub fn output_binding_layout(output: &BufferDecl) -> Result<OutputBindingLayout, BackendError> {
 pub fn output_binding_layouts(program: &Program) -> Result<Vec<OutputBindingLayout>, BackendError> {
 pub fn output_binding_layouts_into(
@@ -315,7 +422,28 @@ pub fn output_layout_from_program(program: &Program) -> Result<OutputLayout, Bac
 pub fn parse_counter_tail(output_bytes: &[u8]) -> Option<SpeculationReport> {
 pub fn path_for(
 pub fn persist(&self) -> Result<(), String> {
+pub fn pinning_atomic_add_usize_with_order(
+pub fn pinning_atomic_increment_u32(
+pub fn pinning_atomic_increment_u64(
+pub fn pinning_increment_u64(counter: &mut u64, on_pinned: impl FnOnce()) -> bool {
 pub fn pipeline_cache_limits_from_env() -> (u32, usize) {
+pub fn plan_device_convergence(
+pub fn plan_device_diagnostic_aggregation(
+pub fn plan_device_diagnostic_aggregation_with_scratch(
+pub fn plan_device_work_queue(
+pub fn plan_device_work_queue_backpressure(
+pub fn plan_graph_capture_bindings(
+pub fn plan_launch_fusion(
+pub fn plan_launch_fusion_with_scratch(
+pub fn plan_megakernel_barriers(
+pub fn plan_megakernel_barriers_with_scratch(
+pub fn plan_megakernel_execution(
+pub fn plan_megakernel_frontier_memory_with_scratch(
+pub fn plan_megakernel_memory_budget(
+pub fn plan_multi_query_execution(
+pub fn plan_multi_query_execution_with_scratch(
+pub fn plan_result_compaction(
+pub fn plan_result_compaction_with_scratch(
 pub fn poisoned_lock<T>(error: std::sync::PoisonError<T>) -> Self {
 pub fn predict_next(&self) -> Option<ShapeFingerprint> {
 pub fn prepare_into(
@@ -327,8 +455,14 @@ pub fn program_hash(program: &Program) -> blake3::Hash {
 pub fn program_vsa_fingerprint(program: &Program) -> Vec<u32> {
 pub fn program_vsa_fingerprint_words(program: &Program) -> [u32; 8] {
 pub fn push(&mut self, case: ConformanceCase) {
+pub fn push_index(&mut self, index: usize) {
+pub fn push_resident_upload_copy<'a>(
 pub fn put(&mut self, key: AutotuneKey, record: AutotuneRecord) {
+pub fn ratio_basis_points_u64(
+pub fn ratio_basis_points_u64_wide(
+pub fn ratio_parts_per_million_u64(
 pub fn read(
+pub fn rebasing_atomic_next_u64(
 pub fn record(&mut self, fingerprint: ShapeFingerprint) {
 pub fn record(&self, report: SpeculationReport) {
 pub fn record_cold_upload(
@@ -359,20 +493,50 @@ pub fn remember_success(&self, hash: blake3::Hash, vsa: &[u32]) -> Result<(), Ba
 pub fn remove(&mut self, key: &str) -> Option<AttrValue> {
 pub fn rename(&mut self, from: &str, to: impl Into<String>) -> bool {
 pub fn render_human(&self) -> String {
+pub fn repair_atomic_sub_usize_fetch_with_order(
+pub fn repair_atomic_sub_usize_with_order(
 pub fn replace_output_buffers_preserving_slots(
 pub fn replace_output_buffers_preserving_slots_with_memory_stats(
 pub fn replace_output_buffers_preserving_slots_with_stats(
+pub fn reserve_hash_map_to_capacity<K, V, S>(
+pub fn reserve_hash_set_to_capacity<T, S>(
+pub fn reserve_smallvec_additional<A>(
+pub fn reserve_smallvec_to_capacity<A>(
+pub fn reserve_typed_hash_map_to_capacity<K, V, S, E>(
+pub fn reserve_typed_hash_set_and_vec_to_capacity<K, V, S, E>(
+pub fn reserve_typed_hash_set_to_capacity<T, S, E>(
+pub fn reserve_typed_vec_to_capacity<T, E>(
+pub fn reserve_vec_additional<T>(
+pub fn reserve_vec_exact_for_len<T>(
+pub fn reserve_vec_to_capacity<T>(
+pub fn reserved_typed_vec<T, E>(
+pub fn reserved_vec<T>(
+pub fn resident_graph_capacity(&self) -> usize {
+pub fn resize_vec_slots<T>(
+pub fn resize_vec_with<T, F>(
 pub fn resolve(&self, program_fp: &str) -> [u32; 3] {
+pub fn resolve_fixpoint_iterations(
+pub fn resolve_fixpoint_iterations_usize(
 pub fn resolve_key(&self, key: &TunerProgramKey) -> [u32; 3] {
 pub fn resolve_launch_workgroup(
 pub fn resolve_launch_workgroup_for_mode(
+pub fn retained_query_bucket_capacity(&self) -> usize {
 pub fn ring_size(&self) -> u32 {
 pub fn root(&self) -> &std::path::Path {
+pub fn rounded_f64_to_u64(self, value: f64, label: &str) -> Result<u64, BackendError> {
+pub fn rounded_f64_to_u64(value: f64, label: &str, backend: &str) -> Result<u64, BackendError> {
 pub fn run(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, BackendError> {
 pub fn samples(&self) -> u32 {
 pub fn save(&self, path: &Path) -> Result<(), String> {
 pub fn save_if_dirty(&mut self, path: &Path) -> std::io::Result<bool> {
+pub fn scale_u64_by_basis_points_floor_min(
+pub fn scale_u64_by_basis_points_round_clamped(
 pub fn scan_dir(&mut self, dir: &Path) {
+pub fn seen_capacity(&self) -> usize {
+pub fn select_benchmark_passes(
+pub fn select_benchmark_passes_with_scratch(
+pub fn select_megakernel_topology(
+pub fn select_megakernel_topology_stable(
 pub fn select_precision_lowering(
 pub fn select_primary_execution_mode(
 pub fn select_retention_set(gains: &mut [u32], n: u32, k: u32) -> Vec<u32> {
@@ -387,8 +551,13 @@ pub fn signatures(&self) -> &[DeviceSignature] {
 pub fn snapshot(&self, alarm_threshold_bps: u32) -> PipelineCacheAuditReport {
 pub fn snapshot() -> Self {
 pub fn snapshot_dispatch_telemetry() -> DispatchTelemetry {
+pub fn sort_by_key_if_needed<T, K, F>(items: &mut [T], mut key: F)
+pub fn sort_indices_unstable_by_key_if_needed<Key, F>(&mut self, mut key: F)
+pub fn sort_unstable_by_key_if_needed<T, K, F>(items: &mut [T], mut key: F)
+pub fn sort_unstable_if_needed<T>(items: &mut [T])
 pub fn speculative_total_ns(&self) -> u128 {
 pub fn split_on_grid_sync(program: &Program) -> Vec<Program> {
+pub fn stable_explanation(&self) -> String {
 pub fn suggest(
 pub fn suggest_resize(&self, feedback: &TunerFeedback) -> Option<u32> {
 pub fn tail(&self) -> u32 {
@@ -409,11 +578,28 @@ pub fn try_new(ring_size: u32) -> Result<Self, String> {
 pub fn try_normalized_program_cache_digest(program: &Program) -> Result<[u8; 32], String> {
 pub fn try_reduction_offsets(subgroup_size: u32) -> Result<Vec<u32>, String> {
 pub fn try_reduction_offsets_into(
+pub fn try_reserve_candidates(
+pub fn try_reserve_hash_map_to_capacity<K, V, S>(
+pub fn try_reserve_hash_set_to_capacity<T, S>(
+pub fn try_reserve_shards(
+pub fn try_reserve_slots(&mut self, slot_count: usize) -> Result<(), ResultCompactionError> {
+pub fn try_reserve_vec_to_capacity<T>(
+pub fn try_reserve_with<E>(
 pub fn try_select_retention_set(
 pub fn try_select_retention_set_into(
 pub fn try_split_on_grid_sync(program: &Program) -> Result<Vec<Program>, BackendError> {
+pub fn try_with_capacity(
+pub fn try_with_capacity(candidate_count: usize) -> Result<Self, BenchmarkPassSelectionError> {
+pub fn try_with_capacity(query_count: usize) -> Result<Self, MultiQueryExecutionError> {
+pub fn try_with_capacity(shard_count: usize) -> Result<Self, DiagnosticAggregationError> {
+pub fn try_with_capacity(slot_count: usize) -> Result<Self, ResultCompactionError> {
+pub fn try_with_capacity(stage_count: usize) -> Result<Self, LaunchFusionError> {
+pub fn u128_to_u64(self, value: u128, label: &str) -> Result<u64, BackendError> {
+pub fn u128_to_u64(value: u128, label: &str, backend: &str) -> Result<u64, BackendError> {
 pub fn unsupported_extension(
 pub fn update_dispatch_policy_cache_hash(hasher: &mut blake3::Hasher, config: &DispatchConfig) {
+pub fn usize_to_u64(self, value: usize, label: &str) -> Result<u64, BackendError> {
+pub fn usize_to_u64(value: usize, label: &str, backend: &str) -> Result<u64, BackendError> {
 pub fn validate(&self) -> Result<(), String> {
 pub fn validate_borrowed_inputs(&self, inputs: &[&[u8]]) -> Result<(), BackendError> {
 pub fn validate_buffer_ownership<'a>(
@@ -427,6 +613,8 @@ pub fn validate_program_for_backend(
 pub fn versioned_specialization_artifact_key(
 pub fn vsa_specialization_key(program: &Program, spec_hash: u64) -> u128 {
 pub fn warning(code: &'static str, message: impl Into<Cow<'static, str>>) -> Self {
+pub fn wave_capacity(&self) -> usize {
+pub fn weighted_u64_by_basis_points_u128(value: u64, basis_points: u32) -> u128 {
 pub fn winner(&self) -> SpeculativeVariantKind {
 pub fn with_attr(mut self, name: impl Into<Cow<'static, str>>) -> Self {
 pub fn with_doc_url(mut self, url: impl Into<Cow<'static, str>>) -> Self {
@@ -436,11 +624,14 @@ pub fn with_operand(mut self, idx: u32) -> Self {
 pub fn workspace_dialect_fixture_path() -> PathBuf {
 pub fn worthwhile(&self, threshold_pct: u32) -> bool {
 pub fn write(
+pub mod accounting;
+pub mod allocation;
 pub mod aot;
 pub mod arm_independence;
 pub mod async_copy_overlap;
 pub mod autotune_store;
 pub mod backend;
+pub mod benchmark_pass_selection;
 pub mod binding;
 pub mod bindless_policy;
 pub mod cache;
@@ -450,25 +641,40 @@ pub mod cache_invalidation;
 pub mod command_reuse_policy;
 pub mod compiler;
 pub mod core_indirect;
+pub mod device_convergence;
+pub mod device_diagnostic_aggregation;
 pub mod device_extraction;
 pub mod device_profile;
 pub mod device_signature;
+pub mod device_work_queue;
 pub mod diagnostics;
 pub mod dialect;
 pub mod dispatch_policy;
+pub mod dispatch_shape;
 pub mod enforce;
 pub mod extraction_cost;
+pub mod fixpoint_iterations;
 pub mod fusion;
+pub mod graph_capture;
 pub mod grid_sync;
 pub mod hashing;
+pub mod input_identity;
 pub mod interner;
 pub mod io;
 pub mod launch;
+pub mod launch_fusion;
 pub mod lowering;
+pub mod megakernel_barrier;
+pub mod megakernel_execution;
+pub mod megakernel_frontier;
 pub mod migration;
+pub mod multi_query_execution;
 pub mod mutation;
+pub mod numeric;
 pub mod observability;
 pub mod op_def;
+pub mod ordering;
+pub mod output_slots;
 pub mod param_inlining;
 pub mod persistent;
 pub mod persistent_kernel_policy;
@@ -478,7 +684,10 @@ pub mod pipeline_fusion;
 pub mod private {
 pub mod program_walks;
 pub mod registry;
+pub mod reservation_policy;
 pub mod residency;
+pub mod resident_transfer_fusion;
+pub mod result_compaction;
 pub mod routing;
 pub mod shadow;
 pub mod shape_prediction;
@@ -489,6 +698,7 @@ pub mod strategy;
 pub mod subgroup;
 pub mod toml_loader;
 pub mod trace_jit_policy;
+pub mod transfer_accounting;
 pub mod tuner;
 pub mod validation;
 pub struct AdaptiveSpeculator {
@@ -505,8 +715,13 @@ pub struct BackendCapability {
 pub struct BackendLatency {
 pub struct BackendLayoutFingerprint {
 pub struct BackendLayoutSlot {
+pub struct BackendNumericPolicy {
 pub struct BackendPrecedence {
 pub struct BackendRegistration {
+pub struct BenchmarkPassCandidate {
+pub struct BenchmarkPassSelectionPlan {
+pub struct BenchmarkPassSelectionSample {
+pub struct BenchmarkPassSelectionScratch {
 pub struct Binding {
 pub struct BindingPlan {
 pub struct BindingSetFingerprint {
@@ -518,17 +733,26 @@ pub struct CacheInvalidationError {
 pub struct CacheInvalidationScratch {
 pub struct Chain<A, B> {
 pub struct CommandReuseInputs {
+pub struct CompactResultRecord {
 pub struct CompiledPipelineBuild {
 pub struct ConformanceCase {
 pub struct ConformanceMatrix {
 pub struct DefaultPolicy {
 pub struct Deprecation {
+pub struct DeviceConvergencePlan {
 pub struct DeviceExtraction<L> {
 pub struct DeviceProfile {
 pub struct DeviceSignature {
 pub struct DeviceSignatureTable {
+pub struct DeviceWorkQueueBackpressurePlan {
+pub struct DeviceWorkQueuePlan {
+pub struct DeviceWorkQueueProfile {
 pub struct Diagnostic {
+pub struct DiagnosticAggregationPlan {
+pub struct DiagnosticAggregationScratch {
 pub struct DiagnosticCode(#[serde(deserialize_with = "de_cow_static")] pub Cow<'static, str>);
+pub struct DiagnosticCompactRange {
+pub struct DiagnosticShard {
 pub struct Dialect {
 pub struct DialectManifest {
 pub struct DialectRegistration {
@@ -544,15 +768,37 @@ pub struct DivergenceEvent {
 pub struct DriverObservability {
 pub struct DuplicateOpIdError {
 pub struct ExtractionDevice<'a> {
+pub struct FusedResidentTransfers {
 pub struct FusionCaps {
 pub struct FusionPass;
+pub struct GraphCaptureBindingPlan {
 pub struct HostShimBuffer {
 pub struct IndirectDispatch {
+pub struct LaunchFusionGroup {
+pub struct LaunchFusionPlan {
+pub struct LaunchFusionScratch {
+pub struct LaunchFusionStage {
 pub struct LaunchGeometryLimits {
 pub struct LaunchPlan {
 pub struct LauncherDependency {
+pub struct MegakernelBarrierGroup {
+pub struct MegakernelBarrierPlan {
+pub struct MegakernelBarrierScratch {
+pub struct MegakernelExecutionPlan {
+pub struct MegakernelExecutionSample {
+pub struct MegakernelFrontierMemoryPlan {
+pub struct MegakernelFrontierWave {
+pub struct MegakernelGraphShape {
+pub struct MegakernelMemoryBudget {
+pub struct MegakernelMemoryPlan {
+pub struct MegakernelTopologyDecision {
+pub struct MegakernelWaveDependency {
 pub struct Migration {
 pub struct MigrationRegistry {
+pub struct MultiQuery {
+pub struct MultiQueryExecutionPlan {
+pub struct MultiQueryExecutionScratch {
+pub struct MultiQueryGroup {
 pub struct NaturalGradientPolicy {
 pub struct NaturalGradientTuningStep {
 pub struct NodeHints {
@@ -581,14 +827,23 @@ pub struct PipelineReproManifest {
 pub struct ProgramValidationCaps {
 pub struct QueueFull;
 pub struct ReferenceExecutor {
+pub struct ReservationPolicy {
 pub struct ResidentDispatchStep<'a> {
 pub struct ResidentGraphReuseTelemetry {
 pub struct ResidentReadRange<'a> {
+pub struct ResidentTransferInterval {
+pub struct ResidentTransferView {
+pub struct ResidentUploadCopy<'a> {
+pub struct ResultCompactionPlan {
+pub struct ResultCompactionScratch {
+pub struct ResultSlot {
+pub struct ReusableIndexScratch<K, S = RandomState> {
 pub struct RingAtomics {
 pub struct RouteDecision {
 pub struct RoutingTable {
 pub struct Semver {
 pub struct ShapeHistory {
+pub struct SkippedBenchmarkPass {
 pub struct SpecCacheKey {
 pub struct SpecMap {
 pub struct SpeculationObservation {
@@ -605,12 +860,14 @@ pub struct TailMaskPolicy {
 pub struct TimedDispatchResult {
 pub struct TomlDialectStore {
 pub struct TraceJitInputs {
+pub struct TransferAccountingPolicy {
 pub struct Tuner {
 pub struct TunerCache {
 pub struct TunerFeedback {
 pub struct TunerProgramKey(String);
 pub struct TuningMeasurement {
 pub struct ValidationCache {
+pub trait ArithmeticOverflow: Sized {
 pub trait Backend: Send + Sync {
 pub trait BackendObservabilityProvider {
 pub trait BackendTimer {
@@ -627,7 +884,9 @@ pub trait TargetGenCtx {
 pub trait TypedDispatchExt: VyreBackend {
 pub trait VyreBackend: private::Sealed + Send + Sync {
 pub type AotTargetId = &'static str;
+pub type ExactInputKey = [u8; 32];
 pub type Memory = Vec<u8>;
 pub type MemoryRef<'a> = &'a [u8];
 pub type OutputBuffers = Vec<Vec<u8>>;
 pub type ShapeFingerprint = [u32; 8];
+pub type StagingReservationFailureAdapter<E> = fn(&'static str, usize, String) -> E;
