@@ -227,6 +227,11 @@ path = "tests/adversarial_graph_csr_validation_contracts.rs"
 required-features = ["graph"]
 
 [[test]]
+name = "proptest_csr_frontier_queue"
+path = "tests/proptest_csr_frontier_queue.rs"
+required-features = ["graph", "cpu-parity"]
+
+[[test]]
 name = "adversarial_boolean_packing_four_russians_readiness"
 path = "tests/adversarial_boolean_packing_four_russians_readiness.rs"
 required-features = ["bitset", "cpu-parity"]

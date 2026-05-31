@@ -12,7 +12,7 @@ use vyre_self_substrate::adaptive_traverse::{
     AdaptiveTraversalResidentScratch,
 };
 
-const GENERATED_CASES: u32 = 512;
+const GENERATED_CASES: u32 = 1024;
 const ALLOW_MASKS: [u32; 8] = [0, 1, 2, 4, 3, 5, 6, 7];
 
 #[test]

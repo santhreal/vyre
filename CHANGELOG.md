@@ -36,6 +36,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Added a CSR-only resident adaptive sparse-queue graph upload and step path so sparse-queue workloads avoid dense adjacency allocation/upload, with live CUDA telemetry coverage and generated sparse-queue matrix coverage on the no-dense path.
 
+- Added CSR frontier queue property gates covering 40,000 generated materialization, traversal, adversarial queue, and validation cases, and doubled live CUDA adaptive sparse-queue generated coverage to 1,024 resident steps per materializer.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**
