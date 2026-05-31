@@ -477,7 +477,6 @@ fn linear_graph_prepared(
     })
 }
 
-
 fn run_graph_step(
     ctx: &mut BenchContext,
     prepared: &mut PreparedCase,
@@ -635,4 +634,3 @@ mod tests {
         );
     }
 }
-

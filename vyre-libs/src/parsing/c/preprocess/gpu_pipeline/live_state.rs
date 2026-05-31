@@ -534,4 +534,3 @@ pub(super) fn recompute_if_expr_truth_gpu_with_scratch(
     insert_live_conditional_cache_value(cache_key, value, "live if-expression")?;
     Ok(value)
 }
-

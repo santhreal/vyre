@@ -32,9 +32,9 @@
 
 use super::gpu_directive_parse_shared::{
     directive_program_from_parse, push_bounded_byte_scan_until, push_c_identifier_span,
-    push_directive_row_bounds, push_hash_and_keyword_start, push_keyword_end, push_ws_skip_from_expr,
-    safe_source_byte_expr as safe_load, trailing_ws_flag as is_trailing_ws, DirectiveOutputColumn,
-    DirectiveThreadLayout, MAX_DIRECTIVE_WS_PREFIX as MAX_WS_PREFIX,
+    push_directive_row_bounds, push_hash_and_keyword_start, push_keyword_end,
+    push_ws_skip_from_expr, safe_source_byte_expr as safe_load, trailing_ws_flag as is_trailing_ws,
+    DirectiveOutputColumn, DirectiveThreadLayout, MAX_DIRECTIVE_WS_PREFIX as MAX_WS_PREFIX,
 };
 use crate::parsing::c::lex::tokens::TOK_PP_DEFINE;
 use vyre::ir::{Expr, Node, Program};

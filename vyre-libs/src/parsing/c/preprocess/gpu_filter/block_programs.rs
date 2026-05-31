@@ -21,10 +21,7 @@ pub(super) fn simple_block_comment_marks_program(n: u32) -> Program {
                     "opens_block",
                     Expr::and(
                         Expr::lt(i.clone(), Expr::var("n_real")),
-                        Expr::and(
-                            byte_eq(b0.clone(), b'/'),
-                            byte_eq(b1.clone(), b'*'),
-                        ),
+                        Expr::and(byte_eq(b0.clone(), b'/'), byte_eq(b1.clone(), b'*')),
                     ),
                 ),
                 Node::store(
@@ -37,10 +34,7 @@ pub(super) fn simple_block_comment_marks_program(n: u32) -> Program {
                         Expr::lt(after_close.clone(), Expr::u32(n)),
                         Expr::and(
                             Expr::lt(i.clone(), Expr::var("n_real")),
-                            Expr::and(
-                                byte_eq(b0, b'*'),
-                                byte_eq(b1, b'/'),
-                            ),
+                            Expr::and(byte_eq(b0, b'*'), byte_eq(b1, b'/')),
                         ),
                     ),
                     vec![Node::store(

@@ -35,7 +35,12 @@ fn parse_borrow() {
 
 #[test]
 fn compile_pipeline_rejects_unwired_gpu_lex_without_silent_cpu_path() {
-    let pipeline = RustPipeline::new(RustPipelineConfig { gpu_lex: true, borrow_check: false, lower: false });
+    let pipeline = RustPipeline::new(RustPipelineConfig {
+        gpu_lex: true,
+        borrow_check: false,
+        lower: false,
+        lower_lane_count: None,
+    });
     let error = pipeline
         .compile_unit(b"fn main() { let x: i32 = 5; }")
         .expect_err("Fix: GPU lexing must fail loudly until Rust GPU lexer dispatch is wired.");
@@ -51,7 +56,10 @@ fn compile_unit_succeeds_on_well_typed_program() {
     let unit = pipeline
         .compile_unit(b"fn add(a: i32, b: i32) -> i32 { return a + b; }")
         .expect("Fix: a well-typed nano-subset program must compile through resolve + typeck");
-    assert!(unit.program.is_none(), "Fix: lowering is off by default, so there is no Program yet");
+    assert!(
+        unit.program.is_none(),
+        "Fix: lowering is off by default, so there is no Program yet"
+    );
 }
 
 #[test]
@@ -60,17 +68,28 @@ fn compile_unit_rejects_type_mismatch() {
     let error = pipeline
         .compile_unit(b"fn f() -> i32 { return true; }")
         .expect_err("Fix: a return-type mismatch must fail type checking, not compile.");
-    assert!(matches!(error, RustFrontendError::Typeck(_)), "got {error:?}");
+    assert!(
+        matches!(error, RustFrontendError::Typeck(_)),
+        "got {error:?}"
+    );
     assert!(error.to_string().contains("mismatched types"));
 }
 
 #[test]
 fn compile_unit_borrow_check_catches_e0596() {
-    let pipeline = RustPipeline::new(RustPipelineConfig { gpu_lex: false, borrow_check: true, lower: false });
+    let pipeline = RustPipeline::new(RustPipelineConfig {
+        gpu_lex: false,
+        borrow_check: true,
+        lower: false,
+        lower_lane_count: None,
+    });
     let error = pipeline
         .compile_unit(b"fn f() { let x: i32 = 0; let r: &mut i32 = &mut x; }")
         .expect_err("Fix: &mut of an immutable binding must fail borrow checking.");
-    assert!(matches!(error, RustFrontendError::Borrow(_)), "got {error:?}");
+    assert!(
+        matches!(error, RustFrontendError::Borrow(_)),
+        "got {error:?}"
+    );
     assert!(error.to_string().contains("cannot borrow `x` as mutable"));
 }
 
@@ -78,9 +97,17 @@ fn compile_unit_borrow_check_catches_e0596() {
 fn compile_unit_borrow_check_accepts_clean_program() {
     // The conflicting-borrow rules are wired (CFG NLL dataflow engine), so a
     // conflict-free program borrow-checks successfully, matching rustc.
-    let pipeline = RustPipeline::new(RustPipelineConfig { gpu_lex: false, borrow_check: true, lower: false });
+    let pipeline = RustPipeline::new(RustPipelineConfig {
+        gpu_lex: false,
+        borrow_check: true,
+        lower: false,
+        lower_lane_count: None,
+    });
     let unit = pipeline
         .compile_unit(b"fn f() { let mut x: i32 = 0; let r: &mut i32 = &mut x; let _p: i32 = *r; }")
         .expect("Fix: a conflict-free program must pass the wired borrow check");
-    assert!(unit.program.is_none(), "lowering is off by default, so there is no Program yet");
+    assert!(
+        unit.program.is_none(),
+        "lowering is off by default, so there is no Program yet"
+    );
 }

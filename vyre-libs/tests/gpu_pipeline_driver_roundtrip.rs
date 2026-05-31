@@ -630,4 +630,3 @@ fn gnu_named_variadic_macro_substitutes_named_rest_parameter() {
         "macro invocation and named variadic parameter marker must not leak downstream; got {out_str:?}"
     );
 }
-

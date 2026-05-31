@@ -26,6 +26,7 @@ vyre-intrinsics = { workspace = true }
 vyre-lower = { workspace = true }
 vyre-emit-ptx = { workspace = true }
 vyre-spec = { workspace = true }
+vyre-frontend-rust = { workspace = true }
 # External dataflow-engine baselines are opt-in cross-crate comparison benches
 # only. The default benchmark surface stays vyre-only.
 external-dataflow-engine = { workspace = true, optional = true }

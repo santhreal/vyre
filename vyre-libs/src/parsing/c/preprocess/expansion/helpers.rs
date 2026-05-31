@@ -448,7 +448,6 @@ pub(super) fn emit_named_replacement_prelude(
                 num_tokens.clone(),
             ),
             vec![Node::if_then(
-
                 Expr::eq(
                     Expr::load(in_tok_types, Expr::add(Expr::var("named_i"), Expr::u32(1))),
                     Expr::u32(TOK_LPAREN),
@@ -653,4 +652,3 @@ pub(super) fn synthesized_paste_token(left: Expr, right: Expr) -> Expr {
         },
     )
 }
-

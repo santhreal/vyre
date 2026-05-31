@@ -392,10 +392,7 @@ fn allocate_and_upload_resident_set(
         }
     }
     let output_start = start + inputs.len();
-    for (resource, &output_size) in resources[output_start..]
-        .iter()
-        .zip(output_sizes.iter())
-    {
+    for (resource, &output_size) in resources[output_start..].iter().zip(output_sizes.iter()) {
         if output_size != 0 {
             uploads.push((resource, &zero_scratch[..output_size]));
         }
@@ -448,7 +445,6 @@ mod tests {
 
     #[test]
     fn resident_batch_upload_count_skips_empty_resources() {
-
         let inputs = vec![vec![1; 3], Vec::new(), vec![2; 1]];
         let output_sizes = [0, 8, 16, 0];
 
@@ -521,4 +517,3 @@ mod tests {
         assert_eq!(accounting.bytes_touched, u64::MAX);
     }
 }
-

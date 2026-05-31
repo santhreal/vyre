@@ -512,7 +512,6 @@ fn render_release_matrix(matrix: &ReleaseWorkloadMatrix, format: &str) -> anyhow
     Ok(out)
 }
 
-
 pub fn enforce_release_matrix(matrix: &ReleaseWorkloadMatrix) -> anyhow::Result<()> {
     if matrix.blockers.is_empty() {
         return Ok(());
@@ -679,4 +678,3 @@ fn collect_cpu_sota_contracts(
         );
     }
 }
-

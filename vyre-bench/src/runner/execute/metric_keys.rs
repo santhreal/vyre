@@ -179,6 +179,13 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "egraph_applied_rewrites") => Some("egraph_applied_rewrites"),
         ("", "egraph_hit_iteration_limit") => Some("egraph_hit_iteration_limit"),
         ("", "egraph_hit_node_limit") => Some("egraph_hit_node_limit"),
+        ("", "rust_frontend_public_pipeline_speedup_x1000") => {
+            Some("rust_frontend_public_pipeline_speedup_x1000")
+        }
+        ("", "rust_frontend_dispatch_speedup_x1000") => {
+            Some("rust_frontend_dispatch_speedup_x1000")
+        }
+        ("", "rust_frontend_lanes") => Some("rust_frontend_lanes"),
         ("baseline_", "flop_count") => Some("baseline_flop_count"),
         ("baseline_", "megakernel_items_processed") => Some("baseline_megakernel_items_processed"),
         _ => None,

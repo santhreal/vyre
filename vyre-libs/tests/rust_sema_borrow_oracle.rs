@@ -29,7 +29,14 @@ fn rustc_accepts(src: &str) -> bool {
     let src_path = base.join("lib.rs");
     std::fs::write(&src_path, src).expect("write temp source");
     let status = std::process::Command::new("rustc")
-        .args(["--edition", "2021", "--crate-type", "lib", "--cap-lints", "allow"])
+        .args([
+            "--edition",
+            "2021",
+            "--crate-type",
+            "lib",
+            "--cap-lints",
+            "allow",
+        ])
         .args(["--emit", "metadata", "-o"])
         .arg(base.join("out.rmeta"))
         .arg(&src_path)
@@ -45,8 +52,12 @@ fn rustc_accepts(src: &str) -> bool {
 fn sema_accepts(src: &str) -> bool {
     let bytes = src.as_bytes();
     let Ok(tokens) = lex(bytes) else { return false };
-    let Ok(module) = parse(bytes, &tokens) else { return false };
-    let Ok(resolution) = resolve(&module, bytes) else { return false };
+    let Ok(module) = parse(bytes, &tokens) else {
+        return false;
+    };
+    let Ok(resolution) = resolve(&module, bytes) else {
+        return false;
+    };
     typeck(&module, bytes, &resolution).is_ok() && borrow_check(&module, &resolution).is_ok()
 }
 
@@ -58,14 +69,19 @@ fn sema_accepts(src: &str) -> bool {
 fn gen_straight(seed: u64) -> String {
     let mut state = seed ^ 0x9E37_79B9_7F4A_7C15;
     let mut next = || {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (state >> 33) as u32
     };
     let nvars = 2 + (next() % 3) as usize;
     let var_mut: Vec<bool> = (0..nvars).map(|_| next() % 2 == 0).collect();
     let mut s = String::from("fn f() {");
     for (i, &m) in var_mut.iter().enumerate() {
-        s.push_str(&format!(" let {}v{i}: i32 = {i};", if m { "mut " } else { "" }));
+        s.push_str(&format!(
+            " let {}v{i}: i32 = {i};",
+            if m { "mut " } else { "" }
+        ));
     }
     let mut borrows = 0usize;
     let mut uses = 0u32;
@@ -91,14 +107,19 @@ fn gen_straight(seed: u64) -> String {
 fn gen_branch(seed: u64) -> String {
     let mut state = seed ^ 0x2545_F491_4F6C_DD1D;
     let mut next = || {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (state >> 33) as u32
     };
     let nvars = 2 + (next() % 3) as usize;
     let var_mut: Vec<bool> = (0..nvars).map(|_| next() % 2 == 0).collect();
     let mut s = String::from("fn f() {");
     for (i, &m) in var_mut.iter().enumerate() {
-        s.push_str(&format!(" let {}v{i}: i32 = {i};", if m { "mut " } else { "" }));
+        s.push_str(&format!(
+            " let {}v{i}: i32 = {i};",
+            if m { "mut " } else { "" }
+        ));
     }
     let nborrows = 1 + (next() % 4) as usize;
     let mut borrows = 0usize;
@@ -133,7 +154,9 @@ fn gen_branch(seed: u64) -> String {
 fn gen_reborrow(seed: u64) -> String {
     let mut state = seed ^ 0x14F6_3D9C_2B7A_05E1;
     let mut next = || {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (state >> 33) as u32
     };
     let mut s = String::from("fn f() { let mut x: i32 = 0; let r: &mut i32 = &mut x;");
@@ -218,7 +241,9 @@ fn sema_matches_rustc_on_reborrow_programs() {
 fn gen_coercion_reborrow(seed: u64) -> String {
     let mut state = seed ^ 0x6A09_E667_F3BC_C908;
     let mut next = || {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (state >> 33) as u32
     };
     let mut s = String::from("fn f() { let mut x: i32 = 0; let r0: &mut i32 = &mut x;");
@@ -260,7 +285,10 @@ const CONFLICT_REJECT: &[&str] = &[
 #[test]
 fn sema_catches_conflicts_rustc_rejects() {
     for (i, src) in CONFLICT_REJECT.iter().enumerate() {
-        assert!(!rustc_accepts(src), "CONFLICT_REJECT[{i}] must be rejected by rustc: {src}");
+        assert!(
+            !rustc_accepts(src),
+            "CONFLICT_REJECT[{i}] must be rejected by rustc: {src}"
+        );
         assert!(
             !sema_accepts(src),
             "CONFLICT_REJECT[{i}]: sema accepted a conflict rustc rejects: {src}"
@@ -280,8 +308,14 @@ const ACCEPT: &[&str] = &[
 #[test]
 fn sema_accepts_what_rustc_accepts() {
     for (i, src) in ACCEPT.iter().enumerate() {
-        assert!(rustc_accepts(src), "ACCEPT[{i}] must compile under rustc: {src}");
-        assert!(sema_accepts(src), "ACCEPT[{i}]: sema rejected what rustc accepts: {src}");
+        assert!(
+            rustc_accepts(src),
+            "ACCEPT[{i}] must compile under rustc: {src}"
+        );
+        assert!(
+            sema_accepts(src),
+            "ACCEPT[{i}]: sema rejected what rustc accepts: {src}"
+        );
     }
 }
 
@@ -290,18 +324,29 @@ const COERCE_ACCEPT: &[&str] = &[
     "fn f() { let mut x: i32 = 0; let m: &mut i32 = &mut x; let s: &i32 = m; let _p: i32 = *s; }",
     "fn g(a: &i32) -> i32 { return *a; } fn f() { let mut x: i32 = 0; let m: &mut i32 = &mut x; let _z: i32 = g(m); }",
 ];
-const COERCE_REJECT: &[&str] = &[
-    "fn f() { let x: i32 = 0; let s: &i32 = &x; let _m: &mut i32 = s; }",
-];
+const COERCE_REJECT: &[&str] =
+    &["fn f() { let x: i32 = 0; let s: &i32 = &x; let _m: &mut i32 = s; }"];
 
 #[test]
 fn sema_matches_rustc_on_reference_coercion() {
     for (i, src) in COERCE_ACCEPT.iter().enumerate() {
-        assert!(rustc_accepts(src), "COERCE_ACCEPT[{i}] must compile under rustc: {src}");
-        assert!(sema_accepts(src), "COERCE_ACCEPT[{i}]: sema rejected a valid &mut->& coercion: {src}");
+        assert!(
+            rustc_accepts(src),
+            "COERCE_ACCEPT[{i}] must compile under rustc: {src}"
+        );
+        assert!(
+            sema_accepts(src),
+            "COERCE_ACCEPT[{i}]: sema rejected a valid &mut->& coercion: {src}"
+        );
     }
     for (i, src) in COERCE_REJECT.iter().enumerate() {
-        assert!(!rustc_accepts(src), "COERCE_REJECT[{i}] must be rejected by rustc: {src}");
-        assert!(!sema_accepts(src), "COERCE_REJECT[{i}]: sema accepted an invalid &->&mut coercion: {src}");
+        assert!(
+            !rustc_accepts(src),
+            "COERCE_REJECT[{i}] must be rejected by rustc: {src}"
+        );
+        assert!(
+            !sema_accepts(src),
+            "COERCE_REJECT[{i}]: sema accepted an invalid &->&mut coercion: {src}"
+        );
     }
 }

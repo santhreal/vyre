@@ -214,7 +214,11 @@ impl RulePipeline {
         }
         let count = u32::from_le_bytes([hit_bytes[0], hit_bytes[1], hit_bytes[2], hit_bytes[3]]);
         // Triples start at byte 4 (after the atomic counter).
-        dispatch_io::try_unpack_match_triples_into(&hit_bytes[4..], count.min(max_matches), matches)?;
+        dispatch_io::try_unpack_match_triples_into(
+            &hit_bytes[4..],
+            count.min(max_matches),
+            matches,
+        )?;
         Ok(())
     }
 
@@ -458,7 +462,6 @@ impl std::fmt::Display for PipelineWireError {
         }
     }
 }
-
 
 impl std::error::Error for PipelineWireError {}
 
@@ -731,4 +734,3 @@ mod tests {
         );
     }
 }
-

@@ -269,8 +269,9 @@ mod generated_buffer_codec_tests {
                 .expect("Fix: exact packing requires aligned word counts; reject odd-length hostile inputs - generated exact table packing must not fail");
 
             let short = &packed[..packed.len() - 1];
-            let short_err = unpack_u32_words_prefix_exact(short, word_count, word_count, "short table")
-                .expect_err("seed {seed}: short exact table must be rejected");
+            let short_err =
+                unpack_u32_words_prefix_exact(short, word_count, word_count, "short table")
+                    .expect_err("seed {seed}: short exact table must be rejected");
             assert!(
                 short_err.contains("malformed u32 table"),
                 "short table error: {short_err}"

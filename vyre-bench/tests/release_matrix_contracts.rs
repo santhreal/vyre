@@ -454,7 +454,6 @@ fn read_json(path: &Path) -> Value {
     .unwrap_or_else(|error| panic!("Fix: `{}` must be valid JSON: {error}", path.display()))
 }
 
-
 fn json_str<'a>(json: &'a Value, key: &str) -> &'a str {
     json[key]
         .as_str()
@@ -510,4 +509,3 @@ fn release_matrix_links_workloads_to_artifact_commands() {
         );
     }
 }
-

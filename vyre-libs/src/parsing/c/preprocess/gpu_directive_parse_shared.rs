@@ -287,10 +287,7 @@ pub(super) fn push_bounded_byte_scan_until(
         Expr::u32(0),
         Expr::var(limit_var),
         vec![Node::if_then(
-            Expr::and(
-                active_guard,
-                Expr::eq(Expr::var(done_var), Expr::u32(0)),
-            ),
+            Expr::and(active_guard, Expr::eq(Expr::var(done_var), Expr::u32(0))),
             vec![
                 Node::let_bind(
                     byte_var,

@@ -113,7 +113,10 @@ impl Interner {
 
 fn unquote(field: &str) -> &str {
     let field = field.trim();
-    field.strip_prefix('"').and_then(|f| f.strip_suffix('"')).unwrap_or(field)
+    field
+        .strip_prefix('"')
+        .and_then(|f| f.strip_suffix('"'))
+        .unwrap_or(field)
 }
 
 fn fields(line: &str) -> Vec<&str> {
@@ -150,7 +153,11 @@ pub fn load_facts(read: impl Fn(&str) -> String) -> RustcNllFacts {
         "loan_issued_at",
         Box::new(|f| {
             if f.len() == 3 {
-                loan_issued_at.push((origins.intern(f[0]), loans.intern(f[1]), points.intern(f[2])));
+                loan_issued_at.push((
+                    origins.intern(f[0]),
+                    loans.intern(f[1]),
+                    points.intern(f[2]),
+                ));
             }
         }),
     );
@@ -177,7 +184,11 @@ pub fn load_facts(read: impl Fn(&str) -> String) -> RustcNllFacts {
         "subset_base",
         Box::new(|f| {
             if f.len() == 3 {
-                subset_base.push((origins.intern(f[0]), origins.intern(f[1]), points.intern(f[2])));
+                subset_base.push((
+                    origins.intern(f[0]),
+                    origins.intern(f[1]),
+                    points.intern(f[2]),
+                ));
             }
         }),
     );
@@ -365,19 +376,18 @@ impl RustcNllFacts {
         let mut idx_second: HashMap<(Origin, Point), Vec<Origin>> = HashMap::new();
         let mut delta: Vec<(Origin, Origin, Point)> = Vec::new();
 
-        let admit =
-            |subset: &mut HashSet<(Origin, Origin, Point)>,
-             idx_first: &mut HashMap<(Origin, Point), Vec<Origin>>,
-             idx_second: &mut HashMap<(Origin, Point), Vec<Origin>>,
-             delta: &mut Vec<(Origin, Origin, Point)>,
-             t: (Origin, Origin, Point)| {
-                if subset.insert(t) {
-                    let (a, b, p) = t;
-                    idx_first.entry((a, p)).or_default().push(b);
-                    idx_second.entry((b, p)).or_default().push(a);
-                    delta.push(t);
-                }
-            };
+        let admit = |subset: &mut HashSet<(Origin, Origin, Point)>,
+                     idx_first: &mut HashMap<(Origin, Point), Vec<Origin>>,
+                     idx_second: &mut HashMap<(Origin, Point), Vec<Origin>>,
+                     delta: &mut Vec<(Origin, Origin, Point)>,
+                     t: (Origin, Origin, Point)| {
+            if subset.insert(t) {
+                let (a, b, p) = t;
+                idx_first.entry((a, p)).or_default().push(b);
+                idx_second.entry((b, p)).or_default().push(a);
+                delta.push(t);
+            }
+        };
 
         for &t in &self.subset_base {
             admit(&mut subset, &mut idx_first, &mut idx_second, &mut delta, t);
@@ -452,7 +462,10 @@ impl RustcNllFacts {
     /// Illegal-subset (region-outlives) errors from a precomputed `subset`: a
     /// derived subset between two placeholder origins that is not a
     /// known/declared placeholder subset.
-    fn subset_errors_from(&self, subset: &HashSet<(Origin, Origin, Point)>) -> Vec<(Origin, Origin)> {
+    fn subset_errors_from(
+        &self,
+        subset: &HashSet<(Origin, Origin, Point)>,
+    ) -> Vec<(Origin, Origin)> {
         let placeholders: HashSet<Origin> = self.placeholder.iter().map(|&(o, _)| o).collect();
         if placeholders.is_empty() {
             return Vec::new();
@@ -584,7 +597,11 @@ impl RustcNllFacts {
             return true;
         }
         let (region_live, succ, subset) = self.region_subset();
-        if need_nll && !self.nll_errors_from(&region_live, &succ, &subset).is_empty() {
+        if need_nll
+            && !self
+                .nll_errors_from(&region_live, &succ, &subset)
+                .is_empty()
+        {
             return false;
         }
         if need_subset && !self.subset_errors_from(&subset).is_empty() {
@@ -667,8 +684,7 @@ mod semi_naive_differential {
         region_live: &HashSet<(Origin, Point)>,
     ) -> HashSet<(Origin, Origin, Point)> {
         let succ = succ_map(f);
-        let mut subset: HashSet<(Origin, Origin, Point)> =
-            f.subset_base.iter().copied().collect();
+        let mut subset: HashSet<(Origin, Origin, Point)> = f.subset_base.iter().copied().collect();
         loop {
             let mut added = Vec::new();
             let snapshot: Vec<(Origin, Origin, Point)> = subset.iter().copied().collect();
@@ -707,8 +723,11 @@ mod semi_naive_differential {
         let succ = succ_map(f);
         let subset = naive_subset(f, &region_live);
         let killed: HashSet<(Loan, Point)> = f.loan_killed_at.iter().copied().collect();
-        let mut requires: HashSet<(Origin, Loan, Point)> =
-            f.loan_issued_at.iter().map(|&(o, l, p)| (o, l, p)).collect();
+        let mut requires: HashSet<(Origin, Loan, Point)> = f
+            .loan_issued_at
+            .iter()
+            .map(|&(o, l, p)| (o, l, p))
+            .collect();
         loop {
             let mut added = Vec::new();
             let req_snapshot: Vec<(Origin, Loan, Point)> = requires.iter().copied().collect();
@@ -761,8 +780,7 @@ mod semi_naive_differential {
         if placeholders.is_empty() {
             return Vec::new();
         }
-        let known: HashSet<(Origin, Origin)> =
-            f.known_placeholder_subset.iter().copied().collect();
+        let known: HashSet<(Origin, Origin)> = f.known_placeholder_subset.iter().copied().collect();
         let region_live = naive_region_live(f);
         let subset = naive_subset(f, &region_live);
         let mut errors: Vec<(Origin, Origin)> = subset
@@ -803,7 +821,8 @@ mod semi_naive_differential {
             ..Default::default()
         };
         for _ in 0..next() % (point_count * 2 + 1) {
-            f.cfg_edge.push((next() % point_count, next() % point_count));
+            f.cfg_edge
+                .push((next() % point_count, next() % point_count));
         }
         for _ in 0..next() % (loan_count + 1) {
             f.loan_issued_at.push((
@@ -813,10 +832,12 @@ mod semi_naive_differential {
             ));
         }
         for _ in 0..next() % 4 {
-            f.loan_invalidated_at.push((next() % point_count, next() % loan_count));
+            f.loan_invalidated_at
+                .push((next() % point_count, next() % loan_count));
         }
         for _ in 0..next() % 3 {
-            f.loan_killed_at.push((next() % loan_count, next() % point_count));
+            f.loan_killed_at
+                .push((next() % loan_count, next() % point_count));
         }
         for _ in 0..next() % 5 {
             f.subset_base.push((
@@ -826,25 +847,32 @@ mod semi_naive_differential {
             ));
         }
         for _ in 0..next() % 6 {
-            f.var_used_at.push((next() % var_count, next() % point_count));
+            f.var_used_at
+                .push((next() % var_count, next() % point_count));
         }
         for _ in 0..next() % 4 {
-            f.var_defined_at.push((next() % var_count, next() % point_count));
+            f.var_defined_at
+                .push((next() % var_count, next() % point_count));
         }
         for _ in 0..next() % 3 {
-            f.var_dropped_at.push((next() % var_count, next() % point_count));
+            f.var_dropped_at
+                .push((next() % var_count, next() % point_count));
         }
         for _ in 0..next() % 5 {
-            f.use_of_var_derefs_origin.push((next() % var_count, next() % origin_count));
+            f.use_of_var_derefs_origin
+                .push((next() % var_count, next() % origin_count));
         }
         for _ in 0..next() % 3 {
-            f.drop_of_var_derefs_origin.push((next() % var_count, next() % origin_count));
+            f.drop_of_var_derefs_origin
+                .push((next() % var_count, next() % origin_count));
         }
         for _ in 0..next() % (origin_count + 1) {
-            f.placeholder.push((next() % origin_count, next() % loan_count));
+            f.placeholder
+                .push((next() % origin_count, next() % loan_count));
         }
         for _ in 0..next() % 3 {
-            f.known_placeholder_subset.push((next() % origin_count, next() % origin_count));
+            f.known_placeholder_subset
+                .push((next() % origin_count, next() % origin_count));
         }
         for _ in 0..next() % (origin_count + 1) {
             f.universal_region.push(next() % origin_count);

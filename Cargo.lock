@@ -3454,6 +3454,7 @@ dependencies = [
  "vyre-emit-spirv",
  "vyre-foundation",
  "vyre-frontend-c",
+ "vyre-frontend-rust",
  "vyre-intrinsics",
  "vyre-libs",
  "vyre-lower",

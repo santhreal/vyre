@@ -633,10 +633,7 @@ fn string_bitmap_scatter_inputs(records: u32) -> StringBitmapScatterInputs {
 }
 
 fn synthetic_count_program(pattern: SyntheticPattern, records: u32) -> Program {
-    let mut buffers =
-        vec![
-            BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-        ];
+    let mut buffers = vec![BufferDecl::output("out_count", 0, DataType::U32).with_count(1)];
     for (binding, name) in pattern_buffers(pattern).iter().enumerate() {
         buffers.push(
             BufferDecl::storage(

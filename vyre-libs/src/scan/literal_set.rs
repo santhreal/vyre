@@ -466,7 +466,8 @@ mod compile_tests {
     #[test]
     fn compile_empty_patterns_matches_fallible_compile_contract() {
         let compat = GpuLiteralSet::compile(&[]);
-        let fallible = GpuLiteralSet::try_compile(&[]).expect("Fix: empty literal set must compile");
+        let fallible =
+            GpuLiteralSet::try_compile(&[]).expect("Fix: empty literal set must compile");
 
         assert_eq!(compat.pattern_offsets, fallible.pattern_offsets);
         assert_eq!(compat.pattern_lengths, fallible.pattern_lengths);
@@ -511,7 +512,6 @@ mod compile_tests {
         );
     }
 }
-
 
 const LITERAL_SET_WIRE_MAGIC: &[u8; 4] = b"VLIT";
 const LITERAL_SET_WIRE_VERSION: u32 = 1;
@@ -710,4 +710,3 @@ fn build_state_cascade(dfa: &CompiledDfa, state: u32, state_var: &str, byte_expr
     }
     node
 }
-

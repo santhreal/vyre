@@ -448,7 +448,6 @@ catalog_pair!(
 );
 
 catalog_pair!(
-
     "vyre-libs::catalog::bitset::and",
     "vyre-primitives::bitset::and"
 );
@@ -728,4 +727,3 @@ catalog_pair!(
     "vyre-libs::catalog::visual::packed_rgba_map",
     "vyre-primitives::visual::packed_rgba_map"
 );
-

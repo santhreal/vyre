@@ -22,6 +22,10 @@ pub const KW_ELSE: u16 = 24;
 pub const KW_RETURN: u16 = 25;
 /// `while` keyword.
 pub const KW_WHILE: u16 = 26;
+/// `for` keyword.
+pub const KW_FOR: u16 = 27;
+/// `in` keyword.
+pub const KW_IN: u16 = 28;
 /// `i32` type keyword.
 pub const KW_I32: u16 = 30;
 /// `bool` type keyword.
@@ -76,6 +80,12 @@ pub const RBRACE: u16 = 63;
 pub const ANDAND: u16 = 64;
 /// `||` logical-or operator.
 pub const OROR: u16 = 65;
+/// `+=` compound-assignment operator.
+pub const PLUS_EQ: u16 = 66;
+/// `-=` compound-assignment operator.
+pub const MINUS_EQ: u16 = 67;
+/// `..` half-open range operator.
+pub const DOTDOT: u16 = 68;
 /// Unrecognised token.
 pub const ERROR: u16 = 0xFFFE;
 /// Token outside the nano-subset.
@@ -88,5 +98,8 @@ pub const fn is_literal(tok: u16) -> bool {
 
 /// True if the token id represents a binary operator.
 pub const fn is_binop(tok: u16) -> bool {
-    matches!(tok, PLUS | MINUS | STAR | SLASH | EQ | LT | PERCENT | GT | LE | GE | NE)
+    matches!(
+        tok,
+        PLUS | MINUS | STAR | SLASH | EQ | LT | PERCENT | GT | LE | GE | NE
+    )
 }

@@ -13,12 +13,14 @@
 use std::collections::HashMap;
 
 use vyre_libs::parsing::rust::lex::lexer::core::lex;
-use vyre_libs::parsing::rust::lower::lower;
+use vyre_libs::parsing::rust::lower::{lower, lower_batched};
 use vyre_libs::parsing::rust::parse::{parse, Expr, Module, Stmt};
 use vyre_libs::parsing::rust::sema::{resolve, typeck, BindingId, Resolution};
 use vyre_reference::value::Value;
 
-use vyre_libs::parsing::rust::lex::tokens::{ANDAND, EQ, GE, GT, LE, LT, MINUS, NE, OROR, PERCENT, PLUS, SLASH, STAR};
+use vyre_libs::parsing::rust::lex::tokens::{
+    ANDAND, EQ, GE, GT, LE, LT, MINUS, NE, OROR, PERCENT, PLUS, SLASH, STAR,
+};
 
 // ---------------------------------------------------------------------------
 // Pipeline helpers
@@ -51,6 +53,43 @@ fn ir_exec(src: &str, inputs: &[i32]) -> i32 {
     let out = vyre_reference::reference_eval(&program, &values).expect("reference_eval");
     assert_eq!(out.len(), 1, "entry must produce exactly one output");
     value_to_i32(&out[0])
+}
+
+fn i32_vec_to_bytes(values: &[i32]) -> Vec<u8> {
+    values
+        .iter()
+        .flat_map(|value| value.to_le_bytes())
+        .collect()
+}
+
+fn bytes_to_i32_vec(bytes: &[u8]) -> Vec<i32> {
+    bytes
+        .chunks_exact(4)
+        .map(|chunk| i32::from_le_bytes(chunk.try_into().expect("i32 chunk")))
+        .collect()
+}
+
+/// Lower `src`'s entry function as a data-parallel batch kernel and run it on
+/// the reference interpreter. Each inner vector is one parameter buffer.
+fn ir_exec_batched(src: &str, columns: &[Vec<i32>]) -> Vec<i32> {
+    let lane_count = columns.first().map_or(0, Vec::len);
+    assert!(lane_count > 0, "batched execution needs at least one lane");
+    assert!(
+        columns.iter().all(|column| column.len() == lane_count),
+        "batched parameter columns must have equal lengths"
+    );
+    let (module, resolution) = frontend(src);
+    let program = lower_batched(&module, &resolution, lane_count as u32).expect("lower_batched");
+    let values: Vec<Value> = columns
+        .iter()
+        .map(|column| Value::from(i32_vec_to_bytes(column)))
+        .collect();
+    let out = vyre_reference::reference_eval(&program, &values).expect("reference_eval");
+    assert_eq!(out.len(), 1, "entry must produce exactly one output");
+    match &out[0] {
+        Value::Bytes(bytes) => bytes_to_i32_vec(bytes),
+        other => vec![value_to_i32(other)],
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -113,7 +152,27 @@ impl Ev<'_> {
                         assert!(guard < 1_000_000, "oracle while loop did not terminate");
                     }
                 }
-                Stmt::Expr(Expr::If { cond, then_block, else_block }) => {
+                Stmt::For {
+                    name,
+                    start,
+                    end,
+                    body,
+                } => {
+                    let binding = self.def_to_id[name];
+                    let start = self.eval_int(start, env);
+                    let end = self.eval_int(end, env);
+                    for value in start..end {
+                        env.insert(binding, value);
+                        if let Flow::Return(v) = self.exec(body, env) {
+                            return Flow::Return(v);
+                        }
+                    }
+                }
+                Stmt::Expr(Expr::If {
+                    cond,
+                    then_block,
+                    else_block,
+                }) => {
                     let taken = if self.eval_bool(cond, env) {
                         Some(then_block.as_ref())
                     } else {
@@ -153,6 +212,7 @@ impl Ev<'_> {
             }
             Expr::Borrow { expr, .. } => self.eval_int(expr, env),
             Expr::Deref(inner) => self.eval_int(inner, env),
+            Expr::Neg(inner) => self.eval_int(inner, env).wrapping_neg(),
             other => panic!("unexpected integer expr {other:?}"),
         }
     }
@@ -187,7 +247,11 @@ impl Ev<'_> {
 fn ast_interp(src: &str, inputs: &[i32]) -> i32 {
     let (module, resolution) = frontend(src);
     let def_to_id = global_def_to_id(&resolution);
-    let ev = Ev { module: &module, resolution: &resolution, def_to_id: &def_to_id };
+    let ev = Ev {
+        module: &module,
+        resolution: &resolution,
+        def_to_id: &def_to_id,
+    };
     ev.run_fn(module.functions.len() - 1, inputs)
 }
 
@@ -200,10 +264,15 @@ struct Gen {
 }
 impl Gen {
     fn new(seed: u64) -> Self {
-        Self { state: seed ^ 0x517C_C1B7_2722_0A95 }
+        Self {
+            state: seed ^ 0x517C_C1B7_2722_0A95,
+        }
     }
     fn next(&mut self) -> u32 {
-        self.state = self.state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.state = self
+            .state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (self.state >> 33) as u32
     }
     /// Small arithmetic expression over `nvars` in-scope `vN` variables. When
@@ -211,7 +280,11 @@ impl Gen {
     fn expr(&mut self, nvars: usize, depth: u32, calls: bool, refs: bool) -> String {
         if depth > 0 {
             if calls && self.next() % 5 == 0 {
-                return format!("h({}, {})", self.expr(nvars, depth - 1, calls, refs), self.expr(nvars, depth - 1, calls, refs));
+                return format!(
+                    "h({}, {})",
+                    self.expr(nvars, depth - 1, calls, refs),
+                    self.expr(nvars, depth - 1, calls, refs)
+                );
             }
             if refs && self.next() % 5 == 0 {
                 let inner = self.expr(nvars, depth - 1, calls, refs);
@@ -225,7 +298,12 @@ impl Gen {
                 // Division or remainder by a nonzero literal divisor (1..=5): no
                 // div-by-zero; dividend may be negative (signed truncation).
                 let op = if self.next() % 2 == 0 { "/" } else { "%" };
-                return format!("({} {} {})", self.expr(nvars, depth - 1, calls, refs), op, self.next() % 5 + 1);
+                return format!(
+                    "({} {} {})",
+                    self.expr(nvars, depth - 1, calls, refs),
+                    op,
+                    self.next() % 5 + 1
+                );
             }
         }
         if depth == 0 || self.next() % 3 == 0 {
@@ -236,7 +314,12 @@ impl Gen {
             }
         } else {
             let op = ["+", "-", "*"][(self.next() % 3) as usize];
-            format!("({} {} {})", self.expr(nvars, depth - 1, calls, refs), op, self.expr(nvars, depth - 1, calls, refs))
+            format!(
+                "({} {} {})",
+                self.expr(nvars, depth - 1, calls, refs),
+                op,
+                self.expr(nvars, depth - 1, calls, refs)
+            )
         }
     }
     fn cond(&mut self, nvars: usize) -> String {
@@ -248,10 +331,20 @@ impl Gen {
         }
         if depth > 0 && self.next() % 3 == 0 {
             let op = if self.next() % 2 == 0 { "&&" } else { "||" };
-            return format!("({}) {} ({})", self.cond_depth(nvars, depth - 1), op, self.cond_depth(nvars, depth - 1));
+            return format!(
+                "({}) {} ({})",
+                self.cond_depth(nvars, depth - 1),
+                op,
+                self.cond_depth(nvars, depth - 1)
+            );
         }
         let op = ["<", ">", "<=", ">=", "==", "!="][(self.next() % 6) as usize];
-        format!("{} {} {}", self.expr(nvars, 1, false, false), op, self.expr(nvars, 1, false, false))
+        format!(
+            "{} {} {}",
+            self.expr(nvars, 1, false, false),
+            op,
+            self.expr(nvars, 1, false, false)
+        )
     }
 }
 
@@ -279,7 +372,11 @@ fn gen_program(seed: u64) -> (String, usize) {
     module.push_str(&format!("fn f({}) -> i32 {{", params.join(", ")));
     let nlets = (g.next() % 3) as usize;
     for _ in 0..nlets {
-        module.push_str(&format!(" let mut v{}: i32 = {};", nvars, g.expr(nvars, 2, calls, refs)));
+        module.push_str(&format!(
+            " let mut v{}: i32 = {};",
+            nvars,
+            g.expr(nvars, 2, calls, refs)
+        ));
         nvars += 1;
     }
     // Reassign existing mut locals (params stay immutable).
@@ -338,15 +435,76 @@ fn lowered_while_matches_ast_and_rustc() {
         let inputs = gen_inputs(seed.wrapping_mul(11).wrapping_add(2), nparams);
         let ast = ast_interp(&src, &inputs);
         let ir = ir_exec(&src, &inputs);
-        assert_eq!(ir, ast, "while: lowered IR diverged from AST interp:\n  {src}\n  inputs {inputs:?}");
+        assert_eq!(
+            ir, ast,
+            "while: lowered IR diverged from AST interp:\n  {src}\n  inputs {inputs:?}"
+        );
         if seed < 60 {
             if let Some(rustc) = rustc_run(&src, &inputs) {
-                assert_eq!(ir, rustc, "while: lowered IR diverged from rustc:\n  {src}\n  inputs {inputs:?}");
+                assert_eq!(
+                    ir, rustc,
+                    "while: lowered IR diverged from rustc:\n  {src}\n  inputs {inputs:?}"
+                );
                 checked += 1;
             }
         }
     }
-    assert!(checked >= 30, "expected most while programs to compile+run under rustc, got {checked}");
+    assert!(
+        checked >= 30,
+        "expected most while programs to compile+run under rustc, got {checked}"
+    );
+}
+
+/// Canonical range-loop program: `for i in START..BOUND { acc += <params,i>; }`.
+/// Bounds are small and signed so the test exercises non-zero, negative, and
+/// zero-trip ranges without risking a huge lowered loop.
+fn gen_for_program(seed: u64) -> (String, usize) {
+    let mut g = Gen::new(seed ^ 0xA11C_E5F0_2BCD_8891);
+    let nparams = 1 + (g.next() % 2) as usize; // 1..=2
+    let acc = nparams;
+    let start = (g.next() % 7) as i32 - 3; // -3..=3
+    let span = g.next() % 7; // 0..=6
+    let end = start + span as i32;
+    let params: Vec<String> = (0..nparams).map(|p| format!("v{p}: i32")).collect();
+    let acc_init = g.expr(nparams, 1, false, false);
+    let body = g.expr(nparams + 2, 1, false, false); // params + acc + loop variable
+    (
+        format!(
+            "fn f({}) -> i32 {{ let mut v{acc}: i32 = {acc_init}; \
+             for v{} in {start}..{end} {{ v{acc} += {body}; }} return v{acc}; }}",
+            params.join(", "),
+            acc + 1
+        ),
+        nparams,
+    )
+}
+
+#[test]
+fn lowered_for_range_matches_ast_and_rustc() {
+    let mut checked = 0;
+    for seed in 0..400u64 {
+        let (src, nparams) = gen_for_program(seed);
+        let inputs = gen_inputs(seed.wrapping_mul(17).wrapping_add(5), nparams);
+        let ast = ast_interp(&src, &inputs);
+        let ir = ir_exec(&src, &inputs);
+        assert_eq!(
+            ir, ast,
+            "for-range: lowered IR diverged from AST interp:\n  {src}\n  inputs {inputs:?}"
+        );
+        if seed < 80 {
+            if let Some(rustc) = rustc_run(&src, &inputs) {
+                assert_eq!(
+                    ir, rustc,
+                    "for-range: lowered IR diverged from rustc:\n  {src}\n  inputs {inputs:?}"
+                );
+                checked += 1;
+            }
+        }
+    }
+    assert!(
+        checked >= 50,
+        "expected most for-range programs to compile+run under rustc, got {checked}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -398,11 +556,78 @@ fn curated_programs_execute_correctly() {
         ("fn f(a: i32) -> i32 { let mut x: i32 = a; x = x + 1; x = x * 2; return x; }", &[3], 8),
         ("fn f(n: i32) -> i32 { let mut i: i32 = 0; let mut acc: i32 = 0; while i < n { acc = acc + i; i = i + 1; } return acc; }", &[5], 10),
         ("fn f(n: i32) -> i32 { let mut i: i32 = 0; let mut acc: i32 = 0; while i < n { acc = acc + i; i = i + 1; } return acc; }", &[0], 0),
+        // Negative bound: rustc runs the loop zero times. The old lowering cast
+        // `n` to u32 (-> ~4.29e9 iterations); the clamped trip count must give 0.
+        ("fn f(n: i32) -> i32 { let mut i: i32 = 0; let mut acc: i32 = 0; while i < n { acc = acc + i; i = i + 1; } return acc; }", &[-3], 0),
+        // Non-zero (and negative) start: `i` must reconstruct as `i0 + lv`, not as
+        // the raw u32 loop counter. 2+3+4 = 9.
+        ("fn f() -> i32 { let mut i: i32 = 2; let mut acc: i32 = 0; while i < 5 { acc = acc + i; i = i + 1; } return acc; }", &[], 9),
+        ("fn f() -> i32 { let mut i: i32 = -2; let mut acc: i32 = 0; while i < 1 { acc = acc + i; i = i + 1; } return acc; }", &[], -3), // (-2)+(-1)+0 = -3
+        // Post-loop induction value. After a loop that ran, `i == n`; for a
+        // zero-trip loop `i` is left unchanged (the old `i := n` was wrong).
+        ("fn f(n: i32) -> i32 { let mut i: i32 = 0; while i < n { i = i + 1; } return i; }", &[4], 4),
+        ("fn f() -> i32 { let mut i: i32 = 5; while i < 3 { i = i + 1; } return i; }", &[], 5),
+        // Compound assignment value semantics: the differential only checks
+        // accept/reject, so a broken `x += e -> x = e` desugar would ship green.
+        // Hardcoded expected values pin the read-modify-write (a broken desugar
+        // fools the ir-vs-ast cross-check but not the literal oracle below).
+        ("fn f(a: i32) -> i32 { let mut x: i32 = a; x += 2; return x; }", &[3], 5),
+        ("fn f(a: i32) -> i32 { let mut x: i32 = a; x -= 2; return x; }", &[10], 8),
+        ("fn f(a: i32, b: i32) -> i32 { let mut x: i32 = a; x += b * 2; return x; }", &[10, 4], 18),
+        // Unary minus value + precedence: `-a + b` must parse as `(-a) + b`, not
+        // `-(a + b)`; `-(-a)` is identity. Accept-only differential cannot see this.
+        ("fn f(a: i32, b: i32) -> i32 { return -a + b; }", &[5, 3], -2),
+        ("fn f(a: i32) -> i32 { return -(-a); }", &[7], 7),
+        ("fn f(a: i32, b: i32) -> i32 { return a - -b; }", &[5, 3], 8),
+        ("fn f() -> i32 { let mut acc: i32 = 0; for i in 0..5 { acc += i; } return acc; }", &[], 10),
+        ("fn f() -> i32 { let mut acc: i32 = 0; for i in -2..2 { acc += i; } return acc; }", &[], -2),
+        ("fn f() -> i32 { let mut acc: i32 = 7; for i in 5..3 { acc += i; } return acc; }", &[], 7),
+        ("fn f(n: i32) -> i32 { let mut acc: i32 = 0; for i in 0..n { acc += i; } return acc; }", &[4], 6),
+        // Bounds are evaluated once before iteration; mutating `n` in the body
+        // must not shorten the range after the first trip.
+        ("fn f(n: i32) -> i32 { let mut m: i32 = n; let mut acc: i32 = 0; for i in 0..m { m = 0; acc += i; } return acc; }", &[4], 6),
     ];
     for (src, inputs, expected) in cases {
         assert_eq!(ir_exec(src, inputs), *expected, "{src} with {inputs:?}");
-        assert_eq!(ast_interp(src, inputs), *expected, "AST interp: {src} with {inputs:?}");
+        assert_eq!(
+            ast_interp(src, inputs),
+            *expected,
+            "AST interp: {src} with {inputs:?}"
+        );
     }
+}
+
+#[test]
+fn batched_lowering_maps_rust_entry_across_input_buffers() {
+    let src = "\
+fn f(a: i32, n: i32) -> i32 {
+    let mut acc: i32 = a;
+    for i in -3..n {
+        if i < 0 {
+            acc += i * 2;
+        } else {
+            acc += i + a;
+        };
+    }
+    return acc;
+}";
+    let lanes = 257usize;
+    let a: Vec<i32> = (0..lanes)
+        .map(|lane| ((lane as i32 * 5) % 23) - 11)
+        .collect();
+    let n: Vec<i32> = (0..lanes)
+        .map(|lane| ((lane as i32 * 7) % 17) - 4)
+        .collect();
+    let got = ir_exec_batched(src, &[a.clone(), n.clone()]);
+    let expected: Vec<i32> = a
+        .iter()
+        .zip(n.iter())
+        .map(|(&a, &n)| ast_interp(src, &[a, n]))
+        .collect();
+    assert_eq!(
+        got, expected,
+        "batched Rust lowering must map scalar entry semantics across every lane"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -415,7 +640,11 @@ fn rustc_run(src: &str, inputs: &[i32]) -> Option<i32> {
     let n = N.fetch_add(1, Ordering::Relaxed);
     let dir = std::env::temp_dir().join(format!("vyre_lower_{}_{}", std::process::id(), n));
     std::fs::create_dir_all(&dir).expect("temp dir");
-    let args = inputs.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ");
+    let args = inputs
+        .iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
     let main = format!("\nfn main() {{ println!(\"{{}}\", f({args})); }}\n");
     let rs = dir.join("m.rs");
     std::fs::write(&rs, format!("{src}{main}")).expect("write");
@@ -431,7 +660,12 @@ fn rustc_run(src: &str, inputs: &[i32]) -> Option<i32> {
             .output()
             .ok()
             .filter(|o| o.status.success())
-            .and_then(|o| String::from_utf8_lossy(&o.stdout).trim().parse::<i32>().ok())
+            .and_then(|o| {
+                String::from_utf8_lossy(&o.stdout)
+                    .trim()
+                    .parse::<i32>()
+                    .ok()
+            })
     } else {
         None
     };
@@ -445,7 +679,9 @@ fn lowered_ir_matches_rustc_execution() {
     for seed in 0..80u64 {
         let (src, nparams) = gen_program(seed);
         let inputs = gen_inputs(seed.wrapping_mul(13).wrapping_add(1), nparams);
-        let Some(expected) = rustc_run(&src, &inputs) else { continue };
+        let Some(expected) = rustc_run(&src, &inputs) else {
+            continue;
+        };
         let got = ir_exec(&src, &inputs);
         assert_eq!(
             got, expected,
@@ -453,5 +689,8 @@ fn lowered_ir_matches_rustc_execution() {
         );
         checked += 1;
     }
-    assert!(checked >= 40, "expected most generated programs to compile+run under rustc, got {checked}");
+    assert!(
+        checked >= 40,
+        "expected most generated programs to compile+run under rustc, got {checked}"
+    );
 }

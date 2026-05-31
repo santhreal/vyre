@@ -26,6 +26,11 @@ pub struct RustPipelineConfig {
     /// nano-subset entry function (the last function) to an executable Vyre
     /// `Program`; unsupported constructs fail loudly rather than miscompiling.
     pub lower: bool,
+    /// When lowering is enabled, compile the scalar entry function as a
+    /// data-parallel map over this many lanes. `None` keeps scalar ABI
+    /// compatibility (`pN[0] -> out[0]`); `Some(n)` lowers to `pN[gid.x] ->
+    /// out[gid.x]` with an out-of-range guard for rounded workgroups.
+    pub lower_lane_count: Option<u32>,
 }
 
 impl Default for RustPipelineConfig {
@@ -38,6 +43,7 @@ impl Default for RustPipelineConfig {
             gpu_lex: false,
             borrow_check: false,
             lower: false,
+            lower_lane_count: None,
         }
     }
 }
@@ -74,7 +80,11 @@ impl RustPipeline {
             self::borrow_stage::borrow_check(&module, &resolution)?;
         }
         let program = if self.config.lower {
-            Some(self::lower_stage::lower(&module, &resolution)?)
+            Some(self::lower_stage::lower(
+                &module,
+                &resolution,
+                self.config.lower_lane_count,
+            )?)
         } else {
             None
         };

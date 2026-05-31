@@ -523,4 +523,3 @@ mod tests {
         assert!(MAX_KEYWORD_LEN >= 12);
     }
 }
-

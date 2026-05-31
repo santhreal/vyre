@@ -151,3 +151,19 @@ required-features = ["logical"]
 name = "sweep_hash_crc32_reference_matrix"
 path = "tests/sweep_hash_crc32_reference_matrix.rs"
 required-features = ["hash"]
+
+# Rust frontend oracle tests import `vyre_libs::parsing::rust`, which is gated
+# behind `rust-parser`. Register them with `required-features` (matching the
+# sweep tests above) so a package-scoped `cargo test -p vyre-libs` cleanly skips
+# them instead of failing to compile, and so they build+run whenever the feature
+# is enabled. Without this entry the auto-discovered tests broke the per-crate
+# gate and only ran via workspace feature unification.
+[[test]]
+name = "rust_lower_exec_oracle"
+path = "tests/rust_lower_exec_oracle.rs"
+required-features = ["rust-parser"]
+
+[[test]]
+name = "rust_sema_borrow_oracle"
+path = "tests/rust_sema_borrow_oracle.rs"
+required-features = ["rust-parser"]

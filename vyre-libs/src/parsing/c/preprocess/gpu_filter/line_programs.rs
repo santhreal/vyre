@@ -54,10 +54,7 @@ pub(super) fn simple_line_comment_starts_program(n: u32) -> Program {
         Node::if_then(
             Expr::lt(i.clone(), Expr::load("line_n_real", Expr::u32(0))),
             vec![Node::if_then(
-                Expr::and(
-                    byte_eq(b0, b'/'),
-                    byte_eq(b1, b'/'),
-                ),
+                Expr::and(byte_eq(b0, b'/'), byte_eq(b1, b'/')),
                 vec![Node::let_bind(
                     "line_comment_start_old",
                     Expr::atomic_min("row_comment_starts", row, i.clone()),

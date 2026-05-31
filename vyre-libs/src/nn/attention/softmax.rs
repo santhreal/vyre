@@ -381,7 +381,8 @@ mod tests {
                 subgroup_size: 32,
                 ulp_budget: Some(128),
             },
-        ).unwrap();
+        )
+        .unwrap();
         assert!(ptx.contains(".target sm_80"), "{ptx}");
         assert!(ptx.contains(".visible .entry main("), "{ptx}");
         assert!(ptx.contains("region: vyre-libs::nn::softmax"), "{ptx}");
@@ -590,4 +591,3 @@ mod tests {
         }
     }
 }
-
