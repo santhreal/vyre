@@ -13,6 +13,7 @@ pub(super) const IFDS_REACH_MASK: u32 = edge_kind::ASSIGNMENT
     | edge_kind::MUT_REF;
 
 const HIGH_DEGREE_THRESHOLD: u32 = 24;
+pub(super) const UGLY_HUB_DEGREE: u32 = 2_048;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct IfdsSkewedStats {
@@ -341,7 +342,7 @@ fn expand_one_launch_wave(
 
 fn skewed_degree(src: u32) -> u32 {
     if src % 4096 == 0 {
-        96
+        UGLY_HUB_DEGREE
     } else if src % 257 == 0 {
         24
     } else if src % 31 == 0 {

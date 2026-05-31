@@ -77,6 +77,7 @@ pub(super) fn ifds_queue_metric_points(
     resident_used: bool,
     workgroup_size_x: u32,
     parallel_materializer: bool,
+    row_strided_traverse: bool,
 ) -> Vec<MetricPoint> {
     let mut metrics = ifds_queue_baseline_metric_points(stats, queue_capacity);
     metrics.push(MetricPoint {
@@ -90,6 +91,10 @@ pub(super) fn ifds_queue_metric_points(
     metrics.push(MetricPoint {
         name: "dataflow_ifds_queue_parallel_materializer".to_string(),
         value: u64::from(parallel_materializer),
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_queue_row_strided_traverse".to_string(),
+        value: u64::from(row_strided_traverse),
     });
     if wall_ns > 0 {
         metrics.push(MetricPoint {

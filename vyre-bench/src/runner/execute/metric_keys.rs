@@ -162,6 +162,9 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "dataflow_ifds_queue_parallel_materializer") => {
             Some("dataflow_ifds_queue_parallel_materializer")
         }
+        ("", "dataflow_ifds_queue_row_strided_traverse") => {
+            Some("dataflow_ifds_queue_row_strided_traverse")
+        }
         ("", "dataflow_ifds_queue_speedup_x1000") => Some("dataflow_ifds_queue_speedup_x1000"),
         ("", "dataflow_ifds_closure_nodes") => Some("dataflow_ifds_closure_nodes"),
         ("", "dataflow_ifds_closure_edges") => Some("dataflow_ifds_closure_edges"),
