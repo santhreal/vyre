@@ -1,7 +1,8 @@
 use super::hash::persistent_bfs_program_layout_hash;
 use super::layout::{
-    persistent_bfs_single_dispatch_grid, PersistentBfsBatchLayout, PersistentBfsFrontierLayout,
-    PersistentBfsPlanCacheKey, PersistentBfsPlanCacheKind,
+    persistent_bfs_batch_dispatch_grid, persistent_bfs_single_dispatch_grid,
+    PersistentBfsBatchLayout, PersistentBfsFrontierLayout, PersistentBfsPlanCacheKey,
+    PersistentBfsPlanCacheKind,
 };
 use super::program::{persistent_bfs, persistent_bfs_batch};
 use crate::graph::program_graph::ProgramGraphShape;
@@ -174,11 +175,7 @@ impl PersistentBfsResidentBatchDispatchPlan {
     /// Batch dispatch grid.
     #[must_use]
     pub const fn dispatch_grid(&self) -> [u32; 3] {
-        if self.batch_layout.query_count == 0 {
-            [1, 1, 1]
-        } else {
-            [1, self.batch_layout.query_count, 1]
-        }
+        persistent_bfs_batch_dispatch_grid(self.node_count, self.batch_layout.query_count)
     }
 
     /// Program graph shape with primitive-owned empty-edge padding.

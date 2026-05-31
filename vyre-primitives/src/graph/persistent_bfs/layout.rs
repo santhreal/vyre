@@ -22,6 +22,16 @@ pub const fn persistent_bfs_single_dispatch_grid(node_count: u32) -> [u32; 3] {
     [persistent_bfs_grid_x(node_count), 1, 1]
 }
 
+/// Dispatch grid for a batched persistent-BFS query set.
+#[must_use]
+pub const fn persistent_bfs_batch_dispatch_grid(node_count: u32, query_count: u32) -> [u32; 3] {
+    if query_count == 0 {
+        [1, 1, 1]
+    } else {
+        [persistent_bfs_grid_x(node_count), query_count, 1]
+    }
+}
+
 const fn persistent_bfs_grid_x(node_count: u32) -> u32 {
     if node_count == 0 {
         1

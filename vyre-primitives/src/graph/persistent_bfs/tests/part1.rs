@@ -507,6 +507,19 @@ fn large_dispatch_plans_cover_every_node_with_parallel_grid() {
     )
     .expect("Fix: large resident persistent-BFS chain should plan");
     assert_eq!(resident.dispatch_grid(), [3, 1, 1]);
+
+    let batch_seed = vec![0u32; seed.len() * 3];
+    let resident_batch = plan_persistent_bfs_resident_batch_dispatch(
+        node_count,
+        edge_targets.len() as u32,
+        seed.len(),
+        &batch_seed,
+        3,
+        0xFFFF_FFFF,
+        node_count,
+    )
+    .expect("Fix: large resident persistent-BFS batch should plan");
+    assert_eq!(resident_batch.dispatch_grid(), [3, 3, 1]);
 }
 
 #[test]

@@ -35,9 +35,9 @@ mod tests;
 pub use cpu_ref::{cpu_ref, try_cpu_ref, try_cpu_ref_into};
 pub use hash::{persistent_bfs_layout_hash, persistent_bfs_program_layout_hash};
 pub use layout::{
-    persistent_bfs_single_dispatch_grid, PersistentBfsPlanCacheKey, PersistentBfsStaticInputKey,
-    BATCH_OP_ID, BINDING_CHANGED, BINDING_FRONTIER_IN, BINDING_FRONTIER_OUT, OP_ID,
-    PERSISTENT_BFS_WORKGROUP_SIZE,
+    persistent_bfs_batch_dispatch_grid, persistent_bfs_single_dispatch_grid,
+    PersistentBfsPlanCacheKey, PersistentBfsStaticInputKey, BATCH_OP_ID, BINDING_CHANGED,
+    BINDING_FRONTIER_IN, BINDING_FRONTIER_OUT, OP_ID, PERSISTENT_BFS_WORKGROUP_SIZE,
 };
 pub use plan::{
     copy_persistent_bfs_batch_seed_and_clear_changed_into, copy_persistent_bfs_seed_frontier_into,

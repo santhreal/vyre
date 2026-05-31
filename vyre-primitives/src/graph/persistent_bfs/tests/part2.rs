@@ -1,5 +1,6 @@
 use super::super::*;
 use crate::graph::program_graph::ProgramGraphShape;
+use vyre_foundation::{ir::Node, MemoryOrdering};
 
 #[test]
 fn reusable_batch_frontier_validation_accepts_empty_and_canonical_batches() {
@@ -205,8 +206,36 @@ fn batch_program_carries_per_query_convergence_flag() {
     );
     let debug = format!("{:?}", program.entry);
     assert!(
-        debug.contains("batch_active"),
-        "persistent_bfs_batch must gate later per-query device work through an active flag"
+        debug.contains("batch_loop_changed_old"),
+        "persistent_bfs_batch must keep per-query changed flags wired to device-side atomic updates"
+    );
+    assert!(
+        !contains_loop_named(program.entry(), "batch_src"),
+        "Fix: persistent_bfs_batch must not scan every source node serially from one query lane."
+    );
+}
+
+#[test]
+fn large_batch_program_uses_grid_sync_parallel_steps() {
+    let program = persistent_bfs_batch(
+        ProgramGraphShape::new(513, 512),
+        "fin",
+        "fout",
+        "changed",
+        3,
+        0xFF,
+        2,
+    );
+
+    assert_eq!(program.workgroup_size, PERSISTENT_BFS_WORKGROUP_SIZE);
+    assert_eq!(
+        count_grid_sync(program.entry()),
+        4,
+        "Fix: two large batch iterations require one seed fence, one snapshot fence per parallel expansion, and one inter-iteration fence."
+    );
+    assert!(
+        !contains_loop_named(program.entry(), "batch_src"),
+        "Fix: large persistent_bfs_batch must not scan every source node from one lane per query."
     );
 }
 
@@ -221,13 +250,10 @@ fn persistent_bfs_batch_seed_copy_covers_frontiers_larger_than_one_workgroup() {
         .next()
         .expect("Fix: checked batch builder source must precede sizing helper");
 
+    assert!(batch_source.contains("Expr::lt(lane.clone(), Expr::u32(words))"));
     assert!(
-        batch_source.contains("Node::loop_for(\n                \"batch_copy_word\""),
-        "Fix: persistent_bfs_batch must copy every frontier word for each query."
-    );
-    assert!(
-        !batch_source.contains("Expr::lt(t.clone(), Expr::u32(words))"),
-        "Fix: persistent_bfs_batch seed copy must not be capped by the first workgroup lane range."
+        !batch_source.contains("\"batch_copy_word\""),
+        "Fix: persistent_bfs_batch seed copy must be parallel over grid.x lanes, not a one-lane loop."
     );
 }
 
@@ -300,4 +326,33 @@ fn panic_payload_message(payload: Box<dyn std::any::Any + Send>) -> String {
     } else {
         format!("{payload:?}")
     }
+}
+
+fn contains_loop_named(nodes: &[Node], needle: &str) -> bool {
+    nodes.iter().any(|node| match node {
+        Node::Loop { var, body, .. } => var.as_str() == needle || contains_loop_named(body, needle),
+        Node::If {
+            then, otherwise, ..
+        } => contains_loop_named(then, needle) || contains_loop_named(otherwise, needle),
+        Node::Block(body) => contains_loop_named(body, needle),
+        Node::Region { body, .. } => contains_loop_named(body, needle),
+        _ => false,
+    })
+}
+
+fn count_grid_sync(nodes: &[Node]) -> usize {
+    nodes
+        .iter()
+        .map(|node| match node {
+            Node::Barrier {
+                ordering: MemoryOrdering::GridSync,
+            } => 1,
+            Node::If {
+                then, otherwise, ..
+            } => count_grid_sync(then) + count_grid_sync(otherwise),
+            Node::Loop { body, .. } | Node::Block(body) => count_grid_sync(body),
+            Node::Region { body, .. } => count_grid_sync(body),
+            _ => 0,
+        })
+        .sum()
 }
