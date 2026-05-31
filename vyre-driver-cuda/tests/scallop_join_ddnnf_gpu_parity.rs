@@ -8,7 +8,9 @@ mod common;
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_primitives::graph::knowledge_compile::{ddnnf_evaluate, ddnnf_evaluate_cpu, LITERAL_TRUE};
+use vyre_primitives::graph::knowledge_compile::{
+    ddnnf_evaluate, ddnnf_evaluate_cpu, ddnnf_evaluate_dispatch_grid, LITERAL_FALSE, LITERAL_TRUE,
+};
 use vyre_primitives::math::scallop_join::{cpu_ref as scallop_cpu, scallop_join};
 use vyre_primitives::math::scallop_join_wide::{cpu_ref as scallop_wide_cpu, scallop_join_wide};
 
@@ -168,9 +170,7 @@ fn run_ddnnf(
         vec![0u8; n_nodes as usize * 4],
     ];
     let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((n_nodes + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
+    config.grid_override = Some(ddnnf_evaluate_dispatch_grid(n_nodes));
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -229,4 +229,67 @@ fn cuda_ddnnf_literal_with_var_assigned_false() {
         assert_eq!(gpu, cpu);
         assert_eq!(gpu[0], 0);
     });
+}
+
+#[test]
+fn cuda_ddnnf_literal_wave_crosses_workgroup_boundaries() {
+    with_live_backend(
+        "cuda_ddnnf_literal_wave_crosses_workgroup_boundaries",
+        |backend| {
+            let n_nodes = 1025u32;
+            let n_vars = 97u32;
+            let node_kinds: Vec<u32> = (0..n_nodes)
+                .map(|idx| {
+                    if idx % 2 == 0 {
+                        LITERAL_TRUE
+                    } else {
+                        LITERAL_FALSE
+                    }
+                })
+                .collect();
+            let node_var: Vec<u32> = (0..n_nodes).map(|idx| idx % n_vars).collect();
+            let child_offsets = vec![0u32; n_nodes as usize];
+            let child_counts = vec![0u32; n_nodes as usize];
+            let children: Vec<u32> = vec![];
+            let var_assignments: Vec<u32> = (0..n_vars)
+                .map(|idx| match idx % 3 {
+                    0 => 0,
+                    1 => 1,
+                    _ => u32::MAX,
+                })
+                .collect();
+            let nodes_cpu: Vec<(u32, u32, u32)> = node_kinds
+                .iter()
+                .copied()
+                .map(|kind| (kind, 0, 0))
+                .collect();
+            let topo_order: Vec<u32> = (0..n_nodes).collect();
+
+            let cpu = ddnnf_evaluate_cpu(
+                &nodes_cpu,
+                &node_var,
+                &children,
+                &var_assignments,
+                &topo_order,
+            );
+            let gpu = run_ddnnf(
+                backend,
+                &node_kinds,
+                &node_var,
+                &child_offsets,
+                &child_counts,
+                &children,
+                &var_assignments,
+            );
+
+            assert_eq!(ddnnf_evaluate_dispatch_grid(n_nodes), [5, 1, 1]);
+            assert_eq!(gpu, cpu);
+            assert_eq!(gpu[0], 0);
+            assert_eq!(gpu[1], 0);
+            assert_eq!(gpu[2], 1);
+            assert_eq!(gpu[256], cpu[256]);
+            assert_eq!(gpu[512], cpu[512]);
+            assert_eq!(gpu[1024], cpu[1024]);
+        },
+    );
 }

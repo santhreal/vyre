@@ -18,6 +18,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Added explicit union-find dispatch sizing through the self-substrate path and multi-block CUDA coverage for large edge batches.
 
+- Added explicit d-DNNF evaluation dispatch sizing and multi-block CUDA coverage for literal-heavy knowledge-compile waves.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

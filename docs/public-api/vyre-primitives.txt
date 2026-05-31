@@ -132,6 +132,7 @@ pub const C_SLASH: u32 = 15;
 pub const C_STAR: u32 = 12;
 pub const C_TILDE: u32 = 26;
 pub const C_WS: u32 = 1;
+pub const DDNNF_EVALUATE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const DEFAULT_DFA_BUDGET_BYTES: usize = 16 * 1024 * 1024;
 pub const DENSE_MATVEC_OP_ID: &str = "vyre-primitives::bitset::four_russians_dense_matvec_byte_lut";
 pub const DENSE_THRESHOLD_PCT: u32 = 25;
@@ -497,6 +498,7 @@ pub const fn csr_forward_or_changed_parallel_batch_grid(
 pub const fn csr_forward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
 pub const fn csr_frontier_degree_sum_dispatch_grid(node_count: u32) -> [u32; 3] {
 pub const fn csr_frontier_step_dispatch_grid(node_count: u32) -> [u32; 3] {
+pub const fn ddnnf_evaluate_dispatch_grid(n_nodes: u32) -> [u32; 3] {
 pub const fn dispatch_grid(&self) -> [u32; 3] {
 pub const fn dom_target_words(&self) -> usize {
 pub const fn dominator_frontier_dispatch_grid(node_count: u32) -> [u32; 3] {
