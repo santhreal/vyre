@@ -22,6 +22,17 @@ pub const BINDING_FRONTIER_IN: u32 = BINDING_PRIMITIVE_START;
 pub const BINDING_FRONTIER_OUT: u32 = BINDING_PRIMITIVE_START + 1;
 pub(crate) const CSR_FRONTIER_STEP_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
+/// Dispatch grid for one source-lane CSR frontier step.
+#[must_use]
+pub const fn csr_frontier_step_dispatch_grid(node_count: u32) -> [u32; 3] {
+    let blocks = node_count.div_ceil(CSR_FRONTIER_STEP_WORKGROUP_SIZE[0]);
+    if blocks == 0 {
+        [1, 1, 1]
+    } else {
+        [blocks, 1, 1]
+    }
+}
+
 /// Direction for a one-step CSR frontier traversal.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum CsrFrontierStepKind {
@@ -255,7 +266,7 @@ fn mark_node_bit(
 
 #[cfg(test)]
 mod tests {
-    use super::CSR_FRONTIER_STEP_WORKGROUP_SIZE;
+    use super::{csr_frontier_step_dispatch_grid, CSR_FRONTIER_STEP_WORKGROUP_SIZE};
 
     fn scalar_forward(
         node_count: u32,
@@ -342,6 +353,15 @@ mod tests {
             program.workgroup_size()[0] > 1,
             "Fix: CSR frontier traversal must not launch one CUDA block per source node."
         );
+    }
+
+    #[test]
+    fn dispatch_grid_packs_source_lanes_into_workgroups() {
+        assert_eq!(csr_frontier_step_dispatch_grid(0), [1, 1, 1]);
+        assert_eq!(csr_frontier_step_dispatch_grid(1), [1, 1, 1]);
+        assert_eq!(csr_frontier_step_dispatch_grid(256), [1, 1, 1]);
+        assert_eq!(csr_frontier_step_dispatch_grid(257), [2, 1, 1]);
+        assert_eq!(csr_frontier_step_dispatch_grid(513), [3, 1, 1]);
     }
 
     #[test]
