@@ -4,7 +4,12 @@ use vyre::ir::Expr;
 
 use crate::parsing::rust::lex::tokens::*;
 
-pub(super) fn keyword_or_ident(haystack: &str, haystack_len: u32, pos: Expr, len: Expr) -> Expr {
+pub(super) fn keyword_or_ident_until(
+    haystack: &str,
+    source_end: Expr,
+    pos: Expr,
+    len: Expr,
+) -> Expr {
     let mut out = Expr::u32(u32::from(IDENT));
     for &(text, kind) in &[
         (b"fn".as_slice(), KW_FN),
@@ -22,7 +27,7 @@ pub(super) fn keyword_or_ident(haystack: &str, haystack_len: u32, pos: Expr, len
         (b"bool".as_slice(), KW_BOOL),
     ] {
         out = Expr::select(
-            bytes_eq(haystack, haystack_len, pos.clone(), len.clone(), text),
+            bytes_eq_until(haystack, source_end.clone(), pos.clone(), len.clone(), text),
             Expr::u32(u32::from(kind)),
             out,
         );
@@ -30,15 +35,15 @@ pub(super) fn keyword_or_ident(haystack: &str, haystack_len: u32, pos: Expr, len
     out
 }
 
-fn bytes_eq(haystack: &str, haystack_len: u32, pos: Expr, len: Expr, text: &[u8]) -> Expr {
+fn bytes_eq_until(haystack: &str, source_end: Expr, pos: Expr, len: Expr, text: &[u8]) -> Expr {
     let mut cond = Expr::eq(len, Expr::u32(text.len() as u32));
     for (offset, byte) in text.iter().enumerate() {
         cond = Expr::and(
             cond,
             byte_eq(
-                byte_at_or_zero(
+                byte_before_or_zero(
                     haystack,
-                    haystack_len,
+                    source_end.clone(),
                     Expr::add(pos.clone(), Expr::u32(offset as u32)),
                 ),
                 *byte,
@@ -52,9 +57,9 @@ pub(super) fn byte_load(haystack: &str, index: Expr) -> Expr {
     Expr::load(haystack, index)
 }
 
-pub(super) fn byte_at_or_zero(haystack: &str, haystack_len: u32, index: Expr) -> Expr {
+pub(super) fn byte_before_or_zero(haystack: &str, source_end: Expr, index: Expr) -> Expr {
     Expr::select(
-        Expr::lt(index.clone(), Expr::u32(haystack_len)),
+        Expr::lt(index.clone(), source_end),
         byte_load(haystack, index),
         Expr::u32(0),
     )

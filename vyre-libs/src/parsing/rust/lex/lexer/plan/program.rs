@@ -1,17 +1,20 @@
 //! Vyre IR program for Rust nano-subset tokenization.
 
+mod batch;
 mod expr;
+
+pub use batch::rust_lexer_batch;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::parsing::rust::lex::tokens::*;
 
 use expr::{
-    byte_at_or_zero, byte_eq, byte_load, is_ascii_whitespace, is_digit, is_ident_continue,
-    is_ident_start, keyword_or_ident, unhandled,
+    byte_before_or_zero, byte_eq, byte_load, is_ascii_whitespace, is_digit, is_ident_continue,
+    is_ident_start, keyword_or_ident_until, unhandled,
 };
 
-const WORKGROUP_SIZE: u32 = 256;
+pub(super) const WORKGROUP_SIZE: u32 = 256;
 const MAX_TOKEN_LEN: u32 = u16::MAX as u32;
 
 /// Build a compacting lexer for the Rust nano-subset.
@@ -43,7 +46,9 @@ pub fn rust_lexer(
                 Expr::lt(Expr::var("cursor"), source_len.clone()),
                 scan_one_token(
                     haystack,
-                    haystack_len,
+                    Expr::u32(0),
+                    source_len.clone(),
+                    Expr::u32(0),
                     out_tok_types,
                     out_tok_starts,
                     out_tok_lens,
@@ -55,6 +60,7 @@ pub fn rust_lexer(
         out_tok_types,
         out_tok_starts,
         out_tok_lens,
+        Expr::u32(0),
         Expr::u32(u32::from(EOF)),
         source_len,
         Expr::u32(0),
@@ -81,18 +87,32 @@ pub fn rust_lexer(
     .with_non_composable_with_self(true)
 }
 
-fn scan_one_token(
+pub(super) fn scan_one_token(
     haystack: &str,
-    haystack_len: u32,
+    source_start: Expr,
+    source_end: Expr,
+    token_index_base: Expr,
     out_tok_types: &str,
     out_tok_starts: &str,
     out_tok_lens: &str,
 ) -> Vec<Node> {
     let pos = Expr::var("cursor");
     let byte = byte_load(haystack, pos.clone());
-    let next = byte_at_or_zero(haystack, haystack_len, Expr::add(pos.clone(), Expr::u32(1)));
-    let next2 = byte_at_or_zero(haystack, haystack_len, Expr::add(pos.clone(), Expr::u32(2)));
-    let next3 = byte_at_or_zero(haystack, haystack_len, Expr::add(pos.clone(), Expr::u32(3)));
+    let next = byte_before_or_zero(
+        haystack,
+        source_end.clone(),
+        Expr::add(pos.clone(), Expr::u32(1)),
+    );
+    let next2 = byte_before_or_zero(
+        haystack,
+        source_end.clone(),
+        Expr::add(pos.clone(), Expr::u32(2)),
+    );
+    let next3 = byte_before_or_zero(
+        haystack,
+        source_end.clone(),
+        Expr::add(pos.clone(), Expr::u32(3)),
+    );
 
     let mut nodes = vec![
         Node::let_bind("pos", pos.clone()),
@@ -121,7 +141,7 @@ fn scan_one_token(
                 byte_eq(Expr::var("next_byte"), b'/'),
             ),
         ),
-        line_comment_skip(haystack, haystack_len),
+        line_comment_skip(haystack, source_end.clone()),
     ));
 
     nodes.push(Node::if_then(
@@ -132,17 +152,17 @@ fn scan_one_token(
                 byte_eq(Expr::var("next_byte"), b'*'),
             ),
         ),
-        block_comment_skip(haystack, haystack_len),
+        block_comment_skip(haystack, source_end.clone()),
     ));
 
     nodes.push(Node::if_then(
         Expr::and(unhandled(), is_ident_start(Expr::var("byte"))),
-        scan_identifier(haystack, haystack_len),
+        scan_identifier(haystack, source_end.clone()),
     ));
 
     nodes.push(Node::if_then(
         Expr::and(unhandled(), is_digit(Expr::var("byte"))),
-        scan_integer(haystack, haystack_len),
+        scan_integer(haystack, source_end.clone()),
     ));
 
     nodes.extend(operator_classifiers());
@@ -153,8 +173,9 @@ fn scan_one_token(
             out_tok_types,
             out_tok_starts,
             out_tok_lens,
+            token_index_base.clone(),
             Expr::var("tok_type"),
-            Expr::var("pos"),
+            Expr::sub(Expr::var("pos"), source_start.clone()),
             Expr::var("tok_len"),
         ));
         emit.push(Node::assign(
@@ -168,14 +189,14 @@ fn scan_one_token(
     nodes
 }
 
-fn line_comment_skip(haystack: &str, haystack_len: u32) -> Vec<Node> {
+fn line_comment_skip(haystack: &str, source_end: Expr) -> Vec<Node> {
     vec![
         Node::assign("cursor", Expr::add(Expr::var("cursor"), Expr::u32(2))),
         Node::let_bind("comment_done", Expr::u32(0)),
         Node::loop_for(
             "line_comment_i",
             Expr::var("cursor"),
-            Expr::u32(haystack_len),
+            source_end,
             vec![Node::if_then(
                 Expr::eq(Expr::var("comment_done"), Expr::u32(0)),
                 vec![
@@ -201,14 +222,14 @@ fn line_comment_skip(haystack: &str, haystack_len: u32) -> Vec<Node> {
     ]
 }
 
-fn block_comment_skip(haystack: &str, haystack_len: u32) -> Vec<Node> {
+fn block_comment_skip(haystack: &str, source_end: Expr) -> Vec<Node> {
     vec![
         Node::assign("cursor", Expr::add(Expr::var("cursor"), Expr::u32(2))),
         Node::let_bind("block_done", Expr::u32(0)),
         Node::loop_for(
             "block_comment_i",
             Expr::var("cursor"),
-            Expr::u32(haystack_len),
+            source_end.clone(),
             vec![Node::if_then(
                 Expr::eq(Expr::var("block_done"), Expr::u32(0)),
                 vec![
@@ -218,9 +239,9 @@ fn block_comment_skip(haystack: &str, haystack_len: u32) -> Vec<Node> {
                     ),
                     Node::let_bind(
                         "block_next",
-                        byte_at_or_zero(
+                        byte_before_or_zero(
                             haystack,
-                            haystack_len,
+                            source_end.clone(),
                             Expr::add(Expr::var("block_comment_i"), Expr::u32(1)),
                         ),
                     ),
@@ -248,7 +269,7 @@ fn block_comment_skip(haystack: &str, haystack_len: u32) -> Vec<Node> {
     ]
 }
 
-fn scan_identifier(haystack: &str, haystack_len: u32) -> Vec<Node> {
+fn scan_identifier(haystack: &str, source_end: Expr) -> Vec<Node> {
     vec![
         Node::assign("tok_type", Expr::u32(u32::from(IDENT))),
         Node::assign("tok_len", Expr::u32(1)),
@@ -256,7 +277,7 @@ fn scan_identifier(haystack: &str, haystack_len: u32) -> Vec<Node> {
         Node::loop_for(
             "ident_i",
             Expr::add(Expr::var("pos"), Expr::u32(1)),
-            Expr::u32(haystack_len),
+            source_end.clone(),
             vec![Node::if_then(
                 Expr::eq(Expr::var("ident_done"), Expr::u32(0)),
                 vec![
@@ -277,9 +298,9 @@ fn scan_identifier(haystack: &str, haystack_len: u32) -> Vec<Node> {
             Expr::select(
                 Expr::gt(Expr::var("tok_len"), Expr::u32(MAX_TOKEN_LEN)),
                 Expr::u32(u32::from(ERROR)),
-                keyword_or_ident(
+                keyword_or_ident_until(
                     haystack,
-                    haystack_len,
+                    source_end,
                     Expr::var("pos"),
                     Expr::var("tok_len"),
                 ),
@@ -288,7 +309,7 @@ fn scan_identifier(haystack: &str, haystack_len: u32) -> Vec<Node> {
     ]
 }
 
-fn scan_integer(haystack: &str, haystack_len: u32) -> Vec<Node> {
+fn scan_integer(haystack: &str, source_end: Expr) -> Vec<Node> {
     vec![
         Node::assign("tok_type", Expr::u32(u32::from(LITERAL_INT))),
         Node::assign("tok_len", Expr::u32(1)),
@@ -296,7 +317,7 @@ fn scan_integer(haystack: &str, haystack_len: u32) -> Vec<Node> {
         Node::loop_for(
             "int_i",
             Expr::add(Expr::var("pos"), Expr::u32(1)),
-            Expr::u32(haystack_len),
+            source_end,
             vec![Node::if_then(
                 Expr::eq(Expr::var("int_done"), Expr::u32(0)),
                 vec![
@@ -402,18 +423,20 @@ fn set_token(cond: Expr, kind: u16, len: u32) -> Node {
     )
 }
 
-fn emit_token(
+pub(super) fn emit_token(
     out_tok_types: &str,
     out_tok_starts: &str,
     out_tok_lens: &str,
+    token_index_base: Expr,
     kind: Expr,
     start: Expr,
     len: Expr,
 ) -> Vec<Node> {
+    let token_index = Expr::add(token_index_base, Expr::var("tok_idx"));
     vec![
-        Node::store(out_tok_types, Expr::var("tok_idx"), kind),
-        Node::store(out_tok_starts, Expr::var("tok_idx"), start),
-        Node::store(out_tok_lens, Expr::var("tok_idx"), len),
+        Node::store(out_tok_types, token_index.clone(), kind),
+        Node::store(out_tok_starts, token_index.clone(), start),
+        Node::store(out_tok_lens, token_index, len),
         Node::assign("tok_idx", Expr::add(Expr::var("tok_idx"), Expr::u32(1))),
     ]
 }

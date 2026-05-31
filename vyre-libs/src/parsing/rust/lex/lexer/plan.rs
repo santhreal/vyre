@@ -2,7 +2,7 @@
 
 mod program;
 
-pub use program::rust_lexer;
+pub use program::{rust_lexer, rust_lexer_batch};
 
 use vyre::ir::Program;
 

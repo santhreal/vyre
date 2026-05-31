@@ -6,6 +6,7 @@ use crate::api::metric::{BenchMetrics, MetricPoint};
 use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
 
 mod lexer;
+mod lexer_batch;
 
 pub struct RustRangeLoopPipeline;
 

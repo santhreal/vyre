@@ -193,6 +193,21 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "rust_frontend_gpu_lexer_source_bytes") => {
             Some("rust_frontend_gpu_lexer_source_bytes")
         }
+        ("", "rust_frontend_gpu_lexer_batch_speedup_x1000") => {
+            Some("rust_frontend_gpu_lexer_batch_speedup_x1000")
+        }
+        ("", "rust_frontend_gpu_lexer_batch_tokens") => {
+            Some("rust_frontend_gpu_lexer_batch_tokens")
+        }
+        ("", "rust_frontend_gpu_lexer_batch_source_bytes") => {
+            Some("rust_frontend_gpu_lexer_batch_source_bytes")
+        }
+        ("", "rust_frontend_gpu_lexer_batch_sources") => {
+            Some("rust_frontend_gpu_lexer_batch_sources")
+        }
+        ("", "rust_frontend_gpu_lexer_batch_token_stride") => {
+            Some("rust_frontend_gpu_lexer_batch_token_stride")
+        }
         ("baseline_", "flop_count") => Some("baseline_flop_count"),
         ("baseline_", "megakernel_items_processed") => Some("baseline_megakernel_items_processed"),
         _ => None,
