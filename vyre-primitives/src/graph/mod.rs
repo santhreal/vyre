@@ -42,6 +42,8 @@ pub mod csr_frontier_degree_sum;
 /// expansion for sparse dataflow waves.
 pub mod csr_frontier_queue;
 mod csr_frontier_step;
+/// Queue-to-queue sparse CSR delta expansion for GPU-resident fixpoint waves.
+pub mod csr_queue_delta;
 
 /// One BFS step over BOTH forward + backward edges.
 pub mod csr_bidirectional;

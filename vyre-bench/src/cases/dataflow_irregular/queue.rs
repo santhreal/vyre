@@ -19,7 +19,16 @@ use super::fixture::{
 use super::metrics::{ifds_queue_baseline_metric_points, ifds_queue_metric_points};
 use super::SUITES;
 
+mod closure;
 mod materialize;
+#[cfg(test)]
+pub(super) use closure::{
+    ifds_queue_closure_inputs, ifds_queue_closure_reset_program, prepare_ifds_skewed_queue_closure,
+    QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
+    QUEUE_CLOSURE_EDGE_OFFSETS_INDEX, QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX,
+    QUEUE_CLOSURE_LEN_B_INDEX, QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX,
+    QUEUE_CLOSURE_SEED_FRONTIER_INDEX,
+};
 #[cfg(test)]
 pub(super) use materialize::{
     ifds_queue_reset_program, prepare_ifds_skewed_queue_materialize_step, QUEUE_ACTIVE_QUEUE_INDEX,

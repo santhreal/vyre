@@ -149,6 +149,20 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
             Some("dataflow_ifds_skewed_workgroup_size_x")
         }
         ("", "dataflow_ifds_skewed_speedup_x1000") => Some("dataflow_ifds_skewed_speedup_x1000"),
+        ("", "dataflow_ifds_queue_capacity") => Some("dataflow_ifds_queue_capacity"),
+        ("", "dataflow_ifds_queue_lane_reduction_x1000") => {
+            Some("dataflow_ifds_queue_lane_reduction_x1000")
+        }
+        ("", "dataflow_ifds_queue_resident_buffers") => {
+            Some("dataflow_ifds_queue_resident_buffers")
+        }
+        ("", "dataflow_ifds_queue_workgroup_size_x") => {
+            Some("dataflow_ifds_queue_workgroup_size_x")
+        }
+        ("", "dataflow_ifds_queue_parallel_materializer") => {
+            Some("dataflow_ifds_queue_parallel_materializer")
+        }
+        ("", "dataflow_ifds_queue_speedup_x1000") => Some("dataflow_ifds_queue_speedup_x1000"),
         ("", "dataflow_ifds_closure_nodes") => Some("dataflow_ifds_closure_nodes"),
         ("", "dataflow_ifds_closure_edges") => Some("dataflow_ifds_closure_edges"),
         ("", "dataflow_ifds_closure_frontier_words") => {
@@ -188,6 +202,16 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
             Some("dataflow_ifds_closure_workgroup_size_x")
         }
         ("", "dataflow_ifds_closure_speedup_x1000") => Some("dataflow_ifds_closure_speedup_x1000"),
+        ("", "dataflow_ifds_closure_queue_capacity") => {
+            Some("dataflow_ifds_closure_queue_capacity")
+        }
+        ("", "dataflow_ifds_closure_total_queue_pops") => {
+            Some("dataflow_ifds_closure_total_queue_pops")
+        }
+        ("", "dataflow_ifds_closure_max_wave_queue_len") => {
+            Some("dataflow_ifds_closure_max_wave_queue_len")
+        }
+        ("", "dataflow_ifds_closure_queue_delta") => Some("dataflow_ifds_closure_queue_delta"),
         ("", "scan_ac_irregular_haystack_bytes") => Some("scan_ac_irregular_haystack_bytes"),
         ("", "scan_ac_irregular_packed_haystack_words") => {
             Some("scan_ac_irregular_packed_haystack_words")
