@@ -78,6 +78,7 @@ pub(super) fn ifds_closure_metric_points(
     wall_ns: u64,
     resident_used: bool,
     resident_reset_bytes: u64,
+    device_reset_sequence: bool,
     dispatch_iterations: u32,
     max_iterations: u32,
     workgroup_size_x: u32,
@@ -96,6 +97,10 @@ pub(super) fn ifds_closure_metric_points(
     metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_resident_reset_bytes".to_string(),
         value: resident_reset_bytes,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_device_reset_sequence".to_string(),
+        value: u64::from(device_reset_sequence),
     });
     metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_workgroup_size_x".to_string(),

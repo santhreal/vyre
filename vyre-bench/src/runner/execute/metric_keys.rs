@@ -167,6 +167,9 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "dataflow_ifds_closure_resident_reset_bytes") => {
             Some("dataflow_ifds_closure_resident_reset_bytes")
         }
+        ("", "dataflow_ifds_closure_device_reset_sequence") => {
+            Some("dataflow_ifds_closure_device_reset_sequence")
+        }
         ("", "dataflow_ifds_closure_workgroup_size_x") => {
             Some("dataflow_ifds_closure_workgroup_size_x")
         }

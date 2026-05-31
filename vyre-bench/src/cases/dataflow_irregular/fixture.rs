@@ -133,6 +133,15 @@ pub(super) fn ifds_closure_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
     inputs
 }
 
+pub(super) fn ifds_closure_resident_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
+    let mut inputs = ifds_graph_inputs(fixture);
+    let seed = vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in);
+    inputs.push(seed.clone());
+    inputs.push(seed);
+    inputs.push(vyre_primitives::wire::pack_u32_slice(&[0]));
+    inputs
+}
+
 pub(super) fn ifds_skewed_cpu_oracle(fixture: &IfdsSkewedFixture) -> IfdsSkewedOracle {
     let mut output = fixture.frontier_out_seed.clone();
     let mut allowed_edges_from_active = 0_u64;

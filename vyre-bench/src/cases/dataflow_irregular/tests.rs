@@ -60,13 +60,25 @@ fn ifds_skewed_closure_oracle_expands_seed_frontier() {
 }
 
 #[test]
+fn ifds_skewed_closure_resident_inputs_keep_immutable_seed() {
+    let fixture = build_ifds_skewed_fixture(4096).unwrap();
+    let inputs = super::fixture::ifds_closure_resident_inputs(&fixture);
+
+    assert_eq!(inputs.len(), 8);
+    assert_eq!(inputs[5].len(), fixture.frontier_in.len() * 4);
+    assert_eq!(inputs[5], inputs[6]);
+    assert_eq!(inputs[7], vyre_primitives::wire::pack_u32_slice(&[0]));
+}
+
+#[test]
 fn ifds_skewed_closure_prepare_builds_resident_fixpoint_program() {
     let prepared = closure::prepare_ifds_skewed_closure(None).unwrap();
 
-    assert_eq!(prepared.program.workgroup_size(), [1, 1, 1]);
+    assert_eq!(prepared.program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(prepared.reset_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.stats.nodes, NODE_COUNT);
     assert_eq!(prepared.inputs.len(), 7);
-    assert_eq!(prepared.seed_frontier_bytes.len(), FRONTIER_WORDS * 4);
+    assert_eq!(prepared.inputs[5].len(), FRONTIER_WORDS * 4);
     assert_eq!(prepared.baseline_outputs.len(), 2);
     assert_eq!(prepared.baseline_outputs[0].len(), FRONTIER_WORDS * 4);
     assert_eq!(prepared.baseline_outputs[1].len(), 4);

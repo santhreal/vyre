@@ -196,6 +196,24 @@ impl ResidentInputSet {
             .map_err(|error| BenchError::BackendFailed(error.to_string()))
     }
 
+    /// Clone resident resource handles in caller-requested binding order.
+    pub fn resources_for_indices(
+        &self,
+        indices: &[usize],
+        context: &str,
+    ) -> Result<Vec<Resource>, BenchError> {
+        indices
+            .iter()
+            .map(|&index| {
+                self.resources.get(index).cloned().ok_or_else(|| {
+                    BenchError::ExecutionFailed(format!(
+                        "{context} resident resources missing resource at index {index}"
+                    ))
+                })
+            })
+            .collect()
+    }
+
     fn upload(
         ctx: &BenchContext,
         inputs: &[Vec<u8>],
