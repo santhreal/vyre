@@ -24,6 +24,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Restored multi-block Scallop dispatch for large relation matrices through split-visible GridSync phases while keeping small matrices on the block-local persistent path.
 
+- Packed `tensor_flow_forward` source-node dataflow lanes into 256-lane workgroups and added CUDA parity for context/field propagation past the first block.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

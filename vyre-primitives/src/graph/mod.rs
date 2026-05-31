@@ -86,6 +86,8 @@ pub mod vast_tree_walk;
 
 /// 3D sub-warp dataflow tensors
 pub mod tensor_flow_forward;
+#[cfg(test)]
+mod tensor_flow_forward_tests;
 
 /// K-step Chebyshev polynomial filter on a graph Laplacian. Composes
 /// from `vyre-primitives::math::semiring_gemm` (each step is one

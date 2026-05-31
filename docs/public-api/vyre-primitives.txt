@@ -440,6 +440,7 @@ pub const STANDARD_DIM_WORDS: u32 = STANDARD_DIM_BITS / 32;
 pub const STORED_HEADER_FIX: &str =
 pub const SUM_F32_OP_ID: &str = "vyre-primitives::reduce::workgroup_sum_f32";
 pub const SUM_U32_OP_ID: &str = "vyre-primitives::reduce::workgroup_sum_u32";
+pub const TENSOR_FLOW_FORWARD_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const TOPOSORT_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
 pub const TOPOSORT_INDEGREE_SCRATCH_BUFFER: &str = "toposort indeg_scratch";
 pub const TOPOSORT_OFFSETS_BUFFER: &str = "toposort offsets";
@@ -580,6 +581,7 @@ pub const fn single(kind: EffectKind) -> Self {
 pub const fn sparse_dense(
 pub const fn static_input_key(
 pub const fn static_input_key(&self) -> PersistentBfsStaticInputKey {
+pub const fn tensor_flow_forward_dispatch_grid(node_count: u32) -> [u32; 3] {
 pub const fn tensor_words(node_count: u32, context_limit: u32, field_limit: u32) -> u32 {
 pub const fn total_words(&self) -> usize {
 pub const fn union(self, other: Self) -> Self {
