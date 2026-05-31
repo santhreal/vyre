@@ -14,6 +14,7 @@ pub use dispatch::{run_resident_csr_queue_batch_budgeted_into, run_resident_csr_
 
 use vyre_foundation::ir::Program;
 
+use crate::graph::csr_frontier_queue_scratch::ResidentCsrQueueMaterializer;
 use crate::graph::resident_handles::free_unique_resident_handles;
 use crate::hardware::scratch::reserve_vec as reserve_graph_vec;
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher, ResidentReadRange};
@@ -25,13 +26,16 @@ pub struct ResidentCsrQueueBatchScratch {
     shape: Option<ResidentCsrQueueBatchShape>,
     queue_len_init_program: Option<Program>,
     clear_frontier_out_program: Option<Program>,
+    word_counts_program: Option<Program>,
     queue_program: Option<Program>,
     traverse_program: Option<Program>,
     frontier_payloads: Vec<Vec<u8>>,
     readbacks: Vec<Vec<u8>>,
     queue_len_init_handle_sets: Vec<[u64; 1]>,
     clear_handle_sets: Vec<[u64; 1]>,
+    word_count_handle_sets: Vec<[u64; 3]>,
     queue_handle_sets: Vec<[u64; 3]>,
+    word_prefix_queue_handle_sets: Vec<[u64; 5]>,
     traverse_handle_sets: Vec<[u64; 6]>,
     read_ranges: Vec<ResidentReadRange>,
 }
@@ -51,7 +55,7 @@ impl ResidentCsrQueueBatchScratch {
 
     /// Free all batch scratch resident buffers.
     pub fn free(&mut self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
-        let handle_slots = self.handles.len().checked_mul(4).ok_or_else(|| {
+        let handle_slots = self.handles.len().checked_mul(6).ok_or_else(|| {
             DispatchError::BackendError(
                 "Fix: resident CSR queue batch scratch free handle count overflowed.".to_string(),
             )
@@ -69,6 +73,12 @@ impl ResidentCsrQueueBatchScratch {
                 handles.queue_len,
                 handles.frontier_out,
             ]);
+            if let Some(word_partials) = handles.word_partials {
+                handles_to_free.push(word_partials);
+            }
+            if let Some(block_totals) = handles.block_totals {
+                handles_to_free.push(block_totals);
+            }
         }
         let free_result = free_unique_resident_handles(
             dispatcher,
@@ -78,13 +88,16 @@ impl ResidentCsrQueueBatchScratch {
         self.shape = None;
         self.queue_len_init_program = None;
         self.clear_frontier_out_program = None;
+        self.word_counts_program = None;
         self.queue_program = None;
         self.traverse_program = None;
         self.frontier_payloads.clear();
         self.readbacks.clear();
         self.queue_len_init_handle_sets.clear();
         self.clear_handle_sets.clear();
+        self.word_count_handle_sets.clear();
         self.queue_handle_sets.clear();
+        self.word_prefix_queue_handle_sets.clear();
         self.traverse_handle_sets.clear();
         self.read_ranges.clear();
         free_result
@@ -97,6 +110,8 @@ struct ResidentCsrQueueBatchQueryHandles {
     active_queue: u64,
     queue_len: u64,
     frontier_out: u64,
+    word_partials: Option<u64>,
+    block_totals: Option<u64>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -107,4 +122,5 @@ struct ResidentCsrQueueBatchShape {
     allow_mask: u32,
     node_count: u32,
     edge_count: u32,
+    materializer: ResidentCsrQueueMaterializer,
 }

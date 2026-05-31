@@ -1,4 +1,5 @@
 use super::*;
+use crate::graph::csr_frontier_queue_scratch::ResidentCsrQueueMaterializer;
 use crate::optimizer::dispatcher::{
     DispatchError, OptimizerDispatcher, ResidentDispatchStep, ResidentReadRange,
 };
@@ -168,13 +169,104 @@ fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_ord
             active_queue: base + 2,
             queue_len: base + 3,
             frontier_out: base + 4,
+            word_partials: None,
+            block_totals: None,
             queue_capacity: 4,
             frontier_bytes: 4,
+            materializer: ResidentCsrQueueMaterializer::AtomicNodeScan,
         });
         scratch.free(&dispatcher).expect("Fix: scratch free dedup");
         assert_eq!(
             dispatcher.freed.borrow().as_slice(),
             &[base + 2, base + 3, base + 4]
         );
+
+        dispatcher.freed.borrow_mut().clear();
+        scratch.handles = Some(ResidentCsrQueueScratchHandles {
+            frontier: base + 5,
+            active_queue: base + 6,
+            queue_len: base + 6,
+            frontier_out: base + 7,
+            word_partials: Some(base + 8),
+            block_totals: Some(base + 8),
+            queue_capacity: 4,
+            frontier_bytes: 4,
+            materializer: ResidentCsrQueueMaterializer::DeterministicWordPrefix,
+        });
+        scratch
+            .free(&dispatcher)
+            .expect("Fix: word-prefix scratch free dedup");
+        assert_eq!(
+            dispatcher.freed.borrow().as_slice(),
+            &[base + 5, base + 6, base + 7, base + 8]
+        );
     }
+}
+
+#[test]
+fn large_resident_query_uses_word_prefix_queue_materializer() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let node_count = 8_193u32;
+    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let graph = ResidentCsrQueueGraph {
+        node_count,
+        edge_count: 0,
+        words,
+        edge_offsets_handle: 201,
+        edge_targets_handle: 202,
+        edge_kind_mask_handle: 203,
+    };
+    let mut scratch = ResidentCsrQueueScratch::default();
+    let mut output = Vec::new();
+    let mut frontier = vec![0u32; words];
+    frontier[0] = 1;
+
+    run_resident_csr_queue_query_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &frontier,
+        8,
+        u32::MAX,
+        &mut output,
+    )
+    .expect("Fix: recording dispatcher should complete large resident CSR queue query");
+
+    let handles = scratch
+        .handles
+        .expect("Fix: large resident CSR queue query should allocate scratch handles");
+    assert_eq!(
+        handles.materializer,
+        ResidentCsrQueueMaterializer::DeterministicWordPrefix
+    );
+    let word_partials = handles
+        .word_partials
+        .expect("Fix: word-prefix query should allocate word_partials");
+    let block_totals = handles
+        .block_totals
+        .expect("Fix: word-prefix query should allocate block_totals");
+    let steps = dispatcher
+        .sequence_step_handles
+        .borrow()
+        .last()
+        .cloned()
+        .expect("Fix: expected one resident step sequence");
+
+    assert_eq!(steps.len(), 4);
+    assert_eq!(steps[0], vec![handles.frontier_out]);
+    assert_eq!(
+        steps[1],
+        vec![handles.frontier, word_partials, block_totals]
+    );
+    assert_eq!(
+        steps[2],
+        vec![
+            handles.frontier,
+            word_partials,
+            block_totals,
+            handles.active_queue,
+            handles.queue_len,
+        ]
+    );
+    assert_eq!(output, vec![0; words * std::mem::size_of::<u32>()]);
 }

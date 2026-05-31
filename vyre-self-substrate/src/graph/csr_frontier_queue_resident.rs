@@ -15,6 +15,7 @@ pub use upload::upload_resident_csr_queue_graph;
 
 use vyre_foundation::ir::Program;
 
+use crate::graph::csr_frontier_queue_scratch::ResidentCsrQueueMaterializer;
 use crate::graph::resident_handles::free_unique_resident_handles;
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 
@@ -88,6 +89,7 @@ pub struct ResidentCsrQueueScratch {
     readbacks: Vec<Vec<u8>>,
     queue_len_init_program: Option<Program>,
     clear_frontier_out_program: Option<Program>,
+    word_counts_program: Option<Program>,
     queue_program: Option<Program>,
     traverse_program: Option<Program>,
     cached_shape: Option<ResidentCsrQueueProgramShape>,
@@ -103,17 +105,29 @@ impl ResidentCsrQueueScratch {
         self.readbacks.clear();
         self.queue_len_init_program = None;
         self.clear_frontier_out_program = None;
+        self.word_counts_program = None;
         self.queue_program = None;
         self.traverse_program = None;
         self.cached_shape = None;
+        let mut handles_to_free = [0_u64; 6];
+        handles_to_free[..4].copy_from_slice(&[
+            handles.frontier,
+            handles.active_queue,
+            handles.queue_len,
+            handles.frontier_out,
+        ]);
+        let mut handle_count = 4;
+        if let Some(word_partials) = handles.word_partials {
+            handles_to_free[handle_count] = word_partials;
+            handle_count += 1;
+        }
+        if let Some(block_totals) = handles.block_totals {
+            handles_to_free[handle_count] = block_totals;
+            handle_count += 1;
+        }
         free_unique_resident_handles(
             dispatcher,
-            &[
-                handles.frontier,
-                handles.active_queue,
-                handles.queue_len,
-                handles.frontier_out,
-            ],
+            &handles_to_free[..handle_count],
             "resident CSR queue scratch",
         )
     }
@@ -125,8 +139,11 @@ struct ResidentCsrQueueScratchHandles {
     active_queue: u64,
     queue_len: u64,
     frontier_out: u64,
+    word_partials: Option<u64>,
+    block_totals: Option<u64>,
     queue_capacity: u32,
     frontier_bytes: usize,
+    materializer: ResidentCsrQueueMaterializer,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -135,4 +152,5 @@ struct ResidentCsrQueueProgramShape {
     edge_count: u32,
     queue_capacity: u32,
     allow_mask: u32,
+    materializer: ResidentCsrQueueMaterializer,
 }

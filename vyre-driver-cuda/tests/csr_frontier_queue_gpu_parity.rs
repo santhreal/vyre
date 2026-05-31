@@ -732,6 +732,79 @@ fn cuda_resident_csr_queue_api_reuses_graph_and_scratch() {
 }
 
 #[test]
+fn cuda_resident_csr_queue_word_prefix_handles_large_sparse_frontier() {
+    let backend = live_backend();
+    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let node_count = 9_000u32;
+    let queue_capacity = 16u32;
+    let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
+    let mut edge_targets = Vec::with_capacity(node_count as usize);
+    let mut edge_kind_mask = Vec::with_capacity(node_count as usize);
+    edge_offsets.push(0);
+    for src in 0..node_count {
+        edge_targets.push(src.wrapping_mul(17).wrapping_add(13) % node_count);
+        edge_kind_mask.push(if src % 11 == 0 { 2 } else { 1 });
+        edge_offsets.push(edge_targets.len() as u32);
+    }
+    let graph = upload_resident_csr_queue_graph(
+        &dispatcher,
+        node_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+    )
+    .expect("Fix: large resident CSR queue graph upload failed.");
+    let frontier = pack_nodes(&[0, 3, 511, 7_000, 8_999], node_count);
+    let (expected_queue, expected_len) =
+        frontier_to_queue_cpu(&frontier, node_count, queue_capacity as usize);
+    let expected_out = csr_queue_forward_traverse_cpu(
+        &expected_queue,
+        expected_len,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        node_count,
+        1,
+    );
+    let mut scratch = ResidentCsrQueueScratch::default();
+    let mut output =
+        Vec::with_capacity(bitset_words(node_count) as usize * std::mem::size_of::<u32>());
+
+    backend.reset_telemetry();
+    run_resident_csr_queue_query_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &frontier,
+        queue_capacity,
+        1,
+        &mut output,
+    )
+    .expect("Fix: large resident CSR word-prefix query failed on CUDA.");
+
+    assert_eq!(bytes_u32(&output), expected_out);
+    let telemetry = backend.telemetry_snapshot();
+    assert_eq!(
+        telemetry.kernel_launches, 4,
+        "Fix: word-prefix resident CSR queue should run clear, word-scan, queue-scatter, and traverse kernels."
+    );
+    assert_eq!(
+        telemetry
+            .host_to_device_bytes
+            .saturating_sub(telemetry.param_upload_bytes),
+        (frontier.len() * std::mem::size_of::<u32>()) as u64,
+        "Fix: large resident CSR queue must upload only the packed frontier; word-prefix scratch stays device-side."
+    );
+
+    scratch
+        .free(&dispatcher)
+        .expect("Fix: large resident CSR queue scratch cleanup failed.");
+    graph
+        .free(&dispatcher)
+        .expect("Fix: large resident CSR queue graph cleanup failed.");
+}
+
+#[test]
 fn cuda_resident_csr_queue_batch_runs_many_queries_with_one_sync() {
     let backend = live_backend();
     let dispatcher = CudaOptimizerDispatcher::new(&backend);
