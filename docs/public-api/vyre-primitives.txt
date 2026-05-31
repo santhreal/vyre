@@ -133,6 +133,8 @@ pub const C_STAR: u32 = 12;
 pub const C_TILDE: u32 = 26;
 pub const C_WS: u32 = 1;
 pub const DDNNF_EVALUATE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+pub const DEDUP_REGIONS_CLUSTER_OP_ID: &str =
+pub const DEDUP_REGIONS_FLAG_OP_ID: &str = "vyre-primitives::matching::region::dedup_regions_flag";
 pub const DEFAULT_DFA_BUDGET_BYTES: usize = 16 * 1024 * 1024;
 pub const DENSE_MATVEC_OP_ID: &str = "vyre-primitives::bitset::four_russians_dense_matvec_byte_lut";
 pub const DENSE_THRESHOLD_PCT: u32 = 25;
@@ -424,6 +426,7 @@ pub const QUEST_SCORE_PAGES_OP_ID: &str = "vyre-primitives::nn::quest_score_page
 pub const QUEST_SELECT_TOP_K_OP_ID: &str = "vyre-primitives::nn::quest_select_top_k";
 pub const QUEST_ZERO_FILL_OP_ID: &str = "vyre-primitives::nn::quest_zero_fill";
 pub const RANGE_COUNTS_U32_OP_ID: &str = "vyre-primitives::reduce::range_counts_u32";
+pub const REGION_DEDUP_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const RESERVED_BTYPE_FIX: &str =
 pub const RESERVED_KEY: u32 = u32::MAX - 1;
 pub const RETURN: u32 = 1 << 2;
@@ -571,6 +574,7 @@ pub const fn query_count(&self) -> usize {
 pub const fn query_count_u32(&self) -> u32 {
 pub const fn queue_forward(
 pub const fn queue_len_init(
+pub const fn region_dedup_dispatch_grid(count: u32) -> [u32; 3] {
 pub const fn rle_segment_lengths_dispatch_grid(segment_count: u32) -> [u32; 3] {
 pub const fn scalar(s: f64) -> Self {
 pub const fn scallop_join_dispatch_grid(_n: u32) -> [u32; 3] {
@@ -873,6 +877,7 @@ pub fn decode_u32_le_bytes_all(bytes: &[u8]) -> Vec<u32> {
 pub fn decode_u32x8_le_bytes(bytes: &[u8; 32]) -> [u32; 8] {
 pub fn decode_u64_le_bytes_all(bytes: &[u8]) -> Vec<u64> {
 pub fn decoded_capacity(input_len: u32) -> u32 {
+pub fn dedup_regions_cluster_program(
 pub fn dedup_regions_cpu(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
 pub fn dedup_regions_flag_program(
 pub fn dedup_regions_inplace(input: &mut Vec<RegionTriple>) {

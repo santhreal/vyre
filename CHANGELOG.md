@@ -26,6 +26,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Packed `tensor_flow_forward` source-node dataflow lanes into 256-lane workgroups and added CUDA parity for context/field propagation past the first block.
 
+- Made GPU region dedup cluster-aware for nested/touching scanner spans, added merged-end metadata for on-device compaction, and proved multi-workgroup CUDA parity.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**
