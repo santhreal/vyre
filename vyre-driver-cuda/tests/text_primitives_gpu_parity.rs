@@ -7,9 +7,9 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::ir::{BufferAccess, Program};
+use vyre::ir::{BufferAccess, DataType, Program};
 use vyre::DispatchConfig;
-use vyre_primitives::text::line_index::{line_index, reference_line_index};
+use vyre_primitives::text::line_index::{line_index, line_index_u8, reference_line_index};
 use vyre_primitives::text::utf8_validate::{
     reference_utf8_validate, utf8_validate, utf8_validate_dispatch_grid, UTF8_CONT, UTF8_INVALID,
     UTF8_LEAD_3, UTF8_LEAD_4,
@@ -34,7 +34,13 @@ fn inputs_for_program(program: &Program, source: &[u8]) -> Vec<Vec<u8>> {
                 return None;
             }
             if buffer.name() == "source" {
-                Some(u32_bytes(&bytes_to_u32_per_lane(source)))
+                match buffer.element() {
+                    DataType::U8 => Some(source.to_vec()),
+                    DataType::U32 => Some(u32_bytes(&bytes_to_u32_per_lane(source))),
+                    other => {
+                        panic!("Fix: CUDA text source buffer must be U8 or U32, got {other:?}")
+                    }
+                }
             } else {
                 Some(vec![0u8; buffer.count().max(1) as usize * 4])
             }
@@ -74,12 +80,32 @@ fn run_line_index(source: &[u8]) -> Vec<u32> {
     out
 }
 
+fn run_line_index_u8(source: &[u8]) -> Vec<u32> {
+    let n = source.len() as u32;
+    let program = line_index_u8("source", "lines", n);
+    let inputs = inputs_for_program(&program, source);
+    let config = DispatchConfig::default();
+    let lines_index = output_index(&program, "lines");
+    let outputs = with_live_backend("packed-u8 line index primitive", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA packed-u8 line-index dispatch failed: {error}")
+            })
+    });
+    let mut out = bytes_u32(&outputs[lines_index]);
+    out.truncate(n as usize);
+    out
+}
+
 #[test]
 fn cuda_line_index_no_newlines() {
     let s = b"Hello";
     let cpu = reference_line_index(s);
     let gpu = run_line_index(s);
+    let gpu_u8 = run_line_index_u8(s);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert_eq!(gpu, vec![0u32; 5]);
 }
 
@@ -88,7 +114,9 @@ fn cuda_line_index_lf_only() {
     let s = b"ab\ncd";
     let cpu = reference_line_index(s);
     let gpu = run_line_index(s);
+    let gpu_u8 = run_line_index_u8(s);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert_eq!(gpu, vec![0, 0, 0, 1, 1]);
 }
 
@@ -97,7 +125,9 @@ fn cuda_line_index_crlf() {
     let s = b"ab\r\ncd";
     let cpu = reference_line_index(s);
     let gpu = run_line_index(s);
+    let gpu_u8 = run_line_index_u8(s);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert_eq!(gpu, vec![0, 0, 0, 0, 1, 1]);
 }
 
@@ -106,7 +136,9 @@ fn cuda_line_index_lone_cr() {
     let s = b"ab\rcd";
     let cpu = reference_line_index(s);
     let gpu = run_line_index(s);
+    let gpu_u8 = run_line_index_u8(s);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert_eq!(gpu, vec![0, 0, 0, 1, 1]);
 }
 
@@ -115,7 +147,9 @@ fn cuda_line_index_back_to_back_lf() {
     let s = b"a\n\nb";
     let cpu = reference_line_index(s);
     let gpu = run_line_index(s);
+    let gpu_u8 = run_line_index_u8(s);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert_eq!(gpu, vec![0, 0, 1, 2]);
 }
 
@@ -134,7 +168,77 @@ fn cuda_line_index_multi_block_mixed_newlines() {
     }
     let cpu = reference_line_index(&s);
     let gpu = run_line_index(&s);
+    let gpu_u8 = run_line_index_u8(&s);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
+}
+
+fn generated_line_index_source(case: u32, len: usize) -> Vec<u8> {
+    let mut state = 0x9e37_79b9_u32 ^ case.wrapping_mul(0x85eb_ca6b);
+    let mut source = Vec::with_capacity(len);
+    for i in 0..len {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        let selector = state.wrapping_add(i as u32).wrapping_add(case) % 31;
+        let byte = match selector {
+            0 | 7 => b'\n',
+            1 | 11 => b'\r',
+            2 => 0,
+            3 => 0xFF,
+            _ => b'a' + ((state >> 8) % 26) as u8,
+        };
+        source.push(byte);
+    }
+    if len > 260 {
+        match case % 4 {
+            0 => {
+                source[255] = b'\r';
+                source[256] = b'\n';
+            }
+            1 => {
+                source[255] = b'\r';
+                source[256] = b'x';
+            }
+            2 => {
+                source[255] = b'\n';
+                source[256] = b'\n';
+            }
+            _ => {
+                source[254] = b'\r';
+                source[255] = b'\r';
+                source[256] = b'\n';
+            }
+        }
+    }
+    source
+}
+
+#[test]
+fn cuda_line_index_u8_generated_matrix_matches_cpu() {
+    let len = 513usize;
+    let program = line_index_u8("source", "lines", len as u32);
+    let lines_index = output_index(&program, "lines");
+    let config = DispatchConfig::default();
+
+    with_live_backend("packed-u8 generated line-index matrix", |backend| {
+        for case in 0..128u32 {
+            let source = generated_line_index_source(case, len);
+            let inputs = inputs_for_program(&program, &source);
+            let outputs = backend
+                .dispatch(&program, &inputs, &config)
+                .unwrap_or_else(|error| {
+                    panic!("Fix: CUDA packed-u8 line-index generated case {case} failed: {error}")
+                });
+            let mut gpu = bytes_u32(&outputs[lines_index]);
+            gpu.truncate(len);
+            assert_eq!(
+                gpu,
+                reference_line_index(&source),
+                "Fix: packed-u8 CUDA line_index mismatch on generated case {case}"
+            );
+        }
+    });
 }
 
 fn run_utf8_validate(source: &[u8]) -> Vec<u32> {

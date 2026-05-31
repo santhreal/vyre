@@ -33,6 +33,10 @@ const FINALIZE_OP_ID: &str = "vyre-primitives::text::line_index::finalize";
 /// Newline bytes belong to the line they terminate, so the generated
 /// pipeline computes an inclusive prefix of per-byte line-break flags
 /// and subtracts the current byte's own flag before storing `lines[i]`.
+///
+/// This compatibility entry point expects one `DataType::U32` element per
+/// source byte and reads the low byte of each word. Use [`line_index_u8`]
+/// when the source is packed as one byte per element.
 #[must_use]
 pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
     match try_line_index(source, lines, n) {
@@ -41,15 +45,40 @@ pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
     }
 }
 
+/// Build a line-index Program over a packed `DataType::U8` source buffer.
+///
+/// It emits the same per-byte line numbers as [`line_index`] while reducing
+/// source input bandwidth from four bytes per logical byte to one.
+#[must_use]
+pub fn line_index_u8(source: &str, lines: &str, n: u32) -> Program {
+    match try_line_index_u8(source, lines, n) {
+        Ok(program) => program,
+        Err(error) => crate::invalid_output_program(OP_ID, lines, DataType::U32, error),
+    }
+}
+
 fn try_line_index(source: &str, lines: &str, n: u32) -> Result<Program, String> {
+    try_line_index_with_source_type(source, lines, n, DataType::U32)
+}
+
+fn try_line_index_u8(source: &str, lines: &str, n: u32) -> Result<Program, String> {
+    try_line_index_with_source_type(source, lines, n, DataType::U8)
+}
+
+fn try_line_index_with_source_type(
+    source: &str,
+    lines: &str,
+    n: u32,
+    source_type: DataType,
+) -> Result<Program, String> {
     if n == 0 {
-        return Ok(empty_line_index_program(source, lines));
+        return Ok(empty_line_index_program(source, lines, source_type));
     }
 
     let flags = format!("__{lines}_line_break_flags");
     let prefix = format!("__{lines}_line_break_prefix");
 
-    let flag_pass = line_break_flags_program(source, &flags, n)?;
+    let flag_pass = line_break_flags_program(source, &flags, n, source_type)?;
     let scan_pass = multi_block_prefix_scan_sum_u32(&flags, &prefix, n);
     if scan_pass.stats().trap() {
         return Err(format!(
@@ -67,10 +96,10 @@ fn try_line_index(source: &str, lines: &str, n: u32) -> Result<Program, String> 
         })
 }
 
-fn empty_line_index_program(source: &str, lines: &str) -> Program {
+fn empty_line_index_program(source: &str, lines: &str, source_type: DataType) -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::storage(source, 0, BufferAccess::ReadOnly, DataType::U32).with_count(0),
+            BufferDecl::storage(source, 0, BufferAccess::ReadOnly, source_type).with_count(0),
             BufferDecl::output(lines, 1, DataType::U32)
                 .with_count(0)
                 .with_output_byte_range(0..0),
@@ -95,23 +124,28 @@ fn output_byte_range(words: u32, context: &str) -> Result<usize, String> {
         })
 }
 
-fn line_break_flags_program(source: &str, flags: &str, n: u32) -> Result<Program, String> {
+fn line_break_flags_program(
+    source: &str,
+    flags: &str,
+    n: u32,
+    source_type: DataType,
+) -> Result<Program, String> {
     let t = Expr::InvocationId { axis: 0 };
     let next_idx = Expr::add(t.clone(), Expr::u32(1));
     let output_bytes = output_byte_range(n, "line_index break-flags output")?;
+    let load_byte = |index: Expr| {
+        Expr::bitand(
+            Expr::cast(DataType::U32, Expr::load(source, index)),
+            Expr::u32(0xFF),
+        )
+    };
 
     let lane_body = vec![
-        Node::let_bind(
-            "byte",
-            Expr::bitand(Expr::load(source, t.clone()), Expr::u32(0xFF)),
-        ),
+        Node::let_bind("byte", load_byte(t.clone())),
         Node::let_bind("next_byte", Expr::u32(0)),
         Node::if_then(
             Expr::lt(next_idx.clone(), Expr::u32(n)),
-            vec![Node::assign(
-                "next_byte",
-                Expr::bitand(Expr::load(source, next_idx), Expr::u32(0xFF)),
-            )],
+            vec![Node::assign("next_byte", load_byte(next_idx))],
         ),
         Node::let_bind("flag", Expr::u32(0)),
         Node::if_then(
@@ -133,7 +167,7 @@ fn line_break_flags_program(source: &str, flags: &str, n: u32) -> Result<Program
 
     Ok(Program::wrapped(
         vec![
-            BufferDecl::storage(source, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::storage(source, 0, BufferAccess::ReadOnly, source_type).with_count(n),
             BufferDecl::storage(flags, 1, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(n)
                 .with_pipeline_live_out(true)

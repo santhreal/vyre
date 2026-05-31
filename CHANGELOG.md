@@ -40,6 +40,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Removed the redundant resident atomic sparse-queue `queue_len` init dispatch from CSR and adaptive traversal paths, dropping small resident sparse-queue steps from four kernels to three while keeping queue length initialization inside `frontier_to_queue`.
 
+- Added packed-`U8` line indexing for text scans, fixed CUDA/PTX byte and halfword memory ops, and covered the path with generated reference parity plus live CUDA CR/LF boundary matrices.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

@@ -1056,6 +1056,7 @@ pub fn len(&self) -> usize {
 pub fn lengauer_tarjan_idoms(
 pub fn level_wave_program(
 pub fn line_index(source: &str, lines: &str, n: u32) -> Program {
+pub fn line_index_u8(source: &str, lines: &str, n: u32) -> Program {
 pub fn line_splice_classify(byte_count: u32) -> Program {
 pub fn linear_homotopy_cpu(g_x: &[f64], f_x: &[f64], t: f64) -> Vec<f64> {
 pub fn literal_of(nodes: &str, nodeset_out: &str, node_count: u32) -> Program {
