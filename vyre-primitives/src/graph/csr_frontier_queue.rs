@@ -30,10 +30,29 @@ pub const FRONTIER_TO_QUEUE_PARALLEL_OP_ID: &str =
 /// Canonical op id for word-level multi-workgroup bitset-to-queue compaction.
 pub const FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID: &str =
     "vyre-primitives::graph::frontier_words_to_queue_parallel";
+/// Canonical op id for packed-frontier word popcount prefix-scan pass A.
+pub const FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID: &str =
+    "vyre-primitives::graph::frontier_word_counts_scan_pass_a";
+/// Canonical op id for deterministic packed-frontier block-prefix scatter.
+pub const FRONTIER_WORD_BLOCK_PREFIX_TO_QUEUE_PARALLEL_OP_ID: &str =
+    "vyre-primitives::graph::frontier_word_block_prefix_to_queue_parallel";
+/// Workgroup lanes used by the deterministic packed-frontier scan path.
+pub const FRONTIER_WORD_SCAN_BLOCK_LANES: u32 = 1024;
 /// Canonical op id for device-side queue length initialization.
 pub const FRONTIER_QUEUE_LEN_INIT_OP_ID: &str = "vyre-primitives::graph::frontier_queue_len_init";
 /// Canonical op id for queue-driven CSR expansion.
 pub const CSR_QUEUE_FORWARD_OP_ID: &str = "vyre-primitives::graph::csr_queue_forward_traverse";
+
+fn u32_byte_range(words: u32, context: &str) -> usize {
+    usize::try_from(words)
+        .ok()
+        .and_then(|count| count.checked_mul(std::mem::size_of::<u32>()))
+        .unwrap_or_else(|| {
+            panic!(
+                "{context} words={words} overflows output byte range. Fix: shard the frontier queue before GPU dispatch."
+            )
+        })
+}
 
 /// Build a GPU program that initializes the active queue length scalar.
 ///
@@ -343,6 +362,325 @@ pub fn frontier_words_to_queue_parallel(
         [256, 1, 1],
         vec![Node::Region {
             generator: Ident::from(FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    )
+}
+
+/// Build Pass A for deterministic packed-frontier queue materialization.
+///
+/// Each workgroup scans one block of packed frontier words. Lane `L` in block
+/// `B` computes the in-range popcount for word `B*1024 + L`, then participates
+/// in a local inclusive Hillis-Steele scan. The program writes one per-word
+/// inclusive count into `word_partials` and one per-block total into
+/// `block_totals`.
+#[must_use]
+pub fn frontier_word_counts_scan_pass_a(
+    frontier_in: &str,
+    word_partials: &str,
+    block_totals: &str,
+    node_count: u32,
+) -> Program {
+    if node_count == 0 {
+        return crate::invalid_output_program(
+            FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID,
+            word_partials,
+            DataType::U32,
+            "Fix: frontier_word_counts_scan_pass_a requires node_count > 0.".to_string(),
+        );
+    }
+    let words = bitset_words(node_count);
+    let num_blocks = words.div_ceil(FRONTIER_WORD_SCAN_BLOCK_LANES).max(1);
+    let total_partials = num_blocks.checked_mul(FRONTIER_WORD_SCAN_BLOCK_LANES).unwrap_or_else(|| {
+        panic!(
+            "frontier_word_counts_scan_pass_a num_blocks={num_blocks} overflows partial word count. Fix: shard the frontier queue."
+        )
+    });
+    let partial_bytes = u32_byte_range(total_partials, "frontier_word_counts_scan_pass_a partials");
+    let block_total_bytes =
+        u32_byte_range(num_blocks, "frontier_word_counts_scan_pass_a block totals");
+    let tail_bits = node_count & 31;
+    let tail_mask = if tail_bits == 0 {
+        u32::MAX
+    } else {
+        (1_u32 << tail_bits) - 1
+    };
+
+    let lane = Expr::var("fwcs_lane");
+    let block = Expr::var("fwcs_block");
+    let global = Expr::var("fwcs_global");
+    let scratch_a = format!("__{word_partials}_fwcs_scratch_a");
+    let scratch_b = format!("__{word_partials}_fwcs_scratch_b");
+
+    let mut body = Vec::new();
+    body.push(Node::let_bind("fwcs_lane", Expr::LocalId { axis: 0 }));
+    body.push(Node::let_bind("fwcs_block", Expr::WorkgroupId { axis: 0 }));
+    body.push(Node::let_bind(
+        "fwcs_global",
+        Expr::add(
+            Expr::mul(block.clone(), Expr::u32(FRONTIER_WORD_SCAN_BLOCK_LANES)),
+            lane.clone(),
+        ),
+    ));
+    body.push(Node::store(&scratch_a, lane.clone(), Expr::u32(0)));
+    let mut load_word = vec![Node::let_bind(
+        "fwcs_word",
+        Expr::load(frontier_in, global.clone()),
+    )];
+    if tail_bits != 0 {
+        load_word.push(Node::if_then(
+            Expr::eq(global.clone(), Expr::u32(words - 1)),
+            vec![Node::assign(
+                "fwcs_word",
+                Expr::bitand(Expr::var("fwcs_word"), Expr::u32(tail_mask)),
+            )],
+        ));
+    }
+    load_word.push(Node::store(
+        &scratch_a,
+        lane.clone(),
+        Expr::popcount(Expr::var("fwcs_word")),
+    ));
+    body.push(Node::if_then(
+        Expr::lt(global.clone(), Expr::u32(words)),
+        load_word,
+    ));
+    body.push(Node::Barrier {
+        ordering: MemoryOrdering::SeqCst,
+    });
+
+    let mut stride = 1_u32;
+    while stride < FRONTIER_WORD_SCAN_BLOCK_LANES {
+        body.push(Node::store(
+            &scratch_b,
+            lane.clone(),
+            Expr::load(&scratch_a, lane.clone()),
+        ));
+        let previous_lane = Expr::add(lane.clone(), Expr::u32(0u32.wrapping_sub(stride)));
+        body.push(Node::if_then(
+            Expr::lt(Expr::u32(stride - 1), lane.clone()),
+            vec![Node::store(
+                &scratch_b,
+                lane.clone(),
+                Expr::add(
+                    Expr::load(&scratch_a, lane.clone()),
+                    Expr::load(&scratch_a, previous_lane),
+                ),
+            )],
+        ));
+        body.push(Node::Barrier {
+            ordering: MemoryOrdering::SeqCst,
+        });
+        body.push(Node::store(
+            &scratch_a,
+            lane.clone(),
+            Expr::load(&scratch_b, lane.clone()),
+        ));
+        body.push(Node::Barrier {
+            ordering: MemoryOrdering::SeqCst,
+        });
+        stride *= 2;
+    }
+
+    body.push(Node::if_then(
+        Expr::lt(global.clone(), Expr::u32(words)),
+        vec![Node::store(
+            word_partials,
+            global.clone(),
+            Expr::load(&scratch_a, lane.clone()),
+        )],
+    ));
+    body.push(Node::if_then(
+        Expr::eq(lane.clone(), Expr::u32(FRONTIER_WORD_SCAN_BLOCK_LANES - 1)),
+        vec![Node::store(
+            block_totals,
+            block.clone(),
+            Expr::load(&scratch_a, lane.clone()),
+        )],
+    ));
+
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(frontier_in, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(words),
+            BufferDecl::output(word_partials, 1, DataType::U32)
+                .with_count(total_partials)
+                .with_output_byte_range(0..partial_bytes),
+            BufferDecl::storage(block_totals, 2, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(num_blocks)
+                .with_pipeline_live_out(true)
+                .with_output_byte_range(0..block_total_bytes),
+            BufferDecl::workgroup(&scratch_a, FRONTIER_WORD_SCAN_BLOCK_LANES, DataType::U32),
+            BufferDecl::workgroup(&scratch_b, FRONTIER_WORD_SCAN_BLOCK_LANES, DataType::U32),
+        ],
+        [FRONTIER_WORD_SCAN_BLOCK_LANES, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    )
+}
+
+/// Build the deterministic scatter pass for packed-frontier queue materialization.
+///
+/// `word_partials` must come from [`frontier_word_counts_scan_pass_a`], and
+/// `block_totals` must be the block-total output from that same pass. The
+/// scatter computes the tiny block prefix locally, preserving source-node order
+/// without an additional block-scan dispatch. It writes `queue_len` as the full
+/// in-range active-node count even when the bounded queue truncates the
+/// materialized entries.
+#[must_use]
+pub fn frontier_word_block_prefix_to_queue_parallel(
+    frontier_in: &str,
+    word_partials: &str,
+    block_totals: &str,
+    active_queue: &str,
+    queue_len: &str,
+    node_count: u32,
+    queue_capacity: u32,
+) -> Program {
+    if node_count == 0 || queue_capacity == 0 {
+        return crate::invalid_output_program(
+            FRONTIER_WORD_BLOCK_PREFIX_TO_QUEUE_PARALLEL_OP_ID,
+            queue_len,
+            DataType::U32,
+            format!(
+                "Fix: frontier_word_block_prefix_to_queue_parallel requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
+            ),
+        );
+    }
+    let words = bitset_words(node_count);
+    let num_blocks = words.div_ceil(FRONTIER_WORD_SCAN_BLOCK_LANES).max(1);
+    let total_partials = num_blocks.checked_mul(FRONTIER_WORD_SCAN_BLOCK_LANES).unwrap_or_else(|| {
+        panic!(
+            "frontier_word_block_prefix_to_queue_parallel num_blocks={num_blocks} overflows partial word count. Fix: shard the frontier queue."
+        )
+    });
+    let tail_bits = node_count & 31;
+    let tail_mask = if tail_bits == 0 {
+        u32::MAX
+    } else {
+        (1_u32 << tail_bits) - 1
+    };
+    let lane = Expr::InvocationId { axis: 0 };
+    let mut word_body = vec![
+        Node::let_bind(
+            "fwq_src_base",
+            Expr::mul(Expr::var("fwq_word_idx"), Expr::u32(32)),
+        ),
+        Node::let_bind(
+            "fwq_block",
+            Expr::div(
+                Expr::var("fwq_word_idx"),
+                Expr::u32(FRONTIER_WORD_SCAN_BLOCK_LANES),
+            ),
+        ),
+        Node::let_bind(
+            "fwq_word",
+            Expr::load(frontier_in, Expr::var("fwq_word_idx")),
+        ),
+    ];
+    if tail_bits != 0 {
+        word_body.push(Node::if_then(
+            Expr::eq(Expr::var("fwq_word_idx"), Expr::u32(words - 1)),
+            vec![Node::assign(
+                "fwq_word",
+                Expr::bitand(Expr::var("fwq_word"), Expr::u32(tail_mask)),
+            )],
+        ));
+    }
+    word_body.extend([
+        Node::let_bind("fwq_active_bits", Expr::popcount(Expr::var("fwq_word"))),
+        Node::let_bind("fwq_block_offset", Expr::u32(0)),
+        Node::loop_for(
+            "fwq_prev_block",
+            Expr::u32(0),
+            Expr::var("fwq_block"),
+            vec![Node::assign(
+                "fwq_block_offset",
+                Expr::add(
+                    Expr::var("fwq_block_offset"),
+                    Expr::load(block_totals, Expr::var("fwq_prev_block")),
+                ),
+            )],
+        ),
+        Node::let_bind(
+            "fwq_end",
+            Expr::add(
+                Expr::load(word_partials, Expr::var("fwq_word_idx")),
+                Expr::var("fwq_block_offset"),
+            ),
+        ),
+        Node::let_bind(
+            "fwq_start",
+            Expr::sub(Expr::var("fwq_end"), Expr::var("fwq_active_bits")),
+        ),
+        Node::let_bind("fwq_remaining", Expr::var("fwq_word")),
+        Node::loop_for(
+            "fwq_rank",
+            Expr::u32(0),
+            Expr::var("fwq_active_bits"),
+            vec![
+                Node::let_bind("fwq_bit", Expr::ctz(Expr::var("fwq_remaining"))),
+                Node::let_bind(
+                    "fwq_src",
+                    Expr::add(Expr::var("fwq_src_base"), Expr::var("fwq_bit")),
+                ),
+                Node::let_bind(
+                    "fwq_slot",
+                    Expr::add(Expr::var("fwq_start"), Expr::var("fwq_rank")),
+                ),
+                Node::if_then(
+                    Expr::and(
+                        Expr::lt(Expr::var("fwq_slot"), Expr::u32(queue_capacity)),
+                        Expr::lt(Expr::var("fwq_src"), Expr::u32(node_count)),
+                    ),
+                    vec![Node::store(
+                        active_queue,
+                        Expr::var("fwq_slot"),
+                        Expr::var("fwq_src"),
+                    )],
+                ),
+                Node::assign(
+                    "fwq_remaining",
+                    Expr::bitand(
+                        Expr::var("fwq_remaining"),
+                        Expr::sub(Expr::var("fwq_remaining"), Expr::u32(1)),
+                    ),
+                ),
+            ],
+        ),
+        Node::if_then(
+            Expr::eq(Expr::var("fwq_word_idx"), Expr::u32(words - 1)),
+            vec![Node::store(queue_len, Expr::u32(0), Expr::var("fwq_end"))],
+        ),
+    ]);
+
+    let body = vec![
+        Node::let_bind("fwq_word_idx", lane),
+        Node::if_then(
+            Expr::lt(Expr::var("fwq_word_idx"), Expr::u32(words)),
+            word_body,
+        ),
+    ];
+
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(frontier_in, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(words),
+            BufferDecl::storage(word_partials, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(total_partials),
+            BufferDecl::storage(block_totals, 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(num_blocks),
+            BufferDecl::storage(active_queue, 3, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(queue_capacity),
+            BufferDecl::storage(queue_len, 4, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+        ],
+        [256, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(FRONTIER_WORD_BLOCK_PREFIX_TO_QUEUE_PARALLEL_OP_ID),
             source_region: None,
             body: Arc::new(body),
         }],
@@ -936,6 +1274,27 @@ mod tests {
         assert_eq!(word_queue.workgroup_size, [256, 1, 1]);
         assert_eq!(word_queue.buffers.len(), 3);
         assert_eq!(word_queue.buffers[0].count, 2);
+        let word_scan =
+            frontier_word_counts_scan_pass_a("frontier", "partials", "block_totals", 64);
+        assert_eq!(word_scan.workgroup_size, [1024, 1, 1]);
+        assert_eq!(word_scan.buffers.len(), 5);
+        assert_eq!(word_scan.buffers[0].count, 2);
+        assert_eq!(word_scan.buffers[1].count, 1024);
+        assert_eq!(word_scan.buffers[2].count, 1);
+        let prefix_queue = frontier_word_block_prefix_to_queue_parallel(
+            "frontier",
+            "partials",
+            "block_totals",
+            "queue",
+            "len",
+            64,
+            8,
+        );
+        assert_eq!(prefix_queue.workgroup_size, [256, 1, 1]);
+        assert_eq!(prefix_queue.buffers.len(), 5);
+        assert_eq!(prefix_queue.buffers[0].count, 2);
+        assert_eq!(prefix_queue.buffers[1].count, 1024);
+        assert_eq!(prefix_queue.buffers[2].count, 1);
         let traverse = csr_queue_forward_traverse(
             "queue", "len", "offsets", "targets", "kinds", "out", 64, 7, 8, 1,
         );
