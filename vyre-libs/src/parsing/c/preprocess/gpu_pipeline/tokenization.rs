@@ -1,5 +1,5 @@
 use super::buffers::{
-    bucket_pow2, checked_gpu_u32, pack_u32_words_into, pad_to_u32_words_into, padded_u32_byte_len,
+    bucket_pow2, checked_gpu_u32, pack_u32_words_into, pad_to_u32_words_into,
     read_u32_scalar_exact, reserve_gpu_staging_bytes, u32_word_byte_len,
     unpack_u32_words_prefix_exact,
 };
@@ -7,7 +7,7 @@ use super::dispatch::GpuDispatcher;
 use super::scan::{inclusive_prefix_scan_u32_into, PrefixScanScratch};
 use crate::parsing::c::lex::lexer::{
     c11_compact_sparse_tokens, c11_compact_sparse_tokens_output,
-    c11_lexer_regular_sparse_packed_haystack_with_flags,
+    c11_lexer_regular_sparse_u8_haystack_with_flags,
 };
 use crate::parsing::c::lex::tokens::{TOK_PP_ELIF, TOK_PP_IF};
 use crate::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata;
@@ -316,7 +316,7 @@ fn sparse_tokenize(
     // program fingerprint and paid a ~2 second cold native-compile per
     // dispatch. Soundness: the lexer's default classification for any
     // byte is `tok_type=TOK_WHITESPACE, emit=0`. Zero-padding the
-    // haystack from `raw.len()` up to the bucket size therefore produces
+    // raw-U8 haystack from `raw.len()` up to the bucket size therefore produces
     // no spurious tokens  -  padding positions get emit=0, so they
     // contribute zero to the prefix scan's running sum and zero to the
     // compact output. n_tokens at the end reflects only real-source
@@ -329,8 +329,8 @@ fn sparse_tokenize(
         "sparse tokenizer bucket byte count",
         bucket_pow2(raw.len().max(1), 1024),
     )?;
-    let bucket_pad_words = n_bytes_bucket as usize;
-    let raw_pad_len = padded_u32_byte_len(n_bytes_bucket as usize, "sparse tokenizer raw input")?;
+    let token_capacity = n_bytes_bucket as usize;
+    let raw_pad_len = token_capacity;
     scratch.raw_padded.clear();
     reserve_gpu_staging_bytes(
         &mut scratch.raw_padded,
@@ -340,7 +340,7 @@ fn sparse_tokenize(
     scratch.raw_padded.extend_from_slice(raw);
     scratch.raw_padded.resize(raw_pad_len, 0);
 
-    let sparse = c11_lexer_regular_sparse_packed_haystack_with_flags(
+    let sparse = c11_lexer_regular_sparse_u8_haystack_with_flags(
         "haystack",
         "sparse_types",
         "sparse_starts",
@@ -350,7 +350,7 @@ fn sparse_tokenize(
     );
     TokenizationScratch::prepare_zero(
         &mut scratch.sparse_zero,
-        u32_word_byte_len(bucket_pad_words, "sparse tokenizer zero staging")?,
+        u32_word_byte_len(token_capacity, "sparse tokenizer zero staging")?,
     )?;
     let sparse_inputs: [&[u8]; 5] = [
         scratch.raw_padded.as_slice(),
@@ -407,7 +407,7 @@ fn sparse_tokenize(
     };
     TokenizationScratch::prepare_zero(
         &mut scratch.compact_zero,
-        u32_word_byte_len(bucket_pad_words, "compact tokenizer zero staging")?,
+        u32_word_byte_len(token_capacity, "compact tokenizer zero staging")?,
     )?;
     TokenizationScratch::prepare_zero(&mut scratch.compact_count_zero, 4)?;
     if requires_output_inputs {
@@ -445,7 +445,6 @@ fn sparse_tokenize(
     let n_tokens =
         read_u32_scalar_exact(count_buf, "c11_sparse_lexer preprocess compact token count")?
             as usize;
-    let token_capacity = bucket_pad_words;
     if n_tokens > token_capacity {
         return Err(format!(
             "c11_sparse_lexer preprocess compact: token count {n_tokens} exceeds output capacity {token_capacity}. Fix: backend must keep out_counts within the dense token table capacity."

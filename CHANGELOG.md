@@ -44,6 +44,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Moved the C preprocessing byte filter to raw `U8` source buffers through preflight, line/block comment paths, full comment masking, and compact scatter, fixed literal-close handling before later comments, and added live CUDA generated-corpus coverage for the end-to-end filter.
 
+- Moved the sparse C tokenizer pipeline to a raw `U8` haystack while preserving packed and expanded compatibility entrypoints, with reference-eval ABI checks and live CUDA generated-corpus parity for token and directive columns.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**
