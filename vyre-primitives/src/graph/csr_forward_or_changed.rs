@@ -46,7 +46,10 @@ pub use cpu_ref::{
     cpu_ref, cpu_ref_closure, cpu_ref_closure_into, cpu_ref_closure_into_with_step_hook,
 };
 pub use launch_plan::CsrForwardOrChangedLaunchPlan;
-pub use layout::{CsrForwardOrChangedProgramKey, CsrForwardOrChangedStaticInputKey};
+pub use layout::{
+    csr_forward_or_changed_parallel_batch_grid, csr_forward_or_changed_parallel_grid,
+    CsrForwardOrChangedProgramKey, CsrForwardOrChangedStaticInputKey,
+};
 pub use plan::plan_csr_forward_or_changed_launch;
 pub use program_dispatch::build_csr_forward_or_changed_dispatch_program;
 pub use program_parallel::{

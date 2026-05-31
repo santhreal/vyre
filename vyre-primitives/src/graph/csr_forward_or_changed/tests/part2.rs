@@ -10,6 +10,10 @@ fn parallel_batch_global_program_uses_one_changed_flag() {
         0xFFFF_FFFF,
         3,
     );
+    assert_eq!(
+        program.workgroup_size,
+        CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE
+    );
     let frontier = program
         .buffers
         .iter()
@@ -34,6 +38,10 @@ fn parallel_batch_global_slot_program_uses_changed_history_buffer() {
         3,
         5,
         8,
+    );
+    assert_eq!(
+        program.workgroup_size,
+        CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE
     );
     let frontier = program
         .buffers

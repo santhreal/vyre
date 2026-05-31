@@ -136,10 +136,10 @@ fn dispatch_plan_selects_changed_history_and_pins_buffer_shape() {
         plan.changed_read_index(8).is_err(),
         "Fix: changed-history readback index must reject iterations outside the buffer"
     );
-    assert_eq!(plan.dispatch_grid(), [65, 1, 1]);
+    assert_eq!(plan.dispatch_grid(), [1, 1, 1]);
     assert_eq!(
         plan.program().workgroup_size,
-        CSR_FORWARD_OR_CHANGED_WORKGROUP_SIZE
+        CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE
     );
     assert!(
         plan.program()
@@ -176,6 +176,18 @@ fn dispatch_plan_uses_single_changed_word_for_unbounded_or_zero_iteration_cases(
 }
 
 #[test]
+fn parallel_dispatch_grid_packs_source_lanes_into_blocks() {
+    assert_eq!(csr_forward_or_changed_parallel_grid(0), [1, 1, 1]);
+    assert_eq!(csr_forward_or_changed_parallel_grid(65), [1, 1, 1]);
+    assert_eq!(csr_forward_or_changed_parallel_grid(256), [1, 1, 1]);
+    assert_eq!(csr_forward_or_changed_parallel_grid(257), [2, 1, 1]);
+    assert_eq!(
+        csr_forward_or_changed_parallel_batch_grid(513, 3),
+        [3, 3, 1]
+    );
+}
+
+#[test]
 fn parallel_program_keeps_frontier_and_changed_resident() {
     let program = csr_forward_or_changed_parallel(
         ProgramGraphShape::new(65, 4),
@@ -183,7 +195,10 @@ fn parallel_program_keeps_frontier_and_changed_resident() {
         "changed",
         0xFFFF_FFFF,
     );
-    assert_eq!(program.workgroup_size, [1, 1, 1]);
+    assert_eq!(
+        program.workgroup_size,
+        CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE
+    );
     let names: Vec<&str> = program.buffers.iter().map(|buffer| buffer.name()).collect();
     assert!(names.contains(&"frontier"));
     assert!(names.contains(&"changed"));
@@ -202,7 +217,10 @@ fn parallel_batch_program_packs_query_frontiers() {
         0xFFFF_FFFF,
         3,
     );
-    assert_eq!(program.workgroup_size, [1, 1, 1]);
+    assert_eq!(
+        program.workgroup_size,
+        CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE
+    );
     let frontier = program
         .buffers
         .iter()

@@ -6,7 +6,7 @@ use vyre_foundation::MemoryOrdering;
 
 use super::layout::{
     CSR_FORWARD_OR_CHANGED_CHANGED_BUFFER, CSR_FORWARD_OR_CHANGED_FRONTIER_BUFFER,
-    CSR_FORWARD_OR_CHANGED_WORKGROUP_SIZE, OP_ID,
+    CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE, OP_ID,
 };
 use crate::graph::program_graph::{
     ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
@@ -57,7 +57,7 @@ pub fn csr_forward_or_changed_parallel(
     );
     Program::wrapped(
         buffers,
-        CSR_FORWARD_OR_CHANGED_WORKGROUP_SIZE,
+        CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE,
         vec![Node::Region {
             generator: Ident::from(OP_ID),
             source_region: None,
