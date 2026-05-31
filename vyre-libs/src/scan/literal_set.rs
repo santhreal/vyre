@@ -332,16 +332,15 @@ impl GpuLiteralSet {
         .collect();
         let outputs = backend.dispatch_borrowed(&self.program, &borrowed_inputs, &config)?;
 
-        let count_bytes = &outputs[0];
-        let count = u32::from_le_bytes([
-            count_bytes[0],
-            count_bytes[1],
-            count_bytes[2],
-            count_bytes[3],
-        ]);
-        let matches_bytes = &outputs[1];
+        let count_bytes = dispatch_io::try_output_bytes(&outputs, 0, "literal_set match count")?;
+        let count = dispatch_io::try_read_u32_prefix(count_bytes, "literal_set match count")?;
+        let matches_bytes = dispatch_io::try_output_bytes(&outputs, 1, "literal_set matches")?;
 
-        dispatch_io::try_unpack_match_triples_into(matches_bytes, count.min(max_matches), matches)?;
+        dispatch_io::try_unpack_match_triples_exact_prefix_into(
+            matches_bytes,
+            count.min(max_matches),
+            matches,
+        )?;
         Ok(())
     }
 
@@ -444,6 +443,49 @@ fn reserve_vec<T>(
 mod compile_tests {
     use super::*;
 
+    #[derive(Clone)]
+    struct LiteralReadbackBackend {
+        outputs: Vec<Vec<u8>>,
+    }
+
+    impl vyre::backend::private::Sealed for LiteralReadbackBackend {}
+
+    impl VyreBackend for LiteralReadbackBackend {
+        fn id(&self) -> &'static str {
+            "literal-readback-test"
+        }
+
+        fn dispatch(
+            &self,
+            _program: &Program,
+            _inputs: &[Vec<u8>],
+            _config: &vyre::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            Ok(self.outputs.clone())
+        }
+
+        fn dispatch_borrowed(
+            &self,
+            _program: &Program,
+            _inputs: &[&[u8]],
+            _config: &vyre::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            Ok(self.outputs.clone())
+        }
+    }
+
+    fn match_count_bytes(count: u32) -> Vec<u8> {
+        count.to_le_bytes().to_vec()
+    }
+
+    fn match_triple_bytes(pattern_id: u32, start: u32, end: u32) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(12);
+        bytes.extend_from_slice(&pattern_id.to_le_bytes());
+        bytes.extend_from_slice(&start.to_le_bytes());
+        bytes.extend_from_slice(&end.to_le_bytes());
+        bytes
+    }
+
     #[test]
     fn try_compile_packs_offsets_lengths_and_bytes_without_truncation() {
         let compiled = GpuLiteralSet::try_compile(&[b"ab".as_slice(), b"cde".as_slice()])
@@ -490,6 +532,73 @@ mod compile_tests {
             other => panic!("expected storage reserve failure, got {other:?}"),
         }
         assert!(scratch.is_empty());
+    }
+
+    #[test]
+    fn literal_scan_rejects_short_match_count_readback() {
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
+        let backend = LiteralReadbackBackend {
+            outputs: vec![vec![1, 2, 3], Vec::new()],
+        };
+        let mut matches = vec![Match::new(99, 1, 2)];
+
+        let err = engine
+            .scan_into(&backend, b"a", 1, &mut matches)
+            .expect_err("short literal match-count readback must fail");
+
+        let msg = err.to_string();
+        assert!(
+            matches.is_empty(),
+            "scan errors must not expose stale matches"
+        );
+        assert!(
+            msg.contains("literal_set match count") && msg.contains("requires 4 bytes"),
+            "literal scan counter error must name the malformed output: {msg}"
+        );
+    }
+
+    #[test]
+    fn literal_scan_rejects_missing_match_output_slot() {
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
+        let backend = LiteralReadbackBackend {
+            outputs: vec![match_count_bytes(1)],
+        };
+        let mut matches = Vec::new();
+
+        let err = engine
+            .scan_into(&backend, b"a", 1, &mut matches)
+            .expect_err("missing literal match output must fail");
+
+        let msg = err.to_string();
+        assert!(
+            msg.contains("literal_set matches") && msg.contains("output index 1"),
+            "literal scan missing-output error must identify the omitted slot: {msg}"
+        );
+    }
+
+    #[test]
+    fn literal_scan_rejects_match_payload_shorter_than_reported_count() {
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
+        let backend = LiteralReadbackBackend {
+            outputs: vec![match_count_bytes(2), match_triple_bytes(0, 0, 1)],
+        };
+        let mut matches = vec![Match::new(99, 1, 2)];
+
+        let err = engine
+            .scan_into(&backend, b"a", 2, &mut matches)
+            .expect_err("short literal match payload must fail");
+
+        let msg = err.to_string();
+        assert!(
+            matches.is_empty(),
+            "scan errors must not expose stale matches"
+        );
+        assert!(
+            msg.contains("readback was 12 byte(s)")
+                && msg.contains("count=2")
+                && msg.contains("requires 24 byte(s)"),
+            "literal scan match-payload error must identify observed and required bytes: {msg}"
+        );
     }
 
     #[test]
