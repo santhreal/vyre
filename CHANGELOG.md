@@ -28,6 +28,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Made GPU region dedup cluster-aware for nested/touching scanner spans, added merged-end metadata for on-device compaction, and proved multi-workgroup CUDA parity.
 
+- Added a 256-lane parallel `bracket_match` path when parser depth caps cannot affect output, with CUDA parity for large nested token streams and retained bounded-stack fallback for overflow-capped shards.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

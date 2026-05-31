@@ -35,7 +35,8 @@ pub use bracket_match::cpu_ref as bracket_match_cpu_ref;
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use bracket_match::cpu_ref_into as bracket_match_cpu_ref_into;
 pub use bracket_match::{
-    bracket_match, pack_u32 as pack_bracket_u32, CLOSE_BRACE, MATCH_NONE, OPEN_BRACE, OTHER,
+    bracket_match, bracket_match_dispatch_grid, pack_u32 as pack_bracket_u32,
+    BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE, CLOSE_BRACE, MATCH_NONE, OPEN_BRACE, OTHER,
 };
 pub use dfa_compile::{
     dfa_compile, dfa_compile_with_budget, CompiledDfa, DfaCompileError, DfaWireError,

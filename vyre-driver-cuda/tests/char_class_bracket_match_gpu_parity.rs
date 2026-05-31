@@ -8,7 +8,8 @@ mod common;
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
 use vyre_primitives::matching::bracket_match::{
-    bracket_match, cpu_ref as bracket_cpu, CLOSE_BRACE, MATCH_NONE, OPEN_BRACE, OTHER,
+    bracket_match, bracket_match_dispatch_grid, cpu_ref as bracket_cpu, CLOSE_BRACE, MATCH_NONE,
+    OPEN_BRACE, OTHER,
 };
 use vyre_primitives::text::char_class::{
     build_char_class_table, char_class, char_class_dispatch_grid, reference_char_class,
@@ -83,7 +84,7 @@ fn run_bracket_match(kinds: &[u32], max_depth: u32) -> Vec<u32> {
         vec![0u8; max_depth as usize * 4],
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some([1, 1, 1]);
+    config.grid_override = Some(bracket_match_dispatch_grid(n, max_depth));
     let outputs = with_live_backend("bracket match", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -102,25 +103,16 @@ fn cuda_bracket_match_simple_pair() {
     let kinds = vec![OPEN_BRACE, OTHER, CLOSE_BRACE];
     let cpu = bracket_cpu(&kinds, 3);
     let gpu = run_bracket_match(&kinds, 3);
-    // CPU initialises match_pairs to MATCH_NONE; GPU's output buffer
-    // is zero-init. Compare only the matched slots.
-    assert_eq!(gpu[0], 2u32);
-    assert_eq!(gpu[2], 0u32);
-    // CPU reports MATCH_NONE for unmatched OTHER; GPU leaves 0. Allow either.
-    assert!(cpu[1] == MATCH_NONE);
+    assert_eq!(gpu, cpu);
 }
 
 #[test]
 fn cuda_bracket_match_nested_pairs() {
     // {{}} → 0 OPEN, 1 OPEN, 2 CLOSE, 3 CLOSE.
     let kinds = vec![OPEN_BRACE, OPEN_BRACE, CLOSE_BRACE, CLOSE_BRACE];
-    let _cpu = bracket_cpu(&kinds, 4);
+    let cpu = bracket_cpu(&kinds, 4);
     let gpu = run_bracket_match(&kinds, 4);
-    // Inner: 1 ↔ 2. Outer: 0 ↔ 3.
-    assert_eq!(gpu[1], 2u32);
-    assert_eq!(gpu[2], 1u32);
-    assert_eq!(gpu[0], 3u32);
-    assert_eq!(gpu[3], 0u32);
+    assert_eq!(gpu, cpu);
 }
 
 #[test]
@@ -129,10 +121,7 @@ fn cuda_bracket_match_unbalanced_open_left_unmatched() {
     let kinds = vec![OPEN_BRACE, OPEN_BRACE, CLOSE_BRACE];
     let cpu = bracket_cpu(&kinds, 3);
     let gpu = run_bracket_match(&kinds, 3);
-    assert_eq!(gpu[1], 2u32);
-    assert_eq!(gpu[2], 1u32);
-    // Outer open at 0 has no matching close.
-    assert_eq!(cpu[0], MATCH_NONE);
+    assert_eq!(gpu, cpu);
 }
 
 #[test]
@@ -141,7 +130,72 @@ fn cuda_bracket_match_extra_close_dropped() {
     let kinds = vec![CLOSE_BRACE, OPEN_BRACE, CLOSE_BRACE];
     let cpu = bracket_cpu(&kinds, 3);
     let gpu = run_bracket_match(&kinds, 3);
-    assert_eq!(gpu[1], 2u32);
-    assert_eq!(gpu[2], 1u32);
-    assert_eq!(cpu[0], MATCH_NONE);
+    assert_eq!(gpu, cpu);
+}
+
+#[test]
+fn cuda_bracket_match_parallel_crosses_workgroup_boundaries() {
+    let mut kinds = vec![OTHER; 513];
+    kinds[0] = OPEN_BRACE;
+    kinds[300] = OPEN_BRACE;
+    kinds[301] = CLOSE_BRACE;
+    kinds[512] = CLOSE_BRACE;
+
+    let cpu = bracket_cpu(&kinds, kinds.len() as u32);
+    let gpu = run_bracket_match(&kinds, kinds.len() as u32);
+
+    assert_eq!(
+        bracket_match_dispatch_grid(kinds.len() as u32, kinds.len() as u32),
+        [3, 1, 1]
+    );
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu[0], 512);
+    assert_eq!(gpu[512], 0);
+    assert_eq!(gpu[300], 301);
+    assert_eq!(gpu[301], 300);
+}
+
+#[test]
+fn cuda_bracket_match_bounded_depth_stays_exact_for_overflow_opens() {
+    let kinds = vec![
+        OPEN_BRACE,
+        OPEN_BRACE,
+        OPEN_BRACE,
+        CLOSE_BRACE,
+        CLOSE_BRACE,
+        CLOSE_BRACE,
+    ];
+    let cpu = bracket_cpu(&kinds, 2);
+    let gpu = run_bracket_match(&kinds, 2);
+
+    assert_eq!(
+        bracket_match_dispatch_grid(kinds.len() as u32, 2),
+        [1, 1, 1]
+    );
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, vec![4, 3, MATCH_NONE, 1, 0, MATCH_NONE]);
+}
+
+#[test]
+fn cuda_bracket_match_parallel_generated_mixed_tokens() {
+    let mut state = 0xBADC_0DEu32;
+    let mut kinds = Vec::with_capacity(1029);
+    for index in 0..1029u32 {
+        state = state.rotate_left(7) ^ index.wrapping_mul(0x9E37_79B9);
+        let kind = match state % 6 {
+            0 | 1 => OPEN_BRACE,
+            2 | 3 => CLOSE_BRACE,
+            _ => OTHER,
+        };
+        kinds.push(kind);
+    }
+
+    let cpu = bracket_cpu(&kinds, kinds.len() as u32);
+    let gpu = run_bracket_match(&kinds, kinds.len() as u32);
+
+    assert_eq!(
+        bracket_match_dispatch_grid(kinds.len() as u32, kinds.len() as u32),
+        [5, 1, 1]
+    );
+    assert_eq!(gpu, cpu);
 }

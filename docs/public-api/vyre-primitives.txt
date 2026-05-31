@@ -57,6 +57,7 @@ pub const BLAKE3_G_OP_ID: &str = "vyre-primitives::hash::blake3_g";
 pub const BLAKE3_ROUND_OP_ID: &str = "vyre-primitives::hash::blake3_round";
 pub const BLOCK_BITS: u32 = 10;
 pub const BLOCK_LANES: u32 = 1024;
+pub const BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const BUNDLE_OP_ID: &str = "vyre-primitives::hash::hypervector_majority_bundle";
 pub const BYTE_HISTOGRAM_256_OP_ID: &str = "vyre-primitives::text::byte_histogram_256";
 pub const BYTE_TILE_STATES: u32 = 256;
@@ -480,6 +481,7 @@ pub const fn bit(self) -> u32 {
 pub const fn bits(self) -> u32 {
 pub const fn bitset_words(n: u32) -> u32 {
 pub const fn bitset_words(node_count: u32) -> u32 {
+pub const fn bracket_match_dispatch_grid(n: u32, max_depth: u32) -> [u32; 3] {
 pub const fn cache_key(
 pub const fn cache_key(&self, device_features: u64) -> PersistentBfsPlanCacheKey {
 pub const fn call_arg_slot(n: u32) -> u32 {
