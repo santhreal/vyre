@@ -98,6 +98,20 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "megakernel_condition_slots_per_sec_x1000") => {
             Some("megakernel_condition_slots_per_sec_x1000")
         }
+        ("", "conditional_eval_resident_buffers") => Some("conditional_eval_resident_buffers"),
+        ("", "conditional_eval_device_reset_sequence") => {
+            Some("conditional_eval_device_reset_sequence")
+        }
+        ("", "conditional_eval_resident_reset_bytes") => {
+            Some("conditional_eval_resident_reset_bytes")
+        }
+        ("", "conditional_batch_resident_buffers") => Some("conditional_batch_resident_buffers"),
+        ("", "conditional_batch_device_reset_sequence") => {
+            Some("conditional_batch_device_reset_sequence")
+        }
+        ("", "conditional_batch_resident_reset_bytes") => {
+            Some("conditional_batch_resident_reset_bytes")
+        }
         ("", "dataflow_nodes") => Some("dataflow_nodes"),
         ("", "dataflow_bitset_words") => Some("dataflow_bitset_words"),
         ("", "dataflow_graph_nodes") => Some("dataflow_graph_nodes"),

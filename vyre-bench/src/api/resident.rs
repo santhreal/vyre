@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
+use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver::{BackendError, CompiledPipeline, Resource, TimedDispatchResult};
 
@@ -46,6 +47,22 @@ pub struct TransferAccounting {
 /// Sum encoded benchmark input bytes once during preparation.
 pub fn input_bytes_total(inputs: &[Vec<u8>]) -> u64 {
     inputs.iter().map(Vec::len).sum::<usize>() as u64
+}
+
+/// Build a one-lane resident reset program for sparse-output `u32` counters.
+pub fn u32_counter_reset_program(buffer_name: &str) -> Program {
+    let idx = Expr::InvocationId { axis: 0 };
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(buffer_name, 0, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::if_then(
+            Expr::eq(idx, Expr::u32(0)),
+            vec![Node::store(buffer_name, Expr::u32(0), Expr::u32(0))],
+        )],
+    )
 }
 
 /// Account resident samples as output-only host traffic and fallback samples as full round trips.
@@ -533,5 +550,17 @@ mod tests {
         assert_eq!(accounting.bytes_read, u64::MAX);
         assert_eq!(accounting.bytes_written, 4096);
         assert_eq!(accounting.bytes_touched, u64::MAX);
+    }
+
+    #[test]
+    fn u32_counter_reset_program_targets_single_read_write_word() {
+        let program = u32_counter_reset_program("counter");
+
+        assert_eq!(program.workgroup_size(), [1, 1, 1]);
+        assert_eq!(program.buffers().len(), 1);
+        assert_eq!(program.buffers()[0].name.as_ref(), "counter");
+        assert_eq!(program.buffers()[0].binding, 0);
+        assert_eq!(program.buffers()[0].access, BufferAccess::ReadWrite);
+        assert_eq!(program.buffers()[0].count, 1);
     }
 }

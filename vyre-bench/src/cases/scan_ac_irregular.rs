@@ -6,11 +6,12 @@ use crate::api::case::{
 };
 use crate::api::metric::BenchMetrics;
 use crate::api::resident::{
-    dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
+    dispatch_program_timed, input_bytes_total, transfer_accounting, u32_counter_reset_program,
+    ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::Program;
 use vyre_foundation::match_result::Match;
 use vyre_libs::scan::classic_ac::{
     classic_ac_compile, try_build_ac_bounded_ranges_program_ext, ClassicAcAutomaton,
@@ -279,7 +280,7 @@ fn prepare_scan_ac_irregular(
         false,
     )
     .map_err(BenchError::ExecutionFailed)?;
-    let reset_program = scan_ac_match_count_reset_program();
+    let reset_program = u32_counter_reset_program("match_count");
 
     let baseline_start = std::time::Instant::now();
     let expected_matches = cpu_aho_overlapping_matches(PATTERNS, &haystack)?;
@@ -505,21 +506,6 @@ fn dispatch_resident_scan_sequence(
         outputs: vec![count_output, matches_output],
         wall_ns,
     })
-}
-
-fn scan_ac_match_count_reset_program() -> Program {
-    let idx = Expr::InvocationId { axis: 0 };
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("match_count", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::if_then(
-            Expr::eq(idx, Expr::u32(0)),
-            vec![Node::store("match_count", Expr::u32(0), Expr::u32(0))],
-        )],
-    )
 }
 
 fn mix32(mut value: u32) -> u32 {
