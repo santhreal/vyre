@@ -2592,3 +2592,68 @@ inventory::submit! {
 inventory::submit! {
     &EGRAPH_SATURATION as &'static dyn BenchCase
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn string_bitmap_scatter_inputs_match_program_abi_at_word_boundaries() {
+        for records in [1, 31, 32, 33, 255, 256, 257, 1024] {
+            let program = string_bitmap_scatter_program(records);
+            let generated = string_bitmap_scatter_inputs(records);
+            let output_words = records.div_ceil(32) as usize;
+
+            assert_eq!(
+                generated.inputs.len(),
+                program.buffers().len(),
+                "records={records} must pass one input per program binding"
+            );
+            assert_eq!(generated.inputs[0].len(), output_words * 4);
+            assert_eq!(generated.inputs[1].len(), records as usize * 4);
+            assert_eq!(generated.inputs[2].len(), records as usize * 4);
+            assert_eq!(program.buffers()[0].name.as_ref(), "out_flags");
+            assert_eq!(program.buffers()[0].count, records.div_ceil(32));
+            assert_eq!(program.buffers()[1].name.as_ref(), "pattern_bitmap");
+            assert_eq!(program.buffers()[1].count, records);
+            assert_eq!(program.buffers()[2].name.as_ref(), "rule_bitmap");
+            assert_eq!(program.buffers()[2].count, records);
+        }
+    }
+
+    #[test]
+    fn string_bitmap_scatter_reference_eval_matches_cpu_bitmap_oracle() {
+        for records in [1, 17, 32, 33, 127, 257] {
+            let program = string_bitmap_scatter_program(records);
+            let generated = string_bitmap_scatter_inputs(records);
+            let values = generated
+                .inputs
+                .iter()
+                .cloned()
+                .map(vyre_reference::value::Value::from)
+                .collect::<Vec<_>>();
+            let outputs = vyre_reference::reference_eval(&program, &values)
+                .expect("Fix: string bitmap scatter must reference-evaluate")
+                .into_iter()
+                .map(|value| value.to_bytes())
+                .collect::<Vec<_>>();
+
+            let mut expected_words = vec![0u32; records.div_ceil(32) as usize];
+            for index in 0..records {
+                let pattern_word = generated.pattern_bitmap[index as usize];
+                let rule_word = generated.rule_bitmap[index as usize];
+                assert_eq!(pattern_word, string_bitmap_pattern_word(index));
+                assert_eq!(rule_word, string_bitmap_rule_word(index));
+                if pattern_word != 0 && rule_word != 0 {
+                    expected_words[(index / 32) as usize] |= 1u32 << (index & 31);
+                }
+            }
+
+            assert_eq!(
+                outputs,
+                vec![encode_u32_words(&expected_words)],
+                "records={records} must scatter exactly the CPU oracle bitmap"
+            );
+        }
+    }
+}
