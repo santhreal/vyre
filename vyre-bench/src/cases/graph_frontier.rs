@@ -8,6 +8,8 @@ use crate::api::resident::{
 };
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+mod skewed_csr;
+
 const NODE_COUNT: u32 = 1_048_576;
 const EDGE_PERMUTATION_MULTIPLIER: u32 = 1_103_515_245;
 const EDGE_PERMUTATION_INCREMENT: u32 = 12_345;

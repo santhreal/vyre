@@ -16,6 +16,7 @@ fn benchmark_registry_contains_program_level_thesis_workloads() {
         "frontend.rust.lexer.ir_execute",
         "frontend.rust.range_loop.ir_execute",
         "foundation.dfa_match.256k",
+        "primitives.graph.csr_skewed_frontier.1m",
         "primitives.graph.frontier_step.1m",
         "runtime.megakernel.truth.1024",
     ] {
