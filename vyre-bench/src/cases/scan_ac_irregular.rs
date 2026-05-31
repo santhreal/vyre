@@ -134,7 +134,7 @@ impl BenchCase for ScanAcIrregularLiterals {
         prepared
             .downcast_ref::<ScanAcIrregularPrepared>()
             .map(|prepared| {
-                let output_bytes = u64::from(prepared.stats.max_matches) * 3 * 4 + 4;
+                let output_bytes = selected_scan_output_bytes(prepared.stats);
                 (prepared.input_bytes_total, output_bytes)
             })
             .unwrap_or((0, 0))
@@ -273,13 +273,6 @@ fn prepare_scan_ac_irregular(
     let (haystack, planted_matches) = build_irregular_haystack(HAYSTACK_BYTES);
     let ac = classic_ac_compile(PATTERNS);
     let pattern_lengths = pattern_lengths()?;
-    let program = try_build_ac_bounded_ranges_program_ext(
-        &ac.dfa,
-        pattern_lengths.len() as u32,
-        MAX_MATCHES,
-        false,
-    )
-    .map_err(BenchError::ExecutionFailed)?;
     let reset_program = u32_counter_reset_program("match_count");
 
     let baseline_start = std::time::Instant::now();
@@ -294,6 +287,15 @@ fn prepare_scan_ac_irregular(
             expected_matches.len()
         )));
     }
+    let expected_match_count = expected_matches.len() as u32;
+    let program = try_build_ac_bounded_ranges_program_ext(
+        &ac.dfa,
+        pattern_lengths.len() as u32,
+        MAX_MATCHES,
+        false,
+    )
+    .map_err(BenchError::ExecutionFailed)
+    .and_then(|program| with_matches_readback_range(program, expected_match_count))?;
 
     let inputs = scan_ac_inputs(&ac, &pattern_lengths, &haystack);
     let input_bytes_total = input_bytes_total(&inputs);
@@ -310,7 +312,7 @@ fn prepare_scan_ac_irregular(
         .transpose()?
         .flatten();
     let baseline_outputs = vec![
-        pack_u32_slice(&[expected_matches.len() as u32]),
+        pack_u32_slice(&[expected_match_count]),
         encode_match_triples(&expected_matches),
     ];
     let stats = ScanAcStats {
@@ -320,7 +322,7 @@ fn prepare_scan_ac_irregular(
         dfa_states: ac.dfa.state_count,
         max_pattern_len: ac.dfa.max_pattern_len,
         output_records: ac.dfa.output_records.len() as u32,
-        expected_matches: expected_matches.len() as u32,
+        expected_matches: expected_match_count,
         max_matches: MAX_MATCHES,
         planted_matches,
     };
@@ -409,6 +411,13 @@ fn decode_scan_outputs(outputs: &[Vec<u8>], context: &str) -> Result<Vec<Match>,
     let triples = outputs.get(1).ok_or_else(|| {
         BenchError::CorrectnessViolation(format!("{context} did not produce match triples"))
     })?;
+    let required_triple_bytes = match_triples_readback_bytes(count)?;
+    if triples.len() < required_triple_bytes {
+        return Err(BenchError::CorrectnessViolation(format!(
+            "{context} match triples failed to decode: count={count} requires {required_triple_bytes} bytes but compact readback returned {}",
+            triples.len()
+        )));
+    }
     try_unpack_match_triples(triples, count).map_err(|error| {
         BenchError::CorrectnessViolation(format!(
             "{context} match triples failed to decode: {error}"
@@ -436,6 +445,47 @@ fn match_triples_output_bytes(max_matches: u32) -> Result<usize, BenchError> {
                 "irregular AC scan max_matches={max_matches} overflows resident output byte sizing. Fix: split the scan output into smaller shards."
             ))
         })
+}
+
+fn match_triples_readback_bytes(match_count: u32) -> Result<usize, BenchError> {
+    usize::try_from(match_count)
+        .ok()
+        .and_then(|matches| matches.checked_mul(MATCH_TRIPLE_WORDS))
+        .and_then(|words| words.checked_mul(std::mem::size_of::<u32>()))
+        .ok_or_else(|| {
+            BenchError::EnvironmentInvalid(format!(
+                "irregular AC scan match_count={match_count} overflows compact match readback byte sizing. Fix: split the scan output into smaller shards."
+            ))
+        })
+}
+
+fn selected_scan_output_bytes(stats: ScanAcStats) -> u64 {
+    4 + u64::from(stats.expected_matches) * MATCH_TRIPLE_WORDS as u64 * 4
+}
+
+fn with_matches_readback_range(program: Program, match_count: u32) -> Result<Program, BenchError> {
+    let byte_len = match_triples_readback_bytes(match_count)?;
+    let mut found_matches_output = false;
+    let buffers = program
+        .buffers()
+        .iter()
+        .cloned()
+        .map(|buffer| {
+            if buffer.name() == "matches" && buffer.is_output() {
+                found_matches_output = true;
+                buffer.with_output_byte_range(0..byte_len)
+            } else {
+                buffer
+            }
+        })
+        .collect::<Vec<_>>();
+    if !found_matches_output {
+        return Err(BenchError::ExecutionFailed(
+            "irregular AC scan program did not expose the matches output buffer. Fix: preserve the bounded-ranges scan buffer layout before compact readback planning."
+                .to_string(),
+        ));
+    }
+    Ok(program.with_rewritten_buffers(buffers))
 }
 
 struct ScanResidentSequenceRun {
@@ -476,7 +526,7 @@ fn dispatch_resident_scan_sequence(
             1,
         ]),
     };
-    let match_output_bytes = match_triples_output_bytes(prepared.stats.max_matches)?;
+    let match_output_bytes = match_triples_readback_bytes(prepared.stats.expected_matches)?;
     let read_ranges = [
         ResidentReadRange {
             resource: &scan_resources[MATCH_COUNT_INPUT_INDEX],

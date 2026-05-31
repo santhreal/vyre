@@ -36,6 +36,26 @@ fn prepare_builds_cuda_compatible_bounded_ranges_program() {
         match_triples_output_bytes(MAX_MATCHES).unwrap(),
         MAX_MATCHES as usize * 12
     );
+    let selected_match_bytes =
+        match_triples_readback_bytes(prepared.stats.expected_matches).unwrap();
+    let matches_output = prepared
+        .program
+        .buffers()
+        .iter()
+        .find(|buffer| buffer.name() == "matches")
+        .expect("bounded-ranges program must expose matches output");
+    assert_eq!(
+        matches_output.output_byte_range(),
+        Some(0..selected_match_bytes)
+    );
+    assert!(
+        selected_match_bytes < match_triples_output_bytes(MAX_MATCHES).unwrap(),
+        "fixture must prove compact match readback avoids capacity-sized transfer"
+    );
+    assert_eq!(
+        selected_scan_output_bytes(prepared.stats),
+        4 + selected_match_bytes as u64
+    );
     assert_eq!(prepared.stats.haystack_bytes, HAYSTACK_BYTES as u32);
     assert_eq!(prepared.stats.patterns, PATTERNS.len() as u32);
     assert!(prepared.stats.expected_matches > 0);
@@ -88,4 +108,17 @@ fn decoded_outputs_canonicalize_atomic_order_variation() {
 
     let decoded = decode_scan_outputs(&actual, "actual").unwrap();
     assert_eq!(decoded, vec![first, second]);
+}
+
+#[test]
+fn compact_match_readback_still_rejects_over_count_outputs() {
+    let only_match = Match::new(0, 3, 7);
+    let actual = vec![pack_u32_slice(&[2]), encode_match_triples(&[only_match])];
+
+    let error = decode_scan_outputs(&actual, "compact actual")
+        .expect_err("compact match readback must reject count values beyond returned triples");
+    assert!(
+        error.to_string().contains("match triples failed to decode"),
+        "decode error should describe the truncated compact match payload: {error}"
+    );
 }

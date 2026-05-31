@@ -78,6 +78,14 @@ pub(super) fn scan_ac_baseline_metric_points(stats: ScanAcStats) -> Vec<MetricPo
             u64::from(stats.max_matches),
         ),
         metric(
+            "scan_ac_irregular_match_readback_bytes",
+            u64::from(stats.expected_matches) * 12,
+        ),
+        metric(
+            "scan_ac_irregular_avoided_match_readback_bytes",
+            u64::from(stats.max_matches.saturating_sub(stats.expected_matches)) * 12,
+        ),
+        metric(
             "scan_ac_irregular_planted_matches",
             u64::from(stats.planted_matches),
         ),
