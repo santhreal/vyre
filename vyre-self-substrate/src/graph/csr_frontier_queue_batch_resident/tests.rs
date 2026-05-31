@@ -277,6 +277,59 @@ fn budgeted_batch_memory_plan_uses_effective_queue_capacity() {
 }
 
 #[test]
+fn budgeted_batch_packs_sparse_runs_around_dense_outlier() {
+    let dispatcher = RecordingBatchDispatcher::default();
+    let node_count = 4096u32;
+    let edge_offsets = vec![0u32; node_count as usize + 1];
+    let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
+        .expect("Fix: zero-edge resident CSR graph is valid");
+    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let mut sparse = vec![0u32; words];
+    sparse[0] = 1;
+    let dense = vec![u32::MAX; words];
+    let frontiers: [&[u32]; 7] = [&sparse, &sparse, &sparse, &dense, &sparse, &sparse, &sparse];
+    let mut scratch = ResidentCsrQueueBatchScratch::default();
+    let mut outputs = Vec::new();
+    let dense_bytes_per_query =
+        words * std::mem::size_of::<u32>() * 2 + node_count as usize * 4 + 4;
+
+    let plan = run_resident_csr_queue_batch_budgeted_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &frontiers,
+        node_count,
+        u32::MAX,
+        dense_bytes_per_query,
+        &mut outputs,
+    )
+    .expect("Fix: sparse runs should pack into large chunks around one dense outlier");
+
+    assert_eq!(plan.query_count, frontiers.len());
+    assert_eq!(
+        plan.max_queries_per_dispatch, 3,
+        "sparse runs should not inherit the dense outlier's graph-sized queue capacity"
+    );
+    assert_eq!(plan.dispatch_batches, 3);
+    assert_eq!(plan.bytes_per_query, dense_bytes_per_query);
+    assert_eq!(plan.peak_batch_scratch_bytes, dense_bytes_per_query);
+    assert_eq!(
+        dispatcher
+            .upload_handles
+            .borrow()
+            .iter()
+            .map(Vec::len)
+            .collect::<Vec<_>>(),
+        vec![3, 1, 3],
+        "budgeted dispatch should preserve order while packing sparse chunks on both sides of the dense frontier"
+    );
+    assert_eq!(
+        outputs,
+        vec![vec![0; words * std::mem::size_of::<u32>()]; frontiers.len()]
+    );
+}
+
+#[test]
 fn large_batch_queries_use_word_prefix_queue_materializer() {
     let dispatcher = RecordingBatchDispatcher::default();
     let node_count = 8_193u32;

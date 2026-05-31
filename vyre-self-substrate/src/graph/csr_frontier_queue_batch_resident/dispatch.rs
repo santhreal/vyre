@@ -17,9 +17,9 @@ use crate::dispatch_buffers::u32_word_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_effective_capacity,
-    resident_csr_queue_materializer, resident_csr_queue_traverse_grid,
-    resident_csr_queue_traverse_kind, FrontierWordPrefixScratch, ResidentCsrQueueMaterializer,
-    ResidentCsrQueueTraverseKind,
+    resident_csr_queue_materializer, resident_csr_queue_scratch_bytes_per_query,
+    resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind, FrontierWordPrefixScratch,
+    ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
 use crate::hardware::scratch::reserve_vec as reserve_graph_vec;
@@ -206,34 +206,31 @@ pub fn run_resident_csr_queue_batch_budgeted_into(
 ) -> Result<ResidentCsrQueueBatchMemoryPlan, DispatchError> {
     validate_frontier_queue_batch(graph.node_count(), frontiers, queue_capacity)
         .map_err(DispatchError::BadInputs)?;
-    let effective_queue_capacity =
-        resident_csr_queue_effective_capacity(graph.node_count(), frontiers, queue_capacity)
-            .map_err(DispatchError::BadInputs)?;
-    let plan = plan_resident_csr_queue_batch_memory(
-        frontiers.len(),
+    let (plan, chunks) = plan_budgeted_effective_chunks(
+        graph.node_count(),
         graph.words(),
-        effective_queue_capacity,
+        frontiers,
+        queue_capacity,
         max_scratch_bytes,
-    )
-    .map_err(|error| DispatchError::BadInputs(error.to_string()))?;
+    )?;
     if outputs.len() < frontiers.len() {
         outputs.resize_with(frontiers.len(), Vec::new);
     }
     outputs.truncate(frontiers.len());
 
     let mut chunk_outputs = Vec::new();
-    for (chunk_index, frontier_chunk) in frontiers.chunks(plan.max_queries_per_dispatch).enumerate()
-    {
+    for chunk in chunks {
+        let frontier_chunk = &frontiers[chunk.start..chunk.end];
         run_resident_csr_queue_batch_into(
             dispatcher,
             graph,
             scratch,
             frontier_chunk,
-            effective_queue_capacity,
+            chunk.queue_capacity,
             allow_mask,
             &mut chunk_outputs,
         )?;
-        let offset = chunk_index * plan.max_queries_per_dispatch;
+        let offset = chunk.start;
         for (target, source) in outputs[offset..offset + frontier_chunk.len()]
             .iter_mut()
             .zip(&chunk_outputs)
@@ -244,6 +241,122 @@ pub fn run_resident_csr_queue_batch_budgeted_into(
     }
 
     Ok(plan)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct ResidentCsrQueueBudgetedChunk {
+    start: usize,
+    end: usize,
+    queue_capacity: u32,
+}
+
+fn plan_budgeted_effective_chunks(
+    node_count: u32,
+    frontier_words: usize,
+    frontiers: &[&[u32]],
+    requested_queue_capacity: u32,
+    max_scratch_bytes: usize,
+) -> Result<
+    (
+        ResidentCsrQueueBatchMemoryPlan,
+        Vec<ResidentCsrQueueBudgetedChunk>,
+    ),
+    DispatchError,
+> {
+    let mut query_capacities = Vec::new();
+    reserve_graph_vec(
+        &mut query_capacities,
+        frontiers.len(),
+        "resident CSR queue budgeted query capacities",
+    )?;
+    for frontier in frontiers {
+        query_capacities.push(
+            resident_csr_queue_effective_capacity(
+                node_count,
+                &[*frontier],
+                requested_queue_capacity,
+            )
+            .map_err(DispatchError::BadInputs)?,
+        );
+    }
+
+    let mut chunks = Vec::new();
+    reserve_graph_vec(
+        &mut chunks,
+        frontiers.len(),
+        "resident CSR queue budgeted dispatch chunks",
+    )?;
+    let mut start = 0usize;
+    let mut max_queries_per_dispatch = 0usize;
+    let mut peak_bytes_per_query = 0usize;
+    let mut peak_batch_scratch_bytes = 0usize;
+
+    while start < frontiers.len() {
+        let mut end = start + 1;
+        let mut chunk_capacity = query_capacities[start];
+        let mut bytes_per_query =
+            budgeted_chunk_bytes_per_query(frontier_words, chunk_capacity, max_scratch_bytes)?;
+
+        while end < frontiers.len() {
+            let candidate_capacity = chunk_capacity.max(query_capacities[end]);
+            let candidate_bytes =
+                resident_csr_queue_scratch_bytes_per_query(frontier_words, candidate_capacity)
+                    .map_err(DispatchError::BadInputs)?;
+            let candidate_queries = end - start + 1;
+            let candidate_peak = checked_batch_scratch_bytes(candidate_bytes, candidate_queries)?;
+            if candidate_peak > max_scratch_bytes {
+                break;
+            }
+            chunk_capacity = candidate_capacity;
+            bytes_per_query = candidate_bytes;
+            end += 1;
+        }
+
+        let query_count = end - start;
+        let chunk_peak = checked_batch_scratch_bytes(bytes_per_query, query_count)?;
+        max_queries_per_dispatch = max_queries_per_dispatch.max(query_count);
+        peak_bytes_per_query = peak_bytes_per_query.max(bytes_per_query);
+        peak_batch_scratch_bytes = peak_batch_scratch_bytes.max(chunk_peak);
+        chunks.push(ResidentCsrQueueBudgetedChunk {
+            start,
+            end,
+            queue_capacity: chunk_capacity,
+        });
+        start = end;
+    }
+
+    Ok((
+        ResidentCsrQueueBatchMemoryPlan {
+            query_count: frontiers.len(),
+            max_queries_per_dispatch,
+            dispatch_batches: chunks.len(),
+            bytes_per_query: peak_bytes_per_query,
+            peak_batch_scratch_bytes,
+        },
+        chunks,
+    ))
+}
+
+fn budgeted_chunk_bytes_per_query(
+    frontier_words: usize,
+    queue_capacity: u32,
+    max_scratch_bytes: usize,
+) -> Result<usize, DispatchError> {
+    plan_resident_csr_queue_batch_memory(1, frontier_words, queue_capacity, max_scratch_bytes)
+        .map(|plan| plan.bytes_per_query)
+        .map_err(|error| DispatchError::BadInputs(error.to_string()))
+}
+
+fn checked_batch_scratch_bytes(
+    bytes_per_query: usize,
+    query_count: usize,
+) -> Result<usize, DispatchError> {
+    bytes_per_query.checked_mul(query_count).ok_or_else(|| {
+        DispatchError::BadInputs(
+            "resident CSR queue budgeted batch scratch byte calculation overflowed. Fix: shard the query batch before planning."
+                .to_string(),
+        )
+    })
 }
 
 fn prepare_batch_sequence_tables(

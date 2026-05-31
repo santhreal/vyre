@@ -7,13 +7,13 @@ use super::csr_frontier_queue_scratch::resident_csr_queue_scratch_bytes_per_quer
 pub struct ResidentCsrQueueBatchMemoryPlan {
     /// Number of input queries.
     pub query_count: usize,
-    /// Maximum query count that fits in one resident dispatch under the budget.
+    /// Largest query count used by any resident dispatch chunk in the plan.
     pub max_queries_per_dispatch: usize,
     /// Number of dispatch batches required.
     pub dispatch_batches: usize,
-    /// Resident scratch bytes required by one query.
+    /// Peak resident scratch bytes required by one query in the plan.
     pub bytes_per_query: usize,
-    /// Peak resident scratch bytes for one planned dispatch batch.
+    /// Peak resident scratch bytes for any planned dispatch batch.
     pub peak_batch_scratch_bytes: usize,
 }
 
