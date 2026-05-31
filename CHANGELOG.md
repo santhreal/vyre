@@ -54,6 +54,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Removed the now-unused C GPU-preprocess U32 byte-padding staging helper so raw-byte directive and live conditional paths cannot route back through padded host macro-name buffers.
 
+- Moved C byte-filter preflight plus simple line/block comment paths to runtime-sized raw `U8` inputs, delaying padded splice-buffer staging until the full comment-state fallback needs it.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

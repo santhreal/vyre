@@ -96,8 +96,7 @@ pub(super) fn transform_candidate_program(n: u32) -> Program {
     ];
     Program::wrapped(
         vec![
-            BufferDecl::storage("bytes_in", 0, BufferAccess::ReadOnly, DataType::U8)
-                .with_count(n.max(1)),
+            BufferDecl::storage("bytes_in", 0, BufferAccess::ReadOnly, DataType::U8).with_count(0),
             BufferDecl::storage("transform_flag", 1, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(n.max(1)),
             BufferDecl::storage("transform_n_real", 2, BufferAccess::ReadOnly, DataType::U32)

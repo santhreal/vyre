@@ -39,8 +39,10 @@ impl SimpleBlockScratch {
 pub(super) fn gpu_filter_simple_block_comments(
     dispatcher: &dyn GpuDispatcher,
     raw: &[u8],
-    splice_input: &[u8],
+    bytes_in: &[u8],
+    fallback_splice_input: &mut Vec<u8>,
     n_bucket: u32,
+    cap_bucket: usize,
     byte_buf_pad: usize,
     n_real_buf: &[u8],
     scratch: &mut SimpleBlockScratch,
@@ -53,7 +55,7 @@ pub(super) fn gpu_filter_simple_block_comments(
         .dispatch_borrowed_into(
             &marks_prog,
             &[
-                splice_input,
+                bytes_in,
                 scratch.zero_words.as_slice(),
                 scratch.zero_words.as_slice(),
                 n_real_buf,
@@ -114,15 +116,13 @@ pub(super) fn gpu_filter_simple_block_comments(
         "simple block comments topology invalid flag",
     )? != 0
     {
+        super::prepare_splice_input(fallback_splice_input, raw, cap_bucket)?;
         return gpu_filter_full_comment_state(
             dispatcher,
             raw,
-            splice_input,
+            fallback_splice_input.as_slice(),
             n_bucket,
-            usize::try_from(n_bucket).map_err(|_| {
-                "simple block comments fallback bucket length does not fit usize. Fix: reduce batch size."
-                    .to_string()
-            })?,
+            cap_bucket,
             byte_buf_pad,
             n_real_buf,
             full_scratch,
@@ -155,7 +155,7 @@ pub(super) fn gpu_filter_simple_block_comments(
         dispatcher,
         "simple block comments",
         raw,
-        splice_input,
+        bytes_in,
         scratch.masks_out[0].as_slice(),
         scratch.masks_out[1].as_slice(),
         n_bucket,

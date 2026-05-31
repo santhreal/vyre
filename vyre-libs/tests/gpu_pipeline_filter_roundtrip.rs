@@ -34,6 +34,7 @@ struct CountingDispatcher {
     calls: std::cell::Cell<usize>,
     op_ids: std::cell::RefCell<Vec<String>>,
     bytes_in_elements: std::cell::RefCell<Vec<DataType>>,
+    bytes_in_input_lens: std::cell::RefCell<Vec<usize>>,
 }
 
 impl CountingDispatcher {
@@ -42,6 +43,7 @@ impl CountingDispatcher {
             calls: std::cell::Cell::new(0),
             op_ids: std::cell::RefCell::new(Vec::new()),
             bytes_in_elements: std::cell::RefCell::new(Vec::new()),
+            bytes_in_input_lens: std::cell::RefCell::new(Vec::new()),
         }
     }
 }
@@ -60,6 +62,14 @@ impl GpuDispatcher for CountingDispatcher {
                 .buffers()
                 .iter()
                 .filter_map(|buffer| (buffer.name() == "bytes_in").then_some(buffer.element())),
+        );
+        self.bytes_in_input_lens.borrow_mut().extend(
+            program
+                .buffers()
+                .iter()
+                .position(|buffer| buffer.name() == "bytes_in")
+                .and_then(|index| inputs.get(index))
+                .map(Vec::len),
         );
         RefDispatcher.dispatch(program, inputs)
     }
@@ -80,6 +90,18 @@ fn assert_byte_source_dispatches_are_u8(dispatcher: &CountingDispatcher) {
             .iter()
             .all(|element| matches!(element, DataType::U8)),
         "filter byte-source programs must consume raw U8 source buffers, got {elements:?}"
+    );
+}
+
+fn assert_byte_source_inputs_are_unpadded(dispatcher: &CountingDispatcher, raw_len: usize) {
+    let input_lens = dispatcher.bytes_in_input_lens.borrow();
+    assert!(
+        !input_lens.is_empty(),
+        "filter path must dispatch at least one byte-source program"
+    );
+    assert!(
+        input_lens.iter().all(|len| *len == raw_len),
+        "filter byte-source programs must consume the raw input length {raw_len}, got {input_lens:?}"
     );
 }
 
@@ -117,6 +139,7 @@ fn division_slash_bypasses_serial_comment_filter() {
         "ordinary slash must stop after the parallel transform preflight"
     );
     assert_byte_source_dispatches_are_u8(&dispatcher);
+    assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 }
 
 #[test]
@@ -145,6 +168,7 @@ fn simple_line_comments_bypass_serial_comment_state_machine() {
             .all(|op| !op.contains("gpu_comment_strip_mask")),
         "simple line comments must not dispatch the serial comment-strip state machine"
     );
+    assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 }
 
 #[test]
@@ -167,6 +191,7 @@ fn simple_block_comments_bypass_serial_comment_state_machine() {
             .all(|op| !op.contains("gpu_comment_strip_mask")),
         "simple block comments must not dispatch the serial comment-strip state machine"
     );
+    assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 }
 
 #[test]

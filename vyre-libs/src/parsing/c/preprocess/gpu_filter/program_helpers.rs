@@ -3,8 +3,14 @@ use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 pub(super) const GPU_FILTER_WORKGROUP: [u32; 3] = [256, 1, 1];
 
 pub(super) fn source_byte_load(buffer: &'static str, addr: Expr) -> Expr {
+    let len = Expr::buf_len(buffer);
+    let safe_addr = Expr::select(
+        Expr::lt(addr.clone(), len.clone()),
+        addr,
+        Expr::saturating_sub(len, Expr::u32(1)),
+    );
     Expr::bitand(
-        Expr::cast(DataType::U32, Expr::load(buffer, addr)),
+        Expr::cast(DataType::U32, Expr::load(buffer, safe_addr)),
         Expr::u32(0xFF),
     )
 }
@@ -49,7 +55,8 @@ pub(super) fn clear_comment_mask_and_final_keep(i: Expr) -> Vec<Node> {
 }
 
 pub(super) fn source_bytes_input_buffer(name: &str, binding: u32, n: u32) -> BufferDecl {
-    BufferDecl::storage(name, binding, BufferAccess::ReadOnly, DataType::U8).with_count(n.max(1))
+    let _ = n;
+    BufferDecl::storage(name, binding, BufferAccess::ReadOnly, DataType::U8).with_count(0)
 }
 
 pub(super) fn u32_read_buffer(name: &str, binding: u32, n: u32) -> BufferDecl {
@@ -255,8 +262,7 @@ pub(super) fn byte_compact_program(n: u32) -> Program {
     ];
     Program::wrapped(
         vec![
-            BufferDecl::storage("bytes_in", 0, BufferAccess::ReadOnly, DataType::U8)
-                .with_count(n.max(1)),
+            BufferDecl::storage("bytes_in", 0, BufferAccess::ReadOnly, DataType::U8).with_count(0),
             BufferDecl::storage("mask", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(n.max(1)),
             BufferDecl::storage("comment_mask", 2, BufferAccess::ReadOnly, DataType::U32)
