@@ -1,24 +1,11 @@
 //! Failure-oriented adversarial tests for text primitives without existing adversarial suites.
 //!
 //! Focus: hostile boundaries, overflow, invalid offsets, property invariants.
-#![cfg(feature = "text")]
+#![cfg(all(feature = "text", feature = "cpu-parity"))]
 #![allow(clippy::needless_range_loop)]
 
-fn reference_byte_histogram(bytes: &[u8]) -> [u32; 256] {
-    let mut histogram = [0u32; 256];
-    for &byte in bytes {
-        histogram[usize::from(byte)] = histogram[usize::from(byte)].wrapping_add(1);
-    }
-    histogram
-}
-
-fn reference_utf8_shape_counts(histogram: &[u32; 256]) -> (u32, u32) {
-    let continuation: u32 = histogram[0x80..0xC0].iter().sum();
-    let starter_2: u32 = histogram[0xC2..0xE0].iter().sum();
-    let starter_3: u32 = histogram[0xE0..0xF0].iter().sum();
-    let starter_4: u32 = histogram[0xF0..0xF5].iter().sum();
-    (continuation, starter_2 + starter_3 * 2 + starter_4 * 3)
-}
+use vyre_primitives::text::byte_histogram::reference_byte_histogram;
+use vyre_primitives::text::utf8_shape_counts::reference_utf8_shape_counts;
 
 #[test]
 fn reference_byte_histogram_empty() {
@@ -108,6 +95,34 @@ fn reference_utf8_shape_counts_large_counts() {
     let (cont, expected) = reference_utf8_shape_counts(&histogram);
     assert_eq!(cont, 0);
     assert_eq!(expected, 100_000_000 + 100_000_000 * 2 + 100_000_000 * 3);
+}
+
+#[test]
+fn reference_utf8_shape_counts_saturates_three_byte_multiplier() {
+    let mut histogram = [0u32; 256];
+    histogram[0xE0] = u32::MAX / 2 + 1;
+    let (cont, expected) = reference_utf8_shape_counts(&histogram);
+    assert_eq!(cont, 0);
+    assert_eq!(expected, u32::MAX);
+}
+
+#[test]
+fn reference_utf8_shape_counts_saturates_four_byte_multiplier() {
+    let mut histogram = [0u32; 256];
+    histogram[0xF0] = u32::MAX / 3 + 1;
+    let (cont, expected) = reference_utf8_shape_counts(&histogram);
+    assert_eq!(cont, 0);
+    assert_eq!(expected, u32::MAX);
+}
+
+#[test]
+fn reference_utf8_shape_counts_saturates_accumulated_expected_count() {
+    let mut histogram = [0u32; 256];
+    histogram[0xC2] = u32::MAX;
+    histogram[0xE0] = 1;
+    let (cont, expected) = reference_utf8_shape_counts(&histogram);
+    assert_eq!(cont, 0);
+    assert_eq!(expected, u32::MAX);
 }
 
 #[test]
