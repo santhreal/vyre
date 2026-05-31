@@ -23,72 +23,158 @@ pub(crate) fn single_word_lineage_body(
         Expr::mul(Expr::var("__sj_chunk"), Expr::u32(lanes)),
         lane.clone(),
     );
+    let transfer_body = single_word_transfer_body(state, next, join_rules, n, cells, cell.clone());
+    let compare_body = single_word_compare_body(state, next, changed, cells, cell);
 
-    let mut transfer_cell = vec![
+    vec![Node::loop_for(
+        "__sj_iter",
+        Expr::u32(0),
+        Expr::u32(max_iterations),
+        vec![
+            Node::if_then(
+                Expr::eq(lane.clone(), Expr::u32(0)),
+                vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
+            ),
+            workgroup_barrier(),
+            Node::loop_for(
+                "__sj_chunk",
+                Expr::u32(0),
+                Expr::u32(cell_chunks),
+                transfer_body,
+            ),
+            workgroup_barrier(),
+            Node::loop_for(
+                "__sj_chunk",
+                Expr::u32(0),
+                Expr::u32(cell_chunks),
+                compare_body,
+            ),
+            workgroup_barrier(),
+            Node::if_then(
+                Expr::eq(Expr::load(changed, Expr::u32(0)), Expr::u32(0)),
+                vec![Node::Return],
+            ),
+        ],
+    )]
+}
+
+pub(crate) fn single_word_lineage_grid_sync_body(
+    state: &str,
+    next: &str,
+    join_rules: &str,
+    changed: &str,
+    n: u32,
+    cells: u32,
+    max_iterations: u32,
+) -> Vec<Node> {
+    let lane = Expr::InvocationId { axis: 0 };
+    let mut body = Vec::new();
+    for iter in 0..max_iterations {
+        body.push(Node::if_then(
+            Expr::eq(lane.clone(), Expr::u32(0)),
+            vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
+        ));
+        body.extend(single_word_transfer_body(
+            state,
+            next,
+            join_rules,
+            n,
+            cells,
+            lane.clone(),
+        ));
+        body.push(grid_sync_barrier());
+        body.extend(single_word_compare_body(
+            state,
+            next,
+            changed,
+            cells,
+            lane.clone(),
+        ));
+        if iter + 1 < max_iterations {
+            body.push(grid_sync_barrier());
+        }
+    }
+    body
+}
+
+fn single_word_transfer_body(
+    state: &str,
+    next: &str,
+    join_rules: &str,
+    n: u32,
+    cells: u32,
+    cell: Expr,
+) -> Vec<Node> {
+    let transfer_cell = vec![
         Node::let_bind("__sj_i", Expr::div(Expr::var("__sj_cell"), Expr::u32(n))),
         Node::let_bind("__sj_j", Expr::rem(Expr::var("__sj_cell"), Expr::u32(n))),
         Node::let_bind("__sj_acc", Expr::u32(0)),
-    ];
-    transfer_cell.push(Node::loop_for(
-        "__sj_kk",
-        Expr::u32(0),
-        Expr::u32(n),
-        vec![
-            Node::let_bind(
-                "__sj_a",
-                Expr::load(
-                    state,
-                    Expr::add(
-                        Expr::mul(Expr::var("__sj_i"), Expr::u32(n)),
-                        Expr::var("__sj_kk"),
+        Node::loop_for(
+            "__sj_kk",
+            Expr::u32(0),
+            Expr::u32(n),
+            vec![
+                Node::let_bind(
+                    "__sj_a",
+                    Expr::load(
+                        state,
+                        Expr::add(
+                            Expr::mul(Expr::var("__sj_i"), Expr::u32(n)),
+                            Expr::var("__sj_kk"),
+                        ),
                     ),
                 ),
-            ),
-            Node::let_bind(
-                "__sj_b",
-                Expr::load(
-                    join_rules,
-                    Expr::add(
-                        Expr::mul(Expr::var("__sj_kk"), Expr::u32(n)),
-                        Expr::var("__sj_j"),
+                Node::let_bind(
+                    "__sj_b",
+                    Expr::load(
+                        join_rules,
+                        Expr::add(
+                            Expr::mul(Expr::var("__sj_kk"), Expr::u32(n)),
+                            Expr::var("__sj_j"),
+                        ),
                     ),
                 ),
-            ),
-            Node::let_bind(
-                "__sj_combined",
-                Expr::select(
-                    Expr::or(
-                        Expr::eq(Expr::var("__sj_a"), Expr::u32(0)),
-                        Expr::eq(Expr::var("__sj_b"), Expr::u32(0)),
+                Node::let_bind(
+                    "__sj_combined",
+                    Expr::select(
+                        Expr::or(
+                            Expr::eq(Expr::var("__sj_a"), Expr::u32(0)),
+                            Expr::eq(Expr::var("__sj_b"), Expr::u32(0)),
+                        ),
+                        Expr::u32(0),
+                        Expr::bitor(Expr::var("__sj_a"), Expr::var("__sj_b")),
                     ),
-                    Expr::u32(0),
-                    Expr::bitor(Expr::var("__sj_a"), Expr::var("__sj_b")),
                 ),
-            ),
-            Node::assign(
-                "__sj_acc",
-                Expr::bitor(Expr::var("__sj_acc"), Expr::var("__sj_combined")),
-            ),
-        ],
-    ));
-    transfer_cell.extend([
+                Node::assign(
+                    "__sj_acc",
+                    Expr::bitor(Expr::var("__sj_acc"), Expr::var("__sj_combined")),
+                ),
+            ],
+        ),
         Node::let_bind("__sj_seed", Expr::load(state, Expr::var("__sj_cell"))),
         Node::store(
             next,
             Expr::var("__sj_cell"),
             Expr::bitor(Expr::var("__sj_seed"), Expr::var("__sj_acc")),
         ),
-    ]);
-
-    let transfer_body = vec![
-        Node::let_bind("__sj_cell", cell.clone()),
+    ];
+    vec![
+        Node::let_bind("__sj_cell", cell),
         Node::if_then(
             Expr::lt(Expr::var("__sj_cell"), Expr::u32(cells)),
             transfer_cell,
         ),
-    ];
+    ]
+}
 
-    let compare_body = vec![
+fn single_word_compare_body(
+    state: &str,
+    next: &str,
+    changed: &str,
+    cells: u32,
+    cell: Expr,
+) -> Vec<Node> {
+    vec![
         Node::let_bind("__sj_cell", cell),
         Node::if_then(
             Expr::lt(Expr::var("__sj_cell"), Expr::u32(cells)),
@@ -105,38 +191,7 @@ pub(crate) fn single_word_lineage_body(
                 Node::store(state, Expr::var("__sj_cell"), Expr::var("__sj_next")),
             ],
         ),
-    ];
-
-    vec![Node::loop_for(
-        "__sj_iter",
-        Expr::u32(0),
-        Expr::u32(max_iterations),
-        vec![
-            Node::if_then(
-                Expr::eq(lane.clone(), Expr::u32(0)),
-                vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
-            ),
-            barrier(),
-            Node::loop_for(
-                "__sj_chunk",
-                Expr::u32(0),
-                Expr::u32(cell_chunks),
-                transfer_body,
-            ),
-            barrier(),
-            Node::loop_for(
-                "__sj_chunk",
-                Expr::u32(0),
-                Expr::u32(cell_chunks),
-                compare_body,
-            ),
-            barrier(),
-            Node::if_then(
-                Expr::eq(Expr::load(changed, Expr::u32(0)), Expr::u32(0)),
-                vec![Node::Return],
-            ),
-        ],
-    )]
+    ]
 }
 
 pub(crate) fn wide_lineage_body(
@@ -156,7 +211,50 @@ pub(crate) fn wide_lineage_body(
         Expr::mul(Expr::var("__sjw_chunk"), Expr::u32(lanes)),
         lane.clone(),
     );
+    let transfer_body = wide_transfer_body(state, next, join_rules, n, w, cells, cell.clone());
+    let compare_body = wide_compare_body(state, next, changed, w, cells, cell);
 
+    vec![Node::loop_for(
+        "__sjw_iter",
+        Expr::u32(0),
+        Expr::u32(max_iterations),
+        vec![
+            Node::if_then(
+                Expr::eq(lane.clone(), Expr::u32(0)),
+                vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
+            ),
+            workgroup_barrier(),
+            Node::loop_for(
+                "__sjw_chunk",
+                Expr::u32(0),
+                Expr::u32(cell_chunks),
+                transfer_body,
+            ),
+            workgroup_barrier(),
+            Node::loop_for(
+                "__sjw_chunk",
+                Expr::u32(0),
+                Expr::u32(cell_chunks),
+                compare_body,
+            ),
+            workgroup_barrier(),
+            Node::if_then(
+                Expr::eq(Expr::load(changed, Expr::u32(0)), Expr::u32(0)),
+                vec![Node::Return],
+            ),
+        ],
+    )]
+}
+
+fn wide_transfer_body(
+    state: &str,
+    next: &str,
+    join_rules: &str,
+    n: u32,
+    w: u32,
+    cells: u32,
+    cell: Expr,
+) -> Vec<Node> {
     let mut transfer_cell = vec![
         Node::let_bind("__sjw_i", Expr::div(Expr::var("__sjw_cell"), Expr::u32(n))),
         Node::let_bind("__sjw_j", Expr::rem(Expr::var("__sjw_cell"), Expr::u32(n))),
@@ -251,14 +349,23 @@ pub(crate) fn wide_lineage_body(
         ));
     }
 
-    let transfer_body = vec![
-        Node::let_bind("__sjw_cell", cell.clone()),
+    vec![
+        Node::let_bind("__sjw_cell", cell),
         Node::if_then(
             Expr::lt(Expr::var("__sjw_cell"), Expr::u32(cells)),
             transfer_cell,
         ),
-    ];
+    ]
+}
 
+fn wide_compare_body(
+    state: &str,
+    next: &str,
+    changed: &str,
+    w: u32,
+    cells: u32,
+    cell: Expr,
+) -> Vec<Node> {
     let mut compare_cell = vec![Node::let_bind(
         "__sjw_cell_base",
         Expr::mul(Expr::var("__sjw_cell"), Expr::u32(w)),
@@ -291,48 +398,65 @@ pub(crate) fn wide_lineage_body(
             Node::store(state, Expr::var(word_name), Expr::var(next_name)),
         ]);
     }
-    let compare_body = vec![
+    vec![
         Node::let_bind("__sjw_cell", cell),
         Node::if_then(
             Expr::lt(Expr::var("__sjw_cell"), Expr::u32(cells)),
             compare_cell,
         ),
-    ];
-
-    vec![Node::loop_for(
-        "__sjw_iter",
-        Expr::u32(0),
-        Expr::u32(max_iterations),
-        vec![
-            Node::if_then(
-                Expr::eq(lane.clone(), Expr::u32(0)),
-                vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
-            ),
-            barrier(),
-            Node::loop_for(
-                "__sjw_chunk",
-                Expr::u32(0),
-                Expr::u32(cell_chunks),
-                transfer_body,
-            ),
-            barrier(),
-            Node::loop_for(
-                "__sjw_chunk",
-                Expr::u32(0),
-                Expr::u32(cell_chunks),
-                compare_body,
-            ),
-            barrier(),
-            Node::if_then(
-                Expr::eq(Expr::load(changed, Expr::u32(0)), Expr::u32(0)),
-                vec![Node::Return],
-            ),
-        ],
-    )]
+    ]
 }
 
-fn barrier() -> Node {
+pub(crate) fn wide_lineage_grid_sync_body(
+    state: &str,
+    next: &str,
+    join_rules: &str,
+    changed: &str,
+    n: u32,
+    w: u32,
+    cells: u32,
+    max_iterations: u32,
+) -> Vec<Node> {
+    let lane = Expr::InvocationId { axis: 0 };
+    let mut body = Vec::new();
+    for iter in 0..max_iterations {
+        body.push(Node::if_then(
+            Expr::eq(lane.clone(), Expr::u32(0)),
+            vec![Node::store(changed, Expr::u32(0), Expr::u32(0))],
+        ));
+        body.extend(wide_transfer_body(
+            state,
+            next,
+            join_rules,
+            n,
+            w,
+            cells,
+            lane.clone(),
+        ));
+        body.push(grid_sync_barrier());
+        body.extend(wide_compare_body(
+            state,
+            next,
+            changed,
+            w,
+            cells,
+            lane.clone(),
+        ));
+        if iter + 1 < max_iterations {
+            body.push(grid_sync_barrier());
+        }
+    }
+    body
+}
+
+fn workgroup_barrier() -> Node {
     Node::Barrier {
         ordering: MemoryOrdering::SeqCst,
+    }
+}
+
+fn grid_sync_barrier() -> Node {
+    Node::Barrier {
+        ordering: MemoryOrdering::GridSync,
     }
 }

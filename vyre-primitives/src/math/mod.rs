@@ -177,12 +177,14 @@ pub mod bellman_shortest_path;
 mod scallop_persistent;
 
 /// Scallop-style probabilistic Datalog join (#39). Emits a lineage
-/// semiring join inside a block-persistent fixpoint kernel. User dialect:
+/// semiring join inside a GPU-resident fixpoint kernel. User dialect:
 /// probabilistic Datalog.
 /// Self-consumer: rule-provenance tracking
 /// (`vyre-libs::self_substrate::scallop_provenance`).
 pub mod scallop_join;
 pub mod scallop_join_wide;
+#[cfg(test)]
+mod scallop_join_wide_tests;
 /// Prefix-scan backed stream compaction over live-lane flags.
 pub mod stream_compact;
 /// SCC-local matrix fixpoint primitive for recursive graph components.

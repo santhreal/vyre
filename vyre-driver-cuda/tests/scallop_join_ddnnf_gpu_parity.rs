@@ -61,7 +61,7 @@ fn cuda_scallop_join_high_cell_chain_converges() {
         let (cpu, _iters) = scallop_cpu(&state, &join_rules, n, 4);
         let gpu = run_scallop_join(backend, &state, &join_rules, n, 4);
 
-        assert_eq!(scallop_join_dispatch_grid(n), [1, 1, 1]);
+        assert_eq!(scallop_join_dispatch_grid(n), [2, 1, 1]);
         assert_eq!(gpu, cpu);
         assert_eq!(gpu[(0 * n + 16) as usize] & 0b0011, 0b0011);
     });
@@ -162,7 +162,7 @@ fn cuda_scallop_join_wide_copies_high_words_past_cell_lane_count() {
             let (cpu, _iters) = scallop_wide_cpu(&state, &join_rules, n, w, 4);
             let gpu = run_scallop_join_wide(backend, &state, &join_rules, n, w, 4);
 
-            assert_eq!(scallop_join_wide_dispatch_grid(n, w), [1, 1, 1]);
+            assert_eq!(scallop_join_wide_dispatch_grid(n, w), [2, 1, 1]);
             assert_eq!(gpu, cpu);
             assert_eq!(gpu[cell_word(16, 16, 0)] & 0b0001, 0b0001);
             assert_eq!(gpu[cell_word(16, 16, 1)] & 0b0010, 0b0010);

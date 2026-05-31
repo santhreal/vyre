@@ -1,8 +1,10 @@
 //! `scallop_join`  -  Scallop-style probabilistic Datalog join, GPU-resident.
 //!
-//! Compiles a Datalog fixpoint into ONE GPU dispatch by emitting a
-//! Lineage-semiring relational join inside a block-persistent convergence
-//! loop. The output cell `C[i,j]` is the bitset union of clauses
+//! Compiles a Datalog fixpoint into GPU-resident dispatch phases by
+//! emitting a Lineage-semiring relational join. Small matrices use a
+//! block-local convergence loop; large matrices expose split-visible
+//! GridSync phases for multi-block CUDA dispatch. The output cell
+//! `C[i,j]` is the bitset union of clauses
 //! participating in any `i ⇝ j` derivation through one join step.
 //!
 //! # Why ship this as a named primitive instead of "compose them yourself"
@@ -84,7 +86,9 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
-use crate::math::scallop_persistent::single_word_lineage_body;
+use crate::math::scallop_persistent::{
+    ceil_div_u32, single_word_lineage_body, single_word_lineage_grid_sync_body,
+};
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::math::semiring_gemm::{semiring_gemm_cpu_into, Semiring};
 
@@ -93,10 +97,12 @@ pub const OP_ID: &str = "vyre-primitives::math::scallop_join";
 /// One lane per relation cell in the single-word lineage fixpoint.
 pub const SCALLOP_JOIN_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-/// Dispatch grid for the block-persistent Scallop kernel.
+/// Dispatch grid for the Scallop kernel.
 #[must_use]
 pub const fn scallop_join_dispatch_grid(_n: u32) -> [u32; 3] {
-    [1, 1, 1]
+    let cells = _n.saturating_mul(_n);
+    let blocks = ceil_div_u32(cells, SCALLOP_JOIN_WORKGROUP_SIZE[0]);
+    [if blocks == 0 { 1 } else { blocks }, 1, 1]
 }
 
 /// Documentation hook for the recursion-thesis self-consumer wired in
@@ -105,13 +111,14 @@ pub const fn scallop_join_dispatch_grid(_n: u32) -> [u32; 3] {
 pub const PROVENANCE_SELF_CONSUMER: &str = "vyre-libs::self_substrate::scallop_provenance";
 
 /// Build a fused Datalog-fixpoint Program: iterate the Lineage join until
-/// convergence, all inside ONE GPU dispatch.
+/// convergence for block-local matrices, or through fixed split-visible phases
+/// for larger matrices.
 ///
 /// The transfer step writes `next` from `state` and the supplied
-/// join-rule matrix, then compares and copies the ping-pong buffer
-/// inside the same block. Each lane strides over relation cells, so
-/// matrices larger than one workgroup remain covered without relying
-/// on CUDA grid barriers.
+/// join-rule matrix, then compares and copies the ping-pong buffer. Small
+/// matrices finish inside one workgroup. Larger matrices surface top-level
+/// GridSync barriers so host dispatch can split transfer and compare phases
+/// across blocks.
 ///
 /// # Panics
 ///
@@ -149,16 +156,28 @@ pub fn scallop_join(
         )
     });
 
-    let body = single_word_lineage_body(
-        state,
-        next,
-        join_rules,
-        changed,
-        n,
-        words,
-        max_iterations,
-        SCALLOP_JOIN_WORKGROUP_SIZE[0],
-    );
+    let body = if words <= SCALLOP_JOIN_WORKGROUP_SIZE[0] {
+        single_word_lineage_body(
+            state,
+            next,
+            join_rules,
+            changed,
+            n,
+            words,
+            max_iterations,
+            SCALLOP_JOIN_WORKGROUP_SIZE[0],
+        )
+    } else {
+        single_word_lineage_grid_sync_body(
+            state,
+            next,
+            join_rules,
+            changed,
+            n,
+            words,
+            max_iterations,
+        )
+    };
 
     // Rebuild the Program with both the fixpoint trio and the
     // additional join_rules ReadOnly buffer surfaced.
@@ -301,6 +320,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_foundation::ir::Node;
+    use vyre_foundation::MemoryOrdering;
 
     #[test]
     fn cpu_ref_one_step_join() {
@@ -410,12 +431,18 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_grid_uses_one_block_for_persistent_kernel() {
+    fn dispatch_grid_scales_large_relations_into_blocks() {
         assert_eq!(scallop_join_dispatch_grid(0), [1, 1, 1]);
         assert_eq!(scallop_join_dispatch_grid(1), [1, 1, 1]);
         assert_eq!(scallop_join_dispatch_grid(16), [1, 1, 1]);
-        assert_eq!(scallop_join_dispatch_grid(17), [1, 1, 1]);
-        assert_eq!(scallop_join_dispatch_grid(33), [1, 1, 1]);
+        assert_eq!(scallop_join_dispatch_grid(17), [2, 1, 1]);
+        assert_eq!(scallop_join_dispatch_grid(33), [5, 1, 1]);
+    }
+
+    #[test]
+    fn large_program_uses_split_visible_grid_sync() {
+        let p = scallop_join("s", "n", "j", "c", 17, 4);
+        assert_eq!(count_grid_sync(p.entry()), 7);
     }
 
     #[test]
@@ -428,5 +455,22 @@ mod tests {
     fn rejects_zero_max_iterations_with_trap() {
         let p = scallop_join("s", "n", "j", "c", 2, 0);
         assert!(p.stats().trap());
+    }
+
+    fn count_grid_sync(nodes: &[Node]) -> usize {
+        nodes
+            .iter()
+            .map(|node| match node {
+                Node::Barrier {
+                    ordering: MemoryOrdering::GridSync,
+                } => 1,
+                Node::If {
+                    then, otherwise, ..
+                } => count_grid_sync(then) + count_grid_sync(otherwise),
+                Node::Loop { body, .. } | Node::Block(body) => count_grid_sync(body),
+                Node::Region { body, .. } => count_grid_sync(body),
+                _ => 0,
+            })
+            .sum()
     }
 }
