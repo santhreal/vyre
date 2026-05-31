@@ -11,8 +11,12 @@ use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::graph::knowledge_compile::{
     ddnnf_evaluate, ddnnf_evaluate_cpu, ddnnf_evaluate_dispatch_grid, LITERAL_FALSE, LITERAL_TRUE,
 };
-use vyre_primitives::math::scallop_join::{cpu_ref as scallop_cpu, scallop_join};
-use vyre_primitives::math::scallop_join_wide::{cpu_ref as scallop_wide_cpu, scallop_join_wide};
+use vyre_primitives::math::scallop_join::{
+    cpu_ref as scallop_cpu, scallop_join, scallop_join_dispatch_grid,
+};
+use vyre_primitives::math::scallop_join_wide::{
+    cpu_ref as scallop_wide_cpu, scallop_join_wide, scallop_join_wide_dispatch_grid,
+};
 
 // ---------------------------------------------------------------------
 // scallop_join (single-word lineage). Iterates Datalog fixpoint inside
@@ -35,15 +39,32 @@ fn run_scallop_join(
         u32_bytes(join_rules),
     ];
     let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((n * n + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
+    config.grid_override = Some(scallop_join_dispatch_grid(n));
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
     let mut out = bytes_u32(&outputs[0]);
     out.truncate(words);
     out
+}
+
+#[test]
+fn cuda_scallop_join_high_cell_chain_converges() {
+    with_live_backend("cuda_scallop_join_high_cell_chain_converges", |backend| {
+        let n = 17u32;
+        let words = (n * n) as usize;
+        let mut state = vec![0u32; words];
+        let mut join_rules = vec![0u32; words];
+        state[(0 * n + 1) as usize] = 0b0001;
+        join_rules[(1 * n + 16) as usize] = 0b0010;
+
+        let (cpu, _iters) = scallop_cpu(&state, &join_rules, n, 4);
+        let gpu = run_scallop_join(backend, &state, &join_rules, n, 4);
+
+        assert_eq!(scallop_join_dispatch_grid(n), [1, 1, 1]);
+        assert_eq!(gpu, cpu);
+        assert_eq!(gpu[(0 * n + 16) as usize] & 0b0011, 0b0011);
+    });
 }
 
 #[test]
@@ -98,9 +119,7 @@ fn run_scallop_join_wide(
         u32_bytes(join_rules),
     ];
     let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((n * n + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
+    config.grid_override = Some(scallop_join_wide_dispatch_grid(n, w));
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -123,6 +142,32 @@ fn cuda_scallop_join_wide_basic() {
         let gpu = run_scallop_join_wide(backend, &state, &join_rules, n, w, 8);
         assert_eq!(gpu, cpu);
     });
+}
+
+#[test]
+fn cuda_scallop_join_wide_copies_high_words_past_cell_lane_count() {
+    with_live_backend(
+        "cuda_scallop_join_wide_copies_high_words_past_cell_lane_count",
+        |backend| {
+            let n = 17u32;
+            let w = 2u32;
+            let words = (n * n * w) as usize;
+            let mut state = vec![0u32; words];
+            let mut join_rules = vec![0u32; words];
+            let cell_word = |row: u32, col: u32, word: u32| ((row * n + col) * w + word) as usize;
+
+            state[cell_word(16, 0, 0)] = 0b0001;
+            join_rules[cell_word(0, 16, 1)] = 0b0010;
+
+            let (cpu, _iters) = scallop_wide_cpu(&state, &join_rules, n, w, 4);
+            let gpu = run_scallop_join_wide(backend, &state, &join_rules, n, w, 4);
+
+            assert_eq!(scallop_join_wide_dispatch_grid(n, w), [1, 1, 1]);
+            assert_eq!(gpu, cpu);
+            assert_eq!(gpu[cell_word(16, 16, 0)] & 0b0001, 0b0001);
+            assert_eq!(gpu[cell_word(16, 16, 1)] & 0b0010, 0b0010);
+        },
+    );
 }
 
 // ---------------------------------------------------------------------

@@ -1,17 +1,9 @@
 //! `scallop_join`  -  Scallop-style probabilistic Datalog join, GPU-resident.
 //!
-//! Compiles one round of Datalog fixpoint into ONE GPU dispatch by
-//! composing two existing primitives:
-//!
-//! 1. [`crate::math::semiring_gemm::semiring_gemm`](crate::math::semiring_gemm::semiring_gemm) under the
-//!    [`crate::math::semiring_gemm::Semiring::Lineage`] choice  -  one round of relational join with
-//!    provenance accumulation. The output cell `C[i,j]` is the bitset
-//!    union of clauses participating in any `i ⇝ j` derivation
-//!    through one join step.
-//! 2. [`persistent_fixpoint`](crate::fixpoint::persistent_fixpoint::persistent_fixpoint)
-//!     -  runs the join to convergence inside a single dispatch with
-//!    GPU-resident ping-pong + scalar `changed` convergence flag. Zero
-//!    host round-trips.
+//! Compiles a Datalog fixpoint into ONE GPU dispatch by emitting a
+//! Lineage-semiring relational join inside a block-persistent convergence
+//! loop. The output cell `C[i,j]` is the bitset union of clauses
+//! participating in any `i ⇝ j` derivation through one join step.
 //!
 //! # Why ship this as a named primitive instead of "compose them yourself"
 //!
@@ -22,18 +14,16 @@
 //! Datalog fixpoint converges when no new fact is derived. Under the
 //! Lineage semiring that means no clause-bitset OR'd into any cell
 //! flips a 0 bit to 1  -  the canonical convergence signal `next ==
-//! current` per word. `persistent_fixpoint` already does this check;
-//! `scallop_join` just packages the (transfer = semiring_gemm Lineage,
-//! convergence = persistent_fixpoint) pairing so callers don't have to
-//! re-derive that the Lineage semiring's monotonic OR-accumulator
-//! makes it safe inside `persistent_fixpoint`'s ping-pong. Other
-//! semirings would NOT be safe  -  `MinPlus` accumulators decrease
-//! over iterations, which the equality check would treat as
-//! "changed = 1" indefinitely until the absolute minimum settles. So
-//! the recursion-thesis-clean wrapper is the contract:
+//! current` per word. `scallop_join` packages the Lineage transfer and
+//! convergence loop together so callers do not re-derive that the
+//! Lineage semiring's monotonic OR-accumulator is safe with ping-pong
+//! equality convergence. Other semirings would NOT be safe  -  `MinPlus`
+//! accumulators decrease over iterations, which the equality check would
+//! treat as "changed = 1" indefinitely until the absolute minimum settles.
+//! So the recursion-thesis-clean wrapper is the contract:
 //!
-//! > "scallop_join is exactly the Datalog-shaped, monotone, GPU-resident
-//! >  composition of semiring_gemm and persistent_fixpoint."
+//! > "scallop_join is exactly the Datalog-shaped, monotone,
+//! >  GPU-resident Lineage fixpoint."
 //!
 //! ## (b) Two consumers, recursion thesis closed from day 1
 //!
@@ -57,8 +47,7 @@
 //!                      participating clauses across one path step",
 //!                      Accumulate = "OR alternative derivations into
 //!                      the same cell."
-//! converge:   stop when R[t+1] == R[t] per cell (persistent_fixpoint
-//!                      compares words; identical = converged).
+//! converge:   stop when R[t+1] == R[t] per cell.
 //! ```
 //!
 //! Each cell is a single u32 bitset of clauses (capacity 32). Multi-word
@@ -93,28 +82,36 @@
 use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
+use crate::math::scallop_persistent::single_word_lineage_body;
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::math::semiring_gemm::semiring_gemm_cpu_into;
-use crate::math::semiring_gemm::{semiring_gemm, Semiring};
+use crate::math::semiring_gemm::{semiring_gemm_cpu_into, Semiring};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::math::scallop_join";
+/// One lane per relation cell in the single-word lineage fixpoint.
+pub const SCALLOP_JOIN_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+
+/// Dispatch grid for the block-persistent Scallop kernel.
+#[must_use]
+pub const fn scallop_join_dispatch_grid(_n: u32) -> [u32; 3] {
+    [1, 1, 1]
+}
 
 /// Documentation hook for the recursion-thesis self-consumer wired in
 /// `vyre-libs::self_substrate::scallop_provenance`. Updates to this
 /// constant must update the self-consumer module's doc-link.
 pub const PROVENANCE_SELF_CONSUMER: &str = "vyre-libs::self_substrate::scallop_provenance";
 
-/// Build a fused Datalog-fixpoint Program: iterate
-/// `state ← semiring_gemm(state, join_rules, Lineage)` until
+/// Build a fused Datalog-fixpoint Program: iterate the Lineage join until
 /// convergence, all inside ONE GPU dispatch.
 ///
-/// The transfer step writes `state` directly via [`semiring_gemm`]
-/// against the supplied join-rule matrix. `persistent_fixpoint`
-/// wraps the transfer step in a forever-loop with the canonical
-/// per-word ping-pong convergence test.
+/// The transfer step writes `next` from `state` and the supplied
+/// join-rule matrix, then compares and copies the ping-pong buffer
+/// inside the same block. Each lane strides over relation cells, so
+/// matrices larger than one workgroup remain covered without relying
+/// on CUDA grid barriers.
 ///
 /// # Panics
 ///
@@ -145,13 +142,6 @@ pub fn scallop_join(
         );
     }
 
-    // The transfer step is a semiring_gemm under Lineage, output to
-    // the `next` ping-pong buffer. We extract its body (entry nodes)
-    // since `persistent_fixpoint` already wraps the whole sequence
-    // in its own outer Region.
-    let transfer = semiring_gemm(state, join_rules, next, n, n, n, Semiring::Lineage);
-    let mut transfer_body: Vec<Node> = transfer.entry().to_vec();
-
     // n*n cells, each one u32  -  one "word" per cell for ping-pong.
     let words = n.checked_mul(n).unwrap_or_else(|| {
         panic!(
@@ -159,54 +149,23 @@ pub fn scallop_join(
         )
     });
 
-    // Datalog monotonicity: each iteration's output must be the
-    // bitwise-OR superset of the input on every cell. semiring_gemm
-    // by itself REPLACES (next = gemm(state, join_rules)), losing the
-    // seed facts. Append a per-cell `next[t] |= state[t]` step so
-    // persistent_fixpoint's ping-pong copy preserves the seed facts
-    // alongside the newly-derived ones  -  matching cpu_ref_into.
-    let t = Expr::InvocationId { axis: 0 };
-    transfer_body.push(Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(words)),
-        vec![
-            Node::let_bind("__sj_seed", Expr::load(state, t.clone())),
-            Node::let_bind("__sj_derived", Expr::load(next, t.clone())),
-            Node::store(
-                next,
-                t,
-                Expr::bitor(Expr::var("__sj_seed"), Expr::var("__sj_derived")),
-            ),
-        ],
-    ));
-    transfer_body.push(Node::Barrier {
-        ordering: vyre_foundation::MemoryOrdering::SeqCst,
-    });
-
-    // Build the persistent fixpoint Program against `state` ↔ `next`.
-    // We deliberately rebuild the buffer declarations so the
-    // join_rules buffer (ReadOnly, binding 3) sits next to the
-    // standard fixpoint trio (state RW=0, next RW=1, changed RW=2).
-    // persistent_fixpoint emits its own Region with that exact
-    // ordering; reuse its body and re-declare buffers + the extra
-    // join_rules input so backend binding layouts have a stable
-    // 4-buffer footprint.
-    let inner = crate::fixpoint::persistent_fixpoint::persistent_fixpoint(
-        transfer_body,
+    let body = single_word_lineage_body(
         state,
         next,
+        join_rules,
         changed,
+        n,
         words,
         max_iterations,
+        SCALLOP_JOIN_WORKGROUP_SIZE[0],
     );
 
     // Rebuild the Program with both the fixpoint trio and the
-    // additional join_rules ReadOnly buffer surfaced. We can't
-    // use the inner Program directly because its buffers list
-    // doesn't include join_rules.
+    // additional join_rules ReadOnly buffer surfaced.
     let entry: Vec<Node> = vec![Node::Region {
         generator: Ident::from(OP_ID),
         source_region: None,
-        body: Arc::new(inner.entry().to_vec()),
+        body: Arc::new(body),
     }];
 
     Program::wrapped(
@@ -217,7 +176,7 @@ pub fn scallop_join(
             BufferDecl::storage(join_rules, 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(words),
         ],
-        [256, 1, 1],
+        SCALLOP_JOIN_WORKGROUP_SIZE,
         entry,
     )
 }
@@ -442,11 +401,21 @@ mod tests {
         let p = scallop_join("s", "n", "j", "c", 2, 4);
         let bufs = p.buffers();
         assert_eq!(bufs.len(), 4, "scallop_join must declare 4 buffers");
+        assert_eq!(p.workgroup_size(), SCALLOP_JOIN_WORKGROUP_SIZE);
         let names: Vec<&str> = bufs.iter().map(|b| b.name()).collect();
         assert!(names.contains(&"s"));
         assert!(names.contains(&"n"));
         assert!(names.contains(&"j"));
         assert!(names.contains(&"c"));
+    }
+
+    #[test]
+    fn dispatch_grid_uses_one_block_for_persistent_kernel() {
+        assert_eq!(scallop_join_dispatch_grid(0), [1, 1, 1]);
+        assert_eq!(scallop_join_dispatch_grid(1), [1, 1, 1]);
+        assert_eq!(scallop_join_dispatch_grid(16), [1, 1, 1]);
+        assert_eq!(scallop_join_dispatch_grid(17), [1, 1, 1]);
+        assert_eq!(scallop_join_dispatch_grid(33), [1, 1, 1]);
     }
 
     #[test]

@@ -20,6 +20,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Added explicit d-DNNF evaluation dispatch sizing and multi-block CUDA coverage for literal-heavy knowledge-compile waves.
 
+- Reworked Scallop single and wide lineage fixpoint kernels to use block-local strided dispatch, preserving high-cell and high-word seed facts without CUDA grid-barrier races, with CUDA parity coverage for the exposed high-word case.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

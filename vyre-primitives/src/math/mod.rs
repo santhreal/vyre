@@ -174,10 +174,11 @@ pub mod semiring_gemm;
 /// `persistent_fixpoint`. Self-consumer: tensor-network contraction order.
 pub mod bellman_shortest_path;
 
-/// Scallop-style probabilistic Datalog join (#39). Composes
-/// `semiring_gemm` under `Lineage` with `persistent_fixpoint`  -
-/// one round of relational join per fixpoint step, run to convergence
-/// inside ONE GPU dispatch. User dialect: probabilistic Datalog.
+mod scallop_persistent;
+
+/// Scallop-style probabilistic Datalog join (#39). Emits a lineage
+/// semiring join inside a block-persistent fixpoint kernel. User dialect:
+/// probabilistic Datalog.
 /// Self-consumer: rule-provenance tracking
 /// (`vyre-libs::self_substrate::scallop_provenance`).
 pub mod scallop_join;

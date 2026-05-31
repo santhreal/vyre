@@ -4,16 +4,26 @@
 //! `W` rules per cell for `W ∈ {2, 4, 8}`. This allows up to 256-rule
 //! provenance tracking for large Scallop programs or external analyzer closures.
 //!
-//! Composes `semiring_gemm_wide` under the `Lineage` semantics with
-//! `persistent_fixpoint`.
+//! Emits `semiring_gemm_wide`-equivalent Lineage semantics inside a
+//! block-persistent fixpoint kernel.
 
 use std::sync::Arc;
 
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use crate::math::scallop_persistent::wide_lineage_body;
+
 /// Stable registry id for the wide Scallop lineage join primitive.
 pub const OP_ID: &str = "vyre-primitives::math::scallop_join_wide";
+/// One lane per relation word in the wide lineage fixpoint wrapper.
+pub const SCALLOP_JOIN_WIDE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+
+/// Dispatch grid for the block-persistent wide Scallop kernel.
+#[must_use]
+pub const fn scallop_join_wide_dispatch_grid(_n: u32, _w: u32) -> [u32; 3] {
+    [1, 1, 1]
+}
 
 /// Emits a generic `M × K · K × N → M × N` matmul Program for `W`-wide lineage cells.
 ///
@@ -148,7 +158,7 @@ pub fn semiring_gemm_wide(
 
     Program::wrapped(
         buffers,
-        [256, 1, 1],
+        SCALLOP_JOIN_WIDE_WORKGROUP_SIZE,
         vec![Node::Region {
             generator: Ident::from(format!("anonymous::{OP_ID}::semiring_gemm_wide")),
             source_region: None,
@@ -193,31 +203,35 @@ pub fn scallop_join_wide(
         );
     }
 
-    let transfer = semiring_gemm_wide(state, join_rules, next, Some(state), n, n, n, w);
-    let transfer_body = transfer.entry().to_vec();
-
-    let words = n
-        .checked_mul(n)
-        .and_then(|cells| cells.checked_mul(w))
+    let cells = n.checked_mul(n).unwrap_or_else(|| {
+        panic!(
+            "scallop_join_wide n={n} overflows cell count. Fix: shard the relation matrix before GPU dispatch."
+        )
+    });
+    let words = cells
+        .checked_mul(w)
         .unwrap_or_else(|| {
             panic!(
                 "scallop_join_wide n={n} w={w} overflows word count. Fix: shard the relation matrix before GPU dispatch."
             )
         });
 
-    let inner = crate::fixpoint::persistent_fixpoint::persistent_fixpoint(
-        transfer_body,
+    let body = wide_lineage_body(
         state,
         next,
+        join_rules,
         changed,
-        words,
+        n,
+        w,
+        cells,
         max_iterations,
+        SCALLOP_JOIN_WIDE_WORKGROUP_SIZE[0],
     );
 
     let entry: Vec<Node> = vec![Node::Region {
         generator: Ident::from(OP_ID),
         source_region: None,
-        body: Arc::new(inner.entry().to_vec()),
+        body: Arc::new(body),
     }];
 
     Program::wrapped(
@@ -228,7 +242,7 @@ pub fn scallop_join_wide(
             BufferDecl::storage(join_rules, 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(words),
         ],
-        [256, 1, 1],
+        SCALLOP_JOIN_WIDE_WORKGROUP_SIZE,
         entry,
     )
 }
@@ -448,7 +462,6 @@ mod tests {
         let current_capacity = current.capacity();
         let next_capacity = next.capacity();
 
-
         let iters = cpu_ref_into(&state, &join_rules, n, w, 4, &mut current, &mut next);
 
         assert!(iters <= 4);
@@ -501,5 +514,14 @@ mod tests {
 
         assert_eq!(actual_state, expected_state);
     }
-}
 
+    #[test]
+    fn dispatch_grid_uses_one_block_for_persistent_kernel() {
+        assert_eq!(scallop_join_wide_dispatch_grid(0, 2), [1, 1, 1]);
+        assert_eq!(scallop_join_wide_dispatch_grid(1, 1), [1, 1, 1]);
+        assert_eq!(scallop_join_wide_dispatch_grid(16, 1), [1, 1, 1]);
+        assert_eq!(scallop_join_wide_dispatch_grid(17, 1), [1, 1, 1]);
+        assert_eq!(scallop_join_wide_dispatch_grid(17, 2), [1, 1, 1]);
+        assert_eq!(scallop_join_wide_dispatch_grid(33, 2), [1, 1, 1]);
+    }
+}
