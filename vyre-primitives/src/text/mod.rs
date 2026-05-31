@@ -42,8 +42,9 @@ pub use char_class::{
 #[cfg(feature = "reduce")]
 pub use encoding_classify::{
     classify_from_histogram as reference_encoding_classify, encoding_classify,
-    encoding_classify_body, encoding_classify_child, ENCODING_CLASSIFY_OP_ID, ENC_ASCII,
-    ENC_BINARY, ENC_ISO8859_1, ENC_UTF16BE, ENC_UTF16LE, ENC_UTF8,
+    encoding_classify_body, encoding_classify_child, ENCODING_CLASSIFY_OP_ID,
+    ENCODING_CLASSIFY_WORKGROUP_SIZE, ENC_ASCII, ENC_BINARY, ENC_ISO8859_1, ENC_UTF16BE,
+    ENC_UTF16LE, ENC_UTF8,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use line_index::line_index;

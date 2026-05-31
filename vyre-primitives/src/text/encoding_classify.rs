@@ -10,6 +10,8 @@ use crate::text::utf8_shape_counts::utf8_shape_counts_child;
 
 /// Canonical op id for histogram-based encoding classification.
 pub const ENCODING_CLASSIFY_OP_ID: &str = "vyre-primitives::text::encoding_classify";
+/// Single-result workgroup for standalone histogram classification.
+pub const ENCODING_CLASSIFY_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 
 /// Encoding-id for pure ASCII input.
 pub const ENC_ASCII: u32 = 0;
@@ -117,7 +119,7 @@ pub fn encoding_classify(histogram: &str, output: &str, count: u32) -> Program {
                 .with_count(1)
                 .with_output_byte_range(0..4),
         ],
-        [256, 1, 1],
+        ENCODING_CLASSIFY_WORKGROUP_SIZE,
         vec![Node::Region {
             generator: Ident::from(ENCODING_CLASSIFY_OP_ID),
             source_region: None,
@@ -193,5 +195,11 @@ mod tests {
         histogram[0xC3] = 2;
         histogram[0xA9] = 2;
         assert_eq!(classify_from_histogram(&histogram, 4), ENC_UTF8);
+    }
+
+    #[test]
+    fn program_uses_single_result_workgroup() {
+        let program = encoding_classify("histogram", "encoding", 0);
+        assert_eq!(program.workgroup_size(), ENCODING_CLASSIFY_WORKGROUP_SIZE);
     }
 }
