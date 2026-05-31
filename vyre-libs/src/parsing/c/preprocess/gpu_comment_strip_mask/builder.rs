@@ -4,8 +4,30 @@ use super::*;
 /// Build the 17b.5 comment-strip-mask `Program`.
 #[must_use]
 pub fn gpu_comment_strip_mask(byte_count: u32) -> Program {
+    gpu_comment_strip_mask_with_source_type(byte_count, DataType::U32)
+}
+
+/// Build the 17b.5 comment-strip-mask `Program` over raw `DataType::U8`
+/// source bytes.
+#[must_use]
+pub fn gpu_comment_strip_mask_u8(byte_count: u32) -> Program {
+    gpu_comment_strip_mask_with_source_type(byte_count, DataType::U8)
+}
+
+fn gpu_comment_strip_mask_with_source_type(byte_count: u32, source_type: DataType) -> Program {
     let safe_load = |addr: Expr| -> Expr {
-        safe_load_packed_byte_expr("bytes_in", addr, Expr::u32(byte_count))
+        if source_type == DataType::U8 {
+            Expr::select(
+                Expr::lt(addr.clone(), Expr::u32(byte_count)),
+                Expr::bitand(
+                    Expr::cast(DataType::U32, Expr::load("bytes_in", addr)),
+                    Expr::u32(0xFF),
+                ),
+                Expr::u32(0),
+            )
+        } else {
+            safe_load_packed_byte_expr("bytes_in", addr, Expr::u32(byte_count))
+        }
     };
 
     // One GPU lane walks the byte stream
@@ -371,6 +393,8 @@ pub fn gpu_comment_strip_mask(byte_count: u32) -> Program {
                             Expr::eq(Expr::var("in_block"), Expr::u32(0)),
                         ),
                         vec![
+                            Node::let_bind("literal_was_in_string", Expr::var("in_string")),
+                            Node::let_bind("literal_was_in_char", Expr::var("in_char")),
                             Node::if_then(
                                 Expr::eq(Expr::var("in_string"), Expr::u32(1)),
                                 vec![
@@ -417,8 +441,8 @@ pub fn gpu_comment_strip_mask(byte_count: u32) -> Program {
                             ),
                             Node::if_then(
                                 Expr::and(
-                                    Expr::eq(Expr::var("in_string"), Expr::u32(0)),
-                                    Expr::eq(Expr::var("in_char"), Expr::u32(0)),
+                                    Expr::eq(Expr::var("literal_was_in_string"), Expr::u32(0)),
+                                    Expr::eq(Expr::var("literal_was_in_char"), Expr::u32(0)),
                                 ),
                                 vec![
                                     Node::if_then(
@@ -464,9 +488,13 @@ pub fn gpu_comment_strip_mask(byte_count: u32) -> Program {
                 "bytes_in",
                 BINDING_BYTES_IN,
                 BufferAccess::ReadOnly,
-                DataType::U32,
+                source_type.clone(),
             )
-            .with_count(byte_count.div_ceil(4).max(1)),
+            .with_count(if source_type == DataType::U8 {
+                byte_count.max(1)
+            } else {
+                byte_count.div_ceil(4).max(1)
+            }),
             BufferDecl::storage(
                 "comment_mask_out",
                 BINDING_COMMENT_MASK_OUT,

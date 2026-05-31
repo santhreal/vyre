@@ -3,9 +3,9 @@ use super::host::read_output_u32;
 use super::program_helpers::{byte_compact_program, combine_keep_mask_program};
 use super::scratch::{copy_output_bytes, write_zero_bytes};
 use super::FilteredBytes;
-use crate::parsing::c::preprocess::gpu_comment_strip_mask::gpu_comment_strip_mask;
+use crate::parsing::c::preprocess::gpu_comment_strip_mask::gpu_comment_strip_mask_u8;
 use crate::parsing::c::preprocess::gpu_pipeline::GpuDispatcher;
-use vyre_primitives::parsing::line_splice_classify::line_splice_classify;
+use vyre_primitives::parsing::line_splice_classify::line_splice_classify_u8;
 
 #[derive(Default)]
 pub(super) struct FullCommentScratch {
@@ -51,8 +51,8 @@ pub(super) fn gpu_filter_full_comment_state(
     // opening comment bytes into live `/` tokens. The staged path is still
     // fully GPU-resident and only used for complex comment/splice inputs; the
     // hot simple-line/simple-block paths stay specialized above.
-    let splice_prog = line_splice_classify(n_bucket);
-    let comment_prog = gpu_comment_strip_mask(n_bucket);
+    let splice_prog = line_splice_classify_u8(n_bucket);
+    let comment_prog = gpu_comment_strip_mask_u8(n_bucket);
     let combine_prog = combine_keep_mask_program(n_bucket);
     let zero_word_bytes = cap_bucket.checked_mul(4).ok_or_else(|| {
         "full comment zero words overflowed usize. Fix: reduce batch size.".to_string()

@@ -42,6 +42,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Added packed-`U8` line indexing, UTF-8 validation, and C line-splice classification for text scans, fixed CUDA/PTX byte and halfword memory ops, and covered the paths with generated reference parity plus live CUDA boundary matrices.
 
+- Moved the C preprocessing byte filter to raw `U8` source buffers through preflight, line/block comment paths, full comment masking, and compact scatter, fixed literal-close handling before later comments, and added live CUDA generated-corpus coverage for the end-to-end filter.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

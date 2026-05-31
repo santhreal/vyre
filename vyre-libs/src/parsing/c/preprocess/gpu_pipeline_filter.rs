@@ -107,7 +107,7 @@ pub(super) fn gpu_filter_source_bytes_with_scratch(
     let preflight_zero_bytes = cap_bucket.checked_mul(4).ok_or_else(|| {
         "filter preflight zero bytes overflowed usize. Fix: reduce batch size.".to_string()
     })?;
-    scratch.prepare_splice_input(raw, byte_buf_pad)?;
+    scratch.prepare_splice_input(raw, cap_bucket)?;
     scratch.prepare_n_real(n);
     scratch.prepare_preflight_zero(preflight_zero_bytes)?;
 

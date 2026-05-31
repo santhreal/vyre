@@ -6,7 +6,7 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-use vyre::ir::Program;
+use vyre::ir::{DataType, Program};
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
     gpu_filter_source_bytes, FilteredBytes, GpuDispatcher,
 };
@@ -33,6 +33,7 @@ impl GpuDispatcher for RefDispatcher {
 struct CountingDispatcher {
     calls: std::cell::Cell<usize>,
     op_ids: std::cell::RefCell<Vec<String>>,
+    bytes_in_elements: std::cell::RefCell<Vec<DataType>>,
 }
 
 impl CountingDispatcher {
@@ -40,6 +41,7 @@ impl CountingDispatcher {
         Self {
             calls: std::cell::Cell::new(0),
             op_ids: std::cell::RefCell::new(Vec::new()),
+            bytes_in_elements: std::cell::RefCell::new(Vec::new()),
         }
     }
 }
@@ -53,12 +55,32 @@ impl GpuDispatcher for CountingDispatcher {
                 .clone()
                 .unwrap_or_else(|| "<anonymous>".to_string()),
         );
+        self.bytes_in_elements.borrow_mut().extend(
+            program
+                .buffers()
+                .iter()
+                .filter_map(|buffer| (buffer.name() == "bytes_in").then_some(buffer.element())),
+        );
         RefDispatcher.dispatch(program, inputs)
     }
 
     fn requires_output_inputs(&self) -> bool {
         true
     }
+}
+
+fn assert_byte_source_dispatches_are_u8(dispatcher: &CountingDispatcher) {
+    let elements = dispatcher.bytes_in_elements.borrow();
+    assert!(
+        !elements.is_empty(),
+        "filter path must dispatch at least one byte-source program"
+    );
+    assert!(
+        elements
+            .iter()
+            .all(|element| matches!(element, DataType::U8)),
+        "filter byte-source programs must consume raw U8 source buffers, got {elements:?}"
+    );
 }
 
 fn reference_filter_source_bytes(raw: &[u8]) -> Vec<u8> {
@@ -94,6 +116,7 @@ fn division_slash_bypasses_serial_comment_filter() {
         1,
         "ordinary slash must stop after the parallel transform preflight"
     );
+    assert_byte_source_dispatches_are_u8(&dispatcher);
 }
 
 #[test]
@@ -212,7 +235,10 @@ fn block_comment_spanning_lines() {
 #[test]
 fn dense_mixed_pattern() {
     let src = b"//c1\nint x; /*c2*/ int y; \\\nint z; // c3\n";
-    assert_eq!(run(src).bytes, reference_filter_source_bytes(src));
+    let dispatcher = CountingDispatcher::new();
+    let out = gpu_filter_source_bytes(&dispatcher, src).expect("gpu_filter_source_bytes");
+    assert_eq!(out.bytes, reference_filter_source_bytes(src));
+    assert_byte_source_dispatches_are_u8(&dispatcher);
 }
 
 #[test]
