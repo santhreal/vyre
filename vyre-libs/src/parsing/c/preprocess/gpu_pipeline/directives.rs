@@ -1,9 +1,9 @@
 use crate::parsing::c::parse::gnu_builtins::gpu_builtin_hash_table_words;
-use crate::parsing::c::preprocess::gpu_define_parse::gpu_define_parse;
+use crate::parsing::c::preprocess::gpu_define_parse::gpu_define_parse_u8;
 use crate::parsing::c::preprocess::gpu_if_expression::gpu_if_expression;
 use crate::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value;
-use crate::parsing::c::preprocess::gpu_include_parse::gpu_include_parse;
-use crate::parsing::c::preprocess::gpu_undef_parse::gpu_undef_parse;
+use crate::parsing::c::preprocess::gpu_include_parse::gpu_include_parse_u8;
+use crate::parsing::c::preprocess::gpu_undef_parse::gpu_undef_parse_u8;
 use vyre::execution_plan::fusion::fuse_programs;
 
 use super::buffers::{
@@ -223,9 +223,10 @@ fn gpu_extract_directive_payloads_impl(
         }
         return Ok(vec![DirectivePayload::None; n]);
     }
-    // Bucket token-count output shapes only. Source and macro buffers are
-    // runtime-sized U32-packed byte buffers, so they no longer specialize
-    // shader programs or require power-of-two source padding.
+    // Bucket token-count output shapes only. Define/include/undef parsing now
+    // consumes the retained raw-U8 source bytes directly; conditional-value
+    // compatibility paths still pack source bytes only when snapshot values are
+    // requested.
     let n_bucket = bucket_pow2(n.max(1), 64);
     let n_pad = n_bucket;
     let source_len = u32::try_from(classified.source.len()).map_err(|_| {
@@ -237,7 +238,6 @@ fn gpu_extract_directive_payloads_impl(
     pack_u32_words_into(&mut scratch.starts_b, &classified.tok_starts, n_pad)?;
     pack_u32_words_into(&mut scratch.lens_b, &classified.tok_lens, n_pad)?;
     pack_u32_words_into(&mut scratch.kinds_b, &classified.directive_kinds, n_pad)?;
-    pad_to_u32_words_into(&mut scratch.src_pad, &classified.source)?;
 
     // ---- Dispatch 1: define + include + undef parsers fused ----
     // All three kernels share the (tok_starts, tok_lens,
@@ -252,9 +252,9 @@ fn gpu_extract_directive_payloads_impl(
     //               body_start, body_len, is_function_like
     //   include out: path_start, path_len, is_system
     //   undef out:  undef_name_start, undef_name_len
-    let dp = gpu_define_parse(n_bucket as u32, source_len);
-    let ip = gpu_include_parse(n_bucket as u32, source_len);
-    let up = gpu_undef_parse(n_bucket as u32, source_len);
+    let dp = gpu_define_parse_u8(n_bucket as u32, source_len);
+    let ip = gpu_include_parse_u8(n_bucket as u32, source_len);
+    let up = gpu_undef_parse_u8(n_bucket as u32, source_len);
     let parse_fused = fuse_programs(&[dp, ip, up])
         .map_err(|e| format!("fuse define+include+undef parse: {e}"))?
         .with_entry_op_id("vyre-libs::parsing::c::preprocess::define_include_undef_parse_fused");
@@ -264,7 +264,7 @@ fn gpu_extract_directive_payloads_impl(
         scratch.starts_b.as_slice(),
         scratch.lens_b.as_slice(),
         scratch.kinds_b.as_slice(),
-        scratch.src_pad.as_slice(),
+        classified.source.as_ref(),
         scratch.zero_init.as_slice(),
         scratch.zero_init.as_slice(),
         scratch.zero_init.as_slice(),
@@ -373,6 +373,7 @@ fn gpu_extract_directive_payloads_impl(
     // No more bucketing needed for these dimensions  -  one cold compile
     // per process for the ifdef/if-expression pair.
     if evaluate_condition_values {
+        pad_to_u32_words_into(&mut scratch.src_pad, &classified.source)?;
         // Pack defined_macros into the (names_packed, offsets, values)
         // layout only when the caller needs snapshot condition values. The
         // production driver skips this branch and re-evaluates reachable

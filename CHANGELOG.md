@@ -48,6 +48,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - Moved the C directive-metadata stage used by the preprocessing pipeline to raw `U8` source bytes while preserving the packed standalone ABI, eliminating another source repack between tokenization and directive classification.
 
+- Moved fused `#define`/`#include`/`#undef` payload parsing in the preprocessing pipeline to raw `U8` source bytes while preserving packed standalone parser ABIs.
+
 ### New
 
 - **`vyre-foundation`  -  effects-handler lowering is on the release path.**

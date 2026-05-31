@@ -4,7 +4,7 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-use vyre::ir::Program;
+use vyre::ir::{DataType, Program};
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
     gpu_extract_directive_payloads, gpu_tokenize_and_classify, DirectivePayload, GpuDispatcher,
 };
@@ -25,10 +25,58 @@ impl GpuDispatcher for RefDispatcher {
     }
 }
 
+struct CountingDispatcher {
+    fused_parse_source_elements: std::cell::RefCell<Vec<DataType>>,
+}
+
+impl CountingDispatcher {
+    fn new() -> Self {
+        Self {
+            fused_parse_source_elements: std::cell::RefCell::new(Vec::new()),
+        }
+    }
+}
+
+impl GpuDispatcher for CountingDispatcher {
+    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
+        if program
+            .entry_op_id
+            .as_deref()
+            .is_some_and(|op_id| op_id.contains("define_include_undef_parse_fused"))
+        {
+            self.fused_parse_source_elements.borrow_mut().extend(
+                program
+                    .buffers()
+                    .iter()
+                    .filter_map(|buffer| (buffer.name() == "source").then_some(buffer.element())),
+            );
+        }
+        RefDispatcher.dispatch(program, inputs)
+    }
+
+    fn requires_output_inputs(&self) -> bool {
+        true
+    }
+}
+
 fn run(src: &[u8], macros: &[&[u8]]) -> Vec<DirectivePayload> {
     let classified = gpu_tokenize_and_classify(&RefDispatcher, src).expect("tokenize_and_classify");
     gpu_extract_directive_payloads(&RefDispatcher, &classified, macros)
         .expect("extract_directive_payloads")
+}
+
+fn assert_fused_payload_parse_source_is_u8(dispatcher: &CountingDispatcher) {
+    let elements = dispatcher.fused_parse_source_elements.borrow();
+    assert!(
+        !elements.is_empty(),
+        "directive payload extraction must dispatch the fused define/include/undef parser"
+    );
+    assert!(
+        elements
+            .iter()
+            .all(|element| matches!(element, DataType::U8)),
+        "fused directive payload parser must consume raw U8 source buffers, got {elements:?}"
+    );
 }
 
 fn directive_payloads(src: &[u8], macros: &[&[u8]]) -> Vec<DirectivePayload> {
@@ -196,6 +244,28 @@ fn undef_extracts_macro_name() {
         DirectivePayload::Undef { name } => assert_eq!(name.as_slice(), b"_LONGER_NAME_42"),
         other => panic!("expected Undef payload, got {other:?}"),
     }
+}
+
+#[test]
+fn fused_define_include_undef_parse_consumes_raw_u8_source() {
+    let dispatcher = CountingDispatcher::new();
+    let classified = gpu_tokenize_and_classify(
+        &dispatcher,
+        b"#define FOO 42\n#include <stdio.h>\n#undef FOO\n",
+    )
+    .expect("tokenize_and_classify");
+    let payloads =
+        gpu_extract_directive_payloads(&dispatcher, &classified, &[]).expect("payload extraction");
+    assert!(payloads
+        .iter()
+        .any(|payload| matches!(payload, DirectivePayload::Define { .. })));
+    assert!(payloads
+        .iter()
+        .any(|payload| matches!(payload, DirectivePayload::Include { .. })));
+    assert!(payloads
+        .iter()
+        .any(|payload| matches!(payload, DirectivePayload::Undef { .. })));
+    assert_fused_payload_parse_source_is_u8(&dispatcher);
 }
 
 #[test]
