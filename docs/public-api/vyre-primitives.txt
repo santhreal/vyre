@@ -1491,6 +1491,7 @@ pub fn utf8_shape_counts(histogram: &str, out: &str) -> Program {
 pub fn utf8_shape_counts_body(
 pub fn utf8_shape_counts_child(
 pub fn utf8_validate(source: &str, classes: &str, n: u32) -> Program {
+pub fn utf8_validate_u8(source: &str, classes: &str, n: u32) -> Program {
 pub fn validate_adaptive_frontier(
 pub fn validate_adaptive_traversal_layout(
 pub fn validate_batched_path_reconstruct_layout(

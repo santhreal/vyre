@@ -11,8 +11,8 @@ use vyre::ir::{BufferAccess, DataType, Program};
 use vyre::DispatchConfig;
 use vyre_primitives::text::line_index::{line_index, line_index_u8, reference_line_index};
 use vyre_primitives::text::utf8_validate::{
-    reference_utf8_validate, utf8_validate, utf8_validate_dispatch_grid, UTF8_CONT, UTF8_INVALID,
-    UTF8_LEAD_3, UTF8_LEAD_4,
+    reference_utf8_validate, utf8_validate, utf8_validate_dispatch_grid, utf8_validate_u8,
+    UTF8_CONT, UTF8_INVALID, UTF8_LEAD_3, UTF8_LEAD_4,
 };
 
 fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
@@ -257,12 +257,33 @@ fn run_utf8_validate(source: &[u8]) -> Vec<u32> {
     out
 }
 
+fn run_utf8_validate_u8(source: &[u8]) -> Vec<u32> {
+    let n = source.len() as u32;
+    let program = utf8_validate_u8("source", "classes", n);
+    let inputs = inputs_for_program(&program, source);
+    let mut config = DispatchConfig::default();
+    config.grid_override = Some(utf8_validate_dispatch_grid(n));
+    let classes_index = output_index(&program, "classes");
+    let outputs = with_live_backend("packed-u8 UTF-8 validate primitive", |backend| {
+        backend
+            .dispatch(&program, &inputs, &config)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA packed-u8 UTF-8 validate dispatch failed: {error}")
+            })
+    });
+    let mut out = bytes_u32(&outputs[classes_index]);
+    out.truncate(n as usize);
+    out
+}
+
 #[test]
 fn cuda_utf8_validate_ascii() {
     let s = b"Hello";
     let cpu = reference_utf8_validate(s);
     let gpu = run_utf8_validate(s);
+    let gpu_u8 = run_utf8_validate_u8(s);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
 }
 
 #[test]
@@ -271,7 +292,9 @@ fn cuda_utf8_validate_two_byte_sequence() {
     let s = &[0xC3, 0xA9];
     let cpu = reference_utf8_validate(s);
     let gpu = run_utf8_validate(s);
+    let gpu_u8 = run_utf8_validate_u8(s);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
 }
 
 #[test]
@@ -280,7 +303,9 @@ fn cuda_utf8_validate_four_byte_sequence() {
     let s = &[0xF0, 0x9F, 0x98, 0x80];
     let cpu = reference_utf8_validate(s);
     let gpu = run_utf8_validate(s);
+    let gpu_u8 = run_utf8_validate_u8(s);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
 }
 
 #[test]
@@ -288,7 +313,9 @@ fn cuda_utf8_validate_invalid_overlong_starts() {
     let s = &[0xC0u8, 0xC1];
     let cpu = reference_utf8_validate(s);
     let gpu = run_utf8_validate(s);
+    let gpu_u8 = run_utf8_validate_u8(s);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
 }
 
 #[test]
@@ -296,7 +323,9 @@ fn cuda_utf8_validate_lone_continuation() {
     let s = &[0x80u8];
     let cpu = reference_utf8_validate(s);
     let gpu = run_utf8_validate(s);
+    let gpu_u8 = run_utf8_validate_u8(s);
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
 }
 
 #[test]
@@ -308,11 +337,82 @@ fn cuda_utf8_validate_mixed_input_past_first_workgroup() {
 
     let cpu = reference_utf8_validate(&s);
     let gpu = run_utf8_validate(&s);
+    let gpu_u8 = run_utf8_validate_u8(&s);
 
     assert_eq!(gpu, cpu);
+    assert_eq!(gpu_u8, cpu);
     assert_eq!(gpu[254], UTF8_LEAD_4);
     assert_eq!(&gpu[255..258], &[UTF8_CONT, UTF8_CONT, UTF8_CONT]);
     assert_eq!(gpu[511], UTF8_LEAD_3);
     assert_eq!(&gpu[512..514], &[UTF8_CONT, UTF8_CONT]);
     assert_eq!(gpu[700], UTF8_INVALID);
+}
+
+fn generated_utf8_source(case: u32, len: usize) -> Vec<u8> {
+    let mut source = Vec::with_capacity(len);
+    let mut state = 0x85eb_ca6b_u32 ^ case.wrapping_mul(0x9e37_79b9);
+    for index in 0..len {
+        state = state
+            .rotate_left(11)
+            .wrapping_mul(0xc2b2_ae35)
+            .wrapping_add(index as u32);
+        let byte = match state & 15 {
+            0 => 0xC0,
+            1 => 0xC1,
+            2 => 0xF5,
+            3 => 0xFF,
+            4 | 5 => 0x80 + ((state >> 8) % 0x40) as u8,
+            6 | 7 => 0xC2 + ((state >> 11) % 0x1E) as u8,
+            8 => 0xE0 + ((state >> 16) % 0x10) as u8,
+            9 => 0xF0 + ((state >> 20) % 5) as u8,
+            _ => (state & 0x7F) as u8,
+        };
+        source.push(byte);
+    }
+
+    for &offset in &[0usize, 1, 254, 255, 256, 510, 511, 768] {
+        if offset + 4 <= source.len() {
+            match (case + offset as u32) % 3 {
+                0 => source[offset..offset + 2].copy_from_slice(&[0xC3, 0xA9]),
+                1 => source[offset..offset + 3].copy_from_slice(&[0xE2, 0x82, 0xAC]),
+                _ => source[offset..offset + 4].copy_from_slice(&[0xF0, 0x9F, 0x98, 0x80]),
+            }
+        }
+    }
+    source
+}
+
+#[test]
+fn cuda_utf8_validate_u8_generated_matrix_matches_cpu() {
+    let len = 1025usize;
+    let program = utf8_validate_u8("source", "classes", len as u32);
+    let classes_index = output_index(&program, "classes");
+    let mut config = DispatchConfig::default();
+    config.grid_override = Some(utf8_validate_dispatch_grid(len as u32));
+
+    with_live_backend("packed-u8 generated UTF-8 matrix", |backend| {
+        let mut checked = 0usize;
+        for case in 0..128u32 {
+            let source = generated_utf8_source(case, len);
+            let inputs = inputs_for_program(&program, &source);
+            let outputs = backend
+                .dispatch(&program, &inputs, &config)
+                .unwrap_or_else(|error| {
+                    panic!("Fix: CUDA packed-u8 UTF-8 generated case {case} failed: {error}")
+                });
+            let mut gpu = bytes_u32(&outputs[classes_index]);
+            gpu.truncate(len);
+            assert_eq!(
+                gpu,
+                reference_utf8_validate(&source),
+                "Fix: packed-u8 CUDA UTF-8 mismatch on generated case {case}"
+            );
+            checked += gpu.len();
+        }
+        assert_eq!(
+            checked,
+            128 * len,
+            "Fix: generated packed-u8 CUDA UTF-8 matrix must compare every byte lane."
+        );
+    });
 }

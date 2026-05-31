@@ -2,10 +2,12 @@
 #![cfg(all(feature = "text", feature = "cpu-parity"))]
 
 use proptest::prelude::*;
+use vyre_foundation::ir::DataType;
 use vyre_primitives::text::utf8_validate::{
-    reference_utf8_validate, UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2, UTF8_LEAD_3,
-    UTF8_LEAD_4,
+    reference_utf8_validate, utf8_validate_u8, UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2,
+    UTF8_LEAD_3, UTF8_LEAD_4,
 };
+use vyre_reference::value::Value;
 
 fn weighted_utf8_byte() -> impl Strategy<Value = u8> {
     prop_oneof![
@@ -121,6 +123,24 @@ fn generated_utf8_case(case: u32) -> Vec<u8> {
     source
 }
 
+fn unpack_u32s(bytes: &[u8]) -> Vec<u32> {
+    bytes
+        .chunks_exact(4)
+        .map(|chunk| {
+            u32::from_le_bytes(chunk.try_into().expect("Fix: u32 chunk conversion failed"))
+        })
+        .collect()
+}
+
+fn run_packed_u8_program(source: &[u8]) -> Vec<u32> {
+    let program = utf8_validate_u8("source", "classes", source.len() as u32);
+    let outputs = vyre_reference::reference_eval(&program, &[Value::from(source.to_vec())])
+        .expect("Fix: packed-u8 UTF-8 validator reference evaluation must succeed");
+    let mut out = unpack_u32s(&outputs[0].to_bytes());
+    out.truncate(source.len());
+    out
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
 
@@ -178,6 +198,51 @@ proptest! {
             "len={}",
             bytes.len()
         );
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(2_048))]
+
+    #[test]
+    fn packed_u8_program_matches_independent_oracle(
+        bytes in proptest::collection::vec(weighted_utf8_byte(), 0..=256),
+    ) {
+        prop_assert_eq!(
+            run_packed_u8_program(&bytes),
+            independent_utf8_validate(&bytes),
+            "len={}",
+            bytes.len()
+        );
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(10_000))]
+
+    #[test]
+    fn packed_u8_builder_declares_byte_source(
+        n in 0u32..=2048,
+    ) {
+        let program = utf8_validate_u8("source", "classes", n);
+        let source = program
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == "source")
+            .expect("Fix: packed-u8 UTF-8 source buffer must be declared");
+        let classes = program
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == "classes")
+            .expect("Fix: packed-u8 UTF-8 class output must be declared");
+
+        prop_assert_eq!(program.workgroup_size(), [256, 1, 1]);
+        prop_assert_eq!(source.element(), DataType::U8);
+        prop_assert_eq!(source.count(), n);
+        prop_assert_eq!(classes.element(), DataType::U32);
+        prop_assert!(classes.is_output());
+        prop_assert_eq!(n as usize * DataType::U8.min_bytes(), n as usize);
+        prop_assert_eq!(n as usize * DataType::U32.min_bytes(), n as usize * 4);
     }
 }
 

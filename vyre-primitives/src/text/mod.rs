@@ -58,6 +58,6 @@ pub use utf8_shape_counts::{
 #[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 pub use utf8_validate::reference_utf8_validate;
 pub use utf8_validate::{
-    utf8_validate, utf8_validate_dispatch_grid, UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2,
-    UTF8_LEAD_3, UTF8_LEAD_4, UTF8_VALIDATE_WORKGROUP_SIZE,
+    utf8_validate, utf8_validate_dispatch_grid, utf8_validate_u8, UTF8_ASCII, UTF8_CONT,
+    UTF8_INVALID, UTF8_LEAD_2, UTF8_LEAD_3, UTF8_LEAD_4, UTF8_VALIDATE_WORKGROUP_SIZE,
 };

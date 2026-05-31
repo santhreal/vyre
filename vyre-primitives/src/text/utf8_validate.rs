@@ -50,8 +50,30 @@ pub const UTF8_INVALID: u32 = 5;
 /// Build a Program that validates and classifies each `source[i]`
 /// byte into one of the `UTF8_*` codes above and writes the result
 /// into `classes[i]`.
+///
+/// This compatibility entry point expects one `DataType::U32` element per
+/// source byte and reads the low byte of each word. Use [`utf8_validate_u8`]
+/// when the source is packed as one byte per element.
 #[must_use]
 pub fn utf8_validate(source: &str, classes: &str, n: u32) -> Program {
+    utf8_validate_with_source_type(source, classes, n, DataType::U32)
+}
+
+/// Build a UTF-8 validation Program over a packed `DataType::U8` source.
+///
+/// It emits the same per-byte class stream as [`utf8_validate`] while cutting
+/// source input bandwidth from four bytes per logical byte to one.
+#[must_use]
+pub fn utf8_validate_u8(source: &str, classes: &str, n: u32) -> Program {
+    utf8_validate_with_source_type(source, classes, n, DataType::U8)
+}
+
+fn utf8_validate_with_source_type(
+    source: &str,
+    classes: &str,
+    n: u32,
+    source_type: DataType,
+) -> Program {
     let idx = Expr::InvocationId { axis: 0 };
     let body = vec![Node::Region {
         generator: Ident::from(OP_ID),
@@ -61,10 +83,7 @@ pub fn utf8_validate(source: &str, classes: &str, n: u32) -> Program {
             Node::if_then(
                 Expr::lt(Expr::var("idx"), Expr::u32(n)),
                 vec![
-                    Node::let_bind(
-                        "byte",
-                        Expr::bitand(Expr::load(source, Expr::var("idx")), Expr::u32(0xFF)),
-                    ),
+                    Node::let_bind("byte", byte_expr(source, Expr::var("idx"))),
                     Node::let_bind("class", Expr::u32(UTF8_INVALID)),
                     Node::if_then(
                         Expr::lt(Expr::var("byte"), Expr::u32(0x80)),
@@ -93,9 +112,9 @@ pub fn utf8_validate(source: &str, classes: &str, n: u32) -> Program {
     }];
 
     let source_decl = if n == 0 {
-        BufferDecl::storage(source, 0, BufferAccess::ReadOnly, DataType::U32)
+        BufferDecl::storage(source, 0, BufferAccess::ReadOnly, source_type)
     } else {
-        BufferDecl::storage(source, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n)
+        BufferDecl::storage(source, 0, BufferAccess::ReadOnly, source_type).with_count(n)
     };
     Program::wrapped(
         vec![
@@ -110,7 +129,10 @@ pub fn utf8_validate(source: &str, classes: &str, n: u32) -> Program {
 }
 
 fn byte_expr(source: &str, index: Expr) -> Expr {
-    Expr::bitand(Expr::load(source, index), Expr::u32(0xFF))
+    Expr::bitand(
+        Expr::cast(DataType::U32, Expr::load(source, index)),
+        Expr::u32(0xFF),
+    )
 }
 
 fn in_range(value: Expr, lo: u32, hi: u32) -> Expr {
