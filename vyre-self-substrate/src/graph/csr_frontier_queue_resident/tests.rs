@@ -136,11 +136,14 @@ fn resident_query_initializes_queue_len_on_device() {
         .last()
         .cloned()
         .expect("Fix: expected one resident step sequence");
-    assert_eq!(steps.len(), 4);
-    assert_eq!(steps[0], vec![handles.queue_len]);
-    assert_eq!(steps[1], vec![handles.frontier_out]);
     assert_eq!(
-        steps[2],
+        steps.len(),
+        3,
+        "atomic resident CSR queue should clear output, compact, then traverse; frontier_to_queue clears queue_len itself"
+    );
+    assert_eq!(steps[0], vec![handles.frontier_out]);
+    assert_eq!(
+        steps[1],
         vec![handles.frontier, handles.active_queue, handles.queue_len]
     );
     assert_eq!(output, vec![0, 0, 0, 0]);

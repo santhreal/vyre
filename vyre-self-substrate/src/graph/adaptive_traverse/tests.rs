@@ -361,9 +361,9 @@ fn sparse_queue_step_accepts_csr_only_resident_graph() {
         .queue_handle
         .expect("Fix: sparse queue step should allocate active queue");
     let steps = dispatcher.last_step_handles();
-    assert_eq!(steps.len(), 4);
+    assert_eq!(steps.len(), 3);
     assert_eq!(
-        steps[3],
+        steps[2],
         vec![
             queue_handle,
             scratch_handles[2],
@@ -535,18 +535,13 @@ fn sparse_queue_resident_step_initializes_queue_len_on_device() {
     let steps = dispatcher.last_step_handles();
     assert_eq!(
         steps.len(),
-        4,
-        "sparse-queue traversal should init queue_len, clear output, compact, then traverse"
+        3,
+        "sparse-queue traversal should clear output, compact, then traverse; frontier_to_queue clears queue_len itself"
     );
     assert_eq!(
         steps[0],
-        vec![scratch_handles[2]],
-        "first sparse-queue resident step must initialize queue_len on device"
-    );
-    assert_eq!(
-        steps[1],
         vec![scratch_handles[1]],
-        "second sparse-queue resident step must clear frontier_out on device"
+        "first sparse-queue resident step must clear frontier_out on device"
     );
     assert_eq!(frontier_out, vec![0]);
 }

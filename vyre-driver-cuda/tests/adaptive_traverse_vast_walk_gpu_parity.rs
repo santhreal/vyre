@@ -518,12 +518,12 @@ fn cuda_resident_adaptive_sparse_queue_path_uses_self_substrate_api() {
     assert_eq!(out, expected);
     let telemetry = backend.telemetry_snapshot();
     assert_eq!(
-        telemetry.kernel_launches, 4,
-        "Fix: self-substrate sparse queue traversal must launch exactly queue length init + device frontier clear + queue-build + queue-consume kernels."
+        telemetry.kernel_launches, 3,
+        "Fix: self-substrate sparse queue traversal must launch exactly device frontier clear + queue-build + queue-consume kernels; frontier_to_queue clears queue_len itself."
     );
     assert_eq!(
         telemetry.sync_points, 1,
-        "Fix: self-substrate sparse queue traversal must fence once for upload + two kernels + compact readback."
+        "Fix: self-substrate sparse queue traversal must fence once for upload + three kernels + compact readback."
     );
     assert_eq!(
         telemetry.readback_bytes,
@@ -581,7 +581,7 @@ fn cuda_resident_adaptive_sparse_queue_csr_only_upload_skips_dense_rows() {
     .expect("resident adaptive sparse queue CSR-only path");
     assert_eq!(out, expected);
     let telemetry = backend.telemetry_snapshot();
-    assert_eq!(telemetry.kernel_launches, 4);
+    assert_eq!(telemetry.kernel_launches, 3);
     assert_eq!(
         telemetry
             .host_to_device_bytes
@@ -726,14 +726,14 @@ fn cuda_resident_adaptive_auto_selects_sparse_queue_for_tiny_frontier() {
     assert_eq!(
         scratch.plan_cache_snapshot(),
         AdaptiveTraversalPlanCacheSnapshot {
-            entries: 4,
-            hits: 4,
-            misses: 4,
+            entries: 3,
+            hits: 3,
+            misses: 3,
         },
-        "Fix: auto sparse queue traversal must reuse queue length init, device frontier clear, queue-build, and queue-consume Programs on repeated resident graph calls."
+        "Fix: auto sparse queue traversal must reuse device frontier clear, queue-build, and queue-consume Programs on repeated resident graph calls."
     );
     let telemetry = backend.telemetry_snapshot();
-    assert_eq!(telemetry.kernel_launches, 8);
+    assert_eq!(telemetry.kernel_launches, 6);
     assert_eq!(telemetry.sync_points, 2);
     assert_eq!(
         telemetry.readback_bytes,

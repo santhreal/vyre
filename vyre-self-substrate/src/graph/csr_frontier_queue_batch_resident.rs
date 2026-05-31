@@ -24,7 +24,6 @@ use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher, ResidentR
 pub struct ResidentCsrQueueBatchScratch {
     handles: Vec<ResidentCsrQueueBatchQueryHandles>,
     shape: Option<ResidentCsrQueueBatchShape>,
-    queue_len_init_program: Option<Program>,
     clear_frontier_out_program: Option<Program>,
     word_counts_program: Option<Program>,
     word_block_offsets_program: Option<Program>,
@@ -32,7 +31,6 @@ pub struct ResidentCsrQueueBatchScratch {
     traverse_program: Option<Program>,
     frontier_payloads: Vec<Vec<u8>>,
     readbacks: Vec<Vec<u8>>,
-    queue_len_init_handle_sets: Vec<[u64; 1]>,
     clear_handle_sets: Vec<[u64; 1]>,
     word_count_handle_sets: Vec<[u64; 3]>,
     word_block_offsets_handle_sets: Vec<[u64; 1]>,
@@ -88,7 +86,6 @@ impl ResidentCsrQueueBatchScratch {
             "resident CSR queue batch scratch",
         );
         self.shape = None;
-        self.queue_len_init_program = None;
         self.clear_frontier_out_program = None;
         self.word_counts_program = None;
         self.word_block_offsets_program = None;
@@ -96,7 +93,6 @@ impl ResidentCsrQueueBatchScratch {
         self.traverse_program = None;
         self.frontier_payloads.clear();
         self.readbacks.clear();
-        self.queue_len_init_handle_sets.clear();
         self.clear_handle_sets.clear();
         self.word_count_handle_sets.clear();
         self.word_block_offsets_handle_sets.clear();

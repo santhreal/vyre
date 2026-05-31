@@ -20,7 +20,7 @@ fn generated_resident_adaptive_sparse_queue_atomic_matrix_matches_csr_oracle_on_
     let backend = live_dispatcher();
     let dispatcher = CudaOptimizerDispatcher::new(&backend);
 
-    run_generated_sparse_queue_matrix(&backend, &dispatcher, 512, "atomic-node-scan");
+    run_generated_sparse_queue_matrix(&backend, &dispatcher, 512, "atomic-node-scan", 3);
 }
 
 #[test]
@@ -28,7 +28,7 @@ fn generated_resident_adaptive_sparse_queue_word_prefix_matrix_matches_csr_oracl
     let backend = live_dispatcher();
     let dispatcher = CudaOptimizerDispatcher::new(&backend);
 
-    run_generated_sparse_queue_matrix(&backend, &dispatcher, 8_193, "word-prefix");
+    run_generated_sparse_queue_matrix(&backend, &dispatcher, 8_193, "word-prefix", 4);
 }
 
 fn run_generated_sparse_queue_matrix(
@@ -36,6 +36,7 @@ fn run_generated_sparse_queue_matrix(
     dispatcher: &CudaOptimizerDispatcher<'_>,
     node_count: u32,
     materializer_name: &str,
+    kernels_per_case: u64,
 ) {
     let (edge_offsets, edge_targets, edge_kind_mask) = generated_sparse_graph(node_count);
     let graph = upload_resident_adaptive_sparse_queue_graph(
@@ -84,12 +85,12 @@ fn run_generated_sparse_queue_matrix(
     }
 
     let snapshot = scratch.plan_cache_snapshot();
-    let expected_entries = 3 + ALLOW_MASKS.len();
+    let expected_entries = kernels_per_case as usize - 1 + ALLOW_MASKS.len();
     assert_eq!(
         snapshot,
         AdaptiveTraversalPlanCacheSnapshot {
             entries: expected_entries,
-            hits: u64::from(GENERATED_CASES) * 4 - expected_entries as u64,
+            hits: u64::from(GENERATED_CASES) * kernels_per_case - expected_entries as u64,
             misses: expected_entries as u64,
         },
         "Fix: generated {materializer_name} sparse queue matrix must reuse resident Programs across frontier changes."
@@ -97,8 +98,8 @@ fn run_generated_sparse_queue_matrix(
     let telemetry = backend.telemetry_snapshot();
     assert_eq!(
         telemetry.kernel_launches,
-        u64::from(GENERATED_CASES) * 4,
-        "Fix: generated {materializer_name} sparse queue matrix must keep the release path to four kernels per resident step."
+        u64::from(GENERATED_CASES) * kernels_per_case,
+        "Fix: generated {materializer_name} sparse queue matrix must keep the release path at {kernels_per_case} kernels per resident step."
     );
     assert_eq!(
         telemetry.sync_points,

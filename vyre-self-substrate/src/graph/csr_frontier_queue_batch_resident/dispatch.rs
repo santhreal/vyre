@@ -3,10 +3,9 @@ use super::{
 };
 use vyre_primitives::bitset::zero::bitset_zero;
 use vyre_primitives::graph::csr_frontier_queue::{
-    csr_queue_forward_traverse, frontier_queue_len_init, frontier_to_queue,
-    frontier_word_block_offsets_in_place, frontier_word_block_offsets_to_queue_parallel,
-    frontier_word_block_prefix_to_queue_parallel, frontier_word_counts_scan_pass_a,
-    validate_frontier_queue_batch,
+    csr_queue_forward_traverse, frontier_to_queue, frontier_word_block_offsets_in_place,
+    frontier_word_block_offsets_to_queue_parallel, frontier_word_block_prefix_to_queue_parallel,
+    frontier_word_counts_scan_pass_a, validate_frontier_queue_batch,
 };
 
 use crate::csr_frontier_queue_batch_memory::{
@@ -102,17 +101,7 @@ pub fn run_resident_csr_queue_batch_into(
     )?;
     match resident_csr_queue_materializer(graph.words()) {
         ResidentCsrQueueMaterializer::AtomicNodeScan => {
-            let queue_len_init_program = scratch.queue_len_init_program.as_ref().ok_or_else(|| {
-                DispatchError::BackendError(
-                    "batch CSR queue length init program is missing after ensure_batch_scratch. Fix: rebuild batch scratch before resident CSR queue dispatch.".to_string(),
-                )
-            })?;
             for query_index in 0..frontiers.len() {
-                steps.push(ResidentDispatchStep {
-                    program: queue_len_init_program,
-                    handle_ids: &scratch.queue_len_init_handle_sets[query_index],
-                    grid_override: Some([1, 1, 1]),
-                });
                 steps.push(ResidentDispatchStep {
                     program: clear_frontier_out_program,
                     handle_ids: &scratch.clear_handle_sets[query_index],
@@ -247,7 +236,6 @@ fn prepare_batch_sequence_tables(
     batch_len: usize,
     frontier_bytes: usize,
 ) -> Result<(), DispatchError> {
-    scratch.queue_len_init_handle_sets.clear();
     scratch.clear_handle_sets.clear();
     scratch.word_count_handle_sets.clear();
     scratch.word_block_offsets_handle_sets.clear();
@@ -256,11 +244,6 @@ fn prepare_batch_sequence_tables(
     scratch.traverse_handle_sets.clear();
     scratch.read_ranges.clear();
 
-    reserve_graph_vec(
-        &mut scratch.queue_len_init_handle_sets,
-        batch_len,
-        "resident CSR queue batch queue-len init handles",
-    )?;
     reserve_graph_vec(
         &mut scratch.clear_handle_sets,
         batch_len,
@@ -299,7 +282,6 @@ fn prepare_batch_sequence_tables(
 
     let materializer = resident_csr_queue_materializer(graph.words());
     for (query_index, handles) in scratch.handles.iter().take(batch_len).enumerate() {
-        scratch.queue_len_init_handle_sets.push([handles.queue_len]);
         scratch.clear_handle_sets.push([handles.frontier_out]);
         scratch
             .queue_handle_sets
@@ -467,13 +449,11 @@ fn ensure_batch_scratch(
             }
         }
     }
-    scratch.queue_len_init_program = None;
     scratch.word_counts_program = None;
     scratch.word_block_offsets_program = None;
     scratch.clear_frontier_out_program = Some(bitset_zero("frontier_out", graph.words() as u32));
     match materializer {
         ResidentCsrQueueMaterializer::AtomicNodeScan => {
-            scratch.queue_len_init_program = Some(frontier_queue_len_init("queue_len"));
             scratch.queue_program = Some(frontier_to_queue(
                 "frontier",
                 "active_queue",

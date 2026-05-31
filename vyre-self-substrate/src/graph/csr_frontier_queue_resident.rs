@@ -87,7 +87,6 @@ pub struct ResidentCsrQueueScratch {
     handles: Option<ResidentCsrQueueScratchHandles>,
     frontier_bytes: Vec<u8>,
     readbacks: Vec<Vec<u8>>,
-    queue_len_init_program: Option<Program>,
     clear_frontier_out_program: Option<Program>,
     word_counts_program: Option<Program>,
     word_block_offsets_program: Option<Program>,
@@ -104,7 +103,6 @@ impl ResidentCsrQueueScratch {
         };
         self.frontier_bytes.clear();
         self.readbacks.clear();
-        self.queue_len_init_program = None;
         self.clear_frontier_out_program = None;
         self.word_counts_program = None;
         self.word_block_offsets_program = None;

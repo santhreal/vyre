@@ -25,7 +25,7 @@ use vyre_primitives::graph::adaptive_traverse::{
     AdaptiveTraversalPlanCacheKey,
 };
 use vyre_primitives::graph::csr_frontier_queue::{
-    csr_queue_forward_traverse as primitive_csr_queue_forward_traverse, frontier_queue_len_init,
+    csr_queue_forward_traverse as primitive_csr_queue_forward_traverse,
     frontier_to_queue as primitive_frontier_to_queue,
     frontier_word_block_offsets_in_place as primitive_frontier_word_block_offsets,
     frontier_word_block_offsets_to_queue_parallel as primitive_frontier_word_block_offsets_queue,
@@ -389,25 +389,8 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     )
                 },
             );
-            let queue_len_init_program = scratch.plan_cache.get_or_build(
-                AdaptiveTraversalPlanCacheKey::queue_len_init(
-                    graph.layout_hash,
-                    graph.node_count,
-                    graph.edge_count,
-                    words_u32,
-                    queue_capacity,
-                    device_features,
-                ),
-                || frontier_queue_len_init("queue_len"),
-            );
-            let queue_len_init_handles = [handles[2]];
             let queue_handles = [handles[0], queue_handle, handles[2]];
             let steps = [
-                ResidentDispatchStep {
-                    program: &queue_len_init_program,
-                    handle_ids: &queue_len_init_handles,
-                    grid_override: Some([1, 1, 1]),
-                },
                 ResidentDispatchStep {
                     program: &clear_frontier_out_program,
                     handle_ids: &clear_handles,

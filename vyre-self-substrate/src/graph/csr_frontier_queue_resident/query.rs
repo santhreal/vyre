@@ -4,10 +4,9 @@ use super::{
 };
 use vyre_primitives::bitset::zero::bitset_zero;
 use vyre_primitives::graph::csr_frontier_queue::{
-    csr_queue_forward_traverse, frontier_queue_len_init, frontier_to_queue,
-    frontier_word_block_offsets_in_place, frontier_word_block_offsets_to_queue_parallel,
-    frontier_word_block_prefix_to_queue_parallel, frontier_word_counts_scan_pass_a,
-    validate_frontier_queue_query,
+    csr_queue_forward_traverse, frontier_to_queue, frontier_word_block_offsets_in_place,
+    frontier_word_block_offsets_to_queue_parallel, frontier_word_block_prefix_to_queue_parallel,
+    frontier_word_counts_scan_pass_a, validate_frontier_queue_query,
 };
 
 use crate::dispatch_buffers::u32_word_bytes;
@@ -68,24 +67,13 @@ pub fn run_resident_csr_queue_query_into(
     }];
     match handles.materializer {
         ResidentCsrQueueMaterializer::AtomicNodeScan => {
-            let queue_len_init_handles = [handles.queue_len];
             let queue_handles = [handles.frontier, handles.active_queue, handles.queue_len];
             let queue_program = scratch.queue_program.as_ref().ok_or_else(|| {
                 DispatchError::BackendError(
                     "resident CSR queue program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
                 )
             })?;
-            let queue_len_init_program = scratch.queue_len_init_program.as_ref().ok_or_else(|| {
-                DispatchError::BackendError(
-                    "resident CSR queue length init program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
-                )
-            })?;
             let steps = [
-                ResidentDispatchStep {
-                    program: queue_len_init_program,
-                    handle_ids: &queue_len_init_handles,
-                    grid_override: Some([1, 1, 1]),
-                },
                 ResidentDispatchStep {
                     program: clear_frontier_out_program,
                     handle_ids: &clear_handles,
@@ -309,13 +297,11 @@ fn ensure_programs(
     if scratch.cached_shape == Some(shape) {
         return Ok(());
     }
-    scratch.queue_len_init_program = None;
     scratch.word_counts_program = None;
     scratch.word_block_offsets_program = None;
     scratch.clear_frontier_out_program = Some(bitset_zero("frontier_out", graph.words as u32));
     match shape.materializer {
         ResidentCsrQueueMaterializer::AtomicNodeScan => {
-            scratch.queue_len_init_program = Some(frontier_queue_len_init("queue_len"));
             scratch.queue_program = Some(frontier_to_queue(
                 "frontier",
                 "active_queue",

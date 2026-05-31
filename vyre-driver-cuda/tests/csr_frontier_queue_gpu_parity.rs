@@ -707,7 +707,7 @@ fn cuda_resident_csr_queue_api_reuses_graph_and_scratch() {
             "Fix: resident CSR queue API must preserve caller-owned output capacity."
         );
         let telemetry = backend.telemetry_snapshot();
-        assert_eq!(telemetry.kernel_launches, 4);
+        assert_eq!(telemetry.kernel_launches, 3);
         assert_eq!(telemetry.sync_points, 1);
         assert_eq!(
             telemetry.readback_bytes,
@@ -874,8 +874,8 @@ fn cuda_resident_csr_queue_batch_runs_many_queries_with_one_sync() {
     let telemetry = backend.telemetry_snapshot();
     assert_eq!(
         telemetry.kernel_launches,
-        (frontiers.len() * 4) as u64,
-        "Fix: each batched CSR queue query should submit queue-len init, frontier clear, queue-build, and queue-consume kernels."
+        (frontiers.len() * 3) as u64,
+        "Fix: each batched CSR queue query should submit frontier clear, queue-build, and queue-consume kernels; frontier_to_queue clears queue_len itself."
     );
     assert_eq!(
         telemetry.sync_points, 1,
@@ -1007,8 +1007,8 @@ fn cuda_resident_csr_queue_budgeted_batch_shards_before_allocation() {
     );
     assert_eq!(
         telemetry.kernel_launches,
-        (frontiers.len() * 4) as u64,
-        "Fix: budgeted resident CSR queue must still run queue-len init, frontier clear, queue-build, and queue-consume per query."
+        (frontiers.len() * 3) as u64,
+        "Fix: budgeted resident CSR queue must still run frontier clear, queue-build, and queue-consume per query."
     );
     assert_eq!(
         telemetry.readback_bytes,

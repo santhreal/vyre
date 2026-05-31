@@ -104,21 +104,23 @@ fn batch_queries_initialize_queue_len_on_device() {
         .last()
         .cloned()
         .expect("Fix: expected one resident step sequence");
-    assert_eq!(steps.len(), 8);
-    assert_eq!(steps[0], vec![scratch.handles[0].queue_len]);
-    assert_eq!(steps[1], vec![scratch.handles[0].frontier_out]);
     assert_eq!(
-        steps[2],
+        steps.len(),
+        6,
+        "atomic resident CSR queue batches should clear, compact, then traverse per query; frontier_to_queue clears queue_len itself"
+    );
+    assert_eq!(steps[0], vec![scratch.handles[0].frontier_out]);
+    assert_eq!(
+        steps[1],
         vec![
             scratch.handles[0].frontier,
             scratch.handles[0].active_queue,
             scratch.handles[0].queue_len,
         ]
     );
-    assert_eq!(steps[4], vec![scratch.handles[1].queue_len]);
-    assert_eq!(steps[5], vec![scratch.handles[1].frontier_out]);
+    assert_eq!(steps[3], vec![scratch.handles[1].frontier_out]);
     assert_eq!(
-        steps[6],
+        steps[4],
         vec![
             scratch.handles[1].frontier,
             scratch.handles[1].active_queue,
@@ -162,7 +164,6 @@ fn large_batch_queries_use_word_prefix_queue_materializer() {
     );
     assert_eq!(scratch.word_count_handle_sets.len(), frontiers.len());
     assert_eq!(scratch.word_prefix_queue_handle_sets.len(), frontiers.len());
-    assert_eq!(scratch.queue_len_init_handle_sets.len(), frontiers.len());
     assert_eq!(scratch.queue_handle_sets.len(), frontiers.len());
     let steps = dispatcher
         .step_handles
@@ -289,7 +290,6 @@ fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
     )
     .expect("Fix: first resident CSR queue batch dispatch should succeed");
     let retained_capacities = (
-        scratch.queue_len_init_handle_sets.capacity(),
         scratch.clear_handle_sets.capacity(),
         scratch.word_count_handle_sets.capacity(),
         scratch.word_block_offsets_handle_sets.capacity(),
@@ -312,7 +312,6 @@ fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
 
     assert_eq!(
         (
-            scratch.queue_len_init_handle_sets.capacity(),
             scratch.clear_handle_sets.capacity(),
             scratch.word_count_handle_sets.capacity(),
             scratch.word_block_offsets_handle_sets.capacity(),
@@ -324,7 +323,6 @@ fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
         retained_capacities,
         "resident batch sequence tables must retain allocation capacity across repeated dispatches"
     );
-    assert_eq!(scratch.queue_len_init_handle_sets.len(), frontiers.len());
     assert_eq!(scratch.clear_handle_sets.len(), frontiers.len());
     assert_eq!(scratch.word_count_handle_sets.len(), 0);
     assert_eq!(scratch.word_block_offsets_handle_sets.len(), 0);
@@ -336,7 +334,6 @@ fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
     scratch
         .free(&dispatcher)
         .expect("Fix: resident CSR batch scratch free should release query handles");
-    assert!(scratch.queue_len_init_handle_sets.is_empty());
     assert!(scratch.clear_handle_sets.is_empty());
     assert!(scratch.word_count_handle_sets.is_empty());
     assert!(scratch.word_block_offsets_handle_sets.is_empty());
