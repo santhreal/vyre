@@ -78,14 +78,16 @@ pub(super) fn ifds_closure_metric_points(
     wall_ns: u64,
     resident_used: bool,
     resident_reset_bytes: u64,
-    fixpoint_iterations: u32,
+    dispatch_iterations: u32,
+    max_iterations: u32,
     workgroup_size_x: u32,
 ) -> Vec<MetricPoint> {
     let mut metrics = ifds_closure_baseline_metric_points(
         stats,
         closure_iterations,
         closure_changed,
-        fixpoint_iterations,
+        dispatch_iterations,
+        max_iterations,
     );
     metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_resident_buffers".to_string(),
@@ -113,7 +115,8 @@ pub(super) fn ifds_closure_baseline_metric_points(
     stats: IfdsSkewedStats,
     closure_iterations: u32,
     closure_changed: u32,
-    fixpoint_iterations: u32,
+    dispatch_iterations: u32,
+    max_iterations: u32,
 ) -> Vec<MetricPoint> {
     vec![
         MetricPoint {
@@ -154,7 +157,15 @@ pub(super) fn ifds_closure_baseline_metric_points(
         },
         MetricPoint {
             name: "dataflow_ifds_closure_fixpoint_iterations".to_string(),
-            value: u64::from(fixpoint_iterations),
+            value: u64::from(dispatch_iterations),
+        },
+        MetricPoint {
+            name: "dataflow_ifds_closure_max_iterations".to_string(),
+            value: u64::from(max_iterations),
+        },
+        MetricPoint {
+            name: "dataflow_ifds_closure_elided_iterations".to_string(),
+            value: u64::from(max_iterations.saturating_sub(dispatch_iterations)),
         },
     ]
 }

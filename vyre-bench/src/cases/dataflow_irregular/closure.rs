@@ -12,8 +12,8 @@ use vyre_primitives::graph::csr_forward_or_changed::csr_forward_or_changed_paral
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
 use super::fixture::{
-    build_ifds_skewed_fixture, ifds_closure_inputs, ifds_skewed_closure_oracle, IfdsSkewedStats,
-    IFDS_REACH_MASK, NODE_COUNT,
+    build_ifds_skewed_fixture, ifds_closure_inputs, ifds_skewed_closure_oracle,
+    ifds_skewed_launch_wave_iterations, IfdsSkewedStats, IFDS_REACH_MASK, NODE_COUNT,
 };
 use super::metrics::{ifds_closure_baseline_metric_points, ifds_closure_metric_points};
 use super::SUITES;
@@ -33,6 +33,7 @@ pub(super) struct DataflowIfdsSkewedClosurePrepared {
     pub(super) baseline_wall_ns: u64,
     pub(super) stats: IfdsSkewedStats,
     pub(super) closure_iterations: u32,
+    pub(super) dispatch_iterations: u32,
     pub(super) closure_changed: u32,
     pub(super) resident: Option<ResidentInputSet>,
 }
@@ -128,7 +129,7 @@ impl BenchCase for DataflowIfdsSkewedClosure {
             })?;
 
         let mut dispatch_config = ctx.dispatch_config.clone();
-        dispatch_config.fixpoint_iterations = Some(CLOSURE_MAX_ITERS);
+        dispatch_config.fixpoint_iterations = Some(prepared.dispatch_iterations);
         dispatch_config
             .workgroup_override
             .get_or_insert(CLOSURE_WORKGROUP_SIZE);
@@ -187,6 +188,7 @@ impl BenchCase for DataflowIfdsSkewedClosure {
                     timed.wall_ns,
                     resident_used,
                     resident_reset_bytes,
+                    prepared.dispatch_iterations,
                     CLOSURE_MAX_ITERS,
                     workgroup[0],
                 ),
@@ -206,6 +208,7 @@ impl BenchCase for DataflowIfdsSkewedClosure {
                     prepared.stats,
                     prepared.closure_iterations,
                     prepared.closure_changed,
+                    prepared.dispatch_iterations,
                     CLOSURE_MAX_ITERS,
                 ),
                 ..Default::default()
@@ -236,6 +239,7 @@ pub(super) fn prepare_ifds_skewed_closure(
         .min(u128::from(u64::MAX)) as u64;
     let mut stats = fixture.stats;
     stats.output_words_set = oracle.output_words_set;
+    let dispatch_iterations = ifds_skewed_launch_wave_iterations(&fixture, CLOSURE_MAX_ITERS);
 
     let inputs = ifds_closure_inputs(&fixture);
     let seed_frontier_bytes = inputs[FRONTIER_RESOURCE_INDEX].clone();
@@ -258,6 +262,7 @@ pub(super) fn prepare_ifds_skewed_closure(
         baseline_wall_ns,
         stats,
         closure_iterations: oracle.iterations,
+        dispatch_iterations,
         closure_changed: oracle.changed,
         resident,
     })

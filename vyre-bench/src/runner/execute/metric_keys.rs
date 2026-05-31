@@ -155,6 +155,12 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "dataflow_ifds_closure_fixpoint_iterations") => {
             Some("dataflow_ifds_closure_fixpoint_iterations")
         }
+        ("", "dataflow_ifds_closure_max_iterations") => {
+            Some("dataflow_ifds_closure_max_iterations")
+        }
+        ("", "dataflow_ifds_closure_elided_iterations") => {
+            Some("dataflow_ifds_closure_elided_iterations")
+        }
         ("", "dataflow_ifds_closure_resident_buffers") => {
             Some("dataflow_ifds_closure_resident_buffers")
         }

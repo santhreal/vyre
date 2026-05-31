@@ -54,6 +54,9 @@ fn ifds_skewed_closure_oracle_expands_seed_frontier() {
                 .filter(|word| **word != 0)
                 .count() as u64
     );
+    let launch_waves = ifds_skewed_launch_wave_iterations(&fixture, closure::CLOSURE_MAX_ITERS);
+    assert!(launch_waves >= oracle.iterations);
+    assert!(launch_waves <= closure::CLOSURE_MAX_ITERS);
 }
 
 #[test]
@@ -69,5 +72,7 @@ fn ifds_skewed_closure_prepare_builds_resident_fixpoint_program() {
     assert_eq!(prepared.baseline_outputs[1].len(), 4);
     assert_eq!(prepared.closure_changed, 1);
     assert!(prepared.closure_iterations > 0);
+    assert!(prepared.dispatch_iterations >= prepared.closure_iterations);
+    assert!(prepared.dispatch_iterations < closure::CLOSURE_MAX_ITERS);
     assert!(prepared.input_bytes_total > u64::from(NODE_COUNT) * 20);
 }

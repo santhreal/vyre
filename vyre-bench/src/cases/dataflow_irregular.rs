@@ -22,7 +22,7 @@ use fixture::{
     IFDS_REACH_MASK, NODE_COUNT,
 };
 #[cfg(test)]
-use fixture::{ifds_skewed_closure_oracle, FRONTIER_WORDS};
+use fixture::{ifds_skewed_closure_oracle, ifds_skewed_launch_wave_iterations, FRONTIER_WORDS};
 use metrics::{ifds_skewed_baseline_metric_points, ifds_skewed_metric_points};
 
 const SUITES: &[SuiteKind] = &[

@@ -197,6 +197,25 @@ pub(super) fn ifds_skewed_closure_oracle(
     }
 }
 
+pub(super) fn ifds_skewed_launch_wave_iterations(
+    fixture: &IfdsSkewedFixture,
+    max_iters: u32,
+) -> u32 {
+    let mut current = fixture.frontier_in.clone();
+    let mut next = current.clone();
+    let mut changed_passes = 0_u32;
+    for iteration in 1..=max_iters {
+        next.clear();
+        next.extend_from_slice(&current);
+        if expand_one_launch_wave(fixture, &current, &mut next) == 0 {
+            return changed_passes.max(1);
+        }
+        changed_passes = iteration;
+        std::mem::swap(&mut current, &mut next);
+    }
+    max_iters
+}
+
 fn ifds_graph_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
     vec![
         vyre_primitives::wire::pack_u32_slice(&fixture.nodes),
@@ -205,6 +224,40 @@ fn ifds_graph_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
         vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
         vyre_primitives::wire::pack_u32_slice(&fixture.node_tags),
     ]
+}
+
+fn expand_one_launch_wave(
+    fixture: &IfdsSkewedFixture,
+    snapshot: &[u32],
+    output: &mut [u32],
+) -> u32 {
+    let mut changed = 0_u32;
+    for src in 0..fixture.stats.nodes {
+        let src_word = (src / 32) as usize;
+        let src_bit = 1_u32 << (src % 32);
+        if (snapshot[src_word] & src_bit) == 0 {
+            continue;
+        }
+        let start = fixture.edge_offsets[src as usize] as usize;
+        let end = fixture.edge_offsets[src as usize + 1] as usize;
+        for edge in start..end {
+            if (fixture.edge_kind_mask[edge] & IFDS_REACH_MASK) == 0 {
+                continue;
+            }
+            let dst = fixture.edge_targets[edge];
+            if dst >= fixture.stats.nodes {
+                continue;
+            }
+            let dst_word = (dst / 32) as usize;
+            let dst_bit = 1_u32 << (dst % 32);
+            let old = output[dst_word];
+            output[dst_word] = old | dst_bit;
+            if output[dst_word] != old {
+                changed = 1;
+            }
+        }
+    }
+    changed
 }
 
 fn skewed_degree(src: u32) -> u32 {
