@@ -21,8 +21,17 @@ fn prepare_builds_cuda_compatible_bounded_ranges_program() {
     let prepared = prepare_scan_ac_irregular(None).unwrap();
 
     assert_eq!(prepared.program.workgroup_size(), [128, 1, 1]);
+    assert_eq!(prepared.reset_program.workgroup_size(), [1, 1, 1]);
     assert_eq!(prepared.inputs.len(), 7);
     assert_eq!(MATCH_COUNT_INPUT_INDEX, prepared.inputs.len() - 1);
+    assert_eq!(
+        SCAN_RESOURCE_INDICES[MATCH_COUNT_INPUT_INDEX],
+        MATCH_COUNT_INPUT_INDEX
+    );
+    assert_eq!(
+        SCAN_RESOURCE_INDICES[MATCHES_RESOURCE_INDEX],
+        MATCHES_RESOURCE_INDEX
+    );
     assert_eq!(
         match_triples_output_bytes(MAX_MATCHES).unwrap(),
         MAX_MATCHES as usize * 12

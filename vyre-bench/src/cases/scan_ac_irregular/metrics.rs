@@ -19,6 +19,7 @@ pub(super) fn scan_ac_metric_points(
     wall_ns: u64,
     resident_used: bool,
     resident_reset_bytes: u64,
+    device_reset_sequence: bool,
     workgroup_size_x: u32,
 ) -> Vec<MetricPoint> {
     let mut metrics = scan_ac_baseline_metric_points(stats);
@@ -29,6 +30,10 @@ pub(super) fn scan_ac_metric_points(
     metrics.push(metric(
         "scan_ac_irregular_resident_reset_bytes",
         resident_reset_bytes,
+    ));
+    metrics.push(metric(
+        "scan_ac_irregular_device_reset_sequence",
+        u64::from(device_reset_sequence),
     ));
     metrics.push(metric(
         "scan_ac_irregular_workgroup_size_x",

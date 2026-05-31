@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
@@ -7,7 +9,8 @@ use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
-use vyre_foundation::ir::Program;
+use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::match_result::Match;
 use vyre_libs::scan::classic_ac::{
     classic_ac_compile, try_build_ac_bounded_ranges_program_ext, ClassicAcAutomaton,
@@ -29,7 +32,9 @@ mod tests;
 const HAYSTACK_BYTES: usize = 4 * 1024 * 1024;
 const MAX_MATCHES: u32 = 65_536;
 const MATCH_COUNT_INPUT_INDEX: usize = 6;
-const MATCH_COUNT_RESET_BYTES: &[u8] = &[0, 0, 0, 0];
+const MATCHES_RESOURCE_INDEX: usize = 7;
+const RESET_RESOURCE_INDICES: [usize; 1] = [MATCH_COUNT_INPUT_INDEX];
+const SCAN_RESOURCE_INDICES: [usize; 8] = [0, 1, 2, 3, 4, 5, 6, MATCHES_RESOURCE_INDEX];
 const MATCH_TRIPLE_WORDS: usize = 3;
 const SUITES: &[SuiteKind] = &[
     SuiteKind::Smoke,
@@ -62,6 +67,7 @@ pub struct ScanAcIrregularLiterals;
 
 struct ScanAcIrregularPrepared {
     program: Program,
+    reset_program: Program,
     inputs: Vec<Vec<u8>>,
     input_bytes_total: u64,
     baseline_outputs: Vec<Vec<u8>>,
@@ -157,9 +163,10 @@ impl BenchCase for ScanAcIrregularLiterals {
             })?;
 
         let mut dispatch_config = ctx.dispatch_config.clone();
+        let program_workgroup = prepared.program.workgroup_size();
         let workgroup = dispatch_config
             .workgroup_override
-            .unwrap_or_else(|| prepared.program.workgroup_size());
+            .unwrap_or(program_workgroup);
         if workgroup.contains(&0) {
             return Err(BenchError::ExecutionFailed(format!(
                 "irregular AC scan received invalid workgroup {:?}. Fix: use positive dispatch dimensions.",
@@ -167,47 +174,55 @@ impl BenchCase for ScanAcIrregularLiterals {
             )));
         }
         dispatch_config.grid_override.get_or_insert([
-            prepared.stats.haystack_bytes.div_ceil(workgroup[0]),
+            prepared.stats.haystack_bytes.div_ceil(workgroup[0]).max(1),
             1,
             1,
         ]);
 
-        if let Some(resident) = prepared.resident.as_ref() {
-            reset_resident_match_count(resident)?;
-        }
-        let dispatch = dispatch_program_timed(
-            ctx,
-            &prepared.program,
-            prepared.resident.as_ref(),
-            &prepared.inputs,
-            &dispatch_config,
-        )?;
-        let resident_used = dispatch.resident_used;
-        let timed = dispatch.timed;
-        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let resident_reset_bytes = u64::from(resident_used) * MATCH_COUNT_RESET_BYTES.len() as u64;
+        let (outputs, wall_ns, dispatch_ns, resident_used, device_reset_sequence) =
+            if let Some(resident) = prepared.resident.as_ref() {
+                let sequence =
+                    dispatch_resident_scan_sequence(ctx, prepared, resident, program_workgroup)?;
+                (sequence.outputs, sequence.wall_ns, None, true, true)
+            } else {
+                let dispatch = dispatch_program_timed(
+                    ctx,
+                    &prepared.program,
+                    None,
+                    &prepared.inputs,
+                    &dispatch_config,
+                )?;
+                let timed = dispatch.timed;
+                (
+                    timed.outputs,
+                    timed.wall_ns,
+                    timed.device_ns,
+                    dispatch.resident_used,
+                    false,
+                )
+            };
+
+        let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let resident_reset_bytes = 0;
         let accounting =
             transfer_accounting(prepared.input_bytes_total, output_bytes, resident_used);
 
         Ok(BenchRun {
             metrics: BenchMetrics {
-                wall_ns: Some(timed.wall_ns),
-                dispatch_ns: timed.device_ns,
+                wall_ns: Some(wall_ns),
+                dispatch_ns,
                 input_bytes: Some(prepared.input_bytes_total),
                 output_bytes: Some(output_bytes),
-                bytes_read: Some(accounting.bytes_read.saturating_add(resident_reset_bytes)),
+                bytes_read: Some(accounting.bytes_read),
                 bytes_written: Some(accounting.bytes_written),
-                bytes_touched: Some(
-                    accounting
-                        .bytes_touched
-                        .saturating_add(resident_reset_bytes),
-                ),
+                bytes_touched: Some(accounting.bytes_touched),
                 custom: scan_ac_metric_points(
                     prepared.stats,
                     prepared.baseline_wall_ns,
-                    timed.wall_ns,
+                    wall_ns,
                     resident_used,
                     resident_reset_bytes,
+                    device_reset_sequence,
                     workgroup[0],
                 ),
                 ..Default::default()
@@ -225,7 +240,7 @@ impl BenchCase for ScanAcIrregularLiterals {
                 custom: scan_ac_baseline_metric_points(prepared.stats),
                 ..Default::default()
             }),
-            outputs: timed.outputs,
+            outputs,
             baseline_outputs: Some(prepared.baseline_outputs.clone()),
         })
     }
@@ -264,6 +279,7 @@ fn prepare_scan_ac_irregular(
         false,
     )
     .map_err(BenchError::ExecutionFailed)?;
+    let reset_program = scan_ac_match_count_reset_program();
 
     let baseline_start = std::time::Instant::now();
     let expected_matches = cpu_aho_overlapping_matches(PATTERNS, &haystack)?;
@@ -310,6 +326,7 @@ fn prepare_scan_ac_irregular(
 
     Ok(ScanAcIrregularPrepared {
         program,
+        reset_program,
         inputs,
         input_bytes_total,
         baseline_outputs,
@@ -420,11 +437,88 @@ fn match_triples_output_bytes(max_matches: u32) -> Result<usize, BenchError> {
         })
 }
 
-fn reset_resident_match_count(resident: &ResidentInputSet) -> Result<(), BenchError> {
-    resident.upload_resource(
-        MATCH_COUNT_INPUT_INDEX,
-        MATCH_COUNT_RESET_BYTES,
-        "irregular AC scan match_count reset",
+struct ScanResidentSequenceRun {
+    outputs: Vec<Vec<u8>>,
+    wall_ns: u64,
+}
+
+fn dispatch_resident_scan_sequence(
+    ctx: &BenchContext,
+    prepared: &ScanAcIrregularPrepared,
+    resident: &ResidentInputSet,
+    workgroup: [u32; 3],
+) -> Result<ScanResidentSequenceRun, BenchError> {
+    if let Some(override_workgroup) = ctx.dispatch_config.workgroup_override {
+        if override_workgroup != workgroup {
+            return Err(BenchError::ExecutionFailed(format!(
+                "irregular AC scan resident sequence uses program workgroup {:?}, but received override {:?}. Fix: run the resident scan sequence without a workgroup override or rebuild the resident sequence program.",
+                workgroup, override_workgroup
+            )));
+        }
+    }
+
+    let reset_resources = resident
+        .resources_for_indices(&RESET_RESOURCE_INDICES, "irregular AC scan reset sequence")?;
+    let scan_resources =
+        resident.resources_for_indices(&SCAN_RESOURCE_INDICES, "irregular AC scan sequence")?;
+    let reset_step = ResidentDispatchStep {
+        program: &prepared.reset_program,
+        resources: &reset_resources,
+        grid_override: Some([1, 1, 1]),
+    };
+    let scan_step = ResidentDispatchStep {
+        program: &prepared.program,
+        resources: &scan_resources,
+        grid_override: Some([
+            prepared.stats.haystack_bytes.div_ceil(workgroup[0]).max(1),
+            1,
+            1,
+        ]),
+    };
+    let match_output_bytes = match_triples_output_bytes(prepared.stats.max_matches)?;
+    let read_ranges = [
+        ResidentReadRange {
+            resource: &scan_resources[MATCH_COUNT_INPUT_INDEX],
+            byte_offset: 0,
+            byte_len: prepared.baseline_outputs[0].len(),
+        },
+        ResidentReadRange {
+            resource: &scan_resources[MATCHES_RESOURCE_INDEX],
+            byte_offset: 0,
+            byte_len: match_output_bytes,
+        },
+    ];
+
+    let mut count_output = Vec::with_capacity(prepared.baseline_outputs[0].len());
+    let mut matches_output = Vec::with_capacity(match_output_bytes);
+    let started = Instant::now();
+    ctx.preferred_backend
+        .dispatch_resident_sequence_read_ranges_into(
+            &[reset_step, scan_step],
+            &read_ranges,
+            &mut [&mut count_output, &mut matches_output],
+        )
+        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+    let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+
+    Ok(ScanResidentSequenceRun {
+        outputs: vec![count_output, matches_output],
+        wall_ns,
+    })
+}
+
+fn scan_ac_match_count_reset_program() -> Program {
+    let idx = Expr::InvocationId { axis: 0 };
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("match_count", 0, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::if_then(
+            Expr::eq(idx, Expr::u32(0)),
+            vec![Node::store("match_count", Expr::u32(0), Expr::u32(0))],
+        )],
     )
 }
 
