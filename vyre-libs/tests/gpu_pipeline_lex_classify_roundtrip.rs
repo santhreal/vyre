@@ -29,6 +29,7 @@ impl GpuDispatcher for RefDispatcher {
 
 struct CountingDispatcher {
     haystack_elements: std::cell::RefCell<Vec<DataType>>,
+    haystack_input_lens: std::cell::RefCell<Vec<usize>>,
     source_elements: std::cell::RefCell<Vec<DataType>>,
 }
 
@@ -36,6 +37,7 @@ impl CountingDispatcher {
     fn new() -> Self {
         Self {
             haystack_elements: std::cell::RefCell::new(Vec::new()),
+            haystack_input_lens: std::cell::RefCell::new(Vec::new()),
             source_elements: std::cell::RefCell::new(Vec::new()),
         }
     }
@@ -54,6 +56,14 @@ impl GpuDispatcher for CountingDispatcher {
                 .buffers()
                 .iter()
                 .filter_map(|buffer| (buffer.name() == "source").then_some(buffer.element())),
+        );
+        self.haystack_input_lens.borrow_mut().extend(
+            program
+                .buffers()
+                .iter()
+                .position(|buffer| buffer.name() == "haystack")
+                .and_then(|index| inputs.get(index))
+                .map(Vec::len),
         );
         RefDispatcher.dispatch(program, inputs)
     }
@@ -88,6 +98,18 @@ fn assert_sparse_haystack_dispatches_are_u8(dispatcher: &CountingDispatcher) {
             .iter()
             .all(|element| matches!(element, DataType::U8)),
         "sparse tokenizer must consume raw U8 haystack buffers, got {elements:?}"
+    );
+}
+
+fn assert_sparse_haystack_inputs_are_unpadded(dispatcher: &CountingDispatcher, raw_len: usize) {
+    let input_lens = dispatcher.haystack_input_lens.borrow();
+    assert!(
+        !input_lens.is_empty(),
+        "tokenization path must dispatch a sparse lexer haystack program"
+    );
+    assert!(
+        input_lens.iter().all(|len| *len == raw_len),
+        "sparse tokenizer must consume raw haystack length {raw_len}, got {input_lens:?}"
     );
 }
 
@@ -174,15 +196,16 @@ fn ifdef_ifndef_distinguished() {
 
 #[test]
 fn mixed_code_and_directives_only_directive_rows_have_kinds() {
+    let src = b"#define A 1\nint x = A;\n#define B 2\n";
     let dispatcher = CountingDispatcher::new();
-    let out = gpu_tokenize_and_classify(&dispatcher, b"#define A 1\nint x = A;\n#define B 2\n")
-        .expect("gpu_tokenize_and_classify");
+    let out = gpu_tokenize_and_classify(&dispatcher, src).expect("gpu_tokenize_and_classify");
     let rows = directive_rows(&out);
     let kinds: Vec<u32> = rows.iter().map(|(k, _)| *k).collect();
     // Two #define rows both classified as TOK_PP_DEFINE; the int line
     // contributes only non-PREPROC tokens (zero in directive_kinds).
     assert_eq!(kinds, vec![TOK_PP_DEFINE, TOK_PP_DEFINE]);
     assert_sparse_haystack_dispatches_are_u8(&dispatcher);
+    assert_sparse_haystack_inputs_are_unpadded(&dispatcher, src.len());
     assert_directive_source_dispatches_are_u8(&dispatcher);
 }
 

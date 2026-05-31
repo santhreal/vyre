@@ -128,7 +128,6 @@ pub(super) struct TokenizationScratch {
     tok_lens_b: Vec<u8>,
     directive_zero: Vec<u8>,
     directive_outputs: Vec<Vec<u8>>,
-    raw_padded: Vec<u8>,
     sparse_zero: Vec<u8>,
     sparse_outputs: Vec<Vec<u8>>,
     prefix_scan: PrefixScanScratch,
@@ -312,12 +311,11 @@ fn sparse_tokenize(
     // Without bucketing every distinct file size produced a unique
     // program fingerprint and paid a ~2 second cold native-compile per
     // dispatch. Soundness: the lexer's default classification for any
-    // byte is `tok_type=TOK_WHITESPACE, emit=0`. Zero-padding the
-    // raw-U8 haystack from `raw.len()` up to the bucket size therefore produces
-    // no spurious tokens  -  padding positions get emit=0, so they
-    // contribute zero to the prefix scan's running sum and zero to the
-    // compact output. n_tokens at the end reflects only real-source
-    // tokens.
+    // byte is `tok_type=TOK_WHITESPACE, emit=0`. The raw-U8 haystack
+    // stays runtime-sized; the bucketed sparse lexer reads zero beyond the
+    // host-supplied raw length. Padding positions therefore get emit=0,
+    // contribute zero to the prefix scan's running sum, and never scatter into
+    // the compact output. n_tokens at the end reflects only real-source tokens.
     // PERF 2026-05-10: floor 1024  -  same as gpu_extract_directive_payloads
     // and gpu_tokenize_and_classify. The lexer kernel was previously
     // unbucketed (every distinct file size was its own program); now it
@@ -327,15 +325,6 @@ fn sparse_tokenize(
         bucket_pow2(raw.len().max(1), 1024),
     )?;
     let token_capacity = n_bytes_bucket as usize;
-    let raw_pad_len = token_capacity;
-    scratch.raw_padded.clear();
-    reserve_gpu_staging_bytes(
-        &mut scratch.raw_padded,
-        raw_pad_len,
-        "sparse tokenizer raw input",
-    )?;
-    scratch.raw_padded.extend_from_slice(raw);
-    scratch.raw_padded.resize(raw_pad_len, 0);
 
     let sparse = c11_lexer_regular_sparse_u8_haystack_with_flags(
         "haystack",
@@ -350,7 +339,7 @@ fn sparse_tokenize(
         u32_word_byte_len(token_capacity, "sparse tokenizer zero staging")?,
     )?;
     let sparse_inputs: [&[u8]; 5] = [
-        scratch.raw_padded.as_slice(),
+        raw,
         scratch.sparse_zero.as_slice(),
         scratch.sparse_zero.as_slice(),
         scratch.sparse_zero.as_slice(),

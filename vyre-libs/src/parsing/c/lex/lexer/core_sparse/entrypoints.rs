@@ -126,7 +126,7 @@ mod tests {
     use vyre::ir::DataType;
 
     #[test]
-    fn u8_haystack_entrypoint_declares_raw_byte_source() {
+    fn u8_haystack_entrypoint_declares_runtime_sized_raw_byte_source() {
         let program = c11_lexer_regular_sparse_u8_haystack_with_flags(
             "haystack", "types", "starts", "lens", "flags", 17,
         );
@@ -137,7 +137,7 @@ mod tests {
             .expect("sparse lexer must declare haystack input");
 
         assert_eq!(haystack.element(), DataType::U8);
-        assert_eq!(haystack.count(), 17);
+        assert_eq!(haystack.count(), 0);
     }
 
     #[test]
