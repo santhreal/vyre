@@ -18,6 +18,7 @@ use vyre_primitives::hash::fnv1a::{fnv1a32, fnv1a32_program};
 use vyre_primitives::hash::hypervector::hypervector_xor_bind;
 use vyre_primitives::parsing::whitespace_classify_word::{
     reference_whitespace_classify_word, whitespace_classify_word,
+    whitespace_classify_word_dispatch_grid,
 };
 
 // ---------------------------------------------------------------------
@@ -302,9 +303,7 @@ fn run_whitespace_classify(backend: &CudaBackend, words: &[u32]) -> Vec<u32> {
     let program = whitespace_classify_word(n);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(words), vec![0u8; n as usize * 4]];
     let mut config = DispatchConfig::default();
-    let workgroup_x = 256u32;
-    let grid_x = ((n + workgroup_x - 1) / workgroup_x).max(1);
-    config.grid_override = Some([grid_x, 1, 1]);
+    config.grid_override = Some(whitespace_classify_word_dispatch_grid(n));
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -358,6 +357,38 @@ fn cuda_whitespace_classify_no_whitespace() {
         assert_eq!(gpu, cpu);
         assert_eq!(gpu[0], 0);
     });
+}
+
+#[test]
+fn cuda_whitespace_classify_generated_multi_block_corpus() {
+    with_live_backend(
+        "cuda_whitespace_classify_generated_multi_block_corpus",
+        |backend| {
+            let bytes = (0..4100u32)
+                .map(|index| match index % 37 {
+                    0 => b' ',
+                    5 => b'\t',
+                    17 => b'\n',
+                    23 => b'\r',
+                    _ => index.wrapping_mul(19).wrapping_add(0x41) as u8,
+                })
+                .collect::<Vec<_>>();
+            let words = pack_bytes(&bytes);
+            let cpu = reference_whitespace_classify_word(&words);
+            let gpu = run_whitespace_classify(backend, &words);
+
+            assert_eq!(words.len(), 1025);
+            assert_eq!(gpu, cpu);
+            assert!(
+                gpu.iter().any(|mask| *mask == 0),
+                "Fix: generated whitespace corpus must include non-whitespace-only words."
+            );
+            assert!(
+                gpu.iter().any(|mask| *mask != 0),
+                "Fix: generated whitespace corpus must include whitespace lanes."
+            );
+        },
+    );
 }
 
 // ---------------------------------------------------------------------
