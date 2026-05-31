@@ -152,6 +152,14 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
     assert_eq!(prepared.reset_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.queue_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.traverse_program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(
+        prepared.queue_program.buffers()[0].name.as_ref(),
+        "frontier_in"
+    );
+    assert_eq!(
+        prepared.queue_program.buffers()[0].count as usize,
+        FRONTIER_WORDS
+    );
     assert_eq!(prepared.stats.nodes, NODE_COUNT);
     assert_eq!(prepared.inputs.len(), 7);
     assert_eq!(
@@ -277,6 +285,14 @@ fn ifds_queue_closure_prepare_builds_delta_fixpoint_sequence() {
     assert_eq!(prepared.seed_queue_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.clear_len_program.workgroup_size(), [1, 1, 1]);
     assert_eq!(prepared.delta_program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(
+        prepared.seed_queue_program.buffers()[0].name.as_ref(),
+        "frontier_seed"
+    );
+    assert_eq!(
+        prepared.seed_queue_program.buffers()[0].count as usize,
+        FRONTIER_WORDS
+    );
     assert_eq!(prepared.stats.nodes, NODE_COUNT);
     assert_eq!(prepared.queue_capacity, NODE_COUNT);
     assert_eq!(prepared.inputs.len(), 9);

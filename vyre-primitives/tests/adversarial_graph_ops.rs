@@ -5,11 +5,27 @@
 //! edge-kind diversity (M8), malformed CSR, cross-word bitsets.
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 
+use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_backward_traverse::cpu_ref as bwd_cpu_ref;
 use vyre_primitives::graph::csr_forward_traverse::cpu_ref as fwd_cpu_ref;
+use vyre_primitives::graph::csr_frontier_queue::{
+    frontier_to_queue_cpu, frontier_words_to_queue_parallel,
+};
 use vyre_primitives::graph::path_reconstruct::cpu_ref as path_cpu_ref;
 use vyre_primitives::graph::scc_decompose::cpu_ref as scc_cpu_ref;
 use vyre_primitives::graph::toposort::{toposort, ToposortError};
+use vyre_reference::value::Value;
+
+fn pack_words(words: &[u32]) -> Vec<u8> {
+    words.iter().flat_map(|word| word.to_le_bytes()).collect()
+}
+
+fn unpack_words(bytes: &[u8]) -> Vec<u32> {
+    bytes
+        .chunks_exact(4)
+        .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("u32 chunk")))
+        .collect()
+}
 
 // ---------------------------------------------------------------------------
 // csr_forward_traverse
@@ -82,6 +98,165 @@ fn forward_edge_kind_diversity_m8() {
         vec![0b0010],
         "broken impl ignoring kind_mask would produce 0b0110"
     );
+}
+
+// ---------------------------------------------------------------------------
+// csr_frontier_queue
+// ---------------------------------------------------------------------------
+
+#[test]
+fn word_parallel_frontier_queue_matches_cpu_and_ignores_tail_bits() {
+    let node_count = 70;
+    let queue_capacity = 8;
+    let frontier = [
+        (1_u32 << 0) | (1_u32 << 1) | (1_u32 << 31),
+        (1_u32 << 0) | (1_u32 << 31),
+        (1_u32 << 0) | (1_u32 << 5) | (1_u32 << 31),
+    ];
+    let (expected_queue, expected_seen) =
+        frontier_to_queue_cpu(&frontier, node_count, queue_capacity as usize);
+    let program = frontier_words_to_queue_parallel(
+        "frontier",
+        "queue",
+        "queue_len",
+        node_count,
+        queue_capacity,
+    );
+
+    let outputs = vyre_reference::reference_eval(
+        &program,
+        &[
+            Value::from(pack_words(&frontier)),
+            Value::from(vec![
+                0_u8;
+                queue_capacity as usize * std::mem::size_of::<u32>()
+            ]),
+            Value::from(pack_words(&[0])),
+        ],
+    )
+    .expect("word-level frontier queue materializer should reference-evaluate");
+
+    let mut queue = unpack_words(&outputs[0].to_bytes());
+    queue.truncate(expected_queue.len());
+    queue.sort_unstable();
+    let mut expected_sorted = expected_queue;
+    expected_sorted.sort_unstable();
+
+    assert_eq!(unpack_words(&outputs[1].to_bytes()), vec![expected_seen]);
+    assert_eq!(
+        queue, expected_sorted,
+        "word-level materializer must enqueue exactly in-range active nodes"
+    );
+    assert!(
+        !queue.contains(&95),
+        "tail bits beyond node_count must not enter the active queue"
+    );
+}
+
+#[test]
+fn word_parallel_frontier_queue_matches_cpu_len_across_2048_generated_frontiers() {
+    for case in 0u32..2048 {
+        let node_count = 1 + case.wrapping_mul(17) % 127;
+        let queue_capacity = 1 + case.wrapping_mul(13) % 48;
+        let words = bitset_words(node_count) as usize;
+        let mut state = 0x9E37_79B9u32 ^ case.wrapping_mul(0x85EB_CA6B);
+        let mut frontier = vec![0u32; words];
+
+        for word in &mut frontier {
+            state ^= state << 13;
+            state ^= state >> 17;
+            state ^= state << 5;
+            *word = match case % 5 {
+                0 => 0,
+                1 => state & 0x0101_0101,
+                2 => state & 0x1111_1111,
+                3 => state,
+                _ => state | 0x8000_0001,
+            };
+        }
+
+        let tail_bits = node_count % 32;
+        if tail_bits != 0 {
+            let in_range_mask = (1u32 << tail_bits) - 1;
+            let tail_mask = !in_range_mask;
+            if case % 7 == 0 {
+                frontier[words - 1] &= !in_range_mask;
+                frontier[words - 1] |= tail_mask;
+            } else if case % 3 == 0 {
+                frontier[words - 1] |= tail_mask & 0xA5A5_A5A5;
+            }
+        }
+
+        let (expected_queue, expected_seen) =
+            frontier_to_queue_cpu(&frontier, node_count, queue_capacity as usize);
+        let active_nodes: Vec<u32> = (0..node_count)
+            .filter(|&node| {
+                let word = frontier[node as usize / 32];
+                (word & (1u32 << (node % 32))) != 0
+            })
+            .collect();
+        let program = frontier_words_to_queue_parallel(
+            "frontier",
+            "queue",
+            "queue_len",
+            node_count,
+            queue_capacity,
+        );
+        let outputs = vyre_reference::reference_eval(
+            &program,
+            &[
+                Value::from(pack_words(&frontier)),
+                Value::from(vec![
+                    0_u8;
+                    queue_capacity as usize * std::mem::size_of::<u32>()
+                ]),
+                Value::from(pack_words(&[0])),
+            ],
+        )
+        .unwrap_or_else(|error| {
+            panic!(
+                "case {case}: word-level frontier queue materializer failed reference_eval: {error}"
+            )
+        });
+
+        let mut queue = unpack_words(&outputs[0].to_bytes());
+        queue.truncate(expected_queue.len());
+        queue.sort_unstable();
+        let mut expected_sorted = expected_queue;
+        expected_sorted.sort_unstable();
+
+        assert_eq!(
+            unpack_words(&outputs[1].to_bytes()),
+            vec![expected_seen],
+            "case {case}: queue_len must report in-range active nodes"
+        );
+        if expected_seen as usize <= queue_capacity as usize {
+            assert_eq!(
+                queue, expected_sorted,
+                "case {case}: queue contents must match CPU oracle without overflow"
+            );
+        } else {
+            assert_eq!(
+                queue.len(),
+                queue_capacity as usize,
+                "case {case}: overflow must fill the bounded queue"
+            );
+            assert!(
+                queue.windows(2).all(|pair| pair[0] != pair[1]),
+                "case {case}: overflow queue must not duplicate an active node"
+            );
+            assert!(
+                queue
+                    .iter()
+                    .all(|node| active_nodes.binary_search(node).is_ok()),
+                "case {case}: overflow queue must contain only active in-range nodes"
+            );
+        }
+        assert!(
+            queue.iter().all(|&node| node < node_count),
+            "case {case}: tail bit escaped into queue for node_count={node_count}"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
