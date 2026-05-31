@@ -57,15 +57,23 @@ pub const BLOCK_LANES: u32 = 1024;
 /// `num_blocks ≤ BLOCK_LANES`.
 pub const SOFT_MAX_N: u32 = BLOCK_LANES * BLOCK_LANES;
 
-fn output_byte_range(words: u32, context: &str) -> usize {
+fn output_byte_range(words: u32, context: &str) -> Result<usize, String> {
     usize::try_from(words)
         .ok()
         .and_then(|count| count.checked_mul(4))
-        .unwrap_or_else(|| {
-            panic!(
+        .ok_or_else(|| {
+            format!(
                 "{context} words={words} overflows output byte range. Fix: shard the scan before GPU dispatch."
             )
         })
+}
+
+fn total_partial_words(num_blocks: u32, context: &str) -> Result<u32, String> {
+    num_blocks.checked_mul(BLOCK_LANES).ok_or_else(|| {
+        format!(
+            "vyre multi_block_prefix_scan {context} num_blocks={num_blocks} overflows partial buffer count. Fix: shard the scan before GPU dispatch."
+        )
+    })
 }
 
 /// Build an inclusive parallel prefix-sum Program over arbitrary `n`.
@@ -77,17 +85,38 @@ fn output_byte_range(words: u32, context: &str) -> usize {
 /// `n == 0` returns an empty Program.
 #[must_use]
 pub fn multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> Program {
+    match try_multi_block_prefix_scan_sum_u32(input, output, n) {
+        Ok(program) => program,
+        Err(error) => {
+            crate::invalid_output_program(OP_ID_INCLUSIVE_SUM, output, DataType::U32, error)
+        }
+    }
+}
+
+fn try_multi_block_prefix_scan_sum_u32(
+    input: &str,
+    output: &str,
+    n: u32,
+) -> Result<Program, String> {
     if n == 0 {
-        return Program::empty();
+        return Ok(Program::empty());
     }
     if n <= BLOCK_LANES {
-        return prefix_scan_with_op_id(
+        return Ok(prefix_scan_with_op_id(
             input,
             output,
             n,
             ScanKind::InclusiveSum,
             OP_ID_INCLUSIVE_SUM,
-        );
+        ));
+    }
+
+    try_multi_block_prefix_scan_chain(input, output, n)
+}
+
+fn try_multi_block_prefix_scan_chain(input: &str, output: &str, n: u32) -> Result<Program, String> {
+    if n <= BLOCK_LANES {
+        return try_guarded_single_block_scan(input, output, n);
     }
 
     let num_blocks = n.div_ceil(BLOCK_LANES);
@@ -99,20 +128,136 @@ pub fn multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> Pro
     let block_totals = format!("__{output}_mbps_block_totals");
     let block_totals_scanned = format!("__{output}_mbps_block_totals_scanned");
 
-    let pass_a = pass_a_local_scan(input, &partials, &block_totals, n, num_blocks);
-    let pass_b = multi_block_prefix_scan_sum_u32(&block_totals, &block_totals_scanned, num_blocks);
-    let pass_c = pass_c_broadcast_offsets(&partials, &block_totals_scanned, output, n, num_blocks);
+    let pass_a = try_pass_a_local_scan(input, &partials, &block_totals, n, num_blocks)?;
+    let pass_b =
+        try_multi_block_prefix_scan_chain(&block_totals, &block_totals_scanned, num_blocks)?;
+    let pass_c =
+        try_pass_c_broadcast_offsets(&partials, &block_totals_scanned, output, n, num_blocks)?;
 
     // Single fused Program; vyre-driver splits at the GridSync barriers.
     // Fuse failure on three disjoint-buffer passes is a substrate bug and must
     // not be represented as an empty program: empty programs are valid
     // elsewhere, so using one here would hide a GPU prefix-scan migration hole.
-    match vyre_foundation::execution_plan::fusion::fuse_programs(&[pass_a, pass_b, pass_c]) {
-        Ok(prog) => prog,
-        Err(_) => panic!(
-            "vyre multi_block_prefix_scan fusion failed for n={n}, num_blocks={num_blocks}. Fix: repair grid-sync fusion for the three-pass GPU scan; do not substitute an empty Program."
-        ),
+    vyre_foundation::execution_plan::fusion::fuse_programs(&[pass_a, pass_b, pass_c])
+        .map(|program| demote_intermediate_outputs(program, output))
+        .map_err(|error| {
+            format!(
+                "vyre multi_block_prefix_scan fusion failed for n={n}, num_blocks={num_blocks}: {error}. Fix: repair grid-sync fusion for the three-pass GPU scan; do not substitute an empty Program."
+            )
+        })
+}
+
+fn try_guarded_single_block_scan(input: &str, output: &str, n: u32) -> Result<Program, String> {
+    if n == 0 {
+        return Ok(Program::empty());
     }
+
+    let lane = Expr::var("lane");
+    let block = Expr::var("block");
+    let scratch_a = format!("__{output}_guarded_scan_a");
+    let scratch_b = format!("__{output}_guarded_scan_b");
+
+    let mut scan_body = Vec::new();
+    scan_body.push(Node::let_bind("lane", Expr::LocalId { axis: 0 }));
+    scan_body.push(Node::store(&scratch_a, lane.clone(), Expr::u32(0)));
+    scan_body.push(Node::if_then(
+        Expr::lt(lane.clone(), Expr::u32(n)),
+        vec![Node::store(
+            &scratch_a,
+            lane.clone(),
+            Expr::load(input, lane.clone()),
+        )],
+    ));
+    scan_body.push(Node::Barrier {
+        ordering: MemoryOrdering::SeqCst,
+    });
+
+    let mut stride = 1_u32;
+    while stride < BLOCK_LANES {
+        scan_body.push(Node::store(
+            &scratch_b,
+            lane.clone(),
+            Expr::load(&scratch_a, lane.clone()),
+        ));
+        let previous_lane = Expr::add(lane.clone(), Expr::u32(0u32.wrapping_sub(stride)));
+        scan_body.push(Node::if_then(
+            Expr::lt(Expr::u32(stride - 1), lane.clone()),
+            vec![Node::store(
+                &scratch_b,
+                lane.clone(),
+                Expr::add(
+                    Expr::load(&scratch_a, lane.clone()),
+                    Expr::load(&scratch_a, previous_lane),
+                ),
+            )],
+        ));
+        scan_body.push(Node::Barrier {
+            ordering: MemoryOrdering::SeqCst,
+        });
+        scan_body.push(Node::store(
+            &scratch_a,
+            lane.clone(),
+            Expr::load(&scratch_b, lane.clone()),
+        ));
+        scan_body.push(Node::Barrier {
+            ordering: MemoryOrdering::SeqCst,
+        });
+        stride *= 2;
+    }
+
+    scan_body.push(Node::if_then(
+        Expr::lt(lane.clone(), Expr::u32(n)),
+        vec![Node::store(
+            output,
+            lane.clone(),
+            Expr::load(&scratch_a, lane.clone()),
+        )],
+    ));
+
+    let output_bytes = output_byte_range(
+        n,
+        "vyre multi_block_prefix_scan guarded single-block output",
+    )?;
+    let body = vec![
+        Node::let_bind("block", Expr::WorkgroupId { axis: 0 }),
+        Node::if_then(Expr::eq(block, Expr::u32(0)), scan_body),
+    ];
+    let buffers = vec![
+        BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+        BufferDecl::output(output, 1, DataType::U32)
+            .with_count(n)
+            .with_output_byte_range(0..output_bytes),
+        BufferDecl::workgroup(&scratch_a, BLOCK_LANES, DataType::U32),
+        BufferDecl::workgroup(&scratch_b, BLOCK_LANES, DataType::U32),
+    ];
+
+    Ok(Program::wrapped(
+        buffers,
+        [BLOCK_LANES, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(
+                "vyre-primitives::reduce::multi_block_prefix_scan::guarded_single_block",
+            ),
+            source_region: None,
+            body: Arc::new(body),
+        }],
+    ))
+}
+
+fn demote_intermediate_outputs(program: Program, final_output: &str) -> Program {
+    let buffers = program
+        .buffers()
+        .iter()
+        .map(|buffer| {
+            let mut buffer = buffer.clone();
+            if buffer.name() != final_output && buffer.is_output() {
+                buffer.is_output = false;
+                buffer.pipeline_live_out = true;
+            }
+            buffer
+        })
+        .collect();
+    program.with_rewritten_buffers(buffers)
 }
 
 /// Pass A  -  per-block local inclusive Hillis-Steele scan.
@@ -137,6 +282,21 @@ pub fn pass_a_local_scan(
     n: u32,
     num_blocks: u32,
 ) -> Program {
+    match try_pass_a_local_scan(input, partials, block_totals, n, num_blocks) {
+        Ok(program) => program,
+        Err(error) => {
+            crate::invalid_output_program(OP_ID_INCLUSIVE_SUM, partials, DataType::U32, error)
+        }
+    }
+}
+
+fn try_pass_a_local_scan(
+    input: &str,
+    partials: &str,
+    block_totals: &str,
+    n: u32,
+    num_blocks: u32,
+) -> Result<Program, String> {
     let lane = Expr::var("lane");
     let block = Expr::var("block");
     let global = Expr::var("global");
@@ -230,19 +390,15 @@ pub fn pass_a_local_scan(
         )],
     ));
 
-    let total_partials = num_blocks.checked_mul(BLOCK_LANES).unwrap_or_else(|| {
-        panic!(
-            "vyre multi_block_prefix_scan Pass A num_blocks={num_blocks} overflows partial buffer count. Fix: shard the scan before GPU dispatch."
-        )
-    });
+    let total_partials = total_partial_words(num_blocks, "Pass A")?;
     let total_partial_bytes = output_byte_range(
         total_partials,
         "vyre multi_block_prefix_scan Pass A partials",
-    );
+    )?;
     let block_total_bytes = output_byte_range(
         num_blocks,
         "vyre multi_block_prefix_scan Pass A block_totals",
-    );
+    )?;
     let buffers = vec![
         BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
         BufferDecl::output(partials, 1, DataType::U32)
@@ -256,7 +412,7 @@ pub fn pass_a_local_scan(
         BufferDecl::workgroup(&scratch_b, BLOCK_LANES, DataType::U32),
     ];
 
-    Program::wrapped(
+    Ok(Program::wrapped(
         buffers,
         [BLOCK_LANES, 1, 1],
         vec![Node::Region {
@@ -264,7 +420,7 @@ pub fn pass_a_local_scan(
             source_region: None,
             body: Arc::new(body),
         }],
-    )
+    ))
 }
 
 /// Pass C  -  broadcast scanned per-block totals back to per-element output.
@@ -288,6 +444,21 @@ pub fn pass_c_broadcast_offsets(
     n: u32,
     num_blocks: u32,
 ) -> Program {
+    match try_pass_c_broadcast_offsets(partials, block_totals_scanned, output, n, num_blocks) {
+        Ok(program) => program,
+        Err(error) => {
+            crate::invalid_output_program(OP_ID_INCLUSIVE_SUM, output, DataType::U32, error)
+        }
+    }
+}
+
+fn try_pass_c_broadcast_offsets(
+    partials: &str,
+    block_totals_scanned: &str,
+    output: &str,
+    n: u32,
+    num_blocks: u32,
+) -> Result<Program, String> {
     let lane = Expr::var("lane");
     let block = Expr::var("block");
     let global = Expr::var("global");
@@ -325,12 +496,8 @@ pub fn pass_c_broadcast_offsets(
         ),
     ];
 
-    let total_partials = num_blocks.checked_mul(BLOCK_LANES).unwrap_or_else(|| {
-        panic!(
-            "vyre multi_block_prefix_scan Pass C num_blocks={num_blocks} overflows partial buffer count. Fix: shard the scan before GPU dispatch."
-        )
-    });
-    let output_bytes = output_byte_range(n, "vyre multi_block_prefix_scan Pass C output");
+    let total_partials = total_partial_words(num_blocks, "Pass C")?;
+    let output_bytes = output_byte_range(n, "vyre multi_block_prefix_scan Pass C output")?;
     let buffers = vec![
         BufferDecl::storage(partials, 0, BufferAccess::ReadOnly, DataType::U32)
             .with_count(total_partials),
@@ -346,7 +513,7 @@ pub fn pass_c_broadcast_offsets(
             .with_output_byte_range(0..output_bytes),
     ];
 
-    Program::wrapped(
+    Ok(Program::wrapped(
         buffers,
         [BLOCK_LANES, 1, 1],
         vec![Node::Region {
@@ -354,7 +521,7 @@ pub fn pass_c_broadcast_offsets(
             source_region: None,
             body: Arc::new(body),
         }],
-    )
+    ))
 }
 
 /// CPU reference: inclusive prefix sum. Used by tests + as the
@@ -462,9 +629,56 @@ mod tests {
             .expect("Fix: multi_block_prefix_scan.rs must contain production section");
 
         assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: multi-block prefix-scan CPU reference wrappers must not panic in production."
+            !production.contains(".expect(")
+                && !production.contains(".unwrap(")
+                && !production.contains("panic!("),
+            "Fix: multi-block prefix-scan builders and CPU reference wrappers must not panic in production."
         );
+    }
+
+    fn program_contains_trap(program: &Program) -> bool {
+        nodes_contain_trap(program.entry())
+    }
+
+    fn nodes_contain_trap(nodes: &[Node]) -> bool {
+        nodes.iter().any(node_contains_trap)
+    }
+
+    fn node_contains_trap(node: &Node) -> bool {
+        match node {
+            Node::Trap { .. } => true,
+            Node::Block(children) | Node::Loop { body: children, .. } => {
+                nodes_contain_trap(children)
+            }
+            Node::If {
+                then, otherwise, ..
+            } => nodes_contain_trap(then) || nodes_contain_trap(otherwise),
+            Node::Region { body, .. } => nodes_contain_trap(body),
+            _ => false,
+        }
+    }
+
+    #[test]
+    fn oversized_multi_block_scan_returns_trap_program_instead_of_panicking() {
+        let prog = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", u32::MAX);
+
+        assert_eq!(prog.buffers()[0].name(), "out_buf");
+        assert!(
+            program_contains_trap(&prog),
+            "oversized scan should encode an executable trap with the sizing error"
+        );
+    }
+
+    #[test]
+    fn oversized_pass_builders_return_trap_programs_instead_of_panicking() {
+        let pass_a = pass_a_local_scan("in_buf", "partials", "block_totals", 1, u32::MAX);
+        let pass_c =
+            pass_c_broadcast_offsets("partials", "block_totals_scanned", "out_buf", 1, u32::MAX);
+
+        assert_eq!(pass_a.buffers()[0].name(), "partials");
+        assert!(program_contains_trap(&pass_a));
+        assert_eq!(pass_c.buffers()[0].name(), "out_buf");
+        assert!(program_contains_trap(&pass_c));
     }
 
     #[test]
@@ -474,8 +688,14 @@ mod tests {
         for &n in &[1u32, 2, 64, 1023, 1024] {
             let prog = multi_block_prefix_scan_sum_u32("in_buf", "out_buf", n);
             let names: Vec<&str> = prog.buffers().iter().map(BufferDecl::name).collect();
-            assert!(names.contains(&"in_buf"), "n={n} must declare in_buf, got {names:?}");
-            assert!(names.contains(&"out_buf"), "n={n} must declare out_buf, got {names:?}");
+            assert!(
+                names.contains(&"in_buf"),
+                "n={n} must declare in_buf, got {names:?}"
+            );
+            assert!(
+                names.contains(&"out_buf"),
+                "n={n} must declare out_buf, got {names:?}"
+            );
         }
     }
 
@@ -491,6 +711,14 @@ mod tests {
         assert!(
             names.contains(&"out_buf"),
             "output must be declared, got {names:?}"
+        );
+        assert_eq!(
+            prog.buffers()
+                .iter()
+                .filter(|buffer| buffer.is_output())
+                .count(),
+            1,
+            "fused multi-block scan must expose only the final output buffer"
         );
     }
 
