@@ -1,5 +1,7 @@
 //! CUDA adapter for the unified resident token/fact graph.
 
+use std::{cmp::Reverse, collections::BinaryHeap};
+
 use crate::backend::accounting::{
     checked_add_u64_count as checked_add, checked_mul_u64_count as checked_mul,
     CudaArithmeticOverflow,
@@ -14,6 +16,8 @@ pub const CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS: usize = 16;
 pub const CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS: [u64; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS] = [
     1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1_024, 2_048, 4_096, 8_192, 16_384, 32_768,
 ];
+
+const CUDA_TOKEN_FACT_DEGREE_PROFILE_MAX_RANK: usize = 32_768;
 
 /// CUDA resident byte envelope for the unified compiler/dataflow graph.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -190,7 +194,9 @@ fn csr_out_degree_profile(
             field: "row_offsets edge count",
         });
     }
-    let mut degrees = Vec::with_capacity(graph.node_ids.len());
+    let profile_capacity = CUDA_TOKEN_FACT_DEGREE_PROFILE_MAX_RANK.min(graph.node_ids.len());
+    let mut top_degrees = BinaryHeap::with_capacity(profile_capacity);
+    let mut max_out_degree = 0_u64;
     for row in graph.row_offsets.windows(2) {
         let start = row[0];
         let end = row[1];
@@ -199,16 +205,26 @@ fn csr_out_degree_profile(
                 field: "row_offsets ordering",
             });
         }
-        degrees.push(u64::from(end - start));
+        let degree = u64::from(end - start);
+        max_out_degree = max_out_degree.max(degree);
+        if top_degrees.len() < profile_capacity {
+            top_degrees.push(Reverse(degree));
+        } else if let Some(mut min_degree) = top_degrees.peek_mut() {
+            if degree > min_degree.0 {
+                *min_degree = Reverse(degree);
+            }
+        }
     }
+    let mut degrees = top_degrees
+        .into_iter()
+        .map(|Reverse(degree)| degree)
+        .collect::<Vec<_>>();
     degrees.sort_unstable_by(|lhs, rhs| rhs.cmp(lhs));
 
-    let mut max_out_degree = 0_u64;
     let mut prefix_sum = 0_u64;
     let mut prefix_sums = [0_u64; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS];
     let mut bucket = 0_usize;
     for (index, degree) in degrees.into_iter().enumerate() {
-        max_out_degree = max_out_degree.max(degree);
         prefix_sum = checked_add(prefix_sum, degree, "top out-degree prefix sum")?;
         let rank = u64::try_from(index + 1).map_err(|_| {
             CudaTokenFactGraphLayoutError::ByteCountOverflow {
@@ -241,10 +257,16 @@ mod tests {
     #[test]
     fn token_fact_adapter_uses_shared_typed_cuda_arithmetic() {
         let source = include_str!("token_fact_graph_cuda_adapter.rs");
+        let production = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("Fix: token/fact CUDA adapter source should contain production section");
 
         assert!(source.contains("checked_add_u64_count as checked_add"));
         assert!(source.contains("checked_mul_u64_count as checked_mul"));
         assert!(source.contains("impl CudaArithmeticOverflow for CudaTokenFactGraphLayoutError"));
+        assert!(production.contains("BinaryHeap::with_capacity(profile_capacity)"));
+        assert!(!production.contains("Vec::with_capacity(graph.node_ids.len())"));
         assert!(!source.contains(concat!("fn checked_", "mul(")));
         assert!(!source.contains(concat!("fn checked_", "add(")));
     }
@@ -374,6 +396,38 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn adapter_profiles_large_graph_with_bounded_top_rank_storage() {
+        let node_count = 32_770_u32;
+        let nodes = (0..node_count)
+            .map(|index| node(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4))
+            .collect::<Vec<_>>();
+        let mut edges = Vec::with_capacity(32_858);
+        for to in 2..=51 {
+            edges.push(edge(1, to, TokenFactEdgeKind::FactDependency));
+        }
+        for to in 3..=42 {
+            edges.push(edge(2, to, TokenFactEdgeKind::FactDependency));
+        }
+        for from in 3..=node_count {
+            edges.push(edge(from, 1, TokenFactEdgeKind::FactDependency));
+        }
+        let graph =
+            plan_device_resident_token_fact_graph(&nodes, &edges, u64::from(node_count) * 4)
+                .expect("Fix: large skewed token/fact graph should pack");
+
+        let cuda = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+            .expect("Fix: large skewed token/fact graph should adapt");
+
+        assert_eq!(cuda.graph_shape.node_count, u64::from(node_count));
+        assert_eq!(cuda.graph_shape.edge_count, 32_858);
+        assert_eq!(cuda.max_out_degree, 50);
+        assert_eq!(cuda.top_out_degree_prefix_sums[0], 50);
+        assert_eq!(cuda.top_out_degree_prefix_sums[1], 90);
+        assert_eq!(cuda.top_out_degree_prefix_sums[2], 92);
+        assert_eq!(cuda.top_out_degree_prefix_sums[15], 32_856);
     }
 
     #[test]
