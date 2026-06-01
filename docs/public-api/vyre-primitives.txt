@@ -960,11 +960,15 @@ pub fn fnv1a32_mul_xor_word_expr(hash: Expr, word: Expr) -> Expr {
 pub fn fnv1a32_packed_u32_low8(words: &[u32]) -> u32 {
 pub fn fnv1a32_program(input: &str, out: &str, n: u32) -> Program {
 pub fn fnv1a32_program_dyn(input: &str, out: &str) -> Program {
+pub fn fnv1a32_program_dyn_u8(input: &str, out: &str) -> Program {
+pub fn fnv1a32_program_u8(input: &str, out: &str, n: u32) -> Program {
 pub fn fnv1a32_update_byte_expr(hash: Expr, byte: Expr) -> Expr {
 pub fn fnv1a32_update_byte_node(hash_var: &str, byte: Expr) -> Node {
 pub fn fnv1a64(bytes: &[u8]) -> u64 {
 pub fn fnv1a64_program(input: &str, out: &str) -> Program {
 pub fn fnv1a64_program_n(input: &str, out: &str, n: u32) -> Program {
+pub fn fnv1a64_program_n_u8(input: &str, out: &str, n: u32) -> Program {
+pub fn fnv1a64_program_u8(input: &str, out: &str) -> Program {
 pub fn four_russians_apply_byte_lut(
 pub fn four_russians_dense_columns_from_adj_rows(
 pub fn four_russians_dense_lut_from_adj_rows(
