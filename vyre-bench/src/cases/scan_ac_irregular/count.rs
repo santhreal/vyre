@@ -336,7 +336,7 @@ pub(super) fn scan_ac_count_inputs_with_masks(
     ]
 }
 
-fn candidate_end_byte_count(mask: &[u32; 8]) -> u32 {
+pub(super) fn candidate_end_byte_count(mask: &[u32; 8]) -> u32 {
     mask.iter().map(|word| word.count_ones()).sum()
 }
 

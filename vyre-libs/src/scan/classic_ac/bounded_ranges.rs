@@ -7,6 +7,16 @@ use crate::scan::dfa::CompiledDfa;
 #[cfg(any(test, feature = "cpu-parity"))]
 use super::ClassicAcAutomaton;
 
+#[path = "bounded_ranges/prefilter.rs"]
+mod prefilter;
+
+pub use prefilter::{
+    build_ac_bounded_ranges_prefilter_program, build_ac_bounded_ranges_prefilter_program_ext,
+    classic_ac_bounded_ranges_prefilter_program, classic_ac_bounded_ranges_prefilter_program_ext,
+    try_build_ac_bounded_ranges_prefilter_program,
+    try_build_ac_bounded_ranges_prefilter_program_ext,
+};
+
 /// Build a Program that scans `haystack` for any AC match and emits
 /// `(pattern_id, start, end)` triples through the canonical
 /// [`append_match`] hit buffer. Pairs with
@@ -102,83 +112,21 @@ pub fn classic_ac_bounded_ranges_program_ext(
 ) -> Program {
     let max_pattern_len = max_pattern_len.max(1);
     let i = Expr::var("i");
-    let end = Expr::add(i.clone(), Expr::u32(1));
-    let scan_start = Expr::select(
-        Expr::lt(i.clone(), Expr::u32(max_pattern_len - 1)),
-        Expr::u32(0),
-        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
-    );
-
-    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
-
     let walk_body = vec![
         Node::let_bind("i", Expr::InvocationId { axis: 0 }),
         Node::if_then(
             Expr::lt(i.clone(), Expr::load(haystack_len, Expr::u32(0))),
-            vec![
-                Node::let_bind("state", Expr::u32(0)),
-                Node::let_bind("scan_start", scan_start),
-                Node::let_bind("scan_end", end.clone()),
-                Node::loop_for(
-                    "step",
-                    Expr::var("scan_start"),
-                    Expr::var("scan_end"),
-                    vec![
-                        load_step_byte,
-                        Node::assign(
-                            "state",
-                            Expr::load(
-                                transitions,
-                                Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
-                            ),
-                        ),
-                    ],
-                ),
-                Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-                Node::let_bind(
-                    "out_end",
-                    Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-                ),
-                Node::loop_for("out_idx", Expr::var("out_begin"), Expr::var("out_end"), {
-                    let mut body = vec![
-                        Node::let_bind(
-                            "pattern_id",
-                            Expr::load(output_records, Expr::var("out_idx")),
-                        ),
-                        Node::let_bind(
-                            "pat_len",
-                            Expr::load(pattern_lengths, Expr::var("pattern_id")),
-                        ),
-                        Node::let_bind(
-                            "match_start",
-                            Expr::select(
-                                Expr::lt(Expr::var("scan_end"), Expr::var("pat_len")),
-                                Expr::u32(0),
-                                Expr::sub(Expr::var("scan_end"), Expr::var("pat_len")),
-                            ),
-                        ),
-                    ];
-                    if use_subgroup_coalesce {
-                        body.extend(append_match_subgroup(
-                            matches,
-                            match_count,
-                            Expr::var("pattern_id"),
-                            Expr::var("match_start"),
-                            Expr::var("scan_end"),
-                            Expr::bool(true),
-                        ));
-                    } else {
-                        body.push(append_match(
-                            matches,
-                            match_count,
-                            Expr::var("pattern_id"),
-                            Expr::var("match_start"),
-                            Expr::var("scan_end"),
-                        ));
-                    }
-                    body
-                }),
-            ],
+            bounded_ranges_scan_nodes(
+                haystack,
+                transitions,
+                output_offsets,
+                output_records,
+                pattern_lengths,
+                match_count,
+                matches,
+                max_pattern_len,
+                use_subgroup_coalesce,
+            ),
         ),
     ];
 
@@ -204,6 +152,94 @@ pub fn classic_ac_bounded_ranges_program_ext(
             walk_body,
         )],
     )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn bounded_ranges_scan_nodes(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    output_records: &str,
+    pattern_lengths: &str,
+    match_count: &str,
+    matches: &str,
+    max_pattern_len: u32,
+    use_subgroup_coalesce: bool,
+) -> Vec<Node> {
+    let max_pattern_len = max_pattern_len.max(1);
+    let i = Expr::var("i");
+    let end = Expr::add(i.clone(), Expr::u32(1));
+    let scan_start = Expr::select(
+        Expr::lt(i.clone(), Expr::u32(max_pattern_len - 1)),
+        Expr::u32(0),
+        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
+    );
+    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
+
+    vec![
+        Node::let_bind("state", Expr::u32(0)),
+        Node::let_bind("scan_start", scan_start),
+        Node::let_bind("scan_end", end),
+        Node::loop_for(
+            "step",
+            Expr::var("scan_start"),
+            Expr::var("scan_end"),
+            vec![
+                load_step_byte,
+                Node::assign(
+                    "state",
+                    Expr::load(
+                        transitions,
+                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
+                    ),
+                ),
+            ],
+        ),
+        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
+        Node::let_bind(
+            "out_end",
+            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
+        ),
+        Node::loop_for("out_idx", Expr::var("out_begin"), Expr::var("out_end"), {
+            let mut body = vec![
+                Node::let_bind(
+                    "pattern_id",
+                    Expr::load(output_records, Expr::var("out_idx")),
+                ),
+                Node::let_bind(
+                    "pat_len",
+                    Expr::load(pattern_lengths, Expr::var("pattern_id")),
+                ),
+                Node::let_bind(
+                    "match_start",
+                    Expr::select(
+                        Expr::lt(Expr::var("scan_end"), Expr::var("pat_len")),
+                        Expr::u32(0),
+                        Expr::sub(Expr::var("scan_end"), Expr::var("pat_len")),
+                    ),
+                ),
+            ];
+            if use_subgroup_coalesce {
+                body.extend(append_match_subgroup(
+                    matches,
+                    match_count,
+                    Expr::var("pattern_id"),
+                    Expr::var("match_start"),
+                    Expr::var("scan_end"),
+                    Expr::bool(true),
+                ));
+            } else {
+                body.push(append_match(
+                    matches,
+                    match_count,
+                    Expr::var("pattern_id"),
+                    Expr::var("match_start"),
+                    Expr::var("scan_end"),
+                ));
+            }
+            body
+        }),
+    ]
 }
 
 /// Build the dispatch Program for a bounded-ranges AC scan over an

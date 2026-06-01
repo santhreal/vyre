@@ -273,6 +273,12 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "scan_ac_irregular_avoided_match_readback_bytes") => {
             Some("scan_ac_irregular_avoided_match_readback_bytes")
         }
+        ("", "scan_ac_irregular_bounded_ranges_prefilter") => {
+            Some("scan_ac_irregular_bounded_ranges_prefilter")
+        }
+        ("", "scan_ac_irregular_bounded_ranges_prefilter_skipped_lanes_x1000") => {
+            Some("scan_ac_irregular_bounded_ranges_prefilter_skipped_lanes_x1000")
+        }
         ("", "scan_ac_irregular_count_only") => Some("scan_ac_irregular_count_only"),
         ("", "scan_ac_irregular_count_prefilter") => Some("scan_ac_irregular_count_prefilter"),
         ("", "scan_ac_irregular_count_readback_bytes") => {
@@ -524,6 +530,8 @@ mod tests {
     #[test]
     fn custom_metric_key_keeps_scan_count_prefilter_telemetry_visible() {
         for name in [
+            "scan_ac_irregular_bounded_ranges_prefilter",
+            "scan_ac_irregular_bounded_ranges_prefilter_skipped_lanes_x1000",
             "scan_ac_irregular_count_only",
             "scan_ac_irregular_count_prefilter",
             "scan_ac_irregular_count_readback_bytes",

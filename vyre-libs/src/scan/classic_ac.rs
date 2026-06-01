@@ -25,9 +25,13 @@ mod count_program;
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use bounded_ranges::classic_ac_bounded_ranges_scan;
 pub use bounded_ranges::{
+    build_ac_bounded_ranges_prefilter_program, build_ac_bounded_ranges_prefilter_program_ext,
     build_ac_bounded_ranges_program, build_ac_bounded_ranges_program_ext,
+    classic_ac_bounded_ranges_prefilter_program, classic_ac_bounded_ranges_prefilter_program_ext,
     classic_ac_bounded_ranges_program, classic_ac_bounded_ranges_program_ext,
-    try_build_ac_bounded_ranges_program, try_build_ac_bounded_ranges_program_ext,
+    try_build_ac_bounded_ranges_prefilter_program,
+    try_build_ac_bounded_ranges_prefilter_program_ext, try_build_ac_bounded_ranges_program,
+    try_build_ac_bounded_ranges_program_ext,
 };
 
 pub use count_program::{

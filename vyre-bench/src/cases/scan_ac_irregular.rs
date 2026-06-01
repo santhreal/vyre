@@ -13,7 +13,8 @@ use crate::api::suite::SuiteKind;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::Program;
 use vyre_libs::scan::classic_ac::{
-    classic_ac_compile, try_build_ac_bounded_ranges_program_ext, ClassicAcAutomaton,
+    classic_ac_candidate_end_byte_mask_words, classic_ac_compile,
+    try_build_ac_bounded_ranges_prefilter_program_ext, ClassicAcAutomaton,
 };
 use vyre_libs::scan::{pack_haystack_u32, pack_u32_slice};
 
@@ -25,7 +26,7 @@ mod support;
 use baseline::cpu_aho_overlapping_matches;
 #[cfg(test)]
 use baseline::cpu_bounded_range_matches;
-use metrics::{scan_ac_baseline_metric_points, scan_ac_metric_points, ScanAcStats};
+use metrics::{scan_ac_baseline_metric_points, scan_ac_bounded_ranges_metric_points, ScanAcStats};
 use support::{
     build_irregular_haystack, decode_scan_outputs, encode_match_triples,
     match_triples_output_bytes, match_triples_readback_bytes, pattern_lengths,
@@ -38,9 +39,20 @@ mod tests;
 const HAYSTACK_BYTES: usize = 4 * 1024 * 1024;
 const MAX_MATCHES: u32 = 65_536;
 const MATCH_COUNT_INPUT_INDEX: usize = 6;
-const MATCHES_RESOURCE_INDEX: usize = 7;
+const CANDIDATE_END_MASK_INPUT_INDEX: usize = 7;
+const MATCHES_RESOURCE_INDEX: usize = 8;
 const RESET_RESOURCE_INDICES: [usize; 1] = [MATCH_COUNT_INPUT_INDEX];
-const SCAN_RESOURCE_INDICES: [usize; 8] = [0, 1, 2, 3, 4, 5, 6, MATCHES_RESOURCE_INDEX];
+const SCAN_RESOURCE_INDICES: [usize; 9] = [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    MATCH_COUNT_INPUT_INDEX,
+    CANDIDATE_END_MASK_INPUT_INDEX,
+    MATCHES_RESOURCE_INDEX,
+];
 const MATCH_TRIPLE_WORDS: usize = 3;
 const SUITES: &[SuiteKind] = &[
     SuiteKind::Smoke,
@@ -222,7 +234,7 @@ impl BenchCase for ScanAcIrregularLiterals {
                 bytes_read: Some(accounting.bytes_read),
                 bytes_written: Some(accounting.bytes_written),
                 bytes_touched: Some(accounting.bytes_touched),
-                custom: scan_ac_metric_points(
+                custom: scan_ac_bounded_ranges_metric_points(
                     prepared.stats,
                     prepared.baseline_wall_ns,
                     wall_ns,
@@ -278,6 +290,7 @@ fn prepare_scan_ac_irregular(
     let (haystack, planted_matches) = build_irregular_haystack(HAYSTACK_BYTES);
     let ac = classic_ac_compile(PATTERNS);
     let pattern_lengths = pattern_lengths()?;
+    let candidate_end_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
     let reset_program = u32_counter_reset_program("match_count");
 
     let baseline_start = std::time::Instant::now();
@@ -293,7 +306,7 @@ fn prepare_scan_ac_irregular(
         )));
     }
     let expected_match_count = expected_matches.len() as u32;
-    let program = try_build_ac_bounded_ranges_program_ext(
+    let program = try_build_ac_bounded_ranges_prefilter_program_ext(
         &ac.dfa,
         pattern_lengths.len() as u32,
         MAX_MATCHES,
@@ -302,7 +315,7 @@ fn prepare_scan_ac_irregular(
     .map_err(BenchError::ExecutionFailed)
     .and_then(|program| with_matches_readback_range(program, expected_match_count))?;
 
-    let inputs = scan_ac_inputs(&ac, &pattern_lengths, &haystack);
+    let inputs = scan_ac_inputs(&ac, &pattern_lengths, &haystack, &candidate_end_mask);
     let input_bytes_total = input_bytes_total(&inputs);
     let resident_output_sizes = [match_triples_output_bytes(MAX_MATCHES)?];
     let resident = ctx
@@ -330,8 +343,8 @@ fn prepare_scan_ac_irregular(
         expected_matches: expected_match_count,
         max_matches: MAX_MATCHES,
         planted_matches,
-        candidate_end_bytes: 0,
-        candidate_end_lanes: 0,
+        candidate_end_bytes: count::candidate_end_byte_count(&candidate_end_mask),
+        candidate_end_lanes: count::candidate_end_lane_count(&haystack, &candidate_end_mask),
         candidate_suffix2_lanes: 0,
         candidate_suffix3_lanes: 0,
     };
@@ -352,6 +365,7 @@ fn scan_ac_inputs(
     ac: &ClassicAcAutomaton,
     pattern_lengths: &[u32],
     haystack: &[u8],
+    candidate_end_mask: &[u32; 8],
 ) -> Vec<Vec<u8>> {
     vec![
         pack_haystack_u32(haystack),
@@ -361,6 +375,7 @@ fn scan_ac_inputs(
         pack_u32_slice(pattern_lengths),
         pack_u32_slice(&[haystack.len() as u32]),
         pack_u32_slice(&[0]),
+        pack_u32_slice(candidate_end_mask),
     ]
 }
 

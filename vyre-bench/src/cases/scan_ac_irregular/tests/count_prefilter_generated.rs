@@ -1,6 +1,7 @@
 use super::super::baseline::cpu_aho_overlapping_matches;
 use super::super::count;
 use super::super::PATTERNS;
+use super::super::{pattern_lengths, scan_ac_inputs};
 use vyre_libs::scan::classic_ac::{
     classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
     classic_ac_candidate_suffix3_bloom_words, classic_ac_compile, classic_ac_scan_counts,
@@ -179,6 +180,62 @@ fn suffix3_prefilter_cuts_generated_suffix2_noise() {
     assert!(
         total_suffix3_lanes * 16 < total_suffix2_lanes,
         "suffix3 prefilter should reject more than 93% of suffix2 noise lanes"
+    );
+}
+
+#[test]
+fn bounded_ranges_prefilter_inputs_keep_all_generated_hits_and_skip_noise() {
+    const CASES: u32 = 10_000;
+
+    let ac = classic_ac_compile(PATTERNS);
+    let pattern_lengths = pattern_lengths().expect("fixture pattern lengths must fit u32");
+    let candidate_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
+    let mut total_lanes = 0_u64;
+    let mut total_candidate_lanes = 0_u64;
+    let mut total_matches = 0_u64;
+
+    for case in 0..CASES {
+        let len = 257 + (mix32(case ^ 0x51A7_E001) % 3_840) as usize;
+        let haystack = generated_scan_haystack(case ^ 0xB17B_100D, len);
+        let aho_matches = cpu_aho_overlapping_matches(PATTERNS, &haystack)
+            .unwrap_or_else(|error| panic!("generated AC baseline case {case} failed: {error}"));
+        let candidate_lanes = count::candidate_end_lane_count(&haystack, &candidate_mask);
+        let inputs = scan_ac_inputs(&ac, &pattern_lengths, &haystack, &candidate_mask);
+
+        assert_eq!(
+            inputs.len(),
+            8,
+            "bounded-ranges prefilter input case {case}"
+        );
+        assert_eq!(
+            inputs[7],
+            pack_u32_slice(&candidate_mask),
+            "bounded-ranges prefilter mask input case {case}"
+        );
+        for hit in &aho_matches {
+            let end = hit.end as usize;
+            assert!(
+                end > 0,
+                "generated AC hit must have nonzero end case {case}"
+            );
+            assert!(
+                count::byte_is_candidate_end(haystack[end - 1], &candidate_mask),
+                "bounded-ranges prefilter rejected real overlapping hit case={case} hit={hit:?}"
+            );
+        }
+
+        total_lanes += haystack.len() as u64;
+        total_candidate_lanes += u64::from(candidate_lanes);
+        total_matches += aho_matches.len() as u64;
+    }
+
+    assert!(
+        total_matches > u64::from(CASES),
+        "generated bounded-ranges corpus must exercise dense overlapping matches"
+    );
+    assert!(
+        total_candidate_lanes * 4 < total_lanes,
+        "bounded-ranges candidate-end prefilter should skip at least 75% of noisy lanes"
     );
 }
 
