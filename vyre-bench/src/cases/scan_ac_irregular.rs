@@ -23,7 +23,7 @@ use vyre_libs::scan::{pack_haystack_u32, pack_u32_slice};
 mod baseline;
 mod count;
 mod metrics;
-mod support;
+pub(crate) mod support;
 
 use baseline::cpu_aho_overlapping_matches;
 #[cfg(test)]
@@ -68,7 +68,7 @@ const SUITES: &[SuiteKind] = &[
     SuiteKind::Honest,
 ];
 
-const PATTERNS: &[&[u8]] = &[
+pub(crate) const PATTERNS: &[&[u8]] = &[
     b"AKIA",
     b"ghp_",
     b"Authorization: Bearer ",

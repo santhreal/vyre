@@ -241,7 +241,9 @@ pub use hit_buffer::{
     emit_hit_then_compact_with_layout, emit_hit_with_layout, HIT_BUFFER_LIVE_LENGTH,
     HIT_BUFFER_OVERFLOW_COUNT,
 };
-pub use literal_set::{GpuLiteralSet, LiteralSetWireError, Match as LiteralMatch};
+pub use literal_set::{
+    GpuLiteralSet, LiteralSetScanScratch, LiteralSetWireError, Match as LiteralMatch,
+};
 #[cfg(feature = "matching-nfa")]
 pub use mega_scan::{build as build_rule_pipeline, PipelineWireError, RulePipeline};
 pub use pipeline::{Pipeline, PostProcessFn};

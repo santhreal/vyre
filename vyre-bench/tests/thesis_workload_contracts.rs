@@ -18,6 +18,7 @@ fn benchmark_registry_contains_program_level_thesis_workloads() {
         "dataflow.ifds.skewed.closure.1m",
         "dataflow.ifds.skewed.step.1m",
         "scan.ac.irregular_literals.4m",
+        "scan.literal_set.irregular_hotloop.4m",
         "foundation.dfa_match.256k",
         "primitives.graph.csr_skewed_frontier.1m",
         "primitives.graph.frontier_step.1m",

@@ -1,10 +1,11 @@
 //! High-level GPU literal matching engine.
 //!
-//! Composed entirely from \`vyre-libs\` LEGO blocks with Innovation I.17.
+//! Composed entirely from `vyre-libs` LEGO blocks.
 
 use crate::region::wrap_anonymous;
-use crate::scan::builders::append_match_subgroup;
+use crate::scan::builders::append_match;
 use crate::scan::dfa::{dfa_compile, CompiledDfa};
+use crate::scan::dispatch_io::ScanDispatchScratch;
 use crate::scan::hit_buffer::HIT_BUFFER_OVERFLOW_COUNT;
 use std::borrow::Cow;
 use std::collections::TryReserveError;
@@ -99,6 +100,26 @@ pub struct GpuLiteralSet {
     pub pattern_lengths: Vec<u32>,
     /// The pre-built vyre Program.
     pub program: Program,
+}
+
+/// Reusable hot-loop state for [`GpuLiteralSet`] scans.
+///
+/// This extends the generic scan dispatch scratch with a one-entry cache for
+/// cap-specific `Program` layouts. Callers that repeatedly scan with the same
+/// non-default `max_matches` avoid rebuilding the rewritten output-buffer
+/// declaration on every dispatch.
+#[derive(Debug, Default)]
+pub struct LiteralSetScanScratch {
+    /// Shared scan staging used by other matching engines.
+    pub dispatch: ScanDispatchScratch,
+    cached_program: Option<CachedLiteralSetProgram>,
+}
+
+#[derive(Debug)]
+struct CachedLiteralSetProgram {
+    base_fingerprint: [u8; 32],
+    max_matches: u32,
+    program: Program,
 }
 
 impl GpuLiteralSet {
@@ -262,7 +283,7 @@ impl GpuLiteralSet {
         max_matches: u32,
         matches: &mut Vec<Match>,
     ) -> Result<(), vyre::BackendError> {
-        let mut scratch = crate::scan::dispatch_io::ScanDispatchScratch::default();
+        let mut scratch = ScanDispatchScratch::default();
         self.scan_into_with_scratch(backend, haystack, max_matches, matches, &mut scratch)
     }
 
@@ -282,7 +303,58 @@ impl GpuLiteralSet {
         haystack: &[u8],
         max_matches: u32,
         matches: &mut Vec<Match>,
-        scratch: &mut crate::scan::dispatch_io::ScanDispatchScratch,
+        scratch: &mut ScanDispatchScratch,
+    ) -> Result<(), vyre::BackendError> {
+        let dispatch_program = self.program_for_match_capacity(max_matches)?;
+        self.scan_into_with_program(
+            backend,
+            haystack,
+            max_matches,
+            matches,
+            scratch,
+            dispatch_program.as_ref(),
+        )
+    }
+
+    /// GPU scan dispatch with literal-set-owned hot-loop scratch.
+    ///
+    /// Use this for repeated scans where `max_matches` is usually stable but
+    /// not equal to the compiled default. It reuses both packed haystack bytes
+    /// and the cap-specific rewritten dispatch `Program`.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] if dispatch, readback, scan-boundary
+    /// validation, host staging allocation, or cap-specific program sizing
+    /// fails.
+    pub fn scan_into_with_literal_scratch<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        max_matches: u32,
+        matches: &mut Vec<Match>,
+        scratch: &mut LiteralSetScanScratch,
+    ) -> Result<(), vyre::BackendError> {
+        let cached_program = &mut scratch.cached_program;
+        let dispatch_program =
+            self.program_for_match_capacity_cached(max_matches, cached_program)?;
+        self.scan_into_with_program(
+            backend,
+            haystack,
+            max_matches,
+            matches,
+            &mut scratch.dispatch,
+            dispatch_program,
+        )
+    }
+
+    fn scan_into_with_program<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        max_matches: u32,
+        matches: &mut Vec<Match>,
+        scratch: &mut ScanDispatchScratch,
+        dispatch_program: &Program,
     ) -> Result<(), vyre::BackendError> {
         use crate::scan::dispatch_io;
 
@@ -310,8 +382,6 @@ impl GpuLiteralSet {
         let match_count_bytes = [0u8; 4];
         let overflow_count_bytes = [0u8; 4];
 
-        let dispatch_program = self.program_for_match_capacity(max_matches)?;
-        let dispatch_program = dispatch_program.as_ref();
         let config = dispatch_io::byte_scan_dispatch_config(
             haystack_len,
             dispatch_program.workgroup_size[0],
@@ -352,11 +422,57 @@ impl GpuLiteralSet {
         Ok(())
     }
 
+    fn program_for_match_capacity_cached<'a>(
+        &'a self,
+        max_matches: u32,
+        cached_program: &'a mut Option<CachedLiteralSetProgram>,
+    ) -> Result<&'a Program, vyre::BackendError> {
+        let (declared_words, readback_bytes) = literal_set_match_output_layout(max_matches)?;
+        if self.compiled_matches_output_satisfies(declared_words, readback_bytes)? {
+            return Ok(&self.program);
+        }
+
+        let base_fingerprint = self.program.fingerprint();
+        let reuse_cached = cached_program.as_ref().is_some_and(|cached| {
+            cached.max_matches == max_matches && cached.base_fingerprint == base_fingerprint
+        });
+        if !reuse_cached {
+            let program = self.rewrite_program_for_match_layout(declared_words, readback_bytes);
+            *cached_program = Some(CachedLiteralSetProgram {
+                base_fingerprint,
+                max_matches,
+                program,
+            });
+        }
+
+        match cached_program.as_ref() {
+            Some(cached) => Ok(&cached.program),
+            None => Err(vyre::BackendError::new(
+                "literal_set failed to retain the cached match-capacity program. Fix: retry with generic ScanDispatchScratch.",
+            )),
+        }
+    }
+
     fn program_for_match_capacity(
         &self,
         max_matches: u32,
     ) -> Result<Cow<'_, Program>, vyre::BackendError> {
         let (declared_words, readback_bytes) = literal_set_match_output_layout(max_matches)?;
+        if self.compiled_matches_output_satisfies(declared_words, readback_bytes)? {
+            return Ok(Cow::Borrowed(&self.program));
+        }
+
+        Ok(Cow::Owned(self.rewrite_program_for_match_layout(
+            declared_words,
+            readback_bytes,
+        )))
+    }
+
+    fn compiled_matches_output_satisfies(
+        &self,
+        declared_words: u32,
+        readback_bytes: usize,
+    ) -> Result<bool, vyre::BackendError> {
         let matches_output = self
             .program
             .buffers()
@@ -368,13 +484,16 @@ impl GpuLiteralSet {
                 )
             })?;
 
-        if matches_output.count == declared_words
+        Ok(matches_output.count == declared_words
             && (matches_output.output_byte_range().is_none()
-                || matches_output.output_byte_range() == Some(0..readback_bytes))
-        {
-            return Ok(Cow::Borrowed(&self.program));
-        }
+                || matches_output.output_byte_range() == Some(0..readback_bytes)))
+    }
 
+    fn rewrite_program_for_match_layout(
+        &self,
+        declared_words: u32,
+        readback_bytes: usize,
+    ) -> Program {
         let buffers = self
             .program
             .buffers()
@@ -391,7 +510,7 @@ impl GpuLiteralSet {
             })
             .collect::<Vec<_>>();
 
-        Ok(Cow::Owned(self.program.with_rewritten_buffers(buffers)))
+        self.program.with_rewritten_buffers(buffers)
     }
 
     /// Serialize this matcher into a self-describing binary blob suitable
@@ -546,6 +665,7 @@ mod compile_tests {
         outputs: Vec<Vec<u8>>,
         observed_matches_layouts:
             std::sync::Arc<std::sync::Mutex<Vec<(u32, Option<std::ops::Range<usize>>)>>>,
+        observed_program_buffer_ptrs: std::sync::Arc<std::sync::Mutex<Vec<usize>>>,
     }
 
     impl RecordingLiteralBackend {
@@ -553,11 +673,19 @@ mod compile_tests {
             Self {
                 outputs,
                 observed_matches_layouts: std::sync::Arc::default(),
+                observed_program_buffer_ptrs: std::sync::Arc::default(),
             }
         }
 
         fn observed_matches_layouts(&self) -> Vec<(u32, Option<std::ops::Range<usize>>)> {
             self.observed_matches_layouts
+                .lock()
+                .expect("Fix: recording literal backend mutex should not be poisoned")
+                .clone()
+        }
+
+        fn observed_program_buffer_ptrs(&self) -> Vec<usize> {
+            self.observed_program_buffer_ptrs
                 .lock()
                 .expect("Fix: recording literal backend mutex should not be poisoned")
                 .clone()
@@ -596,6 +724,10 @@ mod compile_tests {
                 .lock()
                 .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
                 .push((matches.count, matches.output_byte_range()));
+            self.observed_program_buffer_ptrs
+                .lock()
+                .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
+                .push(program.buffers().as_ptr() as usize);
             Ok(self.outputs.clone())
         }
     }
@@ -737,6 +869,7 @@ mod compile_tests {
         assert!(
             production.contains("pub fn scan_into_with_scratch")
                 && production.contains("ScanDispatchScratch")
+                && production.contains("LiteralSetScanScratch")
                 && production.contains("pack_haystack_u32_into")
                 && !production.contains(concat!("pack_haystack_u32", "(haystack)")),
             "Fix: literal scan hot path must expose reusable dispatch scratch and avoid fresh haystack packing allocations."
@@ -744,6 +877,11 @@ mod compile_tests {
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
             "Fix: literal_set production wrappers must not panic."
+        );
+        let program_debug = format!("{:#?}", GpuLiteralSet::compile(&[b"a".as_slice()]).program);
+        assert!(
+            !program_debug.contains("_vyre_match_leader"),
+            "Fix: literal-set GPU program must use the CUDA-lowerable append primitive, not subgroup leader append."
         );
     }
 
@@ -810,6 +948,58 @@ mod compile_tests {
         assert_eq!(
             backend.observed_matches_layouts(),
             vec![(60_003, Some(0..240_012))]
+        );
+    }
+
+    #[test]
+    fn literal_scan_literal_scratch_reuses_rewritten_program_for_same_cap() {
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
+        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
+        let mut matches = Vec::new();
+        let mut scratch = LiteralSetScanScratch::default();
+
+        engine
+            .scan_into_with_literal_scratch(&backend, b"first", 2, &mut matches, &mut scratch)
+            .expect("Fix: first cap-specific literal scan should dispatch");
+        engine
+            .scan_into_with_literal_scratch(&backend, b"second", 2, &mut matches, &mut scratch)
+            .expect("Fix: repeated cap-specific literal scan should dispatch");
+
+        assert_eq!(
+            backend.observed_matches_layouts(),
+            vec![(6, Some(0..24)), (6, Some(0..24))]
+        );
+        let ptrs = backend.observed_program_buffer_ptrs();
+        assert_eq!(ptrs.len(), 2);
+        assert_eq!(
+            ptrs[0], ptrs[1],
+            "Fix: literal-set scan scratch must reuse the rewritten Program for stable caps"
+        );
+    }
+
+    #[test]
+    fn literal_scan_literal_scratch_rebuilds_rewritten_program_when_cap_changes() {
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
+        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
+        let mut matches = Vec::new();
+        let mut scratch = LiteralSetScanScratch::default();
+
+        engine
+            .scan_into_with_literal_scratch(&backend, b"first", 2, &mut matches, &mut scratch)
+            .expect("Fix: first cap-specific literal scan should dispatch");
+        engine
+            .scan_into_with_literal_scratch(&backend, b"second", 3, &mut matches, &mut scratch)
+            .expect("Fix: changed cap-specific literal scan should dispatch");
+
+        assert_eq!(
+            backend.observed_matches_layouts(),
+            vec![(6, Some(0..24)), (9, Some(0..36))]
+        );
+        let ptrs = backend.observed_program_buffer_ptrs();
+        assert_eq!(ptrs.len(), 2);
+        assert_ne!(
+            ptrs[0], ptrs[1],
+            "Fix: literal-set scan scratch must rebuild cached Program when cap changes"
         );
     }
 
@@ -936,14 +1126,17 @@ fn build_literal_set_program(
                     otherwise: vec![],
                 }],
             },
-            Node::Block(append_match_subgroup(
-                matches,
-                match_count,
-                Expr::var("_pid"),
-                Expr::var("_candidate_start"),
-                offset_at_end.clone(),
-                Expr::var("_literal_matched"),
-            )),
+            Node::If {
+                cond: Expr::var("_literal_matched"),
+                then: vec![append_match(
+                    matches,
+                    match_count,
+                    Expr::var("_pid"),
+                    Expr::var("_candidate_start"),
+                    offset_at_end.clone(),
+                )],
+                otherwise: vec![],
+            },
         ],
     }];
 

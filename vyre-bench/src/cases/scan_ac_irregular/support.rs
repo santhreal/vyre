@@ -20,7 +20,7 @@ pub(super) fn pattern_lengths() -> Result<Vec<u32>, BenchError> {
         .collect()
 }
 
-pub(super) fn build_irregular_haystack(len: usize) -> (Vec<u8>, u32) {
+pub(crate) fn build_irregular_haystack(len: usize) -> (Vec<u8>, u32) {
     let mut haystack = vec![0_u8; len];
     for (index, byte) in haystack.iter_mut().enumerate() {
         let mixed = mix32(index as u32);
@@ -79,7 +79,7 @@ pub(super) fn decode_scan_outputs(
     })
 }
 
-pub(super) fn encode_match_triples(matches: &[Match]) -> Vec<u8> {
+pub(crate) fn encode_match_triples(matches: &[Match]) -> Vec<u8> {
     let mut encoded = Vec::with_capacity(matches.len() * 12);
     for hit in matches {
         encoded.extend_from_slice(&hit.pattern_id.to_le_bytes());

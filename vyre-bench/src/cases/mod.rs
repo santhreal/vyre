@@ -23,6 +23,7 @@ pub mod graph_frontier;
 pub mod hashtable;
 pub mod histogram;
 pub mod interpreter;
+pub mod literal_set;
 pub mod lower_rewrite_impact;
 pub mod matmul;
 pub mod megakernel_condition;

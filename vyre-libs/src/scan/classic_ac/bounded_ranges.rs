@@ -93,11 +93,7 @@ pub fn classic_ac_bounded_ranges_program(
 /// (Innovation I.17, one atomic per subgroup leader, the default).
 /// Set `false` for the simpler `append_match` (one atomic per lane
 /// per hit). Use the `false` variant on backends whose IR lowering
-/// can't yet emit `subgroup_ballot`/`subgroup_shuffle`  -  currently
-/// `vyre-driver-cuda` rejects the subgroup form during canonical
-/// pre-emit lowering ("variable `_vyre_match_leader` is referenced
-/// before binding"), so callers that route through CUDA must opt
-/// out until that path lands.
+/// can't emit `subgroup_ballot`/`subgroup_shuffle`.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn classic_ac_bounded_ranges_program_ext(
