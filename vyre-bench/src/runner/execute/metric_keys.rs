@@ -161,6 +161,12 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "dataflow_ifds_queue_row_strided_traverse") => {
             Some("dataflow_ifds_queue_row_strided_traverse")
         }
+        ("", "dataflow_ifds_queue_split_high_degree") => {
+            Some("dataflow_ifds_queue_split_high_degree")
+        }
+        ("", "dataflow_ifds_queue_high_degree_threshold") => {
+            Some("dataflow_ifds_queue_high_degree_threshold")
+        }
         ("", "dataflow_ifds_queue_fused_frontier_clear") => {
             Some("dataflow_ifds_queue_fused_frontier_clear")
         }
@@ -549,6 +555,8 @@ mod tests {
     fn custom_metric_key_keeps_ifds_queue_split_telemetry_visible() {
         for name in [
             "dataflow_ifds_queue_high_degree_capacity",
+            "dataflow_ifds_queue_split_high_degree",
+            "dataflow_ifds_queue_high_degree_threshold",
             "dataflow_ifds_queue_traverse_logical_lanes",
             "dataflow_ifds_queue_traverse_lane_reduction_x1000",
             "dataflow_ifds_queue_fused_frontier_clear",

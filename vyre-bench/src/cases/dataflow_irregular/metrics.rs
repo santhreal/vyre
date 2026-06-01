@@ -80,6 +80,8 @@ pub(super) fn ifds_queue_metric_points(
     workgroup_size_x: u32,
     parallel_materializer: bool,
     row_strided_traverse: bool,
+    split_high_degree_traverse: bool,
+    high_degree_threshold: u32,
     fused_frontier_clear: bool,
     reset_grid_lanes: u32,
 ) -> Vec<MetricPoint> {
@@ -99,6 +101,14 @@ pub(super) fn ifds_queue_metric_points(
     metrics.push(MetricPoint {
         name: "dataflow_ifds_queue_row_strided_traverse".to_string(),
         value: u64::from(row_strided_traverse),
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_queue_split_high_degree".to_string(),
+        value: u64::from(split_high_degree_traverse),
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_queue_high_degree_threshold".to_string(),
+        value: u64::from(high_degree_threshold),
     });
     metrics.push(MetricPoint {
         name: "dataflow_ifds_queue_fused_frontier_clear".to_string(),

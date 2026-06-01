@@ -1,20 +1,27 @@
-use super::fixture::{ifds_active_queue_inputs, ifds_queue_inputs};
+use super::fixture::{
+    ifds_active_high_degree_sources, ifds_active_queue_inputs, ifds_queue_inputs,
+};
 use super::queue::{
     ifds_queue_closure_delta_lanes_per_source, ifds_queue_closure_inputs,
     ifds_queue_closure_reset_program, ifds_queue_materialize_sequence_fingerprint,
-    ifds_queue_should_use_row_strided, ifds_queue_traverse_logical_lanes,
-    ifds_sparse_queue_capacity, prepare_ifds_skewed_active_queue_step,
-    prepare_ifds_skewed_queue_closure, prepare_ifds_skewed_queue_materialize_step,
-    ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX, ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX,
-    ACTIVE_QUEUE_EDGE_TARGETS_INDEX, ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX,
-    QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
+    ifds_queue_should_use_row_strided, ifds_queue_should_use_split_high_degree,
+    ifds_queue_traverse_logical_lanes, ifds_sparse_queue_capacity,
+    prepare_ifds_skewed_active_queue_step, prepare_ifds_skewed_queue_closure,
+    prepare_ifds_skewed_queue_materialize_step, ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX,
+    ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX, ACTIVE_QUEUE_EDGE_TARGETS_INDEX,
+    ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX, QUEUE_ACTIVE_QUEUE_INDEX,
+    QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
     QUEUE_CLOSURE_EDGE_OFFSETS_INDEX, QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX,
     QUEUE_CLOSURE_LEN_B_INDEX, QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX,
     QUEUE_CLOSURE_SEED_FRONTIER_INDEX, QUEUE_CLOSURE_SEED_LEN_INDEX,
     QUEUE_CLOSURE_SEED_QUEUE_INDEX, QUEUE_FRONTIER_IN_INDEX, QUEUE_FRONTIER_OUT_INDEX,
-    QUEUE_LEN_INDEX, QUEUE_RESET_GRID,
+    QUEUE_HIGH_LEN_INDEX, QUEUE_HIGH_QUEUE_INDEX, QUEUE_LEN_INDEX, QUEUE_RESET_GRID,
 };
 use super::*;
+use vyre_primitives::graph::csr_queue_split::{
+    csr_queue_split_low_dispatch_grid, csr_queue_split_mixed_logical_lanes,
+    CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
+};
 
 mod queue_closure_generated;
 
@@ -60,9 +67,11 @@ fn ifds_skewed_prepare_builds_vyre_program_and_oracle() {
 fn ifds_queue_inputs_preserve_sparse_frontier_and_device_scratch() {
     let fixture = build_ifds_skewed_fixture(4096).unwrap();
     let capacity = ifds_sparse_queue_capacity(fixture.stats.active_sources).unwrap();
-    let inputs = ifds_queue_inputs(&fixture, capacity).unwrap();
+    let high_capacity =
+        ifds_active_high_degree_sources(&fixture, CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD).unwrap();
+    let inputs = ifds_queue_inputs(&fixture, capacity, high_capacity).unwrap();
 
-    assert_eq!(inputs.len(), 7);
+    assert_eq!(inputs.len(), 9);
     assert_eq!(
         inputs[QUEUE_FRONTIER_IN_INDEX],
         vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in)
@@ -82,18 +91,38 @@ fn ifds_queue_inputs_preserve_sparse_frontier_and_device_scratch() {
         inputs[QUEUE_FRONTIER_OUT_INDEX],
         vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed)
     );
+    assert_eq!(
+        inputs[QUEUE_HIGH_QUEUE_INDEX].len(),
+        high_capacity as usize * std::mem::size_of::<u32>()
+    );
+    assert!(inputs[QUEUE_HIGH_QUEUE_INDEX].iter().all(|byte| *byte == 0));
+    assert_eq!(
+        inputs[QUEUE_HIGH_LEN_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&[0])
+    );
 }
 
 #[test]
 fn ifds_queue_inputs_reject_capacity_below_active_sources() {
     let fixture = build_ifds_skewed_fixture(4096).unwrap();
     let undersized = fixture.stats.active_sources.saturating_sub(1) as u32;
+    let high_capacity =
+        ifds_active_high_degree_sources(&fixture, CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD).unwrap();
 
-    let err = ifds_queue_inputs(&fixture, undersized).unwrap_err();
+    let err = ifds_queue_inputs(&fixture, undersized, high_capacity).unwrap_err();
 
     assert!(
         err.to_string().contains("queue_capacity >= active_sources"),
         "queue fixture errors must name the capacity invariant, got: {err}"
+    );
+
+    let high_err =
+        ifds_queue_inputs(&fixture, fixture.stats.active_sources as u32, u32::MAX).unwrap_err();
+    assert!(
+        high_err
+            .to_string()
+            .contains("high_degree_queue_capacity <= queue_capacity"),
+        "high queue capacity errors must name the split invariant, got: {high_err}"
     );
 }
 
@@ -160,16 +189,20 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
     assert_eq!(prepared.queue_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.traverse_program.workgroup_size(), [256, 1, 1]);
     assert!(prepared.row_strided_traverse);
+    assert!(prepared.split_high_degree_traverse);
+    assert!(prepared.high_traverse_program.is_some());
     assert_eq!(prepared.high_degree_queue_capacity, 256);
     assert_eq!(
         prepared.traverse_grid,
-        vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
-            prepared.queue_capacity
-        )
+        csr_queue_split_low_dispatch_grid(prepared.queue_capacity)
     );
+    assert_eq!(prepared.high_traverse_grid, [32, 1, 1]);
     assert_eq!(
         prepared.traverse_logical_lanes,
-        ifds_queue_traverse_logical_lanes(prepared.queue_capacity, prepared.row_strided_traverse)
+        csr_queue_split_mixed_logical_lanes(
+            prepared.queue_capacity,
+            prepared.high_degree_queue_capacity,
+        )
     );
     assert_eq!(
         prepared.queue_program.buffers()[0].name.as_ref(),
@@ -188,7 +221,7 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
         FRONTIER_WORDS
     );
     assert_eq!(prepared.stats.nodes, NODE_COUNT);
-    assert_eq!(prepared.inputs.len(), 7);
+    assert_eq!(prepared.inputs.len(), 9);
     assert_eq!(
         prepared.inputs[QUEUE_FRONTIER_IN_INDEX].len(),
         FRONTIER_WORDS * 4
@@ -197,17 +230,87 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
         prepared.inputs[QUEUE_ACTIVE_QUEUE_INDEX].len(),
         prepared.queue_capacity as usize * std::mem::size_of::<u32>()
     );
+    assert_eq!(
+        prepared.inputs[QUEUE_HIGH_QUEUE_INDEX].len(),
+        prepared.high_degree_queue_capacity as usize * std::mem::size_of::<u32>()
+    );
     assert_eq!(prepared.baseline_output.len(), FRONTIER_WORDS * 4);
     assert!(u64::from(prepared.queue_capacity) >= prepared.stats.active_sources);
     assert!(
         prepared.queue_capacity < prepared.stats.nodes / 32,
         "queue capacity should stay sparse relative to the full node-grid launch"
     );
+    assert!(
+        prepared.traverse_logical_lanes
+            < ifds_queue_traverse_logical_lanes(prepared.queue_capacity, true) / 16,
+        "split IFDS traversal should avoid assigning a row-strided team to every active source"
+    );
     assert!(prepared.stats.allowed_edges_from_active > 0);
     assert!(prepared.input_bytes_total > u64::from(NODE_COUNT) * 12);
     assert_ne!(
         ifds_queue_materialize_sequence_fingerprint(&prepared),
         prepared.traverse_program.fingerprint()
+    );
+}
+
+#[test]
+fn generated_ifds_queue_split_targets_only_active_hub_rows() {
+    const CASES: u32 = 10_000;
+
+    let mut split_cases = 0_u32;
+    let mut total_row_strided_lanes = 0_u128;
+    let mut total_split_lanes = 0_u128;
+    let mut total_high_capacity = 0_u64;
+
+    for case in 0..CASES {
+        let node_count = 32_u32 << (case % 8);
+        let fixture = build_ifds_skewed_fixture(node_count).unwrap_or_else(|error| {
+            panic!("generated IFDS split fixture case {case} failed: {error}")
+        });
+        let queue_capacity = ifds_sparse_queue_capacity(fixture.stats.active_sources)
+            .unwrap_or_else(|error| panic!("generated IFDS queue capacity case {case}: {error}"));
+        let high_capacity =
+            ifds_active_high_degree_sources(&fixture, CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD)
+                .unwrap_or_else(|error| {
+                    panic!("generated IFDS high capacity case {case}: {error}")
+                });
+        let inputs = ifds_queue_inputs(&fixture, queue_capacity, high_capacity)
+            .unwrap_or_else(|error| panic!("generated IFDS queue inputs case {case}: {error}"));
+        let row_strided_lanes = ifds_queue_traverse_logical_lanes(queue_capacity, true);
+        let split_lanes = csr_queue_split_mixed_logical_lanes(queue_capacity, high_capacity);
+
+        assert_eq!(
+            inputs[QUEUE_ACTIVE_QUEUE_INDEX].len(),
+            queue_capacity as usize * std::mem::size_of::<u32>(),
+            "active queue bytes case {case}"
+        );
+        assert_eq!(
+            inputs[QUEUE_HIGH_QUEUE_INDEX].len(),
+            high_capacity as usize * std::mem::size_of::<u32>(),
+            "high queue bytes case {case}"
+        );
+        let uses_split = ifds_queue_should_use_split_high_degree(queue_capacity, high_capacity);
+        if uses_split {
+            assert!(
+                split_lanes < row_strided_lanes,
+                "split lanes should beat all-row striding case {case}"
+            );
+        }
+        split_cases += u32::from(uses_split);
+        total_row_strided_lanes += u128::from(row_strided_lanes);
+        total_split_lanes += u128::from(if uses_split {
+            split_lanes
+        } else {
+            row_strided_lanes
+        });
+        total_high_capacity += u64::from(high_capacity);
+    }
+
+    assert!(split_cases > CASES / 2);
+    assert!(total_high_capacity > 0);
+    assert!(
+        total_split_lanes * 8 < total_row_strided_lanes,
+        "mixed IFDS traversal should keep generated lane pressure far below all-row striding"
     );
 }
 

@@ -131,6 +131,7 @@ pub(super) fn ifds_skewed_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
 pub(super) fn ifds_queue_inputs(
     fixture: &IfdsSkewedFixture,
     queue_capacity: u32,
+    high_degree_queue_capacity: u32,
 ) -> Result<Vec<Vec<u8>>, BenchError> {
     if u64::from(queue_capacity) < fixture.stats.active_sources {
         return Err(BenchError::EnvironmentInvalid(format!(
@@ -138,11 +139,23 @@ pub(super) fn ifds_queue_inputs(
             fixture.stats.active_sources
         )));
     }
+    if high_degree_queue_capacity > queue_capacity {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "IFDS split queue fixture requires high_degree_queue_capacity <= queue_capacity, got high_degree_queue_capacity={high_degree_queue_capacity} queue_capacity={queue_capacity}. Fix: derive high-degree capacity from active sources."
+        )));
+    }
     let queue_bytes = (queue_capacity as usize)
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
             BenchError::EnvironmentInvalid(format!(
                 "IFDS queue fixture queue_capacity={queue_capacity} overflows host buffer sizing. Fix: split the frontier queue."
+            ))
+        })?;
+    let high_queue_bytes = (high_degree_queue_capacity as usize)
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            BenchError::EnvironmentInvalid(format!(
+                "IFDS high_degree_queue_capacity={high_degree_queue_capacity} overflows host buffer sizing. Fix: split the high-degree queue."
             ))
         })?;
 
@@ -154,6 +167,8 @@ pub(super) fn ifds_queue_inputs(
         vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
         vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
         vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed),
+        vec![0_u8; high_queue_bytes],
+        vyre_primitives::wire::pack_u32_slice(&[0]),
     ])
 }
 
