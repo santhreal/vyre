@@ -190,6 +190,31 @@ pub(crate) fn frontier_absorb_new_bits_body_prefixed(
     final_word_mask: u32,
     local_prefix: &str,
 ) -> Vec<Node> {
+    frontier_absorb_new_bits_body_prefixed_with_flag(
+        visited,
+        neighbors,
+        next_wave,
+        added_counts,
+        None,
+        words,
+        final_word_mask,
+        local_prefix,
+    )
+}
+
+/// Build one frontier-absorption body and optionally set a scalar flag when
+/// any new bit is added.
+#[must_use]
+pub(crate) fn frontier_absorb_new_bits_body_prefixed_with_flag(
+    visited: &str,
+    neighbors: &str,
+    next_wave: &str,
+    added_counts: Option<&str>,
+    added_any_flag: Option<(&str, Expr)>,
+    words: u32,
+    final_word_mask: u32,
+    local_prefix: &str,
+) -> Vec<Node> {
     let local = |name: &str| -> String {
         if local_prefix.is_empty() {
             name.to_string()
@@ -204,6 +229,7 @@ pub(crate) fn frontier_absorb_new_bits_body_prefixed(
     let domain_mask = local("domain_mask");
     let in_domain_neighbors = local("in_domain_neighbors");
     let new_bits = local("new_bits");
+    let changed_old = local("changed_old");
 
     let mut body = vec![
         Node::let_bind(old_visited.as_str(), Expr::load(visited, t.clone())),
@@ -248,6 +274,15 @@ pub(crate) fn frontier_absorb_new_bits_body_prefixed(
                 op: UnOp::Popcount,
                 operand: Box::new(Expr::var(new_bits.as_str())),
             },
+        ));
+    }
+    if let Some((flag_buffer, flag_index)) = added_any_flag {
+        body.push(Node::if_then(
+            Expr::ne(Expr::var(new_bits.as_str()), Expr::u32(0)),
+            vec![Node::let_bind(
+                changed_old.as_str(),
+                Expr::atomic_or(flag_buffer, flag_index, Expr::u32(1)),
+            )],
         ));
     }
 

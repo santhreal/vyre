@@ -180,6 +180,12 @@ fn run_reachable(
     let buffer_names: Vec<&str> = program.buffers().iter().map(|b| b.name()).collect();
     let mut inputs: Vec<Vec<u8>> = Vec::with_capacity(buffer_names.len());
     for name in &buffer_names {
+        let declared_words = program
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == *name)
+            .map(|buffer| buffer.count().max(1) as usize)
+            .expect("buffer name came from program declaration");
         let buf = match *name {
             "pg_nodes" => u32_bytes(&pg_nodes),
             "pg_edge_offsets" => u32_bytes(&offsets),
@@ -199,7 +205,7 @@ fn run_reachable(
             }
             "pg_node_tags" => u32_bytes(&pg_node_tags),
             "src" => u32_bytes(&sources_packed),
-            "reach" | "reach_frontier_a" | "reach_frontier_b" => vec![0u8; words * 4],
+            "reach" | "reach_frontier_a" | "reach_frontier_b" => vec![0u8; declared_words * 4],
             other => panic!("Unexpected buffer in reachable_program: {other}"),
         };
         inputs.push(buf);

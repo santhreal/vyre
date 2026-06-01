@@ -19,7 +19,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_foundation::MemoryOrdering;
 
 use crate::bitset::bitset_words;
-use crate::bitset::frontier::{frontier_absorb_new_bits_body_prefixed, frontier_tail_mask};
+use crate::bitset::frontier::{
+    frontier_absorb_new_bits_body_prefixed_with_flag, frontier_tail_mask,
+};
 use crate::graph::program_graph::{
     ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
     NAME_EDGE_TARGETS,
@@ -265,13 +267,22 @@ pub fn reachable_program(
     let words = bitset_words(node_count);
     let frontier_a = "reach_frontier_a";
     let frontier_b = "reach_frontier_b";
-
-    let Some(iter_nodes) = (max_iters as usize).checked_mul(6) else {
+    let active_flag_idx = words;
+    let Some(frontier_b_storage_words) = words.checked_add(1) else {
         return crate::invalid_output_program(
             OP_ID,
             reach_out,
             DataType::U32,
-            "Fix: reachable_program max_iters*6 overflows usize.".to_string(),
+            "Fix: reachable_program active-flag scratch word overflows u32.".to_string(),
+        );
+    };
+
+    let Some(iter_nodes) = (max_iters as usize).checked_mul(8) else {
+        return crate::invalid_output_program(
+            OP_ID,
+            reach_out,
+            DataType::U32,
+            "Fix: reachable_program max_iters*8 overflows usize.".to_string(),
         );
     };
     let Some(node_capacity) = iter_nodes.checked_add(4) else {
@@ -305,29 +316,58 @@ pub fn reachable_program(
             Node::store(frontier_b, lane.clone(), Expr::u32(0)),
         ],
     ));
+    entry.push(Node::if_then(
+        Expr::eq(lane.clone(), Expr::u32(0)),
+        vec![Node::store(
+            frontier_b,
+            Expr::u32(active_flag_idx),
+            Expr::u32(0),
+        )],
+    ));
     if max_iters > 0 {
         entry.push(reachable_wave_barrier(node_count));
     }
 
     for i in 0..max_iters {
         let current_wave = if i == 0 { sources_buf } else { frontier_b };
+        let active_var = format!("iter_{i}_active");
+        let active_expr = if i == 0 {
+            Expr::u32(1)
+        } else {
+            Expr::load(frontier_b, Expr::u32(active_flag_idx))
+        };
+        let active_cond = Expr::ne(Expr::var(active_var.as_str()), Expr::u32(0));
+        entry.push(Node::let_bind(active_var.as_str(), active_expr));
         entry.push(Node::if_then(
             Expr::lt(lane.clone(), Expr::u32(words)),
             vec![Node::store(frontier_a, lane.clone(), Expr::u32(0))],
         ));
         entry.push(reachable_wave_barrier(node_count));
-        entry.push(reachable_forward_wave_node(
-            shape,
-            current_wave,
-            frontier_a,
-            &format!("iter_{i}_expand"),
+        entry.push(Node::if_then(
+            active_cond.clone(),
+            vec![reachable_forward_wave_node(
+                shape,
+                current_wave,
+                frontier_a,
+                &format!("iter_{i}_expand"),
+            )],
         ));
         entry.push(reachable_wave_barrier(node_count));
-        entry.extend(frontier_absorb_new_bits_body_prefixed(
+        entry.push(Node::if_then(
+            Expr::eq(lane.clone(), Expr::u32(0)),
+            vec![Node::store(
+                frontier_b,
+                Expr::u32(active_flag_idx),
+                Expr::u32(0),
+            )],
+        ));
+        entry.push(reachable_wave_barrier(node_count));
+        entry.extend(frontier_absorb_new_bits_body_prefixed_with_flag(
             reach_out,
             frontier_a,
             frontier_b,
             None,
+            Some((frontier_b, Expr::u32(active_flag_idx))),
             words,
             frontier_tail_mask(node_count),
             &format!("iter_{i}_absorb"),
@@ -373,7 +413,7 @@ pub fn reachable_program(
             BufferAccess::ReadWrite,
             DataType::U32,
         )
-        .with_count(storage_words),
+        .with_count(frontier_b_storage_words),
     );
 
     Program::wrapped(
@@ -593,12 +633,22 @@ mod tests {
         assert!(names.contains(&"reach"));
         assert!(names.contains(&"reach_frontier_a"));
         assert!(names.contains(&"reach_frontier_b"));
+        let frontier_b = program
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == "reach_frontier_b")
+            .expect("Fix: reachable wavefront scratch must be declared.");
+        assert_eq!(
+            frontier_b.count(),
+            bitset_words(4) + 1,
+            "Fix: reach_frontier_b must reserve one extra word for the converged-wave flag."
+        );
     }
 
     #[test]
     fn reachable_program_zero_iters_seeds_only() {
         // With max_iters = 0 the program should still contain the
-        // preliminary seed step (sources | reach_out -> reach_out).
+        // preliminary seed copy into reach_out.
         let program = reachable_program(4, 4, "sources", "reach", 0);
         assert!(!program.is_explicit_noop());
         assert!(!program.buffers().is_empty());
