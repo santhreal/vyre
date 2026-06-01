@@ -1,10 +1,14 @@
 use crate::api::metric::MetricPoint;
 
-use super::{DataflowIfdsSkewedQueueClosurePrepared, QUEUE_CLOSURE_WORKGROUP_SIZE};
+use super::{
+    ifds_queue_closure_delta_lanes_per_source, DataflowIfdsSkewedQueueClosurePrepared,
+    QUEUE_CLOSURE_WORKGROUP_SIZE,
+};
 use crate::cases::dataflow_irregular::closure::CLOSURE_MAX_ITERS;
 use crate::cases::dataflow_irregular::metrics::{
     ifds_closure_baseline_metric_points, ifds_closure_metric_points,
 };
+use crate::cases::queue_closure_profile::QueueClosureLaneProfile;
 
 pub(super) fn queue_closure_metric_points(
     prepared: &DataflowIfdsSkewedQueueClosurePrepared,
@@ -82,5 +86,42 @@ fn append_queue_closure_points(
     metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_seed_scan_elided".to_string(),
         value: 1,
+    });
+    let lane_profile = QueueClosureLaneProfile::from_wave_lengths(
+        prepared.queue_capacity,
+        &prepared.wave_queue_lengths,
+        ifds_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+    );
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_wave_profiled".to_string(),
+        value: 1,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_fixed_delta_source_slots".to_string(),
+        value: lane_profile.fixed_delta_source_slots,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_profiled_delta_source_slots".to_string(),
+        value: lane_profile.profiled_delta_source_slots,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_elided_delta_source_slots".to_string(),
+        value: lane_profile.elided_delta_source_slots,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_fixed_delta_lanes".to_string(),
+        value: lane_profile.fixed_delta_lanes,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_profiled_delta_lanes".to_string(),
+        value: lane_profile.profiled_delta_lanes,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_elided_delta_lanes".to_string(),
+        value: lane_profile.elided_delta_lanes,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_delta_lane_elision_x1000".to_string(),
+        value: lane_profile.delta_lane_elision_x1000,
     });
 }

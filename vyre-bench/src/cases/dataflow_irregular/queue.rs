@@ -27,7 +27,8 @@ mod closure;
 mod materialize;
 #[cfg(test)]
 pub(super) use closure::{
-    ifds_queue_closure_inputs, ifds_queue_closure_reset_program, ifds_skewed_queue_closure_oracle,
+    ifds_queue_closure_delta_lanes_per_source, ifds_queue_closure_inputs,
+    ifds_queue_closure_reset_program, ifds_skewed_queue_closure_oracle,
     prepare_ifds_skewed_queue_closure, QUEUE_CLOSURE_ACCUMULATOR_INDEX,
     QUEUE_CLOSURE_EDGE_KIND_INDEX, QUEUE_CLOSURE_EDGE_OFFSETS_INDEX,
     QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX, QUEUE_CLOSURE_LEN_B_INDEX,

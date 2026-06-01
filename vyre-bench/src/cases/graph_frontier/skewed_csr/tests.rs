@@ -215,6 +215,39 @@ fn skewed_csr_queue_closure_prepare_builds_resident_delta_sequence() {
     assert!(prepared.queue_capacity >= prepared.max_wave_queue_len);
     assert!(prepared.queue_capacity <= prepared.stats.node_count);
     assert!(prepared.total_queue_pops >= u64::from(prepared.seed_queue_len));
+    assert_eq!(
+        prepared.wave_queue_lengths.len(),
+        prepared.closure_iterations as usize
+    );
+    assert_eq!(
+        prepared
+            .wave_queue_lengths
+            .iter()
+            .map(|&len| u64::from(len))
+            .sum::<u64>(),
+        prepared.total_queue_pops
+    );
+    assert_eq!(
+        prepared
+            .wave_queue_lengths
+            .iter()
+            .copied()
+            .max()
+            .unwrap_or(0),
+        prepared.max_wave_queue_len
+    );
+    let lane_profile =
+        crate::cases::queue_closure_profile::QueueClosureLaneProfile::from_wave_lengths(
+            prepared.queue_capacity,
+            &prepared.wave_queue_lengths,
+            queue_closure::graph_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+        );
+    assert_eq!(
+        lane_profile.profiled_delta_source_slots,
+        prepared.total_queue_pops
+    );
+    assert!(lane_profile.elided_delta_lanes > 0);
+    assert!(lane_profile.delta_lane_elision_x1000 > 500);
 }
 
 #[test]
@@ -247,6 +280,25 @@ fn generated_skewed_csr_queue_closure_capacity_covers_every_wave() {
         assert!(
             oracle.total_queue_pops >= fixture.stats.active_sources,
             "queue pops case {case}"
+        );
+        assert_eq!(
+            oracle.wave_queue_lengths.len(),
+            oracle.iterations as usize,
+            "wave profile length case {case}"
+        );
+        assert_eq!(
+            oracle
+                .wave_queue_lengths
+                .iter()
+                .map(|&len| u64::from(len))
+                .sum::<u64>(),
+            oracle.total_queue_pops,
+            "wave profile sum case {case}"
+        );
+        assert_eq!(
+            oracle.wave_queue_lengths.iter().copied().max().unwrap_or(0),
+            oracle.max_wave_queue_len,
+            "wave profile max case {case}"
         );
         assert_eq!(
             vyre_primitives::wire::decode_u32_le_bytes_all(

@@ -5,11 +5,13 @@ use crate::api::case::{
 use crate::api::metric::BenchMetrics;
 use crate::api::resident::{input_bytes_total, ResidentInputSet};
 use crate::api::suite::SuiteKind;
+use crate::cases::queue_closure_profile::validate_queue_closure_wave_profile;
 use std::time::Instant;
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_frontier_queue::frontier_queue_len_init;
 use vyre_primitives::graph::csr_queue_delta::{
-    csr_queue_delta_enqueue, csr_queue_delta_strided_dispatch_grid, csr_queue_delta_strided_enqueue,
+    csr_queue_delta_enqueue, csr_queue_delta_strided_dispatch_grid,
+    csr_queue_delta_strided_enqueue, CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE,
 };
 
 use super::super::closure::CLOSURE_MAX_ITERS;
@@ -71,7 +73,18 @@ pub(in crate::cases::dataflow_irregular) struct DataflowIfdsSkewedQueueClosurePr
     pub(in crate::cases::dataflow_irregular) closure_changed: u32,
     pub(in crate::cases::dataflow_irregular) total_queue_pops: u64,
     pub(in crate::cases::dataflow_irregular) max_wave_queue_len: u32,
+    pub(in crate::cases::dataflow_irregular) wave_queue_lengths: Vec<u32>,
     pub(in crate::cases::dataflow_irregular) resident: Option<ResidentInputSet>,
+}
+
+pub(in crate::cases::dataflow_irregular) fn ifds_queue_closure_delta_lanes_per_source(
+    row_strided_delta: bool,
+) -> u32 {
+    if row_strided_delta {
+        CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE
+    } else {
+        1
+    }
 }
 
 /// Queue-driven IFDS closure seeded from a sparse queue.
@@ -228,6 +241,14 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_closure(
         .as_nanos()
         .min(u128::from(u64::MAX)) as u64;
     let queue_capacity = oracle.max_wave_queue_len.max(seed_queue_len).max(1);
+    validate_queue_closure_wave_profile(
+        "IFDS",
+        &oracle.wave_queue_lengths,
+        oracle.iterations,
+        oracle.total_queue_pops,
+        oracle.max_wave_queue_len,
+        queue_capacity,
+    )?;
     let reset_program = ifds_queue_closure_reset_program(
         fixture.stats.frontier_words,
         seed_queue_len,
@@ -314,6 +335,7 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_closure(
         closure_changed: oracle.changed,
         total_queue_pops: oracle.total_queue_pops,
         max_wave_queue_len: oracle.max_wave_queue_len,
+        wave_queue_lengths: oracle.wave_queue_lengths,
         resident,
     })
 }

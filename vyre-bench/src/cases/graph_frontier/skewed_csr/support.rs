@@ -48,6 +48,7 @@ pub(super) struct SkewedCsrQueueClosureOracle {
     pub(super) iterations: u32,
     pub(super) total_queue_pops: u64,
     pub(super) max_wave_queue_len: u32,
+    pub(super) wave_queue_lengths: Vec<u32>,
 }
 
 pub(super) fn build_skewed_csr_fixture(node_count: u32) -> Result<SkewedCsrFixture, BenchError> {
@@ -286,8 +287,10 @@ pub(super) fn skewed_csr_queue_closure_oracle(
     let mut iterations = 0_u32;
     let mut total_queue_pops = 0_u64;
     let mut max_wave_queue_len = current.len() as u32;
+    let mut wave_queue_lengths = Vec::new();
 
     while !current.is_empty() && iterations < max_iters {
+        wave_queue_lengths.push(current.len() as u32);
         max_wave_queue_len = max_wave_queue_len.max(current.len() as u32);
         total_queue_pops = total_queue_pops.saturating_add(current.len() as u64);
         next.clear();
@@ -335,6 +338,7 @@ pub(super) fn skewed_csr_queue_closure_oracle(
         iterations,
         total_queue_pops,
         max_wave_queue_len,
+        wave_queue_lengths,
     })
 }
 

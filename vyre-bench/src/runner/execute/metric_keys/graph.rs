@@ -41,6 +41,30 @@ pub(super) fn custom_graph_metric_key(prefix: &'static str, name: &str) -> Optio
         ("", "graph_csr_queue_closure_row_strided_delta") => {
             Some("graph_csr_queue_closure_row_strided_delta")
         }
+        ("", "graph_csr_queue_closure_wave_profiled") => {
+            Some("graph_csr_queue_closure_wave_profiled")
+        }
+        ("", "graph_csr_queue_closure_fixed_delta_source_slots") => {
+            Some("graph_csr_queue_closure_fixed_delta_source_slots")
+        }
+        ("", "graph_csr_queue_closure_profiled_delta_source_slots") => {
+            Some("graph_csr_queue_closure_profiled_delta_source_slots")
+        }
+        ("", "graph_csr_queue_closure_elided_delta_source_slots") => {
+            Some("graph_csr_queue_closure_elided_delta_source_slots")
+        }
+        ("", "graph_csr_queue_closure_fixed_delta_lanes") => {
+            Some("graph_csr_queue_closure_fixed_delta_lanes")
+        }
+        ("", "graph_csr_queue_closure_profiled_delta_lanes") => {
+            Some("graph_csr_queue_closure_profiled_delta_lanes")
+        }
+        ("", "graph_csr_queue_closure_elided_delta_lanes") => {
+            Some("graph_csr_queue_closure_elided_delta_lanes")
+        }
+        ("", "graph_csr_queue_closure_delta_lane_elision_x1000") => {
+            Some("graph_csr_queue_closure_delta_lane_elision_x1000")
+        }
         _ => None,
     }
 }
@@ -67,6 +91,14 @@ mod tests {
             "graph_csr_queue_closure_total_queue_pops",
             "graph_csr_queue_closure_max_wave_len",
             "graph_csr_queue_closure_row_strided_delta",
+            "graph_csr_queue_closure_wave_profiled",
+            "graph_csr_queue_closure_fixed_delta_source_slots",
+            "graph_csr_queue_closure_profiled_delta_source_slots",
+            "graph_csr_queue_closure_elided_delta_source_slots",
+            "graph_csr_queue_closure_fixed_delta_lanes",
+            "graph_csr_queue_closure_profiled_delta_lanes",
+            "graph_csr_queue_closure_elided_delta_lanes",
+            "graph_csr_queue_closure_delta_lane_elision_x1000",
         ] {
             assert_eq!(custom_graph_metric_key("", name), Some(name));
         }

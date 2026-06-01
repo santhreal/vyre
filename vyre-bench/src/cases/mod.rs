@@ -31,6 +31,7 @@ pub mod megakernel_truth;
 pub mod nvme_gpu_ingest;
 pub mod optimizer_impact;
 pub mod quantized_linear;
+pub(crate) mod queue_closure_profile;
 pub mod reduce_sum;
 pub mod regex_bt;
 pub mod release_workloads;

@@ -68,28 +68,37 @@ pub fn csr_queue_delta_strided_enqueue(
     let body = vec![
         Node::let_bind("qds_lane", lane),
         Node::let_bind(
-            "qds_queue_idx",
-            Expr::div(Expr::var("qds_lane"), lanes_per_source.clone()),
+            "qds_active_slots",
+            Expr::min(
+                Expr::load(active_len, Expr::u32(0)),
+                Expr::u32(active_queue_capacity),
+            ),
         ),
         Node::let_bind(
-            "qds_edge_lane",
-            Expr::rem(Expr::var("qds_lane"), lanes_per_source.clone()),
+            "qds_active_lanes",
+            Expr::mul(
+                Expr::var("qds_active_slots"),
+                Expr::u32(CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE),
+            ),
         ),
         Node::if_then(
-            Expr::lt(Expr::var("qds_queue_idx"), Expr::u32(active_queue_capacity)),
-            vec![Node::if_then(
-                Expr::lt(
-                    Expr::var("qds_queue_idx"),
-                    Expr::load(active_len, Expr::u32(0)),
+            Expr::lt(Expr::var("qds_lane"), Expr::var("qds_active_lanes")),
+            vec![
+                Node::let_bind(
+                    "qds_queue_idx",
+                    Expr::div(Expr::var("qds_lane"), lanes_per_source.clone()),
                 ),
-                vec![
-                    Node::let_bind(
-                        "qds_src",
-                        Expr::load(active_queue, Expr::var("qds_queue_idx")),
-                    ),
-                    Node::if_then(
-                        Expr::lt(Expr::var("qds_src"), Expr::u32(node_count)),
-                        vec![
+                Node::let_bind(
+                    "qds_edge_lane",
+                    Expr::rem(Expr::var("qds_lane"), lanes_per_source.clone()),
+                ),
+                Node::let_bind(
+                    "qds_src",
+                    Expr::load(active_queue, Expr::var("qds_queue_idx")),
+                ),
+                Node::if_then(
+                    Expr::lt(Expr::var("qds_src"), Expr::u32(node_count)),
+                    vec![
                             Node::let_bind(
                                 "qds_edge_start",
                                 Expr::load(edge_offsets, Expr::var("qds_src")),
@@ -273,8 +282,7 @@ pub fn csr_queue_delta_strided_enqueue(
                         ],
                     ),
                 ],
-            )],
-        ),
+            ),
     ];
 
     Program::wrapped(

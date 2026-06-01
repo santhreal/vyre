@@ -1,12 +1,12 @@
 use super::fixture::{ifds_active_queue_inputs, ifds_queue_inputs};
 use super::queue::{
-    ifds_queue_closure_inputs, ifds_queue_closure_reset_program, ifds_queue_reset_program,
-    ifds_queue_should_use_row_strided, ifds_sparse_queue_capacity,
-    prepare_ifds_skewed_active_queue_step, prepare_ifds_skewed_queue_closure,
-    prepare_ifds_skewed_queue_materialize_step, ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX,
-    ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX, ACTIVE_QUEUE_EDGE_TARGETS_INDEX,
-    ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX, QUEUE_ACTIVE_QUEUE_INDEX,
-    QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
+    ifds_queue_closure_delta_lanes_per_source, ifds_queue_closure_inputs,
+    ifds_queue_closure_reset_program, ifds_queue_reset_program, ifds_queue_should_use_row_strided,
+    ifds_sparse_queue_capacity, prepare_ifds_skewed_active_queue_step,
+    prepare_ifds_skewed_queue_closure, prepare_ifds_skewed_queue_materialize_step,
+    ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX, ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX,
+    ACTIVE_QUEUE_EDGE_TARGETS_INDEX, ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX,
+    QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
     QUEUE_CLOSURE_EDGE_OFFSETS_INDEX, QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX,
     QUEUE_CLOSURE_LEN_B_INDEX, QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX,
     QUEUE_CLOSURE_SEED_FRONTIER_INDEX, QUEUE_CLOSURE_SEED_LEN_INDEX,
@@ -423,6 +423,38 @@ fn ifds_queue_closure_prepare_builds_delta_fixpoint_sequence() {
     assert!(prepared.closure_iterations <= closure::CLOSURE_MAX_ITERS);
     assert!(prepared.total_queue_pops >= prepared.stats.active_sources);
     assert!(prepared.max_wave_queue_len >= prepared.stats.active_sources as u32);
+    assert_eq!(
+        prepared.wave_queue_lengths.len(),
+        prepared.closure_iterations as usize
+    );
+    assert_eq!(
+        prepared
+            .wave_queue_lengths
+            .iter()
+            .map(|&len| u64::from(len))
+            .sum::<u64>(),
+        prepared.total_queue_pops
+    );
+    assert_eq!(
+        prepared
+            .wave_queue_lengths
+            .iter()
+            .copied()
+            .max()
+            .unwrap_or(0),
+        prepared.max_wave_queue_len
+    );
+    let lane_profile =
+        crate::cases::queue_closure_profile::QueueClosureLaneProfile::from_wave_lengths(
+            prepared.queue_capacity,
+            &prepared.wave_queue_lengths,
+            ifds_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+        );
+    assert_eq!(
+        lane_profile.profiled_delta_source_slots,
+        prepared.total_queue_pops
+    );
+    assert!(lane_profile.elided_delta_lanes > 0);
 }
 
 #[test]

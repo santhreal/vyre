@@ -1,10 +1,11 @@
 use crate::api::metric::MetricPoint;
 
 use super::{
-    GraphCsrSkewedQueueClosurePrepared, GRAPH_QUEUE_CLOSURE_MAX_ITERS,
-    GRAPH_QUEUE_CLOSURE_WORKGROUP_SIZE,
+    graph_queue_closure_delta_lanes_per_source, GraphCsrSkewedQueueClosurePrepared,
+    GRAPH_QUEUE_CLOSURE_MAX_ITERS, GRAPH_QUEUE_CLOSURE_WORKGROUP_SIZE,
 };
 use crate::cases::graph_frontier::skewed_csr::metrics::skewed_csr_baseline_metric_points;
+use crate::cases::queue_closure_profile::QueueClosureLaneProfile;
 
 pub(super) fn queue_closure_metric_points(
     prepared: &GraphCsrSkewedQueueClosurePrepared,
@@ -84,6 +85,40 @@ fn append_queue_closure_points(
     metrics.push(metric(
         "graph_csr_queue_closure_row_strided_delta",
         u64::from(prepared.row_strided_delta),
+    ));
+    let lane_profile = QueueClosureLaneProfile::from_wave_lengths(
+        prepared.queue_capacity,
+        &prepared.wave_queue_lengths,
+        graph_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+    );
+    metrics.push(metric("graph_csr_queue_closure_wave_profiled", 1));
+    metrics.push(metric(
+        "graph_csr_queue_closure_fixed_delta_source_slots",
+        lane_profile.fixed_delta_source_slots,
+    ));
+    metrics.push(metric(
+        "graph_csr_queue_closure_profiled_delta_source_slots",
+        lane_profile.profiled_delta_source_slots,
+    ));
+    metrics.push(metric(
+        "graph_csr_queue_closure_elided_delta_source_slots",
+        lane_profile.elided_delta_source_slots,
+    ));
+    metrics.push(metric(
+        "graph_csr_queue_closure_fixed_delta_lanes",
+        lane_profile.fixed_delta_lanes,
+    ));
+    metrics.push(metric(
+        "graph_csr_queue_closure_profiled_delta_lanes",
+        lane_profile.profiled_delta_lanes,
+    ));
+    metrics.push(metric(
+        "graph_csr_queue_closure_elided_delta_lanes",
+        lane_profile.elided_delta_lanes,
+    ));
+    metrics.push(metric(
+        "graph_csr_queue_closure_delta_lane_elision_x1000",
+        lane_profile.delta_lane_elision_x1000,
     ));
 }
 

@@ -6,10 +6,12 @@ use crate::api::case::{
 };
 use crate::api::metric::BenchMetrics;
 use crate::api::resident::{input_bytes_total, ResidentInputSet};
+use crate::cases::queue_closure_profile::validate_queue_closure_wave_profile;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::graph::csr_frontier_queue::frontier_queue_len_init;
 use vyre_primitives::graph::csr_queue_delta::{
-    csr_queue_delta_enqueue, csr_queue_delta_strided_dispatch_grid, csr_queue_delta_strided_enqueue,
+    csr_queue_delta_enqueue, csr_queue_delta_strided_dispatch_grid,
+    csr_queue_delta_strided_enqueue, CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE,
 };
 
 use super::queue_materialize::graph_queue_should_use_row_strided;
@@ -56,7 +58,16 @@ pub(super) struct GraphCsrSkewedQueueClosurePrepared {
     pub(super) closure_changed: u32,
     pub(super) total_queue_pops: u64,
     pub(super) max_wave_queue_len: u32,
+    pub(super) wave_queue_lengths: Vec<u32>,
     pub(super) resident: Option<ResidentInputSet>,
+}
+
+pub(super) fn graph_queue_closure_delta_lanes_per_source(row_strided_delta: bool) -> u32 {
+    if row_strided_delta {
+        CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE
+    } else {
+        1
+    }
 }
 
 struct GraphCsrSkewedQueueClosure;
@@ -210,6 +221,14 @@ pub(super) fn prepare_skewed_csr_queue_closure(
         .as_nanos()
         .min(u128::from(u64::MAX)) as u64;
     let queue_capacity = oracle.max_wave_queue_len.max(seed_queue_len).max(1);
+    validate_queue_closure_wave_profile(
+        "skewed CSR",
+        &oracle.wave_queue_lengths,
+        oracle.iterations,
+        oracle.total_queue_pops,
+        oracle.max_wave_queue_len,
+        queue_capacity,
+    )?;
     let reset_program = graph_queue_closure_reset_program(
         fixture.stats.frontier_words,
         seed_queue_len,
@@ -289,6 +308,7 @@ pub(super) fn prepare_skewed_csr_queue_closure(
         closure_changed: oracle.changed,
         total_queue_pops: oracle.total_queue_pops,
         max_wave_queue_len: oracle.max_wave_queue_len,
+        wave_queue_lengths: oracle.wave_queue_lengths,
         resident,
     })
 }

@@ -111,6 +111,19 @@ proptest! {
         prop_assert_eq!(full.changed, compact.changed);
         prop_assert_eq!(full.total_queue_pops, compact.total_queue_pops);
         prop_assert_eq!(full.max_wave_queue_len, compact.max_wave_queue_len);
+        prop_assert_eq!(&full.wave_queue_lengths, &compact.wave_queue_lengths);
+        prop_assert_eq!(
+            compact
+                .wave_queue_lengths
+                .iter()
+                .map(|&len| u64::from(len))
+                .sum::<u64>(),
+            compact.total_queue_pops
+        );
+        prop_assert_eq!(
+            compact.wave_queue_lengths.iter().copied().max().unwrap_or(0),
+            compact.max_wave_queue_len
+        );
         prop_assert_eq!(
             compact_inputs[QUEUE_CLOSURE_QUEUE_A_INDEX].len(),
             compact_capacity as usize * std::mem::size_of::<u32>()
@@ -188,6 +201,29 @@ fn ifds_queue_closure_generated_ugly_hubs_match_bitset_with_exact_capacity() {
         assert_eq!(
             full.max_wave_queue_len, compact.max_wave_queue_len,
             "max wave case {case}"
+        );
+        assert_eq!(
+            full.wave_queue_lengths, compact.wave_queue_lengths,
+            "wave profile case {case}"
+        );
+        assert_eq!(
+            compact
+                .wave_queue_lengths
+                .iter()
+                .map(|&len| u64::from(len))
+                .sum::<u64>(),
+            compact.total_queue_pops,
+            "wave profile sum case {case}"
+        );
+        assert_eq!(
+            compact
+                .wave_queue_lengths
+                .iter()
+                .copied()
+                .max()
+                .unwrap_or(0),
+            compact.max_wave_queue_len,
+            "wave profile max case {case}"
         );
         assert_eq!(
             compact_inputs[QUEUE_CLOSURE_SEED_LEN_INDEX],
