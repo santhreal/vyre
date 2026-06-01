@@ -1,4 +1,5 @@
 use crate::api::metric::MetricPoint;
+use vyre_primitives::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
 
 use super::support::SkewedCsrStats;
 
@@ -53,10 +54,22 @@ pub(super) fn skewed_csr_queue_metric_points(
         "graph_csr_queue_row_strided",
         u64::from(row_strided),
     ));
+    let traverse_lanes = graph_queue_traverse_logical_lanes(queue_capacity, row_strided);
+    metrics.push(metric(
+        "graph_csr_queue_traverse_logical_lanes",
+        traverse_lanes,
+    ));
     if queue_capacity > 0 {
         metrics.push(metric(
             "graph_csr_queue_lane_reduction_x1000",
             (u128::from(stats.node_count) * 1000 / u128::from(queue_capacity))
+                .min(u128::from(u64::MAX)) as u64,
+        ));
+    }
+    if traverse_lanes > 0 {
+        metrics.push(metric(
+            "graph_csr_queue_traverse_lane_reduction_x1000",
+            (u128::from(stats.node_count) * 1000 / u128::from(traverse_lanes))
                 .min(u128::from(u64::MAX)) as u64,
         ));
     }
@@ -81,4 +94,13 @@ fn metric(name: &str, value: u64) -> MetricPoint {
         name: name.to_string(),
         value,
     }
+}
+
+fn graph_queue_traverse_logical_lanes(queue_capacity: u32, row_strided: bool) -> u64 {
+    let lanes_per_source = if row_strided {
+        CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE
+    } else {
+        1
+    };
+    u64::from(queue_capacity).saturating_mul(u64::from(lanes_per_source))
 }

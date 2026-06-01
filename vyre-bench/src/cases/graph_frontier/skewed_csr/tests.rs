@@ -72,12 +72,10 @@ fn skewed_csr_queue_prepare_builds_sparse_resident_sequence() {
 
     assert_eq!(prepared.reset_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.queue_program.workgroup_size(), [256, 1, 1]);
-    assert!(prepared.row_strided_traverse);
+    assert!(!prepared.row_strided_traverse);
     assert_eq!(
         prepared.traverse_grid,
-        vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
-            prepared.queue_capacity
-        )
+        [prepared.queue_capacity.div_ceil(256).max(1), 1, 1]
     );
     assert_eq!(prepared.inputs.len(), 7);
     assert_eq!(prepared.stats.node_count, CSR_NODE_COUNT);
@@ -89,6 +87,23 @@ fn skewed_csr_queue_prepare_builds_sparse_resident_sequence() {
         prepared.queue_capacity < prepared.stats.node_count / 32,
         "queue capacity should stay sparse relative to the full node-grid launch"
     );
+}
+
+#[test]
+fn skewed_csr_graph_row_striding_requires_wide_rows() {
+    let lanes =
+        vyre_primitives::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
+    assert_eq!(
+        queue_materialize::GRAPH_QUEUE_ROW_STRIDED_MIN_DEGREE,
+        lanes.saturating_mul(lanes)
+    );
+    assert!(
+        !queue_materialize::graph_queue_should_use_row_strided(96),
+        "96-degree rows are not wide enough to justify a 32-lane team for every queued graph source"
+    );
+    assert!(queue_materialize::graph_queue_should_use_row_strided(
+        queue_materialize::GRAPH_QUEUE_ROW_STRIDED_MIN_DEGREE
+    ));
 }
 
 #[test]
@@ -130,7 +145,7 @@ fn generated_skewed_csr_queue_capacity_covers_active_sources_without_node_grid()
         total_queue_capacity += u64::from(capacity);
     }
 
-    assert_eq!(row_strided_cases, CASES);
+    assert_eq!(row_strided_cases, 0);
     assert!(
         total_queue_capacity * 8 < total_nodes,
         "generated sparse frontiers should avoid graph-sized queue traversal"
@@ -195,12 +210,10 @@ fn skewed_csr_queue_closure_prepare_builds_resident_delta_sequence() {
     assert_eq!(prepared.reset_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.clear_len_program.workgroup_size(), [1, 1, 1]);
     assert_eq!(prepared.delta_program.workgroup_size(), [256, 1, 1]);
-    assert!(prepared.row_strided_delta);
+    assert!(!prepared.row_strided_delta);
     assert_eq!(
         prepared.delta_grid,
-        vyre_primitives::graph::csr_queue_delta::csr_queue_delta_strided_dispatch_grid(
-            prepared.queue_capacity
-        )
+        [prepared.queue_capacity.div_ceil(256).max(1), 1, 1]
     );
     assert_eq!(prepared.inputs.len(), 11);
     assert_eq!(prepared.stats.node_count, CSR_NODE_COUNT);

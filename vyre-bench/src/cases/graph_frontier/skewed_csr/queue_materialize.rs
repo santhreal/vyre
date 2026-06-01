@@ -33,6 +33,9 @@ pub(super) const QUEUE_EDGE_OFFSETS_INDEX: usize = 3;
 pub(super) const QUEUE_EDGE_TARGETS_INDEX: usize = 4;
 pub(super) const QUEUE_EDGE_KIND_INDEX: usize = 5;
 pub(super) const QUEUE_FRONTIER_OUT_INDEX: usize = 6;
+pub(super) const GRAPH_QUEUE_ROW_STRIDED_MIN_DEGREE: u32 =
+    CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE
+        .saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE);
 
 pub(super) struct GraphCsrSkewedQueuePrepared {
     pub(super) reset_program: Program,
@@ -301,7 +304,7 @@ fn graph_queue_traverse_plan(
 }
 
 pub(super) const fn graph_queue_should_use_row_strided(max_degree: u32) -> bool {
-    max_degree >= CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE
+    max_degree >= GRAPH_QUEUE_ROW_STRIDED_MIN_DEGREE
 }
 
 fn graph_queue_reset_program(frontier_words: u32) -> Program {
