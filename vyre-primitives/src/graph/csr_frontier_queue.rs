@@ -30,6 +30,9 @@ pub const FRONTIER_TO_QUEUE_PARALLEL_OP_ID: &str =
 /// Canonical op id for word-level multi-workgroup bitset-to-queue compaction.
 pub const FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID: &str =
     "vyre-primitives::graph::frontier_words_to_queue_parallel";
+/// Canonical op id for word-level compaction that also clears an output bitset.
+pub const FRONTIER_WORDS_TO_QUEUE_CLEAR_OUT_PARALLEL_OP_ID: &str =
+    "vyre-primitives::graph::frontier_words_to_queue_clear_out_parallel";
 /// Canonical op id for packed-frontier word popcount prefix-scan pass A.
 pub const FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID: &str =
     "vyre-primitives::graph::frontier_word_counts_scan_pass_a";
@@ -284,90 +287,147 @@ pub fn frontier_words_to_queue_parallel(
     node_count: u32,
     queue_capacity: u32,
 ) -> Program {
+    frontier_words_to_queue_parallel_program(
+        FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID,
+        frontier_in,
+        active_queue,
+        queue_len,
+        None,
+        node_count,
+        queue_capacity,
+    )
+}
+
+/// Build a packed-frontier queue materializer that also clears `frontier_out`.
+///
+/// The caller must still clear `queue_len` before dispatch. Folding the output
+/// clear into this packed-word scan removes a separate full-frontier reset pass
+/// from resident sparse traversal sequences without changing the queue ABI.
+#[must_use]
+pub fn frontier_words_to_queue_clear_out_parallel(
+    frontier_in: &str,
+    active_queue: &str,
+    queue_len: &str,
+    frontier_out: &str,
+    node_count: u32,
+    queue_capacity: u32,
+) -> Program {
+    frontier_words_to_queue_parallel_program(
+        FRONTIER_WORDS_TO_QUEUE_CLEAR_OUT_PARALLEL_OP_ID,
+        frontier_in,
+        active_queue,
+        queue_len,
+        Some(frontier_out),
+        node_count,
+        queue_capacity,
+    )
+}
+
+fn frontier_words_to_queue_parallel_program(
+    op_id: &'static str,
+    frontier_in: &str,
+    active_queue: &str,
+    queue_len: &str,
+    frontier_out_to_clear: Option<&str>,
+    node_count: u32,
+    queue_capacity: u32,
+) -> Program {
     if node_count == 0 || queue_capacity == 0 {
         return crate::invalid_output_program(
-            FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID,
+            op_id,
             queue_len,
             DataType::U32,
             format!(
-                "Fix: frontier_words_to_queue_parallel requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
+                "Fix: {op_id} requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
             ),
         );
     }
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
-    let body = vec![
-        Node::let_bind("qw_word_idx", lane),
+    let mut word_body = vec![
+        Node::let_bind(
+            "qw_src_base",
+            Expr::mul(Expr::var("qw_word_idx"), Expr::u32(32)),
+        ),
+        Node::let_bind(
+            "qw_remaining",
+            Expr::load(frontier_in, Expr::var("qw_word_idx")),
+        ),
         Node::if_then(
-            Expr::lt(Expr::var("qw_word_idx"), Expr::u32(words)),
+            Expr::ne(Expr::var("qw_remaining"), Expr::u32(0)),
             vec![
-                Node::let_bind(
-                    "qw_src_base",
-                    Expr::mul(Expr::var("qw_word_idx"), Expr::u32(32)),
-                ),
-                Node::let_bind(
-                    "qw_remaining",
-                    Expr::load(frontier_in, Expr::var("qw_word_idx")),
-                ),
-                Node::if_then(
-                    Expr::ne(Expr::var("qw_remaining"), Expr::u32(0)),
+                Node::let_bind("qw_active_bits", Expr::popcount(Expr::var("qw_remaining"))),
+                Node::loop_for(
+                    "qw_rank",
+                    Expr::u32(0),
+                    Expr::var("qw_active_bits"),
                     vec![
-                        Node::let_bind("qw_active_bits", Expr::popcount(Expr::var("qw_remaining"))),
-                        Node::loop_for(
-                            "qw_rank",
-                            Expr::u32(0),
-                            Expr::var("qw_active_bits"),
+                        Node::let_bind("qw_bit", Expr::ctz(Expr::var("qw_remaining"))),
+                        Node::let_bind(
+                            "qw_src",
+                            Expr::add(Expr::var("qw_src_base"), Expr::var("qw_bit")),
+                        ),
+                        Node::if_then(
+                            Expr::lt(Expr::var("qw_src"), Expr::u32(node_count)),
                             vec![
-                                Node::let_bind("qw_bit", Expr::ctz(Expr::var("qw_remaining"))),
                                 Node::let_bind(
-                                    "qw_src",
-                                    Expr::add(Expr::var("qw_src_base"), Expr::var("qw_bit")),
+                                    "qw_slot",
+                                    Expr::atomic_add(queue_len, Expr::u32(0), Expr::u32(1)),
                                 ),
                                 Node::if_then(
-                                    Expr::lt(Expr::var("qw_src"), Expr::u32(node_count)),
-                                    vec![
-                                        Node::let_bind(
-                                            "qw_slot",
-                                            Expr::atomic_add(queue_len, Expr::u32(0), Expr::u32(1)),
-                                        ),
-                                        Node::if_then(
-                                            Expr::lt(
-                                                Expr::var("qw_slot"),
-                                                Expr::u32(queue_capacity),
-                                            ),
-                                            vec![Node::store(
-                                                active_queue,
-                                                Expr::var("qw_slot"),
-                                                Expr::var("qw_src"),
-                                            )],
-                                        ),
-                                    ],
-                                ),
-                                Node::assign(
-                                    "qw_remaining",
-                                    Expr::bitand(
-                                        Expr::var("qw_remaining"),
-                                        Expr::sub(Expr::var("qw_remaining"), Expr::u32(1)),
-                                    ),
+                                    Expr::lt(Expr::var("qw_slot"), Expr::u32(queue_capacity)),
+                                    vec![Node::store(
+                                        active_queue,
+                                        Expr::var("qw_slot"),
+                                        Expr::var("qw_src"),
+                                    )],
                                 ),
                             ],
+                        ),
+                        Node::assign(
+                            "qw_remaining",
+                            Expr::bitand(
+                                Expr::var("qw_remaining"),
+                                Expr::sub(Expr::var("qw_remaining"), Expr::u32(1)),
+                            ),
                         ),
                     ],
                 ),
             ],
         ),
     ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(frontier_in, 0, BufferAccess::ReadOnly, DataType::U32)
+    if let Some(frontier_out) = frontier_out_to_clear {
+        word_body.insert(
+            0,
+            Node::store(frontier_out, Expr::var("qw_word_idx"), Expr::u32(0)),
+        );
+    }
+
+    let body = vec![
+        Node::let_bind("qw_word_idx", lane),
+        Node::if_then(
+            Expr::lt(Expr::var("qw_word_idx"), Expr::u32(words)),
+            word_body,
+        ),
+    ];
+    let mut buffers = vec![
+        BufferDecl::storage(frontier_in, 0, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(words),
+        BufferDecl::storage(active_queue, 1, BufferAccess::ReadWrite, DataType::U32)
+            .with_count(queue_capacity),
+        BufferDecl::storage(queue_len, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+    ];
+    if let Some(frontier_out) = frontier_out_to_clear {
+        buffers.push(
+            BufferDecl::storage(frontier_out, 3, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(words),
-            BufferDecl::storage(active_queue, 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(queue_capacity),
-            BufferDecl::storage(queue_len, 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
+        );
+    }
+    Program::wrapped(
+        buffers,
         [256, 1, 1],
         vec![Node::Region {
-            generator: Ident::from(FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID),
+            generator: Ident::from(op_id),
             source_region: None,
             body: Arc::new(body),
         }],
@@ -1544,6 +1604,13 @@ mod tests {
         assert_eq!(word_queue.workgroup_size, [256, 1, 1]);
         assert_eq!(word_queue.buffers.len(), 3);
         assert_eq!(word_queue.buffers[0].count, 2);
+        let word_queue_clear =
+            frontier_words_to_queue_clear_out_parallel("frontier", "queue", "len", "out", 64, 8);
+        assert_eq!(word_queue_clear.workgroup_size, [256, 1, 1]);
+        assert_eq!(word_queue_clear.buffers.len(), 4);
+        assert_eq!(word_queue_clear.buffers[0].count, 2);
+        assert_eq!(word_queue_clear.buffers[3].name.as_ref(), "out");
+        assert_eq!(word_queue_clear.buffers[3].count, 2);
         let word_scan =
             frontier_word_counts_scan_pass_a("frontier", "partials", "block_totals", 64);
         assert_eq!(word_scan.workgroup_size, [1024, 1, 1]);

@@ -159,7 +159,9 @@ pub(super) fn run_case(
             determinism_p50s.push(percentile(&sorted, 50.0));
         }
     }
-    let program_fingerprint = ctx.compiled_program_fingerprint;
+    let program_fingerprint = case
+        .workload_fingerprint_bytes(prepared)
+        .or(ctx.compiled_program_fingerprint);
     ctx.compiled_pipeline = None;
     ctx.compiled_program_fingerprint = None;
 

@@ -8,8 +8,10 @@ use crate::api::metric::BenchMetrics;
 use crate::api::resident::{input_bytes_total, ResidentInputSet};
 use crate::api::suite::SuiteKind;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange, TimedDispatchResult};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::graph::csr_frontier_queue::frontier_words_to_queue_parallel;
+use vyre_foundation::ir::Program;
+use vyre_primitives::graph::csr_frontier_queue::{
+    frontier_queue_len_init, frontier_words_to_queue_clear_out_parallel,
+};
 use vyre_primitives::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
 
 use super::super::fixture::{
@@ -35,12 +37,13 @@ pub(in crate::cases::dataflow_irregular) const QUEUE_EDGE_OFFSETS_INDEX: usize =
 pub(in crate::cases::dataflow_irregular) const QUEUE_EDGE_TARGETS_INDEX: usize = 4;
 pub(in crate::cases::dataflow_irregular) const QUEUE_EDGE_KIND_INDEX: usize = 5;
 pub(in crate::cases::dataflow_irregular) const QUEUE_FRONTIER_OUT_INDEX: usize = 6;
-pub(in crate::cases::dataflow_irregular) const QUEUE_RESET_RESOURCE_INDICES: [usize; 2] =
-    [QUEUE_LEN_INDEX, QUEUE_FRONTIER_OUT_INDEX];
-pub(in crate::cases::dataflow_irregular) const QUEUE_BUILD_RESOURCE_INDICES: [usize; 3] = [
+pub(in crate::cases::dataflow_irregular) const QUEUE_RESET_RESOURCE_INDICES: [usize; 1] =
+    [QUEUE_LEN_INDEX];
+pub(in crate::cases::dataflow_irregular) const QUEUE_BUILD_RESOURCE_INDICES: [usize; 4] = [
     QUEUE_FRONTIER_IN_INDEX,
     QUEUE_ACTIVE_QUEUE_INDEX,
     QUEUE_LEN_INDEX,
+    QUEUE_FRONTIER_OUT_INDEX,
 ];
 pub(in crate::cases::dataflow_irregular) const QUEUE_TRAVERSE_RESOURCE_INDICES: [usize; 6] = [
     QUEUE_ACTIVE_QUEUE_INDEX,
@@ -50,6 +53,7 @@ pub(in crate::cases::dataflow_irregular) const QUEUE_TRAVERSE_RESOURCE_INDICES: 
     QUEUE_EDGE_KIND_INDEX,
     QUEUE_FRONTIER_OUT_INDEX,
 ];
+pub(in crate::cases::dataflow_irregular) const QUEUE_RESET_GRID: [u32; 3] = [1, 1, 1];
 
 pub(in crate::cases::dataflow_irregular) struct DataflowIfdsSkewedQueuePrepared {
     pub(in crate::cases::dataflow_irregular) reset_program: Program,
@@ -144,6 +148,12 @@ impl BenchCase for DataflowIfdsSkewedQueueMaterializeStep {
             .map(|prepared| &prepared.traverse_program)
     }
 
+    fn workload_fingerprint_bytes(&self, prepared: &PreparedCase) -> Option<[u8; 32]> {
+        prepared
+            .downcast_ref::<DataflowIfdsSkewedQueuePrepared>()
+            .map(ifds_queue_materialize_sequence_fingerprint)
+    }
+
     fn run(
         &self,
         ctx: &mut BenchContext,
@@ -199,6 +209,8 @@ impl BenchCase for DataflowIfdsSkewedQueueMaterializeStep {
                     workgroup[0],
                     true,
                     prepared.row_strided_traverse,
+                    true,
+                    QUEUE_RESET_GRID.into_iter().product(),
                 ),
                 ..Default::default()
             },
@@ -226,11 +238,12 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_materializ
     let queue_capacity = ifds_sparse_queue_capacity(fixture.stats.active_sources)?;
     let high_degree_queue_capacity =
         ifds_active_high_degree_sources(&fixture, CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD)?;
-    let reset_program = ifds_queue_reset_program(fixture.stats.frontier_words);
-    let queue_program = frontier_words_to_queue_parallel(
+    let reset_program = frontier_queue_len_init("queue_len");
+    let queue_program = frontier_words_to_queue_clear_out_parallel(
         "frontier_in",
         "active_queue",
         "queue_len",
+        "frontier_out",
         fixture.stats.nodes,
         queue_capacity,
     );
@@ -279,33 +292,26 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_materializ
     })
 }
 
-pub(in crate::cases::dataflow_irregular) fn ifds_queue_reset_program(
-    frontier_words: u32,
-) -> Program {
-    let idx = Expr::InvocationId { axis: 0 };
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("queue_len", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage("frontier_out", 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(frontier_words.max(1)),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::if_then(
-                Expr::eq(idx.clone(), Expr::u32(0)),
-                vec![Node::store("queue_len", Expr::u32(0), Expr::u32(0))],
-            ),
-            Node::if_then(
-                Expr::lt(idx, Expr::u32(frontier_words)),
-                vec![Node::store(
-                    "frontier_out",
-                    Expr::InvocationId { axis: 0 },
-                    Expr::u32(0),
-                )],
-            ),
-        ],
-    )
+pub(in crate::cases::dataflow_irregular) fn ifds_queue_materialize_sequence_fingerprint(
+    prepared: &DataflowIfdsSkewedQueuePrepared,
+) -> [u8; 32] {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(b"vyre-bench:dataflow.ifds.skewed.queue_materialize_step.sequence:v1");
+    for fingerprint in [
+        prepared.reset_program.fingerprint(),
+        prepared.queue_program.fingerprint(),
+        prepared.traverse_program.fingerprint(),
+    ] {
+        hasher.update(&fingerprint);
+    }
+    for value in QUEUE_RESET_GRID
+        .into_iter()
+        .chain(prepared.queue_program.workgroup_size())
+        .chain(prepared.traverse_grid)
+    {
+        hasher.update(&value.to_le_bytes());
+    }
+    *hasher.finalize().as_bytes()
 }
 
 struct QueueSequenceRun {
@@ -336,7 +342,7 @@ fn dispatch_resident_queue_sequence(
     let reset_step = ResidentDispatchStep {
         program: &prepared.reset_program,
         resources: &reset_resources,
-        grid_override: Some(frontier_word_grid(prepared.stats.frontier_words, workgroup)),
+        grid_override: Some(QUEUE_RESET_GRID),
     };
     let queue_step = ResidentDispatchStep {
         program: &prepared.queue_program,
@@ -382,24 +388,21 @@ fn dispatch_host_queue_sequence(
     workgroup: [u32; 3],
 ) -> Result<QueueSequenceRun, BenchError> {
     let started = Instant::now();
-    let reset_inputs = vec![
-        prepared.inputs[QUEUE_LEN_INDEX].clone(),
-        prepared.inputs[QUEUE_FRONTIER_OUT_INDEX].clone(),
-    ];
+    let reset_inputs = vec![prepared.inputs[QUEUE_LEN_INDEX].clone()];
     let reset = dispatch_queue_stage(
         ctx,
         &prepared.reset_program,
         reset_inputs,
-        frontier_word_grid(prepared.stats.frontier_words, workgroup),
-        workgroup,
+        QUEUE_RESET_GRID,
+        prepared.reset_program.workgroup_size(),
     )?;
     let reset_queue_len = stage_output(&reset, 0, "IFDS queue reset queue_len")?.clone();
-    let reset_frontier_out = stage_output(&reset, 1, "IFDS queue reset frontier_out")?.clone();
 
     let queue_inputs = vec![
         prepared.inputs[QUEUE_FRONTIER_IN_INDEX].clone(),
         prepared.inputs[QUEUE_ACTIVE_QUEUE_INDEX].clone(),
         reset_queue_len,
+        prepared.inputs[QUEUE_FRONTIER_OUT_INDEX].clone(),
     ];
     let queue = dispatch_queue_stage(
         ctx,
@@ -410,6 +413,7 @@ fn dispatch_host_queue_sequence(
     )?;
     let active_queue = stage_output(&queue, 0, "IFDS queue build active_queue")?.clone();
     let queue_len = stage_output(&queue, 1, "IFDS queue build queue_len")?.clone();
+    let cleared_frontier_out = stage_output(&queue, 2, "IFDS queue build frontier_out")?.clone();
 
     let traverse_inputs = vec![
         active_queue,
@@ -417,7 +421,7 @@ fn dispatch_host_queue_sequence(
         prepared.inputs[QUEUE_EDGE_OFFSETS_INDEX].clone(),
         prepared.inputs[QUEUE_EDGE_TARGETS_INDEX].clone(),
         prepared.inputs[QUEUE_EDGE_KIND_INDEX].clone(),
-        reset_frontier_out,
+        cleared_frontier_out,
     ];
     let traverse = dispatch_queue_stage(
         ctx,
@@ -459,7 +463,7 @@ fn dispatch_queue_stage(
     workgroup: [u32; 3],
 ) -> Result<QueueStageRun, BenchError> {
     let mut config = ctx.dispatch_config.clone();
-    config.workgroup_override.get_or_insert(workgroup);
+    config.workgroup_override = Some(workgroup);
     config.grid_override = Some(grid_override);
     let timed = ctx
         .dispatch_timed(program, &inputs, &config)

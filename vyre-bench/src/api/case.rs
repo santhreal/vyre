@@ -441,6 +441,9 @@ pub trait BenchCase: Send + Sync {
     fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a vyre::ir::Program> {
         prepared_program(prepared).ok()
     }
+    fn workload_fingerprint_bytes(&self, prepared: &PreparedCase) -> Option<[u8; 32]> {
+        self.program(prepared).map(vyre::ir::Program::fingerprint)
+    }
     fn run(
         &self,
         ctx: &mut BenchContext,

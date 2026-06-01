@@ -1,18 +1,18 @@
 use super::fixture::{ifds_active_queue_inputs, ifds_queue_inputs};
 use super::queue::{
     ifds_queue_closure_delta_lanes_per_source, ifds_queue_closure_inputs,
-    ifds_queue_closure_reset_program, ifds_queue_reset_program, ifds_queue_should_use_row_strided,
-    ifds_queue_traverse_logical_lanes, ifds_sparse_queue_capacity,
-    prepare_ifds_skewed_active_queue_step, prepare_ifds_skewed_queue_closure,
-    prepare_ifds_skewed_queue_materialize_step, ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX,
-    ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX, ACTIVE_QUEUE_EDGE_TARGETS_INDEX,
-    ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX, QUEUE_ACTIVE_QUEUE_INDEX,
-    QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
+    ifds_queue_closure_reset_program, ifds_queue_materialize_sequence_fingerprint,
+    ifds_queue_should_use_row_strided, ifds_queue_traverse_logical_lanes,
+    ifds_sparse_queue_capacity, prepare_ifds_skewed_active_queue_step,
+    prepare_ifds_skewed_queue_closure, prepare_ifds_skewed_queue_materialize_step,
+    ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX, ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX,
+    ACTIVE_QUEUE_EDGE_TARGETS_INDEX, ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX,
+    QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
     QUEUE_CLOSURE_EDGE_OFFSETS_INDEX, QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX,
     QUEUE_CLOSURE_LEN_B_INDEX, QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX,
     QUEUE_CLOSURE_SEED_FRONTIER_INDEX, QUEUE_CLOSURE_SEED_LEN_INDEX,
     QUEUE_CLOSURE_SEED_QUEUE_INDEX, QUEUE_FRONTIER_IN_INDEX, QUEUE_FRONTIER_OUT_INDEX,
-    QUEUE_LEN_INDEX,
+    QUEUE_LEN_INDEX, QUEUE_RESET_GRID,
 };
 use super::*;
 
@@ -155,7 +155,8 @@ fn ifds_active_queue_inputs_materialize_frontier_queue_once() {
 fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
     let prepared = prepare_ifds_skewed_queue_materialize_step(None).unwrap();
 
-    assert_eq!(prepared.reset_program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(prepared.reset_program.workgroup_size(), [1, 1, 1]);
+    assert_eq!(QUEUE_RESET_GRID, [1, 1, 1]);
     assert_eq!(prepared.queue_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.traverse_program.workgroup_size(), [256, 1, 1]);
     assert!(prepared.row_strided_traverse);
@@ -178,6 +179,14 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
         prepared.queue_program.buffers()[0].count as usize,
         FRONTIER_WORDS
     );
+    assert_eq!(
+        prepared.queue_program.buffers()[3].name.as_ref(),
+        "frontier_out"
+    );
+    assert_eq!(
+        prepared.queue_program.buffers()[3].count as usize,
+        FRONTIER_WORDS
+    );
     assert_eq!(prepared.stats.nodes, NODE_COUNT);
     assert_eq!(prepared.inputs.len(), 7);
     assert_eq!(
@@ -196,6 +205,10 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
     );
     assert!(prepared.stats.allowed_edges_from_active > 0);
     assert!(prepared.input_bytes_total > u64::from(NODE_COUNT) * 12);
+    assert_ne!(
+        ifds_queue_materialize_sequence_fingerprint(&prepared),
+        prepared.traverse_program.fingerprint()
+    );
 }
 
 #[test]
@@ -283,16 +296,14 @@ fn mix32(mut value: u32) -> u32 {
 }
 
 #[test]
-fn ifds_queue_reset_program_clears_len_and_frontier_out() {
-    let program = ifds_queue_reset_program(128);
+fn ifds_queue_reset_only_clears_len_before_fused_queue_build() {
+    let program = vyre_primitives::graph::csr_frontier_queue::frontier_queue_len_init("queue_len");
 
-    assert_eq!(program.workgroup_size(), [256, 1, 1]);
-    assert_eq!(program.buffers().len(), 2);
+    assert_eq!(program.workgroup_size(), [1, 1, 1]);
+    assert_eq!(program.buffers().len(), 1);
     assert_eq!(program.buffers()[0].name.as_ref(), "queue_len");
     assert_eq!(program.buffers()[0].binding, 0);
-    assert_eq!(program.buffers()[1].name.as_ref(), "frontier_out");
-    assert_eq!(program.buffers()[1].binding, 1);
-    assert_eq!(program.buffers()[1].count, 128);
+    assert_eq!(program.buffers()[0].count, 1);
 }
 
 #[test]

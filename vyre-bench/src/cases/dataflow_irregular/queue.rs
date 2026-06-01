@@ -37,8 +37,9 @@ pub(super) use closure::{
 };
 #[cfg(test)]
 pub(super) use materialize::{
-    ifds_queue_reset_program, prepare_ifds_skewed_queue_materialize_step, QUEUE_ACTIVE_QUEUE_INDEX,
-    QUEUE_FRONTIER_IN_INDEX, QUEUE_FRONTIER_OUT_INDEX, QUEUE_LEN_INDEX,
+    ifds_queue_materialize_sequence_fingerprint, prepare_ifds_skewed_queue_materialize_step,
+    QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_FRONTIER_IN_INDEX, QUEUE_FRONTIER_OUT_INDEX, QUEUE_LEN_INDEX,
+    QUEUE_RESET_GRID,
 };
 
 pub(super) const ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX: usize = 0;
@@ -287,6 +288,8 @@ impl BenchCase for DataflowIfdsSkewedActiveQueueStep {
                     workgroup[0],
                     false,
                     prepared.row_strided_traverse,
+                    false,
+                    0,
                 ),
                 ..Default::default()
             },

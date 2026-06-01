@@ -80,6 +80,8 @@ pub(super) fn ifds_queue_metric_points(
     workgroup_size_x: u32,
     parallel_materializer: bool,
     row_strided_traverse: bool,
+    fused_frontier_clear: bool,
+    reset_grid_lanes: u32,
 ) -> Vec<MetricPoint> {
     let mut metrics = ifds_queue_baseline_metric_points(stats, queue_capacity);
     metrics.push(MetricPoint {
@@ -97,6 +99,14 @@ pub(super) fn ifds_queue_metric_points(
     metrics.push(MetricPoint {
         name: "dataflow_ifds_queue_row_strided_traverse".to_string(),
         value: u64::from(row_strided_traverse),
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_queue_fused_frontier_clear".to_string(),
+        value: u64::from(fused_frontier_clear),
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_queue_reset_grid_lanes".to_string(),
+        value: u64::from(reset_grid_lanes),
     });
     metrics.push(MetricPoint {
         name: "dataflow_ifds_queue_high_degree_capacity".to_string(),
