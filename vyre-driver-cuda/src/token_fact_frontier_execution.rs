@@ -309,9 +309,11 @@ pub fn plan_cuda_token_fact_frontier_execution_envelope_with_scratch(
     let work_queue = if active_items == 0 {
         empty_device_work_queue_plan()
     } else {
+        let expansion_items =
+            estimated_queue_expansion_items(active_items, graph_layout.graph_shape)?;
         plan_cuda_device_work_queue_with_expansion(CudaDeviceWorkQueueExpansionProfile {
             initial_items: active_items,
-            expansion_items: graph_layout.graph_shape.edge_count,
+            expansion_items,
             entry_bytes: 4,
             control_bytes: 16,
             budget_bytes: queue_budget,
@@ -392,6 +394,30 @@ fn total_active_items(active_items: &[u64]) -> Result<u64, CudaTokenFactFrontier
         )?;
     }
     Ok(total)
+}
+
+fn estimated_queue_expansion_items(
+    active_items: u64,
+    graph: crate::megakernel_scheduler::CudaMegakernelGraphShape,
+) -> Result<u64, CudaTokenFactFrontierExecutionError> {
+    if active_items == 0 || graph.edge_count == 0 {
+        return Ok(0);
+    }
+    if graph.node_count == 0 {
+        return Ok(graph.edge_count);
+    }
+    let average_out_degree =
+        vyre_driver::numeric::checked_ceil_div_u64(graph.edge_count, graph.node_count).ok_or(
+            CudaTokenFactFrontierExecutionError::ByteCountOverflow {
+                field: "average token/fact graph out-degree",
+            },
+        )?;
+    let projected_edges = active_items.checked_mul(average_out_degree).ok_or(
+        CudaTokenFactFrontierExecutionError::ByteCountOverflow {
+            field: "active frontier edge expansion",
+        },
+    )?;
+    Ok(projected_edges.min(graph.edge_count))
 }
 
 fn max_single_frontier_wave_bytes(
@@ -552,11 +578,114 @@ mod tests {
         )
         .expect("Fix: CUDA token/fact planner should reserve edge-derived queue headroom");
 
-        assert_eq!(plan.work_queue.queue_bytes, (4 + 20) * 4);
-        assert_eq!(plan.resident_work_queue_bytes, (4 + 20) * 4 + 16);
+        assert_eq!(plan.work_queue.queue_bytes, (4 + 16) * 4);
+        assert_eq!(plan.resident_work_queue_bytes, (4 + 16) * 4 + 16);
         assert!(
             plan.frontier.execution.memory.required_bytes
                 <= plan.frontier.execution.memory.budget_bytes
+        );
+    }
+
+    #[test]
+    fn planner_avoids_total_edge_queue_reservation_for_sparse_dense_graph_frontiers() {
+        let nodes = (0_u32..100)
+            .map(|index| {
+                node(
+                    index + 1,
+                    TokenFactNodeKind::Fact,
+                    u64::from(index) * 16,
+                    16,
+                )
+            })
+            .collect::<Vec<_>>();
+        let edges = complete_directed_edges(100, TokenFactEdgeKind::FactDependency);
+        let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 1_600)
+            .expect("Fix: dense token/fact graph should pack");
+        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+            .expect("Fix: dense token/fact graph should adapt");
+        let frontier_input = CudaFrontierTypedIrInput {
+            waves: vec![
+                crate::megakernel_barrier_planner::CudaMegakernelFrontierWave {
+                    frontier_bytes: 16,
+                    scratch_bytes: 16,
+                    output_bytes: 16,
+                },
+            ],
+            active_items: vec![1],
+            dependencies: Vec::new(),
+        };
+        let mut cache = CudaMegakernelPlanCache::new();
+
+        let plan = plan_cuda_token_fact_frontier_execution(
+            &mut cache,
+            0xdad0,
+            CudaMegakernelAnalysisKind::ParserFrontend,
+            device(),
+            CudaMegakernelScheduleSample {
+                dispatch_cost_ns: 10_000.0,
+                frontier_density: 0.01,
+                readback_bytes: 64,
+            },
+            graph_layout,
+            &frontier_input,
+            220_000,
+            250.0,
+            0.0,
+        )
+        .expect("Fix: sparse frontier over dense graph should not reserve every graph edge");
+
+        assert_eq!(
+            plan.work_queue.queue_bytes,
+            100 * 4,
+            "Fix: sparse active frontier should reserve initial item plus one average out-degree, not total graph edges"
+        );
+        assert_eq!(plan.resident_work_queue_bytes, 416);
+    }
+
+    #[test]
+    fn queue_expansion_estimate_caps_dense_frontier_at_total_edges() {
+        assert_eq!(
+            estimated_queue_expansion_items(
+                200,
+                crate::megakernel_scheduler::CudaMegakernelGraphShape {
+                    node_count: 100,
+                    edge_count: 9_900,
+                },
+            )
+            .expect("Fix: dense frontier queue expansion estimate should fit"),
+            9_900
+        );
+    }
+
+    #[test]
+    fn queue_expansion_estimate_uses_total_edges_when_node_count_is_missing() {
+        assert_eq!(
+            estimated_queue_expansion_items(
+                1,
+                crate::megakernel_scheduler::CudaMegakernelGraphShape {
+                    node_count: 0,
+                    edge_count: 128,
+                },
+            )
+            .expect("Fix: malformed zero-node graph should fall back to total-edge headroom"),
+            128
+        );
+    }
+
+    #[test]
+    fn queue_expansion_estimate_rejects_active_average_degree_overflow() {
+        assert_eq!(
+            estimated_queue_expansion_items(
+                2,
+                crate::megakernel_scheduler::CudaMegakernelGraphShape {
+                    node_count: 1,
+                    edge_count: u64::MAX,
+                },
+            )
+            .expect_err("overflowed active frontier expansion should fail before queue planning"),
+            CudaTokenFactFrontierExecutionError::ByteCountOverflow {
+                field: "active frontier edge expansion",
+            }
         );
     }
 
