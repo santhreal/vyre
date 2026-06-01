@@ -9,6 +9,10 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 /// Canonical op id for fused frontier absorption.
 pub const ABSORB_NEW_BITS_OP_ID: &str = "vyre-primitives::bitset::frontier_absorb_new_bits";
+/// Canonical op id for fused frontier absorption when the caller does not need
+/// per-word popcounts.
+pub const ABSORB_NEW_BITS_NO_COUNTS_OP_ID: &str =
+    "vyre-primitives::bitset::frontier_absorb_new_bits_no_counts";
 
 /// Error returned by packed-frontier helpers.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -141,57 +145,15 @@ pub fn frontier_absorb_new_bits_program(
     words: u32,
     final_word_mask: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
-    let final_word = words.saturating_sub(1);
-    let body = vec![
-        Node::let_bind(
-            "frontier_absorb_old_visited",
-            Expr::load(visited, t.clone()),
-        ),
-        Node::let_bind(
-            "frontier_absorb_neighbors",
-            Expr::load(neighbors, t.clone()),
-        ),
-        Node::let_bind(
-            "frontier_absorb_domain_mask",
-            Expr::select(
-                Expr::eq(t.clone(), Expr::u32(final_word)),
-                Expr::u32(final_word_mask),
-                Expr::u32(u32::MAX),
-            ),
-        ),
-        Node::let_bind(
-            "frontier_absorb_in_domain_neighbors",
-            Expr::bitand(
-                Expr::var("frontier_absorb_neighbors"),
-                Expr::var("frontier_absorb_domain_mask"),
-            ),
-        ),
-        Node::let_bind(
-            "frontier_absorb_new_bits",
-            Expr::bitand(
-                Expr::var("frontier_absorb_in_domain_neighbors"),
-                Expr::bitnot(Expr::var("frontier_absorb_old_visited")),
-            ),
-        ),
-        Node::store(next_wave, t.clone(), Expr::var("frontier_absorb_new_bits")),
-        Node::store(
-            visited,
-            t.clone(),
-            Expr::bitor(
-                Expr::var("frontier_absorb_old_visited"),
-                Expr::var("frontier_absorb_new_bits"),
-            ),
-        ),
-        Node::store(
-            added_counts,
-            t.clone(),
-            Expr::UnOp {
-                op: UnOp::Popcount,
-                operand: Box::new(Expr::var("frontier_absorb_new_bits")),
-            },
-        ),
-    ];
+    let body = frontier_absorb_new_bits_body_prefixed(
+        visited,
+        neighbors,
+        next_wave,
+        Some(added_counts),
+        words,
+        final_word_mask,
+        "frontier_absorb",
+    );
 
     Program::wrapped(
         vec![
@@ -208,7 +170,122 @@ pub fn frontier_absorb_new_bits_program(
         vec![Node::Region {
             generator: Ident::from(ABSORB_NEW_BITS_OP_ID),
             source_region: None,
-            body: Arc::new(vec![Node::if_then(Expr::lt(t, Expr::u32(words)), body)]),
+            body: Arc::new(body),
+        }],
+    )
+}
+
+/// Build one frontier-absorption body.
+///
+/// `next_wave[w] = (neighbors[w] & domain_mask) & !visited[w]`
+/// and `visited[w] |= next_wave[w]`. When `added_counts` is supplied, the body
+/// also writes `popcount(next_wave[w])`.
+#[must_use]
+pub(crate) fn frontier_absorb_new_bits_body_prefixed(
+    visited: &str,
+    neighbors: &str,
+    next_wave: &str,
+    added_counts: Option<&str>,
+    words: u32,
+    final_word_mask: u32,
+    local_prefix: &str,
+) -> Vec<Node> {
+    let local = |name: &str| -> String {
+        if local_prefix.is_empty() {
+            name.to_string()
+        } else {
+            format!("{local_prefix}_{name}")
+        }
+    };
+    let t = Expr::InvocationId { axis: 0 };
+    let final_word = words.saturating_sub(1);
+    let old_visited = local("old_visited");
+    let neighbor_word = local("neighbors");
+    let domain_mask = local("domain_mask");
+    let in_domain_neighbors = local("in_domain_neighbors");
+    let new_bits = local("new_bits");
+
+    let mut body = vec![
+        Node::let_bind(old_visited.as_str(), Expr::load(visited, t.clone())),
+        Node::let_bind(neighbor_word.as_str(), Expr::load(neighbors, t.clone())),
+        Node::let_bind(
+            domain_mask.as_str(),
+            Expr::select(
+                Expr::eq(t.clone(), Expr::u32(final_word)),
+                Expr::u32(final_word_mask),
+                Expr::u32(u32::MAX),
+            ),
+        ),
+        Node::let_bind(
+            in_domain_neighbors.as_str(),
+            Expr::bitand(
+                Expr::var(neighbor_word.as_str()),
+                Expr::var(domain_mask.as_str()),
+            ),
+        ),
+        Node::let_bind(
+            new_bits.as_str(),
+            Expr::bitand(
+                Expr::var(in_domain_neighbors.as_str()),
+                Expr::bitnot(Expr::var(old_visited.as_str())),
+            ),
+        ),
+        Node::store(next_wave, t.clone(), Expr::var(new_bits.as_str())),
+        Node::store(
+            visited,
+            t.clone(),
+            Expr::bitor(
+                Expr::var(old_visited.as_str()),
+                Expr::var(new_bits.as_str()),
+            ),
+        ),
+    ];
+    if let Some(added_counts) = added_counts {
+        body.push(Node::store(
+            added_counts,
+            t.clone(),
+            Expr::UnOp {
+                op: UnOp::Popcount,
+                operand: Box::new(Expr::var(new_bits.as_str())),
+            },
+        ));
+    }
+
+    vec![Node::if_then(Expr::lt(t, Expr::u32(words)), body)]
+}
+
+/// Build a fused GPU program for one frontier-closure absorption step without
+/// per-word popcount output.
+#[must_use]
+pub fn frontier_absorb_new_bits_no_counts_program(
+    visited: &str,
+    neighbors: &str,
+    next_wave: &str,
+    words: u32,
+    final_word_mask: u32,
+) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(visited, 0, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(words),
+            BufferDecl::storage(neighbors, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(words),
+            BufferDecl::storage(next_wave, 2, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(words),
+        ],
+        [256, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(ABSORB_NEW_BITS_NO_COUNTS_OP_ID),
+            source_region: None,
+            body: Arc::new(frontier_absorb_new_bits_body_prefixed(
+                visited,
+                neighbors,
+                next_wave,
+                None,
+                words,
+                final_word_mask,
+                "frontier_absorb_no_counts",
+            )),
         }],
     )
 }
@@ -227,6 +304,24 @@ pub fn frontier_absorb_new_bits_for_node_count_program(
         neighbors,
         next_wave,
         added_counts,
+        bitset_words(node_count),
+        frontier_tail_mask(node_count),
+    )
+}
+
+/// Build a no-count frontier-absorption GPU program from the logical node
+/// count.
+#[must_use]
+pub fn frontier_absorb_new_bits_no_counts_for_node_count_program(
+    visited: &str,
+    neighbors: &str,
+    next_wave: &str,
+    node_count: u32,
+) -> Program {
+    frontier_absorb_new_bits_no_counts_program(
+        visited,
+        neighbors,
+        next_wave,
         bitset_words(node_count),
         frontier_tail_mask(node_count),
     )
@@ -498,6 +593,28 @@ mod tests {
         assert_eq!(summary.added_popcount, 4);
         assert_eq!(next_wave, vec![0b0110, 0b0110]);
         assert_eq!(visited, vec![0b0111, 0b0111]);
+    }
+
+    #[test]
+    fn no_count_absorb_program_keeps_only_frontier_outputs() {
+        let program = frontier_absorb_new_bits_no_counts_for_node_count_program(
+            "visited",
+            "neighbors",
+            "next",
+            65,
+        );
+        let names = program
+            .buffers()
+            .iter()
+            .map(|buffer| buffer.name())
+            .collect::<Vec<_>>();
+
+        assert_eq!(program.workgroup_size(), [256, 1, 1]);
+        assert_eq!(names, vec!["visited", "neighbors", "next"]);
+        assert_eq!(program.buffers()[0].count, 3);
+        assert_eq!(program.buffers()[1].count, 3);
+        assert_eq!(program.buffers()[2].count, 3);
+        assert!(!names.contains(&"added_counts"));
     }
 
     #[test]

@@ -1,4 +1,5 @@
 pub const ABSORB_NEW_BITS_OP_ID: &str = "vyre-primitives::bitset::frontier_absorb_new_bits";
+pub const ABSORB_NEW_BITS_NO_COUNTS_OP_ID: &str =
 pub const ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_LANES: u32 = 256;
 pub const ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE: [u32; 3] =
 pub const ADAPTIVE_TRAVERSAL_POPCOUNT_BYTES: usize = std::mem::size_of::<u32>();
@@ -979,6 +980,8 @@ pub fn fractional_derivative_cpu_into(
 pub fn from_bytes(bytes: &[u8]) -> Result<Self, DfaWireError> {
 pub fn from_rules(
 pub fn frontier_absorb_new_bits_for_node_count_program(
+pub fn frontier_absorb_new_bits_no_counts_for_node_count_program(
+pub fn frontier_absorb_new_bits_no_counts_program(
 pub fn frontier_absorb_new_bits_program(
 pub fn frontier_queue_len_init(queue_len: &str) -> Program {
 pub fn frontier_size(frontier: &[u32]) -> u32 {

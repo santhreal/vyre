@@ -292,6 +292,39 @@ fn cuda_reachable_diamond_converges() {
     });
 }
 
+#[test]
+fn cuda_reachable_depth_cap_returns_only_requested_waves() {
+    with_live_backend(
+        "cuda_reachable_depth_cap_returns_only_requested_waves",
+        |backend| {
+            let edges = vec![(0u32, 1u32), (1, 2), (2, 3), (3, 4)];
+            let gpu = run_reachable(backend, 5, &edges, &[0], 2);
+
+            assert_eq!(gpu, vec![0, 1, 2]);
+        },
+    );
+}
+
+#[test]
+fn cuda_reachable_multi_block_wave_handoff() {
+    with_live_backend("cuda_reachable_multi_block_wave_handoff", |backend| {
+        let edges = vec![(255u32, 256u32), (256, 512)];
+        let gpu = run_reachable(backend, 513, &edges, &[255], 2);
+
+        assert_eq!(gpu, vec![255, 256, 512]);
+    });
+}
+
+#[test]
+fn cuda_reachable_cycle_feeds_only_new_bits() {
+    with_live_backend("cuda_reachable_cycle_feeds_only_new_bits", |backend| {
+        let edges = vec![(0u32, 1u32), (1, 0), (1, 2), (2, 2)];
+        let gpu = run_reachable(backend, 3, &edges, &[0], 8);
+
+        assert_eq!(gpu, vec![0, 1, 2]);
+    });
+}
+
 // ---------------------------------------------------------------------
 // level_wave_program
 // ---------------------------------------------------------------------
