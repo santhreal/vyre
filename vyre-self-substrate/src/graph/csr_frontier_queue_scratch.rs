@@ -97,6 +97,7 @@ pub(crate) const fn resident_csr_queue_materializer_for_stats(
     }
 }
 
+#[cfg(test)]
 pub(crate) const fn resident_csr_queue_traverse_kind(
     max_row_degree: u32,
 ) -> ResidentCsrQueueTraverseKind {
@@ -333,6 +334,20 @@ pub(crate) fn resident_csr_queue_scratch_bytes_per_query_for_materializer(
     queue_capacity: u32,
     materializer: ResidentCsrQueueMaterializer,
 ) -> Result<usize, String> {
+    resident_csr_queue_scratch_bytes_per_query_for_materializer_and_traverse(
+        frontier_words,
+        queue_capacity,
+        materializer,
+        ResidentCsrQueueTraverseKind::RowSerial,
+    )
+}
+
+pub(crate) fn resident_csr_queue_scratch_bytes_per_query_for_materializer_and_traverse(
+    frontier_words: usize,
+    queue_capacity: u32,
+    materializer: ResidentCsrQueueMaterializer,
+    traverse_kind: ResidentCsrQueueTraverseKind,
+) -> Result<usize, String> {
     let frontier_bytes = words_to_bytes(frontier_words, "frontier")?;
     let queue_bytes = words_to_bytes(queue_capacity as usize, "active_queue")?;
     let mut bytes = frontier_bytes;
@@ -351,6 +366,17 @@ pub(crate) fn resident_csr_queue_scratch_bytes_per_query_for_materializer(
             words_to_bytes(word_prefix.block_total_words, "block_totals")?,
             "block_totals",
         )?;
+    }
+    if let ResidentCsrQueueTraverseKind::MixedSplit {
+        high_queue_capacity,
+    } = traverse_kind
+    {
+        bytes = checked_add(
+            bytes,
+            words_to_bytes(high_queue_capacity as usize, "high_queue")?,
+            "high_queue",
+        )?;
+        bytes = checked_add(bytes, U32_BYTES, "high_len")?;
     }
     Ok(bytes)
 }

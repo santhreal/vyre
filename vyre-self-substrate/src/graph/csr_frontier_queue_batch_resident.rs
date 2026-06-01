@@ -30,6 +30,8 @@ pub struct ResidentCsrQueueBatchScratch {
     word_counts_program: Option<Program>,
     word_block_offsets_program: Option<Program>,
     queue_program: Option<Program>,
+    high_len_init_program: Option<Program>,
+    split_low_program: Option<Program>,
     traverse_program: Option<Program>,
     frontier_payloads: Vec<Vec<u8>>,
     readbacks: Vec<Vec<u8>>,
@@ -41,6 +43,9 @@ pub struct ResidentCsrQueueBatchScratch {
     atomic_word_queue_handle_sets: Vec<[u64; 4]>,
     word_prefix_queue_handle_sets: Vec<[u64; 5]>,
     traverse_handle_sets: Vec<[u64; 6]>,
+    high_len_handle_sets: Vec<[u64; 1]>,
+    split_low_handle_sets: Vec<[u64; 8]>,
+    high_traverse_handle_sets: Vec<[u64; 6]>,
     read_ranges: Vec<ResidentReadRange>,
 }
 
@@ -59,7 +64,7 @@ impl ResidentCsrQueueBatchScratch {
 
     /// Free all batch scratch resident buffers.
     pub fn free(&mut self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
-        let handle_slots = self.handles.len().checked_mul(6).ok_or_else(|| {
+        let handle_slots = self.handles.len().checked_mul(8).ok_or_else(|| {
             DispatchError::BackendError(
                 "Fix: resident CSR queue batch scratch free handle count overflowed.".to_string(),
             )
@@ -83,6 +88,12 @@ impl ResidentCsrQueueBatchScratch {
             if let Some(block_totals) = handles.block_totals {
                 handles_to_free.push(block_totals);
             }
+            if let Some(high_queue) = handles.high_queue {
+                handles_to_free.push(high_queue);
+            }
+            if let Some(high_len) = handles.high_len {
+                handles_to_free.push(high_len);
+            }
         }
         let free_result = free_unique_resident_handles(
             dispatcher,
@@ -96,6 +107,8 @@ impl ResidentCsrQueueBatchScratch {
         self.word_counts_program = None;
         self.word_block_offsets_program = None;
         self.queue_program = None;
+        self.high_len_init_program = None;
+        self.split_low_program = None;
         self.traverse_program = None;
         self.frontier_payloads.clear();
         self.readbacks.clear();
@@ -107,6 +120,9 @@ impl ResidentCsrQueueBatchScratch {
         self.atomic_word_queue_handle_sets.clear();
         self.word_prefix_queue_handle_sets.clear();
         self.traverse_handle_sets.clear();
+        self.high_len_handle_sets.clear();
+        self.split_low_handle_sets.clear();
+        self.high_traverse_handle_sets.clear();
         self.read_ranges.clear();
         free_result
     }
@@ -120,6 +136,8 @@ struct ResidentCsrQueueBatchQueryHandles {
     frontier_out: u64,
     word_partials: Option<u64>,
     block_totals: Option<u64>,
+    high_queue: Option<u64>,
+    high_len: Option<u64>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -127,6 +145,7 @@ struct ResidentCsrQueueBatchShape {
     batch_len: usize,
     frontier_bytes: usize,
     queue_capacity: u32,
+    high_queue_capacity: u32,
     node_count: u32,
     materializer: ResidentCsrQueueMaterializer,
 }
