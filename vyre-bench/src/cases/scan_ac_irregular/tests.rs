@@ -1,4 +1,7 @@
 use super::*;
+use vyre_foundation::match_result::Match;
+
+mod count_prefilter_generated;
 
 #[test]
 fn irregular_haystack_plants_unaligned_varied_literals() {
@@ -67,12 +70,17 @@ fn count_prepare_builds_compact_cardinality_program() {
     let prepared = count::prepare_scan_ac_irregular_count(None).unwrap();
 
     assert_eq!(prepared.program.workgroup_size(), [128, 1, 1]);
-    assert_eq!(prepared.inputs.len(), 5);
+    assert_eq!(prepared.inputs.len(), 6);
     assert_eq!(prepared.baseline_output.len(), 4);
     assert_eq!(prepared.stats.haystack_bytes, HAYSTACK_BYTES as u32);
     assert_eq!(prepared.stats.patterns, PATTERNS.len() as u32);
     assert!(prepared.stats.expected_matches > 0);
-    assert_eq!(prepared.program.buffers()[4].name(), "match_count");
+    assert_eq!(prepared.program.buffers()[3].name(), "candidate_end_mask");
+    assert_eq!(prepared.program.buffers()[5].name(), "match_count");
+    assert!(prepared.stats.candidate_end_bytes > 0);
+    assert!(prepared.stats.candidate_end_bytes < 32);
+    assert!(prepared.stats.candidate_end_lanes > 0);
+    assert!(prepared.stats.candidate_end_lanes < prepared.stats.haystack_bytes / 2);
     assert_eq!(
         selected_scan_output_bytes(prepared.stats),
         4 + u64::from(prepared.stats.expected_matches) * 12
@@ -82,8 +90,8 @@ fn count_prepare_builds_compact_cardinality_program() {
         u64::from(full_scan.stats.output_records + full_scan.stats.patterns) * 4;
     assert_eq!(
         prepared.input_bytes_total,
-        full_scan.input_bytes_total - removed_emit_tables,
-        "count-only preflight should avoid pattern length and match-output input surfaces"
+        full_scan.input_bytes_total - removed_emit_tables + 8 * 4,
+        "count-only preflight should replace emit tables with the 8-word candidate mask"
     );
 }
 
@@ -149,11 +157,11 @@ fn bounded_count_program_reference_eval_matches_cpu_cardinality() {
         .unwrap()
         .len() as u32;
     let program = with_reference_dispatch_lanes(
-        vyre_libs::scan::classic_ac::build_ac_bounded_count_program(&ac.dfa),
+        vyre_libs::scan::classic_ac::build_ac_bounded_count_prefilter_program(&ac.dfa),
         haystack.len() as u32,
     );
     let mut inputs = count::scan_ac_count_inputs(&ac, &haystack);
-    inputs[4] = vec![0_u8; haystack.len() * 4];
+    inputs[5] = vec![0_u8; haystack.len() * 4];
     let values = inputs
         .into_iter()
         .map(vyre_reference::value::Value::from)

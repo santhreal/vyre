@@ -11,6 +11,8 @@ pub(super) struct ScanAcStats {
     pub(super) expected_matches: u32,
     pub(super) max_matches: u32,
     pub(super) planted_matches: u32,
+    pub(super) candidate_end_bytes: u32,
+    pub(super) candidate_end_lanes: u32,
 }
 
 pub(super) fn scan_ac_metric_points(
@@ -67,7 +69,27 @@ pub(super) fn scan_ac_count_metric_points(
         workgroup_size_x,
     );
     metrics.push(metric("scan_ac_irregular_count_only", 1));
+    metrics.push(metric("scan_ac_irregular_count_prefilter", 1));
     metrics.push(metric("scan_ac_irregular_count_readback_bytes", 4));
+    metrics.push(metric(
+        "scan_ac_irregular_candidate_end_bytes",
+        u64::from(stats.candidate_end_bytes),
+    ));
+    metrics.push(metric(
+        "scan_ac_irregular_candidate_end_lanes",
+        u64::from(stats.candidate_end_lanes),
+    ));
+    if stats.haystack_bytes > 0 {
+        metrics.push(metric(
+            "scan_ac_irregular_count_prefilter_skipped_lanes_x1000",
+            (u128::from(
+                stats
+                    .haystack_bytes
+                    .saturating_sub(stats.candidate_end_lanes),
+            ) * 1000
+                / u128::from(stats.haystack_bytes)) as u64,
+        ));
+    }
     metrics
 }
 
