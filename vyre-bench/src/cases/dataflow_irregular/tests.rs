@@ -326,6 +326,21 @@ fn ifds_queue_closure_prepare_builds_delta_fixpoint_sequence() {
     assert_eq!(prepared.reset_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.clear_len_program.workgroup_size(), [1, 1, 1]);
     assert_eq!(prepared.delta_program.workgroup_size(), [256, 1, 1]);
+    assert!(prepared.row_strided_delta);
+    assert_eq!(
+        prepared.delta_grid,
+        vyre_primitives::graph::csr_queue_delta::csr_queue_delta_strided_dispatch_grid(
+            prepared.queue_capacity
+        )
+    );
+    assert_eq!(
+        prepared.delta_program.buffers()[0].name.as_ref(),
+        "active_queue"
+    );
+    assert_eq!(
+        prepared.delta_program.buffers()[6].name.as_ref(),
+        "next_queue"
+    );
     assert_eq!(
         prepared.reset_program.buffers()[0].name.as_ref(),
         "frontier_seed"

@@ -100,6 +100,8 @@ pub const CSR_FORWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 pub const CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 pub const CSR_QUEUE_DELTA_ENQUEUE_OP_ID: &str = "vyre-primitives::graph::csr_queue_delta_enqueue";
 pub const CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+pub const CSR_QUEUE_DELTA_STRIDED_ENQUEUE_OP_ID: &str =
+pub const CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE: u32 =
 pub const CSR_QUEUE_FORWARD_OP_ID: &str = "vyre-primitives::graph::csr_queue_forward_traverse";
 pub const CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE: u32 = 32;
 pub const CSR_QUEUE_STRIDED_FORWARD_OP_ID: &str =
@@ -511,6 +513,7 @@ pub const fn csr_forward_or_changed_parallel_batch_grid(
 pub const fn csr_forward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
 pub const fn csr_frontier_degree_sum_dispatch_grid(node_count: u32) -> [u32; 3] {
 pub const fn csr_frontier_step_dispatch_grid(node_count: u32) -> [u32; 3] {
+pub const fn csr_queue_delta_strided_dispatch_grid(active_queue_capacity: u32) -> [u32; 3] {
 pub const fn csr_queue_strided_forward_dispatch_grid(queue_capacity: u32) -> [u32; 3] {
 pub const fn ddnnf_evaluate_dispatch_grid(n_nodes: u32) -> [u32; 3] {
 pub const fn dispatch_grid(&self) -> [u32; 3] {
@@ -742,6 +745,7 @@ pub fn char_class(source: &str, classified: &str, n: u32) -> Program {
 pub fn chebyshev_filter(
 pub fn chebyshev_filter_cpu(
 pub fn chebyshev_filter_cpu_into(
+pub fn checked_frontier_domain_popcount(
 pub fn checked_frontier_popcount(frontier: &[u32]) -> Result<u32, FrontierError> {
 pub fn classify_from_histogram(histogram: &[u32; 256], count: u32) -> u32 {
 pub fn clear(&mut self) {
@@ -876,6 +880,7 @@ pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
 pub fn csr_frontier_degree_sum_cpu(
 pub fn csr_queue_delta_enqueue(
 pub fn csr_queue_delta_enqueue_cpu(
+pub fn csr_queue_delta_strided_enqueue(
 pub fn csr_queue_forward_traverse(
 pub fn csr_queue_forward_traverse_cpu(
 pub fn csr_queue_strided_forward_traverse(
@@ -1073,6 +1078,8 @@ pub fn m2l_zeroth_translate_cpu(source_moment: f64, distance: f64) -> f64 {
 pub fn majority_bundle_cpu(hvs: &[Vec<u32>]) -> Vec<u32> {
 pub fn majority_bundle_cpu_into(hvs: &[Vec<u32>], out: &mut Vec<u32>) {
 pub fn mask_frontier_tail_bits(node_count: u32, frontier: &mut [u32]) {
+pub fn materialize_frontier_queue_exact_count_into(
+pub fn materialize_frontier_queue_into(
 pub fn matroid_exchange_bfs_step(
 pub fn matroid_exchange_bfs_step_cpu(
 pub fn matroid_intersection_full(

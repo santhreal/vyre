@@ -76,6 +76,10 @@ fn append_queue_closure_points(
         value: 1,
     });
     metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_row_strided_delta".to_string(),
+        value: if prepared.row_strided_delta { 1 } else { 0 },
+    });
+    metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_seed_scan_elided".to_string(),
         value: 1,
     });

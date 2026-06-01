@@ -12,6 +12,13 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use crate::bitset::bitset_words;
 
+mod strided;
+
+pub use strided::{
+    csr_queue_delta_strided_dispatch_grid, csr_queue_delta_strided_enqueue,
+    CSR_QUEUE_DELTA_STRIDED_ENQUEUE_OP_ID, CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE,
+};
+
 /// Canonical op id for queue-to-queue delta CSR expansion.
 pub const CSR_QUEUE_DELTA_ENQUEUE_OP_ID: &str = "vyre-primitives::graph::csr_queue_delta_enqueue";
 

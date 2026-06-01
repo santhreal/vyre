@@ -8,13 +8,16 @@ use crate::api::suite::SuiteKind;
 use std::time::Instant;
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_frontier_queue::frontier_queue_len_init;
-use vyre_primitives::graph::csr_queue_delta::csr_queue_delta_enqueue;
+use vyre_primitives::graph::csr_queue_delta::{
+    csr_queue_delta_enqueue, csr_queue_delta_strided_dispatch_grid, csr_queue_delta_strided_enqueue,
+};
 
 use super::super::closure::CLOSURE_MAX_ITERS;
 use super::super::fixture::{
     build_ifds_skewed_fixture, ifds_skewed_closure_oracle, IfdsSkewedStats, IFDS_REACH_MASK,
     NODE_COUNT,
 };
+use super::ifds_queue_should_use_row_strided;
 
 mod metrics;
 mod sequence;
@@ -55,6 +58,8 @@ pub(in crate::cases::dataflow_irregular) struct DataflowIfdsSkewedQueueClosurePr
     pub(in crate::cases::dataflow_irregular) reset_program: Program,
     pub(in crate::cases::dataflow_irregular) clear_len_program: Program,
     pub(in crate::cases::dataflow_irregular) delta_program: Program,
+    pub(in crate::cases::dataflow_irregular) delta_grid: [u32; 3],
+    pub(in crate::cases::dataflow_irregular) row_strided_delta: bool,
     pub(in crate::cases::dataflow_irregular) inputs: Vec<Vec<u8>>,
     pub(in crate::cases::dataflow_irregular) input_bytes_total: u64,
     pub(in crate::cases::dataflow_irregular) baseline_output: Vec<u8>,
@@ -229,21 +234,52 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_closure(
         queue_capacity,
     );
     let clear_len_program = frontier_queue_len_init("queue_len");
-    let delta_program = csr_queue_delta_enqueue(
-        "active_queue",
-        "active_len",
-        "edge_offsets",
-        "edge_targets",
-        "edge_kind_mask",
-        "accumulator",
-        "next_queue",
-        "next_len",
-        fixture.stats.nodes,
-        fixture.stats.edges,
-        queue_capacity,
-        queue_capacity,
-        IFDS_REACH_MASK,
-    );
+    let row_strided_delta = ifds_queue_should_use_row_strided(fixture.stats.max_degree);
+    let (delta_program, delta_grid) = if row_strided_delta {
+        (
+            csr_queue_delta_strided_enqueue(
+                "active_queue",
+                "active_len",
+                "edge_offsets",
+                "edge_targets",
+                "edge_kind_mask",
+                "accumulator",
+                "next_queue",
+                "next_len",
+                fixture.stats.nodes,
+                fixture.stats.edges,
+                queue_capacity,
+                queue_capacity,
+                IFDS_REACH_MASK,
+            ),
+            csr_queue_delta_strided_dispatch_grid(queue_capacity),
+        )
+    } else {
+        (
+            csr_queue_delta_enqueue(
+                "active_queue",
+                "active_len",
+                "edge_offsets",
+                "edge_targets",
+                "edge_kind_mask",
+                "accumulator",
+                "next_queue",
+                "next_len",
+                fixture.stats.nodes,
+                fixture.stats.edges,
+                queue_capacity,
+                queue_capacity,
+                IFDS_REACH_MASK,
+            ),
+            [
+                queue_capacity
+                    .div_ceil(QUEUE_CLOSURE_WORKGROUP_SIZE[0])
+                    .max(1),
+                1,
+                1,
+            ],
+        )
+    };
 
     let full_oracle = ifds_skewed_closure_oracle(&fixture, CLOSURE_MAX_ITERS);
     if oracle.output != full_oracle.output {
@@ -265,6 +301,8 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_closure(
         reset_program,
         clear_len_program,
         delta_program,
+        delta_grid,
+        row_strided_delta,
         inputs,
         input_bytes_total,
         baseline_output: vyre_primitives::wire::pack_u32_slice(&oracle.output),

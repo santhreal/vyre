@@ -386,6 +386,7 @@ pub fn manifests(&self) -> Vec<&DialectManifest> {
 pub fn mark_done(&self, slot_idx: u32) -> Result<(), String> {
 pub fn matches_architecture_generation(&self, generation: u32) -> bool {
 pub fn matches_device_name(&self, device_name: &str) -> bool {
+pub fn megakernel_frontier_fused_wave_budget_bytes(
 pub fn message(&self) -> String {
 pub fn mul_usize_capacity(
 pub fn natural_gradient_step(
@@ -432,6 +433,7 @@ pub fn plan_device_diagnostic_aggregation(
 pub fn plan_device_diagnostic_aggregation_with_scratch(
 pub fn plan_device_work_queue(
 pub fn plan_device_work_queue_backpressure(
+pub fn plan_device_work_queue_with_expansion(
 pub fn plan_graph_capture_bindings(
 pub fn plan_launch_fusion(
 pub fn plan_launch_fusion_with_scratch(
@@ -745,6 +747,7 @@ pub struct DeviceProfile {
 pub struct DeviceSignature {
 pub struct DeviceSignatureTable {
 pub struct DeviceWorkQueueBackpressurePlan {
+pub struct DeviceWorkQueueExpansionProfile {
 pub struct DeviceWorkQueuePlan {
 pub struct DeviceWorkQueueProfile {
 pub struct Diagnostic {

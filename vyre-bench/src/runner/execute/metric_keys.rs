@@ -215,6 +215,12 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
             Some("dataflow_ifds_closure_max_wave_queue_len")
         }
         ("", "dataflow_ifds_closure_queue_delta") => Some("dataflow_ifds_closure_queue_delta"),
+        ("", "dataflow_ifds_closure_row_strided_delta") => {
+            Some("dataflow_ifds_closure_row_strided_delta")
+        }
+        ("", "dataflow_ifds_closure_seed_scan_elided") => {
+            Some("dataflow_ifds_closure_seed_scan_elided")
+        }
         ("", "scan_ac_irregular_haystack_bytes") => Some("scan_ac_irregular_haystack_bytes"),
         ("", "scan_ac_irregular_packed_haystack_words") => {
             Some("scan_ac_irregular_packed_haystack_words")

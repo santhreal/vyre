@@ -94,14 +94,6 @@ pub(super) fn dispatch_resident_queue_closure_sequence(
         1,
         1,
     ];
-    let delta_grid = [
-        prepared
-            .queue_capacity
-            .div_ceil(QUEUE_CLOSURE_WORKGROUP_SIZE[0])
-            .max(1),
-        1,
-        1,
-    ];
     let mut specs = Vec::with_capacity(1 + (prepared.closure_iterations as usize * 2));
     specs.push(StepSpec {
         program: &prepared.reset_program,
@@ -119,7 +111,7 @@ pub(super) fn dispatch_resident_queue_closure_sequence(
         specs.push(StepSpec {
             program: &prepared.delta_program,
             resource_set: delta_resource_set,
-            grid: delta_grid,
+            grid: prepared.delta_grid,
         });
     }
 
