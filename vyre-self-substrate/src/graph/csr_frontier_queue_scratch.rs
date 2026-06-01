@@ -104,18 +104,15 @@ pub(crate) fn resident_csr_queue_effective_capacity(
     let final_word_mask = frontier_tail_mask(node_count);
     let mut max_active = 0u32;
     for (query_index, frontier) in frontiers.iter().enumerate() {
-        let mut active = 0u32;
-        for (word_index, &word) in frontier.iter().enumerate() {
-            let in_domain_word = if word_index + 1 == frontier.len() {
-                word & final_word_mask
-            } else {
-                word
-            };
-            active = active.checked_add(in_domain_word.count_ones()).ok_or_else(|| {
-                format!(
-                    "Fix: resident CSR queue query {query_index} frontier popcount overflowed u32 while sizing the active queue."
-                )
-            })?;
+        let active = capped_frontier_popcount(
+            node_count,
+            final_word_mask,
+            frontier,
+            requested_capacity,
+            query_index,
+        )?;
+        if active >= requested_capacity {
+            return Ok(requested_capacity);
         }
         max_active = max_active.max(active);
     }
@@ -123,6 +120,38 @@ pub(crate) fn resident_csr_queue_effective_capacity(
     let active_floor = max_active.max(1);
     let bucketed_active = active_floor.checked_next_power_of_two().unwrap_or(u32::MAX);
     Ok(requested_capacity.min(bucketed_active).max(1))
+}
+
+fn capped_frontier_popcount(
+    node_count: u32,
+    final_word_mask: u32,
+    frontier: &[u32],
+    requested_capacity: u32,
+    query_index: usize,
+) -> Result<u32, String> {
+    let expected_words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let mut active = 0u32;
+    for (word_index, &word) in frontier.iter().take(expected_words).enumerate() {
+        let in_domain_word = if word_index + 1 == expected_words {
+            word & final_word_mask
+        } else {
+            word
+        };
+        let remaining = requested_capacity.saturating_sub(active);
+        if remaining == 0 {
+            return Ok(requested_capacity);
+        }
+        let word_active = in_domain_word.count_ones();
+        if word_active >= remaining {
+            return Ok(requested_capacity);
+        }
+        active = active.checked_add(word_active).ok_or_else(|| {
+            format!(
+                "Fix: resident CSR queue query {query_index} frontier popcount overflowed u32 while sizing the active queue."
+            )
+        })?;
+    }
+    Ok(active)
 }
 
 pub(crate) fn frontier_word_prefix_scratch(
@@ -296,6 +325,46 @@ mod tests {
             resident_csr_queue_effective_capacity(288, &[&dense], 257)
                 .expect("Fix: requested capacity remains a hard traversal cap"),
             257
+        );
+    }
+
+    #[test]
+    fn effective_queue_capacity_caps_dense_frontiers_to_requested_capacity() {
+        let node_count = 1_000_000_u32;
+        let frontier = vec![u32::MAX; vyre_primitives::bitset::bitset_words(node_count) as usize];
+
+        assert_eq!(
+            resident_csr_queue_effective_capacity(node_count, &[&frontier], 17)
+                .expect("Fix: dense resident CSR frontier should size to requested cap"),
+            17
+        );
+
+        let mut overpadded = vec![0u32; vyre_primitives::bitset::bitset_words(33) as usize + 128];
+        overpadded[0] = 1;
+        overpadded[2..].fill(u32::MAX);
+        assert_eq!(
+            resident_csr_queue_effective_capacity(33, &[&overpadded], 1_024)
+                .expect("Fix: resident CSR frontier sizing should ignore out-of-domain padding"),
+            1,
+            "out-of-domain padding must not inflate resident queue capacity"
+        );
+    }
+
+    #[test]
+    fn capped_frontier_popcount_masks_tail_and_saturates_at_capacity() {
+        let node_count = 65_u32;
+        let final_word_mask = frontier_tail_mask(node_count);
+        let frontier = [u32::MAX, u32::MAX, u32::MAX];
+
+        assert_eq!(
+            capped_frontier_popcount(node_count, final_word_mask, &frontier, 40, 0)
+                .expect("Fix: capped popcount should stop at requested capacity"),
+            40
+        );
+        assert_eq!(
+            capped_frontier_popcount(node_count, final_word_mask, &frontier, 100, 0)
+                .expect("Fix: capped popcount should mask bits past node_count"),
+            65
         );
     }
 

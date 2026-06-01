@@ -50,6 +50,11 @@ pub fn run_resident_csr_queue_batch_into(
         effective_queue_capacity,
         allow_mask,
     )?;
+    let resident_queue_capacity = scratch.shape.map(|shape| shape.queue_capacity).ok_or_else(|| {
+        DispatchError::BackendError(
+            "resident CSR queue batch scratch shape is missing after ensure_batch_scratch. Fix: rebuild batch scratch before dispatch.".to_string(),
+        )
+    })?;
 
     let frontier_bytes = u32_word_bytes(graph.words(), "resident CSR queue batch frontier")?;
     if scratch.frontier_payloads.len() < frontiers.len() {
@@ -96,7 +101,7 @@ pub fn run_resident_csr_queue_batch_into(
 
     let mut steps = Vec::new();
     let traverse_kind = resident_csr_queue_traverse_kind(graph.max_row_degree());
-    let traverse_grid = resident_csr_queue_traverse_grid(effective_queue_capacity, traverse_kind);
+    let traverse_grid = resident_csr_queue_traverse_grid(resident_queue_capacity, traverse_kind);
     reserve_graph_vec(
         &mut steps,
         frontiers
@@ -502,7 +507,7 @@ fn ensure_batch_scratch(
         Some(existing)
             if existing.batch_len >= batch_len
                 && existing.frontier_bytes == frontier_bytes
-                && existing.queue_capacity == queue_capacity
+                && existing.queue_capacity >= queue_capacity
                 && existing.allow_mask == allow_mask
                 && existing.node_count == graph.node_count()
                 && existing.edge_count == graph.edge_count()

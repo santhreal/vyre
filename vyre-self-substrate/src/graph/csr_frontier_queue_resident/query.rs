@@ -39,15 +39,16 @@ pub fn run_resident_csr_queue_query_into(
         resident_csr_queue_effective_capacity(graph.node_count, &[frontier_words], queue_capacity)
             .map_err(DispatchError::BadInputs)?;
     ensure_scratch(dispatcher, scratch, graph.words, effective_queue_capacity)?;
-    ensure_programs(scratch, graph, effective_queue_capacity, allow_mask)?;
-    scratch.frontier_bytes.clear();
-    vyre_primitives::wire::append_u32_slice_le_bytes(frontier_words, &mut scratch.frontier_bytes);
-    let frontier_bytes = u32_word_bytes(graph.words, "resident CSR queue query frontier")?;
     let handles = scratch.handles.ok_or_else(|| {
         DispatchError::BackendError(
             "resident CSR queue scratch handles are missing after ensure_scratch. Fix: rebuild scratch before resident CSR queue dispatch.".to_string(),
         )
     })?;
+    let resident_queue_capacity = handles.queue_capacity;
+    ensure_programs(scratch, graph, resident_queue_capacity, allow_mask)?;
+    scratch.frontier_bytes.clear();
+    vyre_primitives::wire::append_u32_slice_le_bytes(frontier_words, &mut scratch.frontier_bytes);
+    let frontier_bytes = u32_word_bytes(graph.words, "resident CSR queue query frontier")?;
     let clear_handles = [handles.frontier_out];
     let traverse_handles = [
         handles.active_queue,
@@ -68,7 +69,7 @@ pub fn run_resident_csr_queue_query_into(
         )
     })?;
     let traverse_grid = resident_csr_queue_traverse_grid(
-        effective_queue_capacity,
+        resident_queue_capacity,
         resident_csr_queue_traverse_kind(graph.max_row_degree),
     );
     let read_ranges = [ResidentReadRange {

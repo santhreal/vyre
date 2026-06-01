@@ -969,10 +969,8 @@ fn cuda_resident_csr_queue_budgeted_batch_shards_before_allocation() {
     let frontier_refs: Vec<&[u32]> = frontiers.iter().map(Vec::as_slice).collect();
     let mut scratch = ResidentCsrQueueBatchScratch::default();
     let output_bytes = bitset_words(node_count) as usize * std::mem::size_of::<u32>();
-    let bytes_per_query = output_bytes
-        + queue_capacity as usize * std::mem::size_of::<u32>()
-        + std::mem::size_of::<u32>()
-        + output_bytes;
+    let two_active_query_bytes =
+        output_bytes + 2 * std::mem::size_of::<u32>() + std::mem::size_of::<u32>() + output_bytes;
     let mut outputs = Vec::new();
 
     backend.reset_telemetry();
@@ -983,7 +981,7 @@ fn cuda_resident_csr_queue_budgeted_batch_shards_before_allocation() {
         &frontier_refs,
         queue_capacity,
         1,
-        bytes_per_query * 2,
+        two_active_query_bytes * 2,
         &mut outputs,
     )
     .expect("Fix: budgeted resident CSR queue batch failed on CUDA.");
