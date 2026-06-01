@@ -12,7 +12,7 @@ use crate::scan::dispatch_io::ScanDispatchScratch;
 use std::borrow::Cow;
 use std::collections::TryReserveError;
 use vyre::ir::{Expr, Node, Program};
-use vyre::VyreBackend;
+use vyre::{DispatchConfig, VyreBackend};
 pub use vyre_foundation::match_result::Match;
 use vyre_primitives::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 use vyre_primitives::matching::DfaWireError;
@@ -20,6 +20,20 @@ use vyre_primitives::matching::DfaWireError;
 const LITERAL_SET_DEFAULT_MAX_MATCHES: u32 = 10_000;
 const MATCH_TRIPLE_WORDS: u32 = 3;
 const U32_BYTES: usize = std::mem::size_of::<u32>();
+const U32_COUNTER_BYTES: usize = std::mem::size_of::<u32>();
+const LITERAL_SET_INPUT_COUNT: usize = 10;
+
+/// Resident-resource index containing the mutable literal-set match counter.
+pub const LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX: usize = 6;
+
+/// Resident-resource index containing literal-set match triples.
+pub const LITERAL_SET_MATCHES_RESOURCE_INDEX: usize = 10;
+
+/// Resident-resource index containing the mutable literal-set match counter.
+pub const LITERAL_SET_RESET_RESOURCE_INDICES: [usize; 1] = [LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX];
+
+/// Resident-resource binding order for a prepared literal-set scan.
+pub const LITERAL_SET_SCAN_RESOURCE_INDICES: [usize; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 /// Back-compatible literal match type.
 pub type LiteralMatch = Match;
@@ -125,6 +139,66 @@ pub struct LiteralSetScanScratch {
     pub dispatch: ScanDispatchScratch,
     cached_program: Option<CachedLiteralSetProgram>,
     cached_prefilter: Option<LiteralSetPrefilterTables>,
+}
+
+/// Backend-neutral prepared literal-set scan payload.
+///
+/// This owns the exact byte buffers consumed by the GPU program. Callers with
+/// resident-resource support can upload `inputs` once, append a zeroed output
+/// resource sized from `matches_output_bytes`, reset
+/// [`LITERAL_SET_RESET_RESOURCE_INDICES`], and dispatch
+/// [`LITERAL_SET_SCAN_RESOURCE_INDICES`] without rebuilding the literal tables.
+#[derive(Clone, Debug)]
+pub struct LiteralSetPreparedScan {
+    /// Cap-specific dispatch program for this scan.
+    pub program: Program,
+    /// Input buffers in program binding order, excluding the `matches` output.
+    pub inputs: Vec<Vec<u8>>,
+    /// Standard byte-scan dispatch geometry for `haystack_len`.
+    pub dispatch_config: DispatchConfig,
+    /// Validated haystack byte length.
+    pub haystack_len: u32,
+    /// Caller-provided output cap.
+    pub max_matches: u32,
+    /// Full resident output allocation size for the `matches` resource.
+    pub matches_output_bytes: usize,
+    /// Total bytes in `inputs`.
+    pub encoded_input_bytes: u64,
+}
+
+impl LiteralSetPreparedScan {
+    /// Byte length required to read the match counter.
+    #[must_use]
+    pub const fn match_count_readback_bytes(&self) -> usize {
+        U32_COUNTER_BYTES
+    }
+
+    /// Byte length required to read up to `match_count` match triples.
+    ///
+    /// The returned range is clamped to `max_matches`, matching the decoder
+    /// used by [`GpuLiteralSet::scan`].
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] when byte-size arithmetic overflows.
+    pub fn match_triples_readback_bytes(
+        &self,
+        match_count: u32,
+    ) -> Result<usize, vyre::BackendError> {
+        literal_set_match_triple_bytes(match_count.min(self.max_matches))
+    }
+
+    /// Decode scan outputs into caller-owned match storage.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] when output buffers are missing,
+    /// malformed, or too short for the reported match count.
+    pub fn decode_outputs_into(
+        &self,
+        outputs: &[Vec<u8>],
+        matches: &mut Vec<Match>,
+    ) -> Result<(), vyre::BackendError> {
+        decode_literal_set_outputs_into(outputs, self.max_matches, matches)
+    }
 }
 
 #[derive(Debug)]
@@ -339,6 +413,34 @@ impl GpuLiteralSet {
         Ok(())
     }
 
+    /// Prepare a backend-neutral dispatch payload for this literal set.
+    ///
+    /// The returned plan owns packed haystack bytes, DFA tables, suffix
+    /// prefilter tables, the zeroed match counter, and the cap-specific
+    /// `Program`. Direct callers can dispatch `inputs` through a normal
+    /// borrowed-input backend. Runtimes with resident resources can upload the
+    /// same `inputs` once and reuse the immutable resources across repeated
+    /// scans of the same haystack.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] if scan-boundary validation,
+    /// cap-specific program sizing, suffix-prefilter staging, or input-buffer
+    /// allocation fails.
+    pub fn prepare_scan_dispatch(
+        &self,
+        haystack: &[u8],
+        max_matches: u32,
+    ) -> Result<LiteralSetPreparedScan, vyre::BackendError> {
+        let dispatch_program = self.program_for_match_capacity(max_matches)?;
+        let prefilter_tables = self.build_prefilter_tables()?;
+        self.prepare_scan_dispatch_with_program(
+            haystack,
+            max_matches,
+            dispatch_program.as_ref(),
+            &prefilter_tables,
+        )
+    }
+
     /// GPU scan dispatch with literal-set-owned hot-loop scratch.
     ///
     /// Use this for repeated scans where `max_matches` is usually stable but
@@ -440,16 +542,92 @@ impl GpuLiteralSet {
         .collect();
         let outputs = backend.dispatch_borrowed(&dispatch_program, &borrowed_inputs, &config)?;
 
-        let count_bytes = dispatch_io::try_output_bytes(&outputs, 0, "literal_set match count")?;
-        let count = dispatch_io::try_read_u32_prefix(count_bytes, "literal_set match count")?;
-        let matches_bytes = dispatch_io::try_output_bytes(&outputs, 1, "literal_set matches")?;
-
-        dispatch_io::try_unpack_match_triples_exact_prefix_into(
-            matches_bytes,
-            count.min(max_matches),
-            matches,
-        )?;
+        decode_literal_set_outputs_into(&outputs, max_matches, matches)?;
         Ok(())
+    }
+
+    fn prepare_scan_dispatch_with_program(
+        &self,
+        haystack: &[u8],
+        max_matches: u32,
+        dispatch_program: &Program,
+        prefilter_tables: &LiteralSetPrefilterTables,
+    ) -> Result<LiteralSetPreparedScan, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let haystack_len =
+            dispatch_io::scan_guard(haystack, "literal_set", dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
+        let (_, matches_output_bytes) = literal_set_match_output_layout(max_matches)?;
+        let mut inputs = Vec::new();
+        vyre_foundation::allocation::try_reserve_vec_to_capacity(
+            &mut inputs,
+            LITERAL_SET_INPUT_COUNT,
+        )
+        .map_err(|source| {
+            vyre::BackendError::new(format!(
+                "literal_set prepared scan could not reserve {LITERAL_SET_INPUT_COUNT} input buffer slot(s): {source}. Fix: shard the literal set or haystack before preparing resident dispatch."
+            ))
+        })?;
+
+        let mut haystack_bytes = Vec::new();
+        dispatch_io::pack_haystack_u32_into(haystack, &mut haystack_bytes)?;
+        inputs.push(haystack_bytes);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &self.dfa.transitions,
+            "transition table",
+        )?);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &self.dfa.output_offsets,
+            "output offset table",
+        )?);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &self.dfa.output_records,
+            "output record table",
+        )?);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &self.pattern_lengths,
+            "pattern length table",
+        )?);
+        inputs.push(haystack_len.to_le_bytes().to_vec());
+        inputs.push(vec![0_u8; U32_COUNTER_BYTES]);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &prefilter_tables.candidate_end_mask,
+            "candidate end mask",
+        )?);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &prefilter_tables.candidate_suffix2_mask,
+            "candidate suffix2 mask",
+        )?);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &prefilter_tables.candidate_suffix3_bloom,
+            "candidate suffix3 bloom",
+        )?);
+
+        let encoded_input_bytes = inputs.iter().try_fold(0_u64, |sum, input| {
+            let len = u64::try_from(input.len()).map_err(|source| {
+                vyre::BackendError::new(format!(
+                    "literal_set prepared scan input byte length does not fit u64: {source}. Fix: shard the scan before dispatch."
+                ))
+            })?;
+            sum.checked_add(len).ok_or_else(|| {
+                vyre::BackendError::new(
+                    "literal_set prepared scan input byte total overflowed u64. Fix: shard the scan before dispatch.",
+                )
+            })
+        })?;
+
+        Ok(LiteralSetPreparedScan {
+            program: dispatch_program.clone(),
+            inputs,
+            dispatch_config: dispatch_io::byte_scan_dispatch_config(
+                haystack_len,
+                dispatch_program.workgroup_size[0],
+            ),
+            haystack_len,
+            max_matches,
+            matches_output_bytes,
+            encoded_input_bytes,
+        })
     }
 
     fn prefilter_tables_cached<'a>(
@@ -852,20 +1030,75 @@ fn reserve_vec<T>(
     )
 }
 
+fn copy_u32_words_as_le_bytes(
+    words: &[u32],
+    field: &'static str,
+) -> Result<Vec<u8>, vyre::BackendError> {
+    let byte_len = words.len().checked_mul(U32_BYTES).ok_or_else(|| {
+        vyre::BackendError::new(format!(
+            "literal_set prepared scan {field} byte length overflowed host usize. Fix: shard the literal set before preparing resident dispatch."
+        ))
+    })?;
+    let mut bytes = Vec::new();
+    vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut bytes, byte_len).map_err(
+        |source| {
+            vyre::BackendError::new(format!(
+                "literal_set prepared scan could not reserve {byte_len} byte(s) for {field}: {source}. Fix: shard the literal set before preparing resident dispatch."
+            ))
+        },
+    )?;
+    if cfg!(target_endian = "little") {
+        bytes.extend_from_slice(bytemuck::cast_slice(words));
+    } else {
+        for &word in words {
+            bytes.extend_from_slice(&word.to_le_bytes());
+        }
+    }
+    Ok(bytes)
+}
+
+fn decode_literal_set_outputs_into(
+    outputs: &[Vec<u8>],
+    max_matches: u32,
+    matches: &mut Vec<Match>,
+) -> Result<(), vyre::BackendError> {
+    let count_bytes =
+        crate::scan::dispatch_io::try_output_bytes(outputs, 0, "literal_set match count")?;
+    let count =
+        crate::scan::dispatch_io::try_read_u32_prefix(count_bytes, "literal_set match count")?;
+    let matches_bytes =
+        crate::scan::dispatch_io::try_output_bytes(outputs, 1, "literal_set matches")?;
+
+    crate::scan::dispatch_io::try_unpack_match_triples_exact_prefix_into(
+        matches_bytes,
+        count.min(max_matches),
+        matches,
+    )
+}
+
+fn literal_set_match_triple_bytes(count: u32) -> Result<usize, vyre::BackendError> {
+    let words = count.checked_mul(MATCH_TRIPLE_WORDS).ok_or_else(|| {
+        vyre::BackendError::new(format!(
+            "literal_set match count {count} overflows the GPU match-output word count. Fix: lower max_matches or split the scan before dispatch."
+        ))
+    })?;
+    usize::try_from(words)
+        .ok()
+        .and_then(|words| words.checked_mul(U32_BYTES))
+        .ok_or_else(|| {
+            vyre::BackendError::new(format!(
+                "literal_set match count {count} overflows host match-output byte sizing. Fix: lower max_matches or split the scan before dispatch."
+            ))
+        })
+}
+
 fn literal_set_match_output_layout(max_matches: u32) -> Result<(u32, usize), vyre::BackendError> {
     let words = max_matches.checked_mul(MATCH_TRIPLE_WORDS).ok_or_else(|| {
         vyre::BackendError::new(format!(
             "literal_set max_matches={max_matches} overflows the GPU match-output word count. Fix: lower max_matches or split the scan before dispatch."
         ))
     })?;
-    let byte_len = usize::try_from(words)
-        .ok()
-        .and_then(|words| words.checked_mul(U32_BYTES))
-        .ok_or_else(|| {
-            vyre::BackendError::new(format!(
-                "literal_set max_matches={max_matches} overflows host match-output byte sizing. Fix: lower max_matches or split the scan before dispatch."
-            ))
-        })?;
+    let byte_len = literal_set_match_triple_bytes(max_matches)?;
     Ok((words.max(1), byte_len))
 }
 
@@ -1111,6 +1344,70 @@ mod compile_tests {
                 .iter()
                 .any(|&word| word != 0),
             "Fix: suffix-prefilter preparation must materialize suffix3 candidate bits."
+        );
+    }
+
+    #[test]
+    fn prepare_scan_dispatch_matches_borrowed_input_layout() {
+        let engine =
+            GpuLiteralSet::try_compile(&[b"a".as_slice(), b"bc".as_slice(), b"token".as_slice()])
+                .expect("Fix: small literal set must compile");
+        let plan = engine
+            .prepare_scan_dispatch(b"xx token bc a", 3)
+            .expect("Fix: prepared literal scan dispatch should own input buffers");
+        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
+        let mut matches = Vec::new();
+
+        engine
+            .scan_into(&backend, b"xx token bc a", 3, &mut matches)
+            .expect("Fix: recording backend should accept literal scan");
+
+        assert_eq!(plan.inputs.len(), LITERAL_SET_INPUT_COUNT);
+        assert_eq!(
+            backend.observed_input_lengths()[0],
+            plan.inputs.iter().map(Vec::len).collect::<Vec<_>>(),
+            "Fix: prepared dispatch buffers must stay in the same ABI order as direct scan dispatch."
+        );
+        assert_eq!(
+            plan.dispatch_config.grid_override,
+            Some([1, 1, 1]),
+            "Fix: prepared dispatch must preserve byte-scan grid geometry."
+        );
+        assert_eq!(plan.match_count_readback_bytes(), U32_COUNTER_BYTES);
+        assert_eq!(
+            plan.match_triples_readback_bytes(u32::MAX)
+                .expect("Fix: clamped readback sizing should not overflow"),
+            plan.matches_output_bytes
+        );
+        assert_eq!(
+            plan.encoded_input_bytes,
+            plan.inputs
+                .iter()
+                .map(|input| input.len() as u64)
+                .sum::<u64>()
+        );
+    }
+
+    #[test]
+    fn prepared_scan_decodes_resident_style_readback() {
+        let engine = GpuLiteralSet::try_compile(&[b"a".as_slice(), b"bc".as_slice()])
+            .expect("Fix: small literal set must compile");
+        let plan = engine
+            .prepare_scan_dispatch(b"abc", 2)
+            .expect("Fix: prepared literal scan dispatch should build");
+        let outputs = vec![
+            match_count_bytes(2),
+            [match_triple_bytes(0, 0, 1), match_triple_bytes(1, 1, 3)].concat(),
+        ];
+        let mut matches = Vec::new();
+
+        plan.decode_outputs_into(&outputs, &mut matches)
+            .expect("Fix: prepared scan decoder should read count plus match triples");
+
+        assert_eq!(
+            matches,
+            vec![Match::new(0, 0, 1), Match::new(1, 1, 3)],
+            "Fix: prepared dispatch decode must match public GpuLiteralSet scan semantics."
         );
     }
 
