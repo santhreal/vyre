@@ -80,16 +80,16 @@ fn oracle_persistent(
     max_iters: u32,
 ) -> (Vec<u32>, u32) {
     let words = bitset_words(node_count);
-    let mut accum = vec![0u32; words];
-    let mut frontier = frontier_in.to_vec();
+    let mut accum = frontier_in.to_vec();
+    accum.resize(words, 0);
     let mut changed = 0u32;
-    for _ in 0..max_iters.max(1) {
+    for _ in 0..max_iters {
         let step = oracle_csr_forward_step(
             node_count,
             edge_offsets,
             edge_targets,
             edge_kind_mask,
-            &frontier,
+            &accum,
             allow_mask,
         );
         let mut step_changed = false;
@@ -102,8 +102,9 @@ fn oracle_persistent(
         }
         if step_changed {
             changed = 1;
+        } else {
+            break;
         }
-        frontier = step;
     }
     (accum, changed)
 }

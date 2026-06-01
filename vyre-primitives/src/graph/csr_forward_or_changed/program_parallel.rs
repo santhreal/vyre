@@ -83,6 +83,8 @@ pub fn csr_forward_or_changed_parallel_body_prefixed(
         edge_kind_mask,
         local_prefix,
         None,
+        None,
+        None,
     )
 }
 
@@ -103,6 +105,33 @@ pub fn csr_forward_or_changed_parallel_snapshot_body_prefixed(
         edge_kind_mask,
         local_prefix,
         Some(MemoryOrdering::GridSync),
+        None,
+        None,
+    )
+}
+
+/// Build one snapshotting parallel expansion body and skip the expensive edge
+/// scan when `active_gate` is zero. Newly discovered nodes set both
+/// `changed[0]` and `changed[active_changed_index]`.
+#[must_use]
+pub fn csr_forward_or_changed_parallel_snapshot_body_prefixed_with_active(
+    shape: ProgramGraphShape,
+    frontier_out: &str,
+    changed: &str,
+    active_gate: Expr,
+    active_changed_index: Expr,
+    edge_kind_mask: u32,
+    local_prefix: &str,
+) -> Vec<Node> {
+    csr_forward_or_changed_parallel_body_prefixed_impl(
+        shape,
+        frontier_out,
+        changed,
+        edge_kind_mask,
+        local_prefix,
+        Some(MemoryOrdering::GridSync),
+        Some(active_gate),
+        Some((changed, active_changed_index)),
     )
 }
 
@@ -113,6 +142,8 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
     edge_kind_mask: u32,
     local_prefix: &str,
     snapshot_barrier: Option<MemoryOrdering>,
+    active_gate: Option<Expr>,
+    extra_changed: Option<(&str, Expr)>,
 ) -> Vec<Node> {
     let local = |name: &str| -> String {
         if local_prefix.is_empty() {
@@ -136,6 +167,25 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
     let dst_bit = local("dst_bit");
     let old = local("old");
     let changed_old = local("changed_old");
+    let extra_changed_old = local("extra_changed_old");
+
+    let mark_changed = || {
+        let mut nodes = vec![Node::let_bind(
+            changed_old.as_str(),
+            Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
+        )];
+        if let Some((extra_changed_buffer, extra_changed_index)) = &extra_changed {
+            nodes.push(Node::let_bind(
+                extra_changed_old.as_str(),
+                Expr::atomic_or(
+                    *extra_changed_buffer,
+                    extra_changed_index.clone(),
+                    Expr::u32(1),
+                ),
+            ));
+        }
+        nodes
+    };
 
     let edge_scan = || {
         vec![
@@ -196,10 +246,7 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
                                             ),
                                             Expr::u32(0),
                                         ),
-                                        vec![Node::let_bind(
-                                            changed_old.as_str(),
-                                            Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
-                                        )],
+                                        mark_changed(),
                                     ),
                                 ],
                             ),
@@ -211,6 +258,20 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
     };
 
     if let Some(ordering) = snapshot_barrier {
+        let ungated_src_active = Expr::select(
+            Expr::var(in_bounds.as_str()),
+            Expr::bitand(Expr::var(src_word.as_str()), Expr::var(bit_mask.as_str())),
+            Expr::u32(0),
+        );
+        let src_active_expr = if let Some(active_gate) = active_gate {
+            Expr::select(
+                Expr::ne(active_gate, Expr::u32(0)),
+                ungated_src_active,
+                Expr::u32(0),
+            )
+        } else {
+            ungated_src_active
+        };
         return vec![
             Node::let_bind(
                 in_bounds.as_str(),
@@ -232,14 +293,7 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
                 src_word.as_str(),
                 Expr::load(frontier_out, Expr::var(word_idx.as_str())),
             ),
-            Node::let_bind(
-                src_active.as_str(),
-                Expr::select(
-                    Expr::var(in_bounds.as_str()),
-                    Expr::bitand(Expr::var(src_word.as_str()), Expr::var(bit_mask.as_str())),
-                    Expr::u32(0),
-                ),
-            ),
+            Node::let_bind(src_active.as_str(), src_active_expr),
             Node::barrier_with_ordering(ordering),
             Node::if_then(
                 Expr::ne(Expr::var(src_active.as_str()), Expr::u32(0)),
@@ -320,5 +374,36 @@ pub fn csr_forward_or_changed_parallel_snapshot_child_prefixed(
             edge_kind_mask,
             local_prefix,
         )),
+    }
+}
+
+/// Wrap an active-gated snapshotting parallel expansion body as a child Region.
+#[must_use]
+pub fn csr_forward_or_changed_parallel_snapshot_child_prefixed_with_active(
+    parent_op_id: &str,
+    shape: ProgramGraphShape,
+    frontier_out: &str,
+    changed: &str,
+    active_gate: Expr,
+    active_changed_index: Expr,
+    edge_kind_mask: u32,
+    local_prefix: &str,
+) -> Node {
+    Node::Region {
+        generator: Ident::from(OP_ID),
+        source_region: Some(GeneratorRef {
+            name: parent_op_id.to_string(),
+        }),
+        body: Arc::new(
+            csr_forward_or_changed_parallel_snapshot_body_prefixed_with_active(
+                shape,
+                frontier_out,
+                changed,
+                active_gate,
+                active_changed_index,
+                edge_kind_mask,
+                local_prefix,
+            ),
+        ),
     }
 }

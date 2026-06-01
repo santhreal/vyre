@@ -6,6 +6,7 @@ mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::DispatchConfig;
+use vyre_foundation::ir::BufferAccess;
 use vyre_primitives::graph::persistent_bfs::{
     cpu_ref, persistent_bfs, persistent_bfs_batch, persistent_bfs_batch_dispatch_grid,
     persistent_bfs_single_dispatch_grid,
@@ -32,18 +33,24 @@ fn run(
         allow_mask,
         max_iters,
     );
-    let inputs: Vec<Vec<u8>> = vec![
-        u32_bytes(&pg_nodes),
-        u32_bytes(edge_offsets),
-        u32_bytes(edge_targets),
-        u32_bytes(edge_kind_mask),
-        u32_bytes(&pg_node_tags),
-        u32_bytes(frontier),
-        // frontier_out: zero-init.
-        vec![0u8; words as usize * 4],
-        // changed: zero-init.
-        vec![0u8; 4],
-    ];
+    let inputs: Vec<Vec<u8>> = program
+        .buffers()
+        .iter()
+        .filter(|buffer| buffer.access() != BufferAccess::Workgroup)
+        .map(|buffer| {
+            let declared_words = buffer.count().max(1) as usize;
+            match buffer.name() {
+                "pg_nodes" => u32_bytes(&pg_nodes),
+                "pg_edge_offsets" => u32_bytes(edge_offsets),
+                "pg_edge_targets" => u32_bytes(edge_targets),
+                "pg_edge_kind_mask" => u32_bytes(edge_kind_mask),
+                "pg_node_tags" => u32_bytes(&pg_node_tags),
+                "frontier_in" => u32_bytes(frontier),
+                "frontier_out" | "changed" => vec![0u8; declared_words * 4],
+                other => panic!("Unexpected buffer in persistent_bfs program: {other}"),
+            }
+        })
+        .collect();
     let mut config = DispatchConfig::default();
     config.grid_override = Some(persistent_bfs_single_dispatch_grid(node_count));
     let outputs = with_live_backend("persistent BFS primitive", |backend| {
@@ -231,6 +238,45 @@ fn cuda_persistent_bfs_isolated_seed_unchanged() {
     );
     assert_eq!(gpu, cpu);
     assert_eq!(gpu.0, vec![0b001u32]);
+    assert_eq!(gpu.1, 0);
+}
+
+#[test]
+fn cuda_persistent_bfs_large_no_edges_converges_without_changed() {
+    let n = 513u32;
+    let edge_offsets = vec![0u32; n as usize + 1];
+    let edge_targets: Vec<u32> = Vec::new();
+    let edge_kind_mask: Vec<u32> = Vec::new();
+    let padded_edge_targets = vec![0u32; 1];
+    let padded_edge_kind_mask = vec![0u32; 1];
+    let words = ((n + 31) / 32) as usize;
+    let mut frontier = vec![0u32; words];
+    frontier[8] = 1;
+
+    let cpu = cpu_ref(
+        n,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        &frontier,
+        0xFFFF_FFFF,
+        64,
+    );
+    let gpu = run(
+        n,
+        0,
+        &edge_offsets,
+        &padded_edge_targets,
+        &padded_edge_kind_mask,
+        &frontier,
+        0xFFFF_FFFF,
+        64,
+    );
+
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu.0[8], 1);
+    assert!(gpu.0[..8].iter().all(|word| *word == 0));
+    assert!(gpu.0[9..].iter().all(|word| *word == 0));
     assert_eq!(gpu.1, 0);
 }
 

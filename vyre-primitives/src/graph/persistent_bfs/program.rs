@@ -4,7 +4,7 @@ use super::layout::{
     BATCH_OP_ID, BINDING_CHANGED, BINDING_FRONTIER_IN, BINDING_FRONTIER_OUT, OP_ID,
     PERSISTENT_BFS_WORKGROUP_SIZE,
 };
-use crate::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_snapshot_child_prefixed;
+use crate::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_snapshot_child_prefixed_with_active;
 use crate::graph::persistent_bfs_step::persistent_bfs_step_child_prefixed_with_active;
 use crate::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::ir::model::expr::Ident;
@@ -199,6 +199,8 @@ fn persistent_bfs_grid_sync_parallel(
 ) -> Program {
     let words = bitset_words(shape.node_count);
     let t = Expr::gid_x();
+    const GRID_CHANGED_WORDS: u32 = 3;
+    const GRID_ACTIVE_BASE: u32 = 1;
     let mut entry: Vec<Node> = vec![
         Node::if_then(
             Expr::lt(t.clone(), Expr::u32(words)),
@@ -209,8 +211,16 @@ fn persistent_bfs_grid_sync_parallel(
             )],
         ),
         Node::if_then(
-            Expr::eq(t, Expr::u32(0)),
-            vec![Node::store("changed", Expr::u32(0), Expr::u32(0))],
+            Expr::eq(t.clone(), Expr::u32(0)),
+            if max_iters > 0 {
+                vec![
+                    Node::store("changed", Expr::u32(0), Expr::u32(0)),
+                    Node::store("changed", Expr::u32(GRID_ACTIVE_BASE), Expr::u32(1)),
+                    Node::store("changed", Expr::u32(GRID_ACTIVE_BASE + 1), Expr::u32(0)),
+                ]
+            } else {
+                vec![Node::store("changed", Expr::u32(0), Expr::u32(0))]
+            },
         ),
     ];
 
@@ -218,14 +228,28 @@ fn persistent_bfs_grid_sync_parallel(
         entry.push(grid_sync_barrier());
     }
     for iter in 0..max_iters {
-        entry.push(csr_forward_or_changed_parallel_snapshot_child_prefixed(
-            OP_ID,
-            shape,
-            frontier_out,
-            "changed",
-            edge_kind_mask,
-            &format!("grid_iter_{iter}"),
+        let active_index = GRID_ACTIVE_BASE + (iter & 1);
+        let next_active_index = GRID_ACTIVE_BASE + ((iter + 1) & 1);
+        entry.push(Node::if_then(
+            Expr::eq(t.clone(), Expr::u32(0)),
+            vec![Node::store(
+                "changed",
+                Expr::u32(next_active_index),
+                Expr::u32(0),
+            )],
         ));
+        entry.push(
+            csr_forward_or_changed_parallel_snapshot_child_prefixed_with_active(
+                OP_ID,
+                shape,
+                frontier_out,
+                "changed",
+                Expr::load("changed", Expr::u32(active_index)),
+                Expr::u32(next_active_index),
+                edge_kind_mask,
+                &format!("grid_iter_{iter}"),
+            ),
+        );
         if iter + 1 < max_iters {
             entry.push(grid_sync_barrier());
         }
@@ -257,7 +281,7 @@ fn persistent_bfs_grid_sync_parallel(
             BufferAccess::ReadWrite,
             DataType::U32,
         )
-        .with_count(1),
+        .with_count(if max_iters > 0 { GRID_CHANGED_WORDS } else { 1 }),
     );
 
     Program::wrapped(

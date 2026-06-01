@@ -57,6 +57,7 @@ pub use program_parallel::{
     csr_forward_or_changed_parallel_child_prefixed,
     csr_forward_or_changed_parallel_snapshot_body_prefixed,
     csr_forward_or_changed_parallel_snapshot_child_prefixed,
+    csr_forward_or_changed_parallel_snapshot_child_prefixed_with_active,
 };
 pub use program_parallel_batch::{
     csr_forward_or_changed_parallel_batch, try_csr_forward_or_changed_parallel_batch,

@@ -542,6 +542,28 @@ fn large_persistent_bfs_program_uses_grid_sync_parallel_steps() {
         6,
         "Fix: three large persistent-BFS iterations require one seed fence, one snapshot fence per parallel expansion, and one inter-iteration fence between expansion passes."
     );
+    let changed = program
+        .buffers()
+        .iter()
+        .find(|buffer| buffer.name() == "changed")
+        .expect("Fix: large persistent_bfs must declare the changed buffer.");
+    assert_eq!(
+        changed.count(),
+        3,
+        "Fix: large persistent_bfs needs changed[1..=2] as ping-pong active scratch to skip converged edge scans."
+    );
+    assert_eq!(
+        changed.output_byte_range(),
+        None,
+        "Fix: grid-sync split must carry all changed scratch words between segments; callers decode changed[0]."
+    );
+    let entry_debug = format!("{:?}", program.entry());
+    assert!(
+        entry_debug.contains("grid_iter_0_extra_changed_old")
+            && entry_debug.contains("grid_iter_1_extra_changed_old")
+            && entry_debug.contains("grid_iter_2_extra_changed_old"),
+        "Fix: every large persistent-BFS wave must set the next active scratch word when it discovers new nodes."
+    );
     assert!(
         !contains_loop_named(program.entry(), "src"),
         "Fix: large persistent_bfs must not scan every source node from one lane."
