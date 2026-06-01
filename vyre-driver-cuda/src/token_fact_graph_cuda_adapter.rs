@@ -7,6 +7,14 @@ use crate::backend::accounting::{
 use crate::megakernel_scheduler::CudaMegakernelGraphShape;
 use vyre_self_substrate::device_resident_token_fact_graph::DeviceResidentTokenFactGraph;
 
+/// Number of rank buckets carried for token/fact out-degree skew planning.
+pub const CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS: usize = 16;
+
+/// Power-of-two ranks used by the token/fact out-degree profile.
+pub const CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS: [u64; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS] = [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1_024, 2_048, 4_096, 8_192, 16_384, 32_768,
+];
+
 /// CUDA resident byte envelope for the unified compiler/dataflow graph.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CudaTokenFactGraphLayout {
@@ -14,6 +22,8 @@ pub struct CudaTokenFactGraphLayout {
     pub graph_shape: CudaMegakernelGraphShape,
     /// Maximum outgoing CSR row degree in the resident token/fact graph.
     pub max_out_degree: u64,
+    /// Prefix sums of top out-degrees at `CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS`.
+    pub top_out_degree_prefix_sums: [u64; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
     /// Fixed bytes per resident node record.
     pub node_record_bytes: u64,
     /// Fixed bytes per resident edge record.
@@ -45,6 +55,8 @@ impl CudaTokenFactGraphLayout {
         Self {
             graph_shape,
             max_out_degree: graph_shape.edge_count,
+            top_out_degree_prefix_sums: [graph_shape.edge_count;
+                CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS],
             node_record_bytes,
             edge_record_bytes,
             node_bytes,
@@ -128,7 +140,7 @@ pub fn adapt_token_fact_graph_to_cuda_layout(
             field: "edge count",
         }
     })?;
-    let max_out_degree = max_csr_out_degree(graph, edge_count)?;
+    let (max_out_degree, top_out_degree_prefix_sums) = csr_out_degree_profile(graph, edge_count)?;
     let node_bytes = checked_mul(node_count, node_record_bytes, "node bytes")?;
     let edge_bytes = checked_mul(edge_count, edge_record_bytes, "edge bytes")?;
     let resident_without_payload = checked_add(node_bytes, edge_bytes, "node plus edge bytes")?;
@@ -144,6 +156,7 @@ pub fn adapt_token_fact_graph_to_cuda_layout(
             edge_count,
         },
         max_out_degree,
+        top_out_degree_prefix_sums,
         node_record_bytes,
         edge_record_bytes,
         node_bytes,
@@ -153,10 +166,10 @@ pub fn adapt_token_fact_graph_to_cuda_layout(
     })
 }
 
-fn max_csr_out_degree(
+fn csr_out_degree_profile(
     graph: &DeviceResidentTokenFactGraph,
     edge_count: u64,
-) -> Result<u64, CudaTokenFactGraphLayoutError> {
+) -> Result<(u64, [u64; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS]), CudaTokenFactGraphLayoutError> {
     let expected_row_offsets = graph.node_ids.len().checked_add(1).ok_or(
         CudaTokenFactGraphLayoutError::ByteCountOverflow {
             field: "row offset count",
@@ -177,7 +190,7 @@ fn max_csr_out_degree(
             field: "row_offsets edge count",
         });
     }
-    let mut max_out_degree = 0_u64;
+    let mut degrees = Vec::with_capacity(graph.node_ids.len());
     for row in graph.row_offsets.windows(2) {
         let start = row[0];
         let end = row[1];
@@ -186,9 +199,34 @@ fn max_csr_out_degree(
                 field: "row_offsets ordering",
             });
         }
-        max_out_degree = max_out_degree.max(u64::from(end - start));
+        degrees.push(u64::from(end - start));
     }
-    Ok(max_out_degree)
+    degrees.sort_unstable_by(|lhs, rhs| rhs.cmp(lhs));
+
+    let mut max_out_degree = 0_u64;
+    let mut prefix_sum = 0_u64;
+    let mut prefix_sums = [0_u64; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS];
+    let mut bucket = 0_usize;
+    for (index, degree) in degrees.into_iter().enumerate() {
+        max_out_degree = max_out_degree.max(degree);
+        prefix_sum = checked_add(prefix_sum, degree, "top out-degree prefix sum")?;
+        let rank = u64::try_from(index + 1).map_err(|_| {
+            CudaTokenFactGraphLayoutError::ByteCountOverflow {
+                field: "out-degree profile rank",
+            }
+        })?;
+        while bucket < CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS
+            && rank >= CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS[bucket]
+        {
+            prefix_sums[bucket] = prefix_sum;
+            bucket += 1;
+        }
+    }
+    while bucket < CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS {
+        prefix_sums[bucket] = prefix_sum;
+        bucket += 1;
+    }
+    Ok((max_out_degree, prefix_sums))
 }
 
 #[cfg(test)]
@@ -233,6 +271,9 @@ mod tests {
         assert_eq!(cuda.graph_shape.node_count, 3);
         assert_eq!(cuda.graph_shape.edge_count, 2);
         assert_eq!(cuda.max_out_degree, 1);
+        assert_eq!(cuda.top_out_degree_prefix_sums[0], 1);
+        assert_eq!(cuda.top_out_degree_prefix_sums[1], 2);
+        assert_eq!(cuda.top_out_degree_prefix_sums[15], 2);
         assert_eq!(cuda.node_bytes, 96);
         assert_eq!(cuda.edge_bytes, 32);
         assert_eq!(cuda.resident_bytes, 152);
@@ -274,6 +315,65 @@ mod tests {
 
         assert_eq!(cuda.graph_shape.edge_count, 4);
         assert_eq!(cuda.max_out_degree, 3);
+        assert_eq!(cuda.top_out_degree_prefix_sums[0], 3);
+        assert_eq!(cuda.top_out_degree_prefix_sums[1], 4);
+        assert_eq!(cuda.top_out_degree_prefix_sums[2], 4);
+    }
+
+    #[test]
+    fn generated_adapter_profiles_top_out_degree_prefixes() {
+        let mut state = 0x5eec_c0de_f00d_7715_u64;
+        for case_index in 0..4096_u64 {
+            let node_count = 1 + (next_u64(&mut state) % 64) as u32;
+            let nodes = (0..node_count)
+                .map(|index| node(index + 1, TokenFactNodeKind::Fact, u64::from(index) * 4, 4))
+                .collect::<Vec<_>>();
+            let mut edges = Vec::new();
+            if case_index % 4 == 0 {
+                for to in 2..=node_count {
+                    edges.push(edge(1, to, TokenFactEdgeKind::FactDependency));
+                }
+            }
+            let attempts = next_u64(&mut state) % (u64::from(node_count) * 5 + 1);
+            for _ in 0..attempts {
+                let from = 1 + (next_u64(&mut state) % u64::from(node_count)) as u32;
+                let to = 1 + (next_u64(&mut state) % u64::from(node_count)) as u32;
+                let kind = if next_u64(&mut state) & 1 == 0 {
+                    TokenFactEdgeKind::FactDependency
+                } else {
+                    TokenFactEdgeKind::DiagnosticProvenance
+                };
+                edges.push(edge(from, to, kind));
+            }
+            let graph =
+                plan_device_resident_token_fact_graph(&nodes, &edges, u64::from(node_count) * 4)
+                    .expect("Fix: generated token/fact graph should pack");
+            let cuda = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+                .expect("Fix: generated token/fact graph should adapt");
+            let mut degrees = graph
+                .row_offsets
+                .windows(2)
+                .map(|row| u64::from(row[1] - row[0]))
+                .collect::<Vec<_>>();
+            degrees.sort_unstable_by(|lhs, rhs| rhs.cmp(lhs));
+
+            assert_eq!(
+                cuda.max_out_degree,
+                degrees.first().copied().unwrap_or(0),
+                "case {case_index}"
+            );
+            for (bucket, rank) in CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS.iter().enumerate() {
+                let expected = degrees
+                    .iter()
+                    .take((*rank as usize).min(degrees.len()))
+                    .copied()
+                    .sum::<u64>();
+                assert_eq!(
+                    cuda.top_out_degree_prefix_sums[bucket], expected,
+                    "case {case_index} bucket {bucket}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -292,6 +392,10 @@ mod tests {
         );
 
         assert_eq!(layout.max_out_degree, 9);
+        assert_eq!(
+            layout.top_out_degree_prefix_sums,
+            [9; CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS]
+        );
         assert_eq!(layout.resident_bytes, 336);
     }
 
@@ -351,5 +455,12 @@ mod tests {
 
     fn edge(from: u32, to: u32, kind: TokenFactEdgeKind) -> TokenFactEdge {
         TokenFactEdge { from, to, kind }
+    }
+
+    fn next_u64(state: &mut u64) -> u64 {
+        *state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        *state
     }
 }

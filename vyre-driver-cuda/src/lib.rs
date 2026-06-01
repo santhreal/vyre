@@ -216,6 +216,7 @@ pub use token_fact_frontier_execution::{
 };
 pub use token_fact_graph_cuda_adapter::{
     adapt_token_fact_graph_to_cuda_layout, CudaTokenFactGraphLayout, CudaTokenFactGraphLayoutError,
+    CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS, CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS,
 };
 
 use std::sync::Arc;
