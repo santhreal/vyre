@@ -1,6 +1,9 @@
 //! Metric-key plumbing: small key/value helpers used by `collect.rs` and
 //! `report.rs` to look up metrics by stable name.
 
+#[path = "metric_keys/graph.rs"]
+mod graph;
+
 pub(super) fn rate_per_second_x1000(units: u64, wall_ns: u64, scale: u64) -> u64 {
     let numerator = u128::from(units) * 1_000_000_000_000u128;
     let denominator = u128::from(wall_ns) * u128::from(scale);
@@ -30,6 +33,10 @@ pub(super) fn gpu_counter_value(
 }
 
 pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'static str> {
+    if let Some(key) = graph::custom_graph_metric_key(prefix, name) {
+        return Some(key);
+    }
+
     match (prefix, name) {
         ("", "flop_count") => Some("flop_count"),
         ("", "clock_mem_max_mhz") => Some("clock_mem_max_mhz"),
@@ -116,17 +123,6 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "dataflow_bitset_words") => Some("dataflow_bitset_words"),
         ("", "dataflow_graph_nodes") => Some("dataflow_graph_nodes"),
         ("", "dataflow_graph_edges") => Some("dataflow_graph_edges"),
-        ("", "graph_csr_nodes") => Some("graph_csr_nodes"),
-        ("", "graph_csr_edges") => Some("graph_csr_edges"),
-        ("", "graph_csr_frontier_words") => Some("graph_csr_frontier_words"),
-        ("", "graph_csr_active_sources") => Some("graph_csr_active_sources"),
-        ("", "graph_csr_allowed_edges") => Some("graph_csr_allowed_edges"),
-        ("", "graph_csr_output_words_set") => Some("graph_csr_output_words_set"),
-        ("", "graph_csr_max_degree") => Some("graph_csr_max_degree"),
-        ("", "graph_csr_high_degree_sources") => Some("graph_csr_high_degree_sources"),
-        ("", "graph_csr_resident_buffers") => Some("graph_csr_resident_buffers"),
-        ("", "graph_csr_workgroup_size_x") => Some("graph_csr_workgroup_size_x"),
-        ("", "graph_csr_skewed_speedup_x1000") => Some("graph_csr_skewed_speedup_x1000"),
         ("", "dataflow_ifds_step") => Some("dataflow_ifds_step"),
         ("", "dataflow_points_to_alias_step") => Some("dataflow_points_to_alias_step"),
         ("", "dataflow_ifds_skewed_nodes") => Some("dataflow_ifds_skewed_nodes"),

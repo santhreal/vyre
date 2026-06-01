@@ -166,6 +166,18 @@ gpu_competitor = "wgpu_dataflow_callgraph"
 notes = "Graph traversal proof workload; sparse frontier behavior must remain GPU-resident."
 
 [[target]]
+id = "primitives.graph.csr_skewed_queue_materialize.1m"
+primitive = "queue-materialized CSR frontier traversal"
+suite = "release"
+backend_focus = "cuda"
+metric = "dispatch_ns_p50"
+min_speedup_over_cpu_sota = 1.0
+cpu_baseline = "optimized CPU CSR sparse-frontier traversal oracle"
+gpu_competitor = "none_recorded"
+bench_case_id = "primitives.graph.csr_skewed_queue_materialize.1m"
+notes = "Tracks sparse active-source queue materialization plus queue-driven traversal over skewed CSR rows."
+
+[[target]]
 id = "release.workload.c_ast_traversal"
 primitive = "C AST traversal and motif predicates"
 suite = "release-workload"
