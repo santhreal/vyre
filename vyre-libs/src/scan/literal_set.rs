@@ -6,6 +6,7 @@ use crate::region::wrap_anonymous;
 use crate::scan::builders::append_match_subgroup;
 use crate::scan::dfa::{dfa_compile, CompiledDfa};
 use crate::scan::hit_buffer::HIT_BUFFER_OVERFLOW_COUNT;
+use std::borrow::Cow;
 use std::collections::TryReserveError;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre::VyreBackend;
@@ -13,6 +14,9 @@ pub use vyre_foundation::match_result::Match;
 use vyre_primitives::matching::DfaWireError;
 
 const OP_ID: &str = "vyre-libs::matching::literal_set";
+const LITERAL_SET_DEFAULT_MAX_MATCHES: u32 = 10_000;
+const MATCH_TRIPLE_WORDS: u32 = 3;
+const U32_BYTES: usize = std::mem::size_of::<u32>();
 
 /// Back-compatible literal match type.
 pub type LiteralMatch = Match;
@@ -306,8 +310,12 @@ impl GpuLiteralSet {
         let match_count_bytes = [0u8; 4];
         let overflow_count_bytes = [0u8; 4];
 
-        let config =
-            dispatch_io::byte_scan_dispatch_config(haystack_len, self.program.workgroup_size[0]);
+        let dispatch_program = self.program_for_match_capacity(max_matches)?;
+        let dispatch_program = dispatch_program.as_ref();
+        let config = dispatch_io::byte_scan_dispatch_config(
+            haystack_len,
+            dispatch_program.workgroup_size[0],
+        );
         let borrowed_inputs: smallvec::SmallVec<[&[u8]; 8]> = [
             // 0: haystack (Packed U32)
             haystack_bytes,
@@ -330,7 +338,7 @@ impl GpuLiteralSet {
         ]
         .into_iter()
         .collect();
-        let outputs = backend.dispatch_borrowed(&self.program, &borrowed_inputs, &config)?;
+        let outputs = backend.dispatch_borrowed(&dispatch_program, &borrowed_inputs, &config)?;
 
         let count_bytes = dispatch_io::try_output_bytes(&outputs, 0, "literal_set match count")?;
         let count = dispatch_io::try_read_u32_prefix(count_bytes, "literal_set match count")?;
@@ -342,6 +350,48 @@ impl GpuLiteralSet {
             matches,
         )?;
         Ok(())
+    }
+
+    fn program_for_match_capacity(
+        &self,
+        max_matches: u32,
+    ) -> Result<Cow<'_, Program>, vyre::BackendError> {
+        let (declared_words, readback_bytes) = literal_set_match_output_layout(max_matches)?;
+        let matches_output = self
+            .program
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == "matches" && buffer.is_output())
+            .ok_or_else(|| {
+                vyre::BackendError::new(
+                    "literal_set program is missing its matches output buffer. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch.",
+                )
+            })?;
+
+        if matches_output.count == declared_words
+            && (matches_output.output_byte_range().is_none()
+                || matches_output.output_byte_range() == Some(0..readback_bytes))
+        {
+            return Ok(Cow::Borrowed(&self.program));
+        }
+
+        let buffers = self
+            .program
+            .buffers()
+            .iter()
+            .cloned()
+            .map(|buffer| {
+                if buffer.name() == "matches" && buffer.is_output() {
+                    buffer
+                        .with_count(declared_words)
+                        .with_output_byte_range(0..readback_bytes)
+                } else {
+                    buffer
+                }
+            })
+            .collect::<Vec<_>>();
+
+        Ok(Cow::Owned(self.program.with_rewritten_buffers(buffers)))
     }
 
     /// Serialize this matcher into a self-describing binary blob suitable
@@ -439,6 +489,23 @@ fn reserve_vec<T>(
     )
 }
 
+fn literal_set_match_output_layout(max_matches: u32) -> Result<(u32, usize), vyre::BackendError> {
+    let words = max_matches.checked_mul(MATCH_TRIPLE_WORDS).ok_or_else(|| {
+        vyre::BackendError::new(format!(
+            "literal_set max_matches={max_matches} overflows the GPU match-output word count. Fix: lower max_matches or split the scan before dispatch."
+        ))
+    })?;
+    let byte_len = usize::try_from(words)
+        .ok()
+        .and_then(|words| words.checked_mul(U32_BYTES))
+        .ok_or_else(|| {
+            vyre::BackendError::new(format!(
+                "literal_set max_matches={max_matches} overflows host match-output byte sizing. Fix: lower max_matches or split the scan before dispatch."
+            ))
+        })?;
+    Ok((words.max(1), byte_len))
+}
+
 #[cfg(test)]
 mod compile_tests {
     use super::*;
@@ -470,6 +537,65 @@ mod compile_tests {
             _inputs: &[&[u8]],
             _config: &vyre::DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            Ok(self.outputs.clone())
+        }
+    }
+
+    #[derive(Clone)]
+    struct RecordingLiteralBackend {
+        outputs: Vec<Vec<u8>>,
+        observed_matches_layouts:
+            std::sync::Arc<std::sync::Mutex<Vec<(u32, Option<std::ops::Range<usize>>)>>>,
+    }
+
+    impl RecordingLiteralBackend {
+        fn new(outputs: Vec<Vec<u8>>) -> Self {
+            Self {
+                outputs,
+                observed_matches_layouts: std::sync::Arc::default(),
+            }
+        }
+
+        fn observed_matches_layouts(&self) -> Vec<(u32, Option<std::ops::Range<usize>>)> {
+            self.observed_matches_layouts
+                .lock()
+                .expect("Fix: recording literal backend mutex should not be poisoned")
+                .clone()
+        }
+    }
+
+    impl vyre::backend::private::Sealed for RecordingLiteralBackend {}
+
+    impl VyreBackend for RecordingLiteralBackend {
+        fn id(&self) -> &'static str {
+            "literal-recording-test"
+        }
+
+        fn dispatch(
+            &self,
+            program: &Program,
+            inputs: &[Vec<u8>],
+            config: &vyre::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
+            self.dispatch_borrowed(program, &borrowed, config)
+        }
+
+        fn dispatch_borrowed(
+            &self,
+            program: &Program,
+            _inputs: &[&[u8]],
+            _config: &vyre::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            let matches = program
+                .buffers()
+                .iter()
+                .find(|buffer| buffer.name() == "matches")
+                .ok_or_else(|| vyre::BackendError::new("test program omitted matches buffer"))?;
+            self.observed_matches_layouts
+                .lock()
+                .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
+                .push((matches.count, matches.output_byte_range()));
             Ok(self.outputs.clone())
         }
     }
@@ -620,6 +746,88 @@ mod compile_tests {
             "Fix: literal_set production wrappers must not panic."
         );
     }
+
+    #[test]
+    fn literal_scan_sizes_match_output_to_requested_cap() {
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
+        let mut payload = match_triple_bytes(0, 0, 1);
+        payload.extend_from_slice(&match_triple_bytes(0, 3, 4));
+        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(2), payload]);
+        let mut matches = Vec::new();
+
+        engine
+            .scan_into(&backend, b"a--a", 2, &mut matches)
+            .expect("Fix: literal scan with two-match cap should dispatch");
+
+        assert_eq!(matches, vec![Match::new(0, 0, 1), Match::new(0, 3, 4)]);
+        assert_eq!(backend.observed_matches_layouts(), vec![(6, Some(0..24))]);
+    }
+
+    #[test]
+    fn literal_scan_default_cap_uses_compiled_output_layout() {
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
+        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
+        let mut matches = Vec::new();
+
+        engine
+            .scan_into(
+                &backend,
+                b"no hits",
+                LITERAL_SET_DEFAULT_MAX_MATCHES,
+                &mut matches,
+            )
+            .expect("Fix: default literal scan cap should use the compiled program layout");
+
+        assert!(matches.is_empty());
+        assert_eq!(backend.observed_matches_layouts(), vec![(30_000, None)]);
+    }
+
+    #[test]
+    fn literal_scan_zero_match_cap_reads_no_match_payload() {
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
+        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(1), Vec::new()]);
+        let mut matches = vec![Match::new(99, 1, 2)];
+
+        engine
+            .scan_into(&backend, b"a", 0, &mut matches)
+            .expect("Fix: literal scan with zero cap should return an empty decoded prefix");
+
+        assert!(matches.is_empty());
+        assert_eq!(backend.observed_matches_layouts(), vec![(1, Some(0..0))]);
+    }
+
+    #[test]
+    fn literal_scan_expands_match_output_above_legacy_fixed_cap() {
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
+        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
+        let mut matches = Vec::new();
+
+        engine
+            .scan_into(&backend, b"no hits", 20_001, &mut matches)
+            .expect("Fix: literal scan should honor caps above the compiled default");
+
+        assert!(matches.is_empty());
+        assert_eq!(
+            backend.observed_matches_layouts(),
+            vec![(60_003, Some(0..240_012))]
+        );
+    }
+
+    #[test]
+    fn literal_scan_rejects_match_cap_that_overflows_output_words() {
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
+        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
+        let mut matches = Vec::new();
+
+        let err = engine
+            .scan_into(&backend, b"a", u32::MAX, &mut matches)
+            .expect_err("Fix: overflowing literal max_matches must fail before dispatch");
+        let msg = err.to_string();
+
+        assert!(msg.contains("literal_set max_matches"));
+        assert!(msg.contains("overflows the GPU match-output word count"));
+        assert!(backend.observed_matches_layouts().is_empty());
+    }
 }
 
 const LITERAL_SET_WIRE_MAGIC: &[u8; 4] = b"VLIT";
@@ -765,7 +973,8 @@ fn build_literal_set_program(
             BufferDecl::storage(pattern_count, 5, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(1),
             BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
-            BufferDecl::output(matches, 7, DataType::U32).with_count(10000 * 3),
+            BufferDecl::output(matches, 7, DataType::U32)
+                .with_count(LITERAL_SET_DEFAULT_MAX_MATCHES * MATCH_TRIPLE_WORDS),
             BufferDecl::read_write(HIT_BUFFER_OVERFLOW_COUNT, 8, DataType::U32).with_count(1),
         ],
         [subgroup_size, 1, 1],
