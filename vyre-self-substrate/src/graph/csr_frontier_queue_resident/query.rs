@@ -17,7 +17,7 @@ use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_frontier_stats,
     resident_csr_queue_materializer_for_stats, resident_csr_queue_split_low_grid,
-    resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind_for_graph,
+    resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind_for_graph_stats,
     FrontierWordPrefixScratch, ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
     STRIDED_FORWARD_MIN_ROW_DEGREE,
 };
@@ -47,10 +47,10 @@ pub fn run_resident_csr_queue_query_into(
         effective_queue_capacity,
         frontier_stats.max_nonzero_words,
     );
-    let traverse_kind = resident_csr_queue_traverse_kind_for_graph(
+    let traverse_kind = resident_csr_queue_traverse_kind_for_graph_stats(
         graph.node_count,
-        graph.edge_count,
         graph.max_row_degree,
+        graph.high_degree_source_count,
         effective_queue_capacity,
     );
     ensure_scratch(

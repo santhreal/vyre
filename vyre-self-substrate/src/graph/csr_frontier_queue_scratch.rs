@@ -114,12 +114,26 @@ pub(crate) fn resident_csr_queue_traverse_kind_for_graph(
     max_row_degree: u32,
     queue_capacity: u32,
 ) -> ResidentCsrQueueTraverseKind {
+    resident_csr_queue_traverse_kind_for_graph_stats(
+        node_count,
+        max_row_degree,
+        resident_csr_queue_high_degree_source_bound_from_edges(edge_count),
+        queue_capacity,
+    )
+}
+
+pub(crate) fn resident_csr_queue_traverse_kind_for_graph_stats(
+    node_count: u32,
+    max_row_degree: u32,
+    high_degree_source_count: u32,
+    queue_capacity: u32,
+) -> ResidentCsrQueueTraverseKind {
     if max_row_degree < STRIDED_FORWARD_MIN_ROW_DEGREE || queue_capacity <= 1 || node_count == 0 {
         return ResidentCsrQueueTraverseKind::RowSerial;
     }
 
     let high_queue_capacity =
-        resident_csr_queue_high_degree_capacity_bound(edge_count, queue_capacity);
+        resident_csr_queue_high_degree_capacity_bound(high_degree_source_count, queue_capacity);
     if high_queue_capacity == 0 {
         return ResidentCsrQueueTraverseKind::RowSerial;
     }
@@ -138,13 +152,16 @@ pub(crate) fn resident_csr_queue_traverse_kind_for_graph(
     }
 }
 
+pub(crate) const fn resident_csr_queue_high_degree_source_bound_from_edges(edge_count: u32) -> u32 {
+    edge_count / STRIDED_FORWARD_MIN_ROW_DEGREE
+}
+
 pub(crate) const fn resident_csr_queue_high_degree_capacity_bound(
-    edge_count: u32,
+    high_degree_source_count: u32,
     queue_capacity: u32,
 ) -> u32 {
-    let high_node_bound = edge_count / STRIDED_FORWARD_MIN_ROW_DEGREE;
-    if high_node_bound < queue_capacity {
-        high_node_bound
+    if high_degree_source_count < queue_capacity {
+        high_degree_source_count
     } else {
         queue_capacity
     }
@@ -491,16 +508,15 @@ mod tests {
     #[test]
     fn skewed_high_degree_graphs_select_mixed_split_when_lane_savings_are_material() {
         let queue_capacity = 128;
-        let one_hub_edge_count = STRIDED_FORWARD_MIN_ROW_DEGREE;
         assert_eq!(
-            resident_csr_queue_high_degree_capacity_bound(one_hub_edge_count, queue_capacity),
+            resident_csr_queue_high_degree_capacity_bound(1, queue_capacity),
             1
         );
         assert_eq!(
-            resident_csr_queue_traverse_kind_for_graph(
+            resident_csr_queue_traverse_kind_for_graph_stats(
                 4096,
-                one_hub_edge_count,
                 STRIDED_FORWARD_MIN_ROW_DEGREE,
+                1,
                 queue_capacity,
             ),
             ResidentCsrQueueTraverseKind::MixedSplit {
@@ -522,20 +538,58 @@ mod tests {
     #[test]
     fn uniformly_high_degree_graphs_keep_global_strided_consumer() {
         let queue_capacity = 128;
-        let edge_count = STRIDED_FORWARD_MIN_ROW_DEGREE * queue_capacity;
         assert_eq!(
-            resident_csr_queue_high_degree_capacity_bound(edge_count, queue_capacity),
+            resident_csr_queue_high_degree_capacity_bound(queue_capacity, queue_capacity),
             queue_capacity
         );
         assert_eq!(
-            resident_csr_queue_traverse_kind_for_graph(
+            resident_csr_queue_traverse_kind_for_graph_stats(
                 4096,
-                edge_count,
                 STRIDED_FORWARD_MIN_ROW_DEGREE,
+                queue_capacity,
                 queue_capacity,
             ),
             ResidentCsrQueueTraverseKind::RowStrided
         );
+    }
+
+    #[test]
+    fn generated_exact_high_degree_counts_avoid_superhub_overallocation() {
+        for seed in 0..10_000u32 {
+            let queue_capacity = 2 + (mix32(seed) % 2_047);
+            let high_degree_sources = 1 + (mix32(seed ^ 0x9e37_79b9) % queue_capacity);
+            let extra_edges_per_high_row = mix32(seed ^ 0xa5a5_51ce) % 257;
+            let edge_count = high_degree_sources.saturating_mul(
+                STRIDED_FORWARD_MIN_ROW_DEGREE.saturating_add(extra_edges_per_high_row),
+            );
+            let edge_bound_capacity = resident_csr_queue_high_degree_capacity_bound(
+                resident_csr_queue_high_degree_source_bound_from_edges(edge_count),
+                queue_capacity,
+            );
+            let exact_capacity =
+                resident_csr_queue_high_degree_capacity_bound(high_degree_sources, queue_capacity);
+            let exact_kind = resident_csr_queue_traverse_kind_for_graph_stats(
+                4096,
+                STRIDED_FORWARD_MIN_ROW_DEGREE + extra_edges_per_high_row,
+                high_degree_sources,
+                queue_capacity,
+            );
+
+            assert!(
+                exact_capacity <= edge_bound_capacity,
+                "exact high-row metadata must never allocate more high_queue slots than the edge-count bound"
+            );
+            assert_eq!(exact_capacity, high_degree_sources.min(queue_capacity));
+            if let ResidentCsrQueueTraverseKind::MixedSplit {
+                high_queue_capacity,
+            } = exact_kind
+            {
+                assert_eq!(
+                    high_queue_capacity, exact_capacity,
+                    "mixed split must carry the exact bounded high-row count"
+                );
+            }
+        }
     }
 
     #[test]

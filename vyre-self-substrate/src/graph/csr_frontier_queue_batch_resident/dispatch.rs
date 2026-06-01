@@ -21,7 +21,7 @@ use crate::graph::csr_frontier_queue_scratch::{
     resident_csr_queue_materializer_for_stats,
     resident_csr_queue_scratch_bytes_per_query_for_materializer_and_traverse,
     resident_csr_queue_split_low_grid, resident_csr_queue_traverse_grid,
-    resident_csr_queue_traverse_kind_for_graph, FrontierWordPrefixScratch,
+    resident_csr_queue_traverse_kind_for_graph_stats, FrontierWordPrefixScratch,
     ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind, STRIDED_FORWARD_MIN_ROW_DEGREE,
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
@@ -51,10 +51,10 @@ pub fn run_resident_csr_queue_batch_into(
         effective_queue_capacity,
         frontier_stats.max_nonzero_words,
     );
-    let traverse_kind = resident_csr_queue_traverse_kind_for_graph(
+    let traverse_kind = resident_csr_queue_traverse_kind_for_graph_stats(
         graph.node_count(),
-        graph.edge_count(),
         graph.max_row_degree(),
+        graph.high_degree_source_count(),
         effective_queue_capacity,
     );
     ensure_batch_scratch(
@@ -437,10 +437,10 @@ fn budgeted_chunk_bytes_per_query(
         queue_capacity,
         max_nonzero_words,
     );
-    let traverse_kind = resident_csr_queue_traverse_kind_for_graph(
+    let traverse_kind = resident_csr_queue_traverse_kind_for_graph_stats(
         graph.node_count(),
-        graph.edge_count(),
         graph.max_row_degree(),
+        graph.high_degree_source_count(),
         queue_capacity,
     );
     resident_csr_queue_scratch_bytes_per_query_for_materializer_and_traverse(

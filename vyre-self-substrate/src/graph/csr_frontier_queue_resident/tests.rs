@@ -80,10 +80,47 @@ fn zero_edge_graph_uploads_padded_resident_edge_buffers() {
         .expect("Fix: zero-edge resident CSR graph is valid");
 
     assert_eq!(graph.edge_count(), 0);
+    assert_eq!(graph.high_degree_source_count(), 0);
     assert_eq!(*dispatcher.allocs.borrow(), vec![16, 4, 4]);
     assert_eq!(
         *dispatcher.uploads.borrow(),
         vec![vec![0; 16], vec![0; 4], vec![0; 4]]
+    );
+}
+
+#[test]
+fn resident_upload_records_exact_high_degree_source_count() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let mut edge_offsets = Vec::new();
+    let mut edge_targets = Vec::new();
+    let mut edge_kind_mask = Vec::new();
+    edge_offsets.push(0);
+    for degree in [
+        STRIDED_FORWARD_MIN_ROW_DEGREE,
+        STRIDED_FORWARD_MIN_ROW_DEGREE - 1,
+        STRIDED_FORWARD_MIN_ROW_DEGREE + 7,
+        0,
+        2,
+    ] {
+        edge_targets.extend((0..degree).map(|edge| edge % 5));
+        edge_kind_mask.extend(std::iter::repeat(1).take(degree as usize));
+        edge_offsets.push(edge_targets.len() as u32);
+    }
+
+    let graph = upload_resident_csr_queue_graph(
+        &dispatcher,
+        5,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+    )
+    .expect("Fix: high-degree resident CSR graph upload should validate");
+
+    assert_eq!(graph.max_row_degree(), STRIDED_FORWARD_MIN_ROW_DEGREE + 7);
+    assert_eq!(
+        graph.high_degree_source_count(),
+        2,
+        "resident graph metadata must count rows, not infer high-row capacity from total edge count"
     );
 }
 
@@ -106,6 +143,7 @@ fn resident_query_initializes_queue_len_on_device() {
         node_count: 1,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words: 1,
         edge_offsets_handle: 101,
         edge_targets_handle: 102,
@@ -169,6 +207,7 @@ fn skewed_high_degree_resident_query_uses_bounded_split_queue() {
         node_count: 16,
         edge_count: STRIDED_FORWARD_MIN_ROW_DEGREE,
         max_row_degree: STRIDED_FORWARD_MIN_ROW_DEGREE,
+        high_degree_source_count: 1,
         words: 1,
         edge_offsets_handle: 101,
         edge_targets_handle: 102,
@@ -249,12 +288,54 @@ fn skewed_high_degree_resident_query_uses_bounded_split_queue() {
 }
 
 #[test]
+fn single_superhub_resident_query_sizes_split_queue_from_high_row_count() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let graph = ResidentCsrQueueGraph {
+        node_count: 16,
+        edge_count: STRIDED_FORWARD_MIN_ROW_DEGREE * 9,
+        max_row_degree: STRIDED_FORWARD_MIN_ROW_DEGREE * 9,
+        high_degree_source_count: 1,
+        words: 1,
+        edge_offsets_handle: 101,
+        edge_targets_handle: 102,
+        edge_kind_mask_handle: 103,
+    };
+    let mut scratch = ResidentCsrQueueScratch::default();
+    let mut output = Vec::new();
+
+    run_resident_csr_queue_query_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &[0x1ff],
+        1024,
+        u32::MAX,
+        &mut output,
+    )
+    .expect("Fix: recording dispatcher should complete superhub resident CSR query");
+
+    let handles = scratch
+        .handles
+        .expect("Fix: superhub mixed split query should allocate scratch handles");
+    assert_eq!(
+        handles.high_queue_capacity, 1,
+        "one enormous row should allocate one high-row slot, not edge_count / threshold slots"
+    );
+    assert_eq!(
+        dispatcher.allocs.borrow().as_slice(),
+        &[4, 64, 4, 4, 4, 4],
+        "superhub split scratch should allocate frontier, 16-slot active queue, queue_len, frontier_out, one high_queue word, and high_len"
+    );
+}
+
+#[test]
 fn uniformly_high_degree_resident_query_uses_row_strided_traverse_grid() {
     let dispatcher = RecordingResidentDispatcher::default();
     let graph = ResidentCsrQueueGraph {
         node_count: 16,
         edge_count: STRIDED_FORWARD_MIN_ROW_DEGREE * 16,
         max_row_degree: STRIDED_FORWARD_MIN_ROW_DEGREE,
+        high_degree_source_count: 16,
         words: 1,
         edge_offsets_handle: 101,
         edge_targets_handle: 102,
@@ -308,6 +389,7 @@ fn resident_query_buckets_graph_sized_capacity_from_frontier_popcount() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         edge_offsets_handle: 101,
         edge_targets_handle: 102,
@@ -365,6 +447,7 @@ fn resident_query_reuses_larger_queue_scratch_for_smaller_effective_capacity() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         edge_offsets_handle: 101,
         edge_targets_handle: 102,
@@ -440,6 +523,7 @@ fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_ord
             node_count: 4,
             edge_count: 3,
             max_row_degree: 1,
+            high_degree_source_count: 0,
             words: 1,
             edge_offsets_handle: base,
             edge_targets_handle: base + 1,
@@ -504,6 +588,7 @@ fn large_single_word_resident_query_uses_atomic_word_materializer() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         edge_offsets_handle: 201,
         edge_targets_handle: 202,
@@ -565,6 +650,7 @@ fn large_dense_resident_query_uses_word_prefix_queue_materializer() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         edge_offsets_handle: 201,
         edge_targets_handle: 202,
@@ -633,6 +719,7 @@ fn small_multiblock_resident_query_inlines_block_offsets() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         edge_offsets_handle: 201,
         edge_targets_handle: 202,
@@ -697,6 +784,7 @@ fn many_block_resident_query_scans_block_offsets_once() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         edge_offsets_handle: 201,
         edge_targets_handle: 202,

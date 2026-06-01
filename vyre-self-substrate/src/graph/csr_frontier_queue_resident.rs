@@ -25,6 +25,7 @@ pub struct ResidentCsrQueueGraph {
     node_count: u32,
     edge_count: u32,
     max_row_degree: u32,
+    high_degree_source_count: u32,
     words: usize,
     edge_offsets_handle: u64,
     edge_targets_handle: u64,
@@ -48,6 +49,12 @@ impl ResidentCsrQueueGraph {
     #[must_use]
     pub fn max_row_degree(&self) -> u32 {
         self.max_row_degree
+    }
+
+    /// Number of rows at or above the resident mixed-split high-degree threshold.
+    #[must_use]
+    pub fn high_degree_source_count(&self) -> u32 {
+        self.high_degree_source_count
     }
 
     /// Number of u32 words in each frontier bitset.

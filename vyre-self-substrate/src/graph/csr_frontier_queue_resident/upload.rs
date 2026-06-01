@@ -1,4 +1,5 @@
 use super::ResidentCsrQueueGraph;
+use crate::graph::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
 use vyre_primitives::graph::csr_frontier_queue::validate_csr_queue_graph;
 
 use crate::graph::dispatch_bridge::{upload_resident_dispatch_inputs, DispatchInput};
@@ -37,9 +38,18 @@ pub fn upload_resident_csr_queue_graph(
         node_count: layout.node_count,
         edge_count: layout.edge_count,
         max_row_degree: layout.max_row_degree,
+        high_degree_source_count: high_degree_source_count(edge_offsets),
         words: layout.words,
         edge_offsets_handle,
         edge_targets_handle,
         edge_kind_mask_handle,
+    })
+}
+
+fn high_degree_source_count(edge_offsets: &[u32]) -> u32 {
+    edge_offsets.windows(2).fold(0_u32, |count, pair| {
+        count.saturating_add(u32::from(
+            pair[1].saturating_sub(pair[0]) >= STRIDED_FORWARD_MIN_ROW_DEGREE,
+        ))
     })
 }
