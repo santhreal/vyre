@@ -1123,33 +1123,24 @@ pub fn try_frontier_to_queue_cpu_into(
     queue_capacity: usize,
     queue: &mut Vec<u32>,
 ) -> Result<u32, String> {
-    let expected_words = bitset_words(node_count) as usize;
-    if frontier_in.len() != expected_words {
-        return Err(format!(
-            "Fix: frontier_to_queue requires frontier_in.len() == bitset_words(node_count), got len={} but expected {expected_words} for node_count={node_count}.",
-            frontier_in.len()
-        ));
-    }
-    crate::graph::scratch::reserve_graph_items(
-        queue,
+    crate::bitset::frontier::materialize_frontier_queue_prefix_into(
+        node_count,
+        frontier_in,
         queue_capacity,
-        "CSR frontier queue CPU oracle",
-        "active frontier queue",
-    )?;
-    queue.clear();
-    let mut seen = 0u32;
-    for src in 0..node_count {
-        let word = (src / 32) as usize;
-        let bit = 1u32 << (src % 32);
-        if frontier_in[word] & bit == 0 {
-            continue;
-        }
-        if queue.len() < queue_capacity {
-            queue.push(src);
-        }
-        seen = seen.saturating_add(1);
-    }
-    Ok(seen)
+        queue,
+    )
+    .map_err(|error| match error {
+        crate::bitset::frontier::FrontierError::BadShape {
+            expected_words,
+            actual_words,
+            ..
+        } => format!(
+            "Fix: frontier_to_queue requires frontier_in.len() == bitset_words(node_count), got len={actual_words} but expected {expected_words} for node_count={node_count}."
+        ),
+        other => format!(
+            "Fix: frontier_to_queue CPU oracle could not materialize the active frontier queue: {other}"
+        ),
+    })
 }
 
 /// CPU reference for queue-driven CSR expansion.
@@ -1265,6 +1256,22 @@ mod generated_cpu_oracle_tests {
             queue,
             vec![7, 3, 1],
             "failed frontier materialization must preserve previous queue diagnostics"
+        );
+    }
+
+    #[test]
+    fn frontier_to_queue_clamps_queue_prefix_and_masks_tail_bits() {
+        let frontier = [0b1010_u32, u32::MAX];
+        let mut queue = Vec::new();
+
+        let seen = try_frontier_to_queue_cpu_into(&frontier, 33, 2, &mut queue)
+            .expect("Fix: canonical frontier should materialize through the CPU oracle");
+
+        assert_eq!(seen, 3);
+        assert_eq!(queue, vec![1, 3]);
+        assert!(
+            queue.iter().all(|node| *node < 33),
+            "out-of-domain tail bits must not enter the compact queue prefix"
         );
     }
 

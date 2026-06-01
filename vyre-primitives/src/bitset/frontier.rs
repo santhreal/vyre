@@ -309,6 +309,57 @@ pub fn materialize_frontier_queue_into(
     )
 }
 
+/// Materialize the queue prefix that fits while returning the full active count.
+///
+/// Device-side frontier compaction exposes overflow pressure by allowing the
+/// observed queue length to exceed the queue storage capacity, while clamping
+/// stores to the resident queue. This host helper mirrors that behavior and
+/// still scans set bits word-by-word instead of walking every node id.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn materialize_frontier_queue_prefix_into(
+    node_count: u32,
+    frontier: &[u32],
+    queue_capacity: usize,
+    queue: &mut Vec<u32>,
+) -> Result<u32, FrontierError> {
+    let expected_words = validate_frontier_shape(node_count, frontier, "input")?;
+    let reserve_words = queue_capacity.min(node_count as usize);
+    if reserve_words > queue.capacity() {
+        queue
+            .try_reserve_exact(reserve_words - queue.capacity())
+            .map_err(|source| FrontierError::Allocation {
+                name: "frontier_queue",
+                requested_words: reserve_words,
+                source: source.to_string(),
+            })?;
+    }
+
+    queue.clear();
+    let final_word_index = expected_words.saturating_sub(1);
+    let final_word_mask = frontier_tail_mask(node_count);
+    let mut observed = 0u32;
+    for (word_index, &word) in frontier.iter().enumerate() {
+        let mut bits = if word_index == final_word_index {
+            word & final_word_mask
+        } else {
+            word
+        };
+        while bits != 0 {
+            let bit = bits.trailing_zeros();
+            if queue.len() < queue_capacity {
+                queue.push((word_index as u32 * u32::BITS) + bit);
+            }
+            observed = observed
+                .checked_add(1)
+                .ok_or(FrontierError::PopcountOverflow {
+                    frontier_words: expected_words,
+                })?;
+            bits &= bits - 1;
+        }
+    }
+    Ok(observed)
+}
+
 /// Materialize active node ids when the caller already knows the active count.
 ///
 /// This is the preferred host path for benchmark/dataflow fixtures that counted
@@ -528,6 +579,46 @@ mod tests {
     }
 
     #[test]
+    fn prefix_frontier_queue_clamps_capacity_and_returns_full_count() {
+        let frontier = [0b1010_u32, u32::MAX, u32::MAX];
+        let mut queue = Vec::new();
+
+        let len = materialize_frontier_queue_prefix_into(65, &frontier, 4, &mut queue)
+            .expect("Fix: prefix frontier queue should materialize");
+
+        assert_eq!(len, 35);
+        assert_eq!(queue, vec![1, 3, 32, 33]);
+        assert!(
+            queue.iter().all(|node| *node < 65),
+            "tail bits outside node_count must not enter the prefix queue"
+        );
+    }
+
+    #[test]
+    fn prefix_frontier_queue_zero_capacity_still_counts_active_bits() {
+        let frontier = [u32::MAX, u32::MAX];
+        let mut queue = vec![99, 100];
+
+        let len = materialize_frontier_queue_prefix_into(33, &frontier, 0, &mut queue)
+            .expect("Fix: zero-capacity prefix queue should still report pressure");
+
+        assert_eq!(len, 33);
+        assert!(queue.is_empty());
+    }
+
+    #[test]
+    fn prefix_frontier_queue_rejects_bad_shape_without_mutating_output() {
+        let frontier = [0b1010_u32];
+        let mut queue = vec![99, 100];
+
+        let err = materialize_frontier_queue_prefix_into(64, &frontier, 8, &mut queue)
+            .expect_err("bad prefix frontier shape must fail");
+
+        assert!(matches!(err, FrontierError::BadShape { name: "input", .. }));
+        assert_eq!(queue, vec![99, 100]);
+    }
+
+    #[test]
     fn generated_frontier_queue_matches_scalar_scan_across_10000_shapes() {
         for seed in 0..10_000_u32 {
             let node_count = 1 + (mix32(seed) % 8_192);
@@ -579,6 +670,36 @@ mod tests {
 
             assert_eq!(len as usize, expected.len(), "seed={seed}");
             assert_eq!(queue, expected, "seed={seed} node_count={node_count}");
+        }
+    }
+
+    #[test]
+    fn generated_prefix_frontier_queue_matches_scalar_scan_across_10000_shapes() {
+        for seed in 0..10_000_u32 {
+            let node_count = 1 + (mix32(seed ^ 0xB17C_0DE5) % 8_192);
+            let words = frontier_words(node_count);
+            let mut frontier = (0..words)
+                .map(|word| mix32(seed ^ (word as u32).wrapping_mul(0x27D4_EB2D)))
+                .collect::<Vec<_>>();
+            if seed & 31 == 0 {
+                frontier.fill(0);
+                let node = mix32(seed ^ 0xA11C_EED5) % node_count;
+                frontier[(node / 32) as usize] |= 1_u32 << (node % 32);
+            }
+            let expected = scalar_frontier_queue(node_count, &frontier);
+            let capacity = (mix32(seed ^ 0xCAFE_BA5E) as usize) % (expected.len() + 17);
+            let mut queue = Vec::new();
+
+            let len =
+                materialize_frontier_queue_prefix_into(node_count, &frontier, capacity, &mut queue)
+                    .expect("Fix: generated prefix frontier queue should materialize");
+
+            assert_eq!(len as usize, expected.len(), "seed={seed}");
+            assert_eq!(
+                queue,
+                expected.iter().copied().take(capacity).collect::<Vec<_>>(),
+                "seed={seed} node_count={node_count} capacity={capacity}"
+            );
         }
     }
 
