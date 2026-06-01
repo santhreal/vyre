@@ -390,6 +390,10 @@ name = "sweep_math_prefix_scan_exclusive_volume_oracle_matrix"
 path = "tests/sweep_math_prefix_scan_exclusive_volume_oracle_matrix.rs"
 required-features = ["math", "cpu-parity"]
 [[test]]
+name = "proptest_prefix_scan_large"
+path = "tests/proptest_prefix_scan_large.rs"
+required-features = ["math", "cpu-parity"]
+[[test]]
 name = "sweep_decode_hex_primitives_volume_oracle_matrix"
 path = "tests/sweep_decode_hex_primitives_volume_oracle_matrix.rs"
 required-features = ["decode"]
