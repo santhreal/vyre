@@ -2,19 +2,18 @@
 //!
 //! Composed entirely from `vyre-libs` LEGO blocks.
 
-use crate::region::wrap_anonymous;
-use crate::scan::builders::append_match;
+use crate::scan::classic_ac::{
+    build_ac_bounded_ranges_program_ext, try_build_ac_bounded_ranges_program_ext,
+};
 use crate::scan::dfa::{dfa_compile, CompiledDfa};
 use crate::scan::dispatch_io::ScanDispatchScratch;
-use crate::scan::hit_buffer::HIT_BUFFER_OVERFLOW_COUNT;
 use std::borrow::Cow;
 use std::collections::TryReserveError;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre::ir::{Expr, Node, Program};
 use vyre::VyreBackend;
 pub use vyre_foundation::match_result::Match;
 use vyre_primitives::matching::DfaWireError;
 
-const OP_ID: &str = "vyre-libs::matching::literal_set";
 const LITERAL_SET_DEFAULT_MAX_MATCHES: u32 = 10_000;
 const MATCH_TRIPLE_WORDS: u32 = 3;
 const U32_BYTES: usize = std::mem::size_of::<u32>();
@@ -53,6 +52,11 @@ pub enum LiteralSetCompileError {
         /// Allocator failure details.
         message: String,
     },
+    /// Dispatch program construction failed for the compiled DFA.
+    DispatchProgramBuildFailed {
+        /// Actionable builder diagnostic.
+        message: String,
+    },
 }
 
 impl std::fmt::Display for LiteralSetCompileError {
@@ -81,6 +85,10 @@ impl std::fmt::Display for LiteralSetCompileError {
             } => write!(
                 f,
                 "literal_set compile failed to reserve {requested} {field} slot(s): {message}. Fix: shard the pattern set before GPU compilation."
+            ),
+            Self::DispatchProgramBuildFailed { message } => write!(
+                f,
+                "literal_set DFA dispatch program build failed: {message}"
             ),
         }
     }
@@ -153,7 +161,7 @@ impl GpuLiteralSet {
             sum.checked_add(pattern.len())
                 .ok_or(LiteralSetCompileError::PatternByteCountOverflow)
         })?;
-        let pattern_byte_count = u32::try_from(total_pattern_bytes).map_err(|_| {
+        u32::try_from(total_pattern_bytes).map_err(|_| {
             LiteralSetCompileError::PatternByteCountExceedsGpuAbi {
                 count: total_pattern_bytes,
             }
@@ -185,18 +193,8 @@ impl GpuLiteralSet {
             pattern_bytes.extend(pattern.iter().map(|&byte| u32::from(byte)));
         }
 
-        let program = build_literal_set_program(
-            "haystack",
-            "pattern_offsets",
-            "pattern_lengths",
-            "pattern_bytes",
-            "haystack_len",
-            "pattern_count",
-            "match_count",
-            "matches",
-            declared_pattern_count,
-            pattern_byte_count,
-        );
+        let program = try_build_literal_set_program(&dfa, declared_pattern_count)
+            .map_err(|message| LiteralSetCompileError::DispatchProgramBuildFailed { message })?;
 
         Ok(Self {
             dfa,
@@ -209,18 +207,7 @@ impl GpuLiteralSet {
 
     fn empty_after_compile_failure() -> Self {
         let dfa = dfa_compile(&[]);
-        let program = build_literal_set_program(
-            "haystack",
-            "pattern_offsets",
-            "pattern_lengths",
-            "pattern_bytes",
-            "haystack_len",
-            "pattern_count",
-            "match_count",
-            "matches",
-            0,
-            0,
-        );
+        let program = build_literal_set_program(&dfa, 0);
 
         Self {
             dfa,
@@ -361,26 +348,19 @@ impl GpuLiteralSet {
         matches.clear();
         let haystack_len =
             dispatch_io::scan_guard(haystack, "literal_set", dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
-        let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
-            vyre::BackendError::new(
-                "literal_set pattern count exceeds u32 capacity. Fix: split the pattern set into smaller shards.",
-            )
-        })?;
 
         // Buffer order matches the BufferDecl declaration in
         // `build_literal_set_program`; reordering here would silently
         // miswire the GPU program.
         dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
         let haystack_bytes = scratch.haystack_bytes.as_slice();
-        let pattern_offset_bytes = dispatch_io::u32_words_as_le_bytes(&self.pattern_offsets);
+        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.transitions);
+        let output_offset_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets);
+        let output_record_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_records);
         let pattern_length_bytes = dispatch_io::u32_words_as_le_bytes(&self.pattern_lengths);
-        let pattern_bytes = dispatch_io::u32_words_as_le_bytes(&self.pattern_bytes);
         let haystack_len_word = [haystack_len];
-        let pattern_count_word = [pattern_count];
         let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
-        let pattern_count_bytes = dispatch_io::u32_words_as_le_bytes(&pattern_count_word);
         let match_count_bytes = [0u8; 4];
-        let overflow_count_bytes = [0u8; 4];
 
         let config = dispatch_io::byte_scan_dispatch_config(
             haystack_len,
@@ -389,22 +369,20 @@ impl GpuLiteralSet {
         let borrowed_inputs: smallvec::SmallVec<[&[u8]; 8]> = [
             // 0: haystack (Packed U32)
             haystack_bytes,
-            // 1: pattern_offsets
-            pattern_offset_bytes.as_ref(),
-            // 2: pattern_lengths
+            // 1: transitions
+            transition_bytes.as_ref(),
+            // 2: output_offsets
+            output_offset_bytes.as_ref(),
+            // 3: output_records
+            output_record_bytes.as_ref(),
+            // 4: pattern_lengths
             pattern_length_bytes.as_ref(),
-            // 3: pattern_bytes
-            pattern_bytes.as_ref(),
-            // 4: haystack_len
+            // 5: haystack_len
             haystack_len_bytes.as_ref(),
-            // 5: pattern_count
-            pattern_count_bytes.as_ref(),
             // 6: match_count atomic counter
             match_count_bytes.as_slice(),
             // 7: matches is a pure `BufferDecl::output`; the backend
             // allocates it from the Program declaration.
-            // 8: overflow counter
-            overflow_count_bytes.as_slice(),
         ]
         .into_iter()
         .collect();
@@ -529,11 +507,12 @@ impl GpuLiteralSet {
     ///   - 4 bytes pattern_bytes word count      + words
     ///
     /// Caller-side cache invalidation: the dispatch `Program` already
-    /// includes vyre's IR wire version + pattern fingerprint inside its
-    /// own framing, so a stale cache surfaces as `LiteralSetWireError::
+    /// includes vyre's IR wire version inside its own framing, so a stale
+    /// current-version cache surfaces as `LiteralSetWireError::
     /// InvalidProgram` from `Program::from_bytes` (or as a bad magic /
-    /// version on this outer envelope). Both signal "recompile from
-    /// patterns".
+    /// version on this outer envelope). Version-1 literal-compare blobs
+    /// are migrated by decoding their DFA/pattern sections and rebuilding
+    /// the current bounded-DFA dispatch program.
     /// # Errors
     /// Returns [`LiteralSetWireError::WireFraming`] if any section
     /// exceeds the envelope's `u32` length-prefix capacity.
@@ -566,16 +545,14 @@ impl GpuLiteralSet {
     /// outer header, or any inner section (program, DFA) is itself
     /// rejected.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, LiteralSetWireError> {
-        let mut r = vyre_foundation::serial::envelope::WireReader::new(
-            bytes,
-            LITERAL_SET_WIRE_MAGIC,
-            LITERAL_SET_WIRE_VERSION,
-        )
-        .map_err(LiteralSetWireError::WireFraming)?;
+        let (mut r, wire_version) =
+            literal_set_wire_reader(bytes).map_err(LiteralSetWireError::WireFraming)?;
 
         let program_bytes = r.read_section().map_err(LiteralSetWireError::WireFraming)?;
-        let program = Program::from_bytes(program_bytes)
-            .map_err(|e| LiteralSetWireError::InvalidProgram(format!("{e}")))?;
+        if wire_version == LITERAL_SET_WIRE_VERSION {
+            Program::from_bytes(program_bytes)
+                .map_err(|e| LiteralSetWireError::InvalidProgram(format!("{e}")))?;
+        }
 
         let dfa_bytes = r.read_section().map_err(LiteralSetWireError::WireFraming)?;
         let dfa = CompiledDfa::from_bytes(dfa_bytes).map_err(LiteralSetWireError::InvalidDfa)?;
@@ -583,6 +560,18 @@ impl GpuLiteralSet {
         let pattern_offsets = r.read_words().map_err(LiteralSetWireError::WireFraming)?;
         let pattern_lengths = r.read_words().map_err(LiteralSetWireError::WireFraming)?;
         let pattern_bytes = r.read_words().map_err(LiteralSetWireError::WireFraming)?;
+        let pattern_count =
+            u32::try_from(pattern_lengths.len()).map_err(|source| {
+                LiteralSetWireError::InvalidProgram(format!(
+                    "literal_set decoded pattern length count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set before caching.",
+                    pattern_lengths.len()
+                ))
+            })?;
+        let program = try_build_literal_set_program(&dfa, pattern_count).map_err(|message| {
+            LiteralSetWireError::InvalidProgram(format!(
+                "literal_set decoded DFA cannot rebuild current dispatch Program: {message}"
+            ))
+        })?;
 
         Ok(Self {
             dfa,
@@ -591,6 +580,31 @@ impl GpuLiteralSet {
             pattern_lengths,
             program,
         })
+    }
+}
+
+fn literal_set_wire_reader(
+    bytes: &[u8],
+) -> Result<
+    (vyre_foundation::serial::envelope::WireReader<'_>, u32),
+    vyre_foundation::serial::envelope::EnvelopeError,
+> {
+    match vyre_foundation::serial::envelope::WireReader::new(
+        bytes,
+        LITERAL_SET_WIRE_MAGIC,
+        LITERAL_SET_WIRE_VERSION,
+    ) {
+        Ok(reader) => Ok((reader, LITERAL_SET_WIRE_VERSION)),
+        Err(vyre_foundation::serial::envelope::EnvelopeError::VersionMismatch {
+            found: LITERAL_SET_LEGACY_LITERAL_COMPARE_WIRE_VERSION,
+            ..
+        }) => vyre_foundation::serial::envelope::WireReader::new(
+            bytes,
+            LITERAL_SET_WIRE_MAGIC,
+            LITERAL_SET_LEGACY_LITERAL_COMPARE_WIRE_VERSION,
+        )
+        .map(|reader| (reader, LITERAL_SET_LEGACY_LITERAL_COMPARE_WIRE_VERSION)),
+        Err(error) => Err(error),
     }
 }
 
@@ -666,6 +680,7 @@ mod compile_tests {
         observed_matches_layouts:
             std::sync::Arc<std::sync::Mutex<Vec<(u32, Option<std::ops::Range<usize>>)>>>,
         observed_program_buffer_ptrs: std::sync::Arc<std::sync::Mutex<Vec<usize>>>,
+        observed_input_lengths: std::sync::Arc<std::sync::Mutex<Vec<Vec<usize>>>>,
     }
 
     impl RecordingLiteralBackend {
@@ -674,6 +689,7 @@ mod compile_tests {
                 outputs,
                 observed_matches_layouts: std::sync::Arc::default(),
                 observed_program_buffer_ptrs: std::sync::Arc::default(),
+                observed_input_lengths: std::sync::Arc::default(),
             }
         }
 
@@ -686,6 +702,13 @@ mod compile_tests {
 
         fn observed_program_buffer_ptrs(&self) -> Vec<usize> {
             self.observed_program_buffer_ptrs
+                .lock()
+                .expect("Fix: recording literal backend mutex should not be poisoned")
+                .clone()
+        }
+
+        fn observed_input_lengths(&self) -> Vec<Vec<usize>> {
+            self.observed_input_lengths
                 .lock()
                 .expect("Fix: recording literal backend mutex should not be poisoned")
                 .clone()
@@ -712,7 +735,7 @@ mod compile_tests {
         fn dispatch_borrowed(
             &self,
             program: &Program,
-            _inputs: &[&[u8]],
+            inputs: &[&[u8]],
             _config: &vyre::DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
             let matches = program
@@ -728,6 +751,10 @@ mod compile_tests {
                 .lock()
                 .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
                 .push(program.buffers().as_ptr() as usize);
+            self.observed_input_lengths
+                .lock()
+                .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
+                .push(inputs.iter().map(|input| input.len()).collect());
             Ok(self.outputs.clone())
         }
     }
@@ -742,6 +769,24 @@ mod compile_tests {
         bytes.extend_from_slice(&start.to_le_bytes());
         bytes.extend_from_slice(&end.to_le_bytes());
         bytes
+    }
+
+    fn decode_u32_words(bytes: &[u8]) -> Vec<u32> {
+        bytes
+            .chunks_exact(4)
+            .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+            .collect()
+    }
+
+    fn decode_reference_matches(outputs: &[vyre_reference::value::Value]) -> Vec<Match> {
+        let count = decode_u32_words(&outputs[0].to_bytes())[0] as usize;
+        decode_u32_words(&outputs[1].to_bytes())
+            .into_iter()
+            .take(count.saturating_mul(3))
+            .collect::<Vec<_>>()
+            .chunks_exact(3)
+            .map(|chunk| Match::new(chunk[0], chunk[1], chunk[2]))
+            .collect()
     }
 
     #[test]
@@ -883,6 +928,34 @@ mod compile_tests {
             !program_debug.contains("_vyre_match_leader"),
             "Fix: literal-set GPU program must use the CUDA-lowerable append primitive, not subgroup leader append."
         );
+        let engine = GpuLiteralSet::compile(&[b"a".as_slice(), b"bc".as_slice()]);
+        let buffer_names = engine
+            .program
+            .buffers()
+            .iter()
+            .map(|buffer| buffer.name())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            buffer_names,
+            vec![
+                "haystack",
+                "transitions",
+                "output_offsets",
+                "output_records",
+                "pattern_lengths",
+                "haystack_len",
+                "match_count",
+                "matches"
+            ],
+            "Fix: public literal-set dispatch must run on the bounded DFA table layout, not the old literal-byte compare ABI."
+        );
+        assert!(
+            !program_debug.contains("pattern_bytes")
+                && !program_debug.contains("pattern_offsets")
+                && !program_debug.contains("_pid")
+                && !program_debug.contains("_literal_matched"),
+            "Fix: literal-set GPU program must not retain the per-pattern literal compare loop."
+        );
     }
 
     #[test]
@@ -899,6 +972,81 @@ mod compile_tests {
 
         assert_eq!(matches, vec![Match::new(0, 0, 1), Match::new(0, 3, 4)]);
         assert_eq!(backend.observed_matches_layouts(), vec![(6, Some(0..24))]);
+    }
+
+    #[test]
+    fn literal_scan_uploads_dfa_tables_instead_of_literal_compare_tables() {
+        let engine = GpuLiteralSet::compile(&[
+            b"AKIA".as_slice(),
+            b"ghp_".as_slice(),
+            b"Authorization: Bearer ".as_slice(),
+        ]);
+        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
+        let mut matches = Vec::new();
+
+        engine
+            .scan_into(
+                &backend,
+                b"prefix Authorization: Bearer token",
+                4,
+                &mut matches,
+            )
+            .expect("Fix: literal scan should dispatch with DFA table inputs");
+
+        assert!(matches.is_empty());
+        let packed_haystack_len =
+            crate::scan::dispatch_io::pack_haystack_u32(b"prefix Authorization: Bearer token")
+                .len();
+        assert_eq!(
+            backend.observed_input_lengths(),
+            vec![vec![
+                packed_haystack_len,
+                engine.dfa.transitions.len() * U32_BYTES,
+                engine.dfa.output_offsets.len() * U32_BYTES,
+                engine.dfa.output_records.len() * U32_BYTES,
+                engine.pattern_lengths.len() * U32_BYTES,
+                U32_BYTES,
+                U32_BYTES,
+            ]],
+            "Fix: public literal-set scan must upload haystack, transitions, output links, pattern lengths, haystack_len, and match_count only."
+        );
+    }
+
+    #[test]
+    fn literal_set_dfa_program_reference_eval_matches_public_oracle() {
+        let patterns: [&[u8]; 5] = [b"a", b"bc", b"abcd", b"BEGIN", b"token"];
+        let haystack = b"zabcd BEGIN token abcdbc";
+        let engine = GpuLiteralSet::compile(&patterns);
+        let inputs = vec![
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_haystack_u32(
+                haystack,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &engine.dfa.transitions,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &engine.dfa.output_offsets,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &engine.dfa.output_records,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &engine.pattern_lengths,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(&[
+                haystack.len() as u32,
+            ])),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(&[0])),
+        ];
+        let outputs = vyre_reference::reference_eval(&engine.program, &inputs).expect(
+            "Fix: public literal-set bounded-DFA program should evaluate in reference backend.",
+        );
+        let mut actual = decode_reference_matches(&outputs);
+        let mut expected = engine.reference_scan(haystack);
+        actual.sort_unstable();
+        expected.sort_unstable();
+
+        assert_eq!(actual, expected);
     }
 
     #[test]
@@ -1021,7 +1169,8 @@ mod compile_tests {
 }
 
 const LITERAL_SET_WIRE_MAGIC: &[u8; 4] = b"VLIT";
-const LITERAL_SET_WIRE_VERSION: u32 = 1;
+const LITERAL_SET_WIRE_VERSION: u32 = 2;
+const LITERAL_SET_LEGACY_LITERAL_COMPARE_WIRE_VERSION: u32 = 1;
 
 /// Errors returned by [`GpuLiteralSet::from_bytes`]. Outer-framing
 /// failures (truncation, bad magic, version drift) are forwarded
@@ -1059,120 +1208,17 @@ impl std::fmt::Display for LiteralSetWireError {
 
 impl std::error::Error for LiteralSetWireError {}
 
-fn build_literal_set_program(
-    haystack: &str,
-    pattern_offsets: &str,
-    pattern_lengths: &str,
-    pattern_bytes: &str,
-    haystack_len: &str,
-    pattern_count: &str,
-    match_count: &str,
-    matches: &str,
-    declared_pattern_count: u32,
-    pattern_byte_count: u32,
-) -> Program {
-    let idx = Expr::InvocationId { axis: 0 };
-    let subgroup_size = 32u32;
-
-    // Use the canonical `builders::load_packed_byte` LEGO primitive
-    // instead of a local re-inlining. Earlier "complete" tasks (#21,
-    // #22) missed this site; the inline version was less efficient
-    // (no let-bind for the loaded word ⇒ no CSE opportunity).
-    let offset_at_end = Expr::add(idx.clone(), Expr::u32(1));
-    let lane_body = vec![Node::Loop {
-        var: "_pid".into(),
-        from: Expr::u32(0),
-        to: Expr::load(pattern_count, Expr::u32(0)),
-        body: vec![
-            Node::Let {
-                name: "_pattern_start".into(),
-                value: Expr::load(pattern_offsets, Expr::var("_pid")),
-            },
-            Node::Let {
-                name: "_len".into(),
-                value: Expr::load(pattern_lengths, Expr::var("_pid")),
-            },
-            Node::Let {
-                name: "_candidate_start".into(),
-                value: Expr::Select {
-                    cond: Box::new(Expr::ge(offset_at_end.clone(), Expr::var("_len"))),
-                    true_val: Box::new(Expr::sub(offset_at_end.clone(), Expr::var("_len"))),
-                    false_val: Box::new(Expr::u32(0)),
-                },
-            },
-            Node::Let {
-                name: "_literal_matched".into(),
-                value: Expr::ge(offset_at_end.clone(), Expr::var("_len")),
-            },
-            Node::Loop {
-                var: "_j".into(),
-                from: Expr::u32(0),
-                to: Expr::var("_len"),
-                body: vec![Node::If {
-                    cond: Expr::ne(
-                        crate::scan::builders::load_packed_byte_expr(
-                            haystack,
-                            Expr::add(Expr::var("_candidate_start"), Expr::var("_j")),
-                        ),
-                        Expr::load(
-                            pattern_bytes,
-                            Expr::add(Expr::var("_pattern_start"), Expr::var("_j")),
-                        ),
-                    ),
-                    then: vec![Node::Assign {
-                        name: "_literal_matched".into(),
-                        value: Expr::bool(false),
-                    }],
-                    otherwise: vec![],
-                }],
-            },
-            Node::If {
-                cond: Expr::var("_literal_matched"),
-                then: vec![append_match(
-                    matches,
-                    match_count,
-                    Expr::var("_pid"),
-                    Expr::var("_candidate_start"),
-                    offset_at_end.clone(),
-                )],
-                otherwise: vec![],
-            },
-        ],
-    }];
-
-    let body = vec![
-        Node::Let {
-            name: "state".into(),
-            value: Expr::u32(0),
-        },
-        Node::If {
-            cond: Expr::lt(idx.clone(), Expr::load(haystack_len, Expr::u32(0))),
-            then: lane_body,
-            otherwise: vec![],
-        },
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(pattern_offsets, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(declared_pattern_count),
-            BufferDecl::storage(pattern_lengths, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(declared_pattern_count),
-            BufferDecl::storage(pattern_bytes, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(pattern_byte_count),
-            BufferDecl::storage(haystack_len, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage(pattern_count, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
-            BufferDecl::output(matches, 7, DataType::U32)
-                .with_count(LITERAL_SET_DEFAULT_MAX_MATCHES * MATCH_TRIPLE_WORDS),
-            BufferDecl::read_write(HIT_BUFFER_OVERFLOW_COUNT, 8, DataType::U32).with_count(1),
-        ],
-        [subgroup_size, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+fn try_build_literal_set_program(dfa: &CompiledDfa, pattern_count: u32) -> Result<Program, String> {
+    try_build_ac_bounded_ranges_program_ext(
+        dfa,
+        pattern_count,
+        LITERAL_SET_DEFAULT_MAX_MATCHES,
+        false,
     )
+}
+
+fn build_literal_set_program(dfa: &CompiledDfa, pattern_count: u32) -> Program {
+    build_ac_bounded_ranges_program_ext(dfa, pattern_count, LITERAL_SET_DEFAULT_MAX_MATCHES, false)
 }
 
 /// Innovation I.18: JIT DFA Lowering.

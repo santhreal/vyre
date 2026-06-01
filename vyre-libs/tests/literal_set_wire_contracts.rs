@@ -33,6 +33,24 @@ fn literal_set_wire_round_trips_patterns_and_cpu_scan() {
     assert_eq!(back.pattern_lengths, original.pattern_lengths);
     assert_eq!(back.pattern_bytes, original.pattern_bytes);
     assert_eq!(back.dfa.state_count, original.dfa.state_count);
+    assert_eq!(
+        back.program
+            .buffers()
+            .iter()
+            .map(|buffer| buffer.name())
+            .collect::<Vec<_>>(),
+        vec![
+            "haystack",
+            "transitions",
+            "output_offsets",
+            "output_records",
+            "pattern_lengths",
+            "haystack_len",
+            "match_count",
+            "matches"
+        ],
+        "literal-set wire decode must rebuild the bounded-DFA dispatch surface"
+    );
 
     let haystack = b"foo AKIA ghp_xxxx bar";
     assert_eq!(
@@ -59,6 +77,33 @@ fn literal_set_wire_rejects_bad_magic() {
             EnvelopeError::BadMagic { .. }
         ))
     ));
+}
+
+#[cfg(any(
+    feature = "matching-substring",
+    feature = "matching-dfa",
+    feature = "matching-nfa"
+))]
+#[test]
+fn literal_set_wire_accepts_v1_literal_compare_cache_by_rebuilding_program() {
+    let original = GpuLiteralSet::compile(&[b"abc".as_slice(), b"bc".as_slice()]);
+    let mut bytes = original.to_bytes().expect("encode literal-set wire blob");
+    bytes[4..8].copy_from_slice(&1u32.to_le_bytes());
+
+    let back = GpuLiteralSet::from_bytes(&bytes).expect("decode legacy literal-set wire blob");
+
+    assert_eq!(back.pattern_lengths, original.pattern_lengths);
+    assert_eq!(
+        back.reference_scan(b"zabc"),
+        original.reference_scan(b"zabc")
+    );
+    assert!(
+        back.program
+            .buffers()
+            .iter()
+            .any(|buffer| buffer.name() == "transitions"),
+        "legacy literal-set cache decode must rebuild the current DFA-table program"
+    );
 }
 
 #[cfg(any(

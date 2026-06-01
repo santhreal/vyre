@@ -214,10 +214,11 @@ impl BenchCase for LiteralSetIrregularHotloop {
 fn literal_set_encoded_input_bytes(engine: &GpuLiteralSet, haystack_len: usize) -> u64 {
     let padded_haystack = haystack_len.div_ceil(4).saturating_mul(4) as u64;
     padded_haystack
-        .saturating_add((engine.pattern_offsets.len() as u64).saturating_mul(4))
+        .saturating_add((engine.dfa.transitions.len() as u64).saturating_mul(4))
+        .saturating_add((engine.dfa.output_offsets.len() as u64).saturating_mul(4))
+        .saturating_add((engine.dfa.output_records.len() as u64).saturating_mul(4))
         .saturating_add((engine.pattern_lengths.len() as u64).saturating_mul(4))
-        .saturating_add((engine.pattern_bytes.len() as u64).saturating_mul(4))
-        .saturating_add(16)
+        .saturating_add(8)
 }
 
 fn literal_set_metric_points(
@@ -235,6 +236,21 @@ fn literal_set_metric_points(
         metric(
             "literal_set_irregular_pattern_bytes",
             prepared.engine.pattern_bytes.len() as u64,
+        ),
+        metric(
+            "literal_set_irregular_dfa_states",
+            u64::from(prepared.engine.dfa.state_count),
+        ),
+        metric(
+            "literal_set_irregular_dfa_table_bytes",
+            ((prepared.engine.dfa.transitions.len()
+                + prepared.engine.dfa.output_offsets.len()
+                + prepared.engine.dfa.output_records.len()) as u64)
+                .saturating_mul(4),
+        ),
+        metric(
+            "literal_set_irregular_dfa_output_records",
+            prepared.engine.dfa.output_records.len() as u64,
         ),
         metric(
             "literal_set_irregular_expected_matches",
