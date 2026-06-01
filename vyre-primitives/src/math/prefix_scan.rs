@@ -434,8 +434,14 @@ mod tests {
         for n in &[1_u32, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024] {
             let program = prefix_scan("in", "out", *n, ScanKind::InclusiveSum);
             let names: Vec<&str> = program.buffers().iter().map(|b| b.name()).collect();
-            assert!(names.contains(&"in"), "prefix_scan must declare in for n={n}");
-            assert!(names.contains(&"out"), "prefix_scan must declare out for n={n}");
+            assert!(
+                names.contains(&"in"),
+                "prefix_scan must declare in for n={n}"
+            );
+            assert!(
+                names.contains(&"out"),
+                "prefix_scan must declare out for n={n}"
+            );
         }
     }
 }

@@ -1,7 +1,6 @@
 //! Volume oracle matrix - independent reference vs production cpu_ref.
 //! Legendary testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
-
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 
 use vyre_primitives::graph::persistent_bfs;
@@ -38,7 +37,6 @@ fn generated_csr_frontier(seed: u64) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<
     (node_count, offsets, targets, masks, frontier, allow_mask)
 }
 
-
 fn oracle_csr_forward_step(
     node_count: u32,
     edge_offsets: &[u32],
@@ -72,7 +70,6 @@ fn oracle_csr_forward_step(
     out
 }
 
-
 fn oracle_persistent(
     node_count: u32,
     edge_offsets: &[u32],
@@ -88,7 +85,12 @@ fn oracle_persistent(
     let mut changed = 0u32;
     for _ in 0..max_iters.max(1) {
         let step = oracle_csr_forward_step(
-            node_count, edge_offsets, edge_targets, edge_kind_mask, &frontier, allow_mask,
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            &frontier,
+            allow_mask,
         );
         let mut step_changed = false;
         for wi in 0..words {

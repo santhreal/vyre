@@ -3868,6 +3868,7 @@ dependencies = [
  "tree-sitter-go",
  "vyre",
  "vyre-driver",
+ "vyre-driver-reference",
  "vyre-emit-naga",
  "vyre-emit-ptx",
  "vyre-foundation",

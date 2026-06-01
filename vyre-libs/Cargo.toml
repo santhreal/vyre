@@ -114,6 +114,7 @@ vyre-reference = { path = "../vyre-reference", features = ["subgroup-ops"] }
 vyre-primitives = { path = "../vyre-primitives", features = ["text", "matching", "decode", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "nfa", "inventory-registry", "geom", "opt", "topology", "visual", "cpu-parity"] }
 criterion.workspace = true
 vyre-driver = { path = "../vyre-driver" }
+vyre-driver-reference = { workspace = true }
 vyre-lower = { path = "../vyre-lower" }
 vyre-emit-naga = { path = "../vyre-emit-naga" }
 vyre-emit-ptx = { path = "../vyre-emit-ptx" }
