@@ -3,6 +3,7 @@
 //! Composed entirely from `vyre-libs` LEGO blocks.
 
 use crate::scan::classic_ac::{
+    build_ac_bounded_count_suffix3_prefilter_program,
     build_ac_bounded_ranges_suffix3_prefilter_program_ext,
     classic_ac_candidate_suffix3_bloom_words,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_ext, CLASSIC_AC_SUFFIX2_MASK_WORDS,
@@ -22,6 +23,7 @@ const MATCH_TRIPLE_WORDS: u32 = 3;
 const U32_BYTES: usize = std::mem::size_of::<u32>();
 const U32_COUNTER_BYTES: usize = std::mem::size_of::<u32>();
 const LITERAL_SET_INPUT_COUNT: usize = 10;
+const LITERAL_SET_COUNT_INPUT_COUNT: usize = 8;
 
 /// Resident-resource index containing the mutable literal-set match counter.
 pub const LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX: usize = 6;
@@ -34,6 +36,15 @@ pub const LITERAL_SET_RESET_RESOURCE_INDICES: [usize; 1] = [LITERAL_SET_MATCH_CO
 
 /// Resident-resource binding order for a prepared literal-set scan.
 pub const LITERAL_SET_SCAN_RESOURCE_INDICES: [usize; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+/// Resident-resource index containing the mutable literal-set count result.
+pub const LITERAL_SET_COUNT_RESOURCE_INDEX: usize = 7;
+
+/// Resident-resource index containing the mutable literal-set count result.
+pub const LITERAL_SET_COUNT_RESET_RESOURCE_INDICES: [usize; 1] = [LITERAL_SET_COUNT_RESOURCE_INDEX];
+
+/// Resident-resource binding order for a prepared literal-set count scan.
+pub const LITERAL_SET_COUNT_SCAN_RESOURCE_INDICES: [usize; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
 
 /// Back-compatible literal match type.
 pub type LiteralMatch = Match;
@@ -138,6 +149,7 @@ pub struct LiteralSetScanScratch {
     /// Shared scan staging used by other matching engines.
     pub dispatch: ScanDispatchScratch,
     cached_program: Option<CachedLiteralSetProgram>,
+    cached_count_program: Option<CachedLiteralSetCountProgram>,
     cached_prefilter: Option<LiteralSetPrefilterTables>,
 }
 
@@ -201,10 +213,52 @@ impl LiteralSetPreparedScan {
     }
 }
 
+/// Backend-neutral prepared literal-set count payload.
+///
+/// This is the count/presence sibling of [`LiteralSetPreparedScan`]: it keeps
+/// the DFA and suffix-prefilter inputs in program binding order but returns
+/// only the mutable `match_count` resource.
+#[derive(Clone, Debug)]
+pub struct LiteralSetPreparedCount {
+    /// Count-only suffix-prefiltered dispatch program.
+    pub program: Program,
+    /// Input buffers in program binding order.
+    pub inputs: Vec<Vec<u8>>,
+    /// Standard byte-scan dispatch geometry for `haystack_len`.
+    pub dispatch_config: DispatchConfig,
+    /// Validated haystack byte length.
+    pub haystack_len: u32,
+    /// Total bytes in `inputs`.
+    pub encoded_input_bytes: u64,
+}
+
+impl LiteralSetPreparedCount {
+    /// Byte length required to read the count result.
+    #[must_use]
+    pub const fn count_readback_bytes(&self) -> usize {
+        U32_COUNTER_BYTES
+    }
+
+    /// Decode the count output from either borrowed or resident dispatch.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] when the output slot is missing or too
+    /// short for one `u32` counter.
+    pub fn decode_outputs(&self, outputs: &[Vec<u8>]) -> Result<u32, vyre::BackendError> {
+        decode_literal_set_count_outputs(outputs)
+    }
+}
+
 #[derive(Debug)]
 struct CachedLiteralSetProgram {
     base_fingerprint: [u8; 32],
     max_matches: u32,
+    program: Program,
+}
+
+#[derive(Debug)]
+struct CachedLiteralSetCountProgram {
+    pattern_fingerprint: u64,
     program: Program,
 }
 
@@ -360,6 +414,24 @@ impl GpuLiteralSet {
         self.scan_into_with_scratch(backend, haystack, max_matches, matches, &mut scratch)
     }
 
+    /// GPU count-only dispatch.
+    ///
+    /// Use this when the caller needs match cardinality or presence without
+    /// materializing every `(pattern_id, start, end)` triple. It dispatches the
+    /// suffix-prefiltered bounded DFA count kernel and reads one `u32`.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] if dispatch, readback, scan-boundary
+    /// validation, or host staging allocation fails.
+    pub fn count<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+    ) -> Result<u32, vyre::BackendError> {
+        let mut scratch = LiteralSetScanScratch::default();
+        self.count_with_literal_scratch(backend, haystack, &mut scratch)
+    }
+
     /// GPU scan dispatch that decodes into caller-owned match scratch and
     /// reuses caller-owned byte staging.
     ///
@@ -413,6 +485,22 @@ impl GpuLiteralSet {
         Ok(())
     }
 
+    /// Prepare count-only hot-loop scratch for repeated dispatches.
+    ///
+    /// This builds the count dispatch `Program` and suffix-prefilter tables
+    /// outside the timed count path without preparing match-list output state.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] if suffix-prefilter staging fails.
+    pub fn prepare_count_scratch(
+        &self,
+        scratch: &mut LiteralSetScanScratch,
+    ) -> Result<(), vyre::BackendError> {
+        self.count_program_cached(&mut scratch.cached_count_program)?;
+        self.prefilter_tables_cached(&mut scratch.cached_prefilter)?;
+        Ok(())
+    }
+
     /// Prepare a backend-neutral dispatch payload for this literal set.
     ///
     /// The returned plan owns packed haystack bytes, DFA tables, suffix
@@ -439,6 +527,25 @@ impl GpuLiteralSet {
             dispatch_program.as_ref(),
             &prefilter_tables,
         )
+    }
+
+    /// Prepare a backend-neutral count-only dispatch payload.
+    ///
+    /// Runtimes with resident resources can upload the returned `inputs` once,
+    /// reset [`LITERAL_SET_COUNT_RESET_RESOURCE_INDICES`], dispatch
+    /// [`LITERAL_SET_COUNT_SCAN_RESOURCE_INDICES`], and read back
+    /// [`LITERAL_SET_COUNT_RESOURCE_INDEX`] for one `u32` result.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] if scan-boundary validation,
+    /// suffix-prefilter staging, or input-buffer allocation fails.
+    pub fn prepare_count_dispatch(
+        &self,
+        haystack: &[u8],
+    ) -> Result<LiteralSetPreparedCount, vyre::BackendError> {
+        let count_program = self.count_program();
+        let prefilter_tables = self.build_prefilter_tables()?;
+        self.prepare_count_dispatch_with_program(haystack, &count_program, &prefilter_tables)
     }
 
     /// GPU scan dispatch with literal-set-owned hot-loop scratch.
@@ -471,6 +578,31 @@ impl GpuLiteralSet {
             matches,
             &mut scratch.dispatch,
             dispatch_program,
+            prefilter_tables,
+        )
+    }
+
+    /// GPU count-only dispatch with literal-set-owned hot-loop scratch.
+    ///
+    /// Reuses packed haystack bytes, suffix-prefilter tables, and the count
+    /// dispatch `Program` across repeated scans.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] if dispatch, readback, scan-boundary
+    /// validation, or host staging allocation fails.
+    pub fn count_with_literal_scratch<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        scratch: &mut LiteralSetScanScratch,
+    ) -> Result<u32, vyre::BackendError> {
+        let count_program = self.count_program_cached(&mut scratch.cached_count_program)?;
+        let prefilter_tables = self.prefilter_tables_cached(&mut scratch.cached_prefilter)?;
+        self.count_with_program(
+            backend,
+            haystack,
+            &mut scratch.dispatch,
+            count_program,
             prefilter_tables,
         )
     }
@@ -544,6 +676,58 @@ impl GpuLiteralSet {
 
         decode_literal_set_outputs_into(&outputs, max_matches, matches)?;
         Ok(())
+    }
+
+    fn count_with_program<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        scratch: &mut ScanDispatchScratch,
+        count_program: &Program,
+        prefilter_tables: &LiteralSetPrefilterTables,
+    ) -> Result<u32, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let haystack_len =
+            dispatch_io::scan_guard(haystack, "literal_set", dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
+        dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
+        let haystack_bytes = scratch.haystack_bytes.as_slice();
+        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.transitions);
+        let output_offset_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets);
+        let candidate_end_mask_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_end_mask);
+        let candidate_suffix2_mask_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix2_mask);
+        let candidate_suffix3_bloom_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix3_bloom);
+        let haystack_len_word = [haystack_len];
+        let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
+        let match_count_bytes = [0u8; U32_COUNTER_BYTES];
+        let config =
+            dispatch_io::byte_scan_dispatch_config(haystack_len, count_program.workgroup_size[0]);
+
+        let borrowed_inputs: smallvec::SmallVec<[&[u8]; 8]> = [
+            // 0: haystack (Packed U32)
+            haystack_bytes,
+            // 1: transitions
+            transition_bytes.as_ref(),
+            // 2: output_offsets
+            output_offset_bytes.as_ref(),
+            // 3: candidate_end_mask
+            candidate_end_mask_bytes.as_ref(),
+            // 4: candidate_suffix2_mask
+            candidate_suffix2_mask_bytes.as_ref(),
+            // 5: candidate_suffix3_bloom
+            candidate_suffix3_bloom_bytes.as_ref(),
+            // 6: haystack_len
+            haystack_len_bytes.as_ref(),
+            // 7: match_count atomic counter and readback
+            match_count_bytes.as_slice(),
+        ]
+        .into_iter()
+        .collect();
+        let outputs = backend.dispatch_borrowed(count_program, &borrowed_inputs, &config)?;
+        decode_literal_set_count_outputs(&outputs)
     }
 
     fn prepare_scan_dispatch_with_program(
@@ -630,6 +814,78 @@ impl GpuLiteralSet {
         })
     }
 
+    fn prepare_count_dispatch_with_program(
+        &self,
+        haystack: &[u8],
+        count_program: &Program,
+        prefilter_tables: &LiteralSetPrefilterTables,
+    ) -> Result<LiteralSetPreparedCount, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let haystack_len =
+            dispatch_io::scan_guard(haystack, "literal_set", dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
+        let mut inputs = Vec::new();
+        vyre_foundation::allocation::try_reserve_vec_to_capacity(
+            &mut inputs,
+            LITERAL_SET_COUNT_INPUT_COUNT,
+        )
+        .map_err(|source| {
+            vyre::BackendError::new(format!(
+                "literal_set prepared count could not reserve {LITERAL_SET_COUNT_INPUT_COUNT} input buffer slot(s): {source}. Fix: shard the literal set or haystack before preparing resident dispatch."
+            ))
+        })?;
+
+        let mut haystack_bytes = Vec::new();
+        dispatch_io::pack_haystack_u32_into(haystack, &mut haystack_bytes)?;
+        inputs.push(haystack_bytes);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &self.dfa.transitions,
+            "transition table",
+        )?);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &self.dfa.output_offsets,
+            "output offset table",
+        )?);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &prefilter_tables.candidate_end_mask,
+            "candidate end mask",
+        )?);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &prefilter_tables.candidate_suffix2_mask,
+            "candidate suffix2 mask",
+        )?);
+        inputs.push(copy_u32_words_as_le_bytes(
+            &prefilter_tables.candidate_suffix3_bloom,
+            "candidate suffix3 bloom",
+        )?);
+        inputs.push(haystack_len.to_le_bytes().to_vec());
+        inputs.push(vec![0_u8; U32_COUNTER_BYTES]);
+
+        let encoded_input_bytes = inputs.iter().try_fold(0_u64, |sum, input| {
+            let len = u64::try_from(input.len()).map_err(|source| {
+                vyre::BackendError::new(format!(
+                    "literal_set prepared count input byte length does not fit u64: {source}. Fix: shard the scan before dispatch."
+                ))
+            })?;
+            sum.checked_add(len).ok_or_else(|| {
+                vyre::BackendError::new(
+                    "literal_set prepared count input byte total overflowed u64. Fix: shard the scan before dispatch.",
+                )
+            })
+        })?;
+
+        Ok(LiteralSetPreparedCount {
+            program: count_program.clone(),
+            inputs,
+            dispatch_config: dispatch_io::byte_scan_dispatch_config(
+                haystack_len,
+                count_program.workgroup_size[0],
+            ),
+            haystack_len,
+            encoded_input_bytes,
+        })
+    }
+
     fn prefilter_tables_cached<'a>(
         &'a self,
         cached_prefilter: &'a mut Option<LiteralSetPrefilterTables>,
@@ -651,6 +907,34 @@ impl GpuLiteralSet {
 
     fn build_prefilter_tables(&self) -> Result<LiteralSetPrefilterTables, vyre::BackendError> {
         self.build_prefilter_tables_with_fingerprint(self.pattern_fingerprint())
+    }
+
+    fn count_program_cached<'a>(
+        &'a self,
+        cached_count_program: &'a mut Option<CachedLiteralSetCountProgram>,
+    ) -> Result<&'a Program, vyre::BackendError> {
+        let pattern_fingerprint = self.pattern_fingerprint();
+        let reuse_cached = cached_count_program
+            .as_ref()
+            .is_some_and(|cached| cached.pattern_fingerprint == pattern_fingerprint);
+        if !reuse_cached {
+            *cached_count_program = Some(CachedLiteralSetCountProgram {
+                pattern_fingerprint,
+                program: self.count_program(),
+            });
+        }
+        cached_count_program
+            .as_ref()
+            .map(|cached| &cached.program)
+            .ok_or_else(|| {
+                vyre::BackendError::new(
+                    "literal_set failed to retain the cached count program. Fix: retry without reusable scratch.",
+                )
+            })
+    }
+
+    fn count_program(&self) -> Program {
+        build_ac_bounded_count_suffix3_prefilter_program(&self.dfa)
     }
 
     fn build_prefilter_tables_with_fingerprint(
@@ -1076,6 +1360,11 @@ fn decode_literal_set_outputs_into(
     )
 }
 
+fn decode_literal_set_count_outputs(outputs: &[Vec<u8>]) -> Result<u32, vyre::BackendError> {
+    let count_bytes = crate::scan::dispatch_io::try_output_bytes(outputs, 0, "literal_set count")?;
+    crate::scan::dispatch_io::try_read_u32_prefix(count_bytes, "literal_set count")
+}
+
 fn literal_set_match_triple_bytes(count: u32) -> Result<usize, vyre::BackendError> {
     let words = count.checked_mul(MATCH_TRIPLE_WORDS).ok_or_else(|| {
         vyre::BackendError::new(format!(
@@ -1222,6 +1511,78 @@ mod compile_tests {
         }
     }
 
+    #[derive(Clone)]
+    struct RecordingCountBackend {
+        outputs: Vec<Vec<u8>>,
+        observed_input_lengths: std::sync::Arc<std::sync::Mutex<Vec<Vec<usize>>>>,
+        observed_buffer_names: std::sync::Arc<std::sync::Mutex<Vec<Vec<String>>>>,
+    }
+
+    impl RecordingCountBackend {
+        fn new(outputs: Vec<Vec<u8>>) -> Self {
+            Self {
+                outputs,
+                observed_input_lengths: std::sync::Arc::default(),
+                observed_buffer_names: std::sync::Arc::default(),
+            }
+        }
+
+        fn observed_input_lengths(&self) -> Vec<Vec<usize>> {
+            self.observed_input_lengths
+                .lock()
+                .expect("Fix: recording count backend mutex should not be poisoned")
+                .clone()
+        }
+
+        fn observed_buffer_names(&self) -> Vec<Vec<String>> {
+            self.observed_buffer_names
+                .lock()
+                .expect("Fix: recording count backend mutex should not be poisoned")
+                .clone()
+        }
+    }
+
+    impl vyre::backend::private::Sealed for RecordingCountBackend {}
+
+    impl VyreBackend for RecordingCountBackend {
+        fn id(&self) -> &'static str {
+            "literal-count-recording-test"
+        }
+
+        fn dispatch(
+            &self,
+            program: &Program,
+            inputs: &[Vec<u8>],
+            config: &vyre::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
+            self.dispatch_borrowed(program, &borrowed, config)
+        }
+
+        fn dispatch_borrowed(
+            &self,
+            program: &Program,
+            inputs: &[&[u8]],
+            _config: &vyre::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            self.observed_input_lengths
+                .lock()
+                .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
+                .push(inputs.iter().map(|input| input.len()).collect());
+            self.observed_buffer_names
+                .lock()
+                .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
+                .push(
+                    program
+                        .buffers()
+                        .iter()
+                        .map(|buffer| buffer.name().to_string())
+                        .collect(),
+                );
+            Ok(self.outputs.clone())
+        }
+    }
+
     fn match_count_bytes(count: u32) -> Vec<u8> {
         count.to_le_bytes().to_vec()
     }
@@ -1345,6 +1706,32 @@ mod compile_tests {
                 .any(|&word| word != 0),
             "Fix: suffix-prefilter preparation must materialize suffix3 candidate bits."
         );
+        assert!(scratch.cached_count_program.is_none());
+    }
+
+    #[test]
+    fn prepare_count_scratch_populates_count_program_and_prefilter_tables() {
+        let engine =
+            GpuLiteralSet::try_compile(&[b"a".as_slice(), b"bc".as_slice(), b"token".as_slice()])
+                .expect("Fix: small literal set must compile");
+        let mut scratch = LiteralSetScanScratch::default();
+
+        engine
+            .prepare_count_scratch(&mut scratch)
+            .expect("Fix: literal count scratch preparation should build derived state");
+
+        assert!(
+            scratch.cached_count_program.is_some(),
+            "Fix: count hot-loop scratch should prepare the count-only program."
+        );
+        assert!(
+            scratch.cached_prefilter.is_some(),
+            "Fix: count hot-loop scratch should prepare suffix-prefilter tables."
+        );
+        assert!(
+            scratch.cached_program.is_none(),
+            "Fix: count scratch preparation should not build match-list output programs."
+        );
     }
 
     #[test]
@@ -1408,6 +1795,79 @@ mod compile_tests {
             matches,
             vec![Match::new(0, 0, 1), Match::new(1, 1, 3)],
             "Fix: prepared dispatch decode must match public GpuLiteralSet scan semantics."
+        );
+    }
+
+    #[test]
+    fn literal_count_uses_count_only_program_and_readback() {
+        let engine = GpuLiteralSet::try_compile(&[b"a".as_slice(), b"bc".as_slice()])
+            .expect("Fix: small literal set must compile");
+        let backend = RecordingCountBackend::new(vec![match_count_bytes(3)]);
+        let mut scratch = LiteralSetScanScratch::default();
+
+        let count = engine
+            .count_with_literal_scratch(&backend, b"abcabc", &mut scratch)
+            .expect("Fix: literal count dispatch should decode one count output");
+
+        assert_eq!(count, 3);
+        assert_eq!(
+            backend.observed_input_lengths()[0].len(),
+            LITERAL_SET_COUNT_INPUT_COUNT,
+            "Fix: count-only dispatch must not upload output_records or pattern lengths."
+        );
+        assert_eq!(
+            backend.observed_buffer_names()[0],
+            vec![
+                "haystack",
+                "transitions",
+                "output_offsets",
+                "candidate_end_mask",
+                "candidate_suffix2_mask",
+                "candidate_suffix3_bloom",
+                "haystack_len",
+                "match_count"
+            ],
+            "Fix: literal count must dispatch the suffix3 count program ABI."
+        );
+        assert!(
+            scratch.cached_count_program.is_some(),
+            "Fix: count hot loops should reuse the count program."
+        );
+    }
+
+    #[test]
+    fn prepare_count_dispatch_matches_count_input_layout() {
+        let engine = GpuLiteralSet::try_compile(&[b"a".as_slice(), b"bc".as_slice()])
+            .expect("Fix: small literal set must compile");
+        let plan = engine
+            .prepare_count_dispatch(b"abcabc")
+            .expect("Fix: prepared literal count dispatch should own input buffers");
+        let backend = RecordingCountBackend::new(vec![match_count_bytes(3)]);
+
+        let count = engine
+            .count(&backend, b"abcabc")
+            .expect("Fix: recording backend should accept literal count");
+
+        assert_eq!(count, 3);
+        assert_eq!(plan.inputs.len(), LITERAL_SET_COUNT_INPUT_COUNT);
+        assert_eq!(
+            backend.observed_input_lengths()[0],
+            plan.inputs.iter().map(Vec::len).collect::<Vec<_>>(),
+            "Fix: prepared count buffers must stay in the same ABI order as direct count dispatch."
+        );
+        assert_eq!(plan.dispatch_config.grid_override, Some([1, 1, 1]));
+        assert_eq!(plan.count_readback_bytes(), U32_COUNTER_BYTES);
+        assert_eq!(
+            plan.decode_outputs(&[match_count_bytes(3)])
+                .expect("Fix: prepared count decoder should read one u32"),
+            3
+        );
+        assert_eq!(
+            plan.encoded_input_bytes,
+            plan.inputs
+                .iter()
+                .map(|input| input.len() as u64)
+                .sum::<u64>()
         );
     }
 

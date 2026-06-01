@@ -55,9 +55,21 @@ pub const API_INDEX: &[(&str, ApiKind, Option<&str>)] = &[
     // Literal-set engine  -  unconditional.
     ("GpuLiteralSet", ApiKind::Struct, None),
     ("LiteralMatch", ApiKind::TypeAlias, None),
+    ("LiteralSetPreparedCount", ApiKind::Struct, None),
     ("LiteralSetPreparedScan", ApiKind::Struct, None),
     ("LiteralSetScanScratch", ApiKind::Struct, None),
     ("LiteralSetWireError", ApiKind::Enum, None),
+    ("LITERAL_SET_COUNT_RESOURCE_INDEX", ApiKind::Const, None),
+    (
+        "LITERAL_SET_COUNT_RESET_RESOURCE_INDICES",
+        ApiKind::Const,
+        None,
+    ),
+    (
+        "LITERAL_SET_COUNT_SCAN_RESOURCE_INDICES",
+        ApiKind::Const,
+        None,
+    ),
     (
         "LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX",
         ApiKind::Const,
@@ -252,10 +264,11 @@ pub use hit_buffer::{
     HIT_BUFFER_OVERFLOW_COUNT,
 };
 pub use literal_set::{
-    GpuLiteralSet, LiteralSetPreparedScan, LiteralSetScanScratch, LiteralSetWireError,
-    Match as LiteralMatch, LITERAL_SET_MATCHES_RESOURCE_INDEX,
-    LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX, LITERAL_SET_RESET_RESOURCE_INDICES,
-    LITERAL_SET_SCAN_RESOURCE_INDICES,
+    GpuLiteralSet, LiteralSetPreparedCount, LiteralSetPreparedScan, LiteralSetScanScratch,
+    LiteralSetWireError, Match as LiteralMatch, LITERAL_SET_COUNT_RESET_RESOURCE_INDICES,
+    LITERAL_SET_COUNT_RESOURCE_INDEX, LITERAL_SET_COUNT_SCAN_RESOURCE_INDICES,
+    LITERAL_SET_MATCHES_RESOURCE_INDEX, LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX,
+    LITERAL_SET_RESET_RESOURCE_INDICES, LITERAL_SET_SCAN_RESOURCE_INDICES,
 };
 #[cfg(feature = "matching-nfa")]
 pub use mega_scan::{build as build_rule_pipeline, PipelineWireError, RulePipeline};
