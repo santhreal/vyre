@@ -10,6 +10,7 @@ use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_
 use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre_foundation::ir::Program;
 use vyre_foundation::match_result::Match;
+use vyre_libs::scan::classic_ac::{CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS};
 use vyre_libs::scan::{GpuLiteralSet, LiteralSetScanScratch};
 
 const HAYSTACK_BYTES: usize = 4 * 1024 * 1024;
@@ -124,12 +125,20 @@ impl BenchCase for LiteralSetIrregularHotloop {
         let output_bytes = 4_u64.saturating_add(encoded_matches.len() as u64);
         let baseline_outputs = vec![expected_matches.to_le_bytes().to_vec(), encoded_matches];
         let encoded_input_bytes = literal_set_encoded_input_bytes(&engine, haystack.len());
+        let mut scratch = LiteralSetScanScratch::default();
+        engine
+            .prepare_literal_scratch(max_matches, &mut scratch)
+            .map_err(|error| {
+                BenchError::ExecutionFailed(format!(
+                    "literal-set irregular hot-loop scratch preparation failed: {error}"
+                ))
+            })?;
 
         Ok(Box::new(LiteralSetIrregularPrepared {
             engine,
             haystack,
             matches: Vec::with_capacity(expected_matches as usize),
-            scratch: LiteralSetScanScratch::default(),
+            scratch,
             baseline_outputs,
             baseline_wall_ns,
             expected_matches,
@@ -218,6 +227,9 @@ fn literal_set_encoded_input_bytes(engine: &GpuLiteralSet, haystack_len: usize) 
         .saturating_add((engine.dfa.output_offsets.len() as u64).saturating_mul(4))
         .saturating_add((engine.dfa.output_records.len() as u64).saturating_mul(4))
         .saturating_add((engine.pattern_lengths.len() as u64).saturating_mul(4))
+        .saturating_add(8 * 4)
+        .saturating_add((CLASSIC_AC_SUFFIX2_MASK_WORDS as u64).saturating_mul(4))
+        .saturating_add((CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u64).saturating_mul(4))
         .saturating_add(8)
 }
 
@@ -251,6 +263,11 @@ fn literal_set_metric_points(
         metric(
             "literal_set_irregular_dfa_output_records",
             prepared.engine.dfa.output_records.len() as u64,
+        ),
+        metric(
+            "literal_set_irregular_prefilter_mask_bytes",
+            ((8 + CLASSIC_AC_SUFFIX2_MASK_WORDS + CLASSIC_AC_SUFFIX3_BLOOM_WORDS) as u64)
+                .saturating_mul(4),
         ),
         metric(
             "literal_set_irregular_expected_matches",

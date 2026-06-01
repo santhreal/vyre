@@ -3,7 +3,9 @@
 //! Composed entirely from `vyre-libs` LEGO blocks.
 
 use crate::scan::classic_ac::{
-    build_ac_bounded_ranges_program_ext, try_build_ac_bounded_ranges_program_ext,
+    build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    classic_ac_candidate_suffix3_bloom_words,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext, CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
 use crate::scan::dfa::{dfa_compile, CompiledDfa};
 use crate::scan::dispatch_io::ScanDispatchScratch;
@@ -12,6 +14,7 @@ use std::collections::TryReserveError;
 use vyre::ir::{Expr, Node, Program};
 use vyre::VyreBackend;
 pub use vyre_foundation::match_result::Match;
+use vyre_primitives::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 use vyre_primitives::matching::DfaWireError;
 
 const LITERAL_SET_DEFAULT_MAX_MATCHES: u32 = 10_000;
@@ -113,14 +116,15 @@ pub struct GpuLiteralSet {
 /// Reusable hot-loop state for [`GpuLiteralSet`] scans.
 ///
 /// This extends the generic scan dispatch scratch with a one-entry cache for
-/// cap-specific `Program` layouts. Callers that repeatedly scan with the same
-/// non-default `max_matches` avoid rebuilding the rewritten output-buffer
-/// declaration on every dispatch.
+/// cap-specific `Program` layouts plus suffix-prefilter tables. Callers that
+/// repeatedly scan with the same non-default `max_matches` avoid rebuilding the
+/// rewritten output-buffer declaration and candidate masks on every dispatch.
 #[derive(Debug, Default)]
 pub struct LiteralSetScanScratch {
     /// Shared scan staging used by other matching engines.
     pub dispatch: ScanDispatchScratch,
     cached_program: Option<CachedLiteralSetProgram>,
+    cached_prefilter: Option<LiteralSetPrefilterTables>,
 }
 
 #[derive(Debug)]
@@ -128,6 +132,14 @@ struct CachedLiteralSetProgram {
     base_fingerprint: [u8; 32],
     max_matches: u32,
     program: Program,
+}
+
+#[derive(Debug)]
+struct LiteralSetPrefilterTables {
+    pattern_fingerprint: u64,
+    candidate_end_mask: [u32; 8],
+    candidate_suffix2_mask: [u32; CLASSIC_AC_SUFFIX2_MASK_WORDS],
+    candidate_suffix3_bloom: Vec<u32>,
 }
 
 impl GpuLiteralSet {
@@ -277,9 +289,11 @@ impl GpuLiteralSet {
     /// GPU scan dispatch that decodes into caller-owned match scratch and
     /// reuses caller-owned byte staging.
     ///
-    /// This is the lowest-allocation hot-loop API for literal scanning:
     /// `matches` reuses decoded match storage and `scratch` reuses the packed
-    /// haystack buffer across dispatches.
+    /// haystack buffer across dispatches. For stable literal-set hot loops, use
+    /// [`Self::prepare_literal_scratch`] with
+    /// [`Self::scan_into_with_literal_scratch`] to also reuse the derived
+    /// suffix-prefilter tables and cap-specific program layout.
     ///
     /// # Errors
     /// Returns [`vyre::BackendError`] if dispatch, readback, scan-boundary
@@ -293,6 +307,7 @@ impl GpuLiteralSet {
         scratch: &mut ScanDispatchScratch,
     ) -> Result<(), vyre::BackendError> {
         let dispatch_program = self.program_for_match_capacity(max_matches)?;
+        let prefilter_tables = self.build_prefilter_tables()?;
         self.scan_into_with_program(
             backend,
             haystack,
@@ -300,14 +315,36 @@ impl GpuLiteralSet {
             matches,
             scratch,
             dispatch_program.as_ref(),
+            &prefilter_tables,
         )
+    }
+
+    /// Prepare literal-set-owned hot-loop scratch for repeated dispatches.
+    ///
+    /// This builds the cap-specific `Program` layout and suffix-prefilter
+    /// tables outside the timed scan path. It is useful for callers that know
+    /// their match-capacity budget before scanning a stream of similarly shaped
+    /// inputs.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] if match-capacity sizing or
+    /// suffix-prefilter staging fails.
+    pub fn prepare_literal_scratch(
+        &self,
+        max_matches: u32,
+        scratch: &mut LiteralSetScanScratch,
+    ) -> Result<(), vyre::BackendError> {
+        self.program_for_match_capacity_cached(max_matches, &mut scratch.cached_program)?;
+        self.prefilter_tables_cached(&mut scratch.cached_prefilter)?;
+        Ok(())
     }
 
     /// GPU scan dispatch with literal-set-owned hot-loop scratch.
     ///
     /// Use this for repeated scans where `max_matches` is usually stable but
-    /// not equal to the compiled default. It reuses both packed haystack bytes
-    /// and the cap-specific rewritten dispatch `Program`.
+    /// not equal to the compiled default. It reuses packed haystack bytes,
+    /// suffix-prefilter tables, and the cap-specific rewritten dispatch
+    /// `Program`.
     ///
     /// # Errors
     /// Returns [`vyre::BackendError`] if dispatch, readback, scan-boundary
@@ -324,6 +361,7 @@ impl GpuLiteralSet {
         let cached_program = &mut scratch.cached_program;
         let dispatch_program =
             self.program_for_match_capacity_cached(max_matches, cached_program)?;
+        let prefilter_tables = self.prefilter_tables_cached(&mut scratch.cached_prefilter)?;
         self.scan_into_with_program(
             backend,
             haystack,
@@ -331,6 +369,7 @@ impl GpuLiteralSet {
             matches,
             &mut scratch.dispatch,
             dispatch_program,
+            prefilter_tables,
         )
     }
 
@@ -342,6 +381,7 @@ impl GpuLiteralSet {
         matches: &mut Vec<Match>,
         scratch: &mut ScanDispatchScratch,
         dispatch_program: &Program,
+        prefilter_tables: &LiteralSetPrefilterTables,
     ) -> Result<(), vyre::BackendError> {
         use crate::scan::dispatch_io;
 
@@ -358,6 +398,12 @@ impl GpuLiteralSet {
         let output_offset_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets);
         let output_record_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_records);
         let pattern_length_bytes = dispatch_io::u32_words_as_le_bytes(&self.pattern_lengths);
+        let candidate_end_mask_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_end_mask);
+        let candidate_suffix2_mask_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix2_mask);
+        let candidate_suffix3_bloom_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix3_bloom);
         let haystack_len_word = [haystack_len];
         let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
         let match_count_bytes = [0u8; 4];
@@ -366,7 +412,7 @@ impl GpuLiteralSet {
             haystack_len,
             dispatch_program.workgroup_size[0],
         );
-        let borrowed_inputs: smallvec::SmallVec<[&[u8]; 8]> = [
+        let borrowed_inputs: smallvec::SmallVec<[&[u8]; 10]> = [
             // 0: haystack (Packed U32)
             haystack_bytes,
             // 1: transitions
@@ -381,7 +427,13 @@ impl GpuLiteralSet {
             haystack_len_bytes.as_ref(),
             // 6: match_count atomic counter
             match_count_bytes.as_slice(),
-            // 7: matches is a pure `BufferDecl::output`; the backend
+            // 7: candidate_end_mask
+            candidate_end_mask_bytes.as_ref(),
+            // 8: candidate_suffix2_mask
+            candidate_suffix2_mask_bytes.as_ref(),
+            // 9: candidate_suffix3_bloom
+            candidate_suffix3_bloom_bytes.as_ref(),
+            // 10: matches is a pure `BufferDecl::output`; the backend
             // allocates it from the Program declaration.
         ]
         .into_iter()
@@ -398,6 +450,132 @@ impl GpuLiteralSet {
             matches,
         )?;
         Ok(())
+    }
+
+    fn prefilter_tables_cached<'a>(
+        &'a self,
+        cached_prefilter: &'a mut Option<LiteralSetPrefilterTables>,
+    ) -> Result<&'a LiteralSetPrefilterTables, vyre::BackendError> {
+        let pattern_fingerprint = self.pattern_fingerprint();
+        let reuse_cached = cached_prefilter
+            .as_ref()
+            .is_some_and(|cached| cached.pattern_fingerprint == pattern_fingerprint);
+        if !reuse_cached {
+            *cached_prefilter =
+                Some(self.build_prefilter_tables_with_fingerprint(pattern_fingerprint)?);
+        }
+        cached_prefilter.as_ref().ok_or_else(|| {
+            vyre::BackendError::new(
+                "literal_set failed to retain cached suffix-prefilter tables. Fix: retry with generic ScanDispatchScratch.",
+            )
+        })
+    }
+
+    fn build_prefilter_tables(&self) -> Result<LiteralSetPrefilterTables, vyre::BackendError> {
+        self.build_prefilter_tables_with_fingerprint(self.pattern_fingerprint())
+    }
+
+    fn build_prefilter_tables_with_fingerprint(
+        &self,
+        pattern_fingerprint: u64,
+    ) -> Result<LiteralSetPrefilterTables, vyre::BackendError> {
+        let pattern_vectors = self.materialize_pattern_bytes()?;
+        let pattern_refs = pattern_vectors
+            .iter()
+            .map(Vec::as_slice)
+            .collect::<Vec<_>>();
+        Ok(LiteralSetPrefilterTables {
+            pattern_fingerprint,
+            candidate_end_mask: literal_set_candidate_end_byte_mask_words(&pattern_refs),
+            candidate_suffix2_mask: literal_set_candidate_suffix2_mask_words(&pattern_refs),
+            candidate_suffix3_bloom: classic_ac_candidate_suffix3_bloom_words(&pattern_refs),
+        })
+    }
+
+    fn materialize_pattern_bytes(&self) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+        if self.pattern_offsets.len() != self.pattern_lengths.len() {
+            return Err(vyre::BackendError::new(format!(
+                "literal_set pattern metadata is malformed: {} offsets for {} lengths. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch.",
+                self.pattern_offsets.len(),
+                self.pattern_lengths.len()
+            )));
+        }
+
+        let mut patterns = Vec::new();
+        vyre_foundation::allocation::try_reserve_vec_to_capacity(
+            &mut patterns,
+            self.pattern_lengths.len(),
+        )
+        .map_err(|source| {
+            vyre::BackendError::new(format!(
+                "literal_set could not reserve {} decoded pattern slot(s): {source}. Fix: shard the pattern set before dispatch.",
+                self.pattern_lengths.len()
+            ))
+        })?;
+
+        for (pattern_index, (&offset, &len)) in self
+            .pattern_offsets
+            .iter()
+            .zip(&self.pattern_lengths)
+            .enumerate()
+        {
+            let start = usize::try_from(offset).map_err(|source| {
+                vyre::BackendError::new(format!(
+                    "literal_set pattern {pattern_index} offset {offset} cannot fit host usize: {source}. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch."
+                ))
+            })?;
+            let len = usize::try_from(len).map_err(|source| {
+                vyre::BackendError::new(format!(
+                    "literal_set pattern {pattern_index} length {len} cannot fit host usize: {source}. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch."
+                ))
+            })?;
+            let end = start.checked_add(len).ok_or_else(|| {
+                vyre::BackendError::new(format!(
+                    "literal_set pattern {pattern_index} byte range overflows host usize. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch."
+                ))
+            })?;
+            let words = self.pattern_bytes.get(start..end).ok_or_else(|| {
+                vyre::BackendError::new(format!(
+                    "literal_set pattern {pattern_index} byte range {start}..{end} exceeds packed pattern byte table length {}. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch.",
+                    self.pattern_bytes.len()
+                ))
+            })?;
+            let mut pattern = Vec::new();
+            vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut pattern, words.len())
+                .map_err(|source| {
+                    vyre::BackendError::new(format!(
+                        "literal_set could not reserve {} byte(s) for pattern {pattern_index}: {source}. Fix: shard the pattern set before dispatch.",
+                        words.len()
+                    ))
+                })?;
+            for (byte_index, &word) in words.iter().enumerate() {
+                let byte = u8::try_from(word).map_err(|source| {
+                    vyre::BackendError::new(format!(
+                        "literal_set pattern {pattern_index} byte {byte_index} has non-byte word {word}: {source}. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch."
+                    ))
+                })?;
+                pattern.push(byte);
+            }
+            patterns.push(pattern);
+        }
+
+        Ok(patterns)
+    }
+
+    fn pattern_fingerprint(&self) -> u64 {
+        let mut hash = fnv1a64_initial_state();
+        for words in [
+            self.pattern_offsets.as_slice(),
+            self.pattern_lengths.as_slice(),
+            self.pattern_bytes.as_slice(),
+        ] {
+            for &word in words {
+                for byte in word.to_le_bytes() {
+                    hash = fnv1a64_update_byte(hash, byte);
+                }
+            }
+        }
+        hash
     }
 
     fn program_for_match_capacity_cached<'a>(
@@ -510,9 +688,9 @@ impl GpuLiteralSet {
     /// includes vyre's IR wire version inside its own framing, so a stale
     /// current-version cache surfaces as `LiteralSetWireError::
     /// InvalidProgram` from `Program::from_bytes` (or as a bad magic /
-    /// version on this outer envelope). Version-1 literal-compare blobs
-    /// are migrated by decoding their DFA/pattern sections and rebuilding
-    /// the current bounded-DFA dispatch program.
+    /// version on this outer envelope). Legacy literal-compare and bounded-DFA
+    /// blobs are migrated by decoding their DFA/pattern sections and
+    /// rebuilding the current suffix-prefiltered bounded-DFA dispatch program.
     /// # Errors
     /// Returns [`LiteralSetWireError::WireFraming`] if any section
     /// exceeds the envelope's `u32` length-prefix capacity.
@@ -596,16 +774,68 @@ fn literal_set_wire_reader(
     ) {
         Ok(reader) => Ok((reader, LITERAL_SET_WIRE_VERSION)),
         Err(vyre_foundation::serial::envelope::EnvelopeError::VersionMismatch {
-            found: LITERAL_SET_LEGACY_LITERAL_COMPARE_WIRE_VERSION,
+            found:
+                legacy_version @ (LITERAL_SET_LEGACY_LITERAL_COMPARE_WIRE_VERSION
+                | LITERAL_SET_LEGACY_BOUNDED_DFA_WIRE_VERSION),
             ..
         }) => vyre_foundation::serial::envelope::WireReader::new(
             bytes,
             LITERAL_SET_WIRE_MAGIC,
-            LITERAL_SET_LEGACY_LITERAL_COMPARE_WIRE_VERSION,
+            legacy_version,
         )
-        .map(|reader| (reader, LITERAL_SET_LEGACY_LITERAL_COMPARE_WIRE_VERSION)),
+        .map(|reader| (reader, legacy_version)),
         Err(error) => Err(error),
     }
+}
+
+fn literal_set_candidate_end_byte_mask_words(patterns: &[&[u8]]) -> [u32; 8] {
+    let mut mask = [0_u32; 8];
+    for pattern in patterns
+        .iter()
+        .copied()
+        .filter(|pattern| !pattern.is_empty())
+    {
+        let byte = usize::from(pattern[pattern.len() - 1]);
+        mask[byte / 32] |= 1_u32 << (byte % 32);
+    }
+    mask
+}
+
+fn literal_set_candidate_suffix2_mask_words(
+    patterns: &[&[u8]],
+) -> [u32; CLASSIC_AC_SUFFIX2_MASK_WORDS] {
+    let mut mask = [0_u32; CLASSIC_AC_SUFFIX2_MASK_WORDS];
+    for pattern in patterns
+        .iter()
+        .copied()
+        .filter(|pattern| !pattern.is_empty())
+    {
+        match pattern.len() {
+            1 => {
+                let current = usize::from(pattern[0]);
+                for previous in 0..=u8::MAX {
+                    set_suffix2_candidate_bit(&mut mask, usize::from(previous), current);
+                }
+            }
+            len => {
+                set_suffix2_candidate_bit(
+                    &mut mask,
+                    usize::from(pattern[len - 2]),
+                    usize::from(pattern[len - 1]),
+                );
+            }
+        }
+    }
+    mask
+}
+
+fn set_suffix2_candidate_bit(
+    mask: &mut [u32; CLASSIC_AC_SUFFIX2_MASK_WORDS],
+    previous: usize,
+    current: usize,
+) {
+    let suffix = (previous << 8) | current;
+    mask[suffix / 32] |= 1_u32 << (suffix % 32);
 }
 
 fn reserve_vec<T>(
@@ -820,6 +1050,71 @@ mod compile_tests {
     }
 
     #[test]
+    fn literal_prefilter_masks_are_derived_from_literal_suffixes() {
+        let patterns: [&[u8]; 3] = [b"a", b"bc", b"token"];
+        let end_mask = literal_set_candidate_end_byte_mask_words(&patterns);
+        let suffix2_mask = literal_set_candidate_suffix2_mask_words(&patterns);
+
+        let end_contains = |byte: u8| {
+            let byte = usize::from(byte);
+            (end_mask[byte / 32] & (1_u32 << (byte % 32))) != 0
+        };
+        let suffix2_contains = |previous: u8, current: u8| {
+            let suffix = (usize::from(previous) << 8) | usize::from(current);
+            (suffix2_mask[suffix / 32] & (1_u32 << (suffix % 32))) != 0
+        };
+
+        assert!(end_contains(b'a'));
+        assert!(end_contains(b'c'));
+        assert!(end_contains(b'n'));
+        assert!(!end_contains(b'z'));
+        assert!(suffix2_contains(0, b'a'));
+        assert!(suffix2_contains(u8::MAX, b'a'));
+        assert!(suffix2_contains(b'b', b'c'));
+        assert!(suffix2_contains(b'e', b'n'));
+        assert!(!suffix2_contains(b'x', b'n'));
+    }
+
+    #[test]
+    fn prepare_literal_scratch_populates_reusable_program_and_prefilter_tables() {
+        let engine =
+            GpuLiteralSet::try_compile(&[b"a".as_slice(), b"bc".as_slice(), b"token".as_slice()])
+                .expect("Fix: small literal set must compile");
+        let mut scratch = LiteralSetScanScratch::default();
+
+        engine
+            .prepare_literal_scratch(3, &mut scratch)
+            .expect("Fix: literal hot-loop scratch preparation should build derived state");
+
+        assert!(
+            scratch.cached_program.is_some(),
+            "Fix: non-default match cap should prepare a reusable rewritten Program."
+        );
+        let prefilter = scratch
+            .cached_prefilter
+            .as_ref()
+            .expect("Fix: scratch preparation should cache suffix-prefilter tables.");
+        assert_ne!(
+            prefilter.candidate_end_mask, [0; 8],
+            "Fix: suffix-prefilter preparation must materialize candidate-end bits."
+        );
+        assert!(
+            prefilter
+                .candidate_suffix2_mask
+                .iter()
+                .any(|&word| word != 0),
+            "Fix: suffix-prefilter preparation must materialize suffix2 candidate bits."
+        );
+        assert!(
+            prefilter
+                .candidate_suffix3_bloom
+                .iter()
+                .any(|&word| word != 0),
+            "Fix: suffix-prefilter preparation must materialize suffix3 candidate bits."
+        );
+    }
+
+    #[test]
     fn reserve_vec_reports_compile_storage_failure() {
         let mut scratch = Vec::<u8>::new();
         let error = reserve_vec(&mut scratch, usize::MAX, "adversarial scratch")
@@ -945,9 +1240,12 @@ mod compile_tests {
                 "pattern_lengths",
                 "haystack_len",
                 "match_count",
+                "candidate_end_mask",
+                "candidate_suffix2_mask",
+                "candidate_suffix3_bloom",
                 "matches"
             ],
-            "Fix: public literal-set dispatch must run on the bounded DFA table layout, not the old literal-byte compare ABI."
+            "Fix: public literal-set dispatch must run on the suffix-prefiltered bounded DFA table layout, not the old literal-byte compare ABI."
         );
         assert!(
             !program_debug.contains("pattern_bytes")
@@ -997,6 +1295,9 @@ mod compile_tests {
         let packed_haystack_len =
             crate::scan::dispatch_io::pack_haystack_u32(b"prefix Authorization: Bearer token")
                 .len();
+        let prefilter = engine
+            .build_prefilter_tables()
+            .expect("Fix: small literal-set prefilter tables should build");
         assert_eq!(
             backend.observed_input_lengths(),
             vec![vec![
@@ -1007,8 +1308,11 @@ mod compile_tests {
                 engine.pattern_lengths.len() * U32_BYTES,
                 U32_BYTES,
                 U32_BYTES,
+                prefilter.candidate_end_mask.len() * U32_BYTES,
+                prefilter.candidate_suffix2_mask.len() * U32_BYTES,
+                prefilter.candidate_suffix3_bloom.len() * U32_BYTES,
             ]],
-            "Fix: public literal-set scan must upload haystack, transitions, output links, pattern lengths, haystack_len, and match_count only."
+            "Fix: public literal-set scan must upload haystack, DFA tables, suffix-prefilter masks, haystack_len, and match_count."
         );
     }
 
@@ -1017,6 +1321,9 @@ mod compile_tests {
         let patterns: [&[u8]; 5] = [b"a", b"bc", b"abcd", b"BEGIN", b"token"];
         let haystack = b"zabcd BEGIN token abcdbc";
         let engine = GpuLiteralSet::compile(&patterns);
+        let prefilter = engine
+            .build_prefilter_tables()
+            .expect("Fix: small literal-set prefilter tables should build");
         let inputs = vec![
             vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_haystack_u32(
                 haystack,
@@ -1037,9 +1344,18 @@ mod compile_tests {
                 haystack.len() as u32,
             ])),
             vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(&[0])),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &prefilter.candidate_end_mask,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &prefilter.candidate_suffix2_mask,
+            )),
+            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+                &prefilter.candidate_suffix3_bloom,
+            )),
         ];
         let outputs = vyre_reference::reference_eval(&engine.program, &inputs).expect(
-            "Fix: public literal-set bounded-DFA program should evaluate in reference backend.",
+            "Fix: public literal-set suffix-prefiltered bounded-DFA program should evaluate in reference backend.",
         );
         let mut actual = decode_reference_matches(&outputs);
         let mut expected = engine.reference_scan(haystack);
@@ -1169,7 +1485,8 @@ mod compile_tests {
 }
 
 const LITERAL_SET_WIRE_MAGIC: &[u8; 4] = b"VLIT";
-const LITERAL_SET_WIRE_VERSION: u32 = 2;
+const LITERAL_SET_WIRE_VERSION: u32 = 3;
+const LITERAL_SET_LEGACY_BOUNDED_DFA_WIRE_VERSION: u32 = 2;
 const LITERAL_SET_LEGACY_LITERAL_COMPARE_WIRE_VERSION: u32 = 1;
 
 /// Errors returned by [`GpuLiteralSet::from_bytes`]. Outer-framing
@@ -1209,7 +1526,7 @@ impl std::fmt::Display for LiteralSetWireError {
 impl std::error::Error for LiteralSetWireError {}
 
 fn try_build_literal_set_program(dfa: &CompiledDfa, pattern_count: u32) -> Result<Program, String> {
-    try_build_ac_bounded_ranges_program_ext(
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(
         dfa,
         pattern_count,
         LITERAL_SET_DEFAULT_MAX_MATCHES,
@@ -1218,7 +1535,12 @@ fn try_build_literal_set_program(dfa: &CompiledDfa, pattern_count: u32) -> Resul
 }
 
 fn build_literal_set_program(dfa: &CompiledDfa, pattern_count: u32) -> Program {
-    build_ac_bounded_ranges_program_ext(dfa, pattern_count, LITERAL_SET_DEFAULT_MAX_MATCHES, false)
+    build_ac_bounded_ranges_suffix3_prefilter_program_ext(
+        dfa,
+        pattern_count,
+        LITERAL_SET_DEFAULT_MAX_MATCHES,
+        false,
+    )
 }
 
 /// Innovation I.18: JIT DFA Lowering.
