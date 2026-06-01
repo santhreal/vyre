@@ -2,7 +2,9 @@ use crate::api::case::BenchError;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::QUEUE_CLOSURE_WORKGROUP_SIZE;
-use crate::cases::dataflow_irregular::fixture::{IfdsSkewedFixture, IFDS_REACH_MASK};
+use crate::cases::dataflow_irregular::fixture::{
+    materialize_ifds_active_queue, IfdsSkewedFixture, IFDS_REACH_MASK,
+};
 
 pub(in crate::cases::dataflow_irregular) struct QueueClosureOracle {
     pub(in crate::cases::dataflow_irregular) output: Vec<u32>,
@@ -36,7 +38,8 @@ pub(in crate::cases::dataflow_irregular) fn ifds_queue_closure_inputs(
             ))
         })?;
     let seed = vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in);
-    let seed_queue = active_queue_from_frontier(fixture, seed_queue_len as usize)?;
+    let seed_queue =
+        materialize_ifds_active_queue(fixture, seed_queue_len as usize, "IFDS queue closure seed")?;
 
     Ok(vec![
         seed.clone(),
@@ -121,7 +124,8 @@ pub(in crate::cases::dataflow_irregular) fn ifds_skewed_queue_closure_oracle(
 ) -> Result<QueueClosureOracle, BenchError> {
     let capacity = queue_capacity as usize;
     let mut accumulator = fixture.frontier_in.clone();
-    let mut current = active_queue_from_frontier(fixture, capacity)?;
+    let mut current =
+        materialize_ifds_active_queue(fixture, capacity, "IFDS queue closure oracle seed")?;
     let mut next = Vec::with_capacity(capacity.min(fixture.stats.nodes as usize));
     let mut iterations = 0_u32;
     let mut total_queue_pops = 0_u64;
@@ -176,25 +180,4 @@ pub(in crate::cases::dataflow_irregular) fn ifds_skewed_queue_closure_oracle(
         total_queue_pops,
         max_wave_queue_len,
     })
-}
-
-fn active_queue_from_frontier(
-    fixture: &IfdsSkewedFixture,
-    capacity: usize,
-) -> Result<Vec<u32>, BenchError> {
-    let mut active = Vec::with_capacity(capacity.min(fixture.stats.active_sources as usize));
-    for src in 0..fixture.stats.nodes {
-        let word = (src / 32) as usize;
-        let bit = 1_u32 << (src % 32);
-        if fixture.frontier_in[word] & bit == 0 {
-            continue;
-        }
-        if active.len() >= capacity {
-            return Err(BenchError::EnvironmentInvalid(format!(
-                "IFDS queue closure seed exceeded queue_capacity={capacity}. Fix: size the seed queue from the active frontier."
-            )));
-        }
-        active.push(src);
-    }
-    Ok(active)
 }

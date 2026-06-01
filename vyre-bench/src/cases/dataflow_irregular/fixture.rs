@@ -1,4 +1,5 @@
 use crate::api::case::BenchError;
+use vyre_primitives::bitset::frontier::materialize_frontier_queue_into;
 use vyre_primitives::predicate::edge_kind;
 
 pub(super) const NODE_COUNT: u32 = 1_048_576;
@@ -167,25 +168,9 @@ pub(super) fn ifds_active_queue_inputs(
         )));
     }
     let capacity = queue_capacity as usize;
-    let mut active_queue = vec![0_u32; capacity];
-    let mut seen = 0_usize;
-    for src in 0..fixture.stats.nodes {
-        let word = (src / 32) as usize;
-        let bit = 1_u32 << (src % 32);
-        if fixture.frontier_in[word] & bit == 0 {
-            continue;
-        }
-        if seen < capacity {
-            active_queue[seen] = src;
-        }
-        seen = seen.saturating_add(1);
-    }
-    if seen != fixture.stats.active_sources as usize {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "IFDS active-queue fixture counted {seen} active sources but stats recorded {}. Fix: rebuild the fixture active frontier stats from the same bitset.",
-            fixture.stats.active_sources
-        )));
-    }
+    let mut active_queue =
+        materialize_ifds_active_queue(fixture, capacity, "IFDS active-queue fixture")?;
+    active_queue.resize(capacity, 0);
 
     Ok(vec![
         vyre_primitives::wire::pack_u32_slice(&active_queue),
@@ -195,6 +180,32 @@ pub(super) fn ifds_active_queue_inputs(
         vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
         vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed),
     ])
+}
+
+pub(in crate::cases::dataflow_irregular) fn materialize_ifds_active_queue(
+    fixture: &IfdsSkewedFixture,
+    queue_capacity: usize,
+    context: &str,
+) -> Result<Vec<u32>, BenchError> {
+    let mut active_queue = Vec::new();
+    let seen = materialize_frontier_queue_into(
+        fixture.stats.nodes,
+        &fixture.frontier_in,
+        queue_capacity,
+        &mut active_queue,
+    )
+    .map_err(|error| {
+        BenchError::EnvironmentInvalid(format!(
+            "{context} could not materialize the sparse frontier queue: {error} Fix: size the queue from the active frontier and rebuild stale fixture stats."
+        ))
+    })?;
+    if u64::from(seen) != fixture.stats.active_sources {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "{context} counted {seen} active sources but stats recorded {}. Fix: rebuild the fixture active frontier stats from the same bitset.",
+            fixture.stats.active_sources
+        )));
+    }
+    Ok(active_queue)
 }
 
 pub(super) fn ifds_closure_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {

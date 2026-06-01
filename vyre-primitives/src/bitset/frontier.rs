@@ -39,6 +39,15 @@ pub enum FrontierError {
         /// Allocator detail.
         source: String,
     },
+    /// A compact frontier queue cannot hold all active in-domain bits.
+    QueueCapacity {
+        /// Declared graph/node domain width.
+        node_count: u32,
+        /// Queue slots available to the caller.
+        capacity: usize,
+        /// In-domain active bits that must be materialized.
+        required: u32,
+    },
 }
 
 impl fmt::Display for FrontierError {
@@ -64,6 +73,14 @@ impl fmt::Display for FrontierError {
             } => write!(
                 f,
                 "{name} frontier could not reserve {requested_words} u32 words: {source}."
+            ),
+            Self::QueueCapacity {
+                node_count,
+                capacity,
+                required,
+            } => write!(
+                f,
+                "frontier queue for {node_count} nodes requires {required} slots, got capacity {capacity}."
             ),
         }
     }
@@ -230,6 +247,79 @@ pub fn checked_frontier_popcount(frontier: &[u32]) -> Result<u32, FrontierError>
     Ok(popcount)
 }
 
+/// Count only in-domain set bits in a frontier with the canonical shape.
+pub fn checked_frontier_domain_popcount(
+    node_count: u32,
+    frontier: &[u32],
+) -> Result<u32, FrontierError> {
+    let expected_words = validate_frontier_shape(node_count, frontier, "input")?;
+    let final_word_index = expected_words.saturating_sub(1);
+    let final_word_mask = frontier_tail_mask(node_count);
+    let mut popcount = 0u32;
+    for (word_index, &word) in frontier.iter().enumerate() {
+        let in_domain_word = if word_index == final_word_index {
+            word & final_word_mask
+        } else {
+            word
+        };
+        popcount = popcount.checked_add(in_domain_word.count_ones()).ok_or(
+            FrontierError::PopcountOverflow {
+                frontier_words: expected_words,
+            },
+        )?;
+    }
+    Ok(popcount)
+}
+
+/// Materialize active node ids from a packed frontier into queue order.
+///
+/// The output queue is exact-length, not padded to `queue_capacity`. Callers
+/// that need fixed-size resident buffers can resize after the active prefix is
+/// written.
+pub fn materialize_frontier_queue_into(
+    node_count: u32,
+    frontier: &[u32],
+    queue_capacity: usize,
+    queue: &mut Vec<u32>,
+) -> Result<u32, FrontierError> {
+    let required = checked_frontier_domain_popcount(node_count, frontier)?;
+    if required as usize > queue_capacity {
+        return Err(FrontierError::QueueCapacity {
+            node_count,
+            capacity: queue_capacity,
+            required,
+        });
+    }
+    let required_usize = required as usize;
+    if required_usize > queue.capacity() {
+        queue
+            .try_reserve_exact(required_usize - queue.capacity())
+            .map_err(|source| FrontierError::Allocation {
+                name: "frontier_queue",
+                requested_words: required_usize,
+                source: source.to_string(),
+            })?;
+    }
+
+    queue.clear();
+    let expected_words = frontier_words(node_count);
+    let final_word_index = expected_words.saturating_sub(1);
+    let final_word_mask = frontier_tail_mask(node_count);
+    for (word_index, &word) in frontier.iter().enumerate() {
+        let mut bits = if word_index == final_word_index {
+            word & final_word_mask
+        } else {
+            word
+        };
+        while bits != 0 {
+            let bit = bits.trailing_zeros();
+            queue.push((word_index as u32 * u32::BITS) + bit);
+            bits &= bits - 1;
+        }
+    }
+    Ok(required)
+}
+
 /// Clear out-of-domain bits in the final frontier word.
 pub fn mask_frontier_tail_bits(node_count: u32, frontier: &mut [u32]) {
     if let Some(last_word) = frontier.last_mut() {
@@ -298,6 +388,67 @@ mod tests {
         assert_eq!(summary.added_popcount, 4);
         assert_eq!(next_wave, vec![0b0110, 0b0110]);
         assert_eq!(visited, vec![0b0111, 0b0111]);
+    }
+
+    #[test]
+    fn frontier_queue_materializes_set_bits_in_order_and_masks_tail() {
+        let frontier = [0b1010_u32, u32::MAX, u32::MAX];
+        let mut queue = Vec::new();
+
+        let len = materialize_frontier_queue_into(65, &frontier, 100, &mut queue)
+            .expect("Fix: frontier queue should fit");
+
+        assert_eq!(len, 35);
+        assert_eq!(queue[0..4], [1, 3, 32, 33]);
+        assert_eq!(*queue.last().unwrap(), 64);
+        assert!(
+            queue.iter().all(|node| *node < 65),
+            "tail bits outside node_count must not enter the frontier queue"
+        );
+    }
+
+    #[test]
+    fn frontier_queue_rejects_under_capacity_without_mutating_output() {
+        let frontier = [0b1111_u32];
+        let mut queue = vec![99, 100];
+
+        let err = materialize_frontier_queue_into(4, &frontier, 3, &mut queue)
+            .expect_err("under-capacity queue must fail");
+
+        assert!(matches!(
+            err,
+            FrontierError::QueueCapacity {
+                node_count: 4,
+                capacity: 3,
+                required: 4,
+            }
+        ));
+        assert_eq!(queue, vec![99, 100]);
+    }
+
+    #[test]
+    fn generated_frontier_queue_matches_scalar_scan_across_10000_shapes() {
+        for seed in 0..10_000_u32 {
+            let node_count = 1 + (mix32(seed) % 8_192);
+            let words = frontier_words(node_count);
+            let mut frontier = (0..words)
+                .map(|word| mix32(seed ^ (word as u32).wrapping_mul(0x9E37_79B9)))
+                .collect::<Vec<_>>();
+            if seed & 7 == 0 {
+                frontier.fill(0);
+                let node = mix32(seed ^ 0x5150_ACE5) % node_count;
+                frontier[(node / 32) as usize] |= 1_u32 << (node % 32);
+            }
+            let expected = scalar_frontier_queue(node_count, &frontier);
+            let mut queue = Vec::new();
+
+            let len =
+                materialize_frontier_queue_into(node_count, &frontier, expected.len(), &mut queue)
+                    .expect("Fix: generated frontier queue should fit exactly");
+
+            assert_eq!(len as usize, expected.len(), "seed={seed}");
+            assert_eq!(queue, expected, "seed={seed} node_count={node_count}");
+        }
     }
 
     #[test]
@@ -380,5 +531,23 @@ mod tests {
                 );
             }
         }
+    }
+
+    fn scalar_frontier_queue(node_count: u32, frontier: &[u32]) -> Vec<u32> {
+        (0..node_count)
+            .filter(|node| {
+                let word = (*node / 32) as usize;
+                let bit = 1_u32 << (*node % 32);
+                frontier[word] & bit != 0
+            })
+            .collect()
+    }
+
+    fn mix32(mut value: u32) -> u32 {
+        value ^= value >> 16;
+        value = value.wrapping_mul(0x7FEB_352D);
+        value ^= value >> 15;
+        value = value.wrapping_mul(0x846C_A68B);
+        value ^ (value >> 16)
     }
 }
