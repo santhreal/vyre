@@ -133,6 +133,8 @@ pub enum AdaptiveTraversalProgramKind {
     QueueForward,
     /// Consume a compacted active-source queue with lane teams for skewed rows.
     QueueForwardStrided,
+    /// Expand low-degree queued rows and compact only high-degree rows.
+    QueueSplitLow,
     /// Dense graph traversal through a reusable Four-Russians byte-tile LUT.
     FourRussiansDense,
 }
@@ -523,6 +525,42 @@ impl AdaptiveTraversalPlanCacheKey {
         )
     }
 
+    /// Cache key for the low-row half of mixed queue-driven CSR traversal.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn queue_split_low(
+        _layout_hash: u64,
+        node_count: u32,
+        edge_count: u32,
+        words: u32,
+        queue_capacity: u32,
+        high_queue_capacity: u32,
+        high_degree_threshold: u32,
+        allow_mask: u32,
+        device_features: u64,
+    ) -> Self {
+        let layout_hash = adaptive_traversal_split_program_layout_hash(
+            node_count,
+            edge_count,
+            words,
+            queue_capacity,
+            high_queue_capacity,
+            high_degree_threshold,
+            AdaptiveTraversalProgramKind::QueueSplitLow,
+        );
+        Self::new(
+            layout_hash,
+            node_count,
+            edge_count,
+            words,
+            queue_capacity,
+            allow_mask,
+            0,
+            device_features,
+            AdaptiveTraversalProgramKind::QueueSplitLow,
+        )
+    }
+
     /// Cache key for dense Four-Russians traversal through a resident LUT.
     #[must_use]
     pub const fn four_russians_dense(
@@ -566,6 +604,7 @@ const fn adaptive_traversal_program_kind_tag(kind: AdaptiveTraversalProgramKind)
         AdaptiveTraversalProgramKind::FrontierWordBlockOffsets => 10,
         AdaptiveTraversalProgramKind::FrontierWordBlockOffsetsQueue => 11,
         AdaptiveTraversalProgramKind::QueueForwardStrided => 12,
+        AdaptiveTraversalProgramKind::QueueSplitLow => 13,
     }
 }
 
@@ -592,6 +631,24 @@ pub const fn adaptive_traversal_program_layout_hash(
     let hash = adaptive_traversal_hash_mix(hash, words as u64);
     let hash = adaptive_traversal_hash_mix(hash, queue_capacity as u64);
     adaptive_traversal_hash_mix(hash, adaptive_traversal_program_kind_tag(kind))
+}
+
+/// Shape-only hash for mixed queue traversal programs whose low-row half also
+/// depends on high-row queue capacity and the high-degree threshold.
+#[must_use]
+pub const fn adaptive_traversal_split_program_layout_hash(
+    node_count: u32,
+    edge_count: u32,
+    words: u32,
+    queue_capacity: u32,
+    high_queue_capacity: u32,
+    high_degree_threshold: u32,
+    kind: AdaptiveTraversalProgramKind,
+) -> u64 {
+    let hash =
+        adaptive_traversal_program_layout_hash(node_count, edge_count, words, queue_capacity, kind);
+    let hash = adaptive_traversal_hash_mix(hash, high_queue_capacity as u64);
+    adaptive_traversal_hash_mix(hash, high_degree_threshold as u64)
 }
 
 /// In-session content hash for resident adaptive CSR+dense graph uploads.
@@ -2005,6 +2062,24 @@ mod tests {
         assert_ne!(
             queue_forward, queue_forward_strided,
             "serial and row-strided queue consumers must not alias in resident Program caches"
+        );
+        let queue_split_low =
+            AdaptiveTraversalPlanCacheKey::queue_split_low(7, 64, 9, 2, 64, 4, 1024, 0x55, 0xA11CE);
+        assert_eq!(
+            queue_split_low.kind,
+            AdaptiveTraversalProgramKind::QueueSplitLow
+        );
+        assert_eq!(queue_split_low.queue_capacity, 64);
+        assert_eq!(queue_split_low.dense_threshold_pct, 0);
+        assert_ne!(
+            queue_split_low,
+            AdaptiveTraversalPlanCacheKey::queue_split_low(7, 64, 9, 2, 64, 8, 1024, 0x55, 0xA11CE,),
+            "mixed split queue programs must distinguish high-row queue capacity"
+        );
+        assert_ne!(
+            queue_split_low,
+            AdaptiveTraversalPlanCacheKey::queue_split_low(7, 64, 9, 2, 64, 4, 2048, 0x55, 0xA11CE,),
+            "mixed split queue programs must distinguish high-degree threshold"
         );
         assert_ne!(
             queue_forward,

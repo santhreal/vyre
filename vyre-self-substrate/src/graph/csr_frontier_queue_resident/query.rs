@@ -407,7 +407,8 @@ fn ensure_programs(
             queue_capacity,
             allow_mask,
         ),
-        ResidentCsrQueueTraverseKind::RowStrided => csr_queue_strided_forward_traverse(
+        ResidentCsrQueueTraverseKind::RowStrided
+        | ResidentCsrQueueTraverseKind::MixedSplit { .. } => csr_queue_strided_forward_traverse(
             "active_queue",
             "queue_len",
             "edge_offsets",

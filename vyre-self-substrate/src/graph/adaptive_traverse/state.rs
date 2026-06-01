@@ -13,10 +13,13 @@ pub(super) use vyre_primitives::graph::adaptive_traverse::{
 pub struct AdaptiveTraversalResidentScratch {
     pub(super) handles: Option<[u64; 3]>,
     pub(super) queue_handle: Option<u64>,
+    pub(super) high_queue_handle: Option<u64>,
+    pub(super) high_len_handle: Option<u64>,
     pub(super) word_partials_handle: Option<u64>,
     pub(super) word_block_totals_handle: Option<u64>,
     pub(super) frontier_bytes: usize,
     pub(super) queue_bytes: usize,
+    pub(super) high_queue_bytes: usize,
     pub(super) word_partials_bytes: usize,
     pub(super) word_block_totals_bytes: usize,
     pub(super) frontier_in_bytes: Vec<u8>,
@@ -43,10 +46,18 @@ impl AdaptiveTraversalResidentScratch {
     /// Returns the first backend free failure after attempting all handles.
     pub fn free(&mut self, dispatcher: &dyn OptimizerDispatcher) -> Result<(), DispatchError> {
         let Some(handles) = self.handles.take() else {
-            let mut scratch_handles = [0_u64; 3];
+            let mut scratch_handles = [0_u64; 5];
             let mut scratch_count = 0;
             if let Some(queue_handle) = self.queue_handle.take() {
                 scratch_handles[scratch_count] = queue_handle;
+                scratch_count += 1;
+            }
+            if let Some(high_queue_handle) = self.high_queue_handle.take() {
+                scratch_handles[scratch_count] = high_queue_handle;
+                scratch_count += 1;
+            }
+            if let Some(high_len_handle) = self.high_len_handle.take() {
+                scratch_handles[scratch_count] = high_len_handle;
                 scratch_count += 1;
             }
             if let Some(word_partials_handle) = self.word_partials_handle.take() {
@@ -58,6 +69,7 @@ impl AdaptiveTraversalResidentScratch {
                 scratch_count += 1;
             }
             self.queue_bytes = 0;
+            self.high_queue_bytes = 0;
             self.word_partials_bytes = 0;
             self.word_block_totals_bytes = 0;
             if scratch_count != 0 {
@@ -70,13 +82,22 @@ impl AdaptiveTraversalResidentScratch {
             return Ok(());
         };
         self.frontier_bytes = 0;
-        let mut all_handles = [0_u64; 6];
+        let mut all_handles = [0_u64; 8];
         all_handles[..3].copy_from_slice(&handles);
         let mut handle_count = 3;
         if let Some(queue_handle) = self.queue_handle.take() {
             all_handles[handle_count] = queue_handle;
             handle_count += 1;
             self.queue_bytes = 0;
+        }
+        if let Some(high_queue_handle) = self.high_queue_handle.take() {
+            all_handles[handle_count] = high_queue_handle;
+            handle_count += 1;
+            self.high_queue_bytes = 0;
+        }
+        if let Some(high_len_handle) = self.high_len_handle.take() {
+            all_handles[handle_count] = high_len_handle;
+            handle_count += 1;
         }
         if let Some(word_partials_handle) = self.word_partials_handle.take() {
             all_handles[handle_count] = word_partials_handle;

@@ -2,7 +2,13 @@
 
 use vyre_primitives::bitset::frontier::frontier_tail_mask;
 use vyre_primitives::graph::csr_frontier_queue::FRONTIER_WORD_SCAN_BLOCK_LANES;
-use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid;
+use vyre_primitives::graph::csr_queue_split::{
+    csr_queue_split_low_dispatch_grid, csr_queue_split_mixed_logical_lanes,
+    CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
+};
+use vyre_primitives::graph::csr_queue_strided::{
+    csr_queue_strided_forward_dispatch_grid, CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
+};
 
 const U32_BYTES: usize = std::mem::size_of::<u32>();
 
@@ -23,7 +29,11 @@ pub(crate) const WORD_PREFIX_MIN_NONZERO_WORDS: usize = 256;
 pub(crate) const WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS: u32 = 8;
 
 /// CSR rows at or above this degree use the row-strided queue consumer.
-pub(crate) const STRIDED_FORWARD_MIN_ROW_DEGREE: u32 = 1024;
+pub(crate) const STRIDED_FORWARD_MIN_ROW_DEGREE: u32 = CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
+
+/// Mixed split traversal must save at least this much logical lane work versus
+/// striding every queued source before paying the extra low-row dispatch.
+pub(crate) const MIXED_SPLIT_MAX_STRIDED_LANE_BPS: u64 = 7_500;
 
 /// Queue materializer selected for a resident CSR frontier query.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -41,6 +51,9 @@ pub(crate) enum ResidentCsrQueueTraverseKind {
     RowSerial,
     /// A fixed lane team consumes each queued source row.
     RowStrided,
+    /// Low-degree rows stay scalar; high-degree rows compact into a bounded
+    /// high queue consumed by the row-strided primitive.
+    MixedSplit { high_queue_capacity: u32 },
 }
 
 /// Scratch dimensions for deterministic word-prefix queue materialization.
@@ -94,6 +107,48 @@ pub(crate) const fn resident_csr_queue_traverse_kind(
     }
 }
 
+pub(crate) fn resident_csr_queue_traverse_kind_for_graph(
+    node_count: u32,
+    edge_count: u32,
+    max_row_degree: u32,
+    queue_capacity: u32,
+) -> ResidentCsrQueueTraverseKind {
+    if max_row_degree < STRIDED_FORWARD_MIN_ROW_DEGREE || queue_capacity <= 1 || node_count == 0 {
+        return ResidentCsrQueueTraverseKind::RowSerial;
+    }
+
+    let high_queue_capacity =
+        resident_csr_queue_high_degree_capacity_bound(edge_count, queue_capacity);
+    if high_queue_capacity == 0 {
+        return ResidentCsrQueueTraverseKind::RowSerial;
+    }
+
+    let all_strided_lanes =
+        u64::from(queue_capacity) * u64::from(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE);
+    let mixed_lanes = csr_queue_split_mixed_logical_lanes(queue_capacity, high_queue_capacity);
+    if mixed_lanes.saturating_mul(10_000)
+        <= all_strided_lanes.saturating_mul(MIXED_SPLIT_MAX_STRIDED_LANE_BPS)
+    {
+        ResidentCsrQueueTraverseKind::MixedSplit {
+            high_queue_capacity,
+        }
+    } else {
+        ResidentCsrQueueTraverseKind::RowStrided
+    }
+}
+
+pub(crate) const fn resident_csr_queue_high_degree_capacity_bound(
+    edge_count: u32,
+    queue_capacity: u32,
+) -> u32 {
+    let high_node_bound = edge_count / STRIDED_FORWARD_MIN_ROW_DEGREE;
+    if high_node_bound < queue_capacity {
+        high_node_bound
+    } else {
+        queue_capacity
+    }
+}
+
 pub(crate) const fn resident_csr_queue_traverse_grid(
     queue_capacity: u32,
     kind: ResidentCsrQueueTraverseKind,
@@ -106,7 +161,14 @@ pub(crate) const fn resident_csr_queue_traverse_grid(
         ResidentCsrQueueTraverseKind::RowStrided => {
             csr_queue_strided_forward_dispatch_grid(queue_capacity)
         }
+        ResidentCsrQueueTraverseKind::MixedSplit {
+            high_queue_capacity,
+        } => csr_queue_strided_forward_dispatch_grid(high_queue_capacity),
     }
+}
+
+pub(crate) const fn resident_csr_queue_split_low_grid(queue_capacity: u32) -> [u32; 3] {
+    csr_queue_split_low_dispatch_grid(queue_capacity)
 }
 
 #[cfg(test)]
@@ -397,6 +459,56 @@ mod tests {
         assert_eq!(
             resident_csr_queue_traverse_grid(9, ResidentCsrQueueTraverseKind::RowStrided),
             [2, 1, 1]
+        );
+    }
+
+    #[test]
+    fn skewed_high_degree_graphs_select_mixed_split_when_lane_savings_are_material() {
+        let queue_capacity = 128;
+        let one_hub_edge_count = STRIDED_FORWARD_MIN_ROW_DEGREE;
+        assert_eq!(
+            resident_csr_queue_high_degree_capacity_bound(one_hub_edge_count, queue_capacity),
+            1
+        );
+        assert_eq!(
+            resident_csr_queue_traverse_kind_for_graph(
+                4096,
+                one_hub_edge_count,
+                STRIDED_FORWARD_MIN_ROW_DEGREE,
+                queue_capacity,
+            ),
+            ResidentCsrQueueTraverseKind::MixedSplit {
+                high_queue_capacity: 1
+            }
+        );
+        assert_eq!(resident_csr_queue_split_low_grid(queue_capacity), [1, 1, 1]);
+        assert_eq!(
+            resident_csr_queue_traverse_grid(
+                queue_capacity,
+                ResidentCsrQueueTraverseKind::MixedSplit {
+                    high_queue_capacity: 1
+                },
+            ),
+            csr_queue_strided_forward_dispatch_grid(1)
+        );
+    }
+
+    #[test]
+    fn uniformly_high_degree_graphs_keep_global_strided_consumer() {
+        let queue_capacity = 128;
+        let edge_count = STRIDED_FORWARD_MIN_ROW_DEGREE * queue_capacity;
+        assert_eq!(
+            resident_csr_queue_high_degree_capacity_bound(edge_count, queue_capacity),
+            queue_capacity
+        );
+        assert_eq!(
+            resident_csr_queue_traverse_kind_for_graph(
+                4096,
+                edge_count,
+                STRIDED_FORWARD_MIN_ROW_DEGREE,
+                queue_capacity,
+            ),
+            ResidentCsrQueueTraverseKind::RowStrided
         );
     }
 

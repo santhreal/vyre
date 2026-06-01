@@ -746,7 +746,8 @@ fn ensure_batch_programs(
             program_shape.queue_capacity,
             program_shape.allow_mask,
         ),
-        ResidentCsrQueueTraverseKind::RowStrided => csr_queue_strided_forward_traverse(
+        ResidentCsrQueueTraverseKind::RowStrided
+        | ResidentCsrQueueTraverseKind::MixedSplit { .. } => csr_queue_strided_forward_traverse(
             "active_queue",
             "queue_len",
             "edge_offsets",

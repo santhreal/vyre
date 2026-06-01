@@ -8,8 +8,9 @@ use crate::dispatch_buffers::write_u32_slice_le_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer_for_stats,
-    resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind, FrontierWordPrefixScratch,
-    ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
+    resident_csr_queue_split_low_grid, resident_csr_queue_traverse_grid,
+    resident_csr_queue_traverse_kind_for_graph, FrontierWordPrefixScratch,
+    ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind, STRIDED_FORWARD_MIN_ROW_DEGREE,
 };
 use crate::graph::dispatch_bridge::{
     alloc_resident_buffers, resident_sequence_single_u32_output_into,
@@ -35,6 +36,7 @@ use vyre_primitives::graph::csr_frontier_queue::{
     frontier_word_counts_scan_pass_a as primitive_frontier_word_counts,
     frontier_words_to_queue_clear_out_parallel as primitive_frontier_words_to_queue_clear_out,
 };
+use vyre_primitives::graph::csr_queue_split::csr_queue_split_low_forward_traverse as primitive_csr_queue_split_low_forward_traverse;
 use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_traverse as primitive_csr_queue_strided_forward_traverse;
 use vyre_primitives::reduce::count::reduce_count;
 
@@ -333,7 +335,12 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
         queue_capacity,
         sparse_plan.frontier_nonzero_words,
     );
-    let traverse_kind = resident_csr_queue_traverse_kind(graph.max_row_degree);
+    let traverse_kind = resident_csr_queue_traverse_kind_for_graph(
+        graph.node_count,
+        graph.edge_count,
+        graph.max_row_degree,
+        queue_capacity,
+    );
     let traverse_grid = resident_csr_queue_traverse_grid(queue_capacity, traverse_kind);
     let device_features = dispatcher.device_feature_cache_key();
     let traverse_key = match traverse_kind {
@@ -357,6 +364,17 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                 device_features,
             )
         }
+        ResidentCsrQueueTraverseKind::MixedSplit {
+            high_queue_capacity,
+        } => AdaptiveTraversalPlanCacheKey::queue_forward_strided(
+            graph.layout_hash,
+            graph.node_count,
+            graph.edge_count,
+            words_u32,
+            high_queue_capacity,
+            allow_mask,
+            device_features,
+        ),
     };
     let traverse_program = scratch
         .plan_cache
@@ -387,6 +405,20 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     allow_mask,
                 )
             }
+            ResidentCsrQueueTraverseKind::MixedSplit {
+                high_queue_capacity,
+            } => primitive_csr_queue_strided_forward_traverse(
+                "high_queue",
+                "high_len",
+                "edge_offsets",
+                "edge_targets",
+                "edge_kind_mask",
+                "frontier_out",
+                graph.node_count,
+                graph.edge_count,
+                high_queue_capacity,
+                allow_mask,
+            ),
         });
     let graph_handles = graph.handles;
     let traverse_handles = [
@@ -397,9 +429,111 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
         graph_handles[2],
         handles[1],
     ];
+    macro_rules! append_traverse_steps {
+        ($steps:ident) => {
+            let split_handles;
+            let high_traverse_handles;
+            let split_low_program;
+            let high_len_init_program;
+            let high_len_handles;
+            let high_traverse_grid;
+            if let ResidentCsrQueueTraverseKind::MixedSplit {
+                high_queue_capacity,
+            } = traverse_kind
+            {
+                let [high_queue_handle, high_len_handle] =
+                    ensure_high_queue_handles(dispatcher, scratch, high_queue_capacity)?;
+                high_len_init_program = scratch.plan_cache.get_or_build(
+                    AdaptiveTraversalPlanCacheKey::queue_len_init(
+                        graph.layout_hash,
+                        graph.node_count,
+                        graph.edge_count,
+                        words_u32,
+                        high_queue_capacity,
+                        device_features,
+                    ),
+                    || primitive_frontier_queue_len_init("high_len"),
+                );
+                high_len_handles = [high_len_handle];
+                split_low_program = scratch.plan_cache.get_or_build(
+                    AdaptiveTraversalPlanCacheKey::queue_split_low(
+                        graph.layout_hash,
+                        graph.node_count,
+                        graph.edge_count,
+                        words_u32,
+                        queue_capacity,
+                        high_queue_capacity,
+                        STRIDED_FORWARD_MIN_ROW_DEGREE,
+                        allow_mask,
+                        device_features,
+                    ),
+                    || {
+                        primitive_csr_queue_split_low_forward_traverse(
+                            "active_queue",
+                            "queue_len",
+                            "edge_offsets",
+                            "edge_targets",
+                            "edge_kind_mask",
+                            "frontier_out",
+                            "high_queue",
+                            "high_len",
+                            graph.node_count,
+                            graph.edge_count,
+                            queue_capacity,
+                            high_queue_capacity,
+                            STRIDED_FORWARD_MIN_ROW_DEGREE,
+                            allow_mask,
+                        )
+                    },
+                );
+                split_handles = [
+                    queue_handle,
+                    handles[2],
+                    graph_handles[0],
+                    graph_handles[1],
+                    graph_handles[2],
+                    handles[1],
+                    high_queue_handle,
+                    high_len_handle,
+                ];
+                high_traverse_handles = [
+                    high_queue_handle,
+                    high_len_handle,
+                    graph_handles[0],
+                    graph_handles[1],
+                    graph_handles[2],
+                    handles[1],
+                ];
+                high_traverse_grid = resident_csr_queue_traverse_grid(
+                    high_queue_capacity,
+                    ResidentCsrQueueTraverseKind::RowStrided,
+                );
+                $steps.push(ResidentDispatchStep {
+                    program: &high_len_init_program,
+                    handle_ids: &high_len_handles,
+                    grid_override: Some([1, 1, 1]),
+                });
+                $steps.push(ResidentDispatchStep {
+                    program: &split_low_program,
+                    handle_ids: &split_handles,
+                    grid_override: Some(resident_csr_queue_split_low_grid(queue_capacity)),
+                });
+                $steps.push(ResidentDispatchStep {
+                    program: &traverse_program,
+                    handle_ids: &high_traverse_handles,
+                    grid_override: Some(high_traverse_grid),
+                });
+            } else {
+                $steps.push(ResidentDispatchStep {
+                    program: &traverse_program,
+                    handle_ids: &traverse_handles,
+                    grid_override: Some(traverse_grid),
+                });
+            }
+        };
+    }
     match materializer {
         ResidentCsrQueueMaterializer::AtomicWordScan => {
-            let uploads = [(handles[0], scratch.frontier_in_bytes.as_slice())];
             let queue_len_init_program = scratch.plan_cache.get_or_build(
                 AdaptiveTraversalPlanCacheKey::queue_len_init(
                     graph.layout_hash,
@@ -433,7 +567,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
             );
             let queue_len_handles = [handles[2]];
             let queue_handles = [handles[0], queue_handle, handles[2], handles[1]];
-            let steps = [
+            let mut steps = vec![
                 ResidentDispatchStep {
                     program: &queue_len_init_program,
                     handle_ids: &queue_len_handles,
@@ -444,16 +578,13 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     handle_ids: &queue_handles,
                     grid_override: Some(sparse_plan.frontier.frontier_word_grid),
                 },
-                ResidentDispatchStep {
-                    program: &traverse_program,
-                    handle_ids: &traverse_handles,
-                    grid_override: Some(traverse_grid),
-                },
             ];
+            append_traverse_steps!(steps);
+            let uploads = [(handles[0], scratch.frontier_in_bytes.as_slice())];
             resident_sequence_single_u32_output_into(
                 dispatcher,
                 &uploads,
-                &steps,
+                steps.as_slice(),
                 ResidentReadRange {
                     handle_id: handles[1],
                     byte_offset: 0,
@@ -480,7 +611,6 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
             let word_prefix = adaptive_word_prefix_scratch(words)?;
             let [word_partials, block_totals] =
                 ensure_word_prefix_handles(dispatcher, scratch, &word_prefix)?;
-            let uploads = [(handles[0], scratch.frontier_in_bytes.as_slice())];
             let word_counts_program = scratch.plan_cache.get_or_build(
                 AdaptiveTraversalPlanCacheKey::frontier_word_counts(
                     graph.layout_hash,
@@ -539,7 +669,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     queue_handle,
                     handles[2],
                 ];
-                let steps = [
+                let mut steps = vec![
                     ResidentDispatchStep {
                         program: &clear_frontier_out_program,
                         handle_ids: &clear_handles,
@@ -560,16 +690,13 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                         handle_ids: &queue_handles,
                         grid_override: Some(adaptive_frontier_word_grid(words)?),
                     },
-                    ResidentDispatchStep {
-                        program: &traverse_program,
-                        handle_ids: &traverse_handles,
-                        grid_override: Some(traverse_grid),
-                    },
                 ];
+                append_traverse_steps!(steps);
+                let uploads = [(handles[0], scratch.frontier_in_bytes.as_slice())];
                 resident_sequence_single_u32_output_into(
                     dispatcher,
                     &uploads,
-                    &steps,
+                    steps.as_slice(),
                     ResidentReadRange {
                         handle_id: handles[1],
                         byte_offset: 0,
@@ -609,7 +736,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     queue_handle,
                     handles[2],
                 ];
-                let steps = [
+                let mut steps = vec![
                     ResidentDispatchStep {
                         program: &clear_frontier_out_program,
                         handle_ids: &clear_handles,
@@ -625,16 +752,13 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                         handle_ids: &queue_handles,
                         grid_override: Some(adaptive_frontier_word_grid(words)?),
                     },
-                    ResidentDispatchStep {
-                        program: &traverse_program,
-                        handle_ids: &traverse_handles,
-                        grid_override: Some(traverse_grid),
-                    },
                 ];
+                append_traverse_steps!(steps);
+                let uploads = [(handles[0], scratch.frontier_in_bytes.as_slice())];
                 resident_sequence_single_u32_output_into(
                     dispatcher,
                     &uploads,
-                    &steps,
+                    steps.as_slice(),
                     ResidentReadRange {
                         handle_id: handles[1],
                         byte_offset: 0,
@@ -751,6 +875,57 @@ fn ensure_queue_handle(
     scratch.queue_handle = Some(handle);
     scratch.queue_bytes = queue_bytes;
     Ok(handle)
+}
+
+fn ensure_high_queue_handles(
+    dispatcher: &dyn OptimizerDispatcher,
+    scratch: &mut AdaptiveTraversalResidentScratch,
+    high_queue_capacity: u32,
+) -> Result<[u64; 2], DispatchError> {
+    let high_queue_bytes =
+        adaptive_word_bytes(high_queue_capacity as usize, "high-degree active queue")?;
+    if scratch.high_queue_bytes >= high_queue_bytes {
+        if let (Some(high_queue), Some(high_len)) =
+            (scratch.high_queue_handle, scratch.high_len_handle)
+        {
+            return Ok([high_queue, high_len]);
+        }
+    }
+    free_high_queue_handles(dispatcher, scratch)?;
+    let [high_queue, high_len] = alloc_resident_buffers(
+        dispatcher,
+        [high_queue_bytes, std::mem::size_of::<u32>()],
+        "adaptive traversal high-degree queue scratch",
+    )?;
+    scratch.high_queue_handle = Some(high_queue);
+    scratch.high_len_handle = Some(high_len);
+    scratch.high_queue_bytes = high_queue_bytes;
+    Ok([high_queue, high_len])
+}
+
+fn free_high_queue_handles(
+    dispatcher: &dyn OptimizerDispatcher,
+    scratch: &mut AdaptiveTraversalResidentScratch,
+) -> Result<(), DispatchError> {
+    let mut handles = [0_u64; 2];
+    let mut handle_count = 0;
+    if let Some(high_queue) = scratch.high_queue_handle.take() {
+        handles[handle_count] = high_queue;
+        handle_count += 1;
+    }
+    if let Some(high_len) = scratch.high_len_handle.take() {
+        handles[handle_count] = high_len;
+        handle_count += 1;
+    }
+    scratch.high_queue_bytes = 0;
+    if handle_count == 0 {
+        return Ok(());
+    }
+    free_unique_resident_handles(
+        dispatcher,
+        &handles[..handle_count],
+        "adaptive traversal high-degree queue scratch",
+    )
 }
 
 fn ensure_word_prefix_handles(

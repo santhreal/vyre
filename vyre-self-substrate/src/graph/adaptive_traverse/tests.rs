@@ -189,6 +189,7 @@ fn matches_primitive_directly_by_wiring_release_programs() {
         "primitive_frontier_word_block_offsets_queue(",
         "primitive_frontier_word_prefix_queue(",
         "primitive_csr_queue_forward_traverse(",
+        "primitive_csr_queue_split_low_forward_traverse(",
     ] {
         assert!(
             release_path.contains(primitive_call),
@@ -505,7 +506,7 @@ fn sparse_queue_step_reuses_larger_queue_scratch_for_smaller_frontier() {
 }
 
 #[test]
-fn high_degree_sparse_queue_step_uses_strided_grid_with_popcount_capacity() {
+fn skewed_high_degree_sparse_queue_step_uses_bounded_split_queue() {
     let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 2048u32;
     let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
@@ -536,11 +537,108 @@ fn high_degree_sparse_queue_step_uses_strided_grid_with_popcount_capacity() {
 
     assert_eq!(scratch.queue_bytes, 16 * std::mem::size_of::<u32>());
     assert_eq!(
+        scratch.high_queue_bytes,
+        std::mem::size_of::<u32>(),
+        "a graph with one possible hub must not launch a strided team for every active source"
+    );
+    let high_queue = scratch
+        .high_queue_handle
+        .expect("Fix: mixed split traversal should allocate a high-degree queue");
+    let high_len = scratch
+        .high_len_handle
+        .expect("Fix: mixed split traversal should allocate a high-degree queue length");
+    let scratch_handles = scratch
+        .handles
+        .expect("Fix: mixed split traversal should allocate frontier scratch");
+    let active_queue = scratch
+        .queue_handle
+        .expect("Fix: mixed split traversal should allocate active queue scratch");
+    let steps = dispatcher.last_step_handles();
+    assert_eq!(
+        steps.len(),
+        5,
+        "skewed sparse queue traversal should materialize active sources, clear high_len, split low/high rows, then traverse only bounded high rows"
+    );
+    assert_eq!(
+        steps[3],
+        vec![
+            active_queue,
+            scratch_handles[2],
+            graph.handles[0],
+            graph.handles[1],
+            graph.handles[2],
+            scratch_handles[1],
+            high_queue,
+            high_len,
+        ],
+        "split-low pass must read the active queue and write only bounded high-row scratch"
+    );
+    assert_eq!(
+        steps[4],
+        vec![
+            high_queue,
+            high_len,
+            graph.handles[0],
+            graph.handles[1],
+            graph.handles[2],
+            scratch_handles[1],
+        ],
+        "strided follow-up must consume the bounded high-row queue, not the whole active queue"
+    );
+    assert_eq!(
+        dispatcher.last_step_grids()[4],
+        Some(vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(1)),
+        "skewed high-degree sparse queue traversal must launch row-strided teams only for the graph-wide high-row bound"
+    );
+}
+
+#[test]
+fn uniformly_high_degree_sparse_queue_step_keeps_global_strided_consumer() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let node_count = 2048u32;
+    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let queue_slots = 16u32;
+    let graph = ResidentAdaptiveTraversalGraph {
+        node_count,
+        edge_count: crate::graph::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE
+            * queue_slots,
+        max_row_degree: crate::graph::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE,
+        words,
+        layout_hash: 17,
+        handles: [101, 102, 103, 104],
+    };
+    let mut scratch = AdaptiveTraversalResidentScratch::default();
+    let mut frontier_in = vec![0u32; words];
+    for node in 0..9u32 {
+        frontier_in[(node / 32) as usize] |= 1 << (node % 32);
+    }
+    let mut frontier_out = Vec::new();
+
+    adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
+        &dispatcher,
+        &graph,
+        &frontier_in,
+        u32::MAX,
+        &mut scratch,
+        &mut frontier_out,
+    )
+    .expect("Fix: recording dispatcher should complete uniformly high-degree traversal");
+
+    assert!(scratch.high_queue_handle.is_none());
+    assert!(scratch.high_len_handle.is_none());
+    assert_eq!(
+        scratch.queue_bytes,
+        queue_slots as usize * std::mem::size_of::<u32>()
+    );
+    assert_eq!(dispatcher.last_step_handles().len(), 3);
+    assert_eq!(
         dispatcher.last_step_grids()[2],
         Some(
-            vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(16)
+            vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
+                queue_slots
+            )
         ),
-        "high-degree sparse queue traversal must launch the row-strided queue consumer using the popcount-derived queue bucket"
+        "uniformly high-degree sparse queue traversal should keep the single row-strided consumer"
     );
 }
 
@@ -1029,10 +1127,13 @@ fn generated_adaptive_resident_free_releases_each_handle_once_in_first_seen_orde
         let mut scratch = AdaptiveTraversalResidentScratch {
             handles: Some([base + 3, base + 4, base + 3]),
             queue_handle: Some(base + 4),
+            high_queue_handle: Some(base + 6),
+            high_len_handle: Some(base + 6),
             word_partials_handle: Some(base + 5),
             word_block_totals_handle: Some(base + 5),
             frontier_bytes: 4,
             queue_bytes: 4,
+            high_queue_bytes: 4,
             word_partials_bytes: 4,
             word_block_totals_bytes: 4,
             frontier_in_bytes: Vec::new(),
@@ -1042,7 +1143,7 @@ fn generated_adaptive_resident_free_releases_each_handle_once_in_first_seen_orde
         scratch.free(&dispatcher).expect("Fix: scratch free dedup");
         assert_eq!(
             dispatcher.freed.borrow().as_slice(),
-            &[base + 3, base + 4, base + 5]
+            &[base + 3, base + 4, base + 6, base + 5]
         );
     }
 }
