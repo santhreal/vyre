@@ -12,6 +12,8 @@ use vyre_self_substrate::device_resident_token_fact_graph::DeviceResidentTokenFa
 pub struct CudaTokenFactGraphLayout {
     /// Scheduler-visible graph shape.
     pub graph_shape: CudaMegakernelGraphShape,
+    /// Maximum outgoing CSR row degree in the resident token/fact graph.
+    pub max_out_degree: u64,
     /// Fixed bytes per resident node record.
     pub node_record_bytes: u64,
     /// Fixed bytes per resident edge record.
@@ -26,12 +28,44 @@ pub struct CudaTokenFactGraphLayout {
     pub resident_bytes: u64,
 }
 
+impl CudaTokenFactGraphLayout {
+    /// Build a layout from aggregate byte fields when CSR row offsets are not
+    /// available to the caller. This preserves correctness by treating total
+    /// edge count as the maximum possible row degree.
+    #[must_use]
+    pub const fn from_aggregate_fields(
+        graph_shape: CudaMegakernelGraphShape,
+        node_record_bytes: u64,
+        edge_record_bytes: u64,
+        node_bytes: u64,
+        edge_bytes: u64,
+        payload_bytes: u64,
+        resident_bytes: u64,
+    ) -> Self {
+        Self {
+            graph_shape,
+            max_out_degree: graph_shape.edge_count,
+            node_record_bytes,
+            edge_record_bytes,
+            node_bytes,
+            edge_bytes,
+            payload_bytes,
+            resident_bytes,
+        }
+    }
+}
+
 /// CUDA token/fact adapter errors.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CudaTokenFactGraphLayoutError {
     /// Record widths must be explicit, non-zero ABI values.
     ZeroRecordWidth {
         /// Field that was zero.
+        field: &'static str,
+    },
+    /// Public CSR fields are inconsistent with each other.
+    InvalidCsrShape {
+        /// Invalid CSR field or relationship.
         field: &'static str,
     },
     /// Byte arithmetic overflowed.
@@ -47,6 +81,10 @@ impl std::fmt::Display for CudaTokenFactGraphLayoutError {
             Self::ZeroRecordWidth { field } => write!(
                 f,
                 "CUDA token/fact graph adapter received zero {field}. Fix: pass the concrete resident ABI record width."
+            ),
+            Self::InvalidCsrShape { field } => write!(
+                f,
+                "CUDA token/fact graph adapter received invalid CSR {field}. Fix: rebuild the token/fact graph through the canonical resident graph planner."
             ),
             Self::ByteCountOverflow { field } => write!(
                 f,
@@ -90,6 +128,7 @@ pub fn adapt_token_fact_graph_to_cuda_layout(
             field: "edge count",
         }
     })?;
+    let max_out_degree = max_csr_out_degree(graph, edge_count)?;
     let node_bytes = checked_mul(node_count, node_record_bytes, "node bytes")?;
     let edge_bytes = checked_mul(edge_count, edge_record_bytes, "edge bytes")?;
     let resident_without_payload = checked_add(node_bytes, edge_bytes, "node plus edge bytes")?;
@@ -104,6 +143,7 @@ pub fn adapt_token_fact_graph_to_cuda_layout(
             node_count,
             edge_count,
         },
+        max_out_degree,
         node_record_bytes,
         edge_record_bytes,
         node_bytes,
@@ -111,6 +151,44 @@ pub fn adapt_token_fact_graph_to_cuda_layout(
         payload_bytes: graph.payload_bytes,
         resident_bytes,
     })
+}
+
+fn max_csr_out_degree(
+    graph: &DeviceResidentTokenFactGraph,
+    edge_count: u64,
+) -> Result<u64, CudaTokenFactGraphLayoutError> {
+    let expected_row_offsets = graph.node_ids.len().checked_add(1).ok_or(
+        CudaTokenFactGraphLayoutError::ByteCountOverflow {
+            field: "row offset count",
+        },
+    )?;
+    if graph.row_offsets.len() != expected_row_offsets {
+        return Err(CudaTokenFactGraphLayoutError::InvalidCsrShape {
+            field: "row_offsets length",
+        });
+    }
+    let declared_edges = u64::from(*graph.row_offsets.last().ok_or(
+        CudaTokenFactGraphLayoutError::InvalidCsrShape {
+            field: "row_offsets terminator",
+        },
+    )?);
+    if declared_edges != edge_count {
+        return Err(CudaTokenFactGraphLayoutError::InvalidCsrShape {
+            field: "row_offsets edge count",
+        });
+    }
+    let mut max_out_degree = 0_u64;
+    for row in graph.row_offsets.windows(2) {
+        let start = row[0];
+        let end = row[1];
+        if end < start {
+            return Err(CudaTokenFactGraphLayoutError::InvalidCsrShape {
+                field: "row_offsets ordering",
+            });
+        }
+        max_out_degree = max_out_degree.max(u64::from(end - start));
+    }
+    Ok(max_out_degree)
 }
 
 #[cfg(test)]
@@ -154,6 +232,7 @@ mod tests {
 
         assert_eq!(cuda.graph_shape.node_count, 3);
         assert_eq!(cuda.graph_shape.edge_count, 2);
+        assert_eq!(cuda.max_out_degree, 1);
         assert_eq!(cuda.node_bytes, 96);
         assert_eq!(cuda.edge_bytes, 32);
         assert_eq!(cuda.resident_bytes, 152);
@@ -169,6 +248,51 @@ mod tests {
         )
         .expect("Fix: adapted token/fact graph should feed CUDA memory planning");
         assert_eq!(memory.graph_bytes, 128);
+    }
+
+    #[test]
+    fn adapter_exports_max_out_degree_for_hub_heavy_queue_planning() {
+        let graph = plan_device_resident_token_fact_graph(
+            &[
+                node(1, TokenFactNodeKind::Fact, 0, 4),
+                node(2, TokenFactNodeKind::Fact, 4, 4),
+                node(3, TokenFactNodeKind::Fact, 8, 4),
+                node(4, TokenFactNodeKind::Fact, 12, 4),
+            ],
+            &[
+                edge(1, 2, TokenFactEdgeKind::FactDependency),
+                edge(1, 3, TokenFactEdgeKind::FactDependency),
+                edge(1, 4, TokenFactEdgeKind::FactDependency),
+                edge(2, 3, TokenFactEdgeKind::FactDependency),
+            ],
+            16,
+        )
+        .expect("Fix: hub-heavy token/fact graph should pack");
+
+        let cuda = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+            .expect("Fix: hub-heavy token/fact graph should adapt to CUDA layout");
+
+        assert_eq!(cuda.graph_shape.edge_count, 4);
+        assert_eq!(cuda.max_out_degree, 3);
+    }
+
+    #[test]
+    fn aggregate_layout_constructor_preserves_legacy_safe_edge_bound() {
+        let layout = CudaTokenFactGraphLayout::from_aggregate_fields(
+            CudaMegakernelGraphShape {
+                node_count: 4,
+                edge_count: 9,
+            },
+            32,
+            16,
+            128,
+            144,
+            64,
+            336,
+        );
+
+        assert_eq!(layout.max_out_degree, 9);
+        assert_eq!(layout.resident_bytes, 336);
     }
 
     #[test]
@@ -188,6 +312,25 @@ mod tests {
                 .expect_err("zero edge record width should fail"),
             CudaTokenFactGraphLayoutError::ZeroRecordWidth {
                 field: "edge_record_bytes",
+            }
+        );
+    }
+
+    #[test]
+    fn adapter_rejects_public_graphs_with_invalid_csr_rows() {
+        let mut graph = plan_device_resident_token_fact_graph(
+            &[node(1, TokenFactNodeKind::Fact, 0, 4)],
+            &[],
+            4,
+        )
+        .expect("Fix: token/fact graph should pack before adversarial mutation");
+        graph.row_offsets[1] = 1;
+
+        assert_eq!(
+            adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+                .expect_err("invalid CSR row offsets should fail before CUDA planning"),
+            CudaTokenFactGraphLayoutError::InvalidCsrShape {
+                field: "row_offsets edge count",
             }
         );
     }

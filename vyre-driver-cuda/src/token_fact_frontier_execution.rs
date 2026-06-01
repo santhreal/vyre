@@ -309,8 +309,11 @@ pub fn plan_cuda_token_fact_frontier_execution_envelope_with_scratch(
     let work_queue = if active_items == 0 {
         empty_device_work_queue_plan()
     } else {
-        let expansion_items =
-            estimated_queue_expansion_items(active_items, graph_layout.graph_shape)?;
+        let expansion_items = estimated_queue_expansion_items(
+            active_items,
+            graph_layout.graph_shape,
+            graph_layout.max_out_degree,
+        )?;
         plan_cuda_device_work_queue_with_expansion(CudaDeviceWorkQueueExpansionProfile {
             initial_items: active_items,
             expansion_items,
@@ -399,20 +402,23 @@ fn total_active_items(active_items: &[u64]) -> Result<u64, CudaTokenFactFrontier
 fn estimated_queue_expansion_items(
     active_items: u64,
     graph: crate::megakernel_scheduler::CudaMegakernelGraphShape,
+    max_out_degree: u64,
 ) -> Result<u64, CudaTokenFactFrontierExecutionError> {
     if active_items == 0 || graph.edge_count == 0 {
         return Ok(0);
     }
-    if graph.node_count == 0 {
+    let expansion_degree = if max_out_degree != 0 {
+        max_out_degree
+    } else if graph.node_count == 0 {
         return Ok(graph.edge_count);
-    }
-    let average_out_degree =
+    } else {
         vyre_driver::numeric::checked_ceil_div_u64(graph.edge_count, graph.node_count).ok_or(
             CudaTokenFactFrontierExecutionError::ByteCountOverflow {
                 field: "average token/fact graph out-degree",
             },
-        )?;
-    let projected_edges = active_items.checked_mul(average_out_degree).ok_or(
+        )?
+    };
+    let projected_edges = active_items.checked_mul(expansion_degree).ok_or(
         CudaTokenFactFrontierExecutionError::ByteCountOverflow {
             field: "active frontier edge expansion",
         },
@@ -643,6 +649,61 @@ mod tests {
     }
 
     #[test]
+    fn planner_reserves_hub_degree_headroom_for_sparse_star_frontier() {
+        let nodes = (0_u32..100)
+            .map(|index| {
+                node(
+                    index + 1,
+                    TokenFactNodeKind::Fact,
+                    u64::from(index) * 16,
+                    16,
+                )
+            })
+            .collect::<Vec<_>>();
+        let edges = (2_u32..=100)
+            .map(|to| edge(1, to, TokenFactEdgeKind::FactDependency))
+            .collect::<Vec<_>>();
+        let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 1_600)
+            .expect("Fix: hub-heavy token/fact graph should pack");
+        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+            .expect("Fix: hub-heavy token/fact graph should adapt");
+        let frontier_input = CudaFrontierTypedIrInput {
+            waves: vec![
+                crate::megakernel_barrier_planner::CudaMegakernelFrontierWave {
+                    frontier_bytes: 16,
+                    scratch_bytes: 16,
+                    output_bytes: 16,
+                },
+            ],
+            active_items: vec![1],
+            dependencies: Vec::new(),
+        };
+        let mut cache = CudaMegakernelPlanCache::new();
+
+        let plan = plan_cuda_token_fact_frontier_execution(
+            &mut cache,
+            0xdad1,
+            CudaMegakernelAnalysisKind::ParserFrontend,
+            device(),
+            CudaMegakernelScheduleSample {
+                dispatch_cost_ns: 10_000.0,
+                frontier_density: 0.01,
+                readback_bytes: 64,
+            },
+            graph_layout,
+            &frontier_input,
+            30_000,
+            250.0,
+            0.0,
+        )
+        .expect("Fix: sparse hub frontier should reserve max-degree expansion headroom");
+
+        assert_eq!(graph_layout.max_out_degree, 99);
+        assert_eq!(plan.work_queue.queue_bytes, 100 * 4);
+        assert_eq!(plan.resident_work_queue_bytes, 416);
+    }
+
+    #[test]
     fn queue_expansion_estimate_caps_dense_frontier_at_total_edges() {
         assert_eq!(
             estimated_queue_expansion_items(
@@ -651,6 +712,7 @@ mod tests {
                     node_count: 100,
                     edge_count: 9_900,
                 },
+                99,
             )
             .expect("Fix: dense frontier queue expansion estimate should fit"),
             9_900
@@ -666,6 +728,7 @@ mod tests {
                     node_count: 0,
                     edge_count: 128,
                 },
+                0,
             )
             .expect("Fix: malformed zero-node graph should fall back to total-edge headroom"),
             128
@@ -681,6 +744,7 @@ mod tests {
                     node_count: 1,
                     edge_count: u64::MAX,
                 },
+                u64::MAX,
             )
             .expect_err("overflowed active frontier expansion should fail before queue planning"),
             CudaTokenFactFrontierExecutionError::ByteCountOverflow {
@@ -776,6 +840,7 @@ mod tests {
                     },
                     node_record_bytes: 32,
                     edge_record_bytes: 16,
+                    max_out_degree: u64::MAX,
                     node_bytes: 32,
                     edge_bytes: 0,
                     payload_bytes: 0,
@@ -865,6 +930,7 @@ mod tests {
                     },
                     node_record_bytes: 32,
                     edge_record_bytes: 16,
+                    max_out_degree: 0,
                     node_bytes: 0,
                     edge_bytes: 0,
                     payload_bytes: 0,
@@ -893,6 +959,7 @@ mod tests {
                     },
                     node_record_bytes: 32,
                     edge_record_bytes: 16,
+                    max_out_degree: 1,
                     node_bytes: 32,
                     edge_bytes: 16,
                     payload_bytes: 8,
