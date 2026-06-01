@@ -70,12 +70,21 @@ fn skewed_csr_queue_inputs_preserve_frontier_and_device_scratch() {
 fn skewed_csr_queue_prepare_builds_sparse_resident_sequence() {
     let prepared = queue_materialize::prepare_skewed_csr_queue_materialize_step(None).unwrap();
 
-    assert_eq!(prepared.reset_program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(prepared.reset_program.workgroup_size(), [1, 1, 1]);
+    assert_eq!(queue_materialize::QUEUE_RESET_GRID, [1, 1, 1]);
     assert_eq!(prepared.queue_program.workgroup_size(), [256, 1, 1]);
     assert!(!prepared.row_strided_traverse);
     assert_eq!(
         prepared.traverse_grid,
         [prepared.queue_capacity.div_ceil(256).max(1), 1, 1]
+    );
+    assert_eq!(
+        prepared.queue_program.buffers()[3].name.as_ref(),
+        "frontier_out"
+    );
+    assert_eq!(
+        prepared.queue_program.buffers()[3].count,
+        prepared.stats.frontier_words
     );
     assert_eq!(prepared.inputs.len(), 7);
     assert_eq!(prepared.stats.node_count, CSR_NODE_COUNT);
@@ -86,6 +95,10 @@ fn skewed_csr_queue_prepare_builds_sparse_resident_sequence() {
     assert!(
         prepared.queue_capacity < prepared.stats.node_count / 32,
         "queue capacity should stay sparse relative to the full node-grid launch"
+    );
+    assert_ne!(
+        queue_materialize::graph_queue_materialize_sequence_fingerprint(&prepared),
+        prepared.traverse_program.fingerprint()
     );
 }
 

@@ -6,9 +6,9 @@ use crate::api::case::{
 };
 use crate::api::metric::BenchMetrics;
 use crate::api::resident::{input_bytes_total, ResidentInputSet};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_frontier_queue::{
-    csr_queue_forward_traverse, frontier_words_to_queue_parallel,
+    csr_queue_forward_traverse, frontier_queue_len_init, frontier_words_to_queue_clear_out_parallel,
 };
 use vyre_primitives::graph::csr_queue_strided::{
     csr_queue_strided_forward_dispatch_grid, csr_queue_strided_forward_traverse,
@@ -33,6 +33,7 @@ pub(super) const QUEUE_EDGE_OFFSETS_INDEX: usize = 3;
 pub(super) const QUEUE_EDGE_TARGETS_INDEX: usize = 4;
 pub(super) const QUEUE_EDGE_KIND_INDEX: usize = 5;
 pub(super) const QUEUE_FRONTIER_OUT_INDEX: usize = 6;
+pub(super) const QUEUE_RESET_GRID: [u32; 3] = [1, 1, 1];
 pub(super) const GRAPH_QUEUE_ROW_STRIDED_MIN_DEGREE: u32 =
     CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE
         .saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE);
@@ -125,6 +126,12 @@ impl BenchCase for GraphCsrSkewedQueueMaterializeStep {
             .map(|prepared| &prepared.traverse_program)
     }
 
+    fn workload_fingerprint_bytes(&self, prepared: &PreparedCase) -> Option<[u8; 32]> {
+        prepared
+            .downcast_ref::<GraphCsrSkewedQueuePrepared>()
+            .map(graph_queue_materialize_sequence_fingerprint)
+    }
+
     fn run(
         &self,
         ctx: &mut BenchContext,
@@ -177,6 +184,8 @@ impl BenchCase for GraphCsrSkewedQueueMaterializeStep {
                     sequence.resident_used,
                     workgroup[0],
                     prepared.row_strided_traverse,
+                    true,
+                    QUEUE_RESET_GRID.into_iter().product(),
                 ),
                 ..Default::default()
             },
@@ -202,11 +211,12 @@ pub(super) fn prepare_skewed_csr_queue_materialize_step(
 ) -> Result<GraphCsrSkewedQueuePrepared, BenchError> {
     let fixture = build_skewed_csr_fixture(CSR_NODE_COUNT)?;
     let queue_capacity = skewed_csr_queue_capacity(fixture.stats.active_sources)?;
-    let reset_program = graph_queue_reset_program(fixture.stats.frontier_words);
-    let queue_program = frontier_words_to_queue_parallel(
+    let reset_program = frontier_queue_len_init("queue_len");
+    let queue_program = frontier_words_to_queue_clear_out_parallel(
         "frontier_in",
         "active_queue",
         "queue_len",
+        "frontier_out",
         fixture.stats.node_count,
         queue_capacity,
     );
@@ -248,6 +258,28 @@ pub(super) fn prepare_skewed_csr_queue_materialize_step(
         queue_capacity,
         resident,
     })
+}
+
+pub(super) fn graph_queue_materialize_sequence_fingerprint(
+    prepared: &GraphCsrSkewedQueuePrepared,
+) -> [u8; 32] {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(b"vyre-bench:primitives.graph.csr_skewed_queue_materialize.sequence:v1");
+    for fingerprint in [
+        prepared.reset_program.fingerprint(),
+        prepared.queue_program.fingerprint(),
+        prepared.traverse_program.fingerprint(),
+    ] {
+        hasher.update(&fingerprint);
+    }
+    for value in QUEUE_RESET_GRID
+        .into_iter()
+        .chain(prepared.queue_program.workgroup_size())
+        .chain(prepared.traverse_grid)
+    {
+        hasher.update(&value.to_le_bytes());
+    }
+    *hasher.finalize().as_bytes()
 }
 
 struct GraphQueueTraversePlan {
@@ -305,33 +337,6 @@ fn graph_queue_traverse_plan(
 
 pub(super) const fn graph_queue_should_use_row_strided(max_degree: u32) -> bool {
     max_degree >= GRAPH_QUEUE_ROW_STRIDED_MIN_DEGREE
-}
-
-fn graph_queue_reset_program(frontier_words: u32) -> Program {
-    let idx = Expr::InvocationId { axis: 0 };
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("queue_len", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage("frontier_out", 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(frontier_words.max(1)),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::if_then(
-                Expr::eq(idx.clone(), Expr::u32(0)),
-                vec![Node::store("queue_len", Expr::u32(0), Expr::u32(0))],
-            ),
-            Node::if_then(
-                Expr::lt(idx, Expr::u32(frontier_words)),
-                vec![Node::store(
-                    "frontier_out",
-                    Expr::InvocationId { axis: 0 },
-                    Expr::u32(0),
-                )],
-            ),
-        ],
-    )
 }
 
 inventory::submit! {

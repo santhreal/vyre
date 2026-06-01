@@ -8,14 +8,15 @@ use vyre_foundation::ir::Program;
 use super::{
     GraphCsrSkewedQueuePrepared, QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_EDGE_KIND_INDEX,
     QUEUE_EDGE_OFFSETS_INDEX, QUEUE_EDGE_TARGETS_INDEX, QUEUE_FRONTIER_IN_INDEX,
-    QUEUE_FRONTIER_OUT_INDEX, QUEUE_LEN_INDEX,
+    QUEUE_FRONTIER_OUT_INDEX, QUEUE_LEN_INDEX, QUEUE_RESET_GRID,
 };
 
-const QUEUE_RESET_RESOURCE_INDICES: [usize; 2] = [QUEUE_LEN_INDEX, QUEUE_FRONTIER_OUT_INDEX];
-const QUEUE_BUILD_RESOURCE_INDICES: [usize; 3] = [
+const QUEUE_RESET_RESOURCE_INDICES: [usize; 1] = [QUEUE_LEN_INDEX];
+const QUEUE_BUILD_RESOURCE_INDICES: [usize; 4] = [
     QUEUE_FRONTIER_IN_INDEX,
     QUEUE_ACTIVE_QUEUE_INDEX,
     QUEUE_LEN_INDEX,
+    QUEUE_FRONTIER_OUT_INDEX,
 ];
 const QUEUE_TRAVERSE_RESOURCE_INDICES: [usize; 6] = [
     QUEUE_ACTIVE_QUEUE_INDEX,
@@ -52,7 +53,7 @@ pub(super) fn dispatch_resident_queue_sequence(
     let reset_step = ResidentDispatchStep {
         program: &prepared.reset_program,
         resources: &reset_resources,
-        grid_override: Some(frontier_word_grid(prepared.stats.frontier_words, workgroup)),
+        grid_override: Some(QUEUE_RESET_GRID),
     };
     let queue_step = ResidentDispatchStep {
         program: &prepared.queue_program,
@@ -98,25 +99,21 @@ pub(super) fn dispatch_host_queue_sequence(
     workgroup: [u32; 3],
 ) -> Result<QueueSequenceRun, BenchError> {
     let started = Instant::now();
-    let reset_inputs = vec![
-        prepared.inputs[QUEUE_LEN_INDEX].clone(),
-        prepared.inputs[QUEUE_FRONTIER_OUT_INDEX].clone(),
-    ];
+    let reset_inputs = vec![prepared.inputs[QUEUE_LEN_INDEX].clone()];
     let reset = dispatch_queue_stage(
         ctx,
         &prepared.reset_program,
         reset_inputs,
-        frontier_word_grid(prepared.stats.frontier_words, workgroup),
-        workgroup,
+        QUEUE_RESET_GRID,
+        prepared.reset_program.workgroup_size(),
     )?;
     let reset_queue_len = stage_output(&reset, 0, "skewed CSR queue reset queue_len")?.clone();
-    let reset_frontier_out =
-        stage_output(&reset, 1, "skewed CSR queue reset frontier_out")?.clone();
 
     let queue_inputs = vec![
         prepared.inputs[QUEUE_FRONTIER_IN_INDEX].clone(),
         prepared.inputs[QUEUE_ACTIVE_QUEUE_INDEX].clone(),
         reset_queue_len,
+        prepared.inputs[QUEUE_FRONTIER_OUT_INDEX].clone(),
     ];
     let queue = dispatch_queue_stage(
         ctx,
@@ -127,6 +124,8 @@ pub(super) fn dispatch_host_queue_sequence(
     )?;
     let active_queue = stage_output(&queue, 0, "skewed CSR queue build active_queue")?.clone();
     let queue_len = stage_output(&queue, 1, "skewed CSR queue build queue_len")?.clone();
+    let cleared_frontier_out =
+        stage_output(&queue, 2, "skewed CSR queue build frontier_out")?.clone();
 
     let traverse_inputs = vec![
         active_queue,
@@ -134,7 +133,7 @@ pub(super) fn dispatch_host_queue_sequence(
         prepared.inputs[QUEUE_EDGE_OFFSETS_INDEX].clone(),
         prepared.inputs[QUEUE_EDGE_TARGETS_INDEX].clone(),
         prepared.inputs[QUEUE_EDGE_KIND_INDEX].clone(),
-        reset_frontier_out,
+        cleared_frontier_out,
     ];
     let traverse = dispatch_queue_stage(
         ctx,
@@ -180,7 +179,7 @@ fn dispatch_queue_stage(
     workgroup: [u32; 3],
 ) -> Result<QueueStageRun, BenchError> {
     let mut config = ctx.dispatch_config.clone();
-    config.workgroup_override.get_or_insert(workgroup);
+    config.workgroup_override = Some(workgroup);
     config.grid_override = Some(grid_override);
     let timed = ctx
         .dispatch_timed(program, &inputs, &config)

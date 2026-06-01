@@ -37,6 +37,8 @@ pub(super) fn skewed_csr_queue_metric_points(
     resident_used: bool,
     workgroup_size_x: u32,
     row_strided: bool,
+    fused_frontier_clear: bool,
+    reset_grid_lanes: u32,
 ) -> Vec<MetricPoint> {
     let mut metrics = skewed_csr_metric_points(
         stats,
@@ -53,6 +55,14 @@ pub(super) fn skewed_csr_queue_metric_points(
     metrics.push(metric(
         "graph_csr_queue_row_strided",
         u64::from(row_strided),
+    ));
+    metrics.push(metric(
+        "graph_csr_queue_fused_frontier_clear",
+        u64::from(fused_frontier_clear),
+    ));
+    metrics.push(metric(
+        "graph_csr_queue_reset_grid_lanes",
+        u64::from(reset_grid_lanes),
     ));
     let traverse_lanes = graph_queue_traverse_logical_lanes(queue_capacity, row_strided);
     metrics.push(metric(

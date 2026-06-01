@@ -14,6 +14,10 @@ pub(super) fn custom_graph_metric_key(prefix: &'static str, name: &str) -> Optio
         ("", "graph_csr_queue_materializer") => Some("graph_csr_queue_materializer"),
         ("", "graph_csr_queue_capacity") => Some("graph_csr_queue_capacity"),
         ("", "graph_csr_queue_row_strided") => Some("graph_csr_queue_row_strided"),
+        ("", "graph_csr_queue_fused_frontier_clear") => {
+            Some("graph_csr_queue_fused_frontier_clear")
+        }
+        ("", "graph_csr_queue_reset_grid_lanes") => Some("graph_csr_queue_reset_grid_lanes"),
         ("", "graph_csr_queue_traverse_logical_lanes") => {
             Some("graph_csr_queue_traverse_logical_lanes")
         }
@@ -97,6 +101,8 @@ mod tests {
             "graph_csr_queue_materializer",
             "graph_csr_queue_capacity",
             "graph_csr_queue_row_strided",
+            "graph_csr_queue_fused_frontier_clear",
+            "graph_csr_queue_reset_grid_lanes",
             "graph_csr_queue_traverse_logical_lanes",
             "graph_csr_queue_traverse_lane_reduction_x1000",
             "graph_csr_queue_lane_reduction_x1000",
