@@ -32,10 +32,13 @@ pub use bounded_ranges::{
 
 pub use count_program::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
-    build_ac_bounded_count_suffix2_prefilter_program, classic_ac_bounded_count_prefilter_program,
+    build_ac_bounded_count_suffix2_prefilter_program,
+    build_ac_bounded_count_suffix3_prefilter_program, classic_ac_bounded_count_prefilter_program,
     classic_ac_bounded_count_program, classic_ac_bounded_count_suffix2_prefilter_program,
-    classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
-    CLASSIC_AC_SUFFIX2_MASK_WORDS,
+    classic_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_end_byte_mask_words,
+    classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
+    classic_ac_suffix3_bloom_contains, CLASSIC_AC_SUFFIX2_MASK_WORDS,
+    CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 
 /// A classic AC automaton with precomputed flat output links.

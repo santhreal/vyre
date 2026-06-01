@@ -77,6 +77,17 @@ gpu_competitor = "none_recorded"
 notes = "Tracks real unaligned security/parser literal scanning with output-only match triples kept resident between samples."
 
 [[target]]
+id = "scan.ac.irregular_count.4m"
+primitive = "packed-byte Aho-Corasick irregular count preflight"
+suite = "smoke"
+backend_focus = "cuda"
+metric = "dispatch_ns_p50"
+min_speedup_over_cpu_sota = 1.0
+cpu_baseline = "aho-corasick crate overlapping multi-pattern CPU cardinality"
+gpu_competitor = "none_recorded"
+notes = "Tracks resident count-only irregular literal scan with byte, suffix2, and hashed suffix3 replay filters plus four-byte cardinality readback."
+
+[[target]]
 id = "release.workload.offset_count_aggregation"
 primitive = "count/offset/length aggregation"
 suite = "release-workload"

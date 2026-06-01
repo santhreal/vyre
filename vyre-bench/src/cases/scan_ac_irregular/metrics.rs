@@ -14,6 +14,7 @@ pub(super) struct ScanAcStats {
     pub(super) candidate_end_bytes: u32,
     pub(super) candidate_end_lanes: u32,
     pub(super) candidate_suffix2_lanes: u32,
+    pub(super) candidate_suffix3_lanes: u32,
 }
 
 pub(super) fn scan_ac_metric_points(
@@ -84,13 +85,17 @@ pub(super) fn scan_ac_count_metric_points(
         "scan_ac_irregular_candidate_suffix2_lanes",
         u64::from(stats.candidate_suffix2_lanes),
     ));
+    metrics.push(metric(
+        "scan_ac_irregular_candidate_suffix3_lanes",
+        u64::from(stats.candidate_suffix3_lanes),
+    ));
     if stats.haystack_bytes > 0 {
         metrics.push(metric(
             "scan_ac_irregular_count_prefilter_skipped_lanes_x1000",
             (u128::from(
                 stats
                     .haystack_bytes
-                    .saturating_sub(stats.candidate_suffix2_lanes),
+                    .saturating_sub(stats.candidate_suffix3_lanes),
             ) * 1000
                 / u128::from(stats.haystack_bytes)) as u64,
         ));
@@ -100,6 +105,15 @@ pub(super) fn scan_ac_count_metric_points(
                 stats
                     .candidate_end_lanes
                     .saturating_sub(stats.candidate_suffix2_lanes),
+            ) * 1000
+                / u128::from(stats.haystack_bytes)) as u64,
+        ));
+        metrics.push(metric(
+            "scan_ac_irregular_suffix3_extra_skipped_lanes_x1000",
+            (u128::from(
+                stats
+                    .candidate_suffix2_lanes
+                    .saturating_sub(stats.candidate_suffix3_lanes),
             ) * 1000
                 / u128::from(stats.haystack_bytes)) as u64,
         ));

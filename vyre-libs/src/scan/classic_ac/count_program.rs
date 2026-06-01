@@ -7,10 +7,18 @@ use crate::scan::dfa::CompiledDfa;
 #[path = "count_program/suffix2.rs"]
 mod suffix2;
 
+#[path = "count_program/suffix3.rs"]
+mod suffix3;
+
 pub use suffix2::{
     build_ac_bounded_count_suffix2_prefilter_program,
     classic_ac_bounded_count_suffix2_prefilter_program, classic_ac_candidate_suffix2_mask_words,
     CLASSIC_AC_SUFFIX2_MASK_WORDS,
+};
+pub use suffix3::{
+    build_ac_bounded_count_suffix3_prefilter_program,
+    classic_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_suffix3_bloom_words,
+    classic_ac_suffix3_bloom_contains, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 
 fn count_scan_nodes(

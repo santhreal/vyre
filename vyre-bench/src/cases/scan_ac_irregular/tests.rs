@@ -70,7 +70,7 @@ fn count_prepare_builds_compact_cardinality_program() {
     let prepared = count::prepare_scan_ac_irregular_count(None).unwrap();
 
     assert_eq!(prepared.program.workgroup_size(), [128, 1, 1]);
-    assert_eq!(prepared.inputs.len(), 7);
+    assert_eq!(prepared.inputs.len(), 8);
     assert_eq!(prepared.baseline_output.len(), 4);
     assert_eq!(prepared.stats.haystack_bytes, HAYSTACK_BYTES as u32);
     assert_eq!(prepared.stats.patterns, PATTERNS.len() as u32);
@@ -80,13 +80,19 @@ fn count_prepare_builds_compact_cardinality_program() {
         prepared.program.buffers()[4].name(),
         "candidate_suffix2_mask"
     );
-    assert_eq!(prepared.program.buffers()[6].name(), "match_count");
+    assert_eq!(
+        prepared.program.buffers()[5].name(),
+        "candidate_suffix3_bloom"
+    );
+    assert_eq!(prepared.program.buffers()[7].name(), "match_count");
     assert!(prepared.stats.candidate_end_bytes > 0);
     assert!(prepared.stats.candidate_end_bytes < 32);
     assert!(prepared.stats.candidate_end_lanes > 0);
     assert!(prepared.stats.candidate_end_lanes < prepared.stats.haystack_bytes / 2);
     assert!(prepared.stats.candidate_suffix2_lanes > 0);
     assert!(prepared.stats.candidate_suffix2_lanes <= prepared.stats.candidate_end_lanes);
+    assert!(prepared.stats.candidate_suffix3_lanes > 0);
+    assert!(prepared.stats.candidate_suffix3_lanes <= prepared.stats.candidate_suffix2_lanes);
     assert_eq!(
         selected_scan_output_bytes(prepared.stats),
         4 + u64::from(prepared.stats.expected_matches) * 12
@@ -96,8 +102,14 @@ fn count_prepare_builds_compact_cardinality_program() {
         u64::from(full_scan.stats.output_records + full_scan.stats.patterns) * 4;
     assert_eq!(
         prepared.input_bytes_total,
-        full_scan.input_bytes_total - removed_emit_tables + (8 + 2048) * 4,
-        "count-only preflight should replace emit tables with byte and suffix2 candidate masks"
+        full_scan.input_bytes_total
+            - removed_emit_tables
+            + (8
+                + vyre_libs::scan::classic_ac::CLASSIC_AC_SUFFIX2_MASK_WORDS
+                + vyre_libs::scan::classic_ac::CLASSIC_AC_SUFFIX3_BLOOM_WORDS)
+                as u64
+                * 4,
+        "count-only preflight should replace emit tables with byte, suffix2, and suffix3 candidate masks"
     );
 }
 
@@ -163,11 +175,11 @@ fn bounded_count_program_reference_eval_matches_cpu_cardinality() {
         .unwrap()
         .len() as u32;
     let program = with_reference_dispatch_lanes(
-        vyre_libs::scan::classic_ac::build_ac_bounded_count_suffix2_prefilter_program(&ac.dfa),
+        vyre_libs::scan::classic_ac::build_ac_bounded_count_suffix3_prefilter_program(&ac.dfa),
         haystack.len() as u32,
     );
     let mut inputs = count::scan_ac_count_inputs(&ac, &haystack);
-    inputs[6] = vec![0_u8; haystack.len() * 4];
+    inputs[7] = vec![0_u8; haystack.len() * 4];
     let values = inputs
         .into_iter()
         .map(vyre_reference::value::Value::from)

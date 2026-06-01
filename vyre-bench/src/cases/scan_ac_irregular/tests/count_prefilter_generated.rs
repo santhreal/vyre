@@ -3,7 +3,7 @@ use super::super::count;
 use super::super::PATTERNS;
 use vyre_libs::scan::classic_ac::{
     classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
-    classic_ac_compile, classic_ac_scan_counts,
+    classic_ac_candidate_suffix3_bloom_words, classic_ac_compile, classic_ac_scan_counts,
 };
 use vyre_libs::scan::pack_u32_slice;
 
@@ -14,9 +14,11 @@ fn count_prefilter_mask_keeps_all_generated_overlapping_hits_and_skips_noise() {
     let ac = classic_ac_compile(PATTERNS);
     let candidate_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
     let suffix2_mask = classic_ac_candidate_suffix2_mask_words(&ac.dfa);
+    let suffix3_bloom = classic_ac_candidate_suffix3_bloom_words(PATTERNS);
     let mut total_lanes = 0_u64;
     let mut total_candidate_lanes = 0_u64;
     let mut total_suffix2_lanes = 0_u64;
+    let mut total_suffix3_lanes = 0_u64;
     let mut total_matches = 0_u64;
     let mut unaligned_matches = 0_u64;
 
@@ -31,8 +33,19 @@ fn count_prefilter_mask_keeps_all_generated_overlapping_hits_and_skips_noise() {
         let candidate_lanes = count::candidate_end_lane_count(&haystack, &candidate_mask);
         let suffix2_lanes =
             count::candidate_suffix2_lane_count(&haystack, &candidate_mask, &suffix2_mask);
-        let inputs =
-            count::scan_ac_count_inputs_with_masks(&ac, &haystack, &candidate_mask, &suffix2_mask);
+        let suffix3_lanes = count::candidate_suffix3_lane_count(
+            &haystack,
+            &candidate_mask,
+            &suffix2_mask,
+            &suffix3_bloom,
+        );
+        let inputs = count::scan_ac_count_inputs_with_masks(
+            &ac,
+            &haystack,
+            &candidate_mask,
+            &suffix2_mask,
+            &suffix3_bloom,
+        );
 
         assert_eq!(
             count as usize,
@@ -41,7 +54,7 @@ fn count_prefilter_mask_keeps_all_generated_overlapping_hits_and_skips_noise() {
         );
         assert_eq!(
             inputs.len(),
-            7,
+            8,
             "prefiltered count input layout case {case}"
         );
         assert_eq!(
@@ -56,6 +69,11 @@ fn count_prefilter_mask_keeps_all_generated_overlapping_hits_and_skips_noise() {
         );
         assert_eq!(
             inputs[5],
+            pack_u32_slice(&suffix3_bloom),
+            "suffix3 candidate bloom input case {case}"
+        );
+        assert_eq!(
+            inputs[6],
             pack_u32_slice(&[haystack.len() as u32]),
             "haystack length input case {case}"
         );
@@ -76,12 +94,24 @@ fn count_prefilter_mask_keeps_all_generated_overlapping_hits_and_skips_noise() {
                     "suffix2 prefilter rejected real overlapping hit case={case} hit={hit:?}"
                 );
             }
+            if end > 2 {
+                assert!(
+                    count::suffix3_triple_is_candidate(
+                        haystack[end - 3],
+                        haystack[end - 2],
+                        end_byte,
+                        &suffix3_bloom
+                    ),
+                    "suffix3 prefilter rejected real overlapping hit case={case} hit={hit:?}"
+                );
+            }
             unaligned_matches += u64::from(hit.start % 4 != 0);
         }
 
         total_lanes += haystack.len() as u64;
         total_candidate_lanes += u64::from(candidate_lanes);
         total_suffix2_lanes += u64::from(suffix2_lanes);
+        total_suffix3_lanes += u64::from(suffix3_lanes);
         total_matches += aho_matches.len() as u64;
     }
 
@@ -104,6 +134,51 @@ fn count_prefilter_mask_keeps_all_generated_overlapping_hits_and_skips_noise() {
     assert!(
         total_suffix2_lanes * 2 < total_candidate_lanes,
         "suffix2 prefilter should cut byte-end replay lanes by more than half"
+    );
+    assert!(
+        total_suffix3_lanes <= total_suffix2_lanes,
+        "suffix3 prefilter must never admit more lanes than the suffix2 prefilter"
+    );
+}
+
+#[test]
+fn suffix3_prefilter_cuts_generated_suffix2_noise() {
+    const CASES: u32 = 10_000;
+
+    let ac = classic_ac_compile(PATTERNS);
+    let candidate_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
+    let suffix2_mask = classic_ac_candidate_suffix2_mask_words(&ac.dfa);
+    let suffix3_bloom = classic_ac_candidate_suffix3_bloom_words(PATTERNS);
+    let mut total_suffix2_lanes = 0_u64;
+    let mut total_suffix3_lanes = 0_u64;
+
+    for case in 0..CASES {
+        let len = 1024 + (mix32(case ^ 0xC0FF_EE13) % 4096) as usize;
+        let haystack = generated_noise_haystack(case, len);
+        let suffix2_lanes =
+            count::candidate_suffix2_lane_count(&haystack, &candidate_mask, &suffix2_mask);
+        let suffix3_lanes = count::candidate_suffix3_lane_count(
+            &haystack,
+            &candidate_mask,
+            &suffix2_mask,
+            &suffix3_bloom,
+        );
+
+        assert!(
+            suffix3_lanes <= suffix2_lanes,
+            "suffix3 prefilter admitted extra generated noise lanes case={case}"
+        );
+        total_suffix2_lanes += u64::from(suffix2_lanes);
+        total_suffix3_lanes += u64::from(suffix3_lanes);
+    }
+
+    assert!(
+        total_suffix2_lanes > u64::from(CASES),
+        "generated noise corpus must exercise suffix2 candidate collisions"
+    );
+    assert!(
+        total_suffix3_lanes * 16 < total_suffix2_lanes,
+        "suffix3 prefilter should reject more than 93% of suffix2 noise lanes"
     );
 }
 
@@ -140,6 +215,15 @@ fn generated_scan_haystack(case: u32, len: usize) -> Vec<u8> {
         }
     }
 
+    haystack
+}
+
+fn generated_noise_haystack(case: u32, len: usize) -> Vec<u8> {
+    let mut haystack = vec![0_u8; len];
+    for (index, byte) in haystack.iter_mut().enumerate() {
+        let mixed = mix32(case ^ (index as u32).wrapping_mul(0x85EB_CA6B));
+        *byte = 33 + (mixed % 90) as u8;
+    }
     haystack
 }
 
