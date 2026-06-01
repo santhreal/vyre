@@ -5,9 +5,11 @@
 //! into two GPU-resident primitives:
 //!
 //! 1. `frontier_to_queue` compacts active source-node ids from a packed bitset
-//!    into an active queue with an atomic device-side length. It uses one
-//!    cooperative workgroup and a strided scan so the queue length can be
-//!    initialized inside the same dispatch without an unsupported grid barrier.
+//!    into an active queue with an atomic device-side length. The legacy variant
+//!    uses one cooperative workgroup and a strided scan so the queue length can
+//!    be initialized inside the same dispatch without an unsupported grid barrier.
+//!    The packed-word variants let resident traversal pipelines initialize
+//!    `queue_len` once, then reserve one queue slice per nonzero frontier word.
 //! 2. `csr_queue_forward_traverse` consumes only queued sources and expands
 //!    their CSR rows into `frontier_out`.
 //!
@@ -276,9 +278,9 @@ pub fn frontier_to_queue_parallel(
 /// queue by scanning packed frontier words.
 ///
 /// The caller must clear `queue_len` before dispatch. This variant maps one
-/// lane to one packed u32 frontier word, so sparse packed frontiers launch 32x
-/// fewer lanes than `frontier_to_queue_parallel` while still consuming the same
-/// bitset representation.
+/// lane to one packed u32 frontier word and performs one atomic queue
+/// reservation per nonzero word, so sparse packed frontiers launch 32x fewer
+/// lanes than `frontier_to_queue_parallel` and avoid per-active-bit atomics.
 #[must_use]
 pub fn frontier_words_to_queue_parallel(
     frontier_in: &str,
@@ -344,6 +346,12 @@ fn frontier_words_to_queue_parallel_program(
     }
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
+    let tail_bits = node_count & 31;
+    let tail_mask = if tail_bits == 0 {
+        u32::MAX
+    } else {
+        (1_u32 << tail_bits) - 1
+    };
     let mut word_body = vec![
         Node::let_bind(
             "qw_src_base",
@@ -353,49 +361,57 @@ fn frontier_words_to_queue_parallel_program(
             "qw_remaining",
             Expr::load(frontier_in, Expr::var("qw_word_idx")),
         ),
-        Node::if_then(
-            Expr::ne(Expr::var("qw_remaining"), Expr::u32(0)),
-            vec![
-                Node::let_bind("qw_active_bits", Expr::popcount(Expr::var("qw_remaining"))),
-                Node::loop_for(
-                    "qw_rank",
-                    Expr::u32(0),
-                    Expr::var("qw_active_bits"),
-                    vec![
-                        Node::let_bind("qw_bit", Expr::ctz(Expr::var("qw_remaining"))),
-                        Node::let_bind(
-                            "qw_src",
-                            Expr::add(Expr::var("qw_src_base"), Expr::var("qw_bit")),
-                        ),
-                        Node::if_then(
-                            Expr::lt(Expr::var("qw_src"), Expr::u32(node_count)),
-                            vec![
-                                Node::let_bind(
-                                    "qw_slot",
-                                    Expr::atomic_add(queue_len, Expr::u32(0), Expr::u32(1)),
-                                ),
-                                Node::if_then(
-                                    Expr::lt(Expr::var("qw_slot"), Expr::u32(queue_capacity)),
-                                    vec![Node::store(
-                                        active_queue,
-                                        Expr::var("qw_slot"),
-                                        Expr::var("qw_src"),
-                                    )],
-                                ),
-                            ],
-                        ),
-                        Node::assign(
-                            "qw_remaining",
-                            Expr::bitand(
-                                Expr::var("qw_remaining"),
-                                Expr::sub(Expr::var("qw_remaining"), Expr::u32(1)),
-                            ),
-                        ),
-                    ],
-                ),
-            ],
-        ),
     ];
+    if tail_bits != 0 {
+        word_body.push(Node::if_then(
+            Expr::eq(Expr::var("qw_word_idx"), Expr::u32(words - 1)),
+            vec![Node::assign(
+                "qw_remaining",
+                Expr::bitand(Expr::var("qw_remaining"), Expr::u32(tail_mask)),
+            )],
+        ));
+    }
+    word_body.push(Node::if_then(
+        Expr::ne(Expr::var("qw_remaining"), Expr::u32(0)),
+        vec![
+            Node::let_bind("qw_active_bits", Expr::popcount(Expr::var("qw_remaining"))),
+            Node::let_bind(
+                "qw_base_slot",
+                Expr::atomic_add(queue_len, Expr::u32(0), Expr::var("qw_active_bits")),
+            ),
+            Node::loop_for(
+                "qw_rank",
+                Expr::u32(0),
+                Expr::var("qw_active_bits"),
+                vec![
+                    Node::let_bind("qw_bit", Expr::ctz(Expr::var("qw_remaining"))),
+                    Node::let_bind(
+                        "qw_src",
+                        Expr::add(Expr::var("qw_src_base"), Expr::var("qw_bit")),
+                    ),
+                    Node::let_bind(
+                        "qw_slot",
+                        Expr::add(Expr::var("qw_base_slot"), Expr::var("qw_rank")),
+                    ),
+                    Node::if_then(
+                        Expr::lt(Expr::var("qw_slot"), Expr::u32(queue_capacity)),
+                        vec![Node::store(
+                            active_queue,
+                            Expr::var("qw_slot"),
+                            Expr::var("qw_src"),
+                        )],
+                    ),
+                    Node::assign(
+                        "qw_remaining",
+                        Expr::bitand(
+                            Expr::var("qw_remaining"),
+                            Expr::sub(Expr::var("qw_remaining"), Expr::u32(1)),
+                        ),
+                    ),
+                ],
+            ),
+        ],
+    ));
     if let Some(frontier_out) = frontier_out_to_clear {
         word_body.insert(
             0,
@@ -1564,6 +1580,7 @@ pub fn validate_frontier_queue_query(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_foundation::transform::visit::{walk_exprs, walk_nodes};
 
     #[test]
     fn cpu_queue_preserves_node_order_and_reports_overflow_pressure() {
@@ -1587,6 +1604,26 @@ mod tests {
             1,
         );
         assert_eq!(out, vec![0b1010]);
+    }
+
+    #[test]
+    fn packed_word_queue_reserves_once_per_nonzero_word() {
+        let program = frontier_words_to_queue_parallel("frontier", "queue", "len", 35, 16);
+
+        assert_eq!(
+            count_atomic_exprs(&program),
+            1,
+            "packed-word queue materialization should have one static queue reservation site"
+        );
+        assert_eq!(
+            loop_atomic_count(&program, "qw_rank"),
+            Some(0),
+            "per-active-bit scatter loop must not issue atomics after the word-level reservation"
+        );
+        assert!(
+            assignment_contains_u32(&program, "qw_remaining", 0b111),
+            "the packed-word materializer must mask tail bits before popcounting the final frontier word"
+        );
     }
 
     #[test]
@@ -1663,6 +1700,62 @@ mod tests {
         );
         assert_eq!(traverse.workgroup_size, [256, 1, 1]);
         assert_eq!(traverse.buffers.len(), 6);
+    }
+
+    fn count_atomic_exprs(program: &Program) -> usize {
+        let mut count = 0;
+        walk_exprs(program, |expr| {
+            if matches!(expr, Expr::Atomic { .. }) {
+                count += 1;
+            }
+        });
+        count
+    }
+
+    fn loop_atomic_count(program: &Program, loop_var: &str) -> Option<usize> {
+        let mut count = None;
+        walk_nodes(program, |node| {
+            if count.is_some() {
+                return;
+            }
+            if let Node::Loop { var, body, .. } = node {
+                if var.as_ref() == loop_var {
+                    let loop_program = Program::wrapped(Vec::new(), [1, 1, 1], body.clone());
+                    count = Some(count_atomic_exprs(&loop_program));
+                }
+            }
+        });
+        count
+    }
+
+    fn assignment_contains_u32(program: &Program, target: &str, value: u32) -> bool {
+        let mut found = false;
+        walk_nodes(program, |node| {
+            if found {
+                return;
+            }
+            if let Node::Assign { name, value: expr } = node {
+                if name.as_ref() == target && expr_contains_u32(expr, value) {
+                    found = true;
+                }
+            }
+        });
+        found
+    }
+
+    fn expr_contains_u32(expr: &Expr, value: u32) -> bool {
+        let mut found = false;
+        let expr_program = Program::wrapped(
+            Vec::new(),
+            [1, 1, 1],
+            vec![Node::let_bind("__expr_probe", expr.clone())],
+        );
+        walk_exprs(&expr_program, |expr| {
+            if matches!(expr, Expr::LitU32(found_value) if *found_value == value) {
+                found = true;
+            }
+        });
+        found
     }
 
     #[test]
