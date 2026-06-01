@@ -25,9 +25,14 @@ fn prepare_builds_cuda_compatible_bounded_ranges_program() {
 
     assert_eq!(prepared.program.workgroup_size(), [128, 1, 1]);
     assert_eq!(prepared.reset_program.workgroup_size(), [1, 1, 1]);
-    assert_eq!(prepared.inputs.len(), 8);
+    assert_eq!(prepared.inputs.len(), 10);
     assert_eq!(MATCH_COUNT_INPUT_INDEX, 6);
-    assert_eq!(CANDIDATE_END_MASK_INPUT_INDEX, prepared.inputs.len() - 1);
+    assert_eq!(CANDIDATE_END_MASK_INPUT_INDEX, 7);
+    assert_eq!(CANDIDATE_SUFFIX2_MASK_INPUT_INDEX, 8);
+    assert_eq!(
+        CANDIDATE_SUFFIX3_BLOOM_INPUT_INDEX,
+        prepared.inputs.len() - 1
+    );
     assert_eq!(
         SCAN_RESOURCE_INDICES[MATCH_COUNT_INPUT_INDEX],
         MATCH_COUNT_INPUT_INDEX
@@ -37,6 +42,15 @@ fn prepare_builds_cuda_compatible_bounded_ranges_program() {
         MATCHES_RESOURCE_INDEX
     );
     assert_eq!(prepared.program.buffers()[7].name(), "candidate_end_mask");
+    assert_eq!(
+        prepared.program.buffers()[8].name(),
+        "candidate_suffix2_mask"
+    );
+    assert_eq!(
+        prepared.program.buffers()[9].name(),
+        "candidate_suffix3_bloom"
+    );
+    assert_eq!(prepared.program.buffers()[10].name(), "matches");
     assert_eq!(
         match_triples_output_bytes(MAX_MATCHES).unwrap(),
         MAX_MATCHES as usize * 12
@@ -68,6 +82,11 @@ fn prepare_builds_cuda_compatible_bounded_ranges_program() {
     assert!(prepared.stats.candidate_end_bytes > 0);
     assert!(prepared.stats.candidate_end_lanes > prepared.stats.expected_matches);
     assert!(prepared.stats.candidate_end_lanes < prepared.stats.haystack_bytes / 8);
+    assert!(prepared.stats.candidate_suffix2_lanes > 0);
+    assert!(prepared.stats.candidate_suffix2_lanes <= prepared.stats.candidate_end_lanes);
+    assert!(prepared.stats.candidate_suffix3_lanes > 0);
+    assert!(prepared.stats.candidate_suffix3_lanes <= prepared.stats.candidate_suffix2_lanes);
+    assert!(prepared.stats.candidate_suffix3_lanes < prepared.stats.candidate_end_lanes / 10);
 }
 
 #[test]
@@ -107,13 +126,8 @@ fn count_prepare_builds_compact_cardinality_program() {
         u64::from(full_scan.stats.output_records + full_scan.stats.patterns) * 4;
     assert_eq!(
         prepared.input_bytes_total,
-        full_scan.input_bytes_total
-            - removed_emit_tables
-            + (vyre_libs::scan::classic_ac::CLASSIC_AC_SUFFIX2_MASK_WORDS
-                + vyre_libs::scan::classic_ac::CLASSIC_AC_SUFFIX3_BLOOM_WORDS)
-                as u64
-                * 4,
-        "count-only preflight should share the byte candidate mask with bounded ranges and replace emit tables with suffix2 and suffix3 candidate masks"
+        full_scan.input_bytes_total - removed_emit_tables,
+        "count-only preflight should share all bounded-ranges suffix masks and remove only emit tables"
     );
 }
 
@@ -138,14 +152,23 @@ fn bounded_ranges_program_reference_eval_matches_cpu_oracle() {
     let mut expected = cpu_bounded_range_matches(&ac, &pattern_lengths, &haystack);
     expected.sort_unstable();
     let candidate_end_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
-    let program = try_build_ac_bounded_ranges_prefilter_program_ext(
+    let candidate_suffix2_mask = classic_ac_candidate_suffix2_mask_words(&ac.dfa);
+    let candidate_suffix3_bloom = classic_ac_candidate_suffix3_bloom_words(PATTERNS);
+    let program = try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(
         &ac.dfa,
         pattern_lengths.len() as u32,
         4096,
         false,
     )
     .unwrap();
-    let inputs = scan_ac_inputs(&ac, &pattern_lengths, &haystack, &candidate_end_mask);
+    let inputs = scan_ac_inputs(
+        &ac,
+        &pattern_lengths,
+        &haystack,
+        &candidate_end_mask,
+        &candidate_suffix2_mask,
+        &candidate_suffix3_bloom,
+    );
     let values = inputs
         .into_iter()
         .map(vyre_reference::value::Value::from)

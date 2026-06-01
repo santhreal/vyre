@@ -21,6 +21,8 @@ pub use suffix3::{
     classic_ac_suffix3_bloom_contains, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 
+pub(in crate::scan::classic_ac) use suffix3::suffix3_bloom_bit_index_expr;
+
 fn count_scan_nodes(
     haystack: &str,
     transitions: &str,

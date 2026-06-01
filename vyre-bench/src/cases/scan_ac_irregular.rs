@@ -13,8 +13,10 @@ use crate::api::suite::SuiteKind;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::Program;
 use vyre_libs::scan::classic_ac::{
-    classic_ac_candidate_end_byte_mask_words, classic_ac_compile,
-    try_build_ac_bounded_ranges_prefilter_program_ext, ClassicAcAutomaton,
+    classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
+    classic_ac_candidate_suffix3_bloom_words, classic_ac_compile,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext, ClassicAcAutomaton,
+    CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
 use vyre_libs::scan::{pack_haystack_u32, pack_u32_slice};
 
@@ -40,9 +42,11 @@ const HAYSTACK_BYTES: usize = 4 * 1024 * 1024;
 const MAX_MATCHES: u32 = 65_536;
 const MATCH_COUNT_INPUT_INDEX: usize = 6;
 const CANDIDATE_END_MASK_INPUT_INDEX: usize = 7;
-const MATCHES_RESOURCE_INDEX: usize = 8;
+const CANDIDATE_SUFFIX2_MASK_INPUT_INDEX: usize = 8;
+const CANDIDATE_SUFFIX3_BLOOM_INPUT_INDEX: usize = 9;
+const MATCHES_RESOURCE_INDEX: usize = 10;
 const RESET_RESOURCE_INDICES: [usize; 1] = [MATCH_COUNT_INPUT_INDEX];
-const SCAN_RESOURCE_INDICES: [usize; 9] = [
+const SCAN_RESOURCE_INDICES: [usize; 11] = [
     0,
     1,
     2,
@@ -51,6 +55,8 @@ const SCAN_RESOURCE_INDICES: [usize; 9] = [
     5,
     MATCH_COUNT_INPUT_INDEX,
     CANDIDATE_END_MASK_INPUT_INDEX,
+    CANDIDATE_SUFFIX2_MASK_INPUT_INDEX,
+    CANDIDATE_SUFFIX3_BLOOM_INPUT_INDEX,
     MATCHES_RESOURCE_INDEX,
 ];
 const MATCH_TRIPLE_WORDS: usize = 3;
@@ -291,6 +297,8 @@ fn prepare_scan_ac_irregular(
     let ac = classic_ac_compile(PATTERNS);
     let pattern_lengths = pattern_lengths()?;
     let candidate_end_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
+    let candidate_suffix2_mask = classic_ac_candidate_suffix2_mask_words(&ac.dfa);
+    let candidate_suffix3_bloom = classic_ac_candidate_suffix3_bloom_words(PATTERNS);
     let reset_program = u32_counter_reset_program("match_count");
 
     let baseline_start = std::time::Instant::now();
@@ -306,7 +314,7 @@ fn prepare_scan_ac_irregular(
         )));
     }
     let expected_match_count = expected_matches.len() as u32;
-    let program = try_build_ac_bounded_ranges_prefilter_program_ext(
+    let program = try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(
         &ac.dfa,
         pattern_lengths.len() as u32,
         MAX_MATCHES,
@@ -315,7 +323,14 @@ fn prepare_scan_ac_irregular(
     .map_err(BenchError::ExecutionFailed)
     .and_then(|program| with_matches_readback_range(program, expected_match_count))?;
 
-    let inputs = scan_ac_inputs(&ac, &pattern_lengths, &haystack, &candidate_end_mask);
+    let inputs = scan_ac_inputs(
+        &ac,
+        &pattern_lengths,
+        &haystack,
+        &candidate_end_mask,
+        &candidate_suffix2_mask,
+        &candidate_suffix3_bloom,
+    );
     let input_bytes_total = input_bytes_total(&inputs);
     let resident_output_sizes = [match_triples_output_bytes(MAX_MATCHES)?];
     let resident = ctx
@@ -345,8 +360,17 @@ fn prepare_scan_ac_irregular(
         planted_matches,
         candidate_end_bytes: count::candidate_end_byte_count(&candidate_end_mask),
         candidate_end_lanes: count::candidate_end_lane_count(&haystack, &candidate_end_mask),
-        candidate_suffix2_lanes: 0,
-        candidate_suffix3_lanes: 0,
+        candidate_suffix2_lanes: count::candidate_suffix2_lane_count(
+            &haystack,
+            &candidate_end_mask,
+            &candidate_suffix2_mask,
+        ),
+        candidate_suffix3_lanes: count::candidate_suffix3_lane_count(
+            &haystack,
+            &candidate_end_mask,
+            &candidate_suffix2_mask,
+            &candidate_suffix3_bloom,
+        ),
     };
 
     Ok(ScanAcIrregularPrepared {
@@ -366,6 +390,8 @@ fn scan_ac_inputs(
     pattern_lengths: &[u32],
     haystack: &[u8],
     candidate_end_mask: &[u32; 8],
+    candidate_suffix2_mask: &[u32; CLASSIC_AC_SUFFIX2_MASK_WORDS],
+    candidate_suffix3_bloom: &[u32],
 ) -> Vec<Vec<u8>> {
     vec![
         pack_haystack_u32(haystack),
@@ -376,6 +402,8 @@ fn scan_ac_inputs(
         pack_u32_slice(&[haystack.len() as u32]),
         pack_u32_slice(&[0]),
         pack_u32_slice(candidate_end_mask),
+        pack_u32_slice(candidate_suffix2_mask),
+        pack_u32_slice(candidate_suffix3_bloom),
     ]
 }
 

@@ -190,8 +190,11 @@ fn bounded_ranges_prefilter_inputs_keep_all_generated_hits_and_skip_noise() {
     let ac = classic_ac_compile(PATTERNS);
     let pattern_lengths = pattern_lengths().expect("fixture pattern lengths must fit u32");
     let candidate_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
+    let suffix2_mask = classic_ac_candidate_suffix2_mask_words(&ac.dfa);
+    let suffix3_bloom = classic_ac_candidate_suffix3_bloom_words(PATTERNS);
     let mut total_lanes = 0_u64;
     let mut total_candidate_lanes = 0_u64;
+    let mut total_suffix3_lanes = 0_u64;
     let mut total_matches = 0_u64;
 
     for case in 0..CASES {
@@ -200,17 +203,40 @@ fn bounded_ranges_prefilter_inputs_keep_all_generated_hits_and_skip_noise() {
         let aho_matches = cpu_aho_overlapping_matches(PATTERNS, &haystack)
             .unwrap_or_else(|error| panic!("generated AC baseline case {case} failed: {error}"));
         let candidate_lanes = count::candidate_end_lane_count(&haystack, &candidate_mask);
-        let inputs = scan_ac_inputs(&ac, &pattern_lengths, &haystack, &candidate_mask);
+        let suffix3_lanes = count::candidate_suffix3_lane_count(
+            &haystack,
+            &candidate_mask,
+            &suffix2_mask,
+            &suffix3_bloom,
+        );
+        let inputs = scan_ac_inputs(
+            &ac,
+            &pattern_lengths,
+            &haystack,
+            &candidate_mask,
+            &suffix2_mask,
+            &suffix3_bloom,
+        );
 
         assert_eq!(
             inputs.len(),
-            8,
+            10,
             "bounded-ranges prefilter input case {case}"
         );
         assert_eq!(
             inputs[7],
             pack_u32_slice(&candidate_mask),
             "bounded-ranges prefilter mask input case {case}"
+        );
+        assert_eq!(
+            inputs[8],
+            pack_u32_slice(&suffix2_mask),
+            "bounded-ranges suffix2 mask input case {case}"
+        );
+        assert_eq!(
+            inputs[9],
+            pack_u32_slice(&suffix3_bloom),
+            "bounded-ranges suffix3 bloom input case {case}"
         );
         for hit in &aho_matches {
             let end = hit.end as usize;
@@ -222,10 +248,32 @@ fn bounded_ranges_prefilter_inputs_keep_all_generated_hits_and_skip_noise() {
                 count::byte_is_candidate_end(haystack[end - 1], &candidate_mask),
                 "bounded-ranges prefilter rejected real overlapping hit case={case} hit={hit:?}"
             );
+            if end > 1 {
+                assert!(
+                    count::suffix2_pair_is_candidate(
+                        haystack[end - 2],
+                        haystack[end - 1],
+                        &suffix2_mask
+                    ),
+                    "bounded-ranges suffix2 prefilter rejected real overlapping hit case={case} hit={hit:?}"
+                );
+            }
+            if end > 2 {
+                assert!(
+                    count::suffix3_triple_is_candidate(
+                        haystack[end - 3],
+                        haystack[end - 2],
+                        haystack[end - 1],
+                        &suffix3_bloom
+                    ),
+                    "bounded-ranges suffix3 prefilter rejected real overlapping hit case={case} hit={hit:?}"
+                );
+            }
         }
 
         total_lanes += haystack.len() as u64;
         total_candidate_lanes += u64::from(candidate_lanes);
+        total_suffix3_lanes += u64::from(suffix3_lanes);
         total_matches += aho_matches.len() as u64;
     }
 
@@ -236,6 +284,10 @@ fn bounded_ranges_prefilter_inputs_keep_all_generated_hits_and_skip_noise() {
     assert!(
         total_candidate_lanes * 4 < total_lanes,
         "bounded-ranges candidate-end prefilter should skip at least 75% of noisy lanes"
+    );
+    assert!(
+        total_suffix3_lanes <= total_candidate_lanes,
+        "bounded-ranges suffix3 prefilter must not admit more dense-corpus replay lanes than byte-end gating"
     );
 }
 

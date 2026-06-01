@@ -279,6 +279,9 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "scan_ac_irregular_bounded_ranges_prefilter_skipped_lanes_x1000") => {
             Some("scan_ac_irregular_bounded_ranges_prefilter_skipped_lanes_x1000")
         }
+        ("", "scan_ac_irregular_bounded_ranges_suffix3_prefilter") => {
+            Some("scan_ac_irregular_bounded_ranges_suffix3_prefilter")
+        }
         ("", "scan_ac_irregular_count_only") => Some("scan_ac_irregular_count_only"),
         ("", "scan_ac_irregular_count_prefilter") => Some("scan_ac_irregular_count_prefilter"),
         ("", "scan_ac_irregular_count_readback_bytes") => {
@@ -532,6 +535,7 @@ mod tests {
         for name in [
             "scan_ac_irregular_bounded_ranges_prefilter",
             "scan_ac_irregular_bounded_ranges_prefilter_skipped_lanes_x1000",
+            "scan_ac_irregular_bounded_ranges_suffix3_prefilter",
             "scan_ac_irregular_count_only",
             "scan_ac_irregular_count_prefilter",
             "scan_ac_irregular_count_readback_bytes",

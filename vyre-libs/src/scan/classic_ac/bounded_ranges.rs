@@ -12,9 +12,15 @@ mod prefilter;
 
 pub use prefilter::{
     build_ac_bounded_ranges_prefilter_program, build_ac_bounded_ranges_prefilter_program_ext,
+    build_ac_bounded_ranges_suffix3_prefilter_program,
+    build_ac_bounded_ranges_suffix3_prefilter_program_ext,
     classic_ac_bounded_ranges_prefilter_program, classic_ac_bounded_ranges_prefilter_program_ext,
+    classic_ac_bounded_ranges_suffix3_prefilter_program,
+    classic_ac_bounded_ranges_suffix3_prefilter_program_ext,
     try_build_ac_bounded_ranges_prefilter_program,
     try_build_ac_bounded_ranges_prefilter_program_ext,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
 };
 
 /// Build a Program that scans `haystack` for any AC match and emits

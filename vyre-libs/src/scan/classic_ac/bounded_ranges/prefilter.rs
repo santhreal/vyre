@@ -6,6 +6,18 @@ use crate::scan::dfa::CompiledDfa;
 
 use super::bounded_ranges_scan_nodes;
 
+#[path = "prefilter/suffix3.rs"]
+mod suffix3;
+
+pub use suffix3::{
+    build_ac_bounded_ranges_suffix3_prefilter_program,
+    build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    classic_ac_bounded_ranges_suffix3_prefilter_program,
+    classic_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+};
+
 /// Build a bounded-window AC ranges program with an exact candidate-end-byte
 /// prefilter.
 ///
