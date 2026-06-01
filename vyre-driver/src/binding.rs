@@ -129,8 +129,8 @@ impl BindingPlan {
     ///
     /// # Errors
     ///
-    /// Returns when resident input counts or byte lengths do not match the
-    /// program ABI.
+    /// Returns when resident input counts are wrong or byte lengths are
+    /// smaller than the program ABI requires.
     pub fn from_input_lengths(
         program: &Program,
         input_lengths: &[usize],
@@ -138,12 +138,13 @@ impl BindingPlan {
         Self::build_inner(program, InputLengths::Lengths(input_lengths), true)
     }
 
-    /// Verifies backend-resident input byte lengths match this binding plan.
+    /// Verifies backend-resident input byte lengths satisfy this binding plan.
     ///
     /// # Errors
     ///
     /// Returns when the caller supplies the wrong number of resident inputs or
-    /// an input length violates the buffer declaration captured in this plan.
+    /// a resident input is smaller than the buffer declaration captured in
+    /// this plan.
     pub fn validate_input_byte_lengths(&self, input_lengths: &[usize]) -> Result<(), BackendError> {
         self.validate_input_lengths(InputLengths::Lengths(input_lengths))
     }
@@ -192,7 +193,7 @@ impl BindingPlan {
                 validate_input_len(
                     binding,
                     byte_len,
-                    matches!(input_lens, InputLengths::Lengths(_)),
+                    !matches!(input_lens, InputLengths::Lengths(_)),
                 )?;
             }
         }
@@ -450,7 +451,6 @@ fn static_byte_len(buffer: &BufferDecl) -> Result<Option<usize>, BackendError> {
         })
 }
 
-
 fn dynamic_element_count_from_bytes(buffer: &BufferDecl, byte_len: usize) -> Option<u32> {
     if let Some(bits) = buffer.element().bit_width() {
         let total_bits = byte_len.checked_mul(8)?;
@@ -466,7 +466,7 @@ fn dynamic_element_count_from_bytes(buffer: &BufferDecl, byte_len: usize) -> Opt
 fn validate_input_len(
     binding: &Binding,
     input_len: usize,
-    _strict_static_input_len: bool,
+    strict_static_input_len: bool,
 ) -> Result<(), BackendError> {
     if binding.element_size > 1 && input_len % binding.element_size != 0 {
         return Err(BackendError::InvalidProgram {
@@ -477,12 +477,20 @@ fn validate_input_len(
         });
     }
     if let Some(expected) = binding.static_byte_len {
-        if input_len != expected {
+        if strict_static_input_len && input_len != expected {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
                     "Fix: input `{}` expected {expected} bytes from its static buffer declaration but received {} bytes.",
                     binding.name,
                     input_len
+                ),
+            });
+        }
+        if !strict_static_input_len && input_len < expected {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: resident input `{}` expected at least {expected} bytes from its static buffer declaration but received {} bytes.",
+                    binding.name, input_len
                 ),
             });
         }
@@ -504,24 +512,41 @@ mod exact_length_tests {
     }
 
     #[test]
-    fn static_input_lengths_are_exact_for_owned_borrowed_and_resident_inputs() {
+    fn static_host_inputs_are_exact_while_resident_inputs_may_be_larger() {
         let program = static_u32_input_program(2);
         let short = vec![0u8; 4];
         let exact = vec![0u8; 8];
+        let oversized = vec![0u8; 12];
 
         let owned_err = BindingPlan::from_program(&program, &[short.clone()])
             .expect_err("owned static input length must be exact");
         assert!(owned_err.to_string().contains("expected 8 bytes"));
-        assert!(BindingPlan::from_program(&program, &[exact]).is_ok());
+        assert!(BindingPlan::from_program(&program, &[exact.clone()]).is_ok());
+        let owned_oversized_err = BindingPlan::from_program(&program, &[oversized.clone()])
+            .expect_err("owned static input length must remain exact");
+        assert!(owned_oversized_err.to_string().contains("expected 8 bytes"));
 
         let borrowed_short = [short.as_slice()];
         let borrowed_err = BindingPlan::from_borrowed_inputs(&program, &borrowed_short)
             .expect_err("borrowed static input length must be exact");
         assert!(borrowed_err.to_string().contains("expected 8 bytes"));
+        let borrowed_oversized = [oversized.as_slice()];
+        let borrowed_oversized_err =
+            BindingPlan::from_borrowed_inputs(&program, &borrowed_oversized)
+                .expect_err("borrowed static input length must remain exact");
+        assert!(borrowed_oversized_err
+            .to_string()
+            .contains("expected 8 bytes"));
 
         let resident_err = BindingPlan::from_input_lengths(&program, &[4])
-            .expect_err("resident static input length must be exact");
-        assert!(resident_err.to_string().contains("expected 8 bytes"));
+            .expect_err("resident static input length must not be smaller than the ABI");
+        assert!(resident_err.to_string().contains("at least 8 bytes"));
+        let resident_exact = BindingPlan::from_input_lengths(&program, &[8])
+            .expect("resident input equal to the ABI size should validate");
+        assert_eq!(resident_exact.bindings[0].element_count, 2);
+        let resident_oversized = BindingPlan::from_input_lengths(&program, &[12])
+            .expect("resident input larger than the ABI size should validate");
+        assert_eq!(resident_oversized.bindings[0].element_count, 2);
     }
 
     #[test]
@@ -832,12 +857,14 @@ mod tests {
 
         plan.validate_input_byte_lengths(&[2])
             .expect("Fix: cached packed I4 input length should remain valid");
+        plan.validate_input_byte_lengths(&[3])
+            .expect("Fix: resident packed I4 input may be larger than its static ABI byte count");
         let error = plan
-            .validate_input_byte_lengths(&[3])
-            .expect_err("unpacked byte length must not satisfy packed I4 contract");
+            .validate_input_byte_lengths(&[1])
+            .expect_err("undersized resident byte length must not satisfy packed I4 contract");
         assert!(
-            format!("{error}").contains("expected 2 bytes"),
-            "Fix: packed byte mismatch must be explicit: {error}"
+            format!("{error}").contains("at least 2 bytes"),
+            "Fix: packed resident byte mismatch must be explicit: {error}"
         );
     }
 
@@ -880,13 +907,14 @@ mod tests {
 
         plan.validate_input_byte_lengths(&[16])
             .expect("Fix: cached resident plan should accept the same input byte length");
+        plan.validate_input_byte_lengths(&[20])
+            .expect("Fix: cached resident plan should accept a larger reused allocation");
         let error = plan
             .validate_input_byte_lengths(&[12])
             .expect_err("cached resident plan must reject stale pipeline shape reuse");
         assert!(
-            format!("{error}").contains("expected 16 bytes"),
+            format!("{error}").contains("at least 16 bytes"),
             "wrong resident input length must produce an actionable size mismatch: {error}"
         );
     }
 }
-

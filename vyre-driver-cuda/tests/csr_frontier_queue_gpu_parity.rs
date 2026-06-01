@@ -15,6 +15,7 @@ use vyre_primitives::graph::csr_queue_delta::{
     csr_queue_delta_enqueue, csr_queue_delta_enqueue_cpu, csr_queue_delta_strided_dispatch_grid,
     csr_queue_delta_strided_enqueue,
 };
+use vyre_primitives::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
 use vyre_self_substrate::csr_frontier_queue_batch_resident::{
     run_resident_csr_queue_batch_budgeted_into, run_resident_csr_queue_batch_into,
     ResidentCsrQueueBatchScratch,
@@ -32,6 +33,30 @@ fn pack_nodes(bits: &[u32], node_count: u32) -> Vec<u32> {
         out[bit as usize / 32] |= 1u32 << (bit % 32);
     }
     out
+}
+
+fn skewed_high_degree_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
+    assert!(
+        node_count > 40,
+        "Fix: skewed CUDA CSR queue parity graph needs enough target nodes."
+    );
+    let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
+    let mut edge_targets = Vec::with_capacity(CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD as usize + 8);
+    let mut edge_kind_mask = Vec::with_capacity(edge_targets.capacity());
+    edge_offsets.push(0);
+    for src in 0..node_count {
+        if src == 0 {
+            for edge in 0..CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD {
+                edge_targets.push(edge.wrapping_mul(7).wrapping_add(11) % node_count);
+                edge_kind_mask.push(if edge % 5 == 0 { 2 } else { 1 });
+            }
+        } else if (1..=8).contains(&src) {
+            edge_targets.push((src + 23) % node_count);
+            edge_kind_mask.push(if src % 3 == 0 { 2 } else { 1 });
+        }
+        edge_offsets.push(edge_targets.len() as u32);
+    }
+    (edge_offsets, edge_targets, edge_kind_mask)
 }
 
 #[test]
@@ -931,7 +956,7 @@ fn cuda_resident_csr_queue_api_reuses_graph_and_scratch() {
 }
 
 #[test]
-fn cuda_resident_csr_queue_word_prefix_handles_large_sparse_frontier() {
+fn cuda_resident_csr_queue_uses_atomic_word_scan_for_large_sparse_frontier() {
     let backend = live_backend();
     let dispatcher = CudaOptimizerDispatcher::new(&backend);
     let node_count = 9_000u32;
@@ -979,28 +1004,99 @@ fn cuda_resident_csr_queue_word_prefix_handles_large_sparse_frontier() {
         1,
         &mut output,
     )
-    .expect("Fix: large resident CSR word-prefix query failed on CUDA.");
+    .expect("Fix: large sparse resident CSR queue query failed on CUDA.");
 
     assert_eq!(bytes_u32(&output), expected_out);
     let telemetry = backend.telemetry_snapshot();
     assert_eq!(
-        telemetry.kernel_launches, 4,
-        "Fix: word-prefix resident CSR queue should run clear, word-scan, queue-scatter, and traverse kernels."
+        telemetry.kernel_launches, 3,
+        "Fix: sparse resident CSR queue should run clear, atomic word queue-build, and traverse kernels; deterministic word-prefix is reserved for dense high-capacity frontiers."
     );
     assert_eq!(
         telemetry
             .host_to_device_bytes
             .saturating_sub(telemetry.param_upload_bytes),
         (frontier.len() * std::mem::size_of::<u32>()) as u64,
-        "Fix: large resident CSR queue must upload only the packed frontier; word-prefix scratch stays device-side."
+        "Fix: large sparse resident CSR queue must upload only the packed frontier; queue scratch stays device-side."
     );
 
     scratch
         .free(&dispatcher)
-        .expect("Fix: large resident CSR queue scratch cleanup failed.");
+        .expect("Fix: large sparse resident CSR queue scratch cleanup failed.");
     graph
         .free(&dispatcher)
-        .expect("Fix: large resident CSR queue graph cleanup failed.");
+        .expect("Fix: large sparse resident CSR queue graph cleanup failed.");
+}
+
+#[test]
+fn cuda_resident_csr_queue_api_splits_skewed_high_degree_rows() {
+    let backend = live_backend();
+    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let node_count = 64u32;
+    let queue_capacity = 1024u32;
+    let (edge_offsets, edge_targets, edge_kind_mask) = skewed_high_degree_graph(node_count);
+    let graph = upload_resident_csr_queue_graph(
+        &dispatcher,
+        node_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+    )
+    .expect("Fix: skewed high-degree resident CSR queue graph upload failed.");
+    let frontier = pack_nodes(&[0, 1, 2, 3, 4, 5, 6, 7, 8], node_count);
+    let (expected_queue, expected_len) =
+        frontier_to_queue_cpu(&frontier, node_count, queue_capacity as usize);
+    let expected_out = csr_queue_forward_traverse_cpu(
+        &expected_queue,
+        expected_len,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        node_count,
+        1,
+    );
+    let mut scratch = ResidentCsrQueueScratch::default();
+    let mut output =
+        Vec::with_capacity(bitset_words(node_count) as usize * std::mem::size_of::<u32>());
+
+    backend.reset_telemetry();
+    run_resident_csr_queue_query_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &frontier,
+        queue_capacity,
+        1,
+        &mut output,
+    )
+    .expect("Fix: skewed high-degree resident CSR queue query failed on CUDA.");
+
+    assert_eq!(bytes_u32(&output), expected_out);
+    let telemetry = backend.telemetry_snapshot();
+    assert_eq!(
+        telemetry.kernel_launches, 5,
+        "Fix: skewed resident CSR queue query must run queue_len init, queue build, high_len init, split-low, and bounded high-row traverse."
+    );
+    assert_eq!(telemetry.sync_points, 1);
+    assert_eq!(
+        telemetry.readback_bytes,
+        output.len() as u64,
+        "Fix: skewed resident CSR queue query must read back only frontier_out."
+    );
+    assert_eq!(
+        telemetry
+            .host_to_device_bytes
+            .saturating_sub(telemetry.param_upload_bytes),
+        (frontier.len() * std::mem::size_of::<u32>()) as u64,
+        "Fix: skewed resident CSR queue query must upload only the packed frontier seed."
+    );
+
+    scratch
+        .free(&dispatcher)
+        .expect("Fix: skewed resident CSR queue scratch cleanup failed.");
+    graph
+        .free(&dispatcher)
+        .expect("Fix: skewed resident CSR queue graph cleanup failed.");
 }
 
 #[test]
@@ -1143,7 +1239,100 @@ fn cuda_resident_csr_queue_batch_runs_many_queries_with_one_sync() {
 }
 
 #[test]
+fn cuda_resident_csr_queue_batch_splits_skewed_high_degree_rows() {
+    let backend = live_backend();
+    let dispatcher = CudaOptimizerDispatcher::new(&backend);
+    let node_count = 64u32;
+    let queue_capacity = 1024u32;
+    let (edge_offsets, edge_targets, edge_kind_mask) = skewed_high_degree_graph(node_count);
+    let graph = upload_resident_csr_queue_graph(
+        &dispatcher,
+        node_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+    )
+    .expect("Fix: skewed high-degree batched resident CSR queue graph upload failed.");
+    let frontiers = [
+        pack_nodes(&[0, 1, 2, 3, 4, 5, 6, 7, 8], node_count),
+        pack_nodes(&[0, 2, 5, 8], node_count),
+    ];
+    let frontier_refs: Vec<&[u32]> = frontiers.iter().map(Vec::as_slice).collect();
+    let mut expected = Vec::new();
+    for frontier in &frontiers {
+        let (expected_queue, expected_len) =
+            frontier_to_queue_cpu(frontier, node_count, queue_capacity as usize);
+        expected.push(csr_queue_forward_traverse_cpu(
+            &expected_queue,
+            expected_len,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            node_count,
+            1,
+        ));
+    }
 
+    let mut scratch = ResidentCsrQueueBatchScratch::default();
+    let output_bytes = bitset_words(node_count) as usize * std::mem::size_of::<u32>();
+    let mut outputs = vec![
+        Vec::with_capacity(output_bytes),
+        Vec::with_capacity(output_bytes),
+    ];
+    let output_ptrs: Vec<*const u8> = outputs.iter().map(Vec::as_ptr).collect();
+
+    backend.reset_telemetry();
+    run_resident_csr_queue_batch_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &frontier_refs,
+        queue_capacity,
+        1,
+        &mut outputs,
+    )
+    .expect("Fix: skewed high-degree batched resident CSR queue execution failed on CUDA.");
+
+    for ((output, expected_words), ptr) in outputs.iter().zip(&expected).zip(&output_ptrs) {
+        assert_eq!(bytes_u32(output), *expected_words);
+        assert_eq!(
+            output.as_ptr(),
+            *ptr,
+            "Fix: skewed batched resident CSR queue must preserve caller-owned output slots."
+        );
+    }
+    let telemetry = backend.telemetry_snapshot();
+    assert_eq!(
+        telemetry.kernel_launches,
+        (frontiers.len() * 5) as u64,
+        "Fix: each skewed batched CSR query must run queue_len init, queue build, high_len init, split-low, and bounded high-row traverse."
+    );
+    assert_eq!(
+        telemetry.sync_points, 1,
+        "Fix: skewed batched resident CSR queue must use one host fence for all queries."
+    );
+    assert_eq!(
+        telemetry.readback_bytes,
+        (frontiers.len() * output_bytes) as u64,
+        "Fix: skewed batched resident CSR queue must read only compact frontier outputs."
+    );
+    assert_eq!(
+        telemetry
+            .host_to_device_bytes
+            .saturating_sub(telemetry.param_upload_bytes),
+        (frontiers.len() * output_bytes) as u64,
+        "Fix: skewed batched resident CSR queue must upload only each frontier seed."
+    );
+
+    scratch
+        .free(&dispatcher)
+        .expect("Fix: skewed batched resident CSR queue scratch cleanup failed.");
+    graph
+        .free(&dispatcher)
+        .expect("Fix: skewed batched resident CSR queue graph cleanup failed.");
+}
+
+#[test]
 fn cuda_resident_csr_queue_budgeted_batch_shards_before_allocation() {
     let backend = live_backend();
     let dispatcher = CudaOptimizerDispatcher::new(&backend);
