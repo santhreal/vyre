@@ -48,6 +48,15 @@ pub enum FrontierError {
         /// In-domain active bits that must be materialized.
         required: u32,
     },
+    /// Caller-provided active-bit count disagrees with the frontier bits.
+    QueueCountMismatch {
+        /// Declared graph/node domain width.
+        node_count: u32,
+        /// Active in-domain bits promised by the caller.
+        expected: u32,
+        /// Active in-domain bits observed before mismatch was proven.
+        observed: u32,
+    },
 }
 
 impl fmt::Display for FrontierError {
@@ -81,6 +90,14 @@ impl fmt::Display for FrontierError {
             } => write!(
                 f,
                 "frontier queue for {node_count} nodes requires {required} slots, got capacity {capacity}."
+            ),
+            Self::QueueCountMismatch {
+                node_count,
+                expected,
+                observed,
+            } => write!(
+                f,
+                "frontier queue for {node_count} nodes expected {expected} active bits, observed {observed}."
             ),
         }
     }
@@ -283,14 +300,37 @@ pub fn materialize_frontier_queue_into(
     queue: &mut Vec<u32>,
 ) -> Result<u32, FrontierError> {
     let required = checked_frontier_domain_popcount(node_count, frontier)?;
-    if required as usize > queue_capacity {
+    materialize_frontier_queue_exact_count_into(
+        node_count,
+        frontier,
+        required,
+        queue_capacity,
+        queue,
+    )
+}
+
+/// Materialize active node ids when the caller already knows the active count.
+///
+/// This is the preferred host path for benchmark/dataflow fixtures that counted
+/// active sources while constructing the frontier. It preserves the same
+/// ordered queue and tail-masking behavior as [`materialize_frontier_queue_into`]
+/// without a second full popcount pass.
+pub fn materialize_frontier_queue_exact_count_into(
+    node_count: u32,
+    frontier: &[u32],
+    active_count: u32,
+    queue_capacity: usize,
+    queue: &mut Vec<u32>,
+) -> Result<u32, FrontierError> {
+    let expected_words = validate_frontier_shape(node_count, frontier, "input")?;
+    if active_count as usize > queue_capacity {
         return Err(FrontierError::QueueCapacity {
             node_count,
             capacity: queue_capacity,
-            required,
+            required: active_count,
         });
     }
-    let required_usize = required as usize;
+    let required_usize = active_count as usize;
     if required_usize > queue.capacity() {
         queue
             .try_reserve_exact(required_usize - queue.capacity())
@@ -302,9 +342,9 @@ pub fn materialize_frontier_queue_into(
     }
 
     queue.clear();
-    let expected_words = frontier_words(node_count);
     let final_word_index = expected_words.saturating_sub(1);
     let final_word_mask = frontier_tail_mask(node_count);
+    let mut observed = 0u32;
     for (word_index, &word) in frontier.iter().enumerate() {
         let mut bits = if word_index == final_word_index {
             word & final_word_mask
@@ -312,12 +352,31 @@ pub fn materialize_frontier_queue_into(
             word
         };
         while bits != 0 {
+            observed = observed
+                .checked_add(1)
+                .ok_or(FrontierError::PopcountOverflow {
+                    frontier_words: expected_words,
+                })?;
+            if observed > active_count {
+                return Err(FrontierError::QueueCountMismatch {
+                    node_count,
+                    expected: active_count,
+                    observed,
+                });
+            }
             let bit = bits.trailing_zeros();
             queue.push((word_index as u32 * u32::BITS) + bit);
             bits &= bits - 1;
         }
     }
-    Ok(required)
+    if observed != active_count {
+        return Err(FrontierError::QueueCountMismatch {
+            node_count,
+            expected: active_count,
+            observed,
+        });
+    }
+    Ok(observed)
 }
 
 /// Clear out-of-domain bits in the final frontier word.
@@ -427,6 +486,48 @@ mod tests {
     }
 
     #[test]
+    fn exact_count_frontier_queue_materializes_ordered_tail_masked_bits() {
+        let frontier = [0b1010_u32, u32::MAX, u32::MAX];
+        let mut queue = Vec::new();
+
+        let len = materialize_frontier_queue_exact_count_into(65, &frontier, 35, 35, &mut queue)
+            .expect("Fix: exact-count frontier queue should fit");
+
+        assert_eq!(len, 35);
+        assert_eq!(queue[0..4], [1, 3, 32, 33]);
+        assert_eq!(*queue.last().unwrap(), 64);
+        assert_eq!(queue.len(), 35);
+    }
+
+    #[test]
+    fn exact_count_frontier_queue_rejects_stale_low_or_high_counts() {
+        let frontier = [0b1111_u32];
+        let mut queue = Vec::new();
+
+        let low = materialize_frontier_queue_exact_count_into(4, &frontier, 3, 4, &mut queue)
+            .expect_err("stale low count must fail");
+        assert!(matches!(
+            low,
+            FrontierError::QueueCountMismatch {
+                node_count: 4,
+                expected: 3,
+                observed: 4,
+            }
+        ));
+
+        let high = materialize_frontier_queue_exact_count_into(4, &frontier, 5, 5, &mut queue)
+            .expect_err("stale high count must fail");
+        assert!(matches!(
+            high,
+            FrontierError::QueueCountMismatch {
+                node_count: 4,
+                expected: 5,
+                observed: 4,
+            }
+        ));
+    }
+
+    #[test]
     fn generated_frontier_queue_matches_scalar_scan_across_10000_shapes() {
         for seed in 0..10_000_u32 {
             let node_count = 1 + (mix32(seed) % 8_192);
@@ -445,6 +546,36 @@ mod tests {
             let len =
                 materialize_frontier_queue_into(node_count, &frontier, expected.len(), &mut queue)
                     .expect("Fix: generated frontier queue should fit exactly");
+
+            assert_eq!(len as usize, expected.len(), "seed={seed}");
+            assert_eq!(queue, expected, "seed={seed} node_count={node_count}");
+        }
+    }
+
+    #[test]
+    fn generated_exact_count_frontier_queue_matches_scalar_scan_across_10000_shapes() {
+        for seed in 0..10_000_u32 {
+            let node_count = 1 + (mix32(seed ^ 0xECA7_C011) % 8_192);
+            let words = frontier_words(node_count);
+            let mut frontier = (0..words)
+                .map(|word| mix32(seed ^ (word as u32).wrapping_mul(0x85EB_CA6B)))
+                .collect::<Vec<_>>();
+            if seed & 15 == 0 {
+                frontier.fill(0);
+                let node = mix32(seed ^ 0xD47A_F10D) % node_count;
+                frontier[(node / 32) as usize] |= 1_u32 << (node % 32);
+            }
+            let expected = scalar_frontier_queue(node_count, &frontier);
+            let mut queue = Vec::new();
+
+            let len = materialize_frontier_queue_exact_count_into(
+                node_count,
+                &frontier,
+                expected.len() as u32,
+                expected.len(),
+                &mut queue,
+            )
+            .expect("Fix: generated exact-count frontier queue should fit exactly");
 
             assert_eq!(len as usize, expected.len(), "seed={seed}");
             assert_eq!(queue, expected, "seed={seed} node_count={node_count}");

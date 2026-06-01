@@ -1,5 +1,5 @@
 use crate::api::case::BenchError;
-use vyre_primitives::bitset::frontier::materialize_frontier_queue_into;
+use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_into;
 use vyre_primitives::predicate::edge_kind;
 
 pub(super) const NODE_COUNT: u32 = 1_048_576;
@@ -188,9 +188,16 @@ pub(in crate::cases::dataflow_irregular) fn materialize_ifds_active_queue(
     context: &str,
 ) -> Result<Vec<u32>, BenchError> {
     let mut active_queue = Vec::new();
-    let seen = materialize_frontier_queue_into(
+    let expected = u32::try_from(fixture.stats.active_sources).map_err(|_| {
+        BenchError::EnvironmentInvalid(format!(
+            "{context} active source count {} exceeds u32 indexing. Fix: split the frontier.",
+            fixture.stats.active_sources
+        ))
+    })?;
+    let seen = materialize_frontier_queue_exact_count_into(
         fixture.stats.nodes,
         &fixture.frontier_in,
+        expected,
         queue_capacity,
         &mut active_queue,
     )
