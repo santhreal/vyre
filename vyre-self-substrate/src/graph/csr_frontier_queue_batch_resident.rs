@@ -24,7 +24,9 @@ use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher, ResidentR
 pub struct ResidentCsrQueueBatchScratch {
     handles: Vec<ResidentCsrQueueBatchQueryHandles>,
     shape: Option<ResidentCsrQueueBatchShape>,
+    program_shape: Option<ResidentCsrQueueBatchProgramShape>,
     clear_frontier_out_program: Option<Program>,
+    queue_len_init_program: Option<Program>,
     word_counts_program: Option<Program>,
     word_block_offsets_program: Option<Program>,
     queue_program: Option<Program>,
@@ -32,9 +34,11 @@ pub struct ResidentCsrQueueBatchScratch {
     frontier_payloads: Vec<Vec<u8>>,
     readbacks: Vec<Vec<u8>>,
     clear_handle_sets: Vec<[u64; 1]>,
+    queue_len_handle_sets: Vec<[u64; 1]>,
     word_count_handle_sets: Vec<[u64; 3]>,
     word_block_offsets_handle_sets: Vec<[u64; 1]>,
     queue_handle_sets: Vec<[u64; 3]>,
+    atomic_word_queue_handle_sets: Vec<[u64; 4]>,
     word_prefix_queue_handle_sets: Vec<[u64; 5]>,
     traverse_handle_sets: Vec<[u64; 6]>,
     read_ranges: Vec<ResidentReadRange>,
@@ -86,7 +90,9 @@ impl ResidentCsrQueueBatchScratch {
             "resident CSR queue batch scratch",
         );
         self.shape = None;
+        self.program_shape = None;
         self.clear_frontier_out_program = None;
+        self.queue_len_init_program = None;
         self.word_counts_program = None;
         self.word_block_offsets_program = None;
         self.queue_program = None;
@@ -94,9 +100,11 @@ impl ResidentCsrQueueBatchScratch {
         self.frontier_payloads.clear();
         self.readbacks.clear();
         self.clear_handle_sets.clear();
+        self.queue_len_handle_sets.clear();
         self.word_count_handle_sets.clear();
         self.word_block_offsets_handle_sets.clear();
         self.queue_handle_sets.clear();
+        self.atomic_word_queue_handle_sets.clear();
         self.word_prefix_queue_handle_sets.clear();
         self.traverse_handle_sets.clear();
         self.read_ranges.clear();
@@ -118,6 +126,13 @@ struct ResidentCsrQueueBatchQueryHandles {
 struct ResidentCsrQueueBatchShape {
     batch_len: usize,
     frontier_bytes: usize,
+    queue_capacity: u32,
+    node_count: u32,
+    materializer: ResidentCsrQueueMaterializer,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct ResidentCsrQueueBatchProgramShape {
     queue_capacity: u32,
     allow_mask: u32,
     node_count: u32,

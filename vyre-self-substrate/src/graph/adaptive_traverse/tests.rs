@@ -182,7 +182,8 @@ fn matches_primitive_directly_by_wiring_release_programs() {
         "primitive_adaptive_sparse_dense_step(",
         "primitive_adaptive_four_russians_dense_step(",
         "primitive_four_russians_dense_lut_from_adj_rows(",
-        "primitive_frontier_to_queue(",
+        "primitive_frontier_queue_len_init(",
+        "primitive_frontier_words_to_queue_clear_out(",
         "primitive_frontier_word_counts(",
         "primitive_frontier_word_block_offsets(",
         "primitive_frontier_word_block_offsets_queue(",
@@ -698,6 +699,9 @@ fn sparse_queue_resident_step_initializes_queue_len_on_device() {
     let scratch_handles = scratch
         .handles
         .expect("Fix: sparse-queue resident step must allocate frontier/queue-len handles");
+    let queue_handle = scratch
+        .queue_handle
+        .expect("Fix: sparse-queue resident step must allocate active queue");
     assert_eq!(
         dispatcher.last_upload_handles(),
         vec![scratch_handles[0]],
@@ -707,12 +711,22 @@ fn sparse_queue_resident_step_initializes_queue_len_on_device() {
     assert_eq!(
         steps.len(),
         3,
-        "sparse-queue traversal should clear output, compact, then traverse; frontier_to_queue clears queue_len itself"
+        "sparse-queue traversal should initialize queue_len, compact packed frontier words while clearing output, then traverse"
     );
     assert_eq!(
         steps[0],
-        vec![scratch_handles[1]],
-        "first sparse-queue resident step must clear frontier_out on device"
+        vec![scratch_handles[2]],
+        "first sparse-queue resident step must initialize queue_len on device"
+    );
+    assert_eq!(
+        steps[1],
+        vec![
+            scratch_handles[0],
+            queue_handle,
+            scratch_handles[2],
+            scratch_handles[1],
+        ],
+        "second sparse-queue resident step must compact packed words while clearing frontier_out"
     );
     assert_eq!(frontier_out, vec![0]);
 }

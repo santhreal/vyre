@@ -147,12 +147,17 @@ fn resident_query_initializes_queue_len_on_device() {
     assert_eq!(
         steps.len(),
         3,
-        "atomic resident CSR queue should clear output, compact, then traverse; frontier_to_queue clears queue_len itself"
+        "atomic-word resident CSR queue should initialize queue_len, compact packed words while clearing output, then traverse"
     );
-    assert_eq!(steps[0], vec![handles.frontier_out]);
+    assert_eq!(steps[0], vec![handles.queue_len]);
     assert_eq!(
         steps[1],
-        vec![handles.frontier, handles.active_queue, handles.queue_len]
+        vec![
+            handles.frontier,
+            handles.active_queue,
+            handles.queue_len,
+            handles.frontier_out,
+        ]
     );
     assert_eq!(output, vec![0, 0, 0, 0]);
 }
@@ -356,7 +361,7 @@ fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_ord
             block_totals: None,
             queue_capacity: 4,
             frontier_bytes: 4,
-            materializer: ResidentCsrQueueMaterializer::AtomicNodeScan,
+            materializer: ResidentCsrQueueMaterializer::AtomicWordScan,
         });
         scratch.free(&dispatcher).expect("Fix: scratch free dedup");
         assert_eq!(

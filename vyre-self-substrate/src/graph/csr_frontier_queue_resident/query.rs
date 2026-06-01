@@ -4,9 +4,10 @@ use super::{
 };
 use vyre_primitives::bitset::zero::bitset_zero;
 use vyre_primitives::graph::csr_frontier_queue::{
-    csr_queue_forward_traverse, frontier_to_queue, frontier_word_block_offsets_in_place,
+    csr_queue_forward_traverse, frontier_queue_len_init, frontier_word_block_offsets_in_place,
     frontier_word_block_offsets_to_queue_parallel, frontier_word_block_prefix_to_queue_parallel,
-    frontier_word_counts_scan_pass_a, validate_frontier_queue_query,
+    frontier_word_counts_scan_pass_a, frontier_words_to_queue_clear_out_parallel,
+    validate_frontier_queue_query,
 };
 use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
 
@@ -44,12 +45,10 @@ pub fn run_resident_csr_queue_query_into(
             "resident CSR queue scratch handles are missing after ensure_scratch. Fix: rebuild scratch before resident CSR queue dispatch.".to_string(),
         )
     })?;
-    let resident_queue_capacity = handles.queue_capacity;
-    ensure_programs(scratch, graph, resident_queue_capacity, allow_mask)?;
+    ensure_programs(scratch, graph, effective_queue_capacity, allow_mask)?;
     scratch.frontier_bytes.clear();
     vyre_primitives::wire::append_u32_slice_le_bytes(frontier_words, &mut scratch.frontier_bytes);
     let frontier_bytes = u32_word_bytes(graph.words, "resident CSR queue query frontier")?;
-    let clear_handles = [handles.frontier_out];
     let traverse_handles = [
         handles.active_queue,
         handles.queue_len,
@@ -58,18 +57,13 @@ pub fn run_resident_csr_queue_query_into(
         graph.edge_kind_mask_handle,
         handles.frontier_out,
     ];
-    let clear_frontier_out_program = scratch.clear_frontier_out_program.as_ref().ok_or_else(|| {
-        DispatchError::BackendError(
-            "resident CSR queue output clear program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
-        )
-    })?;
     let traverse_program = scratch.traverse_program.as_ref().ok_or_else(|| {
         DispatchError::BackendError(
             "resident CSR queue traverse program is missing after ensure_programs. Fix: rebuild programs before resident CSR traverse dispatch.".to_string(),
         )
     })?;
     let traverse_grid = resident_csr_queue_traverse_grid(
-        resident_queue_capacity,
+        effective_queue_capacity,
         resident_csr_queue_traverse_kind(graph.max_row_degree),
     );
     let read_ranges = [ResidentReadRange {
@@ -78,8 +72,19 @@ pub fn run_resident_csr_queue_query_into(
         byte_len: frontier_bytes,
     }];
     match handles.materializer {
-        ResidentCsrQueueMaterializer::AtomicNodeScan => {
-            let queue_handles = [handles.frontier, handles.active_queue, handles.queue_len];
+        ResidentCsrQueueMaterializer::AtomicWordScan => {
+            let queue_len_handles = [handles.queue_len];
+            let queue_handles = [
+                handles.frontier,
+                handles.active_queue,
+                handles.queue_len,
+                handles.frontier_out,
+            ];
+            let queue_len_init_program = scratch.queue_len_init_program.as_ref().ok_or_else(|| {
+                DispatchError::BackendError(
+                    "resident CSR queue length init program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
+                )
+            })?;
             let queue_program = scratch.queue_program.as_ref().ok_or_else(|| {
                 DispatchError::BackendError(
                     "resident CSR queue program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
@@ -87,14 +92,14 @@ pub fn run_resident_csr_queue_query_into(
             })?;
             let steps = [
                 ResidentDispatchStep {
-                    program: clear_frontier_out_program,
-                    handle_ids: &clear_handles,
-                    grid_override: Some(frontier_word_grid(graph.words)?),
+                    program: queue_len_init_program,
+                    handle_ids: &queue_len_handles,
+                    grid_override: Some([1, 1, 1]),
                 },
                 ResidentDispatchStep {
                     program: queue_program,
                     handle_ids: &queue_handles,
-                    grid_override: Some([1, 1, 1]),
+                    grid_override: Some(frontier_word_grid(graph.words)?),
                 },
                 ResidentDispatchStep {
                     program: traverse_program,
@@ -110,6 +115,7 @@ pub fn run_resident_csr_queue_query_into(
             )?;
         }
         ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
+            let clear_handles = [handles.frontier_out];
             let word_prefix = word_prefix_scratch(graph.words)?;
             let (word_partials, block_totals) = word_prefix_handles(handles)?;
             let word_count_handles = [handles.frontier, word_partials, block_totals];
@@ -125,6 +131,12 @@ pub fn run_resident_csr_queue_query_into(
                     "resident CSR queue word-count scan program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
                 )
             })?;
+            let clear_frontier_out_program =
+                scratch.clear_frontier_out_program.as_ref().ok_or_else(|| {
+                    DispatchError::BackendError(
+                        "resident CSR queue output clear program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
+                    )
+                })?;
             let queue_program = scratch.queue_program.as_ref().ok_or_else(|| {
                 DispatchError::BackendError(
                     "resident CSR queue word-prefix scatter program is missing after ensure_programs. Fix: rebuild programs before resident CSR queue dispatch.".to_string(),
@@ -227,7 +239,7 @@ fn ensure_scratch(
     }
     scratch.free(dispatcher)?;
     match materializer {
-        ResidentCsrQueueMaterializer::AtomicNodeScan => {
+        ResidentCsrQueueMaterializer::AtomicWordScan => {
             let [frontier, active_queue, queue_len, frontier_out] = alloc_resident_buffers(
                 dispatcher,
                 [
@@ -312,18 +324,23 @@ fn ensure_programs(
     }
     scratch.word_counts_program = None;
     scratch.word_block_offsets_program = None;
-    scratch.clear_frontier_out_program = Some(bitset_zero("frontier_out", graph.words as u32));
+    scratch.queue_len_init_program = None;
+    scratch.clear_frontier_out_program = None;
     match shape.materializer {
-        ResidentCsrQueueMaterializer::AtomicNodeScan => {
-            scratch.queue_program = Some(frontier_to_queue(
+        ResidentCsrQueueMaterializer::AtomicWordScan => {
+            scratch.queue_len_init_program = Some(frontier_queue_len_init("queue_len"));
+            scratch.queue_program = Some(frontier_words_to_queue_clear_out_parallel(
                 "frontier",
                 "active_queue",
                 "queue_len",
+                "frontier_out",
                 graph.node_count,
                 queue_capacity,
             ));
         }
         ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
+            scratch.clear_frontier_out_program =
+                Some(bitset_zero("frontier_out", graph.words as u32));
             let word_prefix = word_prefix_scratch(graph.words)?;
             scratch.word_counts_program = Some(frontier_word_counts_scan_pass_a(
                 "frontier",

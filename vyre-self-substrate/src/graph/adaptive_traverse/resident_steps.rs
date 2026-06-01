@@ -28,11 +28,12 @@ use vyre_primitives::graph::adaptive_traverse::{
 };
 use vyre_primitives::graph::csr_frontier_queue::{
     csr_queue_forward_traverse as primitive_csr_queue_forward_traverse,
-    frontier_to_queue as primitive_frontier_to_queue,
+    frontier_queue_len_init as primitive_frontier_queue_len_init,
     frontier_word_block_offsets_in_place as primitive_frontier_word_block_offsets,
     frontier_word_block_offsets_to_queue_parallel as primitive_frontier_word_block_offsets_queue,
     frontier_word_block_prefix_to_queue_parallel as primitive_frontier_word_prefix_queue,
     frontier_word_counts_scan_pass_a as primitive_frontier_word_counts,
+    frontier_words_to_queue_clear_out_parallel as primitive_frontier_words_to_queue_clear_out,
 };
 use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_traverse as primitive_csr_queue_strided_forward_traverse;
 use vyre_primitives::reduce::count::reduce_count;
@@ -382,18 +383,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                 )
             }
         });
-    let clear_frontier_out_program = scratch.plan_cache.get_or_build(
-        AdaptiveTraversalPlanCacheKey::clear_frontier_out(
-            graph.layout_hash,
-            graph.node_count,
-            graph.edge_count,
-            words_u32,
-            device_features,
-        ),
-        || bitset_zero("frontier_out", words_u32),
-    );
     let graph_handles = graph.handles;
-    let clear_handles = [handles[1]];
     let traverse_handles = [
         queue_handle,
         handles[2],
@@ -403,8 +393,19 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
         handles[1],
     ];
     match resident_csr_queue_materializer(words) {
-        ResidentCsrQueueMaterializer::AtomicNodeScan => {
+        ResidentCsrQueueMaterializer::AtomicWordScan => {
             let uploads = [(handles[0], scratch.frontier_in_bytes.as_slice())];
+            let queue_len_init_program = scratch.plan_cache.get_or_build(
+                AdaptiveTraversalPlanCacheKey::queue_len_init(
+                    graph.layout_hash,
+                    graph.node_count,
+                    graph.edge_count,
+                    words_u32,
+                    queue_capacity,
+                    device_features,
+                ),
+                || primitive_frontier_queue_len_init("queue_len"),
+            );
             let queue_program = scratch.plan_cache.get_or_build(
                 AdaptiveTraversalPlanCacheKey::frontier_to_queue(
                     graph.layout_hash,
@@ -415,26 +416,28 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     device_features,
                 ),
                 || {
-                    primitive_frontier_to_queue(
+                    primitive_frontier_words_to_queue_clear_out(
                         "frontier_in",
                         "active_queue",
                         "queue_len",
+                        "frontier_out",
                         graph.node_count,
                         queue_capacity,
                     )
                 },
             );
-            let queue_handles = [handles[0], queue_handle, handles[2]];
+            let queue_len_handles = [handles[2]];
+            let queue_handles = [handles[0], queue_handle, handles[2], handles[1]];
             let steps = [
                 ResidentDispatchStep {
-                    program: &clear_frontier_out_program,
-                    handle_ids: &clear_handles,
-                    grid_override: Some(sparse_plan.frontier.frontier_word_grid),
+                    program: &queue_len_init_program,
+                    handle_ids: &queue_len_handles,
+                    grid_override: Some([1, 1, 1]),
                 },
                 ResidentDispatchStep {
                     program: &queue_program,
                     handle_ids: &queue_handles,
-                    grid_override: Some([1, 1, 1]),
+                    grid_override: Some(sparse_plan.frontier.frontier_word_grid),
                 },
                 ResidentDispatchStep {
                     program: &traverse_program,
@@ -458,6 +461,17 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
             )
         }
         ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
+            let clear_frontier_out_program = scratch.plan_cache.get_or_build(
+                AdaptiveTraversalPlanCacheKey::clear_frontier_out(
+                    graph.layout_hash,
+                    graph.node_count,
+                    graph.edge_count,
+                    words_u32,
+                    device_features,
+                ),
+                || bitset_zero("frontier_out", words_u32),
+            );
+            let clear_handles = [handles[1]];
             let word_prefix = adaptive_word_prefix_scratch(words)?;
             let [word_partials, block_totals] =
                 ensure_word_prefix_handles(dispatcher, scratch, &word_prefix)?;

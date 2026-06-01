@@ -20,8 +20,8 @@ pub(crate) const STRIDED_FORWARD_MIN_ROW_DEGREE: u32 = 1024;
 /// Queue materializer selected for a resident CSR frontier query.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ResidentCsrQueueMaterializer {
-    /// Single cooperative workgroup scans source nodes and atomically appends.
-    AtomicNodeScan,
+    /// Packed frontier words are scanned directly and active bits are appended atomically.
+    AtomicWordScan,
     /// Packed words are popcount-scanned, then scattered into queue order.
     DeterministicWordPrefix,
 }
@@ -49,7 +49,7 @@ pub(crate) fn resident_csr_queue_materializer(
     if frontier_words >= WORD_PREFIX_MIN_FRONTIER_WORDS {
         ResidentCsrQueueMaterializer::DeterministicWordPrefix
     } else {
-        ResidentCsrQueueMaterializer::AtomicNodeScan
+        ResidentCsrQueueMaterializer::AtomicWordScan
     }
 }
 
@@ -242,7 +242,7 @@ mod tests {
     fn materializer_switches_at_word_prefix_threshold() {
         assert_eq!(
             resident_csr_queue_materializer(WORD_PREFIX_MIN_FRONTIER_WORDS - 1),
-            ResidentCsrQueueMaterializer::AtomicNodeScan
+            ResidentCsrQueueMaterializer::AtomicWordScan
         );
         assert_eq!(
             resident_csr_queue_materializer(WORD_PREFIX_MIN_FRONTIER_WORDS),
