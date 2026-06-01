@@ -163,7 +163,7 @@ fn resident_query_initializes_queue_len_on_device() {
 }
 
 #[test]
-fn high_degree_resident_query_uses_row_strided_traverse_grid() {
+fn skewed_high_degree_resident_query_uses_bounded_split_queue() {
     let dispatcher = RecordingResidentDispatcher::default();
     let graph = ResidentCsrQueueGraph {
         node_count: 16,
@@ -188,6 +188,104 @@ fn high_degree_resident_query_uses_row_strided_traverse_grid() {
     )
     .expect("Fix: recording dispatcher should complete high-degree resident CSR query");
 
+    let handles = scratch
+        .handles
+        .expect("Fix: mixed split resident query should allocate scratch handles");
+    let high_queue = handles
+        .high_queue
+        .expect("Fix: mixed split resident query should allocate high_queue");
+    let high_len = handles
+        .high_len
+        .expect("Fix: mixed split resident query should allocate high_len");
+    assert_eq!(handles.high_queue_capacity, 1);
+    let steps = dispatcher
+        .sequence_step_handles
+        .borrow()
+        .last()
+        .cloned()
+        .expect("Fix: expected one resident step sequence");
+    assert_eq!(
+        steps.len(),
+        5,
+        "skewed high-degree query should compact all active sources, split low/high rows, then traverse only bounded high rows"
+    );
+    assert_eq!(
+        steps[3],
+        vec![
+            handles.active_queue,
+            handles.queue_len,
+            graph.edge_offsets_handle,
+            graph.edge_targets_handle,
+            graph.edge_kind_mask_handle,
+            handles.frontier_out,
+            high_queue,
+            high_len,
+        ],
+        "split-low pass must bind active queue plus bounded high-row scratch"
+    );
+    assert_eq!(
+        steps[4],
+        vec![
+            high_queue,
+            high_len,
+            graph.edge_offsets_handle,
+            graph.edge_targets_handle,
+            graph.edge_kind_mask_handle,
+            handles.frontier_out,
+        ],
+        "strided follow-up must consume the bounded high-row queue"
+    );
+    let grids = dispatcher
+        .sequence_step_grids
+        .borrow()
+        .last()
+        .cloned()
+        .expect("Fix: expected one resident step grid sequence");
+    assert_eq!(
+        grids[4],
+        Some(csr_queue_strided_forward_dispatch_grid(1)),
+        "skewed high-degree resident CSR queue traversal must launch row-strided teams only for the graph-wide high-row bound"
+    );
+}
+
+#[test]
+fn uniformly_high_degree_resident_query_uses_row_strided_traverse_grid() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let graph = ResidentCsrQueueGraph {
+        node_count: 16,
+        edge_count: STRIDED_FORWARD_MIN_ROW_DEGREE * 16,
+        max_row_degree: STRIDED_FORWARD_MIN_ROW_DEGREE,
+        words: 1,
+        edge_offsets_handle: 101,
+        edge_targets_handle: 102,
+        edge_kind_mask_handle: 103,
+    };
+    let mut scratch = ResidentCsrQueueScratch::default();
+    let mut output = Vec::new();
+
+    run_resident_csr_queue_query_into(
+        &dispatcher,
+        &graph,
+        &mut scratch,
+        &[0x1ff],
+        1024,
+        u32::MAX,
+        &mut output,
+    )
+    .expect("Fix: recording dispatcher should complete uniformly high-degree resident CSR query");
+
+    let handles = scratch
+        .handles
+        .expect("Fix: resident CSR query should allocate scratch handles");
+    assert!(handles.high_queue.is_none());
+    assert!(handles.high_len.is_none());
+    let steps = dispatcher
+        .sequence_step_handles
+        .borrow()
+        .last()
+        .cloned()
+        .expect("Fix: expected one resident step sequence");
+    assert_eq!(steps.len(), 3);
     let grids = dispatcher
         .sequence_step_grids
         .borrow()
@@ -197,7 +295,7 @@ fn high_degree_resident_query_uses_row_strided_traverse_grid() {
     assert_eq!(
         grids[2],
         Some(csr_queue_strided_forward_dispatch_grid(16)),
-        "high-degree resident CSR queue traversal must still use the row-strided path after sparse frontier capacity clamping"
+        "uniformly high-degree resident CSR queue traversal must still use the full row-strided path"
     );
 }
 
@@ -359,7 +457,10 @@ fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_ord
             frontier_out: base + 4,
             word_partials: None,
             block_totals: None,
+            high_queue: None,
+            high_len: None,
             queue_capacity: 4,
+            high_queue_capacity: 0,
             frontier_bytes: 4,
             materializer: ResidentCsrQueueMaterializer::AtomicWordScan,
         });
@@ -377,7 +478,10 @@ fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_ord
             frontier_out: base + 7,
             word_partials: Some(base + 8),
             block_totals: Some(base + 8),
+            high_queue: Some(base + 9),
+            high_len: Some(base + 9),
             queue_capacity: 4,
+            high_queue_capacity: 1,
             frontier_bytes: 4,
             materializer: ResidentCsrQueueMaterializer::DeterministicWordPrefix,
         });
@@ -386,7 +490,7 @@ fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_ord
             .expect("Fix: word-prefix scratch free dedup");
         assert_eq!(
             dispatcher.freed.borrow().as_slice(),
-            &[base + 5, base + 6, base + 7, base + 8]
+            &[base + 5, base + 6, base + 7, base + 8, base + 9]
         );
     }
 }

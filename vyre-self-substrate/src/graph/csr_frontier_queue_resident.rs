@@ -99,6 +99,8 @@ pub struct ResidentCsrQueueScratch {
     word_counts_program: Option<Program>,
     word_block_offsets_program: Option<Program>,
     queue_program: Option<Program>,
+    high_len_init_program: Option<Program>,
+    split_low_program: Option<Program>,
     traverse_program: Option<Program>,
     cached_shape: Option<ResidentCsrQueueProgramShape>,
 }
@@ -116,9 +118,11 @@ impl ResidentCsrQueueScratch {
         self.word_counts_program = None;
         self.word_block_offsets_program = None;
         self.queue_program = None;
+        self.high_len_init_program = None;
+        self.split_low_program = None;
         self.traverse_program = None;
         self.cached_shape = None;
-        let mut handles_to_free = [0_u64; 6];
+        let mut handles_to_free = [0_u64; 8];
         handles_to_free[..4].copy_from_slice(&[
             handles.frontier,
             handles.active_queue,
@@ -132,6 +136,14 @@ impl ResidentCsrQueueScratch {
         }
         if let Some(block_totals) = handles.block_totals {
             handles_to_free[handle_count] = block_totals;
+            handle_count += 1;
+        }
+        if let Some(high_queue) = handles.high_queue {
+            handles_to_free[handle_count] = high_queue;
+            handle_count += 1;
+        }
+        if let Some(high_len) = handles.high_len {
+            handles_to_free[handle_count] = high_len;
             handle_count += 1;
         }
         free_unique_resident_handles(
@@ -150,7 +162,10 @@ struct ResidentCsrQueueScratchHandles {
     frontier_out: u64,
     word_partials: Option<u64>,
     block_totals: Option<u64>,
+    high_queue: Option<u64>,
+    high_len: Option<u64>,
     queue_capacity: u32,
+    high_queue_capacity: u32,
     frontier_bytes: usize,
     materializer: ResidentCsrQueueMaterializer,
 }
