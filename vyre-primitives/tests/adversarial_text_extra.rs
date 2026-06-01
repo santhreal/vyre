@@ -4,7 +4,8 @@
 #![cfg(all(feature = "text", feature = "cpu-parity"))]
 #![allow(clippy::needless_range_loop)]
 
-use vyre_primitives::text::byte_histogram::reference_byte_histogram;
+use vyre_foundation::ir::DataType;
+use vyre_primitives::text::byte_histogram::{byte_histogram_256_u8, reference_byte_histogram};
 use vyre_primitives::text::utf8_shape_counts::reference_utf8_shape_counts;
 
 #[test]
@@ -42,6 +43,36 @@ fn reference_byte_histogram_every_byte_once() {
     let input: Vec<u8> = (0..=255).collect();
     let got = reference_byte_histogram(&input);
     assert!(got.iter().all(|&c| c == 1));
+}
+
+#[test]
+fn packed_u8_byte_histogram_uses_one_source_byte_per_element() {
+    let program = byte_histogram_256_u8("source", "histogram", 1024);
+    let source = program
+        .buffers()
+        .iter()
+        .find(|buffer| buffer.name() == "source")
+        .expect("Fix: packed-u8 byte histogram source buffer must be declared");
+    let histogram = program
+        .buffers()
+        .iter()
+        .find(|buffer| buffer.name() == "histogram")
+        .expect("Fix: byte histogram output buffer must be declared");
+
+    assert_eq!(source.element(), DataType::U8);
+    assert_eq!(source.count(), 1024);
+    assert_eq!(
+        source.count() as usize * DataType::U8.min_bytes(),
+        1024,
+        "Fix: packed-u8 byte histogram must consume one byte per source byte."
+    );
+    assert_eq!(
+        source.count() as usize * DataType::U32.min_bytes(),
+        4096,
+        "Fix: compatibility byte histogram remains the four-byte-per-source-byte path."
+    );
+    assert_eq!(histogram.element(), DataType::U32);
+    assert_eq!(histogram.count(), 256);
 }
 
 #[test]

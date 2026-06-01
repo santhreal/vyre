@@ -735,6 +735,8 @@ pub fn build_table() -> [u32; 256] {
 pub fn byte_histogram_256(input: &str, histogram: &str, count: u32) -> Program {
 pub fn byte_histogram_256_body(input: &str, histogram: &str, count: u32) -> Vec<Node> {
 pub fn byte_histogram_256_child(
+pub fn byte_histogram_256_u8(input: &str, histogram: &str, count: u32) -> Program {
+pub fn byte_histogram_256_u8_child(
 pub fn cache_key(&self) -> &MotifProgramCacheKey {
 pub fn cached_binary_byte_lut(op: BooleanTileOp) -> &'static [u32] {
 pub fn canonical_wire_bytes(&self) -> usize {

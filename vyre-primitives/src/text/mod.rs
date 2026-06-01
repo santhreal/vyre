@@ -8,7 +8,7 @@
 //!
 //! See `docs/primitives-tier.md` and `docs/lego-block-rule.md`.
 
-/// 256-bin byte histogram over u32-packed bytes.
+/// 256-bin byte histogram over source bytes.
 pub mod byte_histogram;
 /// Byte classifier  -  host 256-entry lookup table classifies each source byte.
 pub mod char_class;
@@ -27,7 +27,8 @@ pub mod utf8_shape_counts;
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use byte_histogram::reference_byte_histogram;
 pub use byte_histogram::{
-    byte_histogram_256, byte_histogram_256_body, byte_histogram_256_child, BYTE_HISTOGRAM_256_OP_ID,
+    byte_histogram_256, byte_histogram_256_body, byte_histogram_256_child, byte_histogram_256_u8,
+    byte_histogram_256_u8_child, BYTE_HISTOGRAM_256_OP_ID,
 };
 #[cfg(any(test, feature = "cpu-parity", feature = "text"))]
 pub use char_class::reference_char_class;
