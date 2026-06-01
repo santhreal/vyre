@@ -204,8 +204,8 @@ impl BenchCase for LiteralSetIrregularHotloop {
                     .prepared_scan
                     .decode_outputs_into(&sequence.outputs, &mut prepared.matches)
                     .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-                let encoded_matches = encode_match_triples(&prepared.matches);
                 let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+                let encoded_matches = encode_match_triples(&prepared.matches);
                 (
                     vec![
                         (prepared.matches.len() as u32).to_le_bytes().to_vec(),
