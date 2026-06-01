@@ -35,6 +35,7 @@ struct CountingDispatcher {
     op_ids: std::cell::RefCell<Vec<String>>,
     bytes_in_elements: std::cell::RefCell<Vec<DataType>>,
     bytes_in_input_lens: std::cell::RefCell<Vec<usize>>,
+    preflight_flags: std::cell::RefCell<Vec<(String, u32, usize)>>,
 }
 
 impl CountingDispatcher {
@@ -44,6 +45,7 @@ impl CountingDispatcher {
             op_ids: std::cell::RefCell::new(Vec::new()),
             bytes_in_elements: std::cell::RefCell::new(Vec::new()),
             bytes_in_input_lens: std::cell::RefCell::new(Vec::new()),
+            preflight_flags: std::cell::RefCell::new(Vec::new()),
         }
     }
 }
@@ -71,6 +73,16 @@ impl GpuDispatcher for CountingDispatcher {
                 .and_then(|index| inputs.get(index))
                 .map(Vec::len),
         );
+        for (index, buffer) in program.buffers().iter().enumerate() {
+            let name = buffer.name();
+            if name == "transform_flag" || name == "spliced_comment_flag" {
+                self.preflight_flags.borrow_mut().push((
+                    name.to_string(),
+                    buffer.count(),
+                    inputs.get(index).map_or(0, Vec::len),
+                ));
+            }
+        }
         RefDispatcher.dispatch(program, inputs)
     }
 
@@ -105,6 +117,20 @@ fn assert_byte_source_inputs_are_unpadded(dispatcher: &CountingDispatcher, raw_l
     );
 }
 
+fn assert_preflight_flags_are_singleton(dispatcher: &CountingDispatcher) {
+    let flags = dispatcher.preflight_flags.borrow();
+    assert!(
+        flags.iter().any(|(name, _, _)| name == "transform_flag"),
+        "filter path must dispatch the transform preflight"
+    );
+    for (name, count, input_len) in flags.iter() {
+        assert!(
+            *count == 1 && *input_len == std::mem::size_of::<u32>(),
+            "{name} must stage exactly one zeroed u32, got count={count} input_len={input_len}"
+        );
+    }
+}
+
 fn reference_filter_source_bytes(raw: &[u8]) -> Vec<u8> {
     use vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::reference_gpu_comment_strip_mask;
     use vyre_primitives::parsing::line_splice_classify::reference_line_splice_classify;
@@ -121,10 +147,64 @@ fn run(raw: &[u8]) -> FilteredBytes {
     gpu_filter_source_bytes(&RefDispatcher, raw).expect("gpu_filter_source_bytes")
 }
 
+fn generated_route_source(case: u32) -> Vec<u8> {
+    match case % 8 {
+        0 => format!("int keep_{case} = a / b; char c_{case} = '/';\n").into_bytes(),
+        1 => format!("int x_{case} = 1; // strip line {case}\nint y_{case} = 2;\n").into_bytes(),
+        2 => format!("int x_{case} = /* strip block {case} */ {case};\n").into_bytes(),
+        3 => format!("int joined_{case} = {case} + \\\n{};\n", case + 1).into_bytes(),
+        4 => format!("int x_{case} = 1; /\\\n/ hidden {case}\nint y_{case} = 2;\n").into_bytes(),
+        5 => format!("int x_{case} = 1; /\\\n* hidden {case} */ int y_{case} = 2;\n").into_bytes(),
+        6 => format!("int a_{case} = 1; // line\nint b_{case} = /* block */ 2;\n").into_bytes(),
+        _ => format!("int x_{case} = 1; /* outer /* inner {case} */ int y_{case} = 2;\n")
+            .into_bytes(),
+    }
+}
+
 #[test]
 fn no_comments_no_splices_passes_through() {
     let src = b"int main(void) { return 0; }";
     assert_eq!(run(src).bytes, reference_filter_source_bytes(src));
+}
+
+#[test]
+fn generated_filter_route_matrix_uses_singleton_preflight_flags() {
+    let mut route_counts = [0usize; 6];
+
+    for case in 0..64u32 {
+        let src = generated_route_source(case);
+        let dispatcher = CountingDispatcher::new();
+        let out = gpu_filter_source_bytes(&dispatcher, &src)
+            .unwrap_or_else(|error| panic!("Fix: generated C filter case {case} failed: {error}"));
+        assert_eq!(
+            out.bytes,
+            reference_filter_source_bytes(&src),
+            "case {case}"
+        );
+        assert_preflight_flags_are_singleton(&dispatcher);
+        assert_byte_source_dispatches_are_u8(&dispatcher);
+        assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
+
+        let ops = dispatcher.op_ids.borrow();
+        let saw_op = |needle: &str| ops.iter().any(|op| op.contains(needle));
+        route_counts[0] += usize::from(ops.len() == 1);
+        route_counts[1] += usize::from(saw_op("simple_line_comment_masks"));
+        route_counts[2] += usize::from(saw_op("simple_block_comment_masks"));
+        let saw_spliced_preflight = saw_op("filter_spliced_comment_preflight");
+        route_counts[5] += usize::from(saw_spliced_preflight);
+        let saw_full_comment = saw_op("gpu_comment_strip_mask");
+        route_counts[4] += usize::from(saw_full_comment);
+        route_counts[3] += usize::from(saw_spliced_preflight && !saw_full_comment);
+    }
+
+    assert!(
+        route_counts[..5].iter().all(|count| *count > 0),
+        "generated matrix route gap: {route_counts:?}"
+    );
+    assert!(
+        route_counts[5] >= 24,
+        "generated matrix must repeatedly run spliced-comment preflights"
+    );
 }
 
 #[test]
@@ -341,7 +421,11 @@ fn late_transform_candidate_after_first_workgroup_is_detected() {
     }
     assert!(src.len() > 1024, "prefix must exceed one workgroup");
     src.extend_from_slice(b"int tail = 1; // late comment\n");
-    assert_eq!(run(&src).bytes, reference_filter_source_bytes(&src));
+    let dispatcher = CountingDispatcher::new();
+    let out = gpu_filter_source_bytes(&dispatcher, &src).expect("gpu_filter_source_bytes");
+    assert_eq!(out.bytes, reference_filter_source_bytes(&src));
+    assert_preflight_flags_are_singleton(&dispatcher);
+    assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 }
 
 #[test]

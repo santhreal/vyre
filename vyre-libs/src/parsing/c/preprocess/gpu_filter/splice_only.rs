@@ -20,14 +20,10 @@ pub(super) struct SpliceOnlyScratch {
 }
 
 impl SpliceOnlyScratch {
-    fn prepare_spliced_comment_preflight(&mut self, n_bucket: u32) -> Result<(), String> {
-        let word_bytes = (n_bucket as usize).checked_mul(4).ok_or_else(|| {
-            "line-splice comment preflight byte size overflowed usize. Fix: reduce batch size."
-                .to_string()
-        })?;
+    fn prepare_spliced_comment_preflight(&mut self) -> Result<(), String> {
         write_zero_bytes(
             &mut self.zero_words,
-            word_bytes,
+            std::mem::size_of::<u32>(),
             "line-splice comment preflight zero words",
         )
     }
@@ -53,7 +49,7 @@ pub(super) fn line_splices_can_create_comment(
     n_real_buf: &[u8],
     scratch: &mut SpliceOnlyScratch,
 ) -> Result<bool, String> {
-    scratch.prepare_spliced_comment_preflight(n_bucket)?;
+    scratch.prepare_spliced_comment_preflight()?;
     dispatcher
         .dispatch_borrowed_into(
             &spliced_comment_candidate_program(n_bucket),
@@ -140,7 +136,7 @@ pub(super) fn gpu_filter_line_splices(
     )
 }
 
-fn spliced_comment_candidate_program(n: u32) -> Program {
+fn spliced_comment_candidate_program(_n: u32) -> Program {
     let i = Expr::var("i");
     let load = |offset: u32| {
         source_byte_load_or_zero(
@@ -227,8 +223,8 @@ fn spliced_comment_candidate_program(n: u32) -> Program {
     wrap_gpu_filter_program(
         "vyre-libs::parsing::c::preprocess::filter_spliced_comment_preflight",
         vec![
-            source_bytes_input_buffer("bytes_in", 0, n),
-            u32_rw_buffer("spliced_comment_flag", 1, n),
+            source_bytes_input_buffer("bytes_in", 0, 0),
+            u32_rw_buffer("spliced_comment_flag", 1, 1),
             singleton_u32_read_buffer("spliced_comment_n_real", 2),
         ],
         body,

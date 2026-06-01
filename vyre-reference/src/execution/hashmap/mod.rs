@@ -89,8 +89,10 @@ pub(crate) fn run_hashmap_reference(
     let mut max_output_elements = 0u32;
     let mut max_input_elements = 1u32;
     let mut program_graph_node_count = None;
+    let mut has_workgroup_buffer = false;
     for decl in program.buffers() {
         if decl.access() == BufferAccess::Workgroup {
+            has_workgroup_buffer = true;
             continue;
         }
         if decl.binding() == 0 && decl.name() == "pg_nodes" {
@@ -165,10 +167,11 @@ pub(crate) fn run_hashmap_reference(
         .copied()
         .fold(1u32, u32::saturating_mul)
         .max(1);
+    let force_full_span = has_workgroup_buffer || program.stats().atomic_op_count > 0;
     let dispatch_elements = max_output_elements
         .max(program_graph_node_count.unwrap_or(0))
         .max(1)
-        .max(if output_decls.is_empty() {
+        .max(if output_decls.is_empty() || force_full_span {
             max_input_elements
         } else {
             1
