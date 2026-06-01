@@ -17,6 +17,30 @@ pub(super) fn custom_graph_metric_key(prefix: &'static str, name: &str) -> Optio
         ("", "graph_csr_queue_lane_reduction_x1000") => {
             Some("graph_csr_queue_lane_reduction_x1000")
         }
+        ("", "graph_csr_queue_closure_speedup_x1000") => {
+            Some("graph_csr_queue_closure_speedup_x1000")
+        }
+        ("", "graph_csr_queue_closure_capacity") => Some("graph_csr_queue_closure_capacity"),
+        ("", "graph_csr_queue_closure_capacity_reduction_x1000") => {
+            Some("graph_csr_queue_closure_capacity_reduction_x1000")
+        }
+        ("", "graph_csr_queue_closure_seed_len") => Some("graph_csr_queue_closure_seed_len"),
+        ("", "graph_csr_queue_closure_iterations") => Some("graph_csr_queue_closure_iterations"),
+        ("", "graph_csr_queue_closure_changed") => Some("graph_csr_queue_closure_changed"),
+        ("", "graph_csr_queue_closure_max_iters") => Some("graph_csr_queue_closure_max_iters"),
+        ("", "graph_csr_queue_closure_dispatch_count") => {
+            Some("graph_csr_queue_closure_dispatch_count")
+        }
+        ("", "graph_csr_queue_closure_total_queue_pops") => {
+            Some("graph_csr_queue_closure_total_queue_pops")
+        }
+        ("", "graph_csr_queue_closure_max_wave_len") => {
+            Some("graph_csr_queue_closure_max_wave_len")
+        }
+        ("", "graph_csr_queue_closure_delta") => Some("graph_csr_queue_closure_delta"),
+        ("", "graph_csr_queue_closure_row_strided_delta") => {
+            Some("graph_csr_queue_closure_row_strided_delta")
+        }
         _ => None,
     }
 }
@@ -35,6 +59,14 @@ mod tests {
             "graph_csr_queue_capacity",
             "graph_csr_queue_row_strided",
             "graph_csr_queue_lane_reduction_x1000",
+            "graph_csr_queue_closure_capacity",
+            "graph_csr_queue_closure_capacity_reduction_x1000",
+            "graph_csr_queue_closure_seed_len",
+            "graph_csr_queue_closure_iterations",
+            "graph_csr_queue_closure_dispatch_count",
+            "graph_csr_queue_closure_total_queue_pops",
+            "graph_csr_queue_closure_max_wave_len",
+            "graph_csr_queue_closure_row_strided_delta",
         ] {
             assert_eq!(custom_graph_metric_key("", name), Some(name));
         }

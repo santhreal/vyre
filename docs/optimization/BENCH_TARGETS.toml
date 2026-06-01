@@ -178,6 +178,18 @@ bench_case_id = "primitives.graph.csr_skewed_queue_materialize.1m"
 notes = "Tracks sparse active-source queue materialization plus queue-driven traversal over skewed CSR rows."
 
 [[target]]
+id = "primitives.graph.csr_skewed_queue_closure.1m"
+primitive = "queue-driven CSR reachability closure"
+suite = "release"
+backend_focus = "cuda"
+metric = "dispatch_ns_p50"
+min_speedup_over_cpu_sota = 1.0
+cpu_baseline = "optimized CPU sparse-queue CSR reachability oracle"
+gpu_competitor = "none_recorded"
+bench_case_id = "primitives.graph.csr_skewed_queue_closure.1m"
+notes = "Tracks resident ping-pong queue waves for sparse reachability over skewed CSR rows."
+
+[[target]]
 id = "release.workload.c_ast_traversal"
 primitive = "C AST traversal and motif predicates"
 suite = "release-workload"

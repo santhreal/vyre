@@ -1,5 +1,6 @@
 use crate::api::case::BenchError;
 use crate::api::suite::SuiteKind;
+use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_into;
 
 pub(super) const CSR_NODE_COUNT: u32 = 1_048_576;
 pub(super) const CSR_ALLOW_MASK: u32 = 0b0111;
@@ -39,6 +40,14 @@ pub(super) struct SkewedCsrOracle {
     pub(super) output: Vec<u32>,
     pub(super) allowed_edges_from_active: u64,
     pub(super) output_words_set: u64,
+}
+
+pub(super) struct SkewedCsrQueueClosureOracle {
+    pub(super) output: Vec<u32>,
+    pub(super) changed: u32,
+    pub(super) iterations: u32,
+    pub(super) total_queue_pops: u64,
+    pub(super) max_wave_queue_len: u32,
 }
 
 pub(super) fn build_skewed_csr_fixture(node_count: u32) -> Result<SkewedCsrFixture, BenchError> {
@@ -154,6 +163,84 @@ pub(super) fn skewed_csr_queue_inputs(
     ])
 }
 
+pub(super) fn materialize_skewed_csr_active_queue(
+    fixture: &SkewedCsrFixture,
+    queue_capacity: usize,
+    context: &str,
+) -> Result<Vec<u32>, BenchError> {
+    let expected = u32::try_from(fixture.stats.active_sources).map_err(|_| {
+        BenchError::EnvironmentInvalid(format!(
+            "{context} active source count {} exceeds u32 indexing. Fix: split the sparse graph frontier.",
+            fixture.stats.active_sources
+        ))
+    })?;
+    let mut active_queue = Vec::new();
+    let seen = materialize_frontier_queue_exact_count_into(
+        fixture.stats.node_count,
+        &fixture.frontier_in,
+        expected,
+        queue_capacity,
+        &mut active_queue,
+    )
+    .map_err(|error| {
+        BenchError::EnvironmentInvalid(format!(
+            "{context} could not materialize sparse graph frontier queue: {error} Fix: rebuild queue capacity from active source stats."
+        ))
+    })?;
+    if u64::from(seen) != fixture.stats.active_sources {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "{context} counted {seen} active sources but fixture stats recorded {}. Fix: rebuild frontier stats from the same bitset.",
+            fixture.stats.active_sources
+        )));
+    }
+    Ok(active_queue)
+}
+
+pub(super) fn skewed_csr_queue_closure_inputs(
+    fixture: &SkewedCsrFixture,
+    queue_capacity: u32,
+) -> Result<Vec<Vec<u8>>, BenchError> {
+    if u64::from(queue_capacity) < fixture.stats.active_sources {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "skewed CSR queue closure requires queue_capacity >= active_sources, got capacity={queue_capacity} active_sources={}. Fix: size ping-pong queues for the seed frontier.",
+            fixture.stats.active_sources
+        )));
+    }
+    let seed_queue_len = u32::try_from(fixture.stats.active_sources).map_err(|_| {
+        BenchError::EnvironmentInvalid(format!(
+            "skewed CSR queue closure active source count {} exceeds u32 indexing. Fix: split the seed queue.",
+            fixture.stats.active_sources
+        ))
+    })?;
+    let queue_bytes = (queue_capacity as usize)
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            BenchError::EnvironmentInvalid(format!(
+                "skewed CSR queue closure queue_capacity={queue_capacity} overflows host buffer sizing. Fix: split the frontier queue."
+            ))
+        })?;
+    let seed_frontier = vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in);
+    let seed_queue = materialize_skewed_csr_active_queue(
+        fixture,
+        seed_queue_len as usize,
+        "skewed CSR queue closure seed",
+    )?;
+
+    Ok(vec![
+        seed_frontier.clone(),
+        vyre_primitives::wire::pack_u32_slice(&seed_queue),
+        vyre_primitives::wire::pack_u32_slice(&[seed_queue_len]),
+        vec![0_u8; queue_bytes],
+        vyre_primitives::wire::pack_u32_slice(&[0]),
+        vec![0_u8; queue_bytes],
+        vyre_primitives::wire::pack_u32_slice(&[0]),
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets),
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
+        seed_frontier,
+    ])
+}
+
 pub(super) fn skewed_csr_cpu_oracle(fixture: &SkewedCsrFixture) -> SkewedCsrOracle {
     let node_count = fixture.stats.node_count;
     let mut output = fixture.frontier_out_seed.clone();
@@ -184,6 +271,71 @@ pub(super) fn skewed_csr_cpu_oracle(fixture: &SkewedCsrFixture) -> SkewedCsrOrac
         output,
         allowed_edges_from_active,
     }
+}
+
+pub(super) fn skewed_csr_queue_closure_oracle(
+    fixture: &SkewedCsrFixture,
+    max_iters: u32,
+    queue_capacity: u32,
+) -> Result<SkewedCsrQueueClosureOracle, BenchError> {
+    let capacity = queue_capacity as usize;
+    let mut accumulator = fixture.frontier_in.clone();
+    let mut current =
+        materialize_skewed_csr_active_queue(fixture, capacity, "skewed CSR queue closure oracle")?;
+    let mut next = Vec::with_capacity(capacity.min(fixture.stats.node_count as usize));
+    let mut iterations = 0_u32;
+    let mut total_queue_pops = 0_u64;
+    let mut max_wave_queue_len = current.len() as u32;
+
+    while !current.is_empty() && iterations < max_iters {
+        max_wave_queue_len = max_wave_queue_len.max(current.len() as u32);
+        total_queue_pops = total_queue_pops.saturating_add(current.len() as u64);
+        next.clear();
+        for &src in &current {
+            if src >= fixture.stats.node_count {
+                continue;
+            }
+            let start = fixture.edge_offsets[src as usize] as usize;
+            let end = fixture.edge_offsets[src as usize + 1] as usize;
+            for edge in start..end {
+                if fixture.edge_kind_mask[edge] & CSR_ALLOW_MASK == 0 {
+                    continue;
+                }
+                let dst = fixture.edge_targets[edge];
+                if dst >= fixture.stats.node_count {
+                    continue;
+                }
+                let dst_word = dst as usize / 32;
+                let dst_bit = 1_u32 << (dst % 32);
+                if accumulator[dst_word] & dst_bit != 0 {
+                    continue;
+                }
+                accumulator[dst_word] |= dst_bit;
+                if next.len() >= capacity {
+                    return Err(BenchError::EnvironmentInvalid(format!(
+                        "skewed CSR queue closure next wave exceeded queue_capacity={queue_capacity}. Fix: increase queue capacity or shard closure waves."
+                    )));
+                }
+                next.push(dst);
+            }
+        }
+        iterations = iterations.saturating_add(1);
+        std::mem::swap(&mut current, &mut next);
+    }
+
+    if !current.is_empty() {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "skewed CSR queue closure did not converge within {max_iters} queue waves. Fix: raise the closure wave bound or use a smaller fixture diameter."
+        )));
+    }
+
+    Ok(SkewedCsrQueueClosureOracle {
+        changed: u32::from(accumulator != fixture.frontier_in),
+        output: accumulator,
+        iterations,
+        total_queue_pops,
+        max_wave_queue_len,
+    })
 }
 
 fn skewed_degree(src: u32) -> u32 {

@@ -136,3 +136,145 @@ fn generated_skewed_csr_queue_capacity_covers_active_sources_without_node_grid()
         "generated sparse frontiers should avoid graph-sized queue traversal"
     );
 }
+
+#[test]
+fn skewed_csr_queue_closure_inputs_materialize_seed_queue_once() {
+    let fixture = build_skewed_csr_fixture(4096).unwrap();
+    let capacity = support::skewed_csr_queue_capacity(fixture.stats.active_sources).unwrap();
+    let inputs = support::skewed_csr_queue_closure_inputs(&fixture, capacity).unwrap();
+
+    assert_eq!(inputs.len(), 11);
+    assert_eq!(
+        inputs[queue_closure::QUEUE_CLOSURE_SEED_FRONTIER_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in)
+    );
+    assert_eq!(
+        inputs[queue_closure::QUEUE_CLOSURE_ACCUMULATOR_INDEX],
+        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in)
+    );
+
+    let seed_queue = vyre_primitives::wire::decode_u32_le_bytes_all(
+        &inputs[queue_closure::QUEUE_CLOSURE_SEED_QUEUE_INDEX],
+    );
+    assert_eq!(seed_queue.len(), capacity as usize);
+    assert!(seed_queue.windows(2).all(|pair| pair[0] < pair[1]));
+    assert_eq!(
+        vyre_primitives::wire::decode_u32_le_bytes_all(
+            &inputs[queue_closure::QUEUE_CLOSURE_SEED_LEN_INDEX]
+        ),
+        vec![capacity]
+    );
+    assert_eq!(
+        inputs[queue_closure::QUEUE_CLOSURE_QUEUE_A_INDEX].len(),
+        capacity as usize * std::mem::size_of::<u32>()
+    );
+    assert!(inputs[queue_closure::QUEUE_CLOSURE_QUEUE_A_INDEX]
+        .iter()
+        .all(|byte| *byte == 0));
+    assert!(inputs[queue_closure::QUEUE_CLOSURE_QUEUE_B_INDEX]
+        .iter()
+        .all(|byte| *byte == 0));
+    assert_eq!(
+        vyre_primitives::wire::decode_u32_le_bytes_all(
+            &inputs[queue_closure::QUEUE_CLOSURE_LEN_A_INDEX]
+        ),
+        vec![0]
+    );
+    assert_eq!(
+        vyre_primitives::wire::decode_u32_le_bytes_all(
+            &inputs[queue_closure::QUEUE_CLOSURE_LEN_B_INDEX]
+        ),
+        vec![0]
+    );
+}
+
+#[test]
+fn skewed_csr_queue_closure_prepare_builds_resident_delta_sequence() {
+    let prepared = queue_closure::prepare_skewed_csr_queue_closure(None).unwrap();
+
+    assert_eq!(prepared.reset_program.workgroup_size(), [256, 1, 1]);
+    assert_eq!(prepared.clear_len_program.workgroup_size(), [1, 1, 1]);
+    assert_eq!(prepared.delta_program.workgroup_size(), [256, 1, 1]);
+    assert!(prepared.row_strided_delta);
+    assert_eq!(
+        prepared.delta_grid,
+        vyre_primitives::graph::csr_queue_delta::csr_queue_delta_strided_dispatch_grid(
+            prepared.queue_capacity
+        )
+    );
+    assert_eq!(prepared.inputs.len(), 11);
+    assert_eq!(prepared.stats.node_count, CSR_NODE_COUNT);
+    assert_eq!(
+        prepared.baseline_output.len(),
+        prepared.stats.frontier_words as usize * std::mem::size_of::<u32>()
+    );
+    assert!(prepared.closure_iterations > 0);
+    assert!(prepared.closure_iterations <= queue_closure::GRAPH_QUEUE_CLOSURE_MAX_ITERS);
+    assert_eq!(prepared.closure_changed, 1);
+    assert!(prepared.queue_capacity >= prepared.seed_queue_len);
+    assert!(prepared.queue_capacity >= prepared.max_wave_queue_len);
+    assert!(prepared.queue_capacity <= prepared.stats.node_count);
+    assert!(prepared.total_queue_pops >= u64::from(prepared.seed_queue_len));
+}
+
+#[test]
+fn generated_skewed_csr_queue_closure_capacity_covers_every_wave() {
+    const CASES: u32 = 10_000;
+
+    let mut total_iterations = 0_u64;
+    let mut changed_cases = 0_u32;
+    let mut total_queue_capacity = 0_u64;
+
+    for case in 0..CASES {
+        let node_count = 32_u32 << (case % 8);
+        let fixture = build_skewed_csr_fixture(node_count).unwrap_or_else(|error| {
+            panic!("generated skewed CSR closure fixture case {case} failed: {error}")
+        });
+        let oracle = support::skewed_csr_queue_closure_oracle(&fixture, node_count, node_count)
+            .unwrap_or_else(|error| {
+                panic!("generated skewed CSR closure oracle case {case} failed: {error}")
+            });
+        let capacity = oracle
+            .max_wave_queue_len
+            .max(fixture.stats.active_sources as u32)
+            .max(1);
+        let inputs = support::skewed_csr_queue_closure_inputs(&fixture, capacity)
+            .unwrap_or_else(|error| panic!("generated closure inputs case {case} failed: {error}"));
+
+        assert_eq!(oracle.output.len(), fixture.frontier_out_seed.len());
+        assert!(oracle.iterations <= node_count, "case {case}");
+        assert!(capacity <= node_count, "capacity case {case}");
+        assert!(
+            oracle.total_queue_pops >= fixture.stats.active_sources,
+            "queue pops case {case}"
+        );
+        assert_eq!(
+            vyre_primitives::wire::decode_u32_le_bytes_all(
+                &inputs[queue_closure::QUEUE_CLOSURE_SEED_LEN_INDEX]
+            ),
+            vec![fixture.stats.active_sources as u32],
+            "seed length case {case}"
+        );
+        assert_eq!(
+            inputs[queue_closure::QUEUE_CLOSURE_ACCUMULATOR_INDEX],
+            vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in),
+            "seed accumulator case {case}"
+        );
+        assert!(
+            support::skewed_csr_queue_closure_inputs(
+                &fixture,
+                (fixture.stats.active_sources as u32).saturating_sub(1),
+            )
+            .is_err(),
+            "undersized queue should fail case {case}"
+        );
+
+        total_iterations += u64::from(oracle.iterations);
+        changed_cases += oracle.changed;
+        total_queue_capacity += u64::from(capacity);
+    }
+
+    assert!(changed_cases > CASES / 2);
+    assert!(total_iterations > u64::from(CASES));
+    assert!(total_queue_capacity > u64::from(CASES));
+}

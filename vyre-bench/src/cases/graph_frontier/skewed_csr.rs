@@ -10,6 +10,7 @@ use vyre_foundation::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
 mod metrics;
+mod queue_closure;
 mod queue_materialize;
 mod support;
 #[cfg(test)]
