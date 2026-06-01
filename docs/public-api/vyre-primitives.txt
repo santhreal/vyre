@@ -744,6 +744,7 @@ pub fn canonicalize_csr_within_rows(row_ptr: &[u32], col_idx: &[u32]) -> (Vec<u3
 pub fn canonicalize_csr_within_rows_in_place(
 pub fn changed_read_index(&self, iteration: u32) -> Result<usize, String> {
 pub fn char_class(source: &str, classified: &str, n: u32) -> Program {
+pub fn char_class_u8(source: &str, classified: &str, n: u32) -> Program {
 pub fn chebyshev_filter(
 pub fn chebyshev_filter_cpu(
 pub fn chebyshev_filter_cpu_into(
