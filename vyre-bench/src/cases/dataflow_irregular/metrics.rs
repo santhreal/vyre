@@ -72,6 +72,8 @@ pub(super) fn ifds_skewed_baseline_metric_points(stats: IfdsSkewedStats) -> Vec<
 pub(super) fn ifds_queue_metric_points(
     stats: IfdsSkewedStats,
     queue_capacity: u32,
+    high_degree_queue_capacity: u32,
+    traverse_logical_lanes: u64,
     baseline_wall_ns: u64,
     wall_ns: u64,
     resident_used: bool,
@@ -96,6 +98,21 @@ pub(super) fn ifds_queue_metric_points(
         name: "dataflow_ifds_queue_row_strided_traverse".to_string(),
         value: u64::from(row_strided_traverse),
     });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_queue_high_degree_capacity".to_string(),
+        value: u64::from(high_degree_queue_capacity),
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_queue_traverse_logical_lanes".to_string(),
+        value: traverse_logical_lanes,
+    });
+    if traverse_logical_lanes > 0 {
+        metrics.push(MetricPoint {
+            name: "dataflow_ifds_queue_traverse_lane_reduction_x1000".to_string(),
+            value: (u128::from(stats.nodes) * 1000 / u128::from(traverse_logical_lanes))
+                .min(u128::from(u64::MAX)) as u64,
+        });
+    }
     if wall_ns > 0 {
         metrics.push(MetricPoint {
             name: "dataflow_ifds_queue_speedup_x1000".to_string(),

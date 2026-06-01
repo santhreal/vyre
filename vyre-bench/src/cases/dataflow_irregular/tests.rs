@@ -2,11 +2,12 @@ use super::fixture::{ifds_active_queue_inputs, ifds_queue_inputs};
 use super::queue::{
     ifds_queue_closure_delta_lanes_per_source, ifds_queue_closure_inputs,
     ifds_queue_closure_reset_program, ifds_queue_reset_program, ifds_queue_should_use_row_strided,
-    ifds_sparse_queue_capacity, prepare_ifds_skewed_active_queue_step,
-    prepare_ifds_skewed_queue_closure, prepare_ifds_skewed_queue_materialize_step,
-    ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX, ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX,
-    ACTIVE_QUEUE_EDGE_TARGETS_INDEX, ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX,
-    QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
+    ifds_queue_traverse_logical_lanes, ifds_sparse_queue_capacity,
+    prepare_ifds_skewed_active_queue_step, prepare_ifds_skewed_queue_closure,
+    prepare_ifds_skewed_queue_materialize_step, ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX,
+    ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX, ACTIVE_QUEUE_EDGE_TARGETS_INDEX,
+    ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX, QUEUE_ACTIVE_QUEUE_INDEX,
+    QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
     QUEUE_CLOSURE_EDGE_OFFSETS_INDEX, QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX,
     QUEUE_CLOSURE_LEN_B_INDEX, QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX,
     QUEUE_CLOSURE_SEED_FRONTIER_INDEX, QUEUE_CLOSURE_SEED_LEN_INDEX,
@@ -158,11 +159,16 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
     assert_eq!(prepared.queue_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.traverse_program.workgroup_size(), [256, 1, 1]);
     assert!(prepared.row_strided_traverse);
+    assert_eq!(prepared.high_degree_queue_capacity, 256);
     assert_eq!(
         prepared.traverse_grid,
         vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
             prepared.queue_capacity
         )
+    );
+    assert_eq!(
+        prepared.traverse_logical_lanes,
+        ifds_queue_traverse_logical_lanes(prepared.queue_capacity, prepared.row_strided_traverse)
     );
     assert_eq!(
         prepared.queue_program.buffers()[0].name.as_ref(),
@@ -247,6 +253,10 @@ fn ifds_active_queue_prepare_builds_sparse_traversal_program() {
         vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
             prepared.queue_capacity
         )
+    );
+    assert_eq!(
+        prepared.traverse_logical_lanes,
+        ifds_queue_traverse_logical_lanes(prepared.queue_capacity, prepared.row_strided_traverse)
     );
     assert_eq!(prepared.stats.nodes, NODE_COUNT);
     assert_eq!(prepared.inputs.len(), 6);

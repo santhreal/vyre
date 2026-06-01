@@ -157,6 +157,31 @@ pub(super) fn ifds_queue_inputs(
     ])
 }
 
+pub(super) fn ifds_active_high_degree_sources(
+    fixture: &IfdsSkewedFixture,
+    min_degree: u32,
+) -> Result<u32, BenchError> {
+    let mut high_sources = 0_u32;
+    for src in 0..fixture.stats.nodes {
+        let word = (src / 32) as usize;
+        let bit = 1_u32 << (src % 32);
+        if fixture.frontier_in[word] & bit == 0 {
+            continue;
+        }
+        let start = fixture.edge_offsets[src as usize];
+        let end = fixture.edge_offsets[src as usize + 1];
+        if end.saturating_sub(start) >= min_degree {
+            high_sources = high_sources.checked_add(1).ok_or_else(|| {
+                BenchError::EnvironmentInvalid(
+                    "IFDS split queue high-degree active source count exceeded u32. Fix: split the frontier queue."
+                        .to_string(),
+                )
+            })?;
+        }
+    }
+    Ok(high_sources)
+}
+
 pub(super) fn ifds_active_queue_inputs(
     fixture: &IfdsSkewedFixture,
     queue_capacity: u32,

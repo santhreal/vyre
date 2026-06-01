@@ -10,13 +10,16 @@ use crate::api::suite::SuiteKind;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange, TimedDispatchResult};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::graph::csr_frontier_queue::frontier_words_to_queue_parallel;
+use vyre_primitives::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
 
 use super::super::fixture::{
-    build_ifds_skewed_fixture, ifds_queue_inputs, ifds_skewed_cpu_oracle, IfdsSkewedStats,
-    NODE_COUNT,
+    build_ifds_skewed_fixture, ifds_active_high_degree_sources, ifds_queue_inputs,
+    ifds_skewed_cpu_oracle, IfdsSkewedStats, NODE_COUNT,
 };
 use super::super::metrics::{ifds_queue_baseline_metric_points, ifds_queue_metric_points};
-use super::{ifds_queue_traverse_plan, ifds_sparse_queue_capacity};
+use super::{
+    ifds_queue_traverse_logical_lanes, ifds_queue_traverse_plan, ifds_sparse_queue_capacity,
+};
 
 pub(in crate::cases::dataflow_irregular) const QUEUE_MATERIALIZE_SUITES: &[SuiteKind] = &[
     SuiteKind::Smoke,
@@ -54,6 +57,8 @@ pub(in crate::cases::dataflow_irregular) struct DataflowIfdsSkewedQueuePrepared 
     pub(in crate::cases::dataflow_irregular) traverse_program: Program,
     pub(in crate::cases::dataflow_irregular) traverse_grid: [u32; 3],
     pub(in crate::cases::dataflow_irregular) row_strided_traverse: bool,
+    pub(in crate::cases::dataflow_irregular) high_degree_queue_capacity: u32,
+    pub(in crate::cases::dataflow_irregular) traverse_logical_lanes: u64,
     pub(in crate::cases::dataflow_irregular) inputs: Vec<Vec<u8>>,
     pub(in crate::cases::dataflow_irregular) input_bytes_total: u64,
     pub(in crate::cases::dataflow_irregular) baseline_output: Vec<u8>,
@@ -186,6 +191,8 @@ impl BenchCase for DataflowIfdsSkewedQueueMaterializeStep {
                 custom: ifds_queue_metric_points(
                     prepared.stats,
                     prepared.queue_capacity,
+                    prepared.high_degree_queue_capacity,
+                    prepared.traverse_logical_lanes,
                     prepared.baseline_wall_ns,
                     sequence.wall_ns,
                     sequence.resident_used,
@@ -217,6 +224,8 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_materializ
 ) -> Result<DataflowIfdsSkewedQueuePrepared, BenchError> {
     let fixture = build_ifds_skewed_fixture(NODE_COUNT)?;
     let queue_capacity = ifds_sparse_queue_capacity(fixture.stats.active_sources)?;
+    let high_degree_queue_capacity =
+        ifds_active_high_degree_sources(&fixture, CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD)?;
     let reset_program = ifds_queue_reset_program(fixture.stats.frontier_words);
     let queue_program = frontier_words_to_queue_parallel(
         "frontier_in",
@@ -231,6 +240,8 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_materializ
         fixture.stats.edges,
         queue_capacity,
     );
+    let traverse_logical_lanes =
+        ifds_queue_traverse_logical_lanes(queue_capacity, traverse_plan.row_strided);
 
     let baseline_start = Instant::now();
     let oracle = ifds_skewed_cpu_oracle(&fixture);
@@ -256,6 +267,8 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_materializ
         traverse_program: traverse_plan.program,
         traverse_grid: traverse_plan.grid,
         row_strided_traverse: traverse_plan.row_strided,
+        high_degree_queue_capacity,
+        traverse_logical_lanes,
         inputs,
         input_bytes_total,
         baseline_output: vyre_primitives::wire::pack_u32_slice(&oracle.output),

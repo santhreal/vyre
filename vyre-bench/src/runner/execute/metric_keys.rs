@@ -161,6 +161,15 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "dataflow_ifds_queue_row_strided_traverse") => {
             Some("dataflow_ifds_queue_row_strided_traverse")
         }
+        ("", "dataflow_ifds_queue_high_degree_capacity") => {
+            Some("dataflow_ifds_queue_high_degree_capacity")
+        }
+        ("", "dataflow_ifds_queue_traverse_logical_lanes") => {
+            Some("dataflow_ifds_queue_traverse_logical_lanes")
+        }
+        ("", "dataflow_ifds_queue_traverse_lane_reduction_x1000") => {
+            Some("dataflow_ifds_queue_traverse_lane_reduction_x1000")
+        }
         ("", "dataflow_ifds_queue_speedup_x1000") => Some("dataflow_ifds_queue_speedup_x1000"),
         ("", "dataflow_ifds_closure_nodes") => Some("dataflow_ifds_closure_nodes"),
         ("", "dataflow_ifds_closure_edges") => Some("dataflow_ifds_closure_edges"),
@@ -525,6 +534,17 @@ mod tests {
             "dataflow_ifds_closure_launch_delta_lanes",
             "dataflow_ifds_closure_launch_elided_delta_lanes",
             "dataflow_ifds_closure_launch_lane_elision_x1000",
+        ] {
+            assert_eq!(custom_metric_key("", name), Some(name));
+        }
+    }
+
+    #[test]
+    fn custom_metric_key_keeps_ifds_queue_split_telemetry_visible() {
+        for name in [
+            "dataflow_ifds_queue_high_degree_capacity",
+            "dataflow_ifds_queue_traverse_logical_lanes",
+            "dataflow_ifds_queue_traverse_lane_reduction_x1000",
         ] {
             assert_eq!(custom_metric_key("", name), Some(name));
         }

@@ -44,6 +44,9 @@ pub mod csr_frontier_queue;
 mod csr_frontier_step;
 /// Queue-to-queue sparse CSR delta expansion for GPU-resident fixpoint waves.
 pub mod csr_queue_delta;
+/// Mixed queue traversal that keeps low-degree rows scalar and sends only hubs
+/// to row-strided teams.
+pub mod csr_queue_split;
 /// Row-strided queue-driven CSR expansion for high-degree active rows.
 pub mod csr_queue_strided;
 

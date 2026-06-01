@@ -52,6 +52,7 @@ pub(super) struct DataflowIfdsSkewedActiveQueuePrepared {
     pub(super) traverse_program: Program,
     pub(super) traverse_grid: [u32; 3],
     pub(super) row_strided_traverse: bool,
+    pub(super) traverse_logical_lanes: u64,
     pub(super) inputs: Vec<Vec<u8>>,
     pub(super) input_bytes_total: u64,
     pub(super) baseline_output: Vec<u8>,
@@ -132,6 +133,17 @@ pub(super) const fn ifds_queue_should_use_row_strided(max_degree: u32) -> bool {
     max_degree
         >= CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE
             .saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE)
+}
+
+pub(super) const fn ifds_queue_traverse_logical_lanes(
+    queue_capacity: u32,
+    row_strided_traverse: bool,
+) -> u64 {
+    if row_strided_traverse {
+        (queue_capacity as u64).saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE as u64)
+    } else {
+        queue_capacity as u64
+    }
 }
 
 /// Queue-driven IFDS step when the active frontier queue is already resident.
@@ -267,6 +279,8 @@ impl BenchCase for DataflowIfdsSkewedActiveQueueStep {
                 custom: ifds_queue_metric_points(
                     prepared.stats,
                     prepared.queue_capacity,
+                    0,
+                    prepared.traverse_logical_lanes,
                     prepared.baseline_wall_ns,
                     timed.wall_ns,
                     resident_used,
@@ -327,6 +341,10 @@ pub(super) fn prepare_ifds_skewed_active_queue_step(
         traverse_program: traverse_plan.program,
         traverse_grid: traverse_plan.grid,
         row_strided_traverse: traverse_plan.row_strided,
+        traverse_logical_lanes: ifds_queue_traverse_logical_lanes(
+            queue_capacity,
+            traverse_plan.row_strided,
+        ),
         inputs,
         input_bytes_total,
         baseline_output: vyre_primitives::wire::pack_u32_slice(&oracle.output),
