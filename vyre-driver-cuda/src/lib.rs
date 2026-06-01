@@ -109,8 +109,9 @@ pub use device_diagnostic_aggregation::{
 };
 pub use device_work_queue::{
     plan_cuda_device_work_queue, plan_cuda_device_work_queue_backpressure,
-    CudaDeviceWorkQueueBackpressurePlan, CudaDeviceWorkQueueDrainStrategy,
-    CudaDeviceWorkQueueError, CudaDeviceWorkQueuePlan, CudaDeviceWorkQueueProfile,
+    plan_cuda_device_work_queue_with_expansion, CudaDeviceWorkQueueBackpressurePlan,
+    CudaDeviceWorkQueueDrainStrategy, CudaDeviceWorkQueueError,
+    CudaDeviceWorkQueueExpansionProfile, CudaDeviceWorkQueuePlan, CudaDeviceWorkQueueProfile,
     CudaWorkQueueHostSync,
 };
 pub use egraph_device_image::{
@@ -1271,4 +1272,3 @@ mod tests {
             .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - method end must exist")
     }
 }
-

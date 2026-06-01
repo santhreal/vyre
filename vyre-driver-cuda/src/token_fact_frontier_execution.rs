@@ -1,19 +1,21 @@
 //! CUDA execution planner for unified token/fact graph frontier waves.
 
 use crate::device_work_queue::{
-    plan_cuda_device_work_queue, CudaDeviceWorkQueueError, CudaDeviceWorkQueuePlan,
-    CudaDeviceWorkQueueProfile, CudaWorkQueueHostSync,
+    plan_cuda_device_work_queue_with_expansion, CudaDeviceWorkQueueError,
+    CudaDeviceWorkQueueExpansionProfile, CudaDeviceWorkQueuePlan, CudaWorkQueueHostSync,
 };
 use crate::frontier_typed_ir_adapter::CudaFrontierTypedIrInput;
 use crate::megakernel_barrier_planner::{
     plan_cuda_frontier_megakernel_execution_with_scratch, CudaMegakernelBarrierScratch,
     CudaMegakernelFrontierExecutionPlan, CudaMegakernelFrontierExecutionPlanError,
+    CudaMegakernelFrontierWave,
 };
 use crate::megakernel_plan_cache::{
     CudaMegakernelAnalysisKind, CudaMegakernelDeviceKey, CudaMegakernelPlanCache,
 };
 use crate::megakernel_scheduler::CudaMegakernelScheduleSample;
 use crate::token_fact_graph_cuda_adapter::CudaTokenFactGraphLayout;
+use vyre_driver::megakernel_frontier::megakernel_frontier_fused_wave_budget_bytes;
 use vyre_driver::ResidentGraphReuseTelemetry;
 
 /// Dependency-aware CUDA execution plan for a unified token/fact graph.
@@ -301,15 +303,18 @@ pub fn plan_cuda_token_fact_frontier_execution_envelope_with_scratch(
         },
     )?;
     let active_items = total_active_items(&frontier_input.active_items)?;
+    let frontier_reserve_bytes = max_single_frontier_wave_bytes(&frontier_input.waves)?;
+    let queue_budget =
+        queue_residency_budget(payload_budget, resident_graph_bytes, frontier_reserve_bytes);
     let work_queue = if active_items == 0 {
         empty_device_work_queue_plan()
     } else {
-        plan_cuda_device_work_queue(CudaDeviceWorkQueueProfile {
+        plan_cuda_device_work_queue_with_expansion(CudaDeviceWorkQueueExpansionProfile {
             initial_items: active_items,
-            queue_capacity: active_items,
+            expansion_items: graph_layout.graph_shape.edge_count,
             entry_bytes: 4,
             control_bytes: 16,
-            budget_bytes: payload_budget,
+            budget_bytes: queue_budget,
             host_sync: CudaWorkQueueHostSync::FinalOnly,
         })?
     };
@@ -389,6 +394,29 @@ fn total_active_items(active_items: &[u64]) -> Result<u64, CudaTokenFactFrontier
     Ok(total)
 }
 
+fn max_single_frontier_wave_bytes(
+    waves: &[CudaMegakernelFrontierWave],
+) -> Result<u64, CudaTokenFactFrontierExecutionError> {
+    let mut peak = 0_u64;
+    for wave in waves {
+        let bytes = megakernel_frontier_fused_wave_budget_bytes(*wave)
+            .map_err(CudaMegakernelFrontierExecutionPlanError::from)
+            .map_err(CudaTokenFactFrontierExecutionError::from)?;
+        peak = peak.max(bytes);
+    }
+    Ok(peak)
+}
+
+fn queue_residency_budget(
+    payload_budget: u64,
+    resident_graph_bytes: u64,
+    frontier_reserve_bytes: u64,
+) -> u64 {
+    payload_budget
+        .saturating_sub(resident_graph_bytes)
+        .saturating_sub(frontier_reserve_bytes)
+}
+
 fn empty_device_work_queue_plan() -> CudaDeviceWorkQueuePlan {
     CudaDeviceWorkQueuePlan {
         queue_bytes: 0,
@@ -448,7 +476,6 @@ mod tests {
         )
         .expect("Fix: frontier plan should build");
         let frontier_input = adapt_frontier_typed_ir_to_cuda(&frontier_plan, 8, 16, 8)
-
             .expect("Fix: frontier plan should adapt");
         let mut cache = CudaMegakernelPlanCache::new();
 
@@ -471,10 +498,172 @@ mod tests {
         .expect("Fix: token/fact frontier execution should plan");
 
         assert_eq!(plan.frontier.barriers.global_barriers, 2);
-        assert_eq!(plan.work_queue.queue_bytes, 12 * 4);
-        assert_eq!(plan.resident_work_queue_bytes, 64);
+        assert_eq!(plan.work_queue.queue_bytes, 14 * 4);
+        assert_eq!(plan.resident_work_queue_bytes, 72);
         assert_eq!(plan.resident_payload_bytes, 48);
         assert!(plan.total_required_bytes >= plan.frontier.execution.memory.required_bytes);
+    }
+
+    #[test]
+    fn planner_sizes_resident_work_queue_for_edge_expansion_headroom() {
+        let nodes = (0_u32..5)
+            .map(|index| {
+                node(
+                    index + 1,
+                    TokenFactNodeKind::Fact,
+                    u64::from(index) * 16,
+                    16,
+                )
+            })
+            .collect::<Vec<_>>();
+        let edges = complete_directed_edges(5, TokenFactEdgeKind::FactDependency);
+        let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 80)
+            .expect("Fix: fanout-heavy token/fact graph should pack");
+        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+            .expect("Fix: fanout-heavy token/fact graph should adapt");
+        let frontier_input = CudaFrontierTypedIrInput {
+            waves: vec![
+                crate::megakernel_barrier_planner::CudaMegakernelFrontierWave {
+                    frontier_bytes: 16,
+                    scratch_bytes: 16,
+                    output_bytes: 16,
+                },
+            ],
+            active_items: vec![4],
+            dependencies: Vec::new(),
+        };
+        let mut cache = CudaMegakernelPlanCache::new();
+
+        let plan = plan_cuda_token_fact_frontier_execution(
+            &mut cache,
+            0xbeef,
+            CudaMegakernelAnalysisKind::ParserFrontend,
+            device(),
+            CudaMegakernelScheduleSample {
+                dispatch_cost_ns: 10_000.0,
+                frontier_density: 0.10,
+                readback_bytes: 64,
+            },
+            graph_layout,
+            &frontier_input,
+            4_096,
+            250.0,
+            0.0,
+        )
+        .expect("Fix: CUDA token/fact planner should reserve edge-derived queue headroom");
+
+        assert_eq!(plan.work_queue.queue_bytes, (4 + 20) * 4);
+        assert_eq!(plan.resident_work_queue_bytes, (4 + 20) * 4 + 16);
+        assert!(
+            plan.frontier.execution.memory.required_bytes
+                <= plan.frontier.execution.memory.budget_bytes
+        );
+    }
+
+    #[test]
+    fn planner_clamps_queue_expansion_after_graph_and_frontier_reserve() {
+        let nodes = (0_u32..10)
+            .map(|index| {
+                node(
+                    index + 1,
+                    TokenFactNodeKind::Fact,
+                    u64::from(index) * 16,
+                    16,
+                )
+            })
+            .collect::<Vec<_>>();
+        let edges = complete_directed_edges(10, TokenFactEdgeKind::FactDependency);
+        let graph = plan_device_resident_token_fact_graph(&nodes, &edges, 160)
+            .expect("Fix: dense token/fact graph should pack");
+        let graph_layout = adapt_token_fact_graph_to_cuda_layout(&graph, 32, 16)
+            .expect("Fix: dense token/fact graph should adapt");
+        let frontier_input = CudaFrontierTypedIrInput {
+            waves: vec![
+                crate::megakernel_barrier_planner::CudaMegakernelFrontierWave {
+                    frontier_bytes: 16,
+                    scratch_bytes: 16,
+                    output_bytes: 16,
+                },
+            ],
+            active_items: vec![4],
+            dependencies: Vec::new(),
+        };
+        let mut cache = CudaMegakernelPlanCache::new();
+
+        let plan = plan_cuda_token_fact_frontier_execution(
+            &mut cache,
+            0xcafe,
+            CudaMegakernelAnalysisKind::ParserFrontend,
+            device(),
+            CudaMegakernelScheduleSample {
+                dispatch_cost_ns: 10_000.0,
+                frontier_density: 0.10,
+                readback_bytes: 64,
+            },
+            graph_layout,
+            &frontier_input,
+            2_100,
+            250.0,
+            0.0,
+        )
+        .expect("Fix: queue expansion should clamp to the resident budget left after graph bytes");
+
+        assert_eq!(plan.work_queue.queue_bytes, 17 * 4);
+        assert_eq!(plan.resident_work_queue_bytes, 84);
+        assert_eq!(plan.frontier.execution.memory.required_bytes, 1_808);
+        assert_eq!(plan.frontier.execution.memory.budget_bytes, 1_856);
+    }
+
+    #[test]
+    fn planner_rejects_overflowed_edge_expansion_queue_capacity() {
+        let frontier_input = CudaFrontierTypedIrInput {
+            waves: vec![
+                crate::megakernel_barrier_planner::CudaMegakernelFrontierWave {
+                    frontier_bytes: 8,
+                    scratch_bytes: 8,
+                    output_bytes: 8,
+                },
+            ],
+            active_items: vec![1],
+            dependencies: Vec::new(),
+        };
+        let mut cache = CudaMegakernelPlanCache::new();
+
+        assert_eq!(
+            plan_cuda_token_fact_frontier_execution(
+                &mut cache,
+                0xfeed,
+                CudaMegakernelAnalysisKind::ParserFrontend,
+                device(),
+                CudaMegakernelScheduleSample {
+                    dispatch_cost_ns: 1.0,
+                    frontier_density: 0.0,
+                    readback_bytes: 0,
+                },
+                CudaTokenFactGraphLayout {
+                    graph_shape: crate::megakernel_scheduler::CudaMegakernelGraphShape {
+                        node_count: 1,
+                        edge_count: u64::MAX,
+                    },
+                    node_record_bytes: 32,
+                    edge_record_bytes: 16,
+                    node_bytes: 32,
+                    edge_bytes: 0,
+                    payload_bytes: 0,
+                    resident_bytes: 32,
+                },
+                &frontier_input,
+                u64::MAX,
+                0.0,
+                0.0,
+            )
+            .expect_err("overflowed edge expansion capacity should fail before CUDA planning"),
+            CudaTokenFactFrontierExecutionError::WorkQueue(
+                CudaDeviceWorkQueueError::ByteCountOverflow {
+                    field: "queue expansion capacity",
+                }
+            )
+        );
     }
 
     #[test]
@@ -771,6 +960,18 @@ mod tests {
         TokenFactEdge { from, to, kind }
     }
 
+    fn complete_directed_edges(node_count: u32, kind: TokenFactEdgeKind) -> Vec<TokenFactEdge> {
+        let mut edges = Vec::new();
+        for from in 1..=node_count {
+            for to in 1..=node_count {
+                if from != to {
+                    edges.push(edge(from, to, kind));
+                }
+            }
+        }
+        edges
+    }
+
     fn frontier_node(id: u32, domain: FrontierDomain, active_items: u32) -> FrontierNode {
         FrontierNode {
             id,
@@ -790,4 +991,3 @@ mod tests {
         }
     }
 }
-
