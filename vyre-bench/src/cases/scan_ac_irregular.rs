@@ -332,6 +332,7 @@ fn prepare_scan_ac_irregular(
         planted_matches,
         candidate_end_bytes: 0,
         candidate_end_lanes: 0,
+        candidate_suffix2_lanes: 0,
     };
 
     Ok(ScanAcIrregularPrepared {

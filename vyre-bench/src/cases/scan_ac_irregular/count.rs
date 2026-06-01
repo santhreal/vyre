@@ -13,8 +13,9 @@ use crate::api::suite::SuiteKind;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::Program;
 use vyre_libs::scan::classic_ac::{
-    build_ac_bounded_count_prefilter_program, classic_ac_candidate_end_byte_mask_words,
-    classic_ac_compile, ClassicAcAutomaton,
+    build_ac_bounded_count_suffix2_prefilter_program, classic_ac_candidate_end_byte_mask_words,
+    classic_ac_candidate_suffix2_mask_words, classic_ac_compile, ClassicAcAutomaton,
+    CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
 use vyre_libs::scan::{pack_haystack_u32, pack_u32_slice};
 
@@ -24,15 +25,17 @@ use super::{
     build_irregular_haystack, pattern_lengths, HAYSTACK_BYTES, MAX_MATCHES, PATTERNS, SUITES,
 };
 
-const COUNT_CANDIDATE_MASK_INPUT_INDEX: usize = 3;
-const COUNT_HAYSTACK_LEN_INPUT_INDEX: usize = 4;
-const COUNT_MATCH_COUNT_INPUT_INDEX: usize = 5;
+const COUNT_CANDIDATE_END_MASK_INPUT_INDEX: usize = 3;
+const COUNT_CANDIDATE_SUFFIX2_MASK_INPUT_INDEX: usize = 4;
+const COUNT_HAYSTACK_LEN_INPUT_INDEX: usize = 5;
+const COUNT_MATCH_COUNT_INPUT_INDEX: usize = 6;
 const COUNT_RESET_RESOURCE_INDICES: [usize; 1] = [COUNT_MATCH_COUNT_INPUT_INDEX];
-const COUNT_SCAN_RESOURCE_INDICES: [usize; 6] = [
+const COUNT_SCAN_RESOURCE_INDICES: [usize; 7] = [
     0,
     1,
     2,
-    COUNT_CANDIDATE_MASK_INPUT_INDEX,
+    COUNT_CANDIDATE_END_MASK_INPUT_INDEX,
+    COUNT_CANDIDATE_SUFFIX2_MASK_INPUT_INDEX,
     COUNT_HAYSTACK_LEN_INPUT_INDEX,
     COUNT_MATCH_COUNT_INPUT_INDEX,
 ];
@@ -236,8 +239,14 @@ pub(super) fn prepare_scan_ac_irregular_count(
         .as_nanos()
         .min(u128::from(u64::MAX)) as u64;
     let candidate_end_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
-    let program = build_ac_bounded_count_prefilter_program(&ac.dfa);
-    let inputs = scan_ac_count_inputs(&ac, &haystack);
+    let candidate_suffix2_mask = classic_ac_candidate_suffix2_mask_words(&ac.dfa);
+    let program = build_ac_bounded_count_suffix2_prefilter_program(&ac.dfa);
+    let inputs = scan_ac_count_inputs_with_masks(
+        &ac,
+        &haystack,
+        &candidate_end_mask,
+        &candidate_suffix2_mask,
+    );
     let input_bytes_total = input_bytes_total(&inputs);
     let resident = ctx
         .map(|ctx| ResidentInputSet::upload_optional(ctx, &inputs, "irregular AC count"))
@@ -255,6 +264,11 @@ pub(super) fn prepare_scan_ac_irregular_count(
         planted_matches,
         candidate_end_bytes: candidate_end_byte_count(&candidate_end_mask),
         candidate_end_lanes: candidate_end_lane_count(&haystack, &candidate_end_mask),
+        candidate_suffix2_lanes: candidate_suffix2_lane_count(
+            &haystack,
+            &candidate_end_mask,
+            &candidate_suffix2_mask,
+        ),
     };
     if stats.max_pattern_len != pattern_lengths.iter().copied().max().unwrap_or_default() {
         return Err(BenchError::EnvironmentInvalid(
@@ -277,11 +291,22 @@ pub(super) fn prepare_scan_ac_irregular_count(
 
 pub(super) fn scan_ac_count_inputs(ac: &ClassicAcAutomaton, haystack: &[u8]) -> Vec<Vec<u8>> {
     let candidate_end_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
+    let candidate_suffix2_mask = classic_ac_candidate_suffix2_mask_words(&ac.dfa);
+    scan_ac_count_inputs_with_masks(ac, haystack, &candidate_end_mask, &candidate_suffix2_mask)
+}
+
+pub(super) fn scan_ac_count_inputs_with_masks(
+    ac: &ClassicAcAutomaton,
+    haystack: &[u8],
+    candidate_end_mask: &[u32; 8],
+    candidate_suffix2_mask: &[u32; CLASSIC_AC_SUFFIX2_MASK_WORDS],
+) -> Vec<Vec<u8>> {
     vec![
         pack_haystack_u32(haystack),
         pack_u32_slice(&ac.dfa.transitions),
         pack_u32_slice(&ac.dfa.output_offsets),
-        pack_u32_slice(&candidate_end_mask),
+        pack_u32_slice(candidate_end_mask),
+        pack_u32_slice(candidate_suffix2_mask),
         pack_u32_slice(&[haystack.len() as u32]),
         pack_u32_slice(&[0]),
     ]
@@ -301,6 +326,33 @@ pub(super) fn candidate_end_lane_count(haystack: &[u8], mask: &[u32; 8]) -> u32 
 
 pub(super) fn byte_is_candidate_end(byte: u8, mask: &[u32; 8]) -> bool {
     (mask[byte as usize / 32] & (1_u32 << (byte as usize % 32))) != 0
+}
+
+pub(super) fn candidate_suffix2_lane_count(
+    haystack: &[u8],
+    end_mask: &[u32; 8],
+    suffix2_mask: &[u32; CLASSIC_AC_SUFFIX2_MASK_WORDS],
+) -> u32 {
+    if haystack.is_empty() {
+        return 0;
+    }
+
+    let lanes = u32::from(byte_is_candidate_end(haystack[0], end_mask));
+    let suffix2_lanes = haystack
+        .windows(2)
+        .filter(|pair| suffix2_pair_is_candidate(pair[0], pair[1], suffix2_mask))
+        .count()
+        .min(u32::MAX as usize) as u32;
+    lanes.saturating_add(suffix2_lanes)
+}
+
+pub(super) fn suffix2_pair_is_candidate(
+    previous: u8,
+    current: u8,
+    mask: &[u32; CLASSIC_AC_SUFFIX2_MASK_WORDS],
+) -> bool {
+    let suffix = ((previous as usize) << 8) | current as usize;
+    (mask[suffix / 32] & (1_u32 << (suffix % 32))) != 0
 }
 
 struct CountResidentSequenceRun {

@@ -4,6 +4,15 @@ use crate::region::wrap_anonymous;
 use crate::scan::builders::{load_packed_byte, load_packed_byte_expr};
 use crate::scan::dfa::CompiledDfa;
 
+#[path = "count_program/suffix2.rs"]
+mod suffix2;
+
+pub use suffix2::{
+    build_ac_bounded_count_suffix2_prefilter_program,
+    classic_ac_bounded_count_suffix2_prefilter_program, classic_ac_candidate_suffix2_mask_words,
+    CLASSIC_AC_SUFFIX2_MASK_WORDS,
+};
+
 fn count_scan_nodes(
     haystack: &str,
     transitions: &str,

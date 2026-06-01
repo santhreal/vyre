@@ -257,8 +257,14 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "scan_ac_irregular_candidate_end_lanes") => {
             Some("scan_ac_irregular_candidate_end_lanes")
         }
+        ("", "scan_ac_irregular_candidate_suffix2_lanes") => {
+            Some("scan_ac_irregular_candidate_suffix2_lanes")
+        }
         ("", "scan_ac_irregular_count_prefilter_skipped_lanes_x1000") => {
             Some("scan_ac_irregular_count_prefilter_skipped_lanes_x1000")
+        }
+        ("", "scan_ac_irregular_suffix2_extra_skipped_lanes_x1000") => {
+            Some("scan_ac_irregular_suffix2_extra_skipped_lanes_x1000")
         }
         ("", "scan_ac_irregular_planted_matches") => Some("scan_ac_irregular_planted_matches"),
         ("", "scan_ac_irregular_resident_buffers") => Some("scan_ac_irregular_resident_buffers"),
@@ -479,7 +485,9 @@ mod tests {
             "scan_ac_irregular_count_readback_bytes",
             "scan_ac_irregular_candidate_end_bytes",
             "scan_ac_irregular_candidate_end_lanes",
+            "scan_ac_irregular_candidate_suffix2_lanes",
             "scan_ac_irregular_count_prefilter_skipped_lanes_x1000",
+            "scan_ac_irregular_suffix2_extra_skipped_lanes_x1000",
         ] {
             assert_eq!(custom_metric_key("", name), Some(name));
         }
