@@ -237,6 +237,11 @@ path = "tests/proptest_csr_queue_strided.rs"
 required-features = ["graph", "cpu-parity"]
 
 [[test]]
+name = "proptest_csr_queue_split"
+path = "tests/proptest_csr_queue_split.rs"
+required-features = ["graph", "cpu-parity"]
+
+[[test]]
 name = "adversarial_boolean_packing_four_russians_readiness"
 path = "tests/adversarial_boolean_packing_four_russians_readiness.rs"
 required-features = ["bitset", "cpu-parity"]
