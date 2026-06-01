@@ -27,6 +27,8 @@ fn sparse_compact_capacity_is_token_count_driven_across_compaction_paths() {
     let compaction = read("src/pipeline/sparse_compaction.rs");
     let programs = read("src/pipeline/sparse_compaction/programs.rs");
     let megakernel = read("src/pipeline/sparse_lexer_megakernel.rs");
+    let resident = read("src/pipeline/sparse_lexer_megakernel/resident_stages.rs");
+    let collect = read("src/pipeline/sparse_lexer_megakernel/output_collect.rs");
 
     assert!(
         compaction.matches("compact_output_capacity_from_inclusive_offsets(").count() >= 3,
@@ -69,5 +71,28 @@ fn sparse_compact_capacity_is_token_count_driven_across_compaction_paths() {
     assert!(
         staged_key.contains("compact_capacity as u64"),
         "staged sparse lexer compact cache key must include token-count capacity"
+    );
+
+    let resident_compact_start = resident
+        .find("\"syntax_sparse_lexer_stage_compact_resident\"")
+        .expect("resident sparse lexer compact stage must exist");
+    let resident_compact_end = resident.len().min(resident_compact_start + 2_500);
+    let resident_compact = &resident[resident_compact_start..resident_compact_end];
+    assert!(
+        resident_compact.contains("dispatch_resident_stage_cached("),
+        "resident sparse lexer compact must stay GPU-resident before exact ranged readback"
+    );
+    assert!(
+        !resident_compact.contains("dispatch_resident_stage_readback_cached_into("),
+        "resident sparse lexer compact must not full-readback source-length token columns"
+    );
+    assert!(
+        resident_compact.contains("collect_resident_compact_lexer_output_exact_readback("),
+        "resident sparse lexer compact must use count-first exact readback"
+    );
+    assert!(
+        collect.contains("download_resident_range_into(&counts.resource, 0, 4")
+            && collect.contains("download_resident_ranges_into(&ranges"),
+        "resident exact compact collection must read count first, then only live token columns"
     );
 }

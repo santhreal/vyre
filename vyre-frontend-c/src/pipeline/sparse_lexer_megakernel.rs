@@ -22,7 +22,7 @@ mod output_collect;
 mod resident_stages;
 
 use output_collect::{
-    collect_compact_lexer_output_drain, collect_compact_lexer_output_named_drain,
+    collect_compact_lexer_output_drain, collect_resident_compact_lexer_output_exact_readback,
     mark_output_buffers, resident_output_pairs, returned_buffer_names, take_resident_blob,
     zero_readback_buffers,
 };
@@ -30,9 +30,8 @@ use resident_stages::{dispatch_sparse_lexer_cached_stages_resident, workgroup_pr
 
 use super::backend_select::dispatch_borrowed_stage_cached_into;
 use super::{
-    dispatch_resident_stage_cached, dispatch_resident_stage_readback_cached_into,
-    free_resident_blobs, read_u32_at, stage_pipeline_cache_key, validate_internal_stage,
-    ResidentBlob, ResidentStageInput,
+    dispatch_resident_stage_cached, free_resident_blobs, read_u32_at, stage_pipeline_cache_key,
+    validate_internal_stage, ResidentBlob, ResidentStageInput,
 };
 
 #[derive(Default)]
@@ -44,6 +43,7 @@ pub(super) struct SparseLexerMegakernelScratch {
     input_padding: Vec<Vec<u8>>,
     fused_outputs: Vec<Vec<u8>>,
     resident_compact_outputs: Vec<Vec<u8>>,
+    resident_count_readback: Vec<u8>,
     prefix_scan: PrefixScanDispatchScratch,
     block_totals_scanned: Vec<u8>,
     offsets: Vec<u8>,
