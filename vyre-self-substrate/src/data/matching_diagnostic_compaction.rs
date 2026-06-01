@@ -12,7 +12,8 @@ use crate::dispatch_buffers::{
 use crate::hardware::scratch::reserve_vec_capacity;
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use vyre_primitives::matching::bracket_match::{
-    bracket_match, pack_u32, CLOSE_BRACE, MATCH_NONE, OPEN_BRACE, OTHER,
+    bracket_match, bracket_match_dispatch_grid, pack_u32, CLOSE_BRACE, MATCH_NONE, OPEN_BRACE,
+    OTHER,
 };
 use vyre_primitives::matching::region::{
     dedup_regions_flag_program, region_sort_program, RegionTriple,
@@ -178,7 +179,11 @@ pub fn bracket_pairs_via_with_scratch_into(
     scratch.match_pairs_seed.clear();
     scratch.match_pairs_seed.resize(kinds.len(), MATCH_NONE);
     write_u32_slice_le_bytes(&mut scratch.inputs[2], &scratch.match_pairs_seed);
-    let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([1, 1, 1]))?;
+    let outputs = dispatcher.dispatch(
+        &program,
+        &scratch.inputs,
+        Some(bracket_match_dispatch_grid(n, max_depth)),
+    )?;
     decode_first_output(&outputs, kinds.len(), "bracket_pairs_via", out)
 }
 
@@ -449,7 +454,6 @@ mod tests {
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
 
-
     struct MatchingDispatcher;
 
     impl OptimizerDispatcher for MatchingDispatcher {
@@ -469,9 +473,13 @@ mod tests {
                 .expect("Fix: matching primitive should expose a region generator");
             match op_id {
                 vyre_primitives::matching::bracket_match::OP_ID => {
-                    assert_eq!(grid_override, Some([1, 1, 1]));
                     let kinds = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
                     let depth_words = inputs[1].len() / std::mem::size_of::<u32>();
+                    assert_eq!(
+                        grid_override,
+                        Some(bracket_match_dispatch_grid(kinds.len() as u32, depth_words as u32)),
+                        "Fix: bracket_pairs_via must dispatch the primitive with enough workgroups for its selected bracket matcher."
+                    );
                     Ok(vec![u32_slice_to_le_bytes(&primitive_bracket_match(
                         &kinds,
                         depth_words as u32,
@@ -548,6 +556,64 @@ mod tests {
             pack_diagnostic_u32(&[OPEN_BRACE, CLOSE_BRACE]),
             pack_u32(&[OPEN_BRACE, CLOSE_BRACE])
         );
+    }
+
+    #[test]
+    fn bracket_pairs_uncapped_large_stream_dispatches_all_parallel_workgroups() {
+        let mut kinds = vec![OTHER; 513];
+        kinds[0] = OPEN_BRACE;
+        kinds[255] = OPEN_BRACE;
+        kinds[256] = CLOSE_BRACE;
+        kinds[512] = CLOSE_BRACE;
+
+        assert_eq!(
+            bracket_pairs_via(&MatchingDispatcher, &kinds, kinds.len() as u32).unwrap(),
+            reference_bracket_pairs(&kinds, kinds.len() as u32)
+        );
+    }
+
+    #[test]
+    fn bracket_pairs_depth_capped_stream_keeps_single_workgroup_fallback() {
+        let mut kinds = vec![OTHER; 513];
+        kinds[0] = OPEN_BRACE;
+        kinds[64] = OPEN_BRACE;
+        kinds[65] = CLOSE_BRACE;
+
+        assert_eq!(
+            bracket_pairs_via(&MatchingDispatcher, &kinds, 64).unwrap(),
+            reference_bracket_pairs(&kinds, 64)
+        );
+    }
+
+    #[test]
+    fn bracket_pairs_generated_dispatch_grids_cover_4096_large_streams() {
+        for case in 0..4096u32 {
+            let len = 257 + (case.wrapping_mul(37) % 768) as usize;
+            let max_depth = if case % 2 == 0 {
+                len as u32
+            } else {
+                1 + case.wrapping_mul(19) % 192
+            };
+            let mut state = 0x8BAD_F00Du32 ^ case.wrapping_mul(0x9E37_79B9);
+            let mut kinds = Vec::with_capacity(len);
+            for index in 0..len {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+                let kind = match (state.wrapping_add(index as u32)) % 7 {
+                    0 | 1 => OPEN_BRACE,
+                    2 | 3 => CLOSE_BRACE,
+                    _ => OTHER,
+                };
+                kinds.push(kind);
+            }
+
+            assert_eq!(
+                bracket_pairs_via(&MatchingDispatcher, &kinds, max_depth).unwrap(),
+                reference_bracket_pairs(&kinds, max_depth),
+                "case {case}: diagnostic bracket dispatch must match primitive CPU oracle"
+            );
+        }
     }
 
     #[test]
@@ -656,4 +722,3 @@ mod tests {
             .contains("Fix: sort_regions_via requires at least one region"));
     }
 }
-
