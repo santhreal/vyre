@@ -22,6 +22,29 @@ fn independent_prefix_flag_line_index(source: &[u8]) -> Vec<u32> {
     out
 }
 
+fn independent_line_start_flags(source: &[u8]) -> Vec<u32> {
+    let mut out = Vec::with_capacity(source.len());
+    for index in 0..source.len() {
+        let flag = u32::from(
+            index > 0
+                && (source[index - 1] == b'\n'
+                    || (source[index - 1] == b'\r' && source[index] != b'\n')),
+        );
+        out.push(flag);
+    }
+    out
+}
+
+fn inclusive_scan(input: &[u32]) -> Vec<u32> {
+    let mut acc = 0u32;
+    let mut out = Vec::with_capacity(input.len());
+    for &value in input {
+        acc = acc.wrapping_add(value);
+        out.push(acc);
+    }
+    out
+}
+
 fn byte_strategy() -> impl Strategy<Value = u8> {
     prop_oneof![
         4 => Just(b'\n'),
@@ -182,6 +205,15 @@ proptest! {
     }
 
     #[test]
+    fn reference_matches_direct_line_start_flag_scan(
+        source in proptest::collection::vec(byte_strategy(), 0..=256),
+    ) {
+        let flags = independent_line_start_flags(&source);
+
+        prop_assert_eq!(reference_line_index(&source), inclusive_scan(&flags));
+    }
+
+    #[test]
     fn builder_does_not_regress_to_lane_zero_serial_loop(
         n in 1u32..=(BLOCK_LANES * 4),
     ) {
@@ -202,7 +234,7 @@ proptest! {
                 && buffer.count() == n
         });
         let has_flags = program.buffers().iter().any(|buffer| {
-            buffer.name() == "__lines_line_break_flags"
+            buffer.name() == "__lines_line_start_flags"
                 && buffer.count() == n
                 && buffer.is_pipeline_live_out()
                 && !buffer.is_output()
@@ -212,8 +244,15 @@ proptest! {
             .iter()
             .any(|buffer| buffer.name() == "lines" && buffer.count() == n && buffer.is_output());
         prop_assert!(has_source, "line_index source input missing for n={n}");
-        prop_assert!(has_flags, "line_index break flags missing for n={n}");
+        prop_assert!(has_flags, "line_index line-start flags missing for n={n}");
         prop_assert!(has_lines, "line_index final output missing for n={n}");
+        prop_assert!(
+            !program
+                .buffers()
+                .iter()
+                .any(|buffer| buffer.name() == "__lines_line_break_prefix"),
+            "line_index must scan line-start flags directly into lines for n={n}"
+        );
         prop_assert_eq!(
             program
                 .buffers()

@@ -113,11 +113,7 @@ fn line_index_pipeline_intermediates_match_registered_fixture_shape() {
     let program = line_index("source", "lines", source.len() as u32);
     assert_eq!(
         output_names(&program),
-        vec![
-            "__lines_line_break_flags",
-            "__lines_line_break_prefix",
-            "lines"
-        ]
+        vec!["__lines_line_start_flags", "lines"]
     );
 
     let mut input_bytes = Vec::with_capacity(source.len() * 4);
@@ -127,9 +123,8 @@ fn line_index_pipeline_intermediates_match_registered_fixture_shape() {
     let outputs = vyre_reference::reference_eval(&program, &[Value::from(input_bytes)])
         .expect("Fix: line_index pipeline fixture reference evaluation must succeed");
 
-    assert_eq!(unpack_u32s(&outputs[0].to_bytes()), vec![0, 0, 1, 0, 0]);
-    assert_eq!(unpack_u32s(&outputs[1].to_bytes()), vec![0, 0, 1, 1, 1]);
-    assert_eq!(unpack_u32s(&outputs[2].to_bytes()), vec![0, 0, 0, 1, 1]);
+    assert_eq!(unpack_u32s(&outputs[0].to_bytes()), vec![0, 0, 0, 1, 0]);
+    assert_eq!(unpack_u32s(&outputs[1].to_bytes()), vec![0, 0, 0, 1, 1]);
 }
 
 #[test]

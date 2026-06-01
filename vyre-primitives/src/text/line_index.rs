@@ -1,16 +1,15 @@
 //! Tier 2.5 line-index  -  write a per-byte line number into `lines[i]`.
 //!
 //! Every parser dialect that reports diagnostics needs line numbers.
-//! This op is a GPU-native flag/scan/finalize pipeline. The first pass
-//! marks bytes that terminate a line, the reduce substrate computes an
-//! inclusive prefix sum of those marks, and the final pass writes the
-//! line number for every byte position.
+//! This op is a GPU-native flag/scan pipeline. The first pass marks bytes
+//! where the line number increments from the previous byte, and the reduce
+//! substrate scans those marks directly into the line number for every byte
+//! position.
 //!
 //! Carriage-return handling: `\r` alone (Mac classic), `\r\n` (Windows),
-//! and bare `\n` (Unix) are all normalized  -  `\r` does NOT increment
-//! the counter (the following `\n` does), and a `\r` not followed by
-//! `\n` increments on the `\r` itself. This matches `str::lines()`
-//! semantics for byte-counting purposes.
+//! and bare `\n` (Unix) are all normalized. Newline bytes belong to the
+//! line they terminate; the following byte starts the next line when one
+//! exists. This matches `str::lines()` semantics for byte-counting purposes.
 //!
 //! Ranged use: `column_for_byte(idx)` is `idx - line_start_offset`.
 //! This primitive deliberately publishes per-byte line numbers only;
@@ -25,14 +24,15 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 /// Stable op id for the registered Tier 3 wrapper.
 pub const OP_ID: &str = "vyre-primitives::text::line_index";
-const FLAG_OP_ID: &str = "vyre-primitives::text::line_index::break_flags";
-const FINALIZE_OP_ID: &str = "vyre-primitives::text::line_index::finalize";
+const FLAG_OP_ID: &str = "vyre-primitives::text::line_index::line_start_flags";
 
 /// Build a Program that writes `lines[i] = line_number_of(source[i])`.
 ///
 /// Newline bytes belong to the line they terminate, so the generated
-/// pipeline computes an inclusive prefix of per-byte line-break flags
-/// and subtracts the current byte's own flag before storing `lines[i]`.
+/// pipeline scans per-byte "line starts here" increment flags: byte 0 is
+/// always line 0, a byte after `\n` starts the next line, and a byte after
+/// lone `\r` starts the next line unless the current byte is the `\n` half
+/// of `\r\n`.
 ///
 /// This compatibility entry point expects one `DataType::U32` element per
 /// source byte and reads the low byte of each word. Use [`line_index_u8`]
@@ -75,23 +75,21 @@ fn try_line_index_with_source_type(
         return Ok(empty_line_index_program(source, lines, source_type));
     }
 
-    let flags = format!("__{lines}_line_break_flags");
-    let prefix = format!("__{lines}_line_break_prefix");
+    let flags = format!("__{lines}_line_start_flags");
 
-    let flag_pass = line_break_flags_program(source, &flags, n, source_type)?;
-    let scan_pass = multi_block_prefix_scan_sum_u32(&flags, &prefix, n);
+    let flag_pass = line_start_flags_program(source, &flags, n, source_type)?;
+    let scan_pass = multi_block_prefix_scan_sum_u32(&flags, lines, n);
     if scan_pass.stats().trap() {
         return Err(format!(
             "line_index n={n} could not build its prefix-scan pass. Fix: shard the source before line indexing or repair reduce::multi_block_prefix_scan sizing."
         ));
     }
-    let finalize_pass = line_index_finalize_program(&flags, &prefix, lines, n)?;
 
-    vyre_foundation::execution_plan::fusion::fuse_programs(&[flag_pass, scan_pass, finalize_pass])
+    vyre_foundation::execution_plan::fusion::fuse_programs(&[flag_pass, scan_pass])
         .map(|program| demote_intermediate_outputs(program, lines))
         .map_err(|error| {
             format!(
-                "line_index fusion failed for n={n}: {error}. Fix: repair flag/scan/finalize fusion instead of falling back to a serial lane-0 loop."
+                "line_index fusion failed for n={n}: {error}. Fix: repair flag/scan fusion instead of falling back to a serial lane-0 loop."
             )
         })
 }
@@ -124,15 +122,15 @@ fn output_byte_range(words: u32, context: &str) -> Result<usize, String> {
         })
 }
 
-fn line_break_flags_program(
+fn line_start_flags_program(
     source: &str,
     flags: &str,
     n: u32,
     source_type: DataType,
 ) -> Result<Program, String> {
     let t = Expr::InvocationId { axis: 0 };
-    let next_idx = Expr::add(t.clone(), Expr::u32(1));
-    let output_bytes = output_byte_range(n, "line_index break-flags output")?;
+    let prev_idx = Expr::add(t.clone(), Expr::u32(u32::MAX));
+    let output_bytes = output_byte_range(n, "line_index line-start-flags output")?;
     let load_byte = |index: Expr| {
         Expr::bitand(
             Expr::cast(DataType::U32, Expr::load(source, index)),
@@ -142,22 +140,25 @@ fn line_break_flags_program(
 
     let lane_body = vec![
         Node::let_bind("byte", load_byte(t.clone())),
-        Node::let_bind("next_byte", Expr::u32(0)),
+        Node::let_bind("prev_byte", Expr::u32(0)),
         Node::if_then(
-            Expr::lt(next_idx.clone(), Expr::u32(n)),
-            vec![Node::assign("next_byte", load_byte(next_idx))],
+            Expr::lt(Expr::u32(0), t.clone()),
+            vec![Node::assign("prev_byte", load_byte(prev_idx))],
         ),
         Node::let_bind("flag", Expr::u32(0)),
         Node::if_then(
-            Expr::eq(Expr::var("byte"), Expr::u32(0x0A)),
+            Expr::and(
+                Expr::lt(Expr::u32(0), t.clone()),
+                Expr::eq(Expr::var("prev_byte"), Expr::u32(0x0A)),
+            ),
             vec![Node::assign("flag", Expr::u32(1))],
         ),
         Node::if_then(
             Expr::and(
-                Expr::eq(Expr::var("byte"), Expr::u32(0x0D)),
+                Expr::lt(Expr::u32(0), t.clone()),
                 Expr::and(
-                    Expr::lt(Expr::add(t.clone(), Expr::u32(1)), Expr::u32(n)),
-                    Expr::ne(Expr::var("next_byte"), Expr::u32(0x0A)),
+                    Expr::eq(Expr::var("prev_byte"), Expr::u32(0x0D)),
+                    Expr::ne(Expr::var("byte"), Expr::u32(0x0A)),
                 ),
             ),
             vec![Node::assign("flag", Expr::u32(1))],
@@ -178,40 +179,6 @@ fn line_break_flags_program(
             generator: Ident::from(FLAG_OP_ID),
             source_region: None,
             body: Arc::new(vec![Node::if_then(Expr::lt(t, Expr::u32(n)), lane_body)]),
-        }],
-    ))
-}
-
-fn line_index_finalize_program(
-    flags: &str,
-    prefix: &str,
-    lines: &str,
-    n: u32,
-) -> Result<Program, String> {
-    let t = Expr::InvocationId { axis: 0 };
-    let output_bytes = output_byte_range(n, "line_index lines output")?;
-    let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(n)),
-        vec![Node::store(
-            lines,
-            t.clone(),
-            Expr::sub(Expr::load(prefix, t.clone()), Expr::load(flags, t)),
-        )],
-    )];
-
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(flags, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(prefix, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(lines, 2, DataType::U32)
-                .with_count(n)
-                .with_output_byte_range(0..output_bytes),
-        ],
-        [BLOCK_LANES, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(FINALIZE_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
         }],
     ))
 }
@@ -269,8 +236,7 @@ inventory::submit! {
         }),
         Some(|| {
             vec![vec![
-                vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-                vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00],
+                vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
                 vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00],
             ]]
         }),
@@ -323,13 +289,12 @@ mod tests {
         assert!(program
             .buffers()
             .iter()
-            .any(|buffer| buffer.name() == "__lines_line_break_flags"
+            .any(|buffer| buffer.name() == "__lines_line_start_flags"
                 && buffer.is_pipeline_live_out()));
-        assert!(program
+        assert!(!program
             .buffers()
             .iter()
-            .any(|buffer| buffer.name() == "__lines_line_break_prefix"
-                && buffer.is_pipeline_live_out()));
+            .any(|buffer| buffer.name() == "__lines_line_break_prefix"));
         assert_eq!(
             program
                 .buffers()
