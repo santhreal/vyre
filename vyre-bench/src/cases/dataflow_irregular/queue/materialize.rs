@@ -9,7 +9,7 @@ use crate::api::resident::{input_bytes_total, ResidentInputSet};
 use crate::api::suite::SuiteKind;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange, TimedDispatchResult};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::graph::csr_frontier_queue::frontier_to_queue_parallel;
+use vyre_primitives::graph::csr_frontier_queue::frontier_words_to_queue_parallel;
 
 use super::super::fixture::{
     build_ifds_skewed_fixture, ifds_queue_inputs, ifds_skewed_cpu_oracle, IfdsSkewedStats,
@@ -218,7 +218,7 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_materializ
     let fixture = build_ifds_skewed_fixture(NODE_COUNT)?;
     let queue_capacity = ifds_sparse_queue_capacity(fixture.stats.active_sources)?;
     let reset_program = ifds_queue_reset_program(fixture.stats.frontier_words);
-    let queue_program = frontier_to_queue_parallel(
+    let queue_program = frontier_words_to_queue_parallel(
         "frontier_in",
         "active_queue",
         "queue_len",
@@ -304,6 +304,10 @@ struct QueueSequenceRun {
     bytes_written: u64,
 }
 
+fn frontier_word_grid(frontier_words: u32, workgroup: [u32; 3]) -> [u32; 3] {
+    [frontier_words.div_ceil(workgroup[0]).max(1), 1, 1]
+}
+
 fn dispatch_resident_queue_sequence(
     ctx: &BenchContext,
     prepared: &DataflowIfdsSkewedQueuePrepared,
@@ -319,16 +323,12 @@ fn dispatch_resident_queue_sequence(
     let reset_step = ResidentDispatchStep {
         program: &prepared.reset_program,
         resources: &reset_resources,
-        grid_override: Some([
-            prepared.stats.frontier_words.div_ceil(workgroup[0]).max(1),
-            1,
-            1,
-        ]),
+        grid_override: Some(frontier_word_grid(prepared.stats.frontier_words, workgroup)),
     };
     let queue_step = ResidentDispatchStep {
         program: &prepared.queue_program,
         resources: &queue_resources,
-        grid_override: Some([prepared.stats.nodes.div_ceil(workgroup[0]).max(1), 1, 1]),
+        grid_override: Some(frontier_word_grid(prepared.stats.frontier_words, workgroup)),
     };
     let traverse_step = ResidentDispatchStep {
         program: &prepared.traverse_program,
@@ -377,11 +377,7 @@ fn dispatch_host_queue_sequence(
         ctx,
         &prepared.reset_program,
         reset_inputs,
-        [
-            prepared.stats.frontier_words.div_ceil(workgroup[0]).max(1),
-            1,
-            1,
-        ],
+        frontier_word_grid(prepared.stats.frontier_words, workgroup),
         workgroup,
     )?;
     let reset_queue_len = stage_output(&reset, 0, "IFDS queue reset queue_len")?.clone();
@@ -396,7 +392,7 @@ fn dispatch_host_queue_sequence(
         ctx,
         &prepared.queue_program,
         queue_inputs,
-        [prepared.stats.nodes.div_ceil(workgroup[0]).max(1), 1, 1],
+        frontier_word_grid(prepared.stats.frontier_words, workgroup),
         workgroup,
     )?;
     let active_queue = stage_output(&queue, 0, "IFDS queue build active_queue")?.clone();

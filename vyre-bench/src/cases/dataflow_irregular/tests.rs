@@ -193,6 +193,50 @@ fn ifds_queue_materialize_prepare_builds_parallel_sparse_sequence() {
 }
 
 #[test]
+fn generated_word_queue_materializer_launches_frontier_words_not_nodes() {
+    const CASES: u32 = 10_000;
+
+    let mut old_lanes = 0_u128;
+    let mut new_lanes = 0_u128;
+    for case in 0..CASES {
+        let node_count = 65_536 + (mix32(case ^ 0xF901_DA7A) % 983_041);
+        let frontier_words = node_count.div_ceil(32);
+        let queue_capacity = 1 + (mix32(case ^ 0x51E5_4A11) % frontier_words.max(1));
+        let program = vyre_primitives::graph::csr_frontier_queue::frontier_words_to_queue_parallel(
+            "frontier_in",
+            "active_queue",
+            "queue_len",
+            node_count,
+            queue_capacity,
+        );
+        let inputs = vec![
+            vec![0_u8; frontier_words as usize * std::mem::size_of::<u32>()],
+            vec![0_u8; queue_capacity as usize * std::mem::size_of::<u32>()],
+            vyre_primitives::wire::pack_u32_slice(&[0]),
+        ];
+        let grid = vyre_driver::infer_dispatch_grid(
+            &program,
+            &inputs,
+            &vyre_driver::DispatchConfig::default(),
+        )
+        .unwrap_or_else(|error| {
+            panic!("generated word queue materializer case {case} failed: {error}")
+        });
+        let word_grid_x = frontier_words.div_ceil(256).max(1);
+        let node_grid_x = node_count.div_ceil(256).max(1);
+
+        assert_eq!(grid, [word_grid_x, 1, 1], "case {case}");
+        old_lanes += u128::from(node_grid_x) * 256;
+        new_lanes += u128::from(word_grid_x) * 256;
+    }
+
+    assert!(
+        old_lanes >= new_lanes * 31,
+        "packed-word queue materialization should cut generated launch lanes by about 32x"
+    );
+}
+
+#[test]
 fn ifds_active_queue_prepare_builds_sparse_traversal_program() {
     let prepared = prepare_ifds_skewed_active_queue_step(None).unwrap();
 
@@ -218,6 +262,14 @@ fn ifds_active_queue_prepare_builds_sparse_traversal_program() {
     assert!(u64::from(prepared.queue_capacity) >= prepared.stats.active_sources);
     assert!(prepared.queue_capacity < prepared.stats.nodes / 32);
     assert!(prepared.stats.allowed_edges_from_active > 0);
+}
+
+fn mix32(mut value: u32) -> u32 {
+    value ^= value >> 16;
+    value = value.wrapping_mul(0x7FEB_352D);
+    value ^= value >> 15;
+    value = value.wrapping_mul(0x846C_A68B);
+    value ^ (value >> 16)
 }
 
 #[test]
