@@ -621,7 +621,12 @@ fn cuda_resident_adaptive_sparse_queue_word_prefix_handles_large_frontier() {
         &adj,
     )
     .expect("resident adaptive graph upload");
-    let active_nodes = [0, 3, 511, 7_000, 8_999];
+    let mut active_nodes = Vec::with_capacity(513);
+    for word in 0..256u32 {
+        active_nodes.push(word * 32);
+        active_nodes.push(word * 32 + 1);
+    }
+    active_nodes.push(256 * 32);
     let frontier_in = pack_nodes(&active_nodes, node_count);
     let expected_nodes: Vec<u32> = active_nodes
         .iter()

@@ -2,6 +2,7 @@ use super::state::{
     adaptive_four_russians_layout_hash, adaptive_traversal_layout_hash, AdaptiveTraversalPlanCache,
 };
 use super::*;
+use crate::graph::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use crate::optimizer::dispatcher::{ResidentDispatchStep, ResidentReadRange};
 use std::cell::{Cell, RefCell};
@@ -221,6 +222,7 @@ fn sparse_dense_zero_frontier_returns_zero_without_resident_work_or_cache() {
         node_count: 33,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words: 2,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -285,6 +287,7 @@ fn sparse_queue_zero_frontier_returns_zero_without_queue_allocation_or_cache() {
         node_count: 33,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words: 2,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -343,6 +346,58 @@ fn sparse_queue_graph_upload_skips_dense_adjacency_rows() {
             edge_kind_mask.len() * std::mem::size_of::<u32>(),
         ],
         "CSR-only sparse-queue upload must not allocate or upload dense adjacency rows"
+    );
+}
+
+#[test]
+fn adaptive_upload_records_exact_high_degree_source_count() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let node_count = 5u32;
+    let degrees = [
+        STRIDED_FORWARD_MIN_ROW_DEGREE,
+        STRIDED_FORWARD_MIN_ROW_DEGREE - 1,
+        STRIDED_FORWARD_MIN_ROW_DEGREE + 11,
+        0,
+        3,
+    ];
+    let mut edge_offsets = Vec::with_capacity(degrees.len() + 1);
+    let mut edge_targets = Vec::new();
+    let mut edge_kind_mask = Vec::new();
+    edge_offsets.push(0);
+    for degree in degrees {
+        edge_targets.extend((0..degree).map(|edge| edge % node_count));
+        edge_kind_mask.extend(std::iter::repeat(1).take(degree as usize));
+        edge_offsets.push(edge_targets.len() as u32);
+    }
+    let adj_rows_dense = vec![0u32; node_count as usize];
+
+    let full_graph = upload_resident_adaptive_traversal_graph(
+        &dispatcher,
+        node_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+        &adj_rows_dense,
+    )
+    .expect("Fix: full adaptive resident upload should accept high-degree CSR");
+    let sparse_graph = upload_resident_adaptive_sparse_queue_graph(
+        &dispatcher,
+        node_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+    )
+    .expect("Fix: CSR-only adaptive resident upload should accept high-degree CSR");
+
+    assert_eq!(
+        full_graph.high_degree_source_count(),
+        2,
+        "full adaptive graph metadata must count high-degree rows exactly"
+    );
+    assert_eq!(
+        sparse_graph.high_degree_source_count(),
+        2,
+        "CSR-only adaptive graph metadata must count high-degree rows exactly"
     );
 }
 
@@ -408,6 +463,7 @@ fn sparse_queue_step_sizes_active_queue_from_frontier_popcount() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -449,6 +505,7 @@ fn sparse_queue_step_reuses_larger_queue_scratch_for_smaller_frontier() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         layout_hash: 11,
         handles: [101, 102, 103, 104],
@@ -514,6 +571,7 @@ fn skewed_high_degree_sparse_queue_step_uses_bounded_split_queue() {
         node_count,
         edge_count: crate::graph::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE,
         max_row_degree: crate::graph::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE,
+        high_degree_source_count: 1,
         words,
         layout_hash: 13,
         handles: [101, 102, 103, 104],
@@ -593,6 +651,55 @@ fn skewed_high_degree_sparse_queue_step_uses_bounded_split_queue() {
 }
 
 #[test]
+fn single_superhub_csr_only_sparse_queue_sizes_split_queue_from_high_row_count() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let node_count = 2048u32;
+    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let hub_degree = STRIDED_FORWARD_MIN_ROW_DEGREE * 9;
+    let mut edge_offsets = vec![hub_degree; node_count as usize + 1];
+    edge_offsets[0] = 0;
+    let edge_targets = vec![1u32; hub_degree as usize];
+    let edge_kind_mask = vec![1u32; hub_degree as usize];
+    let graph = upload_resident_adaptive_sparse_queue_graph(
+        &dispatcher,
+        node_count,
+        &edge_offsets,
+        &edge_targets,
+        &edge_kind_mask,
+    )
+    .expect("Fix: CSR-only adaptive sparse queue graph should accept a one-superhub graph");
+    let mut scratch = AdaptiveTraversalResidentScratch::default();
+    let mut frontier_in = vec![0u32; words];
+    for node in 0..9u32 {
+        frontier_in[(node / 32) as usize] |= 1 << (node % 32);
+    }
+    let mut frontier_out = Vec::new();
+
+    adaptive_traverse_resident_sparse_queue_step_with_scratch_into(
+        &dispatcher,
+        &graph,
+        &frontier_in,
+        u32::MAX,
+        &mut scratch,
+        &mut frontier_out,
+    )
+    .expect("Fix: CSR-only adaptive sparse queue step should complete one-superhub traversal");
+
+    assert_eq!(graph.high_degree_source_count(), 1);
+    assert_eq!(scratch.queue_bytes, 16 * std::mem::size_of::<u32>());
+    assert_eq!(
+        scratch.high_queue_bytes,
+        std::mem::size_of::<u32>(),
+        "one enormous row should allocate one adaptive high-row slot, not edge_count / threshold slots"
+    );
+    assert_eq!(
+        dispatcher.last_step_grids()[4],
+        Some(vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(1)),
+        "one-superhub adaptive traversal must launch only one row-strided team"
+    );
+}
+
+#[test]
 fn uniformly_high_degree_sparse_queue_step_keeps_global_strided_consumer() {
     let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 2048u32;
@@ -603,6 +710,7 @@ fn uniformly_high_degree_sparse_queue_step_keeps_global_strided_consumer() {
         edge_count: crate::graph::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE
             * queue_slots,
         max_row_degree: crate::graph::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE,
+        high_degree_source_count: queue_slots,
         words,
         layout_hash: 17,
         handles: [101, 102, 103, 104],
@@ -649,6 +757,7 @@ fn auto_zero_frontier_returns_sparse_queue_without_resident_work_or_cache() {
         node_count: 33,
         edge_count: 128,
         max_row_degree: 8,
+        high_degree_source_count: 0,
         words: 2,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -687,6 +796,7 @@ fn sparse_dense_resident_step_does_not_upload_popcount_zero_seed() {
         node_count: 1,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words: 1,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -723,6 +833,7 @@ fn sparse_dense_resident_program_cache_reuses_same_shape_graphs() {
         node_count: 33,
         edge_count: 8,
         max_row_degree: 2,
+        high_degree_source_count: 0,
         words: 2,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -731,6 +842,7 @@ fn sparse_dense_resident_program_cache_reuses_same_shape_graphs() {
         node_count: 33,
         edge_count: 8,
         max_row_degree: 2,
+        high_degree_source_count: 0,
         words: 2,
         layout_hash: 99,
         handles: [201, 202, 203, 204],
@@ -777,6 +889,7 @@ fn sparse_queue_resident_step_initializes_queue_len_on_device() {
         node_count: 1,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words: 1,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -838,6 +951,7 @@ fn large_single_word_sparse_queue_resident_step_uses_atomic_materializer() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -899,6 +1013,7 @@ fn large_dense_sparse_queue_resident_step_uses_word_prefix_materializer() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         layout_hash: 7,
         handles: [101, 102, 103, 104],
@@ -964,6 +1079,7 @@ fn small_multiblock_sparse_queue_resident_step_inlines_block_offsets() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         layout_hash: 11,
         handles: [101, 102, 103, 104],
@@ -1036,6 +1152,7 @@ fn many_block_sparse_queue_resident_step_scans_block_offsets_once() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words,
         layout_hash: 11,
         handles: [101, 102, 103, 104],
@@ -1113,6 +1230,7 @@ fn generated_adaptive_resident_free_releases_each_handle_once_in_first_seen_orde
             node_count: 4,
             edge_count: 3,
             max_row_degree: 1,
+            high_degree_source_count: 0,
             words: 1,
             layout_hash: seed,
             handles: [base, base + 1, base + 2, base],
@@ -1156,6 +1274,7 @@ fn auto_step_rejects_bad_frontier_before_resident_allocation() {
         node_count: 33,
         edge_count: 0,
         max_row_degree: 0,
+        high_degree_source_count: 0,
         words: 2,
         layout_hash: 7,
         handles: [101, 102, 103, 104],

@@ -9,7 +9,7 @@ use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer_for_stats,
     resident_csr_queue_split_low_grid, resident_csr_queue_traverse_grid,
-    resident_csr_queue_traverse_kind_for_graph, FrontierWordPrefixScratch,
+    resident_csr_queue_traverse_kind_for_graph_stats, FrontierWordPrefixScratch,
     ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind, STRIDED_FORWARD_MIN_ROW_DEGREE,
 };
 use crate::graph::dispatch_bridge::{
@@ -45,6 +45,7 @@ struct AdaptiveSparseQueueGraphView {
     node_count: u32,
     edge_count: u32,
     max_row_degree: u32,
+    high_degree_source_count: u32,
     layout_hash: u64,
     handles: [u64; 3],
 }
@@ -56,6 +57,7 @@ impl AdaptiveSparseQueueGraphView {
             node_count: graph.node_count,
             edge_count: graph.edge_count,
             max_row_degree: graph.max_row_degree,
+            high_degree_source_count: graph.high_degree_source_count,
             layout_hash: graph.layout_hash,
             handles: [handles[0], handles[1], handles[2]],
         }
@@ -66,6 +68,7 @@ impl AdaptiveSparseQueueGraphView {
             node_count: graph.node_count,
             edge_count: graph.edge_count,
             max_row_degree: graph.max_row_degree,
+            high_degree_source_count: graph.high_degree_source_count,
             layout_hash: graph.layout_hash,
             handles: graph.handles,
         }
@@ -335,10 +338,10 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
         queue_capacity,
         sparse_plan.frontier_nonzero_words,
     );
-    let traverse_kind = resident_csr_queue_traverse_kind_for_graph(
+    let traverse_kind = resident_csr_queue_traverse_kind_for_graph_stats(
         graph.node_count,
-        graph.edge_count,
         graph.max_row_degree,
+        graph.high_degree_source_count,
         queue_capacity,
     );
     let traverse_grid = resident_csr_queue_traverse_grid(queue_capacity, traverse_kind);

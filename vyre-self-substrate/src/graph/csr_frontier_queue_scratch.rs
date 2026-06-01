@@ -108,20 +108,6 @@ pub(crate) const fn resident_csr_queue_traverse_kind(
     }
 }
 
-pub(crate) fn resident_csr_queue_traverse_kind_for_graph(
-    node_count: u32,
-    edge_count: u32,
-    max_row_degree: u32,
-    queue_capacity: u32,
-) -> ResidentCsrQueueTraverseKind {
-    resident_csr_queue_traverse_kind_for_graph_stats(
-        node_count,
-        max_row_degree,
-        resident_csr_queue_high_degree_source_bound_from_edges(edge_count),
-        queue_capacity,
-    )
-}
-
 pub(crate) fn resident_csr_queue_traverse_kind_for_graph_stats(
     node_count: u32,
     max_row_degree: u32,
@@ -152,8 +138,12 @@ pub(crate) fn resident_csr_queue_traverse_kind_for_graph_stats(
     }
 }
 
-pub(crate) const fn resident_csr_queue_high_degree_source_bound_from_edges(edge_count: u32) -> u32 {
-    edge_count / STRIDED_FORWARD_MIN_ROW_DEGREE
+pub(crate) fn resident_csr_queue_high_degree_source_count(edge_offsets: &[u32]) -> u32 {
+    edge_offsets.windows(2).fold(0_u32, |count, pair| {
+        count.saturating_add(u32::from(
+            pair[1].saturating_sub(pair[0]) >= STRIDED_FORWARD_MIN_ROW_DEGREE,
+        ))
+    })
 }
 
 pub(crate) const fn resident_csr_queue_high_degree_capacity_bound(
@@ -563,7 +553,7 @@ mod tests {
                 STRIDED_FORWARD_MIN_ROW_DEGREE.saturating_add(extra_edges_per_high_row),
             );
             let edge_bound_capacity = resident_csr_queue_high_degree_capacity_bound(
-                resident_csr_queue_high_degree_source_bound_from_edges(edge_count),
+                edge_count / STRIDED_FORWARD_MIN_ROW_DEGREE,
                 queue_capacity,
             );
             let exact_capacity =

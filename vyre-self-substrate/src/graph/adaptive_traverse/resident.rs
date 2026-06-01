@@ -7,6 +7,7 @@ pub struct ResidentAdaptiveTraversalGraph {
     pub(crate) node_count: u32,
     pub(crate) edge_count: u32,
     pub(crate) max_row_degree: u32,
+    pub(crate) high_degree_source_count: u32,
     pub(crate) words: usize,
     pub(crate) layout_hash: u64,
     pub(crate) handles: [u64; 4],
@@ -18,6 +19,7 @@ pub struct ResidentAdaptiveSparseQueueGraph {
     pub(crate) node_count: u32,
     pub(crate) edge_count: u32,
     pub(crate) max_row_degree: u32,
+    pub(crate) high_degree_source_count: u32,
     pub(crate) words: usize,
     pub(crate) layout_hash: u64,
     pub(crate) handles: [u64; 3],
@@ -86,6 +88,12 @@ impl ResidentAdaptiveSparseQueueGraph {
         self.max_row_degree
     }
 
+    /// Number of sparse CSR rows at or above the mixed-split high-degree threshold.
+    #[must_use]
+    pub fn high_degree_source_count(&self) -> u32 {
+        self.high_degree_source_count
+    }
+
     /// Number of u32 words per frontier bitset.
     #[must_use]
     pub fn words(&self) -> usize {
@@ -136,6 +144,12 @@ impl ResidentAdaptiveTraversalGraph {
     #[must_use]
     pub fn max_row_degree(&self) -> u32 {
         self.max_row_degree
+    }
+
+    /// Number of sparse CSR rows at or above the mixed-split high-degree threshold.
+    #[must_use]
+    pub fn high_degree_source_count(&self) -> u32 {
+        self.high_degree_source_count
     }
 
     /// Number of u32 words per frontier bitset.
