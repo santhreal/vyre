@@ -16,7 +16,10 @@ mod strided;
 
 pub use strided::{
     csr_queue_delta_strided_dispatch_grid, csr_queue_delta_strided_enqueue,
-    CSR_QUEUE_DELTA_STRIDED_ENQUEUE_OP_ID, CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE,
+    csr_queue_delta_strided_logical_lanes_per_launch,
+    csr_queue_delta_strided_source_slots_per_launch,
+    CSR_QUEUE_DELTA_STRIDED_CAPPED_LAUNCH_MIN_CAPACITY, CSR_QUEUE_DELTA_STRIDED_ENQUEUE_OP_ID,
+    CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE, CSR_QUEUE_DELTA_STRIDED_MAX_SOURCE_SLOTS_PER_LAUNCH,
 };
 
 /// Canonical op id for queue-to-queue delta CSR expansion.

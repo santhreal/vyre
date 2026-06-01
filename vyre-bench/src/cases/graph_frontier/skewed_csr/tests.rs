@@ -236,11 +236,16 @@ fn skewed_csr_queue_closure_prepare_builds_resident_delta_sequence() {
             .unwrap_or(0),
         prepared.max_wave_queue_len
     );
+    let launch_lanes = crate::cases::queue_closure_profile::queue_closure_launch_lanes_per_wave(
+        prepared.delta_grid,
+        prepared.delta_program.workgroup_size(),
+    );
     let lane_profile =
-        crate::cases::queue_closure_profile::QueueClosureLaneProfile::from_wave_lengths(
+        crate::cases::queue_closure_profile::QueueClosureLaneProfile::from_wave_lengths_with_launch_lanes(
             prepared.queue_capacity,
             &prepared.wave_queue_lengths,
             queue_closure::graph_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+            launch_lanes,
         );
     assert_eq!(
         lane_profile.profiled_delta_source_slots,
@@ -248,6 +253,14 @@ fn skewed_csr_queue_closure_prepare_builds_resident_delta_sequence() {
     );
     assert!(lane_profile.elided_delta_lanes > 0);
     assert!(lane_profile.delta_lane_elision_x1000 > 500);
+    assert!(lane_profile.launched_delta_lanes >= lane_profile.fixed_delta_lanes);
+    assert!(
+        lane_profile.launched_delta_lanes - lane_profile.fixed_delta_lanes
+            < prepared.wave_queue_lengths.len() as u64
+                * u64::from(prepared.delta_program.workgroup_size()[0])
+    );
+    assert_eq!(lane_profile.launch_elided_delta_lanes, 0);
+    assert_eq!(lane_profile.launch_lane_elision_x1000, 0);
 }
 
 #[test]

@@ -9,6 +9,9 @@ pub(crate) struct QueueClosureLaneProfile {
     pub(crate) profiled_delta_lanes: u64,
     pub(crate) elided_delta_lanes: u64,
     pub(crate) delta_lane_elision_x1000: u64,
+    pub(crate) launched_delta_lanes: u64,
+    pub(crate) launch_elided_delta_lanes: u64,
+    pub(crate) launch_lane_elision_x1000: u64,
 }
 
 impl QueueClosureLaneProfile {
@@ -17,6 +20,23 @@ impl QueueClosureLaneProfile {
         queue_capacity: u32,
         wave_lengths: &[u32],
         lanes_per_source: u32,
+    ) -> Self {
+        let launch_lanes_per_wave =
+            u64::from(queue_capacity).saturating_mul(u64::from(lanes_per_source.max(1)));
+        Self::from_wave_lengths_with_launch_lanes(
+            queue_capacity,
+            wave_lengths,
+            lanes_per_source,
+            launch_lanes_per_wave,
+        )
+    }
+
+    #[must_use]
+    pub(crate) fn from_wave_lengths_with_launch_lanes(
+        queue_capacity: u32,
+        wave_lengths: &[u32],
+        lanes_per_source: u32,
+        launch_lanes_per_wave: u64,
     ) -> Self {
         let lanes_per_source = u128::from(lanes_per_source.max(1));
         let fixed_delta_source_slots =
@@ -29,10 +49,18 @@ impl QueueClosureLaneProfile {
         let fixed_delta_lanes = fixed_delta_source_slots.saturating_mul(lanes_per_source);
         let profiled_delta_lanes = profiled_delta_source_slots.saturating_mul(lanes_per_source);
         let elided_delta_lanes = fixed_delta_lanes.saturating_sub(profiled_delta_lanes);
+        let launched_delta_lanes =
+            u128::from(launch_lanes_per_wave).saturating_mul(wave_lengths.len() as u128);
+        let launch_elided_delta_lanes = fixed_delta_lanes.saturating_sub(launched_delta_lanes);
         let delta_lane_elision_x1000 = if fixed_delta_lanes == 0 {
             0
         } else {
             elided_delta_lanes.saturating_mul(1000) / fixed_delta_lanes
+        };
+        let launch_lane_elision_x1000 = if fixed_delta_lanes == 0 {
+            0
+        } else {
+            launch_elided_delta_lanes.saturating_mul(1000) / fixed_delta_lanes
         };
 
         Self {
@@ -43,8 +71,24 @@ impl QueueClosureLaneProfile {
             profiled_delta_lanes: u128_to_u64_saturating(profiled_delta_lanes),
             elided_delta_lanes: u128_to_u64_saturating(elided_delta_lanes),
             delta_lane_elision_x1000: u128_to_u64_saturating(delta_lane_elision_x1000),
+            launched_delta_lanes: u128_to_u64_saturating(launched_delta_lanes),
+            launch_elided_delta_lanes: u128_to_u64_saturating(launch_elided_delta_lanes),
+            launch_lane_elision_x1000: u128_to_u64_saturating(launch_lane_elision_x1000),
         }
     }
+}
+
+#[must_use]
+pub(crate) fn queue_closure_launch_lanes_per_wave(
+    dispatch_grid: [u32; 3],
+    workgroup_size: [u32; 3],
+) -> u64 {
+    dispatch_grid
+        .iter()
+        .chain(workgroup_size.iter())
+        .fold(1_u64, |lanes, &extent| {
+            lanes.saturating_mul(u64::from(extent.max(1)))
+        })
 }
 
 #[must_use]
@@ -150,9 +194,20 @@ mod tests {
 
             let profile =
                 QueueClosureLaneProfile::from_wave_lengths(capacity, &waves, lanes_per_source);
+            let capped_launch_sources = capacity.min(16_384);
+            let capped_launch_lanes =
+                u64::from(capped_launch_sources.max(1)).saturating_mul(u64::from(lanes_per_source));
+            let capped_profile = QueueClosureLaneProfile::from_wave_lengths_with_launch_lanes(
+                capacity,
+                &waves,
+                lanes_per_source,
+                capped_launch_lanes,
+            );
             let profiled_sources = waves.iter().map(|&len| u64::from(len)).sum::<u64>();
             let fixed_sources = u64::from(capacity).saturating_mul(u64::from(wave_count));
             let elided_sources = fixed_sources.saturating_sub(profiled_sources);
+            let fixed_lanes = fixed_sources.saturating_mul(u64::from(lanes_per_source));
+            let launched_lanes = capped_launch_lanes.saturating_mul(u64::from(wave_count));
 
             assert_eq!(
                 profile.fixed_delta_source_slots, fixed_sources,
@@ -167,8 +222,7 @@ mod tests {
                 "elided source slots case {case}"
             );
             assert_eq!(
-                profile.fixed_delta_lanes,
-                fixed_sources.saturating_mul(u64::from(lanes_per_source)),
+                profile.fixed_delta_lanes, fixed_lanes,
                 "fixed lanes case {case}"
             );
             assert_eq!(
@@ -180,6 +234,15 @@ mod tests {
                 profile.elided_delta_lanes,
                 elided_sources.saturating_mul(u64::from(lanes_per_source)),
                 "elided lanes case {case}"
+            );
+            assert_eq!(
+                capped_profile.launched_delta_lanes, launched_lanes,
+                "launch lanes case {case}"
+            );
+            assert_eq!(
+                capped_profile.launch_elided_delta_lanes,
+                fixed_lanes.saturating_sub(launched_lanes),
+                "launch-elided lanes case {case}"
             );
             if fixed_sources == 0 {
                 assert_eq!(profile.delta_lane_elision_x1000, 0, "empty case {case}");
@@ -210,6 +273,36 @@ mod tests {
 
         assert!(eliding_cases > CASES * 9 / 10);
         assert!(exact_cases > 0);
+    }
+
+    #[test]
+    fn generated_queue_closure_launch_lane_product_is_saturating() {
+        const CASES: u32 = 10_000;
+        let mut saturated_cases = 0_u32;
+
+        for case in 0..CASES {
+            let grid = [
+                mix32(case ^ 0xA171_0001),
+                mix32(case ^ 0xA171_0002),
+                1 + (mix32(case ^ 0xA171_0003) % 9),
+            ];
+            let workgroup = [1 + (mix32(case ^ 0xA171_0004) % 1024), 1, 1];
+            let lanes = queue_closure_launch_lanes_per_wave(grid, workgroup);
+            let expected = grid
+                .iter()
+                .chain(workgroup.iter())
+                .fold(1_u128, |total, &extent| {
+                    total.saturating_mul(u128::from(extent.max(1)))
+                });
+            assert_eq!(
+                lanes,
+                u128_to_u64_saturating(expected),
+                "launch lane product case {case}"
+            );
+            saturated_cases += u32::from(expected > u128::from(u64::MAX));
+        }
+
+        assert!(saturated_cases > 0);
     }
 
     #[test]

@@ -65,6 +65,15 @@ pub(super) fn custom_graph_metric_key(prefix: &'static str, name: &str) -> Optio
         ("", "graph_csr_queue_closure_delta_lane_elision_x1000") => {
             Some("graph_csr_queue_closure_delta_lane_elision_x1000")
         }
+        ("", "graph_csr_queue_closure_launch_delta_lanes") => {
+            Some("graph_csr_queue_closure_launch_delta_lanes")
+        }
+        ("", "graph_csr_queue_closure_launch_elided_delta_lanes") => {
+            Some("graph_csr_queue_closure_launch_elided_delta_lanes")
+        }
+        ("", "graph_csr_queue_closure_launch_lane_elision_x1000") => {
+            Some("graph_csr_queue_closure_launch_lane_elision_x1000")
+        }
         _ => None,
     }
 }
@@ -99,6 +108,9 @@ mod tests {
             "graph_csr_queue_closure_profiled_delta_lanes",
             "graph_csr_queue_closure_elided_delta_lanes",
             "graph_csr_queue_closure_delta_lane_elision_x1000",
+            "graph_csr_queue_closure_launch_delta_lanes",
+            "graph_csr_queue_closure_launch_elided_delta_lanes",
+            "graph_csr_queue_closure_launch_lane_elision_x1000",
         ] {
             assert_eq!(custom_graph_metric_key("", name), Some(name));
         }

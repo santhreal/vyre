@@ -8,7 +8,9 @@ use crate::cases::dataflow_irregular::closure::CLOSURE_MAX_ITERS;
 use crate::cases::dataflow_irregular::metrics::{
     ifds_closure_baseline_metric_points, ifds_closure_metric_points,
 };
-use crate::cases::queue_closure_profile::QueueClosureLaneProfile;
+use crate::cases::queue_closure_profile::{
+    queue_closure_launch_lanes_per_wave, QueueClosureLaneProfile,
+};
 
 pub(super) fn queue_closure_metric_points(
     prepared: &DataflowIfdsSkewedQueueClosurePrepared,
@@ -87,10 +89,13 @@ fn append_queue_closure_points(
         name: "dataflow_ifds_closure_seed_scan_elided".to_string(),
         value: 1,
     });
-    let lane_profile = QueueClosureLaneProfile::from_wave_lengths(
+    let launch_lanes_per_wave =
+        queue_closure_launch_lanes_per_wave(prepared.delta_grid, QUEUE_CLOSURE_WORKGROUP_SIZE);
+    let lane_profile = QueueClosureLaneProfile::from_wave_lengths_with_launch_lanes(
         prepared.queue_capacity,
         &prepared.wave_queue_lengths,
         ifds_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+        launch_lanes_per_wave,
     );
     metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_wave_profiled".to_string(),
@@ -123,5 +128,17 @@ fn append_queue_closure_points(
     metrics.push(MetricPoint {
         name: "dataflow_ifds_closure_delta_lane_elision_x1000".to_string(),
         value: lane_profile.delta_lane_elision_x1000,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_launch_delta_lanes".to_string(),
+        value: lane_profile.launched_delta_lanes,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_launch_elided_delta_lanes".to_string(),
+        value: lane_profile.launch_elided_delta_lanes,
+    });
+    metrics.push(MetricPoint {
+        name: "dataflow_ifds_closure_launch_lane_elision_x1000".to_string(),
+        value: lane_profile.launch_lane_elision_x1000,
     });
 }

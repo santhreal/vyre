@@ -248,6 +248,15 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "dataflow_ifds_closure_delta_lane_elision_x1000") => {
             Some("dataflow_ifds_closure_delta_lane_elision_x1000")
         }
+        ("", "dataflow_ifds_closure_launch_delta_lanes") => {
+            Some("dataflow_ifds_closure_launch_delta_lanes")
+        }
+        ("", "dataflow_ifds_closure_launch_elided_delta_lanes") => {
+            Some("dataflow_ifds_closure_launch_elided_delta_lanes")
+        }
+        ("", "dataflow_ifds_closure_launch_lane_elision_x1000") => {
+            Some("dataflow_ifds_closure_launch_lane_elision_x1000")
+        }
         ("", "scan_ac_irregular_haystack_bytes") => Some("scan_ac_irregular_haystack_bytes"),
         ("", "scan_ac_irregular_packed_haystack_words") => {
             Some("scan_ac_irregular_packed_haystack_words")
@@ -504,6 +513,9 @@ mod tests {
             "dataflow_ifds_closure_profiled_delta_lanes",
             "dataflow_ifds_closure_elided_delta_lanes",
             "dataflow_ifds_closure_delta_lane_elision_x1000",
+            "dataflow_ifds_closure_launch_delta_lanes",
+            "dataflow_ifds_closure_launch_elided_delta_lanes",
+            "dataflow_ifds_closure_launch_lane_elision_x1000",
         ] {
             assert_eq!(custom_metric_key("", name), Some(name));
         }

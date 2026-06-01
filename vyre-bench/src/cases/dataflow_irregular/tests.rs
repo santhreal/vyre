@@ -444,17 +444,24 @@ fn ifds_queue_closure_prepare_builds_delta_fixpoint_sequence() {
             .unwrap_or(0),
         prepared.max_wave_queue_len
     );
+    let launch_lanes = crate::cases::queue_closure_profile::queue_closure_launch_lanes_per_wave(
+        prepared.delta_grid,
+        prepared.delta_program.workgroup_size(),
+    );
     let lane_profile =
-        crate::cases::queue_closure_profile::QueueClosureLaneProfile::from_wave_lengths(
+        crate::cases::queue_closure_profile::QueueClosureLaneProfile::from_wave_lengths_with_launch_lanes(
             prepared.queue_capacity,
             &prepared.wave_queue_lengths,
             ifds_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+            launch_lanes,
         );
     assert_eq!(
         lane_profile.profiled_delta_source_slots,
         prepared.total_queue_pops
     );
     assert!(lane_profile.elided_delta_lanes > 0);
+    assert!(lane_profile.launch_elided_delta_lanes > 0);
+    assert!(lane_profile.launch_lane_elision_x1000 > 800);
 }
 
 #[test]

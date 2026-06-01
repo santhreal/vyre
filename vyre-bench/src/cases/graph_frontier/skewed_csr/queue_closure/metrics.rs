@@ -5,7 +5,9 @@ use super::{
     GRAPH_QUEUE_CLOSURE_MAX_ITERS, GRAPH_QUEUE_CLOSURE_WORKGROUP_SIZE,
 };
 use crate::cases::graph_frontier::skewed_csr::metrics::skewed_csr_baseline_metric_points;
-use crate::cases::queue_closure_profile::QueueClosureLaneProfile;
+use crate::cases::queue_closure_profile::{
+    queue_closure_launch_lanes_per_wave, QueueClosureLaneProfile,
+};
 
 pub(super) fn queue_closure_metric_points(
     prepared: &GraphCsrSkewedQueueClosurePrepared,
@@ -86,10 +88,15 @@ fn append_queue_closure_points(
         "graph_csr_queue_closure_row_strided_delta",
         u64::from(prepared.row_strided_delta),
     ));
-    let lane_profile = QueueClosureLaneProfile::from_wave_lengths(
+    let launch_lanes_per_wave = queue_closure_launch_lanes_per_wave(
+        prepared.delta_grid,
+        GRAPH_QUEUE_CLOSURE_WORKGROUP_SIZE,
+    );
+    let lane_profile = QueueClosureLaneProfile::from_wave_lengths_with_launch_lanes(
         prepared.queue_capacity,
         &prepared.wave_queue_lengths,
         graph_queue_closure_delta_lanes_per_source(prepared.row_strided_delta),
+        launch_lanes_per_wave,
     );
     metrics.push(metric("graph_csr_queue_closure_wave_profiled", 1));
     metrics.push(metric(
@@ -119,6 +126,18 @@ fn append_queue_closure_points(
     metrics.push(metric(
         "graph_csr_queue_closure_delta_lane_elision_x1000",
         lane_profile.delta_lane_elision_x1000,
+    ));
+    metrics.push(metric(
+        "graph_csr_queue_closure_launch_delta_lanes",
+        lane_profile.launched_delta_lanes,
+    ));
+    metrics.push(metric(
+        "graph_csr_queue_closure_launch_elided_delta_lanes",
+        lane_profile.launch_elided_delta_lanes,
+    ));
+    metrics.push(metric(
+        "graph_csr_queue_closure_launch_lane_elision_x1000",
+        lane_profile.launch_lane_elision_x1000,
     ));
 }
 
