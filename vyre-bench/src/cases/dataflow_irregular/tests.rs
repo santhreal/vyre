@@ -1,13 +1,12 @@
-use super::fixture::IfdsSkewedFixture;
 use super::fixture::{ifds_active_queue_inputs, ifds_queue_inputs};
 use super::queue::{
     ifds_queue_closure_inputs, ifds_queue_closure_reset_program, ifds_queue_reset_program,
-    ifds_queue_should_use_row_strided, ifds_skewed_queue_closure_oracle,
-    ifds_sparse_queue_capacity, prepare_ifds_skewed_active_queue_step,
-    prepare_ifds_skewed_queue_closure, prepare_ifds_skewed_queue_materialize_step,
-    ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX, ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX,
-    ACTIVE_QUEUE_EDGE_TARGETS_INDEX, ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX,
-    QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
+    ifds_queue_should_use_row_strided, ifds_sparse_queue_capacity,
+    prepare_ifds_skewed_active_queue_step, prepare_ifds_skewed_queue_closure,
+    prepare_ifds_skewed_queue_materialize_step, ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX,
+    ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX, ACTIVE_QUEUE_EDGE_TARGETS_INDEX,
+    ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_LEN_INDEX, QUEUE_ACTIVE_QUEUE_INDEX,
+    QUEUE_CLOSURE_ACCUMULATOR_INDEX, QUEUE_CLOSURE_EDGE_KIND_INDEX,
     QUEUE_CLOSURE_EDGE_OFFSETS_INDEX, QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX,
     QUEUE_CLOSURE_LEN_B_INDEX, QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX,
     QUEUE_CLOSURE_SEED_FRONTIER_INDEX, QUEUE_CLOSURE_SEED_LEN_INDEX,
@@ -15,7 +14,8 @@ use super::queue::{
     QUEUE_LEN_INDEX,
 };
 use super::*;
-use proptest::prelude::*;
+
+mod queue_closure_generated;
 
 #[test]
 fn ifds_skewed_fixture_has_filtered_edges_and_bitset_frontier() {
@@ -371,131 +371,6 @@ fn ifds_queue_closure_prepare_builds_delta_fixpoint_sequence() {
     assert!(prepared.closure_iterations <= closure::CLOSURE_MAX_ITERS);
     assert!(prepared.total_queue_pops >= prepared.stats.active_sources);
     assert!(prepared.max_wave_queue_len >= prepared.stats.active_sources as u32);
-}
-
-fn generated_ifds_fixture(
-    node_count: u32,
-    seeds: &[u32],
-    edges: &[(u32, u32, bool)],
-) -> IfdsSkewedFixture {
-    let frontier_words = node_count.div_ceil(32);
-    let mut frontier_in = vec![0_u32; frontier_words as usize];
-    for &seed in seeds {
-        let node = seed % node_count;
-        frontier_in[(node / 32) as usize] |= 1_u32 << (node % 32);
-    }
-    let active_sources = frontier_in
-        .iter()
-        .map(|word| u64::from(word.count_ones()))
-        .sum::<u64>();
-    let mut by_source = vec![Vec::<(u32, u32)>::new(); node_count as usize];
-    for &(src, dst, allowed) in edges {
-        let kind_mask = if allowed { IFDS_REACH_MASK } else { 0 };
-        by_source[(src % node_count) as usize].push((dst % node_count, kind_mask));
-    }
-
-    let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
-    let mut edge_targets = Vec::new();
-    let mut edge_kind_mask = Vec::new();
-    let mut allowed_edges_from_active = 0_u64;
-    let mut filtered_edges_from_active = 0_u64;
-    let mut max_degree = 0_u32;
-    let mut high_degree_sources = 0_u64;
-    edge_offsets.push(0);
-    for src in 0..node_count {
-        let src_edges = &by_source[src as usize];
-        let degree = src_edges.len() as u32;
-        max_degree = max_degree.max(degree);
-        high_degree_sources += u64::from(degree >= 24);
-        let src_word = (src / 32) as usize;
-        let src_bit = 1_u32 << (src % 32);
-        let src_active = frontier_in[src_word] & src_bit != 0;
-        for &(dst, kind_mask) in src_edges {
-            if src_active && kind_mask & IFDS_REACH_MASK != 0 {
-                allowed_edges_from_active += 1;
-            } else if src_active {
-                filtered_edges_from_active += 1;
-            }
-            edge_targets.push(dst);
-            edge_kind_mask.push(kind_mask);
-        }
-        edge_offsets.push(edge_targets.len() as u32);
-    }
-
-    IfdsSkewedFixture {
-        nodes: vec![0; node_count as usize],
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        node_tags: vec![0; node_count as usize],
-        frontier_in,
-        frontier_out_seed: vec![0; frontier_words as usize],
-        stats: IfdsSkewedStats {
-            nodes: node_count,
-            edges: edges.len() as u32,
-            frontier_words,
-            active_sources,
-            allowed_edges_from_active,
-            filtered_edges_from_active,
-            output_words_set: 0,
-            max_degree,
-            high_degree_sources,
-        },
-    }
-}
-
-proptest! {
-    #![proptest_config(ProptestConfig {
-        cases: 4_096,
-        failure_persistence: Some(Box::new(
-            proptest::test_runner::FileFailurePersistence::Off
-        )),
-        ..ProptestConfig::default()
-    })]
-
-    #[test]
-    fn ifds_queue_closure_compact_capacity_matches_full_capacity_for_generated_graphs(
-        node_count in 1_u32..=128,
-        seeds in proptest::collection::vec(any::<u32>(), 0..=24),
-        edges in proptest::collection::vec((any::<u32>(), any::<u32>(), any::<bool>()), 0..=256),
-    ) {
-        let fixture = generated_ifds_fixture(node_count, &seeds, &edges);
-        let max_iters = node_count.saturating_add(1);
-        let full = ifds_skewed_queue_closure_oracle(&fixture, max_iters, fixture.stats.nodes)?;
-        let bitset = ifds_skewed_closure_oracle(&fixture, max_iters);
-        let compact_capacity = full
-            .max_wave_queue_len
-            .max(fixture.stats.active_sources as u32)
-            .max(1);
-        let compact = ifds_skewed_queue_closure_oracle(&fixture, max_iters, compact_capacity)?;
-        let compact_inputs = ifds_queue_closure_inputs(&fixture, compact_capacity)?;
-
-        prop_assert_eq!(&full.output, &bitset.output);
-        prop_assert_eq!(&full.output, &compact.output);
-        prop_assert_eq!(full.iterations, compact.iterations);
-        prop_assert_eq!(full.changed, compact.changed);
-        prop_assert_eq!(full.total_queue_pops, compact.total_queue_pops);
-        prop_assert_eq!(full.max_wave_queue_len, compact.max_wave_queue_len);
-        prop_assert_eq!(
-            compact_inputs[QUEUE_CLOSURE_QUEUE_A_INDEX].len(),
-            compact_capacity as usize * std::mem::size_of::<u32>()
-        );
-        prop_assert_eq!(
-            compact_inputs[QUEUE_CLOSURE_QUEUE_B_INDEX].len(),
-            compact_capacity as usize * std::mem::size_of::<u32>()
-        );
-
-        if fixture.stats.active_sources > 0 || full.max_wave_queue_len > 0 {
-            prop_assert!(
-                ifds_skewed_queue_closure_oracle(
-                    &fixture,
-                    max_iters,
-                    compact_capacity.saturating_sub(1)
-                )
-                .is_err()
-            );
-        }
-    }
 }
 
 #[test]

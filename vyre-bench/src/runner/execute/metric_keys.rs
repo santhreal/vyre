@@ -208,6 +208,15 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "dataflow_ifds_closure_queue_capacity") => {
             Some("dataflow_ifds_closure_queue_capacity")
         }
+        ("", "dataflow_ifds_closure_queue_capacity_reduction_x1000") => {
+            Some("dataflow_ifds_closure_queue_capacity_reduction_x1000")
+        }
+        ("", "dataflow_ifds_closure_seed_queue_len") => {
+            Some("dataflow_ifds_closure_seed_queue_len")
+        }
+        ("", "dataflow_ifds_closure_dispatch_count") => {
+            Some("dataflow_ifds_closure_dispatch_count")
+        }
         ("", "dataflow_ifds_closure_total_queue_pops") => {
             Some("dataflow_ifds_closure_total_queue_pops")
         }
@@ -428,5 +437,27 @@ pub(super) fn metric_key(prefix: &'static str, name: &'static str) -> Option<&'s
         ("baseline_", "atomic_op_count") => Some("baseline_atomic_op_count"),
         ("baseline_", "wire_bytes") => Some("baseline_wire_bytes"),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::custom_metric_key;
+
+    #[test]
+    fn custom_metric_key_keeps_queue_closure_telemetry_visible() {
+        for name in [
+            "dataflow_ifds_closure_queue_capacity",
+            "dataflow_ifds_closure_queue_capacity_reduction_x1000",
+            "dataflow_ifds_closure_seed_queue_len",
+            "dataflow_ifds_closure_dispatch_count",
+            "dataflow_ifds_closure_total_queue_pops",
+            "dataflow_ifds_closure_max_wave_queue_len",
+            "dataflow_ifds_closure_queue_delta",
+            "dataflow_ifds_closure_row_strided_delta",
+            "dataflow_ifds_closure_seed_scan_elided",
+        ] {
+            assert_eq!(custom_metric_key("", name), Some(name));
+        }
     }
 }
