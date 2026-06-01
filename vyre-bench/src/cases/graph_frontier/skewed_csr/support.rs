@@ -5,6 +5,7 @@ use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_in
 pub(super) const CSR_NODE_COUNT: u32 = 1_048_576;
 pub(super) const CSR_ALLOW_MASK: u32 = 0b0111;
 pub(super) const HIGH_DEGREE_THRESHOLD: u32 = 24;
+pub(super) const UGLY_HUB_DEGREE: u32 = 2_048;
 pub(super) const SUITES: &[SuiteKind] = &[
     SuiteKind::Smoke,
     SuiteKind::Release,
@@ -146,6 +147,7 @@ pub(super) fn skewed_csr_queue_capacity(active_sources: u64) -> Result<u32, Benc
 pub(super) fn skewed_csr_queue_inputs(
     fixture: &SkewedCsrFixture,
     queue_capacity: u32,
+    high_degree_queue_capacity: u32,
 ) -> Result<Vec<Vec<u8>>, BenchError> {
     if u64::from(queue_capacity) < fixture.stats.active_sources {
         return Err(BenchError::EnvironmentInvalid(format!(
@@ -153,15 +155,61 @@ pub(super) fn skewed_csr_queue_inputs(
             fixture.stats.active_sources
         )));
     }
+    if high_degree_queue_capacity > queue_capacity {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "skewed CSR split queue inputs require high_degree_queue_capacity <= queue_capacity, got high_degree_queue_capacity={high_degree_queue_capacity} queue_capacity={queue_capacity}. Fix: derive high-degree capacity from active sources."
+        )));
+    }
+    let queue_bytes = (queue_capacity as usize)
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            BenchError::EnvironmentInvalid(format!(
+                "skewed CSR queue_capacity={queue_capacity} overflows host buffer sizing. Fix: split the frontier queue."
+            ))
+        })?;
+    let high_queue_bytes = (high_degree_queue_capacity as usize)
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            BenchError::EnvironmentInvalid(format!(
+                "skewed CSR high_degree_queue_capacity={high_degree_queue_capacity} overflows host buffer sizing. Fix: split the high-degree queue."
+            ))
+        })?;
     Ok(vec![
         vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in),
-        vec![0_u8; queue_capacity as usize * std::mem::size_of::<u32>()],
+        vec![0_u8; queue_bytes],
         vyre_primitives::wire::pack_u32_slice(&[0]),
         vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets),
         vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets),
         vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask),
         vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed),
+        vec![0_u8; high_queue_bytes],
+        vyre_primitives::wire::pack_u32_slice(&[0]),
     ])
+}
+
+pub(super) fn skewed_csr_active_high_degree_sources(
+    fixture: &SkewedCsrFixture,
+    min_degree: u32,
+) -> Result<u32, BenchError> {
+    let mut high_sources = 0_u32;
+    for src in 0..fixture.stats.node_count {
+        let word = (src / 32) as usize;
+        let bit = 1_u32 << (src % 32);
+        if fixture.frontier_in[word] & bit == 0 {
+            continue;
+        }
+        let start = fixture.edge_offsets[src as usize];
+        let end = fixture.edge_offsets[src as usize + 1];
+        if end.saturating_sub(start) >= min_degree {
+            high_sources = high_sources.checked_add(1).ok_or_else(|| {
+                BenchError::EnvironmentInvalid(
+                    "skewed CSR split queue high-degree active source count exceeded u32. Fix: split the frontier queue."
+                        .to_string(),
+                )
+            })?;
+        }
+    }
+    Ok(high_sources)
 }
 
 pub(super) fn materialize_skewed_csr_active_queue(
@@ -344,7 +392,7 @@ pub(super) fn skewed_csr_queue_closure_oracle(
 
 fn skewed_degree(src: u32) -> u32 {
     if src % 4096 == 0 {
-        96
+        UGLY_HUB_DEGREE
     } else if src % 257 == 0 {
         24
     } else if src % 31 == 0 {

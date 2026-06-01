@@ -6,7 +6,7 @@ fn skewed_csr_fixture_has_variable_degree_and_bitset_frontier() {
 
     assert_eq!(fixture.edge_offsets.len(), 4097);
     assert!(fixture.edge_targets.len() > 4096);
-    assert_eq!(fixture.stats.max_degree, 96);
+    assert_eq!(fixture.stats.max_degree, support::UGLY_HUB_DEGREE);
     assert!(fixture.stats.high_degree_sources > 0);
     assert!(fixture.stats.active_sources > 0);
     assert_eq!(fixture.frontier_in.len(), 128);
@@ -42,9 +42,14 @@ fn skewed_csr_prepare_builds_primitive_program_and_oracle() {
 fn skewed_csr_queue_inputs_preserve_frontier_and_device_scratch() {
     let fixture = build_skewed_csr_fixture(4096).unwrap();
     let capacity = support::skewed_csr_queue_capacity(fixture.stats.active_sources).unwrap();
-    let inputs = support::skewed_csr_queue_inputs(&fixture, capacity).unwrap();
+    let high_capacity = support::skewed_csr_active_high_degree_sources(
+        &fixture,
+        queue_materialize::GRAPH_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
+    )
+    .unwrap();
+    let inputs = support::skewed_csr_queue_inputs(&fixture, capacity, high_capacity).unwrap();
 
-    assert_eq!(inputs.len(), 7);
+    assert_eq!(inputs.len(), 9);
     assert_eq!(
         inputs[queue_materialize::QUEUE_FRONTIER_IN_INDEX],
         vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in)
@@ -57,9 +62,19 @@ fn skewed_csr_queue_inputs_preserve_frontier_and_device_scratch() {
         vyre_primitives::wire::decode_u32_le_bytes_all(&inputs[queue_materialize::QUEUE_LEN_INDEX]),
         vec![0]
     );
+    assert_eq!(
+        inputs[queue_materialize::QUEUE_HIGH_QUEUE_INDEX].len(),
+        high_capacity as usize * std::mem::size_of::<u32>()
+    );
+    assert_eq!(
+        vyre_primitives::wire::decode_u32_le_bytes_all(
+            &inputs[queue_materialize::QUEUE_HIGH_LEN_INDEX]
+        ),
+        vec![0]
+    );
 
     let undersized = capacity.saturating_sub(1);
-    let err = support::skewed_csr_queue_inputs(&fixture, undersized).unwrap_err();
+    let err = support::skewed_csr_queue_inputs(&fixture, undersized, high_capacity).unwrap_err();
     assert!(
         err.to_string().contains("queue_capacity >= active_sources"),
         "queue capacity errors must name the invariant, got: {err}"
@@ -73,10 +88,21 @@ fn skewed_csr_queue_prepare_builds_sparse_resident_sequence() {
     assert_eq!(prepared.reset_program.workgroup_size(), [1, 1, 1]);
     assert_eq!(queue_materialize::QUEUE_RESET_GRID, [1, 1, 1]);
     assert_eq!(prepared.queue_program.workgroup_size(), [256, 1, 1]);
-    assert!(!prepared.row_strided_traverse);
+    assert!(prepared.row_strided_traverse);
+    assert!(prepared.split_high_degree_traverse);
+    assert_eq!(prepared.high_degree_queue_capacity, 256);
     assert_eq!(
         prepared.traverse_grid,
         [prepared.queue_capacity.div_ceil(256).max(1), 1, 1]
+    );
+    assert_eq!(prepared.high_traverse_grid, [32, 1, 1]);
+    assert_eq!(
+        prepared.traverse_logical_lanes,
+        u64::from(prepared.queue_capacity)
+            + u64::from(prepared.high_degree_queue_capacity)
+                * u64::from(
+                    vyre_primitives::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE
+                )
     );
     assert_eq!(
         prepared.queue_program.buffers()[3].name.as_ref(),
@@ -86,7 +112,7 @@ fn skewed_csr_queue_prepare_builds_sparse_resident_sequence() {
         prepared.queue_program.buffers()[3].count,
         prepared.stats.frontier_words
     );
-    assert_eq!(prepared.inputs.len(), 7);
+    assert_eq!(prepared.inputs.len(), 9);
     assert_eq!(prepared.stats.node_count, CSR_NODE_COUNT);
     assert_eq!(
         u64::from(prepared.queue_capacity),
@@ -95,6 +121,10 @@ fn skewed_csr_queue_prepare_builds_sparse_resident_sequence() {
     assert!(
         prepared.queue_capacity < prepared.stats.node_count / 32,
         "queue capacity should stay sparse relative to the full node-grid launch"
+    );
+    assert!(
+        prepared.traverse_logical_lanes < u64::from(prepared.stats.node_count) / 4,
+        "mixed queue traversal should keep launched logical lanes well below graph-sized traversal"
     );
     assert_ne!(
         queue_materialize::graph_queue_materialize_sequence_fingerprint(&prepared),
@@ -115,6 +145,17 @@ fn skewed_csr_graph_row_striding_requires_wide_rows() {
         "96-degree rows are not wide enough to justify a 32-lane team for every queued graph source"
     );
     assert!(queue_materialize::graph_queue_should_use_row_strided(
+        support::UGLY_HUB_DEGREE
+    ));
+    assert_eq!(
+        queue_materialize::GRAPH_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
+        lanes * 2
+    );
+    assert!(
+        queue_materialize::graph_queue_should_use_split_high_degree(1_000, 256),
+        "graph hubs should use the mixed split path when most queued rows stay low-degree"
+    );
+    assert!(queue_materialize::graph_queue_should_use_row_strided(
         queue_materialize::GRAPH_QUEUE_ROW_STRIDED_MIN_DEGREE
     ));
 }
@@ -125,7 +166,9 @@ fn generated_skewed_csr_queue_capacity_covers_active_sources_without_node_grid()
 
     let mut total_nodes = 0_u64;
     let mut total_queue_capacity = 0_u64;
-    let mut row_strided_cases = 0_u32;
+    let mut total_high_capacity = 0_u64;
+    let mut all_row_strided_candidates = 0_u32;
+    let mut split_cases = 0_u32;
 
     for case in 0..CASES {
         let node_count = 32_u32 << (case % 8);
@@ -134,7 +177,14 @@ fn generated_skewed_csr_queue_capacity_covers_active_sources_without_node_grid()
         });
         let capacity = support::skewed_csr_queue_capacity(fixture.stats.active_sources)
             .unwrap_or_else(|error| panic!("generated queue capacity case {case} failed: {error}"));
-        let inputs = support::skewed_csr_queue_inputs(&fixture, capacity)
+        let high_capacity = support::skewed_csr_active_high_degree_sources(
+            &fixture,
+            queue_materialize::GRAPH_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
+        )
+        .unwrap_or_else(|error| {
+            panic!("generated high-degree capacity case {case} failed: {error}")
+        });
+        let inputs = support::skewed_csr_queue_inputs(&fixture, capacity, high_capacity)
             .unwrap_or_else(|error| panic!("generated queue inputs case {case} failed: {error}"));
 
         assert_eq!(
@@ -147,18 +197,31 @@ fn generated_skewed_csr_queue_capacity_covers_active_sources_without_node_grid()
             capacity as usize * std::mem::size_of::<u32>(),
             "active queue byte length case {case}"
         );
+        assert_eq!(
+            inputs[queue_materialize::QUEUE_HIGH_QUEUE_INDEX].len(),
+            high_capacity as usize * std::mem::size_of::<u32>(),
+            "high queue byte length case {case}"
+        );
         assert!(
-            support::skewed_csr_queue_inputs(&fixture, capacity.saturating_sub(1)).is_err(),
+            support::skewed_csr_queue_inputs(&fixture, capacity.saturating_sub(1), high_capacity)
+                .is_err(),
             "undersized queue should fail case {case}"
         );
-        row_strided_cases += u32::from(queue_materialize::graph_queue_should_use_row_strided(
-            fixture.stats.max_degree,
+        all_row_strided_candidates += u32::from(
+            queue_materialize::graph_queue_should_use_row_strided(fixture.stats.max_degree),
+        );
+        split_cases += u32::from(queue_materialize::graph_queue_should_use_split_high_degree(
+            capacity,
+            high_capacity,
         ));
         total_nodes += u64::from(node_count);
         total_queue_capacity += u64::from(capacity);
+        total_high_capacity += u64::from(high_capacity);
     }
 
-    assert_eq!(row_strided_cases, 0);
+    assert_eq!(all_row_strided_candidates, CASES);
+    assert!(split_cases > 0);
+    assert!(total_high_capacity > 0);
     assert!(
         total_queue_capacity * 8 < total_nodes,
         "generated sparse frontiers should avoid graph-sized queue traversal"
@@ -223,10 +286,12 @@ fn skewed_csr_queue_closure_prepare_builds_resident_delta_sequence() {
     assert_eq!(prepared.reset_program.workgroup_size(), [256, 1, 1]);
     assert_eq!(prepared.clear_len_program.workgroup_size(), [1, 1, 1]);
     assert_eq!(prepared.delta_program.workgroup_size(), [256, 1, 1]);
-    assert!(!prepared.row_strided_delta);
+    assert!(prepared.row_strided_delta);
     assert_eq!(
         prepared.delta_grid,
-        [prepared.queue_capacity.div_ceil(256).max(1), 1, 1]
+        vyre_primitives::graph::csr_queue_delta::csr_queue_delta_strided_dispatch_grid(
+            prepared.queue_capacity
+        )
     );
     assert_eq!(prepared.inputs.len(), 11);
     assert_eq!(prepared.stats.node_count, CSR_NODE_COUNT);
@@ -279,14 +344,22 @@ fn skewed_csr_queue_closure_prepare_builds_resident_delta_sequence() {
     );
     assert!(lane_profile.elided_delta_lanes > 0);
     assert!(lane_profile.delta_lane_elision_x1000 > 500);
-    assert!(lane_profile.launched_delta_lanes >= lane_profile.fixed_delta_lanes);
-    assert!(
-        lane_profile.launched_delta_lanes - lane_profile.fixed_delta_lanes
-            < prepared.wave_queue_lengths.len() as u64
-                * u64::from(prepared.delta_program.workgroup_size()[0])
-    );
-    assert_eq!(lane_profile.launch_elided_delta_lanes, 0);
-    assert_eq!(lane_profile.launch_lane_elision_x1000, 0);
+    if prepared.queue_capacity
+        > vyre_primitives::graph::csr_queue_delta::CSR_QUEUE_DELTA_STRIDED_CAPPED_LAUNCH_MIN_CAPACITY
+    {
+        assert!(lane_profile.launched_delta_lanes < lane_profile.fixed_delta_lanes);
+        assert!(lane_profile.launch_elided_delta_lanes > 0);
+        assert!(lane_profile.launch_lane_elision_x1000 > 0);
+    } else {
+        assert!(lane_profile.launched_delta_lanes >= lane_profile.fixed_delta_lanes);
+        assert!(
+            lane_profile.launched_delta_lanes - lane_profile.fixed_delta_lanes
+                < prepared.wave_queue_lengths.len() as u64
+                    * u64::from(prepared.delta_program.workgroup_size()[0])
+        );
+        assert_eq!(lane_profile.launch_elided_delta_lanes, 0);
+        assert_eq!(lane_profile.launch_lane_elision_x1000, 0);
+    }
 }
 
 #[test]
