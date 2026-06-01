@@ -11,17 +11,16 @@ use vyre_primitives::graph::csr_frontier_queue::{
 };
 use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
 
-use crate::csr_frontier_queue_batch_memory::{
-    plan_resident_csr_queue_batch_memory, ResidentCsrQueueBatchMemoryPlan,
-};
+use crate::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlan;
 use crate::csr_frontier_queue_resident::ResidentCsrQueueGraph;
 use crate::dispatch_buffers::u32_word_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
-    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_effective_capacity,
-    resident_csr_queue_materializer, resident_csr_queue_scratch_bytes_per_query,
-    resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind, FrontierWordPrefixScratch,
-    ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
+    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_frontier_stats,
+    resident_csr_queue_materializer_for_stats,
+    resident_csr_queue_scratch_bytes_per_query_for_materializer, resident_csr_queue_traverse_grid,
+    resident_csr_queue_traverse_kind, FrontierWordPrefixScratch, ResidentCsrQueueMaterializer,
+    ResidentCsrQueueTraverseKind,
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
 use crate::hardware::scratch::reserve_vec as reserve_graph_vec;
@@ -41,9 +40,15 @@ pub fn run_resident_csr_queue_batch_into(
 ) -> Result<(), DispatchError> {
     validate_frontier_queue_batch(graph.node_count(), frontiers, queue_capacity)
         .map_err(DispatchError::BadInputs)?;
-    let effective_queue_capacity =
-        resident_csr_queue_effective_capacity(graph.node_count(), frontiers, queue_capacity)
+    let frontier_stats =
+        resident_csr_queue_frontier_stats(graph.node_count(), frontiers, queue_capacity)
             .map_err(DispatchError::BadInputs)?;
+    let effective_queue_capacity = frontier_stats.effective_queue_capacity;
+    let materializer = resident_csr_queue_materializer_for_stats(
+        graph.words(),
+        effective_queue_capacity,
+        frontier_stats.max_nonzero_words,
+    );
     ensure_batch_scratch(
         dispatcher,
         graph,
@@ -51,6 +56,7 @@ pub fn run_resident_csr_queue_batch_into(
         frontiers.len(),
         effective_queue_capacity,
         allow_mask,
+        materializer,
     )?;
 
     let frontier_bytes = u32_word_bytes(graph.words(), "resident CSR queue batch frontier")?;
@@ -64,7 +70,13 @@ pub fn run_resident_csr_queue_batch_into(
         payload.clear();
         vyre_primitives::wire::append_u32_slice_le_bytes(frontier, payload);
     }
-    prepare_batch_sequence_tables(graph, scratch, frontiers.len(), frontier_bytes)?;
+    prepare_batch_sequence_tables(
+        graph,
+        scratch,
+        frontiers.len(),
+        frontier_bytes,
+        materializer,
+    )?;
 
     let mut upload_refs = Vec::new();
     reserve_graph_vec(
@@ -105,7 +117,7 @@ pub fn run_resident_csr_queue_batch_into(
             ))?,
         "resident CSR queue batch steps",
     )?;
-    match resident_csr_queue_materializer(graph.words()) {
+    match materializer {
         ResidentCsrQueueMaterializer::AtomicWordScan => {
             let queue_len_init_program = scratch.queue_len_init_program.as_ref().ok_or_else(|| {
                 DispatchError::BackendError(
@@ -258,6 +270,12 @@ struct ResidentCsrQueueBudgetedChunk {
     queue_capacity: u32,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct ResidentCsrQueueBudgetedQueryStats {
+    queue_capacity: u32,
+    nonzero_words: usize,
+}
+
 fn plan_budgeted_effective_chunks(
     node_count: u32,
     frontier_words: usize,
@@ -271,21 +289,20 @@ fn plan_budgeted_effective_chunks(
     ),
     DispatchError,
 > {
-    let mut query_capacities = Vec::new();
+    let mut query_stats = Vec::new();
     reserve_graph_vec(
-        &mut query_capacities,
+        &mut query_stats,
         frontiers.len(),
-        "resident CSR queue budgeted query capacities",
+        "resident CSR queue budgeted query stats",
     )?;
     for frontier in frontiers {
-        query_capacities.push(
-            resident_csr_queue_effective_capacity(
-                node_count,
-                &[*frontier],
-                requested_queue_capacity,
-            )
-            .map_err(DispatchError::BadInputs)?,
-        );
+        let stats =
+            resident_csr_queue_frontier_stats(node_count, &[*frontier], requested_queue_capacity)
+                .map_err(DispatchError::BadInputs)?;
+        query_stats.push(ResidentCsrQueueBudgetedQueryStats {
+            queue_capacity: stats.effective_queue_capacity,
+            nonzero_words: stats.max_nonzero_words,
+        });
     }
 
     let mut chunks = Vec::new();
@@ -301,21 +318,27 @@ fn plan_budgeted_effective_chunks(
 
     while start < frontiers.len() {
         let mut end = start + 1;
-        let mut chunk_capacity = query_capacities[start];
+        let mut chunk_capacity = query_stats[start].queue_capacity;
+        let mut chunk_nonzero_words = query_stats[start].nonzero_words;
         let mut bytes_per_query =
-            budgeted_chunk_bytes_per_query(frontier_words, chunk_capacity, max_scratch_bytes)?;
+            budgeted_chunk_bytes_per_query(frontier_words, chunk_capacity, chunk_nonzero_words)?;
+        ensure_one_query_fits_budget(bytes_per_query, max_scratch_bytes)?;
 
         while end < frontiers.len() {
-            let candidate_capacity = chunk_capacity.max(query_capacities[end]);
-            let candidate_bytes =
-                resident_csr_queue_scratch_bytes_per_query(frontier_words, candidate_capacity)
-                    .map_err(DispatchError::BadInputs)?;
+            let candidate_capacity = chunk_capacity.max(query_stats[end].queue_capacity);
+            let candidate_nonzero_words = chunk_nonzero_words.max(query_stats[end].nonzero_words);
+            let candidate_bytes = budgeted_chunk_bytes_per_query(
+                frontier_words,
+                candidate_capacity,
+                candidate_nonzero_words,
+            )?;
             let candidate_queries = end - start + 1;
             let candidate_peak = checked_batch_scratch_bytes(candidate_bytes, candidate_queries)?;
             if candidate_peak > max_scratch_bytes {
                 break;
             }
             chunk_capacity = candidate_capacity;
+            chunk_nonzero_words = candidate_nonzero_words;
             bytes_per_query = candidate_bytes;
             end += 1;
         }
@@ -348,11 +371,19 @@ fn plan_budgeted_effective_chunks(
 fn budgeted_chunk_bytes_per_query(
     frontier_words: usize,
     queue_capacity: u32,
-    max_scratch_bytes: usize,
+    max_nonzero_words: usize,
 ) -> Result<usize, DispatchError> {
-    plan_resident_csr_queue_batch_memory(1, frontier_words, queue_capacity, max_scratch_bytes)
-        .map(|plan| plan.bytes_per_query)
-        .map_err(|error| DispatchError::BadInputs(error.to_string()))
+    let materializer = resident_csr_queue_materializer_for_stats(
+        frontier_words,
+        queue_capacity,
+        max_nonzero_words,
+    );
+    resident_csr_queue_scratch_bytes_per_query_for_materializer(
+        frontier_words,
+        queue_capacity,
+        materializer,
+    )
+    .map_err(DispatchError::BadInputs)
 }
 
 fn checked_batch_scratch_bytes(
@@ -367,11 +398,24 @@ fn checked_batch_scratch_bytes(
     })
 }
 
+fn ensure_one_query_fits_budget(
+    bytes_per_query: usize,
+    max_scratch_bytes: usize,
+) -> Result<(), DispatchError> {
+    if bytes_per_query <= max_scratch_bytes {
+        return Ok(());
+    }
+    Err(DispatchError::BadInputs(format!(
+        "resident CSR queue batch needs {bytes_per_query} scratch bytes per query but budget allows {max_scratch_bytes}. Fix: increase max_scratch_bytes or use a smaller graph shard."
+    )))
+}
+
 fn prepare_batch_sequence_tables(
     graph: &ResidentCsrQueueGraph,
     scratch: &mut ResidentCsrQueueBatchScratch,
     batch_len: usize,
     frontier_bytes: usize,
+    materializer: ResidentCsrQueueMaterializer,
 ) -> Result<(), DispatchError> {
     scratch.clear_handle_sets.clear();
     scratch.queue_len_handle_sets.clear();
@@ -429,7 +473,6 @@ fn prepare_batch_sequence_tables(
         "resident CSR queue batch read ranges",
     )?;
 
-    let materializer = resident_csr_queue_materializer(graph.words());
     let precompute_block_offsets =
         if materializer == ResidentCsrQueueMaterializer::DeterministicWordPrefix {
             let word_prefix = word_prefix_scratch(graph.words())?;
@@ -506,6 +549,7 @@ fn ensure_batch_scratch(
     batch_len: usize,
     queue_capacity: u32,
     allow_mask: u32,
+    materializer: ResidentCsrQueueMaterializer,
 ) -> Result<(), DispatchError> {
     let frontier_bytes =
         u32_word_bytes(graph.words(), "resident CSR queue batch scratch frontier")?;
@@ -514,7 +558,6 @@ fn ensure_batch_scratch(
         "resident CSR queue batch scratch active_queue",
     )?;
     let queue_len_bytes = u32_word_bytes(1, "resident CSR queue batch scratch queue_len")?;
-    let materializer = resident_csr_queue_materializer(graph.words());
     let traverse_kind = resident_csr_queue_traverse_kind(graph.max_row_degree());
     let shape = ResidentCsrQueueBatchShape {
         batch_len,
@@ -628,7 +671,9 @@ fn ensure_batch_programs(
     graph: &ResidentCsrQueueGraph,
     program_shape: ResidentCsrQueueBatchProgramShape,
 ) -> Result<(), DispatchError> {
-    if scratch.program_shape == Some(program_shape) && batch_programs_available(scratch, graph)? {
+    if scratch.program_shape == Some(program_shape)
+        && batch_programs_available(scratch, graph, program_shape.materializer)?
+    {
         return Ok(());
     }
 
@@ -721,11 +766,12 @@ fn ensure_batch_programs(
 fn batch_programs_available(
     scratch: &ResidentCsrQueueBatchScratch,
     graph: &ResidentCsrQueueGraph,
+    materializer: ResidentCsrQueueMaterializer,
 ) -> Result<bool, DispatchError> {
     if scratch.queue_program.is_none() || scratch.traverse_program.is_none() {
         return Ok(false);
     }
-    match resident_csr_queue_materializer(graph.words()) {
+    match materializer {
         ResidentCsrQueueMaterializer::AtomicWordScan => {
             Ok(scratch.queue_len_init_program.is_some())
         }

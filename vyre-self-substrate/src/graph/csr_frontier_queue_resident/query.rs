@@ -14,8 +14,8 @@ use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_travers
 use crate::dispatch_buffers::u32_word_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
-    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_effective_capacity,
-    resident_csr_queue_materializer, resident_csr_queue_traverse_grid,
+    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_frontier_stats,
+    resident_csr_queue_materializer_for_stats, resident_csr_queue_traverse_grid,
     resident_csr_queue_traverse_kind, FrontierWordPrefixScratch, ResidentCsrQueueMaterializer,
     ResidentCsrQueueTraverseKind,
 };
@@ -36,16 +36,34 @@ pub fn run_resident_csr_queue_query_into(
 ) -> Result<(), DispatchError> {
     validate_frontier_queue_query(graph.node_count, frontier_words, queue_capacity)
         .map_err(DispatchError::BadInputs)?;
-    let effective_queue_capacity =
-        resident_csr_queue_effective_capacity(graph.node_count, &[frontier_words], queue_capacity)
+    let frontier_stats =
+        resident_csr_queue_frontier_stats(graph.node_count, &[frontier_words], queue_capacity)
             .map_err(DispatchError::BadInputs)?;
-    ensure_scratch(dispatcher, scratch, graph.words, effective_queue_capacity)?;
+    let effective_queue_capacity = frontier_stats.effective_queue_capacity;
+    let materializer = resident_csr_queue_materializer_for_stats(
+        graph.words,
+        effective_queue_capacity,
+        frontier_stats.max_nonzero_words,
+    );
+    ensure_scratch(
+        dispatcher,
+        scratch,
+        graph.words,
+        effective_queue_capacity,
+        materializer,
+    )?;
     let handles = scratch.handles.ok_or_else(|| {
         DispatchError::BackendError(
             "resident CSR queue scratch handles are missing after ensure_scratch. Fix: rebuild scratch before resident CSR queue dispatch.".to_string(),
         )
     })?;
-    ensure_programs(scratch, graph, effective_queue_capacity, allow_mask)?;
+    ensure_programs(
+        scratch,
+        graph,
+        effective_queue_capacity,
+        allow_mask,
+        materializer,
+    )?;
     scratch.frontier_bytes.clear();
     vyre_primitives::wire::append_u32_slice_le_bytes(frontier_words, &mut scratch.frontier_bytes);
     let frontier_bytes = u32_word_bytes(graph.words, "resident CSR queue query frontier")?;
@@ -225,9 +243,9 @@ fn ensure_scratch(
     scratch: &mut ResidentCsrQueueScratch,
     words: usize,
     queue_capacity: u32,
+    materializer: ResidentCsrQueueMaterializer,
 ) -> Result<(), DispatchError> {
     let frontier_bytes = u32_word_bytes(words, "resident CSR queue scratch frontier")?;
-    let materializer = resident_csr_queue_materializer(words);
     if matches!(
         scratch.handles,
         Some(handles)
@@ -310,13 +328,14 @@ fn ensure_programs(
     graph: &ResidentCsrQueueGraph,
     queue_capacity: u32,
     allow_mask: u32,
+    materializer: ResidentCsrQueueMaterializer,
 ) -> Result<(), DispatchError> {
     let shape = ResidentCsrQueueProgramShape {
         node_count: graph.node_count,
         edge_count: graph.edge_count,
         queue_capacity,
         allow_mask,
-        materializer: resident_csr_queue_materializer(graph.words),
+        materializer,
         traverse_kind: resident_csr_queue_traverse_kind(graph.max_row_degree),
     };
     if scratch.cached_shape == Some(shape) {

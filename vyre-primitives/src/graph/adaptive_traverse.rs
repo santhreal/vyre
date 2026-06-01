@@ -54,6 +54,7 @@ use crate::bitset::{
         dense_matvec_byte_lut, dense_matvec_byte_lut_words, four_russians_dense_matvec_byte_lut,
         frontier_words_for_byte_tiles,
     },
+    frontier::frontier_tail_mask,
 };
 
 /// Density threshold (percent). Tiles with ≥ this fraction of
@@ -713,8 +714,19 @@ pub struct AdaptiveFrontierLayout {
 pub struct AdaptiveFrontierWorkPlan {
     /// Validated frontier layout.
     pub layout: AdaptiveFrontierLayout,
-    /// Whether any physical frontier word contains active bits.
+    /// Whether any in-domain frontier bit is active.
     pub has_active_bits: bool,
+}
+
+/// In-domain frontier statistics for adaptive traversal planning.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct AdaptiveFrontierStats {
+    /// Validated frontier layout.
+    pub layout: AdaptiveFrontierLayout,
+    /// Set bits at node ids `< node_count`, excluding padding in the tail word.
+    pub popcount: u32,
+    /// Packed words with at least one in-domain active bit.
+    pub nonzero_words: usize,
 }
 
 /// Workgroup lane count used by resident linear adaptive traversal kernels.
@@ -745,6 +757,8 @@ pub struct AdaptiveResidentFrontierPlan {
 pub struct AdaptiveResidentSparseQueuePlan {
     /// Shared frontier launch and scratch plan.
     pub frontier: AdaptiveResidentFrontierPlan,
+    /// Packed frontier words with at least one in-domain active bit.
+    pub frontier_nonzero_words: usize,
     /// Active-source queue capacity in u32 node ids.
     pub queue_capacity: u32,
     /// Number of bytes in the resident active-source queue.
@@ -793,7 +807,21 @@ pub fn should_use_dense(frontier_in: &[u32], node_count: u32) -> bool {
     if node_count == 0 {
         return false;
     }
-    let popcount: u32 = frontier_in.iter().map(|w| w.count_ones()).sum();
+    let expected_words = bitset_words(node_count) as usize;
+    let final_word_mask = frontier_tail_mask(node_count);
+    let popcount: u32 = frontier_in
+        .iter()
+        .take(expected_words)
+        .enumerate()
+        .map(|(index, &word)| {
+            if index + 1 == expected_words {
+                word & final_word_mask
+            } else {
+                word
+            }
+            .count_ones()
+        })
+        .sum();
     should_use_dense_with_popcount(popcount, node_count, DENSE_THRESHOLD_PCT)
 }
 
@@ -974,14 +1002,15 @@ pub fn plan_adaptive_frontier_work(
     node_count: u32,
     frontier_in: &[u32],
 ) -> Result<AdaptiveFrontierWorkPlan, String> {
-    let layout = validate_adaptive_frontier(node_count, frontier_in)?;
+    let stats =
+        adaptive_frontier_stats(node_count, frontier_in, "adaptive traversal frontier work")?;
     Ok(AdaptiveFrontierWorkPlan {
-        layout,
-        has_active_bits: frontier_in.iter().any(|&word| word != 0),
+        layout: stats.layout,
+        has_active_bits: stats.popcount != 0,
     })
 }
 
-/// Checked popcount for an adaptive traversal frontier.
+/// Checked physical-word popcount for an adaptive traversal frontier.
 ///
 /// # Errors
 ///
@@ -998,6 +1027,60 @@ pub fn adaptive_frontier_popcount(frontier_in: &[u32], context: &str) -> Result<
         })?;
     }
     Ok(popcount)
+}
+
+/// Checked in-domain popcount for an adaptive traversal frontier.
+///
+/// # Errors
+///
+/// Returns frontier-shape diagnostics or an actionable diagnostic if the
+/// in-domain frontier contains more set bits than fit in a u32 scalar.
+pub fn adaptive_frontier_popcount_in_domain(
+    node_count: u32,
+    frontier_in: &[u32],
+    context: &str,
+) -> Result<u32, String> {
+    adaptive_frontier_stats(node_count, frontier_in, context).map(|stats| stats.popcount)
+}
+
+/// Validate and count only frontier bits whose node ids are in domain.
+///
+/// # Errors
+///
+/// Returns frontier-shape diagnostics or an actionable diagnostic if the
+/// in-domain frontier contains more set bits than fit in a u32 scalar.
+pub fn adaptive_frontier_stats(
+    node_count: u32,
+    frontier_in: &[u32],
+    context: &str,
+) -> Result<AdaptiveFrontierStats, String> {
+    let layout = validate_adaptive_frontier(node_count, frontier_in)?;
+    let final_word_mask = frontier_tail_mask(node_count);
+    let mut popcount = 0u32;
+    let mut nonzero_words = 0usize;
+    for (index, &word) in frontier_in.iter().enumerate() {
+        let in_domain_word = if index + 1 == layout.words {
+            word & final_word_mask
+        } else {
+            word
+        };
+        if in_domain_word != 0 {
+            nonzero_words += 1;
+        }
+        popcount = popcount
+            .checked_add(in_domain_word.count_ones())
+            .ok_or_else(|| {
+                format!(
+                    "Fix: {context} frontier popcount exceeds u32::MAX for {} frontier words.",
+                    frontier_in.len()
+                )
+            })?;
+    }
+    Ok(AdaptiveFrontierStats {
+        layout,
+        popcount,
+        nonzero_words,
+    })
 }
 
 /// Validate and plan resident frontier scratch plus launch grids.
@@ -1025,21 +1108,24 @@ pub fn plan_adaptive_resident_sparse_queue_step(
     node_count: u32,
     frontier_in: &[u32],
 ) -> Result<AdaptiveResidentSparseQueuePlan, String> {
-    let layout = validate_adaptive_frontier(node_count, frontier_in)?;
-    let frontier_popcount =
-        adaptive_frontier_popcount(frontier_in, "adaptive resident sparse queue step")?;
+    let stats = adaptive_frontier_stats(
+        node_count,
+        frontier_in,
+        "adaptive resident sparse queue step",
+    )?;
     let work = AdaptiveFrontierWorkPlan {
-        layout,
-        has_active_bits: frontier_popcount != 0,
+        layout: stats.layout,
+        has_active_bits: stats.popcount != 0,
     };
     let frontier = adaptive_resident_frontier_plan_from_work(node_count, work)?;
-    let queue_capacity = adaptive_sparse_queue_capacity(node_count, frontier_popcount);
+    let queue_capacity = adaptive_sparse_queue_capacity(node_count, stats.popcount);
     let queue_bytes = adaptive_u32_byte_len(
         queue_capacity as usize,
         "adaptive traversal resident active-source queue",
     )?;
     Ok(AdaptiveResidentSparseQueuePlan {
         frontier,
+        frontier_nonzero_words: stats.nonzero_words,
         queue_capacity,
         queue_bytes,
         queue_grid: adaptive_linear_grid(queue_capacity),
@@ -1065,22 +1151,17 @@ pub fn plan_adaptive_resident_auto_step(
     frontier_in: &[u32],
     dense_threshold_pct: u32,
 ) -> Result<AdaptiveResidentAutoStepPlan, String> {
-    let layout = validate_adaptive_frontier(node_count, frontier_in)?;
-    let frontier_popcount = adaptive_frontier_popcount(frontier_in, "adaptive resident auto step")?;
+    let stats = adaptive_frontier_stats(node_count, frontier_in, "adaptive resident auto step")?;
     let work = AdaptiveFrontierWorkPlan {
-        layout,
-        has_active_bits: frontier_popcount != 0,
+        layout: stats.layout,
+        has_active_bits: stats.popcount != 0,
     };
     let frontier = adaptive_resident_frontier_plan_from_work(node_count, work)?;
-    let mode = select_adaptive_traversal_mode(
-        node_count,
-        edge_count,
-        frontier_popcount,
-        dense_threshold_pct,
-    );
+    let mode =
+        select_adaptive_traversal_mode(node_count, edge_count, stats.popcount, dense_threshold_pct);
     Ok(AdaptiveResidentAutoStepPlan {
         frontier,
-        frontier_popcount,
+        frontier_popcount: stats.popcount,
         mode,
     })
 }
@@ -2045,6 +2126,30 @@ mod tests {
     }
 
     #[test]
+    fn adaptive_frontier_stats_ignore_tail_padding_bits() {
+        let stats = adaptive_frontier_stats(35, &[0b101, u32::MAX & !0b111], "tail stats")
+            .expect("Fix: tail-padded frontier should be valid");
+
+        assert_eq!(stats.popcount, 2);
+        assert_eq!(stats.nonzero_words, 1);
+        assert_eq!(
+            adaptive_frontier_popcount_in_domain(35, &[0b101, u32::MAX & !0b111], "tail popcount")
+                .expect("Fix: tail-padded frontier should count"),
+            2
+        );
+        assert!(
+            !plan_adaptive_frontier_work(35, &[0, u32::MAX & !0b111])
+                .expect("Fix: tail-only padding frontier should be valid")
+                .has_active_bits,
+            "tail padding bits beyond node_count must not trigger resident traversal work"
+        );
+        assert!(
+            !should_use_dense(&[0, u32::MAX & !0b111], 35),
+            "tail padding bits must not push adaptive mode selection toward dense traversal"
+        );
+    }
+
+    #[test]
     fn adaptive_frontier_validation_rejects_zero_nodes_and_wrong_width() {
         let err = validate_adaptive_frontier(0, &[]).unwrap_err();
         assert!(err.contains("node_count > 0"));
@@ -2110,6 +2215,7 @@ mod tests {
             .expect("Fix: resident sparse-queue plan should accept a correctly shaped frontier");
 
         assert_eq!(plan.frontier.work.layout.words, 17);
+        assert_eq!(plan.frontier_nonzero_words, 17);
         assert_eq!(plan.queue_capacity, 32);
         assert_eq!(plan.queue_bytes, 32 * std::mem::size_of::<u32>());
         assert_eq!(plan.queue_grid, [1, 1, 1]);
@@ -2125,6 +2231,7 @@ mod tests {
             .expect("Fix: resident sparse-queue plan should accept a single active source");
 
         assert_eq!(single.queue_capacity, 1);
+        assert_eq!(single.frontier_nonzero_words, 1);
         assert_eq!(single.queue_bytes, std::mem::size_of::<u32>());
         assert_eq!(single.queue_grid, [1, 1, 1]);
 
@@ -2135,6 +2242,7 @@ mod tests {
             .expect("Fix: resident sparse-queue plan should accept a sparse active frontier");
 
         assert_eq!(bucketed.queue_capacity, 512);
+        assert_eq!(bucketed.frontier_nonzero_words, 9);
         assert_eq!(bucketed.queue_bytes, 512 * std::mem::size_of::<u32>());
         assert_eq!(bucketed.queue_grid, [2, 1, 1]);
     }

@@ -7,7 +7,7 @@ use super::{
 use crate::dispatch_buffers::write_u32_slice_le_bytes;
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
-    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer,
+    frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer_for_stats,
     resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind, FrontierWordPrefixScratch,
     ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
 };
@@ -328,6 +328,11 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
     let words_u32 = sparse_plan.frontier.work.layout.words_u32;
     let words = sparse_plan.frontier.work.layout.words;
     let queue_capacity = sparse_plan.queue_capacity;
+    let materializer = resident_csr_queue_materializer_for_stats(
+        words,
+        queue_capacity,
+        sparse_plan.frontier_nonzero_words,
+    );
     let traverse_kind = resident_csr_queue_traverse_kind(graph.max_row_degree);
     let traverse_grid = resident_csr_queue_traverse_grid(queue_capacity, traverse_kind);
     let device_features = dispatcher.device_feature_cache_key();
@@ -392,7 +397,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
         graph_handles[2],
         handles[1],
     ];
-    match resident_csr_queue_materializer(words) {
+    match materializer {
         ResidentCsrQueueMaterializer::AtomicWordScan => {
             let uploads = [(handles[0], scratch.frontier_in_bytes.as_slice())];
             let queue_len_init_program = scratch.plan_cache.get_or_build(

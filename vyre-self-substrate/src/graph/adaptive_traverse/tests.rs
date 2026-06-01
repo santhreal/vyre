@@ -732,7 +732,7 @@ fn sparse_queue_resident_step_initializes_queue_len_on_device() {
 }
 
 #[test]
-fn large_sparse_queue_resident_step_uses_word_prefix_materializer() {
+fn large_single_word_sparse_queue_resident_step_uses_atomic_materializer() {
     let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 8_193u32;
     let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
@@ -765,18 +765,78 @@ fn large_sparse_queue_resident_step_uses_word_prefix_materializer() {
     let queue_handle = scratch
         .queue_handle
         .expect("Fix: sparse-queue resident step must allocate active queue");
+    assert!(scratch.word_partials_handle.is_none());
+    assert!(scratch.word_block_totals_handle.is_none());
+    assert_eq!(dispatcher.last_upload_handles(), vec![scratch_handles[0]]);
+    let steps = dispatcher.last_step_handles();
+    assert_eq!(
+        steps.len(),
+        3,
+        "wide graph with one nonzero frontier word should keep the single-pass atomic word materializer"
+    );
+    assert_eq!(
+        steps[0],
+        vec![scratch_handles[2]],
+        "first sparse-queue resident step must initialize queue_len on device"
+    );
+    assert_eq!(
+        steps[1],
+        vec![
+            scratch_handles[0],
+            queue_handle,
+            scratch_handles[2],
+            scratch_handles[1],
+        ],
+        "single-word sparse queue traversal must compact packed words while clearing frontier_out"
+    );
+    assert_eq!(frontier_out, vec![0; words]);
+}
+
+#[test]
+fn large_dense_sparse_queue_resident_step_uses_word_prefix_materializer() {
+    let dispatcher = RecordingResidentDispatcher::default();
+    let node_count = 8_193u32;
+    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let graph = ResidentAdaptiveTraversalGraph {
+        node_count,
+        edge_count: 0,
+        max_row_degree: 0,
+        words,
+        layout_hash: 7,
+        handles: [101, 102, 103, 104],
+    };
+    let mut scratch = AdaptiveTraversalResidentScratch::default();
+    let frontier_in = vec![u32::MAX; words];
+    let mut frontier_out = Vec::new();
+
+    adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
+        &dispatcher,
+        &graph,
+        &frontier_in,
+        u32::MAX,
+        &mut scratch,
+        &mut frontier_out,
+    )
+    .expect("Fix: recording dispatcher should complete dense resident sparse-queue sequence");
+
+    let scratch_handles = scratch
+        .handles
+        .expect("Fix: sparse-queue resident step must allocate frontier/queue-len handles");
+    let queue_handle = scratch
+        .queue_handle
+        .expect("Fix: sparse-queue resident step must allocate active queue");
     let word_partials = scratch
         .word_partials_handle
-        .expect("Fix: large sparse-queue step must allocate word partials");
+        .expect("Fix: dense sparse-queue step must allocate word partials");
     let block_totals = scratch
         .word_block_totals_handle
-        .expect("Fix: large sparse-queue step must allocate block totals");
+        .expect("Fix: dense sparse-queue step must allocate block totals");
     assert_eq!(dispatcher.last_upload_handles(), vec![scratch_handles[0]]);
     let steps = dispatcher.last_step_handles();
     assert_eq!(
         steps.len(),
         4,
-        "large sparse-queue traversal should clear output, scan words, scatter queue, then traverse"
+        "large dense sparse-queue traversal should clear output, scan words, scatter queue, then traverse"
     );
     assert_eq!(steps[0], vec![scratch_handles[1]]);
     assert_eq!(
@@ -792,7 +852,7 @@ fn large_sparse_queue_resident_step_uses_word_prefix_materializer() {
             queue_handle,
             scratch_handles[2],
         ],
-        "large sparse-queue traversal must use deterministic word-prefix queue scatter"
+        "large dense sparse-queue traversal must use deterministic word-prefix queue scatter"
     );
     assert_eq!(frontier_out, vec![0; words]);
 }
@@ -811,9 +871,7 @@ fn small_multiblock_sparse_queue_resident_step_inlines_block_offsets() {
         handles: [101, 102, 103, 104],
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
-    let mut frontier_in = vec![0u32; words];
-    frontier_in[0] = 1;
-    frontier_in[1028] = 1;
+    let frontier_in = vec![u32::MAX; words];
     let mut frontier_out = Vec::new();
 
     adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(
@@ -885,9 +943,7 @@ fn many_block_sparse_queue_resident_step_scans_block_offsets_once() {
         handles: [101, 102, 103, 104],
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
-    let mut frontier_in = vec![0u32; words];
-    frontier_in[0] = 1;
-    frontier_in[8193] = 1;
+    let frontier_in = vec![u32::MAX; words];
     let mut frontier_out = Vec::new();
 
     adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into(

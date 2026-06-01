@@ -10,6 +10,14 @@ const U32_BYTES: usize = std::mem::size_of::<u32>();
 /// to deterministic word-prefix queue materialization.
 pub(crate) const WORD_PREFIX_MIN_FRONTIER_WORDS: usize = 256;
 
+/// Active-source queue bucket where deterministic word-prefix queue
+/// materialization starts paying for its extra scan/scatter launches.
+pub(crate) const WORD_PREFIX_MIN_QUEUE_CAPACITY: u32 = 1024;
+
+/// Nonzero packed frontier words needed before word-level atomic reservations
+/// are expected to be more expensive than deterministic prefix scatter.
+pub(crate) const WORD_PREFIX_MIN_NONZERO_WORDS: usize = 256;
+
 /// Maximum word-prefix scan blocks whose offsets are summed inside the scatter
 /// pass instead of paying a separate block-offset scan launch.
 pub(crate) const WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS: u32 = 8;
@@ -43,10 +51,33 @@ pub(crate) struct FrontierWordPrefixScratch {
     pub(crate) block_total_words: usize,
 }
 
+/// Host-visible statistics for selecting resident CSR queue shape.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct ResidentCsrQueueFrontierStats {
+    pub(crate) effective_queue_capacity: u32,
+    pub(crate) max_active_nodes: u32,
+    pub(crate) max_nonzero_words: usize,
+}
+
 pub(crate) fn resident_csr_queue_materializer(
     frontier_words: usize,
 ) -> ResidentCsrQueueMaterializer {
     if frontier_words >= WORD_PREFIX_MIN_FRONTIER_WORDS {
+        ResidentCsrQueueMaterializer::DeterministicWordPrefix
+    } else {
+        ResidentCsrQueueMaterializer::AtomicWordScan
+    }
+}
+
+pub(crate) const fn resident_csr_queue_materializer_for_stats(
+    frontier_words: usize,
+    queue_capacity: u32,
+    max_nonzero_words: usize,
+) -> ResidentCsrQueueMaterializer {
+    if frontier_words >= WORD_PREFIX_MIN_FRONTIER_WORDS
+        && queue_capacity >= WORD_PREFIX_MIN_QUEUE_CAPACITY
+        && max_nonzero_words >= WORD_PREFIX_MIN_NONZERO_WORDS
+    {
         ResidentCsrQueueMaterializer::DeterministicWordPrefix
     } else {
         ResidentCsrQueueMaterializer::AtomicWordScan
@@ -78,50 +109,100 @@ pub(crate) const fn resident_csr_queue_traverse_grid(
     }
 }
 
+#[cfg(test)]
 pub(crate) fn resident_csr_queue_effective_capacity(
     node_count: u32,
     frontiers: &[&[u32]],
     requested_capacity: u32,
 ) -> Result<u32, String> {
+    resident_csr_queue_frontier_stats(node_count, frontiers, requested_capacity)
+        .map(|stats| stats.effective_queue_capacity)
+}
+
+pub(crate) fn resident_csr_queue_frontier_stats(
+    node_count: u32,
+    frontiers: &[&[u32]],
+    requested_capacity: u32,
+) -> Result<ResidentCsrQueueFrontierStats, String> {
     if node_count == 0 {
-        return Err(
-            "Fix: resident CSR queue effective capacity requires node_count > 0.".to_string(),
-        );
+        return Err("Fix: resident CSR queue frontier stats require node_count > 0.".to_string());
     }
     if frontiers.is_empty() {
         return Err(
-            "Fix: resident CSR queue effective capacity requires at least one frontier."
-                .to_string(),
+            "Fix: resident CSR queue frontier stats require at least one frontier.".to_string(),
         );
     }
     if requested_capacity == 0 {
         return Err(
-            "Fix: resident CSR queue effective capacity requires requested_capacity > 0."
-                .to_string(),
+            "Fix: resident CSR queue frontier stats require requested_capacity > 0.".to_string(),
         );
     }
 
+    let expected_words = vyre_primitives::bitset::bitset_words(node_count) as usize;
     let final_word_mask = frontier_tail_mask(node_count);
     let mut max_active = 0u32;
+    let mut max_nonzero_words = 0usize;
     for (query_index, frontier) in frontiers.iter().enumerate() {
-        let active = capped_frontier_popcount(
-            node_count,
-            final_word_mask,
-            frontier,
-            requested_capacity,
-            query_index,
-        )?;
-        if active >= requested_capacity {
-            return Ok(requested_capacity);
-        }
-        max_active = max_active.max(active);
+        let stats = frontier_query_stats(expected_words, final_word_mask, frontier, query_index)?;
+        max_active = max_active.max(stats.active_nodes);
+        max_nonzero_words = max_nonzero_words.max(stats.nonzero_words);
     }
 
-    let active_floor = max_active.max(1);
+    let capped_active = max_active.min(requested_capacity);
+    let active_floor = capped_active.max(1);
     let bucketed_active = active_floor.checked_next_power_of_two().unwrap_or(u32::MAX);
-    Ok(requested_capacity.min(bucketed_active).max(1))
+    Ok(ResidentCsrQueueFrontierStats {
+        effective_queue_capacity: requested_capacity.min(bucketed_active).max(1),
+        max_active_nodes: max_active,
+        max_nonzero_words,
+    })
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct FrontierQueryStats {
+    active_nodes: u32,
+    nonzero_words: usize,
+}
+
+fn frontier_query_stats(
+    expected_words: usize,
+    final_word_mask: u32,
+    frontier: &[u32],
+    query_index: usize,
+) -> Result<FrontierQueryStats, String> {
+    if frontier.len() < expected_words {
+        return Err(format!(
+            "Fix: resident CSR queue query {query_index} frontier has {} word(s), expected at least {expected_words}.",
+            frontier.len()
+        ));
+    }
+
+    let mut active = 0u32;
+    let mut nonzero_words = 0usize;
+    for (word_index, &word) in frontier.iter().take(expected_words).enumerate() {
+        let in_domain_word = if word_index + 1 == expected_words {
+            word & final_word_mask
+        } else {
+            word
+        };
+        if in_domain_word != 0 {
+            nonzero_words += 1;
+        }
+        active = active
+            .checked_add(in_domain_word.count_ones())
+            .ok_or_else(|| {
+                format!(
+                    "Fix: resident CSR queue query {query_index} frontier popcount overflowed u32 while sizing the active queue."
+                )
+            })?;
+    }
+    Ok(FrontierQueryStats {
+        active_nodes: active,
+        nonzero_words,
+    })
+}
+
+#[cfg(test)]
 fn capped_frontier_popcount(
     node_count: u32,
     final_word_mask: u32,
@@ -130,28 +211,8 @@ fn capped_frontier_popcount(
     query_index: usize,
 ) -> Result<u32, String> {
     let expected_words = vyre_primitives::bitset::bitset_words(node_count) as usize;
-    let mut active = 0u32;
-    for (word_index, &word) in frontier.iter().take(expected_words).enumerate() {
-        let in_domain_word = if word_index + 1 == expected_words {
-            word & final_word_mask
-        } else {
-            word
-        };
-        let remaining = requested_capacity.saturating_sub(active);
-        if remaining == 0 {
-            return Ok(requested_capacity);
-        }
-        let word_active = in_domain_word.count_ones();
-        if word_active >= remaining {
-            return Ok(requested_capacity);
-        }
-        active = active.checked_add(word_active).ok_or_else(|| {
-            format!(
-                "Fix: resident CSR queue query {query_index} frontier popcount overflowed u32 while sizing the active queue."
-            )
-        })?;
-    }
-    Ok(active)
+    frontier_query_stats(expected_words, final_word_mask, frontier, query_index)
+        .map(|stats| stats.active_nodes.min(requested_capacity))
 }
 
 pub(crate) fn frontier_word_prefix_scratch(
@@ -198,15 +259,25 @@ pub(crate) fn resident_csr_queue_scratch_bytes_per_query(
     frontier_words: usize,
     queue_capacity: u32,
 ) -> Result<usize, String> {
+    resident_csr_queue_scratch_bytes_per_query_for_materializer(
+        frontier_words,
+        queue_capacity,
+        resident_csr_queue_materializer(frontier_words),
+    )
+}
+
+pub(crate) fn resident_csr_queue_scratch_bytes_per_query_for_materializer(
+    frontier_words: usize,
+    queue_capacity: u32,
+    materializer: ResidentCsrQueueMaterializer,
+) -> Result<usize, String> {
     let frontier_bytes = words_to_bytes(frontier_words, "frontier")?;
     let queue_bytes = words_to_bytes(queue_capacity as usize, "active_queue")?;
     let mut bytes = frontier_bytes;
     bytes = checked_add(bytes, queue_bytes, "active_queue")?;
     bytes = checked_add(bytes, U32_BYTES, "queue_len")?;
     bytes = checked_add(bytes, frontier_bytes, "frontier_out")?;
-    if resident_csr_queue_materializer(frontier_words)
-        == ResidentCsrQueueMaterializer::DeterministicWordPrefix
-    {
+    if materializer == ResidentCsrQueueMaterializer::DeterministicWordPrefix {
         let word_prefix = frontier_word_prefix_scratch(frontier_words)?;
         bytes = checked_add(
             bytes,
@@ -246,6 +317,34 @@ mod tests {
         );
         assert_eq!(
             resident_csr_queue_materializer(WORD_PREFIX_MIN_FRONTIER_WORDS),
+            ResidentCsrQueueMaterializer::DeterministicWordPrefix
+        );
+    }
+
+    #[test]
+    fn active_frontier_stats_select_word_prefix_only_when_it_can_pay_off() {
+        assert_eq!(
+            resident_csr_queue_materializer_for_stats(
+                WORD_PREFIX_MIN_FRONTIER_WORDS,
+                WORD_PREFIX_MIN_QUEUE_CAPACITY - 1,
+                WORD_PREFIX_MIN_NONZERO_WORDS,
+            ),
+            ResidentCsrQueueMaterializer::AtomicWordScan
+        );
+        assert_eq!(
+            resident_csr_queue_materializer_for_stats(
+                WORD_PREFIX_MIN_FRONTIER_WORDS,
+                WORD_PREFIX_MIN_QUEUE_CAPACITY,
+                WORD_PREFIX_MIN_NONZERO_WORDS - 1,
+            ),
+            ResidentCsrQueueMaterializer::AtomicWordScan
+        );
+        assert_eq!(
+            resident_csr_queue_materializer_for_stats(
+                WORD_PREFIX_MIN_FRONTIER_WORDS,
+                WORD_PREFIX_MIN_QUEUE_CAPACITY,
+                WORD_PREFIX_MIN_NONZERO_WORDS,
+            ),
             ResidentCsrQueueMaterializer::DeterministicWordPrefix
         );
     }
@@ -307,6 +406,10 @@ mod tests {
         let second = [0_u32, 0b101_u32];
         let frontiers: [&[u32]; 2] = [&first, &second];
 
+        let stats = resident_csr_queue_frontier_stats(35, &frontiers, 1_024)
+            .expect("Fix: valid resident CSR queue frontiers should produce stats");
+        assert_eq!(stats.max_active_nodes, 2);
+        assert_eq!(stats.max_nonzero_words, 1);
         assert_eq!(
             resident_csr_queue_effective_capacity(35, &frontiers, 1_024)
                 .expect("Fix: valid resident CSR queue frontiers should size"),
