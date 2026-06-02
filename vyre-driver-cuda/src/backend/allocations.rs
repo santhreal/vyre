@@ -204,16 +204,20 @@ impl PinnedHostAllocation {
             byte_offset,
             byte_len,
             self.byte_len,
-            || BackendError::InvalidProgram {
+            || {
+                BackendError::InvalidProgram {
                 fix: format!(
                     "Fix: CUDA pinned-host zero-fill overflowed usize at offset {byte_offset} len {byte_len}."
                 ),
+            }
             },
-            |end| BackendError::InvalidProgram {
+            |end| {
+                BackendError::InvalidProgram {
                 fix: format!(
                     "Fix: CUDA pinned-host zero-fill requested byte range [{byte_offset}..{end}) from a {} byte allocation.",
                     self.byte_len
                 ),
+            }
             },
         )?;
         if end == byte_offset {
@@ -622,26 +626,32 @@ impl HostTransferAllocations {
     }
 
     fn reserve_next_allocation_slot(&mut self, context: &'static str) -> Result<(), BackendError> {
-        let next_len =
-            vyre_driver::accounting::checked_add_usize_lazy(self.allocations.len(), 1, || {
+        let next_len = vyre_driver::accounting::checked_add_usize_lazy(
+            self.allocations.len(),
+            1,
+            || {
                 BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA pinned-host allocation table length overflowed while staging {context}. Split the dispatch before host transfer staging."
                     ),
                 }
-            })?;
+            },
+        )?;
         reserve_smallvec(&mut self.allocations, next_len, "pinned-host transfer")
     }
 
     fn reserve_next_output_slot(&mut self, context: &'static str) -> Result<(), BackendError> {
-        let next_len =
-            vyre_driver::accounting::checked_add_usize_lazy(self.outputs.len(), 1, || {
+        let next_len = vyre_driver::accounting::checked_add_usize_lazy(
+            self.outputs.len(),
+            1,
+            || {
                 BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA pinned-host output table length overflowed while staging {context}. Split the dispatch before output readback staging."
                     ),
                 }
-            })?;
+            },
+        )?;
         reserve_smallvec(&mut self.outputs, next_len, "pinned-host output")
     }
 
@@ -654,6 +664,7 @@ impl HostTransferAllocations {
             self.outputs.len(),
             "CUDA host transfer output vector",
         )?;
+        self.reserve_output_slots_into(outputs.iter_mut().enumerate())?;
         self.collect_output_slots_into(outputs.iter_mut().enumerate())
     }
 
@@ -670,12 +681,62 @@ impl HostTransferAllocations {
                 ),
             });
         }
+        self.reserve_output_slots_into(
+            outputs
+                .iter_mut()
+                .enumerate()
+                .map(|(output_index, output)| (output_index, &mut **output)),
+        )?;
         self.collect_output_slots_into(
             outputs
                 .iter_mut()
                 .enumerate()
                 .map(|(output_index, output)| (output_index, &mut **output)),
         )
+    }
+
+    fn reserve_output_slots_into<'a>(
+        &self,
+        outputs: impl IntoIterator<Item = (usize, &'a mut Vec<u8>)>,
+    ) -> Result<(), BackendError> {
+        for (output_index, output) in outputs {
+            self.reserve_output_slot_into(output_index, output)?;
+        }
+        Ok(())
+    }
+
+    fn reserve_output_slot_into(
+        &self,
+        output_index: usize,
+        output: &mut Vec<u8>,
+    ) -> Result<(), BackendError> {
+        let Some(&transfer) = self.outputs.get(output_index) else {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA output preflight requested output index {output_index}, but only {} output transfer(s) exist.",
+                    self.outputs.len()
+                ),
+            });
+        };
+        if let Some(allocation_index) = transfer.allocation_index {
+            let Some(allocation) = self.allocations.get(allocation_index) else {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA output preflight for transfer {output_index} references allocation index {allocation_index}, but only {} allocation(s) exist.",
+                        self.allocations.len()
+                    ),
+                });
+            };
+            if transfer.byte_len > allocation.byte_len {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA output preflight for transfer {output_index} needs {} byte(s) from a {} byte pinned-host allocation. Recompute output transfer sizing before collecting results.",
+                        transfer.byte_len, allocation.byte_len
+                    ),
+                });
+            }
+        }
+        reserve_vec(output, transfer.byte_len, "CUDA host transfer output bytes")
     }
 
     fn collect_output_slots_into<'a>(
@@ -1132,6 +1193,40 @@ mod tests {
     }
 
     #[test]
+    fn host_transfer_output_collection_preflights_all_slots_before_copying() {
+        let pool = Arc::new(PinnedHostAllocationPool::new(0));
+        let mut transfers = HostTransferAllocations::with_capacity(pool, 1, 2)
+            .expect("Fix: host transfer table should reserve");
+        transfers.allocations.push(PinnedHostAllocation {
+            ptr: std::ptr::NonNull::<u8>::dangling().as_ptr(),
+            byte_len: 1,
+        });
+        transfers.outputs.push(HostOutputTransfer {
+            allocation_index: Some(0),
+            byte_len: 1,
+        });
+        transfers.outputs.push(HostOutputTransfer {
+            allocation_index: Some(9),
+            byte_len: 1,
+        });
+        let mut outputs = vec![vec![0xaa], vec![0xbb]];
+
+        let error = transfers.collect_outputs_into(&mut outputs).expect_err(
+            "Fix: invalid second CUDA output transfer must fail before copying output zero.",
+        );
+
+        assert!(
+            error.to_string().contains("CUDA output preflight"),
+            "error must identify output preflight before materialization, got: {error}"
+        );
+        assert_eq!(
+            outputs,
+            vec![vec![0xaa], vec![0xbb]],
+            "CUDA host-transfer output collection must not mutate an earlier output before a later transfer descriptor fails preflight."
+        );
+    }
+
+    #[test]
     fn owned_and_borrowed_output_collection_share_one_slot_iterator() {
         let source = include_str!("allocations.rs");
         let host_transfer_impl = source
@@ -1146,6 +1241,27 @@ mod tests {
             host_transfer_impl.contains("fn collect_output_slots_into"),
             "Fix: CUDA host-transfer output collection must expose one shared slot iterator."
         );
+        assert!(
+            host_transfer_impl.contains("fn reserve_output_slots_into")
+                && host_transfer_impl.contains("fn reserve_output_slot_into"),
+            "Fix: CUDA host-transfer output collection must preflight destination slots before shared collection."
+        );
+        for method in ["collect_outputs_into", "collect_borrowed_outputs_into"] {
+            let method_body = host_transfer_impl
+                .split(&format!("pub(crate) fn {method}"))
+                .nth(1)
+                .unwrap_or_else(|| panic!("Fix: HostTransferAllocations must expose {method}."));
+            let reserve_pos = method_body
+                .find("self.reserve_output_slots_into")
+                .unwrap_or_else(|| panic!("Fix: {method} must preflight output slots."));
+            let collect_pos = method_body
+                .find("self.collect_output_slots_into")
+                .unwrap_or_else(|| panic!("Fix: {method} must collect output slots."));
+            assert!(
+                reserve_pos < collect_pos,
+                "Fix: {method} must reserve every CUDA host-transfer output before copying any slot."
+            );
+        }
         assert_eq!(
             host_transfer_impl
                 .matches(concat!("self.collect_output_slots_", "into("))
@@ -1190,7 +1306,10 @@ mod tests {
             .expect("Fix: HostTransferAllocations impl must precede Drop impl");
 
         for (method, reservation) in [
-            ("push_upload", "reserve_next_allocation_slot(\"byte upload\")?"),
+            (
+                "push_upload",
+                "reserve_next_allocation_slot(\"byte upload\")?",
+            ),
             (
                 "push_upload_padded",
                 "reserve_next_allocation_slot(\"padded byte upload\")?",
@@ -1216,9 +1335,9 @@ mod tests {
                 .split(&format!("pub(crate) fn {method}"))
                 .nth(1)
                 .unwrap_or_else(|| panic!("Fix: HostTransferAllocations must expose {method}."));
-            let reserve_pos = method_body
-                .find(reservation)
-                .unwrap_or_else(|| panic!("Fix: {method} must reserve metadata before acquisition."));
+            let reserve_pos = method_body.find(reservation).unwrap_or_else(|| {
+                panic!("Fix: {method} must reserve metadata before acquisition.")
+            });
             let acquire_pos = method_body
                 .find("self.pool.acquire(")
                 .unwrap_or_else(|| panic!("Fix: {method} must acquire pinned host memory."));

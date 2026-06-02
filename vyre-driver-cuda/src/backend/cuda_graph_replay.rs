@@ -8,7 +8,7 @@ use vyre_driver::BackendError;
 use super::allocations::cuda_check;
 use super::cuda_graph::{CachedCudaGraph, GraphExecGuard, StreamGuard};
 use super::dispatch::CudaBackend;
-use super::staging_reserve::{reserved_vec, resize_vec_slots};
+use super::staging_reserve::{reserve_vec, reserved_vec, resize_vec_slots};
 use crate::input_identity::{exact_input_key, ExactInputKey};
 
 impl CachedCudaGraph {
@@ -510,6 +510,7 @@ fn collect_cuda_graph_outputs(
         cached.output_host_bufs.len(),
         "cuda graph replay output vector",
     )?;
+    reserve_cuda_graph_output_slots(&cached.output_lens, outputs)?;
     for (output, (buf, byte_len)) in outputs.iter_mut().zip(
         cached
             .output_host_bufs
@@ -517,6 +518,25 @@ fn collect_cuda_graph_outputs(
             .zip(cached.output_lens.iter()),
     ) {
         buf.copy_prefix_into(*byte_len, output)?;
+    }
+    Ok(())
+}
+
+fn reserve_cuda_graph_output_slots(
+    output_lens: &[usize],
+    outputs: &mut [Vec<u8>],
+) -> Result<(), BackendError> {
+    if output_lens.len() != outputs.len() {
+        return Err(BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: cached cuda graph output preflight expected {} caller output slot(s) but received {}. Re-record the graph before collecting outputs.",
+                output_lens.len(),
+                outputs.len()
+            ),
+        });
+    }
+    for (&byte_len, output) in output_lens.iter().zip(outputs.iter_mut()) {
+        reserve_vec(output, byte_len, "cuda graph replay output bytes")?;
     }
     Ok(())
 }
@@ -539,7 +559,9 @@ mod source_contract_tests {
     #[test]
     fn cuda_graph_replay_uses_fallible_output_staging_reservation() {
         let source = include_str!("cuda_graph_replay.rs");
-        assert!(source.contains("use super::staging_reserve::{reserved_vec, resize_vec_slots};"));
+        assert!(source.contains(
+            "use super::staging_reserve::{reserve_vec, reserved_vec, resize_vec_slots};"
+        ));
         assert!(source.contains("fn collect_cuda_graph_outputs("));
         assert!(source.contains(") -> Result<(), BackendError>"));
         assert!(!source.contains(concat!(
@@ -551,6 +573,33 @@ mod source_contract_tests {
                 && !source.contains(concat!("outputs", ".extend("))
                 && !source.contains(concat!("outputs", ".resize_with(")),
             "Fix: CUDA graph replay output staging must use the shared fallible resize helper instead of bespoke growth."
+        );
+        let collector = source
+            .split("fn collect_cuda_graph_outputs(")
+            .nth(1)
+            .and_then(|tail| tail.split("fn reserve_cuda_graph_output_slots(").next())
+            .expect("Fix: CUDA graph replay must expose output collection before output-slot preflight.");
+        let preflight = collector
+            .find("reserve_cuda_graph_output_slots(&cached.output_lens, outputs)?")
+            .expect(
+                "Fix: CUDA graph replay output collection must preflight every caller output slot.",
+            );
+        let copy = collector
+            .find("buf.copy_prefix_into(*byte_len, output)?")
+            .expect("Fix: CUDA graph replay output collection must copy pinned graph outputs.");
+        assert!(
+            preflight < copy,
+            "Fix: CUDA graph replay must reserve every caller output before copying any pinned graph output bytes."
+        );
+        let preflight_helper = source
+            .split("fn reserve_cuda_graph_output_slots(")
+            .nth(1)
+            .and_then(|tail| tail.split("impl CudaBackend").next())
+            .expect("Fix: CUDA graph replay must expose output-slot preflight before backend telemetry.");
+        assert!(
+            preflight_helper.contains("output_lens.len() != outputs.len()")
+                && preflight_helper.contains("reserve_vec(output, byte_len, \"cuda graph replay output bytes\")?"),
+            "Fix: CUDA graph replay output preflight must validate cardinality and reserve every destination byte capacity."
         );
         assert!(
             source.contains("cached.input_host_bufs.len() != cached.expected_input_lens.len()")
@@ -763,12 +812,24 @@ mod source_contract_tests {
         let lock_position = partition_section
             .find("let cache = self.lock_materialized_output_cache")
             .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - batch partition must acquire materialized cache lock");
+        let resize_position = partition_section
+            .find("resize_vec_slots(\n            outputs,\n            batches.len(),\n            \"cuda graph materialized batch output\",")
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - batch partition must resize output slots before hit copy");
+        let hit_copy_position = partition_section
+            .find("snapshot.copy_into(compiled_graph_output_mut(")
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - batch partition must copy materialized cache hits");
         assert!(
             partition_section.contains("for (batch_index, inputs) in batches.iter().enumerate()")
                 && partition_section.contains("input_keys.push((batch_index, materialized_input_key(inputs)?));")
                 && partition_section.contains("let cache = self.lock_materialized_output_cache")
                 && key_position < lock_position,
             "Fix: compiled materialized batch replay must compute exact-input keys before acquiring the materialized-output cache lock."
+        );
+        assert!(
+            key_position < resize_position
+                && lock_position < resize_position
+                && resize_position < hit_copy_position,
+            "Fix: compiled materialized batch replay must finish exact-input key and cache-snapshot partitioning before resizing caller-owned output slots, then resize before copying cache hits."
         );
     }
 }

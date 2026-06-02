@@ -720,16 +720,18 @@ impl CudaCompiledPipeline {
                             );
                         }
                     };
-                let output_slot =
-                    match compiled_graph_output_mut(outputs, batch_index, "materialized cache probe")
-                    {
-                        Ok(output_slot) => output_slot,
-                        Err(error) => {
-                            return self.finish_and_return_cuda_graph_lanes_after_error(
-                                lanes, &launched, outputs, error,
-                            );
-                        }
-                    };
+                let output_slot = match compiled_graph_output_mut(
+                    outputs,
+                    batch_index,
+                    "materialized cache probe",
+                ) {
+                    Ok(output_slot) => output_slot,
+                    Err(error) => {
+                        return self.finish_and_return_cuda_graph_lanes_after_error(
+                            lanes, &launched, outputs, error,
+                        );
+                    }
+                };
                 match self
                     .backend
                     .try_cuda_graph_materialized_cache_with_input_state_into(
@@ -851,11 +853,6 @@ impl CudaCompiledPipeline {
         outputs: &mut Vec<OutputBuffers>,
     ) -> Result<SmallVec<[MaterializedBatchMiss; MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE]>, BackendError>
     {
-        resize_vec_slots(
-            outputs,
-            batches.len(),
-            "cuda graph materialized batch output",
-        )?;
         let mut input_keys = SmallVec::<
             [(usize, MaterializedInputKey); MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE],
         >::new();
@@ -895,6 +892,11 @@ impl CudaCompiledPipeline {
                 }
             }
         }
+        resize_vec_slots(
+            outputs,
+            batches.len(),
+            "cuda graph materialized batch output",
+        )?;
         for (batch_index, snapshot) in hit_snapshots {
             snapshot.copy_into(compiled_graph_output_mut(
                 outputs,

@@ -33,11 +33,8 @@ fn resident_resource_source() -> String {
 }
 
 fn buffer_handle_source() -> String {
-    std::fs::read_to_string(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/src/buffer/handle.rs"
-    ))
-    .expect("Fix: resident-buffer contract must read WGPU buffer handle implementation source")
+    std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/buffer/handle.rs"))
+        .expect("Fix: resident-buffer contract must read WGPU buffer handle implementation source")
 }
 
 fn record_and_readback_source() -> String {
@@ -192,7 +189,9 @@ fn wgpu_recorded_readback_reserves_before_clearing_caller_output() {
         .expect("Fix: WGPU record-and-readback collector must expose timed collection.");
     let reserve_pos = collector
         .find("try_reserve_vec_to_capacity(out, read_len)")
-        .expect("Fix: WGPU recorded readback collector must reserve caller output storage fallibly.");
+        .expect(
+            "Fix: WGPU recorded readback collector must reserve caller output storage fallibly.",
+        );
     let clear_pos = collector
         .find("out.clear();\n                        out.extend_from_slice(bytes);")
         .expect("Fix: WGPU recorded readback collector must clear and rewrite caller output after successful reservation.");
@@ -235,10 +234,49 @@ fn wgpu_resident_batch_download_uses_shared_interval_fusion() {
     assert!(
         source.contains("vyre_driver::resident_transfer_fusion")
             && batch_body.contains("fuse_resident_transfer_intervals(&copies)?")
+            && batch_body.contains("reserve_fused_resident_view_outputs(&fused.copies, &fused.views, outputs)?")
             && batch_body.contains("for copy in fused.copies.iter().copied()")
             && batch_body.contains("for (view, output) in fused.views.iter().copied().zip(outputs.iter_mut())")
             && !batch_body.contains("for ((handle, byte_offset, byte_len), output)"),
         "Fix: WGPU resident ranged batch download must share CUDA's backend-neutral interval fusion instead of issuing one readback per requested range."
+    );
+}
+
+#[test]
+fn wgpu_resident_fused_batch_download_preflights_outputs_before_readback() {
+    let source = resident_download_source();
+    let batch_body = source
+        .split("fn download_resident_ranges_into(")
+        .nth(1)
+        .and_then(|tail| tail.split("fn reserve_fused_resident_view_outputs(").next())
+        .expect("Fix: WGPU resident download module must expose batch download before fused output preflight.");
+    let preflight_pos = batch_body
+        .find("reserve_fused_resident_view_outputs(&fused.copies, &fused.views, outputs)?")
+        .expect("Fix: WGPU fused resident batch download must preflight caller output slots.");
+    let device_queue_pos = batch_body
+        .find("let device_queue = backend.current_device_queue();")
+        .expect("Fix: WGPU fused resident batch download must stage device readbacks.");
+    let materialize_pos = batch_body
+        .find("copy_fused_resident_view_into(&fused_outputs, view, output)?")
+        .expect("Fix: WGPU fused resident batch download must materialize every fused view.");
+
+    assert!(
+        preflight_pos < device_queue_pos && preflight_pos < materialize_pos,
+        "Fix: WGPU fused resident batch download must validate fused views and reserve every caller output before any GPU readback or output mutation."
+    );
+
+    let preflight = source
+        .split("fn reserve_fused_resident_view_outputs(")
+        .nth(1)
+        .and_then(|tail| tail.split("fn validate_resident_readback_range(").next())
+        .expect("Fix: WGPU resident download module must expose fused output preflight before range validation.");
+    assert!(
+        preflight.contains("views.len() != outputs.len()")
+            && preflight.contains("copies.get(view.copy_slot)")
+            && preflight.contains("view.byte_offset.checked_add(view.byte_len)")
+            && preflight.contains("view_end > copy.byte_len")
+            && preflight.contains("try_reserve_vec_to_capacity(*output, view.byte_len)"),
+        "Fix: WGPU fused resident output preflight must reject cardinality/view drift and reserve all caller output bytes before materialization."
     );
 }
 

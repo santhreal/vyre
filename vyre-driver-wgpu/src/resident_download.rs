@@ -173,6 +173,7 @@ pub(crate) fn download_resident_ranges_into(
         });
     }
     let fused = fuse_resident_transfer_intervals(&copies)?;
+    reserve_fused_resident_view_outputs(&fused.copies, &fused.views, outputs)?;
     let mut fused_outputs = SmallVec::<[Vec<u8>; 8]>::new();
     vyre_foundation::allocation::try_reserve_smallvec_to_capacity(
         &mut fused_outputs,
@@ -211,6 +212,51 @@ pub(crate) fn download_resident_ranges_into(
     }
     for (view, output) in fused.views.iter().copied().zip(outputs.iter_mut()) {
         copy_fused_resident_view_into(&fused_outputs, view, output)?;
+    }
+    Ok(())
+}
+
+fn reserve_fused_resident_view_outputs(
+    copies: &[ResidentTransferInterval],
+    views: &[ResidentTransferView],
+    outputs: &mut [&mut Vec<u8>],
+) -> Result<(), vyre_driver::BackendError> {
+    if views.len() != outputs.len() {
+        return Err(vyre_driver::BackendError::new(format!(
+            "WGPU resident ranged batch download fused {} output view(s) for {} requested output slot(s). Fix: keep resident transfer fusion cardinality-preserving before materializing outputs.",
+            views.len(),
+            outputs.len()
+        )));
+    }
+    for (view_index, (view, output)) in views.iter().copied().zip(outputs.iter_mut()).enumerate() {
+        if view.byte_len != 0 {
+            let Some(copy) = copies.get(view.copy_slot) else {
+                return Err(vyre_driver::BackendError::new(format!(
+                    "WGPU resident ranged batch download view {view_index} references missing fused copy slot {}. Fix: rebuild the fused readback plan before materializing outputs.",
+                    view.copy_slot
+                )));
+            };
+            let view_end = view.byte_offset.checked_add(view.byte_len).ok_or_else(|| {
+                vyre_driver::BackendError::new(format!(
+                    "WGPU resident ranged batch download view {view_index} overflows usize at offset {} len {}. Fix: rebuild the fused readback plan before materializing outputs.",
+                    view.byte_offset, view.byte_len
+                ))
+            })?;
+            if view_end > copy.byte_len {
+                return Err(vyre_driver::BackendError::new(format!(
+                    "WGPU resident ranged batch download view {view_index} requested bytes [{}..{}) from a {} byte fused output. Fix: rebuild the fused readback plan before materializing outputs.",
+                    view.byte_offset, view_end, copy.byte_len
+                )));
+            }
+        }
+        vyre_driver::allocation::try_reserve_vec_to_capacity(*output, view.byte_len).map_err(
+            |source| {
+                vyre_driver::BackendError::new(format!(
+                    "WGPU resident ranged batch download could not reserve {} output byte(s) for view {view_index}: {source}. Fix: split the resident readback batch before materializing outputs.",
+                    view.byte_len
+                ))
+            },
+        )?;
     }
     Ok(())
 }
