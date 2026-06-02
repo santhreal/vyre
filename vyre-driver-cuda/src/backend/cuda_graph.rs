@@ -159,14 +159,14 @@ fn create_cuda_graph_stream() -> Result<StreamGuard, BackendError> {
         .map(StreamGuard::new)
 }
 
-fn synchronize_cuda_graph_param_init_stream(stream: &StreamGuard) -> Result<(), BackendError> {
+fn synchronize_cuda_graph_stream(
+    stream: &StreamGuard,
+    label: &'static str,
+) -> Result<(), BackendError> {
     // The shared stream boundary validates non-null ownership before issuing
     // cuStreamSynchronize(stream.ptr().as_ptr()), keeping graph capture off
     // CUDA's legacy default stream while preserving one raw FFI implementation.
-    crate::stream::synchronize_raw_stream(
-        stream.ptr().as_ptr(),
-        "cuStreamSynchronize (cuda_graph param init)",
-    )
+    crate::stream::synchronize_raw_stream(stream.ptr().as_ptr(), label)
 }
 
 fn record_cuda_graph_output_readbacks(
@@ -615,6 +615,28 @@ mod tests {
                 && source.contains("capture_guard.finish(")
                 && source.contains("resident_capture_guard.finish("),
             "Fix: CUDA graph capture, instantiate, upload, and cleanup paths must route through shared lifecycle helpers."
+        );
+        let upload_cleanup = source
+            .rsplit("let upload_result = (||")
+            .next()
+            .expect("Fix: CUDA graph upload must classify graph-upload cleanup errors.")
+            .split("let (input_host_bufs, output_host_bufs) = host_buffers.into_raw();")
+            .next()
+            .expect("Fix: CUDA graph upload cleanup must precede cached graph ownership transfer.");
+        assert!(
+            upload_cleanup.contains("synchronize_cuda_graph_stream(")
+                && upload_cleanup.contains("\"cuStreamSynchronize (cuda_graph upload cleanup)\"")
+                && upload_cleanup.contains("In-flight CUDA graph resources will not be recycled.")
+                && upload_cleanup.contains("std::mem::forget(stream);")
+                && upload_cleanup.contains("std::mem::forget(graph_exec);")
+                && upload_cleanup.contains("std::mem::forget(graph);")
+                && upload_cleanup.contains("std::mem::forget(resident_input_graph_exec);")
+                && upload_cleanup.contains("std::mem::forget(resident_input_graph);")
+                && upload_cleanup.contains("std::mem::forget(params_device_ptr);")
+                && upload_cleanup.contains("std::mem::forget(input_device_ptrs);")
+                && upload_cleanup.contains("std::mem::forget(output_device_ptrs);")
+                && upload_cleanup.contains("std::mem::forget(host_buffers);"),
+            "Fix: CUDA graph upload errors must prove stream completion before dropping graph resources or leak all captured owners when completion is unproven."
         );
     }
 
@@ -1104,7 +1126,10 @@ impl CudaBackend {
                     stream.ptr().as_ptr(),
                     "cuMemcpyHtoDAsync_v2 (cuda_graph param init)",
                 )?;
-                synchronize_cuda_graph_param_init_stream(&stream)?;
+                synchronize_cuda_graph_stream(
+                    &stream,
+                    "cuStreamSynchronize (cuda_graph param init)",
+                )?;
             }
             self.telemetry.record_sync_point();
         }
@@ -1277,12 +1302,40 @@ impl CudaBackend {
             "cuGraphInstantiateWithFlags returned a null resident-input executable graph after reporting success. Fix: update the CUDA driver or disable CUDA graph capture for this device.",
         )?;
 
-        upload_cuda_graph_exec(&graph_exec, &stream, "cuGraphUpload")?;
-        upload_cuda_graph_exec(
-            &resident_input_graph_exec,
-            &stream,
-            "cuGraphUpload (resident input cuda_graph)",
-        )?;
+        let upload_result = (|| {
+            upload_cuda_graph_exec(&graph_exec, &stream, "cuGraphUpload")?;
+            upload_cuda_graph_exec(
+                &resident_input_graph_exec,
+                &stream,
+                "cuGraphUpload (resident input cuda_graph)",
+            )
+        })();
+        if let Err(error) = upload_result {
+            match synchronize_cuda_graph_stream(
+                &stream,
+                "cuStreamSynchronize (cuda_graph upload cleanup)",
+            ) {
+                Ok(()) => {
+                    self.telemetry.record_sync_point();
+                    return Err(error);
+                }
+                Err(sync_error) => {
+                    tracing::error!(
+                        "Fix: failed to synchronize CUDA graph upload stream after upload error: {sync_error}. In-flight CUDA graph resources will not be recycled."
+                    );
+                    std::mem::forget(stream);
+                    std::mem::forget(graph_exec);
+                    std::mem::forget(graph);
+                    std::mem::forget(resident_input_graph_exec);
+                    std::mem::forget(resident_input_graph);
+                    std::mem::forget(params_device_ptr);
+                    std::mem::forget(input_device_ptrs);
+                    std::mem::forget(output_device_ptrs);
+                    std::mem::forget(host_buffers);
+                    return Err(error);
+                }
+            }
+        }
 
         let (input_host_bufs, output_host_bufs) = host_buffers.into_raw();
 
