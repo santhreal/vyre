@@ -302,41 +302,108 @@ impl CudaBackend {
             Arc::clone(&self.launch_resources),
             false,
         )?;
-        let stream_raw = launch_resources.stream_raw()?;
-        enqueue_optional_resident_h2d_copy(param_upload, stream_raw)?;
+        let mut launch_resources = Some(launch_resources);
+        let mut allocations = Some(allocations);
+        let mut resident_use = Some(resident_use);
+        let mut host_transfers = Some(host_transfers);
+        let stream_raw = launch_resources
+            .as_ref()
+            .ok_or_else(|| BackendError::InvalidProgram {
+                fix: "Fix: CUDA resident batch launch resources were consumed before enqueue; rebuild pending dispatch ownership before launching.".to_string(),
+            })?
+            .stream_raw()?;
+        let pending = (|| {
+            enqueue_optional_resident_h2d_copy(param_upload, stream_raw)?;
 
-        let mut kernel_args = SmallVec::<[*mut c_void; 8]>::new();
-        for mut launch_ptrs in launch_ptrs_by_batch {
-            let mut params_ref = params_ptr;
-            Self::kernel_args_into(&mut launch_ptrs, &mut params_ref, &mut kernel_args)?;
-            for _ in 0..prepared.fixpoint_iterations {
-                self.launch_prevalidated_function(
-                    func,
-                    &mut kernel_args,
-                    &prepared.launch,
-                    stream_raw,
-                    false,
-                    prepared.cooperative,
-                )?;
+            let mut kernel_args = SmallVec::<[*mut c_void; 8]>::new();
+            for launch_ptrs in launch_ptrs_by_batch.iter_mut() {
+                let mut params_ref = params_ptr;
+                Self::kernel_args_into(launch_ptrs, &mut params_ref, &mut kernel_args)?;
+                for _ in 0..prepared.fixpoint_iterations {
+                    self.launch_prevalidated_function(
+                        func,
+                        &mut kernel_args,
+                        &prepared.launch,
+                        stream_raw,
+                        false,
+                        prepared.cooperative,
+                    )?;
+                }
             }
-        }
 
-        let event = self.launch_resources.acquire_event()?;
-        if let Err(error) = event.record(stream_raw) {
-            self.launch_resources.release_event(event);
-            return Err(error);
-        }
-        let (stream, _) = launch_resources.into_parts()?;
-        let pending = crate::stream::CudaPendingDispatch::new_resident_batch_pending(
-            Arc::clone(&self.ctx),
-            Arc::clone(&self.launch_resources),
-            event,
-            stream,
-            allocations,
-            resident_use,
-            host_transfers,
-            Arc::clone(&self.telemetry),
-        );
+            let event = self.launch_resources.acquire_event()?;
+            if let Err(error) = event.record(stream_raw) {
+                self.launch_resources.release_event(event);
+                return Err(error);
+            }
+            let (stream, _) = launch_resources
+                .take()
+                .ok_or_else(|| BackendError::InvalidProgram {
+                    fix: "Fix: CUDA resident batch launch resources were consumed before pending dispatch ownership transfer.".to_string(),
+                })?
+                .into_parts()?;
+            let allocations = allocations
+                .take()
+                .ok_or_else(|| BackendError::InvalidProgram {
+                    fix: "Fix: CUDA resident batch allocations were consumed before pending dispatch ownership transfer.".to_string(),
+                })?;
+            let resident_use = resident_use
+                .take()
+                .ok_or_else(|| BackendError::InvalidProgram {
+                    fix: "Fix: CUDA resident batch use guard was consumed before pending dispatch ownership transfer.".to_string(),
+                })?;
+            let host_transfers =
+                host_transfers
+                    .take()
+                    .ok_or_else(|| BackendError::InvalidProgram {
+                        fix: "Fix: CUDA resident batch host staging was consumed before pending dispatch ownership transfer.".to_string(),
+                    })?;
+            Ok(
+                crate::stream::CudaPendingDispatch::new_resident_batch_pending(
+                    Arc::clone(&self.ctx),
+                    Arc::clone(&self.launch_resources),
+                    event,
+                    stream,
+                    allocations,
+                    resident_use,
+                    host_transfers,
+                    Arc::clone(&self.telemetry),
+                ),
+            )
+        })();
+        let pending = match pending {
+            Ok(pending) => pending,
+            Err(error) => {
+                let Some(launch_resources) = launch_resources.take() else {
+                    return Err(error);
+                };
+                match crate::stream::synchronize_raw_stream(
+                    stream_raw,
+                    "cuStreamSynchronize (resident batch error cleanup)",
+                ) {
+                    Ok(()) => {
+                        self.telemetry.record_sync_point();
+                        return Err(error);
+                    }
+                    Err(sync_error) => {
+                        tracing::error!(
+                            "Fix: failed to synchronize CUDA resident batch stream after enqueue error: {sync_error}. In-flight resident batch resources will not be recycled."
+                        );
+                        std::mem::forget(launch_resources);
+                        if let Some(allocations) = allocations.take() {
+                            std::mem::forget(allocations);
+                        }
+                        if let Some(resident_use) = resident_use.take() {
+                            std::mem::forget(resident_use);
+                        }
+                        if let Some(host_transfers) = host_transfers.take() {
+                            std::mem::forget(host_transfers);
+                        }
+                        return Err(error);
+                    }
+                }
+            }
+        };
         Ok(CudaResidentBatchDispatch {
             pending,
             output_handles: output_handles_by_batch,

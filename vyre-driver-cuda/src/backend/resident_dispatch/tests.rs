@@ -408,4 +408,43 @@ mod tests {
             "Fix: resident sequence compact readback staging must remain owned by outer cleanup until stream completion is proven and outputs are collected."
         );
     }
+
+    #[test]
+    fn resident_batch_error_cleanup_leaks_resources_when_sync_is_unproven() {
+        let source = super::resident_dispatch_production_source();
+        let batch = source
+            .split("pub(crate) fn dispatch_resident_batch_async_concrete_with_ptx_key")
+            .nth(1)
+            .expect("Fix: resident batch dispatch function must exist.")
+            .split("    }\n}")
+            .next()
+            .expect("Fix: resident batch dispatch must end inside its module impl.");
+        assert!(
+            batch.contains("let mut launch_resources = Some(launch_resources);")
+                && batch.contains("let mut allocations = Some(allocations);")
+                && batch.contains("let mut resident_use = Some(resident_use);")
+                && batch.contains("let mut host_transfers = Some(host_transfers);")
+                && batch.contains("let pending = (||"),
+            "Fix: CUDA resident batch dispatch must retain launch resources, resident use, transient allocations, and pinned host staging in outer cleanup ownership until pending dispatch takes over."
+        );
+        assert!(
+            batch.contains("crate::stream::synchronize_raw_stream(\n                    stream_raw,\n                    \"cuStreamSynchronize (resident batch error cleanup)\",")
+                && batch.contains("In-flight resident batch resources will not be recycled.")
+                && batch.contains("std::mem::forget(launch_resources);")
+                && batch.contains("std::mem::forget(allocations);")
+                && batch.contains("std::mem::forget(resident_use);")
+                && batch.contains("std::mem::forget(host_transfers);"),
+            "Fix: CUDA resident batch dispatch must leak in-flight resources when completion is unproven after enqueue errors."
+        );
+        let cleanup_pos = batch
+            .find("let pending = match pending")
+            .expect("Fix: resident batch dispatch must classify pending construction errors.");
+        let transfer_pos = batch
+            .find("CudaPendingDispatch::new_resident_batch_pending")
+            .expect("Fix: resident batch dispatch must eventually transfer ownership to CudaPendingDispatch.");
+        assert!(
+            transfer_pos < cleanup_pos,
+            "Fix: resident batch dispatch must install fail-closed cleanup around all fallible enqueue work before returning pending ownership."
+        );
+    }
 }
