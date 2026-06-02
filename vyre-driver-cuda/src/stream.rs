@@ -401,13 +401,29 @@ impl CudaLaunchResourceLease {
 
 impl Drop for CudaLaunchResourceLease {
     fn drop(&mut self) {
+        let Some(stream) = self.stream.take() else {
+            if let Some((start, end)) = self.timing_events.take() {
+                self.pool.release_timing_event(start);
+                self.pool.release_timing_event(end);
+            }
+            return;
+        };
+        if let Err(error) = stream.synchronize() {
+            tracing::error!(
+                "Fix: failed to synchronize CUDA launch resource lease during drop: {error}. In-flight lease resources will not be recycled."
+            );
+            if let Some((start, end)) = self.timing_events.take() {
+                std::mem::forget(start);
+                std::mem::forget(end);
+            }
+            std::mem::forget(stream);
+            return;
+        }
         if let Some((start, end)) = self.timing_events.take() {
             self.pool.release_timing_event(start);
             self.pool.release_timing_event(end);
         }
-        if let Some(stream) = self.stream.take() {
-            self.pool.release_stream(stream);
-        }
+        self.pool.release_stream(stream);
     }
 }
 
@@ -875,6 +891,46 @@ mod tests {
                 && source.contains("pub timing_events: usize")
                 && source.contains("cached_counts_detailed"),
             "Fix: CUDA launch-resource telemetry must expose timing-event cache pressure, not just streams and completion events."
+        );
+    }
+
+    #[test]
+    fn launch_resource_lease_drop_synchronizes_before_recycling_resources() {
+        let source = include_str!("stream.rs");
+        let drop_impl = source
+            .split("impl Drop for CudaLaunchResourceLease")
+            .nth(1)
+            .expect("Fix: CUDA launch-resource lease must own a Drop implementation.")
+            .split("impl CudaLaunchResourcePool")
+            .next()
+            .expect(
+                "Fix: launch-resource lease Drop must precede the resource pool implementation.",
+            );
+        let sync_pos = drop_impl.find("stream.synchronize()").expect(
+            "Fix: CUDA launch-resource lease Drop must synchronize before recycling a stream.",
+        );
+        let post_sync_drop = &drop_impl[sync_pos..];
+        let release_timing_pos = sync_pos
+            + post_sync_drop
+            .find("self.pool.release_timing_event(start);")
+            .expect("Fix: CUDA launch-resource lease Drop must release timing events after successful synchronization.");
+        let release_stream_pos = sync_pos
+            + post_sync_drop
+            .find("self.pool.release_stream(stream);")
+            .expect("Fix: CUDA launch-resource lease Drop must release streams after successful synchronization.");
+
+        assert!(
+            sync_pos < release_timing_pos && release_timing_pos < release_stream_pos,
+            "Fix: CUDA launch-resource lease Drop must prove stream completion before timing-event or stream reuse."
+        );
+        assert!(
+            drop_impl.contains("Err(error)")
+                && drop_impl.contains("In-flight lease resources will not be recycled.")
+                && drop_impl.contains("std::mem::forget(start);")
+                && drop_impl.contains("std::mem::forget(end);")
+                && drop_impl.contains("std::mem::forget(stream);")
+                && !drop_impl.contains("self.pool.release_stream(stream);\n        if let Err"),
+            "Fix: CUDA launch-resource lease Drop must leak resources instead of pooling them when drop-time synchronization fails."
         );
     }
 
