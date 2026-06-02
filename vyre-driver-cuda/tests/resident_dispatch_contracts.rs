@@ -1442,7 +1442,8 @@ fn cuda_host_dispatch_does_not_allocate_for_empty_launch_params() {
         "Fix: CUDA host dispatch must use a null parameter pointer for empty launch params instead of allocating a rounded 1-byte device buffer."
     );
     assert!(
-        source.contains(".checked_add(usize::from(!prepared.launch.param_words.is_empty()))"),
+        source.contains("checked_add_usize_lazy(")
+            && source.contains("usize::from(!prepared.launch.param_words.is_empty())"),
         "Fix: CUDA host dispatch must not reserve pinned-host transfer slots when there are no parameter words to upload."
     );
 }
