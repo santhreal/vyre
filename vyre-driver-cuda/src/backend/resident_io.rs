@@ -53,6 +53,18 @@ impl CudaBackend {
     ) -> Result<T, BackendError> {
         let stream = self.launch_resources.acquire_stream()?;
         let result = operation(&stream);
+        if result.is_err() {
+            match stream.synchronize() {
+                Ok(()) => self.telemetry.record_sync_point(),
+                Err(error) => {
+                    tracing::error!(
+                        "Fix: failed to synchronize CUDA resident I/O stream after operation error: {error}. In-flight resident I/O resources will not be recycled."
+                    );
+                    std::mem::forget(stream);
+                    return result;
+                }
+            }
+        }
         self.launch_resources.release_stream(stream);
         result
     }
@@ -1153,6 +1165,38 @@ mod async_upload_tests {
                     "std::ptr::null_mut(),"
                 )),
             "Fix: CUDA async resident uploads must not enqueue or synchronize on the null stream; that creates a global device fence."
+        );
+    }
+
+    #[test]
+    fn resident_io_stream_errors_require_completion_before_reuse() {
+        let source = include_str!("resident_io.rs");
+        let helper = source
+            .split("fn with_resident_stream<T>")
+            .nth(1)
+            .expect("Fix: CUDA resident I/O must use a shared stream lease helper.")
+            .split("fn add_resident_transfer_bytes")
+            .next()
+            .expect("Fix: resident I/O stream helper must precede transfer accounting.");
+        assert!(
+            helper.contains("let result = operation(&stream);")
+                && helper.contains("if result.is_err()")
+                && helper.contains("match stream.synchronize()")
+                && helper.contains("Ok(()) => self.telemetry.record_sync_point()")
+                && helper.contains("In-flight resident I/O resources will not be recycled.")
+                && helper.contains("std::mem::forget(stream);")
+                && helper.contains("return result;"),
+            "Fix: CUDA resident I/O stream helper must not return a stream to the pool after an operation error unless completion is proven."
+        );
+        let error_cleanup_pos = helper
+            .find("if result.is_err()")
+            .expect("Fix: resident I/O stream helper must handle operation errors.");
+        let release_pos = helper
+            .find("self.launch_resources.release_stream(stream);")
+            .expect("Fix: resident I/O stream helper must release completed streams.");
+        assert!(
+            error_cleanup_pos < release_pos,
+            "Fix: resident I/O stream helper must complete error cleanup before pooled stream release."
         );
     }
 
