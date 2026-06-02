@@ -389,6 +389,7 @@ fn prepare_cuda_graph_replay(
             }
         }
         cached.cached_input_key = input_state.input_key;
+        cached.device_inputs_initialized = false;
         cached.host_outputs_initialized = false;
     }
     let mut stats = CudaGraphReplayStats::from_cached(cached);
@@ -738,8 +739,29 @@ mod source_contract_tests {
         assert!(
             replay_source.contains("let input_key = exact_input_key(inputs)?;")
                 && replay_source.contains("cached.cached_input_key = input_state.input_key;")
+                && replay_source.contains("cached.device_inputs_initialized = false;")
                 && replay_source.contains("cached.host_outputs_initialized = false;"),
-            "Fix: rewriting cached graph host inputs must update the exact-input key and immediately invalidate materialized host outputs before graph launch/finish can fail."
+            "Fix: rewriting cached graph host inputs must update the exact-input key and immediately invalidate resident device inputs plus materialized host outputs before graph launch/finish can fail."
+        );
+        let prepare_replay = replay_source
+            .split("fn prepare_cuda_graph_replay(")
+            .nth(1)
+            .expect("Fix: CUDA graph replay preparation must stay centralized.")
+            .split("fn prepare_cuda_graph_replay_launch(")
+            .next()
+            .expect("Fix: replay preparation must precede prepared-launch construction.");
+        let key_update = prepare_replay
+            .find("cached.cached_input_key = input_state.input_key;")
+            .expect("Fix: replay preparation must update the cached input key after rewriting host inputs.");
+        let device_invalidate = prepare_replay
+            .find("cached.device_inputs_initialized = false;")
+            .expect("Fix: replay preparation must invalidate resident device inputs before launch can fail.");
+        let host_invalidate = prepare_replay
+            .find("cached.host_outputs_initialized = false;")
+            .expect("Fix: replay preparation must invalidate materialized host outputs before launch can fail.");
+        assert!(
+            key_update < device_invalidate && device_invalidate < host_invalidate,
+            "Fix: rewritten CUDA graph inputs must invalidate resident device state before the graph can be re-used after an enqueue failure."
         );
         assert!(
             graph_source.contains("pub(crate) cached_input_key: ExactInputKey")
