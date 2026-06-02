@@ -201,6 +201,8 @@ impl CompiledPipeline for CudaCompiledPipeline {
         if replay_result.is_ok() {
             self.return_cached_graph(cached)?;
             self.remember_materialized_output_cache(inputs, &outputs)?;
+        } else {
+            std::mem::forget(cached);
         }
         let device_ns = replay_result?;
         let wall_ns = CUDA_NUMERIC.elapsed_nanos_u64(started, "cuda graph replay wall latency")?;
@@ -263,6 +265,8 @@ impl CompiledPipeline for CudaCompiledPipeline {
         if replay_result.is_ok() {
             self.return_cached_graph(cached)?;
             self.remember_materialized_output_cache(inputs, outputs)?;
+        } else {
+            std::mem::forget(cached);
         }
         replay_result
     }

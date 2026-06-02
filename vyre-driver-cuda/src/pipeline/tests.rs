@@ -228,9 +228,31 @@ fn compiled_cuda_graph_batched_replay_uses_checked_batch_lane_and_output_slots()
             && source.contains("return self.finish_and_return_cuda_graph_lanes_after_error(")
             && source.contains("return self.return_cached_graph_lanes_after_error(lanes, error)")
             && source.matches("std::mem::forget(lanes);").count() >= 2
+            && source.matches("std::mem::forget(cached);").count() >= 2
             && !source.contains("finish_cuda_graph_indexed_lane_replays(&mut lanes, launched, outputs)?")
             && !source.contains("compiled_graph_output_mut(\n                            outputs,\n                            batch_index,\n                            \"materialized cache probe\",\n                        )?"),
         "Fix: compiled CUDA graph batched replay must finish launched lanes and either return reusable cached graph lanes or leak unproven-completion lanes instead of bypassing cleanup with direct `?` exits."
+    );
+    let timed_replay = source
+        .split("let replay_result =\n            self.backend\n                .dispatch_via_cuda_graph_timed_into")
+        .nth(1)
+        .expect("Fix: timed single CUDA graph replay must expose checked-out cached graph handling.")
+        .split("let device_ns = replay_result?")
+        .next()
+        .expect("Fix: timed single CUDA graph replay must classify replay errors before timing output.");
+    let untimed_replay = source
+        .split("let replay_result = self\n            .backend\n            .dispatch_via_cuda_graph_into")
+        .nth(1)
+        .expect("Fix: untimed single CUDA graph replay must expose checked-out cached graph handling.")
+        .split("replay_result\n    }")
+        .next()
+        .expect("Fix: untimed single CUDA graph replay must classify replay errors before returning.");
+    assert!(
+        timed_replay.contains("self.return_cached_graph(cached)?")
+            && timed_replay.contains("std::mem::forget(cached);")
+            && untimed_replay.contains("self.return_cached_graph(cached)?")
+            && untimed_replay.contains("std::mem::forget(cached);"),
+        "Fix: single CUDA graph replay must return cached graphs only after successful replay and leak them when replay completion is unproven."
     );
     let finish_helper = source
         .split("fn finish_cuda_graph_indexed_lane_replays")
