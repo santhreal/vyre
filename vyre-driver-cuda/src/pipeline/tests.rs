@@ -224,10 +224,25 @@ fn compiled_cuda_graph_batched_replay_uses_checked_batch_lane_and_output_slots()
     assert!(
         source.contains("fn finish_and_return_cuda_graph_lanes_after_error")
             && source.contains("fn return_cached_graph_lanes_after_error")
+            && source.contains("fn finish_cuda_graph_lane_replay_discarding_outputs")
             && source.contains("return self.finish_and_return_cuda_graph_lanes_after_error(")
             && source.contains("return self.return_cached_graph_lanes_after_error(lanes, error)")
             && !source.contains("compiled_graph_output_mut(\n                            outputs,\n                            batch_index,\n                            \"materialized cache probe\",\n                        )?"),
         "Fix: compiled CUDA graph batched replay must finish launched lanes and return cached graph lanes on intermediate errors instead of bypassing cleanup with direct `?` exits."
+    );
+    let finish_helper = source
+        .split("fn finish_cuda_graph_indexed_lane_replays")
+        .nth(1)
+        .expect("Fix: compiled CUDA graph replay must expose indexed lane finishing.")
+        .split("fn finish_and_return_cuda_graph_lanes_after_error")
+        .next()
+        .expect("Fix: compiled CUDA graph lane finishing must precede error-return helper.");
+    assert!(
+        finish_helper.contains("finish_cuda_graph_lane_replay_discarding_outputs")
+            && finish_helper.contains("lane.output_host_bufs.len()")
+            && finish_helper.contains("\"discarded cuda graph lane output\"")
+            && finish_helper.contains("finish_cuda_graph_replay_into(lane, replay_stats, &mut discard_outputs)"),
+        "Fix: launched CUDA graph lanes must be fenced through finish_cuda_graph_replay_into even when caller output-slot lookup fails."
     );
 }
 

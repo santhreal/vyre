@@ -1000,6 +1000,16 @@ impl CudaCompiledPipeline {
             ) {
                 Ok(output) => output,
                 Err(error) => {
+                    if let Err(cleanup_error) = self
+                        .finish_cuda_graph_lane_replay_discarding_outputs(
+                            lane,
+                            launched_batch.replay_stats,
+                        )
+                    {
+                        if finish_error.is_none() {
+                            finish_error = Some(cleanup_error);
+                        }
+                    }
                     if finish_error.is_none() {
                         finish_error = Some(error);
                     }
@@ -1020,6 +1030,19 @@ impl CudaCompiledPipeline {
             return Err(error);
         }
         Ok(())
+    }
+
+    fn finish_cuda_graph_lane_replay_discarding_outputs(
+        &self,
+        lane: &mut CachedCudaGraph,
+        replay_stats: CudaGraphReplayStats,
+    ) -> Result<(), BackendError> {
+        let mut discard_outputs = reserved_vec(
+            lane.output_host_bufs.len(),
+            "discarded cuda graph lane output",
+        )?;
+        self.backend
+            .finish_cuda_graph_replay_into(lane, replay_stats, &mut discard_outputs)
     }
 
     fn finish_and_return_cuda_graph_lanes_after_error(
