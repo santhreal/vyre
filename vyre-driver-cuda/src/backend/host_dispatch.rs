@@ -19,7 +19,7 @@ use super::copy::aligned_async_copy_len;
 use super::dispatch::CudaBackend;
 use super::launch_params::launch_param_byte_len;
 use super::module_cache::ModuleCacheKey;
-use super::output_range::cuda_output_readback;
+use super::output_range::cuda_output_readback_for_binding;
 use super::plan::CudaDispatchPlan;
 use super::staging_reserve::{reserve_smallvec, reserved_vec};
 
@@ -124,6 +124,23 @@ fn add_transfer_bytes(total: &mut u64, bytes: usize, label: &str) -> Result<(), 
 
 fn add_transfer_operation(total: &mut u64, label: &str) -> Result<(), BackendError> {
     CUDA_HOST_TRANSFER_ACCOUNTING.add_operation(total, label)
+}
+
+fn host_dispatch_input<'a>(
+    inputs: &'a [&[u8]],
+    input_index: usize,
+    binding_name: &str,
+    context: &'static str,
+) -> Result<&'a [u8], BackendError> {
+    inputs
+        .get(input_index)
+        .copied()
+        .ok_or_else(|| BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA host dispatch {context} expected input index {input_index} for `{binding_name}` but only {} input(s) were supplied. Rebuild the binding plan or validate inputs before launch.",
+                inputs.len()
+            ),
+        })
 }
 
 impl CudaBackend {
@@ -378,7 +395,10 @@ impl CudaBackend {
             }
 
             let byte_len = match binding.input_index {
-                Some(input_index) => inputs[input_index].len(),
+                Some(input_index) => {
+                    host_dispatch_input(inputs, input_index, &binding.name, "allocation sizing")?
+                        .len()
+                }
                 None => binding.static_byte_len.ok_or_else(|| BackendError::InvalidProgram {
                     fix: format!(
                         "Fix: CUDA output `{}` needs a static byte length before launch; set BufferDecl::with_count or output_byte_range.",
@@ -394,10 +414,11 @@ impl CudaBackend {
                     .usize_to_u64(allocation.byte_len, "transient allocation byte count")?,
             );
             let dev_ptr = allocation.ptr;
-            allocations.set_ptr(binding.buffer_index, allocation);
+            allocations.set_ptr(binding.buffer_index, allocation, &binding.name)?;
 
             if let Some(input_index) = binding.input_index {
-                let input = inputs[input_index];
+                let input =
+                    host_dispatch_input(inputs, input_index, &binding.name, "upload staging")?;
                 let copy_byte_len = aligned_async_copy_len(input.len())?;
                 let host_ptr = host_transfers.push_upload_padded(input, copy_byte_len)?;
                 add_transfer_bytes(&mut upload_bytes, input.len(), "host upload")?;
@@ -500,7 +521,7 @@ impl CudaBackend {
             if binding.role == BindingRole::Shared {
                 continue;
             }
-            let ptr = allocations.ptr(binding.buffer_index);
+            let ptr = allocations.ptr(binding.buffer_index, &binding.name)?;
             if ptr == 0 {
                 return Err(BackendError::InvalidProgram {
                     fix: format!(
@@ -541,11 +562,17 @@ impl CudaBackend {
         let mut readback_bytes = 0_u64;
         let mut readback_operations = 0_u64;
         for &binding_index in &prepared.output_binding_indices {
-            let binding = &prepared.bindings.bindings[binding_index];
+            let binding = prepared.output_binding(binding_index, "host dispatch output readback")?;
             let full_byte_len = match binding.static_byte_len {
                 Some(len) => len,
                 None => match binding.input_index {
-                    Some(input_index) => inputs[input_index].len(),
+                    Some(input_index) => host_dispatch_input(
+                        inputs,
+                        input_index,
+                        &binding.name,
+                        "output readback sizing",
+                    )?
+                    .len(),
                     None => {
                         return Err(BackendError::InvalidProgram {
                             fix: format!(
@@ -556,13 +583,24 @@ impl CudaBackend {
                     }
                 },
             };
-            let readback = cuda_output_readback(&buffers[binding.buffer_index], full_byte_len)?;
-            let allocation_byte_len = allocations.byte_len(binding.buffer_index);
+            let readback = cuda_output_readback_for_binding(
+                buffers,
+                binding.buffer_index,
+                &binding.name,
+                full_byte_len,
+                "output readback",
+            )?;
+            let allocation_byte_len = allocations.byte_len(binding.buffer_index, &binding.name)?;
             let padded_readback_len = aligned_async_copy_len(readback.byte_len)?;
             let readback_end = readback
                 .device_offset
                 .checked_add(padded_readback_len)
-                .unwrap_or(usize::MAX);
+                .ok_or_else(|| BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA host dispatch readback for output `{}` overflowed while checking capacity at device offset {} with padded length {}. Rebuild the program with a valid output byte range or split the output buffer.",
+                        binding.name, readback.device_offset, padded_readback_len
+                    ),
+                })?;
             let copy_byte_len = if readback_end <= allocation_byte_len {
                 padded_readback_len
             } else {
@@ -572,7 +610,7 @@ impl CudaBackend {
             if readback.byte_len != 0 {
                 add_transfer_bytes(&mut readback_bytes, readback.byte_len, "output readback")?;
                 add_transfer_operation(&mut readback_operations, "output readback")?;
-                let base_ptr = allocations.ptr(binding.buffer_index);
+                let base_ptr = allocations.ptr(binding.buffer_index, &binding.name)?;
                 let device_ptr = vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
                     base_ptr,
                     readback.device_offset,
@@ -598,12 +636,7 @@ impl CudaBackend {
                 // the surrounding function. cuda_check (or matching CUresult
                 // guard) propagates non-success codes as BackendError.
                 unsafe {
-                    super::copy::d2h_async_checked(
-                        out_ptr,
-                        device_ptr,
-                        copy_byte_len,
-                        stream_raw,
-                    )?;
+                    super::copy::d2h_async_checked(out_ptr, device_ptr, copy_byte_len, stream_raw)?;
                 }
             }
         }

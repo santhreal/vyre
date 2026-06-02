@@ -16,7 +16,10 @@ use crate::backend::resident_dispatch::helpers::{
 use crate::backend::resident_dispatch_support::{
     checked_resident_dispatch_capacity_add, CudaResidentDispatchStep,
 };
-use crate::backend::resident_readback_fusion::{fuse_resident_readback_copies, ResidentReadbackCopy};
+use crate::backend::resident_io::reserve_borrowed_resident_readback_outputs;
+use crate::backend::resident_readback_fusion::{
+    fuse_resident_readback_copies, validate_fused_resident_readbacks, ResidentReadbackCopy,
+};
 use crate::backend::staging_reserve::reserve_smallvec;
 
 impl CudaBackend {
@@ -219,6 +222,11 @@ impl CudaBackend {
             "resident sequence host transfers",
         )?;
         let mut sequence_param_cache = SmallVec::<[(SmallVec<[u32; 8]>, u64); 8]>::new();
+        reserve_smallvec(
+            &mut sequence_param_cache,
+            prepared_steps.len(),
+            "resident sequence parameter cache",
+        )?;
         let mut upload_host_transfers = HostTransferAllocations::with_capacity(
             Arc::clone(&self.host_pool),
             upload_copies.len(),
@@ -344,11 +352,34 @@ impl CudaBackend {
                     params_ptr,
                 });
             }
+            if resolved_steps.len() != prepared_steps.len() {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA resident sequence resolved {} dispatch step(s) for {} prepared step(s). Rebuild the resident sequence launch plan before dispatch.",
+                        resolved_steps.len(),
+                        prepared_steps.len()
+                    ),
+                });
+            }
 
             let mut kernel_args = SmallVec::<[*mut c_void; 8]>::new();
             let mut launch_resolved_step = |step_index: usize| -> Result<(), BackendError> {
-                let step = &prepared_steps[step_index];
-                let resolved = &mut resolved_steps[step_index];
+                let Some(step) = prepared_steps.get(step_index) else {
+                    return Err(BackendError::InvalidProgram {
+                        fix: format!(
+                            "Fix: CUDA resident sequence launch references prepared step index {step_index} but only {} prepared step(s) exist. Rebuild the sequence step index plan before dispatch.",
+                            prepared_steps.len()
+                        ),
+                    });
+                };
+                let Some(resolved) = resolved_steps.get_mut(step_index) else {
+                    return Err(BackendError::InvalidProgram {
+                        fix: format!(
+                            "Fix: CUDA resident sequence launch references resolved step index {step_index} but only {} resolved step(s) exist. Rebuild the sequence resolved-step table before dispatch.",
+                            resolved_steps.len()
+                        ),
+                    });
+                };
                 let mut params_ref = resolved.params_ptr;
                 Self::kernel_args_into(
                     &mut resolved.launch_ptrs,
@@ -442,6 +473,12 @@ impl CudaBackend {
             }
 
             let fused_readbacks = fuse_resident_readback_copies(&requested_readbacks)?;
+            validate_fused_resident_readbacks(
+                &fused_readbacks,
+                requested_readbacks.len(),
+                "resident sequence compact readback",
+            )?;
+            reserve_borrowed_resident_readback_outputs(&fused_readbacks.views, outputs)?;
 
             let mut readback_host_transfers = HostTransferAllocations::with_capacity(
                 Arc::clone(&self.host_pool),
@@ -453,7 +490,12 @@ impl CudaBackend {
                 if copy.byte_len != 0 {
                     // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
                     unsafe {
-                        crate::backend::copy::d2h_async_checked(dst, copy.src, copy.byte_len, stream.raw())?;
+                        crate::backend::copy::d2h_async_checked(
+                            dst,
+                            copy.src,
+                            copy.byte_len,
+                            stream.raw(),
+                        )?;
                     }
                 }
             }

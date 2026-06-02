@@ -59,10 +59,10 @@ use super::allocations::{
     PinnedHostAllocation, PinnedHostAllocationPool,
 };
 use super::dispatch::CudaBackend;
-use super::output_range::cuda_output_readback;
+use super::output_range::cuda_output_readback_for_binding;
 use super::staging_reserve::reserve_smallvec;
-use crate::input_identity::{exact_input_key, ExactInputKey};
 use crate::backend::copy::aligned_async_copy_len;
+use crate::input_identity::{exact_input_key, ExactInputKey};
 use crate::numeric::CUDA_NUMERIC;
 
 const CUDA_GRAPH_REPLAY_ACCOUNTING: TransferAccountingPolicy =
@@ -78,6 +78,23 @@ fn log_cuda_drop_result(op: &str, result: cudarc::driver::sys::CUresult) {
 
 fn cuda_graph_usize_to_u64(value: usize, label: &'static str) -> Result<u64, BackendError> {
     CUDA_NUMERIC.usize_to_u64(value, label)
+}
+
+fn cuda_graph_sample_input<'a>(
+    sample_inputs: &'a [&[u8]],
+    input_index: usize,
+    binding_name: &str,
+    context: &'static str,
+) -> Result<&'a [u8], BackendError> {
+    sample_inputs
+        .get(input_index)
+        .copied()
+        .ok_or_else(|| BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA graph capture {context} expected sample input index {input_index} for `{binding_name}` but only {} sample input(s) were supplied. Rebuild the binding plan or validate graph sample inputs before recording.",
+                sample_inputs.len()
+            ),
+        })
 }
 
 /// CUDA driver constant: stream-capture-mode thread-local. Only the calling
@@ -487,7 +504,6 @@ impl GraphHostBuffers {
     }
 }
 
-
 impl Drop for GraphHostBuffers {
     fn drop(&mut self) {
         for allocation in self.input.drain(..).chain(self.output.drain(..)) {
@@ -531,13 +547,12 @@ mod tests {
         let mut buffers = GraphHostBuffers::try_with_capacity(Arc::clone(&pool), 1, 1)
             .expect("Fix: padded input staging should use fallible pinned buffer acquisition");
 
-        buffers
-            .push_input_padded(&[1_u8, 2, 3], 16)
-            .expect("Fix: padded input staging should allocate enough capacity for async DMA copies");
+        buffers.push_input_padded(&[1_u8, 2, 3], 16).expect(
+            "Fix: padded input staging should allocate enough capacity for async DMA copies",
+        );
 
         let mut out = Vec::new();
-        buffers
-            .input[0]
+        buffers.input[0]
             .copy_prefix_into(16, &mut out)
             .expect("Fix: copy back staged input staging bytes to verify alignment padding");
 
@@ -938,19 +953,29 @@ impl CudaBackend {
                 continue;
             }
             let byte_len = match binding.input_index {
-                Some(input_index) => sample_inputs[input_index].len(),
+                Some(input_index) => cuda_graph_sample_input(
+                    sample_inputs,
+                    input_index,
+                    &binding.name,
+                    "allocation sizing",
+                )?
+                .len(),
                 None => binding
                     .static_byte_len
-                .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: CUDA-graph output `{}` needs a static byte length to be \
+                    .ok_or_else(|| BackendError::InvalidProgram {
+                        fix: format!(
+                            "Fix: CUDA-graph output `{}` needs a static byte length to be \
                              cached. Set BufferDecl::with_count or output_byte_range before \
                              recording.",
                             binding.name
                         ),
                     })?,
             };
-            let device_byte_len = if byte_len == 0 { 1 } else { aligned_async_copy_len(byte_len)? };
+            let device_byte_len = if byte_len == 0 {
+                1
+            } else {
+                aligned_async_copy_len(byte_len)?
+            };
             let device_ptr = alloc_cuda_ptr(
                 device_byte_len,
                 "cuMemAlloc_v2 (cuda_graph input/output buffer)",
@@ -961,7 +986,13 @@ impl CudaBackend {
                     "cudaGraph input/output allocation bytes",
                 )?);
             if let Some(input_index) = binding.input_index {
-                let input_len = sample_inputs[input_index].len();
+                let sample_input = cuda_graph_sample_input(
+                    sample_inputs,
+                    input_index,
+                    &binding.name,
+                    "input staging",
+                )?;
+                let input_len = sample_input.len();
                 let input_transfer_len = if input_len == 0 {
                     0
                 } else {
@@ -976,14 +1007,19 @@ impl CudaBackend {
                         "host upload replay",
                     )?;
                 }
-                host_buffers.push_input_padded(sample_inputs[input_index], input_transfer_len)?;
+                host_buffers.push_input_padded(sample_input, input_transfer_len)?;
                 input_device_ptrs.push(DevicePtrGuard::new(device_ptr));
             } else {
                 output_device_ptrs.push(DevicePtrGuard::new(device_ptr));
             }
             if binding.output_index.is_some() {
-                let readback =
-                    cuda_output_readback(&program.buffers()[binding.buffer_index], byte_len)?;
+                let readback = cuda_output_readback_for_binding(
+                    program.buffers(),
+                    binding.buffer_index,
+                    &binding.name,
+                    byte_len,
+                    "graph capture output readback",
+                )?;
                 host_buffers.push_output(readback.byte_len)?;
                 output_lens.push(readback.byte_len);
                 add_cuda_graph_replay_bytes(
@@ -1054,10 +1090,8 @@ impl CudaBackend {
         if param_bytes != 0 {
             let mut param_host_transfer =
                 HostTransferAllocations::with_capacity(Arc::clone(&self.host_pool), 1, 0)?;
-            let param_host_ptr = param_host_transfer.push_u32_words_padded(
-                &prepared.launch.param_words,
-                param_copy_bytes,
-            )?;
+            let param_host_ptr = param_host_transfer
+                .push_u32_words_padded(&prepared.launch.param_words, param_copy_bytes)?;
             // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
             unsafe {
                 // Upload the param words once; the kernel reads them on every replay.

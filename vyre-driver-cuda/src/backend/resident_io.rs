@@ -9,12 +9,15 @@ use super::dispatch::CudaBackend;
 use super::output_range::CudaOutputReadback;
 use super::resident::{CudaResidentBuffer, ResidentViewCache};
 use super::resident_readback_fusion::{
-    fuse_resident_readback_copies, FusedResidentReadbacks, ResidentReadbackCopy,
+    fuse_resident_readback_copies, validate_fused_resident_readbacks, FusedResidentReadbacks,
+    ResidentReadbackCopy, ResidentReadbackView,
 };
 use super::resident_upload_fusion::{
     fuse_resident_upload_copies, push_resident_upload_copy, ResidentUploadCopy,
 };
-use super::staging_reserve::{clear_vec_slots, reserve_smallvec, reserved_vec, resize_vec_slots};
+use super::staging_reserve::{
+    clear_vec_slots, reserve_smallvec, reserve_vec, reserved_vec, resize_vec_slots,
+};
 use crate::numeric::CUDA_NUMERIC;
 use smallvec::SmallVec;
 
@@ -93,6 +96,160 @@ fn clear_resident_copy_outputs(
 ) -> Result<(), BackendError> {
     resize_vec_slots(outputs, copies.len(), "readback output")?;
     clear_vec_slots(outputs);
+    Ok(())
+}
+
+pub(crate) fn reserve_borrowed_resident_readback_outputs(
+    views: &[ResidentReadbackView],
+    outputs: &mut [&mut Vec<u8>],
+) -> Result<(), BackendError> {
+    if views.len() != outputs.len() {
+        return Err(BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA resident readback materialization expected {} caller output slot(s) but received {}. Rebuild the resident readback fusion plan before copying bytes.",
+                views.len(),
+                outputs.len()
+            ),
+        });
+    }
+    for (view, output) in views.iter().zip(outputs.iter_mut()) {
+        reserve_vec(
+            *output,
+            view.byte_len,
+            "borrowed resident readback output bytes",
+        )?;
+    }
+    Ok(())
+}
+
+fn reserve_resident_readback_outputs(
+    views: &[ResidentReadbackView],
+    outputs: &mut OutputBuffers,
+) -> Result<(), BackendError> {
+    let existing_slots_to_copy = outputs.len().min(views.len());
+    if outputs.len() < views.len() {
+        reserve_vec(outputs, views.len(), "resident readback output slots")?;
+    }
+    for (view, output) in views.iter().take(existing_slots_to_copy).zip(outputs.iter_mut()) {
+        reserve_vec(output, view.byte_len, "resident readback output bytes")?;
+    }
+    let mut appended_outputs = reserved_vec(
+        views.len() - existing_slots_to_copy,
+        "resident readback appended output slots",
+    )?;
+    for view in views.iter().skip(existing_slots_to_copy) {
+        appended_outputs.push(reserved_vec(
+            view.byte_len,
+            "resident readback appended output bytes",
+        )?);
+    }
+    outputs.truncate(views.len());
+    outputs.extend(appended_outputs);
+    Ok(())
+}
+
+fn next_resident_readback_view(
+    views: &[ResidentReadbackView],
+    view_index: &mut usize,
+    total_copy_slots: usize,
+) -> Result<ResidentReadbackView, BackendError> {
+    let view = views
+        .get(*view_index)
+        .copied()
+        .ok_or_else(|| BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA resident fused batched readback ran out of output views while reserving {total_copy_slots} copy slot(s). Rebuild the resident readback fusion plan before collecting outputs."
+            ),
+        })?;
+    *view_index += 1;
+    Ok(view)
+}
+
+fn reserve_resident_readback_batch_outputs(
+    copy_batches: &[SmallVec<[ResidentReadbackCopy; 8]>],
+    views: &[ResidentReadbackView],
+    outputs: &mut Vec<OutputBuffers>,
+) -> Result<(), BackendError> {
+    let existing_batches_to_copy = outputs.len().min(copy_batches.len());
+    if outputs.len() < copy_batches.len() {
+        reserve_vec(outputs, copy_batches.len(), "batched readback output slots")?;
+    }
+
+    let mut appended_items_by_batch = reserved_vec(
+        existing_batches_to_copy,
+        "batched readback appended item groups",
+    )?;
+    let mut appended_batches = reserved_vec(
+        copy_batches.len() - existing_batches_to_copy,
+        "batched readback appended output batches",
+    )?;
+    let total_copy_slots = views.len();
+    let mut view_index = 0usize;
+
+    for (copies, batch_outputs) in copy_batches
+        .iter()
+        .take(existing_batches_to_copy)
+        .zip(outputs.iter_mut())
+    {
+        let existing_items_to_copy = batch_outputs.len().min(copies.len());
+        if batch_outputs.len() < copies.len() {
+            reserve_vec(
+                batch_outputs,
+                copies.len(),
+                "batched readback item slots",
+            )?;
+        }
+        for output in batch_outputs.iter_mut().take(existing_items_to_copy) {
+            let view = next_resident_readback_view(views, &mut view_index, total_copy_slots)?;
+            reserve_vec(output, view.byte_len, "batched readback item bytes")?;
+        }
+        let mut appended_items = reserved_vec(
+            copies.len() - existing_items_to_copy,
+            "batched readback appended item slots",
+        )?;
+        for _ in existing_items_to_copy..copies.len() {
+            let view = next_resident_readback_view(views, &mut view_index, total_copy_slots)?;
+            appended_items.push(reserved_vec(
+                view.byte_len,
+                "batched readback appended item bytes",
+            )?);
+        }
+        appended_items_by_batch.push(appended_items);
+    }
+
+    for copies in copy_batches.iter().skip(existing_batches_to_copy) {
+        let mut batch_outputs =
+            reserved_vec(copies.len(), "batched readback appended batch item slots")?;
+        for _ in copies {
+            let view = next_resident_readback_view(views, &mut view_index, total_copy_slots)?;
+            batch_outputs.push(reserved_vec(
+                view.byte_len,
+                "batched readback appended batch item bytes",
+            )?);
+        }
+        appended_batches.push(batch_outputs);
+    }
+
+    if view_index != views.len() {
+        return Err(BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA resident fused batched readback produced {} output view(s) for {view_index} consumed slot(s). Keep resident readback fusion cardinality-preserving before collecting outputs.",
+                views.len()
+            ),
+        });
+    }
+
+    outputs.truncate(copy_batches.len());
+    for ((copies, batch_outputs), appended_items) in copy_batches
+        .iter()
+        .take(existing_batches_to_copy)
+        .zip(outputs.iter_mut())
+        .zip(appended_items_by_batch)
+    {
+        batch_outputs.truncate(copies.len());
+        batch_outputs.extend(appended_items);
+    }
+    outputs.extend(appended_batches);
     Ok(())
 }
 
@@ -337,15 +494,21 @@ impl CudaBackend {
                 add_resident_copy_count(&mut expected_copy_count, "ranged readback")?;
             }
         }
+        let fused_readbacks = fuse_resident_readback_copies(&copies)?;
+        validate_fused_resident_readbacks(
+            &fused_readbacks,
+            copies.len(),
+            "resident ranged batch download",
+        )?;
+        reserve_borrowed_resident_readback_outputs(&fused_readbacks.views, outputs)?;
         if expected_copy_count == 0 {
             for output in outputs.iter_mut() {
                 output.clear();
             }
             return Ok(());
         }
-        let fused_readbacks = fuse_resident_readback_copies(&copies)?;
         let (host_transfers, copy_count) =
-            self.stage_fused_resident_readbacks_to_host(&fused_readbacks, copies.len())?;
+            self.stage_fused_resident_readbacks_to_host(&fused_readbacks)?;
         for (view, output) in fused_readbacks.views.iter().zip(outputs.iter_mut()) {
             host_transfers.collect_output_range_into(
                 view.copy_slot,
@@ -392,7 +555,6 @@ impl CudaBackend {
         }
         let mut copies = SmallVec::<[ResidentReadbackCopy; 8]>::new();
         reserve_smallvec(&mut copies, handles.len(), "readback copy")?;
-        let mut expected_copy_count = 0usize;
         let mut resident_view_cache = ResidentViewCache::new();
         reserve_smallvec(
             &mut resident_view_cache,
@@ -455,12 +617,6 @@ impl CudaBackend {
                 src,
                 byte_len: readback.byte_len,
             });
-            if readback.byte_len != 0 {
-                add_resident_copy_count(&mut expected_copy_count, "readback")?;
-            }
-        }
-        if expected_copy_count == 0 {
-            return clear_resident_copy_outputs(&copies, outputs);
         }
         self.download_resident_fused_copies_many_into(&copies, outputs)
     }
@@ -468,13 +624,12 @@ impl CudaBackend {
     fn stage_fused_resident_readbacks_to_host(
         &self,
         fused_readbacks: &FusedResidentReadbacks,
-        requested_output_slots: usize,
     ) -> Result<(HostTransferAllocations, usize), BackendError> {
         self.warmup()?;
         let mut host_transfers = HostTransferAllocations::with_capacity(
             std::sync::Arc::clone(&self.host_pool),
             fused_readbacks.non_empty_copy_count,
-            requested_output_slots,
+            fused_readbacks.copies.len(),
         )?;
         let copy_count = self.with_resident_stream(|stream| {
             let mut copy_count = 0usize;
@@ -520,12 +675,18 @@ impl CudaBackend {
         outputs: &mut OutputBuffers,
     ) -> Result<(), BackendError> {
         let fused_readbacks = fuse_resident_readback_copies(copies)?;
+        validate_fused_resident_readbacks(
+            &fused_readbacks,
+            copies.len(),
+            "resident fused readback",
+        )?;
+        reserve_resident_readback_outputs(&fused_readbacks.views, outputs)?;
         if fused_readbacks.non_empty_copy_count == 0 {
-            return clear_resident_copy_outputs(copies, outputs);
+            clear_vec_slots(outputs);
+            return Ok(());
         }
         let (host_transfers, copy_count) =
-            self.stage_fused_resident_readbacks_to_host(&fused_readbacks, copies.len())?;
-        resize_vec_slots(outputs, copies.len(), "readback output")?;
+            self.stage_fused_resident_readbacks_to_host(&fused_readbacks)?;
         for (view, output) in fused_readbacks.views.iter().zip(outputs.iter_mut()) {
             host_transfers.collect_output_range_into(
                 view.copy_slot,
@@ -559,32 +720,50 @@ impl CudaBackend {
         }
 
         let fused_readbacks = fuse_resident_readback_copies(&flat_copies)?;
+        validate_fused_resident_readbacks(
+            &fused_readbacks,
+            total_copy_slots,
+            "resident fused batched readback",
+        )?;
+        reserve_resident_readback_batch_outputs(
+            copy_batches,
+            &fused_readbacks.views,
+            outputs,
+        )?;
         if fused_readbacks.non_empty_copy_count == 0 {
-            resize_vec_slots(outputs, copy_batches.len(), "batched readback output")?;
-            for (copies, batch_outputs) in copy_batches.iter().zip(outputs.iter_mut()) {
-                resize_vec_slots(batch_outputs, copies.len(), "batched readback item")?;
+            for batch_outputs in outputs.iter_mut() {
                 clear_vec_slots(batch_outputs);
             }
             return Ok(());
         }
 
         let (host_transfers, copy_count) =
-            self.stage_fused_resident_readbacks_to_host(&fused_readbacks, total_copy_slots)?;
+            self.stage_fused_resident_readbacks_to_host(&fused_readbacks)?;
 
-        resize_vec_slots(outputs, copy_batches.len(), "batched readback output")?;
-        let mut transfer_index = 0usize;
+        let mut fused_views = fused_readbacks.views.iter().copied();
         for (copies, batch_outputs) in copy_batches.iter().zip(outputs.iter_mut()) {
-            resize_vec_slots(batch_outputs, copies.len(), "batched readback item")?;
             for output in batch_outputs {
-                let view = fused_readbacks.views[transfer_index];
+                let view = fused_views.next().ok_or_else(|| BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA resident fused batched readback ran out of output views while materializing {} batch(es). Rebuild the resident readback fusion plan before collecting outputs.",
+                        copy_batches.len()
+                    ),
+                })?;
                 host_transfers.collect_output_range_into(
                     view.copy_slot,
                     view.byte_offset,
                     view.byte_len,
                     output,
                 )?;
-                transfer_index += 1;
             }
+        }
+        if fused_views.next().is_some() {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA resident fused batched readback produced more output views than {} requested copy slot(s). Keep resident readback fusion cardinality-preserving before collecting outputs.",
+                    total_copy_slots
+                ),
+            });
         }
         self.record_resident_readback_telemetry(
             &fused_readbacks,
@@ -613,7 +792,6 @@ impl CudaBackend {
         }
         let mut copy_batches = SmallVec::<[SmallVec<[ResidentReadbackCopy; 8]>; 8]>::new();
         reserve_smallvec(&mut copy_batches, handle_batches.len(), "readback batch")?;
-        let mut expected_copy_count = 0usize;
         let mut total_copy_slots = 0usize;
         for (batch_index, (handles, readbacks)) in handle_batches
             .iter()
@@ -694,19 +872,8 @@ impl CudaBackend {
                     src,
                     byte_len: readback.byte_len,
                 });
-                if readback.byte_len != 0 {
-                    add_resident_copy_count(&mut expected_copy_count, "batch readback")?;
-                }
             }
             copy_batches.push(copies);
-        }
-        if expected_copy_count == 0 {
-            resize_vec_slots(outputs, copy_batches.len(), "batched readback output")?;
-            for (copies, batch_outputs) in copy_batches.iter().zip(outputs.iter_mut()) {
-                resize_vec_slots(batch_outputs, copies.len(), "batched readback item")?;
-                clear_vec_slots(batch_outputs);
-            }
-            return Ok(());
         }
         self.download_resident_fused_copy_batches_many_into(
             &copy_batches,
@@ -1058,4 +1225,3 @@ fn checked_resident_dst(
         },
     )
 }
-

@@ -224,6 +224,7 @@ impl CudaBackend {
         outputs: &mut Vec<Vec<u8>>,
     ) -> Result<(), BackendError> {
         synchronize_cuda_graph_replay_stream(cached)?;
+        cached.device_inputs_initialized = true;
         self.telemetry.record_sync_point();
         self.record_cuda_graph_replay_stats(stats);
         collect_cuda_graph_outputs(cached, outputs)?;
@@ -300,6 +301,7 @@ impl CudaBackend {
         self.telemetry.record_cuda_graph_launch();
         end.record(cached.stream.ptr().as_ptr())?;
         end.synchronize()?;
+        cached.device_inputs_initialized = true;
         self.telemetry.record_sync_point();
         let device_ns = start.elapsed_time_ns(&end)?;
         self.record_cuda_graph_replay_stats(prepared.stats);
@@ -413,9 +415,7 @@ fn launch_prepared_cuda_graph_replay(
     } else {
         &cached.graph_exec
     };
-    launch_cuda_graph_exec(graph_exec, &cached.stream, label)?;
-    cached.device_inputs_initialized = true;
-    Ok(())
+    launch_cuda_graph_exec(graph_exec, &cached.stream, label)
 }
 
 fn prepare_cuda_graph_replay_input_state(
@@ -447,6 +447,15 @@ fn validate_cached_graph_inputs(
             ),
         });
     }
+    if cached.input_transfer_lens.len() != cached.expected_input_lens.len() {
+        return Err(BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: cached cuda graph has {} input transfer length(s) but {} expected input length(s). Re-record the graph; zip-based replay would skip or truncate input uploads.",
+                cached.input_transfer_lens.len(),
+                cached.expected_input_lens.len()
+            ),
+        });
+    }
     if inputs.len() != cached.expected_input_lens.len() {
         return Err(BackendError::InvalidProgram {
             fix: format!(
@@ -456,13 +465,26 @@ fn validate_cached_graph_inputs(
             ),
         });
     }
-    for (idx, expected_len) in cached.expected_input_lens.iter().enumerate() {
-        if inputs[idx].len() != *expected_len {
+    for (idx, ((input, expected_len), transfer_len)) in inputs
+        .iter()
+        .zip(cached.expected_input_lens.iter())
+        .zip(cached.input_transfer_lens.iter())
+        .enumerate()
+    {
+        let received_len = input.len();
+        if received_len != *expected_len {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
                     "Fix: cached cuda graph input {idx} expects {expected_len} bytes but \
                      received {}  -  re-record the graph for this input shape.",
-                    inputs[idx].len()
+                    received_len
+                ),
+            });
+        }
+        if *transfer_len < *expected_len {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: cached cuda graph input {idx} expects {expected_len} bytes but its captured transfer length is {transfer_len}. Re-record the graph before replay; truncated graph memcpy would leave stale device input bytes.",
                 ),
             });
         }
@@ -532,7 +554,14 @@ mod source_contract_tests {
         );
         assert!(
             source.contains("cached.input_host_bufs.len() != cached.expected_input_lens.len()")
+                && source.contains("cached.input_transfer_lens.len() != cached.expected_input_lens.len()")
+                && source.contains("zip-based replay would skip or truncate input uploads")
+                && source.contains("*transfer_len < *expected_len")
+                && source.contains("truncated graph memcpy would leave stale device input bytes")
                 && source.contains("zip-based replay would skip input uploads")
+                && source.contains(".zip(cached.expected_input_lens.iter())")
+                && source.contains(".zip(cached.input_transfer_lens.iter())")
+                && !source.contains(concat!("inputs", "[idx]"))
                 && source.contains("cached.output_host_bufs.len() != cached.output_lens.len()"),
             "Fix: CUDA graph replay must validate cached graph input/output metadata before zip-based staging."
         );
@@ -563,10 +592,28 @@ mod source_contract_tests {
             source.contains("fn prepare_cuda_graph_replay_launch(")
                 && source.contains("fn launch_prepared_cuda_graph_replay(")
                 && source
-                    .matches("launch_prepared_cuda_graph_replay(cached, &prepared, \"cuGraphLaunch\")")
+                    .matches(
+                        "launch_prepared_cuda_graph_replay(cached, &prepared, \"cuGraphLaunch\")"
+                    )
                     .count()
                     == 2,
-            "Fix: timed and untimed CUDA graph replay must share prepared launch graph selection and device-input state updates."
+            "Fix: timed and untimed CUDA graph replay must share prepared launch graph selection."
+        );
+        let launch_helper = source
+            .split("fn launch_prepared_cuda_graph_replay(")
+            .nth(1)
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - prepared CUDA graph launch helper must exist")
+            .split("fn prepare_cuda_graph_replay_input_state(")
+            .next()
+            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - prepared launch helper must precede input-state preparation");
+        assert!(
+            !launch_helper.contains("cached.device_inputs_initialized = true;"),
+            "Fix: CUDA graph replay must not mark device inputs initialized immediately after cuGraphLaunch; the stream/timing fence must complete first."
+        );
+        assert!(
+            source.contains("synchronize_cuda_graph_replay_stream(cached)?;\n        cached.device_inputs_initialized = true;")
+                && source.contains("end.synchronize()?;\n        cached.device_inputs_initialized = true;"),
+            "Fix: CUDA graph replay must mark resident device inputs initialized only after successful untimed and timed completion fences."
         );
         let timed_section = source
             .split("pub(crate) fn dispatch_via_cuda_graph_timed_into")

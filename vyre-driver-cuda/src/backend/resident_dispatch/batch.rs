@@ -12,11 +12,12 @@ use crate::backend::dispatch::CudaBackend;
 use crate::backend::launch_params::launch_param_byte_len;
 use crate::backend::module_cache::ModuleCacheKey;
 use crate::backend::ordering::sort_unstable_by_key_if_needed;
-use crate::backend::output_range::{cuda_output_readback, CudaOutputReadback};
+use crate::backend::output_range::{cuda_output_readback_for_binding, CudaOutputReadback};
 use crate::backend::plan::CudaDispatchPlan;
 use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
 use crate::backend::resident_dispatch::helpers::{
-    enqueue_optional_resident_h2d_copy, resident_required_handles,
+    enqueue_optional_resident_h2d_copy, next_resident_handle, resident_required_handles,
+    validate_dense_resident_output_indices,
 };
 use crate::backend::resident_dispatch_support::{
     checked_resident_dispatch_capacity_mul, CudaResidentBatchDispatch,
@@ -175,8 +176,8 @@ impl CudaBackend {
                 if binding.role == BindingRole::Shared {
                     continue;
                 }
-                let handle = handles[next_handle];
-                next_handle += 1;
+                let handle =
+                    next_resident_handle(handles, &mut next_handle, "resident batch dispatch")?;
                 let resident = self.resident_store.view_cached(
                     handle,
                     &mut resident_view_cache,
@@ -206,9 +207,12 @@ impl CudaBackend {
                         Some(len) => len,
                         None => resident.byte_len,
                     };
-                    let readback = cuda_output_readback(
-                        &program.buffers()[binding.buffer_index],
+                    let readback = cuda_output_readback_for_binding(
+                        program.buffers(),
+                        binding.buffer_index,
+                        &binding.name,
                         full_byte_len,
+                        "resident batch output readback",
                     )?;
                     output_handles_by_index.push((output_index, handle, readback));
                 }
@@ -226,6 +230,13 @@ impl CudaBackend {
                 output_handles_by_index.as_mut_slice(),
                 |(output_index, _, _)| *output_index,
             );
+            validate_dense_resident_output_indices(
+                output_handles_by_index
+                    .iter()
+                    .map(|(output_index, _, _)| *output_index),
+                prepared.output_binding_indices.len(),
+                "resident batch output handles",
+            )?;
             let mut output_handles = SmallVec::<[CudaResidentBuffer; 8]>::new();
             reserve_smallvec(
                 &mut output_handles,

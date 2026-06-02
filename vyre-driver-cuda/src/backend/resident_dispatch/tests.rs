@@ -1,6 +1,6 @@
 use super::helpers::{
     borrow_resident_sequence_output_slots, prepare_resident_sequence_fills,
-    stage_resident_fill_payload,
+    stage_resident_fill_payload, validate_dense_resident_output_indices,
 };
 
 fn resident_dispatch_production_source() -> String {
@@ -24,7 +24,7 @@ fn resident_dispatch_production_source() -> String {
 mod tests {
     use super::{
         borrow_resident_sequence_output_slots, prepare_resident_sequence_fills,
-        stage_resident_fill_payload,
+        stage_resident_fill_payload, validate_dense_resident_output_indices,
     };
     use crate::backend::resident::CudaResidentBuffer;
 
@@ -115,6 +115,20 @@ mod tests {
     }
 
     #[test]
+    fn resident_output_index_validation_rejects_sparse_or_duplicate_sorted_indexes() {
+        validate_dense_resident_output_indices([0, 1, 2], 3, "test output")
+            .expect("Fix: dense resident output indexes must validate.");
+        assert!(
+            validate_dense_resident_output_indices([0, 0, 2], 3, "test output").is_err(),
+            "Fix: duplicate resident output indexes must fail before readback ordering can alias an output slot."
+        );
+        assert!(
+            validate_dense_resident_output_indices([0, 2, 3], 3, "test output").is_err(),
+            "Fix: sparse resident output indexes must fail before readback ordering can skip an output slot."
+        );
+    }
+
+    #[test]
     fn resident_sequence_fills_coalesce_duplicates_and_skip_full_upload_overwrites() {
         let first = CudaResidentBuffer {
             id: 1,
@@ -185,8 +199,40 @@ mod tests {
     }
 
     #[test]
+    fn resident_sequence_fill_coalescing_uses_checked_effective_slot_updates() {
+        let source = super::resident_dispatch_production_source();
+        let helper = source
+            .split("pub(crate) fn prepare_resident_sequence_fills")
+            .nth(1)
+            .and_then(|tail| tail.split("pub(crate) struct PreparedStep").next())
+            .expect("Fix: resident dispatch helpers must expose prepare_resident_sequence_fills before PreparedStep.");
+
+        assert!(
+            helper.contains("effective.get_mut(index)")
+                && helper.contains("pointed at stale effective fill slot {index}")
+                && !helper.contains("effective[index]"),
+            "Fix: duplicate resident sequence fill coalescing must convert stale effective-slot indexes into BackendError instead of panicking."
+        );
+    }
+
+    #[test]
     fn resident_full_readback_preparation_is_single_sourced() {
         let source = super::resident_dispatch_production_source();
+        let helper = source
+            .split("fn prepare_full_resident_readbacks")
+            .nth(1)
+            .and_then(|tail| tail.split("pub(crate) fn upload_resident_many_sequence_read_ranges_into").next())
+            .expect("Fix: resident sequence API must expose full readback preparation before ranged sequence APIs.");
+        let readback_reserve = helper
+            .find("reserve_smallvec(\n            readbacks")
+            .expect("Fix: full resident readback preparation must reserve caller scratch readbacks.");
+        let view_cache_reserve = helper
+            .find("reserve_smallvec(\n            &mut resident_view_cache")
+            .expect("Fix: full resident readback preparation must reserve the resident view cache.");
+        let clear = helper
+            .find("readbacks.clear();")
+            .expect("Fix: full resident readback preparation must clear reusable scratch before refilling.");
+
         assert!(
             source.contains("fn prepare_full_resident_readbacks")
                 && source
@@ -194,6 +240,10 @@ mod tests {
                     .count()
                     == 2,
             "Fix: CUDA resident full-handle readback preparation must be shared by read_many and fill_read_many paths."
+        );
+        assert!(
+            readback_reserve < clear && view_cache_reserve < clear,
+            "Fix: CUDA resident full-readback preparation must reserve all scratch before clearing reusable readback state."
         );
     }
 
@@ -251,6 +301,29 @@ mod tests {
                 && !production.contains("resident sequence readback view cache")
                 && !production.contains("struct ClearCopy"),
             "Fix: CUDA resident sequence dispatch must use one sequence-wide resident view cache instead of rebuilding fill, step, and readback caches."
+        );
+    }
+
+    #[test]
+    fn resident_sequence_parameter_cache_growth_is_fallible() {
+        let source = super::resident_dispatch_production_source();
+        let production = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("Fix: resident_dispatch production source must precede tests.");
+        let cache_section = production
+            .split("let mut sequence_param_cache")
+            .nth(1)
+            .expect("Fix: CUDA resident sequence dispatch must keep a per-sequence parameter cache.")
+            .split("let mut upload_host_transfers")
+            .next()
+            .expect("Fix: CUDA resident sequence parameter cache must be reserved before upload staging.");
+
+        assert!(
+            cache_section.contains("reserve_smallvec(\n            &mut sequence_param_cache")
+                && cache_section.contains("prepared_steps.len()")
+                && cache_section.contains("\"resident sequence parameter cache\""),
+            "Fix: CUDA resident sequence parameter-cache growth must be fallibly reserved to the prepared-step bound before hot-path pushes."
         );
     }
 }

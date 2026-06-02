@@ -140,6 +140,42 @@ fn cuda_graph_shape_bytes_overflow_fails_loudly_without_saturating_arithmetic() 
 }
 
 #[test]
+fn compiled_cuda_graph_batched_replay_uses_checked_batch_lane_and_output_slots() {
+    let source = include_str!("compiled_dispatch.rs");
+
+    assert!(
+        source.contains("fn compiled_graph_batch_inputs")
+            && source.contains("fn compiled_graph_output_mut")
+            && source.contains("fn compiled_graph_lane")
+            && source.contains("fn compiled_graph_lane_mut")
+            && source.contains(".get(batch_index)")
+            && source.contains(".get_mut(batch_index)")
+            && source.contains("miss_batches\n                .first()\n                .copied()")
+            && source.contains(".get(lane)")
+            && source.contains(".get_mut(lane)"),
+        "Fix: compiled CUDA graph batched replay must use typed accessors for batch inputs, output slots, and lane slots."
+    );
+    assert!(
+        !source.contains("batches[batch_index]")
+            && !source.contains("outputs[batch_index]")
+            && !source.contains("batches[launched_batch.batch_index]")
+            && !source.contains("outputs[launched_batch.batch_index]")
+            && !source.contains("miss_batches[0]")
+            && !source.contains(concat!("lanes", "[lane]"))
+            && !source.contains("lanes[launched_batch.lane]"),
+        "Fix: compiled CUDA graph batched replay must return BackendError for stale replay indexes instead of panicking on direct indexing."
+    );
+    assert!(
+        source.contains("fn finish_and_return_cuda_graph_lanes_after_error")
+            && source.contains("fn return_cached_graph_lanes_after_error")
+            && source.contains("return self.finish_and_return_cuda_graph_lanes_after_error(")
+            && source.contains("return self.return_cached_graph_lanes_after_error(lanes, error)")
+            && !source.contains("compiled_graph_output_mut(\n                            outputs,\n                            batch_index,\n                            \"materialized cache probe\",\n                        )?"),
+        "Fix: compiled CUDA graph batched replay must finish launched lanes and return cached graph lanes on intermediate errors instead of bypassing cleanup with direct `?` exits."
+    );
+}
+
+#[test]
 fn materialized_input_key_separates_tuple_boundaries_for_4096_generated_cases() {
     for seed in 0_u32..4096 {
         let left_len = ((seed.wrapping_mul(17) ^ seed.rotate_left(5)) % 31 + 1) as usize;
@@ -336,6 +372,66 @@ fn materialized_output_snapshot_survives_same_key_replacement() {
         replayed_from_cache, outputs_b,
         "Fix: same-key replacement must still expose the newest cached output after an older snapshot escapes the cache lock."
     );
+}
+
+#[test]
+fn materialized_output_cache_hit_preserves_existing_output_slots_until_reservation_succeeds() {
+    let source = include_str!("materialized_cache.rs");
+    let copier = source
+        .split("fn copy_materialized_outputs_into(")
+        .nth(1)
+        .expect("Fix: materialized cache must expose output copy helper.")
+        .split("fn clone_materialized_cache_bytes(")
+        .next()
+        .expect("Fix: materialized output copy helper must precede byte clone helper.");
+    let reserve_pos = copier
+        .find("try_reserve_exact(source.len() - target.capacity())")
+        .expect("Fix: materialized cache hit must reserve existing output bytes before mutation.");
+    let append_clone_pos = copier
+        .find("clone_materialized_cache_bytes(\n                source,\n                \"new output destination bytes\"")
+        .expect("Fix: materialized cache hit must build new output slots before mutating the caller output vector.");
+    let truncate_pos = copier
+        .find("dst.truncate(outputs.len());")
+        .expect("Fix: materialized cache hit must trim stale caller slots only after reservation.");
+    let clear_pos = copier
+        .find("target.clear();\n        target.extend_from_slice(source);")
+        .expect("Fix: materialized cache hit must rewrite existing output slots after reservation.");
+
+    assert!(
+        reserve_pos < truncate_pos
+            && append_clone_pos < truncate_pos
+            && truncate_pos < clear_pos
+            && copier.contains("dst.extend(appended_outputs);")
+            && !copier.contains("target.clear();\n        target.try_reserve"),
+        "Fix: CUDA materialized output cache hits must reserve/build output storage before truncating or clearing caller-owned outputs."
+    );
+
+    let mut cache = MaterializedPipelineOutputCache::default();
+    let input = b"capacity-preserving materialized cache input";
+    let outputs = vec![b"cached output a".to_vec(), b"cached output b".to_vec()];
+    cache
+        .remember(&[input.as_slice()], &outputs)
+        .expect("Fix: materialized cache insert must fit capacity-preservation fixture.");
+
+    let mut replayed = vec![
+        Vec::with_capacity(64),
+        Vec::with_capacity(32),
+        b"stale extra output".to_vec(),
+    ];
+    replayed[0].extend_from_slice(b"old-a");
+    replayed[1].extend_from_slice(b"old-b");
+    let first_capacity = replayed[0].capacity();
+    let second_capacity = replayed[1].capacity();
+
+    assert!(
+        cache
+            .hit_into(&[input.as_slice()], &mut replayed)
+            .expect("Fix: materialized cache hit must fit capacity-preservation fixture."),
+        "Fix: materialized cache must hit exact capacity-preservation fixture input."
+    );
+    assert_eq!(replayed, outputs);
+    assert_eq!(replayed[0].capacity(), first_capacity);
+    assert_eq!(replayed[1].capacity(), second_capacity);
 }
 
 #[test]
@@ -541,4 +637,3 @@ fn materialized_output_cache_preflights_oversized_entries_before_owning_bytes() 
         "Fix: materialized CUDA replay cache must compute admissibility before cloning input/output bytes."
     );
 }
-

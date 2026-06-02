@@ -8,7 +8,7 @@ use vyre_foundation::ir::Program;
 use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
 use crate::backend::dispatch::CudaBackend;
 use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
-use crate::backend::resident_dispatch::helpers::PreparedStep;
+use crate::backend::resident_dispatch::helpers::{next_resident_handle, PreparedStep};
 use crate::backend::resident_dispatch_support::CudaResidentDispatchStep;
 use crate::backend::resident_upload_fusion::{
     fuse_resident_upload_copies, push_resident_upload_copy, ResidentUploadCopy,
@@ -32,8 +32,8 @@ impl CudaBackend {
             if binding.role == BindingRole::Shared {
                 continue;
             }
-            let handle = step.handles[next_handle];
-            next_handle += 1;
+            let handle =
+                next_resident_handle(&step.handles, &mut next_handle, "resident sequence launch")?;
             let resident = self.resident_store.view_cached(
                 handle,
                 resident_view_cache,
@@ -99,8 +99,8 @@ impl CudaBackend {
             if binding.role == BindingRole::Shared {
                 continue;
             }
-            let handle = handles[next_handle];
-            next_handle += 1;
+            let handle =
+                next_resident_handle(handles, &mut next_handle, "resident fallback dispatch")?;
             if binding.input_index.is_some() {
                 input_storage.push(self.download_resident(handle)?);
             }
