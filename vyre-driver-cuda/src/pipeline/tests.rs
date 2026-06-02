@@ -112,9 +112,40 @@ fn cuda_graph_replay_is_release_default_not_opt_in_debug_path() {
 #[test]
 fn static_launch_param_upload_sync_is_telemetry_visible() {
     let source = include_str!("static_params.rs");
+    let upload = source
+        .split("pub(crate) fn upload_static_launch_params")
+        .nth(1)
+        .expect("Fix: CUDA static launch parameter upload helper must exist.");
     assert!(
-        source.contains("backend.telemetry.record_sync_point();"),
+        upload.contains("backend.telemetry.record_sync_point();"),
         "Fix: CUDA compiled-pipeline static parameter upload must record its stream synchronization in telemetry."
+    );
+    assert!(
+        upload.contains("if let Err(error) = enqueue_result")
+            && upload.contains("match stream.synchronize()")
+            && upload.contains("In-flight static parameter upload stream will not be recycled.")
+            && upload.contains("std::mem::forget(stream);")
+            && upload.contains("return Err(error);"),
+        "Fix: CUDA compiled-pipeline static parameter upload must not recycle its stream after enqueue errors unless completion is proven."
+    );
+    assert!(
+        upload.contains("if let Err(error) = stream.synchronize()")
+            && upload.contains("backend.telemetry.record_sync_point();")
+            && upload.contains("backend.launch_resources.release_stream(stream);"),
+        "Fix: CUDA compiled-pipeline static parameter upload must check synchronization before telemetry or stream release."
+    );
+    let sync_pos = upload
+        .find("if let Err(error) = stream.synchronize()")
+        .expect("Fix: static parameter upload must synchronize before releasing the stream.");
+    let telemetry_pos = upload
+        .rfind("backend.telemetry.record_sync_point();")
+        .expect("Fix: static parameter upload must record sync telemetry after success.");
+    let release_pos = upload
+        .rfind("backend.launch_resources.release_stream(stream);")
+        .expect("Fix: static parameter upload must release the stream after successful synchronization.");
+    assert!(
+        sync_pos < telemetry_pos && telemetry_pos < release_pos,
+        "Fix: CUDA compiled-pipeline static parameter upload must prove completion before telemetry or pooled stream release."
     );
 }
 
