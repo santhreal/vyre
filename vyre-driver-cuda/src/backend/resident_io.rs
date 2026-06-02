@@ -26,6 +26,19 @@ const CUDA_RESIDENT_BUDGET_DENOMINATOR: u64 = 10;
 const CUDA_RESIDENT_TRANSFER_ACCOUNTING: TransferAccountingPolicy =
     TransferAccountingPolicy::new("CUDA resident", "split the transfer into bounded chunks");
 
+enum ResidentStreamFailure {
+    Completed(BackendError),
+    CompletionUnproven(BackendError),
+}
+
+impl ResidentStreamFailure {
+    fn into_error(self) -> BackendError {
+        match self {
+            Self::Completed(error) | Self::CompletionUnproven(error) => error,
+        }
+    }
+}
+
 fn cuda_resident_total_budget_bytes(total_memory: u64) -> u64 {
     let budget = (u128::from(total_memory) * u128::from(CUDA_RESIDENT_BUDGET_NUMERATOR))
         / u128::from(CUDA_RESIDENT_BUDGET_DENOMINATOR);
@@ -51,7 +64,18 @@ impl CudaBackend {
         &self,
         operation: impl FnOnce(&crate::stream::CudaStream) -> Result<T, BackendError>,
     ) -> Result<T, BackendError> {
-        let stream = self.launch_resources.acquire_stream()?;
+        self.with_resident_stream_classified(operation)
+            .map_err(ResidentStreamFailure::into_error)
+    }
+
+    fn with_resident_stream_classified<T>(
+        &self,
+        operation: impl FnOnce(&crate::stream::CudaStream) -> Result<T, BackendError>,
+    ) -> Result<T, ResidentStreamFailure> {
+        let stream = self
+            .launch_resources
+            .acquire_stream()
+            .map_err(ResidentStreamFailure::Completed)?;
         let result = operation(&stream);
         if result.is_err() {
             match stream.synchronize() {
@@ -61,12 +85,12 @@ impl CudaBackend {
                         "Fix: failed to synchronize CUDA resident I/O stream after operation error: {error}. In-flight resident I/O resources will not be recycled."
                     );
                     std::mem::forget(stream);
-                    return result;
+                    return result.map_err(ResidentStreamFailure::CompletionUnproven);
                 }
             }
         }
         self.launch_resources.release_stream(stream);
-        result
+        result.map_err(ResidentStreamFailure::Completed)
     }
 }
 
@@ -643,7 +667,7 @@ impl CudaBackend {
             fused_readbacks.non_empty_copy_count,
             fused_readbacks.copies.len(),
         )?;
-        let copy_count = self.with_resident_stream(|stream| {
+        let copy_count = match self.with_resident_stream_classified(|stream| {
             let mut copy_count = 0usize;
             for copy in &fused_readbacks.copies {
                 let dst = host_transfers.push_output(copy.byte_len)?;
@@ -663,7 +687,14 @@ impl CudaBackend {
                 self.telemetry.record_sync_point();
             }
             Ok::<usize, BackendError>(copy_count)
-        })?;
+        }) {
+            Ok(copy_count) => copy_count,
+            Err(ResidentStreamFailure::Completed(error)) => return Err(error),
+            Err(ResidentStreamFailure::CompletionUnproven(error)) => {
+                std::mem::forget(host_transfers);
+                return Err(error);
+            }
+        };
         Ok((host_transfers, copy_count))
     }
 
@@ -963,7 +994,7 @@ impl CudaBackend {
             copies.len(),
             0,
         )?;
-        self.with_resident_stream(|stream| {
+        match self.with_resident_stream_classified(|stream| {
             for copy in copies {
                 let bytes = copy.bytes.as_slice();
                 let host_ptr = host_transfers.push_upload(bytes)?;
@@ -981,7 +1012,14 @@ impl CudaBackend {
                 }
             }
             stream.synchronize()
-        })?;
+        }) {
+            Ok(()) => {}
+            Err(ResidentStreamFailure::Completed(error)) => return Err(error),
+            Err(ResidentStreamFailure::CompletionUnproven(error)) => {
+                std::mem::forget(host_transfers);
+                return Err(error);
+            }
+        }
         self.telemetry.record_sync_point();
         self.telemetry.record_host_to_device_bytes(uploaded_bytes);
         self.telemetry.record_host_upload_operations(
@@ -1176,10 +1214,17 @@ mod async_upload_tests {
     #[test]
     fn resident_io_stream_errors_require_completion_before_reuse() {
         let source = include_str!("resident_io.rs");
+        assert!(
+            source.contains("enum ResidentStreamFailure")
+                && source.contains("Completed(BackendError)")
+                && source.contains("CompletionUnproven(BackendError)")
+                && source.contains("fn with_resident_stream_classified<T>"),
+            "Fix: CUDA resident I/O stream cleanup must classify completion-proven and completion-unproven failures."
+        );
         let helper = source
-            .split("fn with_resident_stream<T>")
+            .split("fn with_resident_stream_classified<T>")
             .nth(1)
-            .expect("Fix: CUDA resident I/O must use a shared stream lease helper.")
+            .expect("Fix: CUDA resident I/O must use a classified stream lease helper.")
             .split("fn add_resident_transfer_bytes")
             .next()
             .expect("Fix: resident I/O stream helper must precede transfer accounting.");
@@ -1190,7 +1235,8 @@ mod async_upload_tests {
                 && helper.contains("Ok(()) => self.telemetry.record_sync_point()")
                 && helper.contains("In-flight resident I/O resources will not be recycled.")
                 && helper.contains("std::mem::forget(stream);")
-                && helper.contains("return result;"),
+                && helper.contains("ResidentStreamFailure::CompletionUnproven")
+                && helper.contains("result.map_err(ResidentStreamFailure::Completed)"),
             "Fix: CUDA resident I/O stream helper must not return a stream to the pool after an operation error unless completion is proven."
         );
         let error_cleanup_pos = helper
@@ -1202,6 +1248,40 @@ mod async_upload_tests {
         assert!(
             error_cleanup_pos < release_pos,
             "Fix: resident I/O stream helper must complete error cleanup before pooled stream release."
+        );
+    }
+
+    #[test]
+    fn resident_io_host_staging_leaks_when_completion_is_unproven() {
+        let source = include_str!("resident_io.rs");
+        let readback = source
+            .split(concat!("fn stage_fused_resident_", "readbacks_to_host"))
+            .nth(1)
+            .expect("Fix: CUDA fused resident readback staging helper must exist.")
+            .split("fn record_resident_readback_telemetry")
+            .next()
+            .expect("Fix: fused resident readback staging must precede readback telemetry.");
+        assert!(
+            readback.contains("self.with_resident_stream_classified")
+                && readback.contains("Err(ResidentStreamFailure::Completed(error)) => return Err(error)")
+                && readback.contains("Err(ResidentStreamFailure::CompletionUnproven(error))")
+                && readback.contains("std::mem::forget(host_transfers);"),
+            "Fix: CUDA resident readback staging must leak pinned host transfers when D2H completion is unproven."
+        );
+
+        let upload = source
+            .split("fn copy_resident_uploads")
+            .nth(1)
+            .expect("Fix: CUDA resident upload staging helper must exist.")
+            .split("/// Async H2D copy")
+            .next()
+            .expect("Fix: resident upload staging must precede async upload API.");
+        assert!(
+            upload.contains("self.with_resident_stream_classified")
+                && upload.contains("Err(ResidentStreamFailure::Completed(error)) => return Err(error)")
+                && upload.contains("Err(ResidentStreamFailure::CompletionUnproven(error))")
+                && upload.contains("std::mem::forget(host_transfers);"),
+            "Fix: CUDA resident upload staging must leak pinned host transfers when H2D completion is unproven."
         );
     }
 
