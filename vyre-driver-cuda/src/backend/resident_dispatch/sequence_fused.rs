@@ -531,8 +531,20 @@ impl CudaBackend {
             Ok(())
         })();
         if result.is_err() {
-            let _ = stream.synchronize();
-            self.telemetry.record_sync_point();
+            match stream.synchronize() {
+                Ok(()) => self.telemetry.record_sync_point(),
+                Err(error) => {
+                    tracing::error!(
+                        "Fix: failed to synchronize CUDA resident sequence stream after an error: {error}. In-flight resident sequence resources will not be recycled."
+                    );
+                    std::mem::forget(stream);
+                    std::mem::forget(resident_use);
+                    std::mem::forget(allocations);
+                    std::mem::forget(host_transfers);
+                    std::mem::forget(upload_host_transfers);
+                    return result;
+                }
+            }
         }
         self.launch_resources.release_stream(stream);
         drop(resident_use);

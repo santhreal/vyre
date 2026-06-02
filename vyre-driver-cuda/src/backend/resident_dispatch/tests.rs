@@ -225,13 +225,17 @@ mod tests {
             .expect("Fix: resident sequence API must expose full readback preparation before ranged sequence APIs.");
         let readback_reserve = helper
             .find("reserve_smallvec(\n            readbacks")
-            .expect("Fix: full resident readback preparation must reserve caller scratch readbacks.");
+            .expect(
+                "Fix: full resident readback preparation must reserve caller scratch readbacks.",
+            );
         let view_cache_reserve = helper
             .find("reserve_smallvec(\n            &mut resident_view_cache")
-            .expect("Fix: full resident readback preparation must reserve the resident view cache.");
-        let clear = helper
-            .find("readbacks.clear();")
-            .expect("Fix: full resident readback preparation must clear reusable scratch before refilling.");
+            .expect(
+                "Fix: full resident readback preparation must reserve the resident view cache.",
+            );
+        let clear = helper.find("readbacks.clear();").expect(
+            "Fix: full resident readback preparation must clear reusable scratch before refilling.",
+        );
 
         assert!(
             source.contains("fn prepare_full_resident_readbacks")
@@ -324,6 +328,50 @@ mod tests {
                 && cache_section.contains("prepared_steps.len()")
                 && cache_section.contains("\"resident sequence parameter cache\""),
             "Fix: CUDA resident sequence parameter-cache growth must be fallibly reserved to the prepared-step bound before hot-path pushes."
+        );
+    }
+
+    #[test]
+    fn resident_sequence_error_cleanup_leaks_resources_when_sync_is_unproven() {
+        let source = super::resident_dispatch_production_source();
+        let sequence = source
+            .split("pub(crate) fn fill_upload_resident_many_repeated_sequence_read_ranges_borrowed_into")
+            .nth(1)
+            .expect("Fix: resident sequence fused dispatch function must exist.")
+            .split("    }\n}")
+            .next()
+            .expect("Fix: resident sequence fused dispatch must end inside its module impl.");
+        let cleanup = sequence
+            .split("if result.is_err()")
+            .nth(1)
+            .expect("Fix: resident sequence dispatch must handle error cleanup explicitly.")
+            .split("self.launch_resources.release_stream(stream);")
+            .next()
+            .expect("Fix: resident sequence error cleanup must precede stream release.");
+
+        assert!(
+            cleanup.contains("match stream.synchronize()")
+                && cleanup.contains("Ok(()) => self.telemetry.record_sync_point()")
+                && cleanup.contains("Err(error) =>")
+                && cleanup.contains("In-flight resident sequence resources will not be recycled.")
+                && !cleanup.contains("let _ = stream.synchronize();"),
+            "Fix: CUDA resident sequence error cleanup must not ignore failed stream synchronization or record sync telemetry without proof."
+        );
+        for resource in [
+            "stream",
+            "resident_use",
+            "allocations",
+            "host_transfers",
+            "upload_host_transfers",
+        ] {
+            assert!(
+                cleanup.contains(&format!("std::mem::forget({resource});")),
+                "Fix: CUDA resident sequence error cleanup must leak {resource} when stream completion is unproven."
+            );
+        }
+        assert!(
+            cleanup.contains("return result;"),
+            "Fix: CUDA resident sequence error cleanup must not continue to pooled stream release after leaking in-flight resources."
         );
     }
 }
