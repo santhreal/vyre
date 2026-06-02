@@ -519,7 +519,18 @@ impl WgpuPipeline {
             push_constant_ranges: &[],
         });
 
-        let pipeline_cache_handle = create_compiled_pipeline_cache(device, &artifact_key)?;
+        // Only attempt the persistent pipeline cache when the device actually
+        // enabled PIPELINE_CACHE. `enabled_features_for_adapter` (device.rs)
+        // requests it only on backends that implement wgpu pipeline caches
+        // (Vulkan/DX12); on Metal/GL this is `false` and we compile uncached. A
+        // `create_pipeline_cache` call on a device without the feature is a
+        // fatal validation abort, not a recoverable error.
+        let pipeline_cache_handle =
+            if device.features().contains(wgpu::Features::PIPELINE_CACHE) {
+                Some(create_compiled_pipeline_cache(device, &artifact_key)?)
+            } else {
+                None
+            };
         runtime::shader::dump_wgsl_if_requested("vyre P-6 cached shader module", &wgsl).map_err(
             |error| {
                 BackendError::new(format!(
@@ -538,7 +549,7 @@ impl WgpuPipeline {
             module: &module,
             entry_point: Some("main"),
             compilation_options: wgpu::PipelineCompilationOptions::default(),
-            cache: Some(&pipeline_cache_handle.cache),
+            cache: pipeline_cache_handle.as_ref().map(|h| &h.cache),
         });
         if let Some(error) =
             crate::runtime::device::pop_error_scope_now(device).map_err(|message| {
@@ -557,7 +568,9 @@ impl WgpuPipeline {
                 ),
             });
         }
-        persist_compiled_pipeline_cache(&artifact_key, &pipeline_cache_handle.cache)?;
+        if let Some(handle) = &pipeline_cache_handle {
+            persist_compiled_pipeline_cache(&artifact_key, &handle.cache)?;
+        }
 
         let compiled_artifact = Arc::new(CachedPipelineArtifact {
             id: format!(
