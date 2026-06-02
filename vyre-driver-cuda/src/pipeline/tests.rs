@@ -227,8 +227,10 @@ fn compiled_cuda_graph_batched_replay_uses_checked_batch_lane_and_output_slots()
             && source.contains("fn finish_cuda_graph_lane_replay_discarding_outputs")
             && source.contains("return self.finish_and_return_cuda_graph_lanes_after_error(")
             && source.contains("return self.return_cached_graph_lanes_after_error(lanes, error)")
+            && source.matches("std::mem::forget(lanes);").count() >= 2
+            && !source.contains("finish_cuda_graph_indexed_lane_replays(&mut lanes, launched, outputs)?")
             && !source.contains("compiled_graph_output_mut(\n                            outputs,\n                            batch_index,\n                            \"materialized cache probe\",\n                        )?"),
-        "Fix: compiled CUDA graph batched replay must finish launched lanes and return cached graph lanes on intermediate errors instead of bypassing cleanup with direct `?` exits."
+        "Fix: compiled CUDA graph batched replay must finish launched lanes and either return reusable cached graph lanes or leak unproven-completion lanes instead of bypassing cleanup with direct `?` exits."
     );
     let finish_helper = source
         .split("fn finish_cuda_graph_indexed_lane_replays")

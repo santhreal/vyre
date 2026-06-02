@@ -811,6 +811,7 @@ impl CudaCompiledPipeline {
             if let Err(error) =
                 self.finish_cuda_graph_indexed_lane_replays(&mut lanes, &launched, outputs)
             {
+                std::mem::forget(lanes);
                 return Err(error);
             }
             for launched_batch in launched.iter().copied() {
@@ -1052,7 +1053,12 @@ impl CudaCompiledPipeline {
         outputs: &mut [OutputBuffers],
         error: BackendError,
     ) -> Result<(), BackendError> {
-        self.finish_cuda_graph_indexed_lane_replays(&mut lanes, launched, outputs)?;
+        if let Err(finish_error) =
+            self.finish_cuda_graph_indexed_lane_replays(&mut lanes, launched, outputs)
+        {
+            std::mem::forget(lanes);
+            return Err(finish_error);
+        }
         self.return_cached_graph_lanes_after_error(lanes, error)
     }
 
