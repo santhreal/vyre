@@ -363,6 +363,7 @@ mod tests {
             "allocations",
             "host_transfers",
             "upload_host_transfers",
+            "readback_host_transfers",
         ] {
             assert!(
                 cleanup.contains(&format!("std::mem::forget({resource});")),
@@ -372,6 +373,39 @@ mod tests {
         assert!(
             cleanup.contains("return result;"),
             "Fix: CUDA resident sequence error cleanup must not continue to pooled stream release after leaking in-flight resources."
+        );
+
+        let param_upload = sequence
+            .split("let param_host_ptr =")
+            .nth(1)
+            .expect("Fix: resident sequence parameter upload staging must exist.")
+            .split("self.telemetry.record_host_to_device_bytes")
+            .next()
+            .expect("Fix: resident sequence parameter upload must record telemetry after enqueue.");
+        let retain_param_staging_pos = param_upload
+            .find("host_transfers.push(step_host_transfers);")
+            .expect("Fix: resident sequence parameter staging must be retained before async H2D enqueue.");
+        let enqueue_param_pos = param_upload
+            .find("enqueue_resident_h2d_copy(")
+            .expect("Fix: resident sequence parameter upload must enqueue an async H2D copy.");
+        assert!(
+            retain_param_staging_pos < enqueue_param_pos,
+            "Fix: resident sequence parameter host staging must enter outer cleanup ownership before async H2D enqueue."
+        );
+
+        let readback = sequence
+            .split("readback_host_transfers = Some(HostTransferAllocations::with_capacity")
+            .nth(1)
+            .expect("Fix: resident sequence readback staging must be owned outside the fallible stream closure.")
+            .split("self.telemetry.record_host_to_device_bytes")
+            .next()
+            .expect("Fix: resident sequence readback staging must precede final telemetry.");
+        assert!(
+            readback.contains("readback_host_transfers.as_mut()")
+                && readback.contains("transfers.push_output(copy.byte_len)?")
+                && readback.contains("stream.synchronize()?")
+                && readback.contains("transfers.collect_output_range_into"),
+            "Fix: resident sequence compact readback staging must remain owned by outer cleanup until stream completion is proven and outputs are collected."
         );
     }
 }

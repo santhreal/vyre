@@ -232,6 +232,7 @@ impl CudaBackend {
             upload_copies.len(),
             0,
         )?;
+        let mut readback_host_transfers: Option<HostTransferAllocations> = None;
         let result = (|| {
             let mut sequence_view_cache = ResidentViewCache::new();
             reserve_smallvec(
@@ -314,6 +315,9 @@ impl CudaBackend {
                     let params_ptr = params_allocation.ptr;
                     let param_host_ptr =
                         step_host_transfers.push_u32_words(&step.prepared.launch.param_words)?;
+                    step_allocations.set_params(params_allocation);
+                    allocations.push(step_allocations);
+                    host_transfers.push(step_host_transfers);
                     enqueue_resident_h2d_copy(
                         params_ptr,
                         param_host_ptr,
@@ -333,7 +337,6 @@ impl CudaBackend {
                             "resident sequence parameter upload byte count",
                         )?,
                     );
-                    step_allocations.set_params(params_allocation);
                     let mut cached_param_words = SmallVec::<[u32; 8]>::new();
                     reserve_smallvec(
                         &mut cached_param_words,
@@ -342,8 +345,6 @@ impl CudaBackend {
                     )?;
                     cached_param_words.extend_from_slice(&step.prepared.launch.param_words);
                     sequence_param_cache.push((cached_param_words, params_ptr));
-                    allocations.push(step_allocations);
-                    host_transfers.push(step_host_transfers);
                     params_ptr
                 };
                 resolved_steps.push(ResolvedStep {
@@ -480,13 +481,18 @@ impl CudaBackend {
             )?;
             reserve_borrowed_resident_readback_outputs(&fused_readbacks.views, outputs)?;
 
-            let mut readback_host_transfers = HostTransferAllocations::with_capacity(
+            readback_host_transfers = Some(HostTransferAllocations::with_capacity(
                 Arc::clone(&self.host_pool),
                 fused_readbacks.non_empty_copy_count,
                 fused_readbacks.copies.len(),
-            )?;
+            )?);
+            let transfers = readback_host_transfers.as_mut().ok_or_else(|| {
+                BackendError::InvalidProgram {
+                    fix: "Fix: CUDA resident sequence readback staging was not retained for stream-failure cleanup. Recreate the readback staging owner before enqueueing D2H copies.".to_string(),
+                }
+            })?;
             for copy in &fused_readbacks.copies {
-                let dst = readback_host_transfers.push_output(copy.byte_len)?;
+                let dst = transfers.push_output(copy.byte_len)?;
                 if copy.byte_len != 0 {
                     // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
                     unsafe {
@@ -507,7 +513,7 @@ impl CudaBackend {
                 }
             } else {
                 for (output, view) in outputs.iter_mut().zip(fused_readbacks.views.iter()) {
-                    readback_host_transfers.collect_output_range_into(
+                    transfers.collect_output_range_into(
                         view.copy_slot,
                         view.byte_offset,
                         view.byte_len,
@@ -542,6 +548,7 @@ impl CudaBackend {
                     std::mem::forget(allocations);
                     std::mem::forget(host_transfers);
                     std::mem::forget(upload_host_transfers);
+                    std::mem::forget(readback_host_transfers);
                     return result;
                 }
             }
