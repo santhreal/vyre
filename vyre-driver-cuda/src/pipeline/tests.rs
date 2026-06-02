@@ -261,8 +261,9 @@ fn compiled_cuda_graph_batched_replay_uses_checked_batch_lane_and_output_slots()
             && timed_single.contains("prepare_cuda_graph_replay_input_state_with_key")
             && timed_single.contains("&cached")
             && timed_single.contains("input_key")
-            && timed_single.contains("dispatch_via_cuda_graph_timed_with_input_state_into"),
-        "Fix: timed single CUDA graph replay must reuse one exact-input key across pipeline cache, graph selection, and raw graph replay."
+            && timed_single.contains("dispatch_via_cuda_graph_timed_with_input_state_into")
+            && timed_single.contains("remember_materialized_output_cache_with_key(inputs, input_key"),
+        "Fix: timed single CUDA graph replay must reuse one exact-input key across pipeline cache, graph selection, raw graph replay, and materialized-cache storage."
     );
     assert!(
         untimed_single.contains("let input_key = materialized_input_key(inputs)?;")
@@ -271,14 +272,17 @@ fn compiled_cuda_graph_batched_replay_uses_checked_batch_lane_and_output_slots()
             && untimed_single.contains("prepare_cuda_graph_replay_input_state_with_key")
             && untimed_single.contains("&cached")
             && untimed_single.contains("input_key")
-            && untimed_single.contains("dispatch_via_cuda_graph_with_input_state_into"),
-        "Fix: untimed single CUDA graph replay must reuse one exact-input key across pipeline cache, graph selection, and raw graph replay."
+            && untimed_single.contains("dispatch_via_cuda_graph_with_input_state_into")
+            && untimed_single.contains("remember_materialized_output_cache_with_key(inputs, input_key"),
+        "Fix: untimed single CUDA graph replay must reuse one exact-input key across pipeline cache, graph selection, raw graph replay, and materialized-cache storage."
     );
     assert!(
         source.contains("fn materialized_output_cache_hit_with_key_into")
             && source.contains("cache.snapshot_with_key(inputs, input_key)")
             && source.contains("fn take_cached_graph_with_key")
-            && source.contains("materialized_output_cache_matches_with_input_state(inputs, &input_state)"),
+            && source.contains("materialized_output_cache_matches_with_input_state(inputs, &input_state)")
+            && source.contains("fn remember_materialized_output_cache_with_key")
+            && !source.contains("fn remember_materialized_output_cache("),
         "Fix: compiled CUDA graph single replay helpers must consume precomputed input keys instead of re-hashing exact inputs."
     );
     let finish_helper = source

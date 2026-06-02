@@ -209,7 +209,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
             );
         if replay_result.is_ok() {
             self.return_cached_graph(cached)?;
-            self.remember_materialized_output_cache(inputs, &outputs)?;
+            self.remember_materialized_output_cache_with_key(inputs, input_key, &outputs)?;
         } else {
             std::mem::forget(cached);
         }
@@ -280,7 +280,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
         );
         if replay_result.is_ok() {
             self.return_cached_graph(cached)?;
-            self.remember_materialized_output_cache(inputs, outputs)?;
+            self.remember_materialized_output_cache_with_key(inputs, input_key, outputs)?;
         } else {
             std::mem::forget(cached);
         }
@@ -949,19 +949,6 @@ impl CudaCompiledPipeline {
             .telemetry
             .record_cuda_graph_materialized_cache_hit();
         Ok(true)
-    }
-
-    fn remember_materialized_output_cache(
-        &self,
-        inputs: &[&[u8]],
-        outputs: &OutputBuffers,
-    ) -> Result<(), BackendError> {
-        let Some(entry) = MaterializedPipelineOutputCacheEntry::new_if_cacheable(inputs, outputs)?
-        else {
-            return Ok(());
-        };
-        let mut cache = self.lock_materialized_output_cache("while storing replay output")?;
-        cache.remember_entry(entry)
     }
 
     fn remember_materialized_output_cache_with_key(
