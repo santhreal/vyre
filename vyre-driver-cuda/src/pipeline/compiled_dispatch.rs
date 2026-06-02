@@ -175,7 +175,8 @@ impl CompiledPipeline for CudaCompiledPipeline {
         }
         let started = std::time::Instant::now();
         let mut outputs = reserved_vec(self.prepared.output_binding_indices.len(), "timed output")?;
-        if self.materialized_output_cache_hit_into(inputs, &mut outputs)? {
+        let input_key = materialized_input_key(inputs)?;
+        if self.materialized_output_cache_hit_with_key_into(inputs, &input_key, &mut outputs)? {
             let wall_ns = CUDA_NUMERIC
                 .elapsed_nanos_u64(started, "cuda graph materialized timed hit wall latency")?;
             self.backend
@@ -189,15 +190,23 @@ impl CompiledPipeline for CudaCompiledPipeline {
                 wait_ns: None,
             });
         }
-        let mut cached = match self.take_cached_graph(inputs)? {
+        let mut cached = match self.take_cached_graph_with_key(inputs, &input_key)? {
             Some(cached) => cached,
             None => self
                 .backend
                 .record_cuda_graph_borrowed(&self.program, inputs, config)?,
         };
-        let replay_result =
-            self.backend
-                .dispatch_via_cuda_graph_timed_into(&mut cached, inputs, &mut outputs);
+        let input_state = self
+            .backend
+            .prepare_cuda_graph_replay_input_state_with_key(&cached, inputs, input_key)?;
+        let replay_result = self
+            .backend
+            .dispatch_via_cuda_graph_timed_with_input_state_into(
+                &mut cached,
+                inputs,
+                &input_state,
+                &mut outputs,
+            );
         if replay_result.is_ok() {
             self.return_cached_graph(cached)?;
             self.remember_materialized_output_cache(inputs, &outputs)?;
@@ -250,18 +259,25 @@ impl CompiledPipeline for CudaCompiledPipeline {
                 .await_result_into(outputs)?;
             return Ok(());
         }
-        if self.materialized_output_cache_hit_into(inputs, outputs)? {
+        let input_key = materialized_input_key(inputs)?;
+        if self.materialized_output_cache_hit_with_key_into(inputs, &input_key, outputs)? {
             return Ok(());
         }
-        let mut cached = match self.take_cached_graph(inputs)? {
+        let mut cached = match self.take_cached_graph_with_key(inputs, &input_key)? {
             Some(cached) => cached,
             None => self
                 .backend
                 .record_cuda_graph_borrowed(&self.program, inputs, config)?,
         };
-        let replay_result = self
+        let input_state = self
             .backend
-            .dispatch_via_cuda_graph_into(&mut cached, inputs, outputs);
+            .prepare_cuda_graph_replay_input_state_with_key(&cached, inputs, input_key)?;
+        let replay_result = self.backend.dispatch_via_cuda_graph_with_input_state_into(
+            &mut cached,
+            inputs,
+            &input_state,
+            outputs,
+        );
         if replay_result.is_ok() {
             self.return_cached_graph(cached)?;
             self.remember_materialized_output_cache(inputs, outputs)?;
@@ -915,14 +931,15 @@ impl CudaCompiledPipeline {
         Ok(miss_entries)
     }
 
-    fn materialized_output_cache_hit_into(
+    fn materialized_output_cache_hit_with_key_into(
         &self,
         inputs: &[&[u8]],
+        input_key: &MaterializedInputKey,
         outputs: &mut OutputBuffers,
     ) -> Result<bool, BackendError> {
         let snapshot = {
             let cache = self.lock_materialized_output_cache("during single-dispatch replay")?;
-            cache.snapshot(inputs)?
+            cache.snapshot_with_key(inputs, input_key)
         };
         let Some(snapshot) = snapshot else {
             return Ok(false);
@@ -1076,6 +1093,15 @@ impl CudaCompiledPipeline {
     }
 
     fn take_cached_graph(&self, inputs: &[&[u8]]) -> Result<Option<CachedCudaGraph>, BackendError> {
+        let input_key = materialized_input_key(inputs)?;
+        self.take_cached_graph_with_key(inputs, &input_key)
+    }
+
+    fn take_cached_graph_with_key(
+        &self,
+        inputs: &[&[u8]],
+        input_key: &MaterializedInputKey,
+    ) -> Result<Option<CachedCudaGraph>, BackendError> {
         let mut graphs = self.graph_cache.lock().map_err(|_| {
             BackendError::DispatchFailed {
                 code: None,
@@ -1090,7 +1116,10 @@ impl CudaCompiledPipeline {
             if first_shape_match.is_none() {
                 first_shape_match = Some(index);
             }
-            if cached.materialized_output_cache_matches(inputs)? {
+            let input_state = self
+                .backend
+                .prepare_cuda_graph_replay_input_state_with_key(cached, inputs, *input_key)?;
+            if cached.materialized_output_cache_matches_with_input_state(inputs, &input_state)? {
                 return Ok(Some(graphs.swap_remove(index)));
             }
         }

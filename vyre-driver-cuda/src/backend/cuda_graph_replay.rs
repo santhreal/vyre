@@ -261,6 +261,16 @@ impl CudaBackend {
         outputs: &mut Vec<Vec<u8>>,
     ) -> Result<(), BackendError> {
         let input_state = self.prepare_cuda_graph_replay_input_state(cached, inputs)?;
+        self.dispatch_via_cuda_graph_with_input_state_into(cached, inputs, &input_state, outputs)
+    }
+
+    pub(crate) fn dispatch_via_cuda_graph_with_input_state_into(
+        &self,
+        cached: &mut CachedCudaGraph,
+        inputs: &[&[u8]],
+        input_state: &CudaGraphReplayInputState,
+        outputs: &mut Vec<Vec<u8>>,
+    ) -> Result<(), BackendError> {
         if self.try_cuda_graph_materialized_cache_with_input_state_into(
             cached,
             inputs,
@@ -282,6 +292,21 @@ impl CudaBackend {
         outputs: &mut Vec<Vec<u8>>,
     ) -> Result<u64, BackendError> {
         let input_state = self.prepare_cuda_graph_replay_input_state(cached, inputs)?;
+        self.dispatch_via_cuda_graph_timed_with_input_state_into(
+            cached,
+            inputs,
+            &input_state,
+            outputs,
+        )
+    }
+
+    pub(crate) fn dispatch_via_cuda_graph_timed_with_input_state_into(
+        &self,
+        cached: &mut CachedCudaGraph,
+        inputs: &[&[u8]],
+        input_state: &CudaGraphReplayInputState,
+        outputs: &mut Vec<Vec<u8>>,
+    ) -> Result<u64, BackendError> {
         if self.try_cuda_graph_materialized_cache_with_input_state_into(
             cached,
             inputs,
@@ -705,8 +730,14 @@ mod source_contract_tests {
         let replay_source = include_str!("cuda_graph_replay.rs");
         let compiled_dispatch = include_str!("../pipeline/compiled_dispatch.rs");
         assert!(
-            replay_source.contains("pub(crate) fn try_cuda_graph_materialized_cache_with_input_state_into(")
-                && replay_source.contains("if self.try_cuda_graph_materialized_cache_with_input_state_into("),
+            replay_source
+                .contains("pub(crate) fn try_cuda_graph_materialized_cache_with_input_state_into(")
+                && replay_source.contains(
+                    "pub(crate) fn dispatch_via_cuda_graph_with_input_state_into("
+                )
+                && replay_source.contains(
+                    "pub(crate) fn dispatch_via_cuda_graph_timed_with_input_state_into("
+                ),
             "Fix: single CUDA graph replay must route materialized output cache hits through the shared helper."
         );
         assert!(
@@ -799,6 +830,11 @@ mod source_contract_tests {
                 && untimed_section.contains("enqueue_cuda_graph_replay_with_input_state"),
             "Fix: untimed raw CUDA graph replay must pass the prepared input state through both cache and launch paths."
         );
+        assert!(
+            replay_source.contains("dispatch_via_cuda_graph_with_input_state_into(cached, inputs, &input_state, outputs)")
+                && replay_source.contains("pub(crate) fn dispatch_via_cuda_graph_with_input_state_into("),
+            "Fix: untimed raw CUDA graph replay must expose a with-input-state entrypoint so compiled pipelines can reuse precomputed exact-input keys."
+        );
         let timed_section = replay_source
             .split("pub(crate) fn dispatch_via_cuda_graph_timed_into")
             .nth(1)
@@ -818,6 +854,11 @@ mod source_contract_tests {
                 && timed_section.contains("prepare_cuda_graph_replay_launch(cached, inputs, &input_state)?")
                 && timed_section.contains("launch_prepared_cuda_graph_replay(cached, &prepared, \"cuGraphLaunch\")"),
             "Fix: timed raw CUDA graph replay must reuse the prepared input state for materialized and resident-input replay decisions."
+        );
+        assert!(
+            replay_source.contains("dispatch_via_cuda_graph_timed_with_input_state_into(\n            cached,\n            inputs,\n            &input_state,\n            outputs,\n        )")
+                && replay_source.contains("pub(crate) fn dispatch_via_cuda_graph_timed_with_input_state_into("),
+            "Fix: timed raw CUDA graph replay must expose a with-input-state entrypoint so compiled pipelines can reuse precomputed exact-input keys."
         );
     }
 
