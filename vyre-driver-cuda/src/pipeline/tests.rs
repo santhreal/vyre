@@ -112,6 +112,12 @@ fn cuda_graph_replay_is_release_default_not_opt_in_debug_path() {
 #[test]
 fn static_launch_param_upload_sync_is_telemetry_visible() {
     let source = include_str!("static_params.rs");
+    assert!(
+        source.contains("enum StaticParamUploadFailure")
+            && source.contains("Completed(BackendError)")
+            && source.contains("CompletionUnproven(BackendError)"),
+        "Fix: CUDA static launch parameter upload must distinguish completed cleanup failures from unproven in-flight failures."
+    );
     let upload = source
         .split("pub(crate) fn upload_static_launch_params")
         .nth(1)
@@ -123,10 +129,29 @@ fn static_launch_param_upload_sync_is_telemetry_visible() {
     assert!(
         upload.contains("if let Err(error) = enqueue_result")
             && upload.contains("match stream.synchronize()")
-            && upload.contains("In-flight static parameter upload stream will not be recycled.")
+            && upload.contains("In-flight static parameter upload resources will not be recycled.")
             && upload.contains("std::mem::forget(stream);")
-            && upload.contains("return Err(error);"),
+            && upload.contains("StaticParamUploadFailure::CompletionUnproven(error)"),
         "Fix: CUDA compiled-pipeline static parameter upload must not recycle its stream after enqueue errors unless completion is proven."
+    );
+    assert!(
+        upload.contains("Err(StaticParamUploadFailure::Completed(err)) =>")
+            && upload.contains("backend.transient_pool.release(allocation);")
+            && upload.contains("Err(StaticParamUploadFailure::CompletionUnproven(err)) =>")
+            && upload.contains("let _unreleased_allocation = allocation;")
+            && upload.contains("std::mem::forget(host_transfers);"),
+        "Fix: CUDA compiled-pipeline static parameter upload must not recycle device or host staging allocations when upload completion is unproven."
+    );
+    let unproven_cleanup = upload
+        .split("Err(StaticParamUploadFailure::CompletionUnproven(err)) =>")
+        .nth(1)
+        .expect("Fix: static parameter upload must have unproven-completion cleanup.")
+        .split("backend.telemetry.record_host_to_device_bytes")
+        .next()
+        .expect("Fix: unproven static upload cleanup must precede success telemetry.");
+    assert!(
+        !unproven_cleanup.contains("transient_pool.release"),
+        "Fix: CUDA static parameter upload must not return unproven in-flight device memory to the transient pool."
     );
     assert!(
         upload.contains("if let Err(error) = stream.synchronize()")
