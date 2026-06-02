@@ -1112,10 +1112,15 @@ impl CudaBackend {
         let Some(stream) = stream else {
             return Ok(());
         };
-        let result = stream.synchronize();
-        self.launch_resources.release_stream(stream);
-        result?;
+        if let Err(error) = stream.synchronize() {
+            tracing::error!(
+                "Fix: failed to synchronize CUDA async resident upload stream: {error}. In-flight async resident upload stream will not be recycled."
+            );
+            std::mem::forget(stream);
+            return Err(error);
+        }
         self.telemetry.record_sync_point();
+        self.launch_resources.release_stream(stream);
         Ok(())
     }
 }
@@ -1197,6 +1202,38 @@ mod async_upload_tests {
         assert!(
             error_cleanup_pos < release_pos,
             "Fix: resident I/O stream helper must complete error cleanup before pooled stream release."
+        );
+    }
+
+    #[test]
+    fn synchronize_uploads_releases_stream_only_after_successful_sync() {
+        let source = include_str!("resident_io.rs");
+        let synchronize_uploads = source
+            .split("pub fn synchronize_uploads(&self)")
+            .nth(1)
+            .expect("Fix: CUDA async upload synchronization entrypoint must exist.")
+            .split("}\n}")
+            .next()
+            .expect("Fix: synchronize_uploads must end inside the resident I/O impl.");
+        assert!(
+            synchronize_uploads.contains("if let Err(error) = stream.synchronize()")
+                && synchronize_uploads.contains("In-flight async resident upload stream will not be recycled.")
+                && synchronize_uploads.contains("std::mem::forget(stream);")
+                && synchronize_uploads.contains("return Err(error);"),
+            "Fix: CUDA async resident upload synchronization must leak the stream when completion cannot be proven."
+        );
+        let sync_pos = synchronize_uploads
+            .find("stream.synchronize()")
+            .expect("Fix: synchronize_uploads must synchronize the upload stream.");
+        let telemetry_pos = synchronize_uploads
+            .find("self.telemetry.record_sync_point();")
+            .expect("Fix: synchronize_uploads must record sync telemetry after success.");
+        let release_pos = synchronize_uploads
+            .find("self.launch_resources.release_stream(stream);")
+            .expect("Fix: synchronize_uploads must release successfully synchronized streams.");
+        assert!(
+            sync_pos < telemetry_pos && telemetry_pos < release_pos,
+            "Fix: synchronize_uploads must prove stream completion before telemetry or pooled stream release."
         );
     }
 
