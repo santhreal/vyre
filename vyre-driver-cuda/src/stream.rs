@@ -317,6 +317,7 @@ pub(crate) struct CudaLaunchResourceLease {
 pub(crate) struct CudaTimingEventPairLease {
     pool: Arc<CudaLaunchResourcePool>,
     timing_events: Option<(CudaEvent, CudaEvent)>,
+    synchronized: bool,
 }
 
 impl CudaTimingEventPairLease {
@@ -325,6 +326,7 @@ impl CudaTimingEventPairLease {
         Ok(Self {
             pool,
             timing_events: Some(timing_events),
+            synchronized: false,
         })
     }
 
@@ -335,13 +337,25 @@ impl CudaTimingEventPairLease {
                 fix: "Fix: CUDA timing event pair lease was already consumed; acquire a fresh timing lease before recording graph replay events.".to_string(),
             })
     }
+
+    pub(crate) fn mark_synchronized(&mut self) {
+        self.synchronized = true;
+    }
 }
 
 impl Drop for CudaTimingEventPairLease {
     fn drop(&mut self) {
         if let Some((start, end)) = self.timing_events.take() {
-            self.pool.release_timing_event(start);
-            self.pool.release_timing_event(end);
+            if self.synchronized {
+                self.pool.release_timing_event(start);
+                self.pool.release_timing_event(end);
+            } else {
+                tracing::error!(
+                    "Fix: leaking CUDA timing event pair lease because completion was not proven before drop."
+                );
+                std::mem::forget(start);
+                std::mem::forget(end);
+            }
         }
     }
 }
@@ -891,6 +905,42 @@ mod tests {
                 && source.contains("pub timing_events: usize")
                 && source.contains("cached_counts_detailed"),
             "Fix: CUDA launch-resource telemetry must expose timing-event cache pressure, not just streams and completion events."
+        );
+    }
+
+    #[test]
+    fn timing_event_pair_lease_requires_completion_before_reuse() {
+        let source = include_str!("stream.rs");
+        let lease_impl = source
+            .split("impl CudaTimingEventPairLease")
+            .nth(1)
+            .expect("Fix: CUDA timing event pair lease implementation must exist.")
+            .split("impl Drop for CudaTimingEventPairLease")
+            .next()
+            .expect("Fix: timing event pair lease methods must precede Drop.");
+        assert!(
+            source.contains("synchronized: bool")
+                && source.contains("synchronized: false")
+                && lease_impl.contains("pub(crate) fn mark_synchronized(&mut self)")
+                && lease_impl.contains("self.synchronized = true;"),
+            "Fix: CUDA timing event pair leases must default to unproven completion and require an explicit synchronized mark before reuse."
+        );
+
+        let drop_impl = source
+            .split("impl Drop for CudaTimingEventPairLease")
+            .nth(1)
+            .expect("Fix: CUDA timing event pair lease must own Drop.")
+            .split("impl CudaLaunchResourceLease")
+            .next()
+            .expect("Fix: timing event pair Drop must precede launch-resource leases.");
+        assert!(
+            drop_impl.contains("if self.synchronized")
+                && drop_impl.contains("self.pool.release_timing_event(start);")
+                && drop_impl.contains("self.pool.release_timing_event(end);")
+                && drop_impl.contains("completion was not proven before drop")
+                && drop_impl.contains("std::mem::forget(start);")
+                && drop_impl.contains("std::mem::forget(end);"),
+            "Fix: CUDA timing event pair lease Drop must leak unsynchronized events instead of returning them to the pool."
         );
     }
 

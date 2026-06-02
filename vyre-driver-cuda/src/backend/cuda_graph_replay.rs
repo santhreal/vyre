@@ -293,17 +293,23 @@ impl CudaBackend {
         self.warmup()?;
         let prepared = prepare_cuda_graph_replay_launch(cached, inputs, &input_state)?;
 
-        let timing_events =
+        let mut timing_events =
             crate::stream::CudaTimingEventPairLease::acquire(Arc::clone(&self.launch_resources))?;
-        let (start, end) = timing_events.events()?;
-        start.record(cached.stream.ptr().as_ptr())?;
-        launch_prepared_cuda_graph_replay(cached, &prepared, "cuGraphLaunch")?;
-        self.telemetry.record_cuda_graph_launch();
-        end.record(cached.stream.ptr().as_ptr())?;
-        end.synchronize()?;
+        {
+            let (start, end) = timing_events.events()?;
+            start.record(cached.stream.ptr().as_ptr())?;
+            launch_prepared_cuda_graph_replay(cached, &prepared, "cuGraphLaunch")?;
+            self.telemetry.record_cuda_graph_launch();
+            end.record(cached.stream.ptr().as_ptr())?;
+            end.synchronize()?;
+        }
+        timing_events.mark_synchronized();
         cached.device_inputs_initialized = true;
         self.telemetry.record_sync_point();
-        let device_ns = start.elapsed_time_ns(&end)?;
+        let device_ns = {
+            let (start, end) = timing_events.events()?;
+            start.elapsed_time_ns(end)?
+        };
         self.record_cuda_graph_replay_stats(prepared.stats);
         collect_cuda_graph_outputs(cached, outputs)?;
         cached.host_outputs_initialized = true;
@@ -661,7 +667,8 @@ mod source_contract_tests {
         );
         assert!(
             source.contains("synchronize_cuda_graph_replay_stream(cached)?;\n        cached.device_inputs_initialized = true;")
-                && source.contains("end.synchronize()?;\n        cached.device_inputs_initialized = true;"),
+                && source.contains("end.synchronize()?;")
+                && source.contains("timing_events.mark_synchronized();\n        cached.device_inputs_initialized = true;"),
             "Fix: CUDA graph replay must mark resident device inputs initialized only after successful untimed and timed completion fences."
         );
         let timed_section = source
@@ -676,6 +683,19 @@ mod source_contract_tests {
                 && timed_section.contains("launch_prepared_cuda_graph_replay(cached, &prepared, \"cuGraphLaunch\")")
                 && !timed_section.contains("for (slot, src) in cached.input_host_bufs"),
             "Fix: timed CUDA graph replay must use resident-input graph replay when safe instead of always copying host inputs."
+        );
+        let timed_sync_pos = timed_section
+            .find("end.synchronize()?;")
+            .expect("Fix: timed CUDA graph replay must fence the end timing event before trusting resident inputs.");
+        let timing_release_pos = timed_section
+            .find("timing_events.mark_synchronized();")
+            .expect("Fix: timed CUDA graph replay must mark timing events reusable only after end-event synchronization.");
+        let initialized_pos = timed_section
+            .find("cached.device_inputs_initialized = true;")
+            .expect("Fix: timed CUDA graph replay must promote resident inputs after completion is proven.");
+        assert!(
+            timed_sync_pos < timing_release_pos && timing_release_pos < initialized_pos,
+            "Fix: timed CUDA graph replay must prove timing-event completion before timing lease reuse or resident-input promotion."
         );
     }
 
