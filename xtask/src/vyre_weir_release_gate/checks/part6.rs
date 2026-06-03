@@ -371,13 +371,23 @@ fn check_benchmark_source_artifact_files(
     report: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
+    let workspace_root = base_dir
+        .file_name()
+        .is_some_and(|name| name == "release")
+        .then(|| base_dir.parent())
+        .flatten()
+        .unwrap_or(base_dir);
     for artifact in benchmark_source_artifact_paths(report) {
-        let artifact_path = resolve_artifact_path(base_dir, &artifact);
-        if !artifact_path.is_file() {
+        if let Some(issue) =
+            crate::benchmark_evidence_semantics::benchmark_source_artifact_path_issue(
+                workspace_root,
+                &artifact,
+            )
+        {
             failures.push(format!(
-                "requirement `{}` benchmark `{label}` source_artifact `{artifact}` is not a readable file at {}",
+                "requirement `{}` benchmark `{label}` {}",
                 requirement.id,
-                artifact_path.display()
+                issue.describe(&artifact)
             ));
         }
     }
@@ -855,6 +865,60 @@ mod tests {
                 "benchmark `wgpu-missing-source-artifact.json` source_artifact `release/evidence/benchmarks/missing-source.json` is not a readable file"
             )),
             "Fix: generic benchmark gate must reject source_artifacts that do not resolve to files; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn benchmark_report_has_cases_rejects_absolute_source_artifact_file() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for absolute source artifact gate test.");
+        let release_dir = dir.path().join("release");
+        let evidence_dir = release_dir.join("evidence/benchmarks");
+        fs::create_dir_all(&evidence_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let external_source = dir.path().join("external-source.json");
+        fs::write(&external_source, "{}").expect("Fix: write external source artifact.");
+        let artifact = evidence_dir.join("wgpu-absolute-source-artifact.json");
+        fs::write(
+            &artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567:dirty=false",
+                "source_artifacts": [external_source.display().to_string()],
+                "environment": {"host_cpu_model": "test cpu"},
+                "summary": {"failed": 0, "cache_hit_rate": null},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize absolute source artifact fixture."),
+        )
+        .expect("Fix: write absolute source artifact fixture.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/wgpu-absolute-source-artifact.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_benchmark_report_has_cases(
+            &requirement,
+            &release_dir,
+            "wgpu-absolute-source-artifact.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "benchmark `wgpu-absolute-source-artifact.json` source_artifact `"
+            ) && failure.contains("must be a relative release path")),
+            "Fix: generic benchmark gate must reject existing absolute source_artifact files; failures={failures:?}"
         );
     }
 

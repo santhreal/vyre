@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{self, Read};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 use serde_json::{Map, Value};
@@ -109,6 +109,84 @@ pub(crate) fn benchmark_duplicate_source_artifact_paths(report: &Value) -> BTree
         })
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum BenchmarkSourceArtifactPathIssue {
+    AbsolutePath,
+    NonReleasePath,
+    ParentTraversal,
+    Missing {
+        artifact_path: PathBuf,
+    },
+    OutsideWorkspace {
+        artifact_path: PathBuf,
+        workspace_root: PathBuf,
+    },
+}
+
+impl BenchmarkSourceArtifactPathIssue {
+    pub(crate) fn describe(&self, artifact: &str) -> String {
+        match self {
+            Self::AbsolutePath => {
+                format!("source_artifact `{artifact}` must be a relative release path")
+            }
+            Self::NonReleasePath => {
+                format!("source_artifact `{artifact}` must start with `release/`")
+            }
+            Self::ParentTraversal => {
+                format!("source_artifact `{artifact}` must not contain parent directory traversal")
+            }
+            Self::Missing { artifact_path } => format!(
+                "source_artifact `{artifact}` is not a readable file at {}",
+                artifact_path.display()
+            ),
+            Self::OutsideWorkspace {
+                artifact_path,
+                workspace_root,
+            } => format!(
+                "source_artifact `{artifact}` resolves outside workspace: {} is outside {}",
+                artifact_path.display(),
+                workspace_root.display()
+            ),
+        }
+    }
+}
+
+pub(crate) fn benchmark_source_artifact_path_issue(
+    workspace_root: &Path,
+    artifact: &str,
+) -> Option<BenchmarkSourceArtifactPathIssue> {
+    let candidate = PathBuf::from(artifact);
+    if candidate.is_absolute() {
+        return Some(BenchmarkSourceArtifactPathIssue::AbsolutePath);
+    }
+    if !artifact.starts_with("release/") {
+        return Some(BenchmarkSourceArtifactPathIssue::NonReleasePath);
+    }
+    if candidate
+        .components()
+        .any(|component| matches!(component, Component::ParentDir))
+    {
+        return Some(BenchmarkSourceArtifactPathIssue::ParentTraversal);
+    }
+    let artifact_path = workspace_root.join(&candidate);
+    if !artifact_path.is_file() {
+        return Some(BenchmarkSourceArtifactPathIssue::Missing { artifact_path });
+    }
+    let Ok(canonical_root) = workspace_root.canonicalize() else {
+        return Some(BenchmarkSourceArtifactPathIssue::Missing { artifact_path });
+    };
+    let Ok(canonical_artifact) = artifact_path.canonicalize() else {
+        return Some(BenchmarkSourceArtifactPathIssue::Missing { artifact_path });
+    };
+    if !canonical_artifact.starts_with(&canonical_root) {
+        return Some(BenchmarkSourceArtifactPathIssue::OutsideWorkspace {
+            artifact_path: canonical_artifact,
+            workspace_root: canonical_root,
+        });
+    }
+    None
+}
+
 pub(crate) fn duplicate_nonblank_string_array_values(
     value: &Value,
     field: &str,
@@ -200,14 +278,11 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
 
     let mut source_reports = Vec::new();
     for artifact in source_artifacts {
-        let artifact_path = resolve_benchmark_artifact_path(workspace_root, &artifact);
-        if !artifact_path.is_file() {
-            issues.push(format!(
-                "source_artifact `{artifact}` is not a readable file at {}",
-                artifact_path.display()
-            ));
+        if let Some(issue) = benchmark_source_artifact_path_issue(workspace_root, &artifact) {
+            issues.push(issue.describe(&artifact));
             continue;
         }
+        let artifact_path = resolve_benchmark_artifact_path(workspace_root, &artifact);
         let text =
             match read_text_bounded(&artifact_path, MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES) {
                 Ok(text) => text,
@@ -2853,6 +2928,106 @@ mod tests {
             ]),
             "Fix: source_artifact path extraction must expose the same unique usable paths used by release gates."
         );
+    }
+
+    #[test]
+    fn benchmark_source_artifact_path_rejects_absolute_existing_file() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for source artifact path test.");
+        let artifact = dir.path().join("release/evidence/benchmarks/source.json");
+        std::fs::create_dir_all(
+            artifact
+                .parent()
+                .expect("Fix: source artifact fixture must have a parent directory."),
+        )
+        .expect("Fix: create temporary source artifact directory.");
+        std::fs::write(&artifact, "{}").expect("Fix: write source artifact fixture.");
+
+        assert_eq!(
+            benchmark_source_artifact_path_issue(dir.path(), &artifact.display().to_string()),
+            Some(BenchmarkSourceArtifactPathIssue::AbsolutePath),
+            "Fix: existing absolute source_artifact paths must not pass release evidence validation."
+        );
+    }
+
+    #[test]
+    fn benchmark_source_artifact_path_rejects_parent_traversal() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for source artifact traversal test.");
+
+        assert_eq!(
+            benchmark_source_artifact_path_issue(
+                dir.path(),
+                "release/evidence/benchmarks/../../Cargo.toml"
+            ),
+            Some(BenchmarkSourceArtifactPathIssue::ParentTraversal),
+            "Fix: source_artifact validation must reject parent traversal before resolving files."
+        );
+    }
+
+    #[test]
+    fn benchmark_source_artifact_path_rejects_non_release_relative_path() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for non-release artifact path test.");
+
+        assert_eq!(
+            benchmark_source_artifact_path_issue(dir.path(), "evidence/benchmarks/source.json"),
+            Some(BenchmarkSourceArtifactPathIssue::NonReleasePath),
+            "Fix: source_artifact validation must keep benchmark evidence references under release/."
+        );
+    }
+
+    #[test]
+    fn benchmark_source_artifact_path_accepts_release_file_inside_workspace() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for valid source artifact path test.");
+        let artifact = dir.path().join("release/evidence/benchmarks/source.json");
+        std::fs::create_dir_all(
+            artifact
+                .parent()
+                .expect("Fix: source artifact fixture must have a parent directory."),
+        )
+        .expect("Fix: create temporary source artifact directory.");
+        std::fs::write(&artifact, "{}").expect("Fix: write source artifact fixture.");
+
+        assert_eq!(
+            benchmark_source_artifact_path_issue(
+                dir.path(),
+                "release/evidence/benchmarks/source.json"
+            ),
+            None,
+            "Fix: release/evidence source artifacts inside the workspace must remain valid."
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn benchmark_source_artifact_path_rejects_symlink_escape() {
+        let workspace = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for symlink source artifact test.");
+        let outside = tempfile::TempDir::new()
+            .expect("Fix: create external directory for symlink source artifact test.");
+        let outside_artifact = outside.path().join("source.json");
+        std::fs::write(&outside_artifact, "{}").expect("Fix: write external source artifact.");
+        let link = workspace
+            .path()
+            .join("release/evidence/benchmarks/source.json");
+        std::fs::create_dir_all(
+            link.parent()
+                .expect("Fix: symlink artifact fixture must have a parent directory."),
+        )
+        .expect("Fix: create temporary symlink source artifact directory.");
+        std::os::unix::fs::symlink(&outside_artifact, &link)
+            .expect("Fix: create source artifact symlink.");
+
+        let Some(BenchmarkSourceArtifactPathIssue::OutsideWorkspace { .. }) =
+            benchmark_source_artifact_path_issue(
+                workspace.path(),
+                "release/evidence/benchmarks/source.json",
+            )
+        else {
+            panic!("Fix: source_artifact validation must reject symlink escapes.");
+        };
     }
 
     #[test]

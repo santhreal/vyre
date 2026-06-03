@@ -218,17 +218,13 @@ fn inspect_benchmark_report_provenance(
     match release_evidence_workspace_root(path) {
         Some(workspace_root) => {
             for artifact in source_artifacts {
-                let candidate = PathBuf::from(&artifact);
-                let artifact_path = if candidate.is_absolute() {
-                    candidate
-                } else {
-                    workspace_root.join(candidate)
-                };
-                if !artifact_path.is_file() {
-                    blockers.push(format!(
-                        "{evidence}: source_artifact `{artifact}` is not a readable file at {}",
-                        artifact_path.display()
-                    ));
+                if let Some(issue) =
+                    crate::benchmark_evidence_semantics::benchmark_source_artifact_path_issue(
+                        workspace_root,
+                        &artifact,
+                    )
+                {
+                    blockers.push(format!("{evidence}: {}", issue.describe(&artifact)));
                 }
             }
         }
@@ -648,6 +644,53 @@ mod tests {
                 "source_artifact `release/evidence/benchmarks/missing-source.json` is not a readable file"
             )),
             "Fix: completion audit must reject benchmark source_artifacts that do not resolve to files; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_absolute_benchmark_source_artifact_file() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for absolute source artifact audit test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        let evidence_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&evidence_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let external_source = dir.path().join("external-source.json");
+        std::fs::write(&external_source, "{}").expect("Fix: write external source artifact.");
+        let path = evidence_dir.join("wgpu-absolute-source-artifact.json");
+        std::fs::write(
+            &path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567:dirty=false",
+                "source_artifacts": [external_source.display().to_string()],
+                "environment": {"host_cpu_model": "test cpu"},
+                "summary": {"failed": 0, "cache_hit_rate": null},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize absolute source artifact audit fixture."),
+        )
+        .expect("Fix: write absolute source artifact audit fixture.");
+        let mut blockers = Vec::new();
+
+        inspect_json_evidence(
+            "release/evidence/benchmarks/wgpu-absolute-source-artifact.json",
+            &path,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "release/evidence/benchmarks/wgpu-absolute-source-artifact.json: source_artifact `"
+            ) && blocker.contains("must be a relative release path")),
+            "Fix: completion audit must reject existing absolute benchmark source_artifact files; blockers={blockers:?}"
         );
     }
 
