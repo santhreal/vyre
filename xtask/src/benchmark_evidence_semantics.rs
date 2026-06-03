@@ -656,6 +656,22 @@ fn inspect_source_artifact_case_integrity(
             )),
         }
     }
+    for issue in contract_backend_issues(report) {
+        match issue {
+            ContractBackendIssue::MissingBaselines {
+                case_id,
+                backend_id,
+            } => issues.push(format!(
+                "source_artifact `{artifact}` case `{case_id}` backend `{backend_id}` has a performance contract with no baselines"
+            )),
+            ContractBackendIssue::NoApplicableBaseline {
+                case_id,
+                backend_id,
+            } => issues.push(format!(
+                "source_artifact `{artifact}` case `{case_id}` backend `{backend_id}` has no applicable performance contract baseline"
+            )),
+        }
+    }
     for issue in cuda_forbidden_telemetry_issues(report) {
         match issue {
             CudaForbiddenTelemetryIssue::ResidentBorrowedEscapeHatch {
@@ -2960,6 +2976,67 @@ mod tests {
                 "source_artifact `release/evidence/benchmarks/cuda-cpu-sota-drift.json` case `release.cpu-sota-drift` has cuda_resident_borrowed_fallback_dispatches p50=3"
             ) && issue.contains("CPU-SOTA aggregate proof must use native resident dispatch")),
             "Fix: CPU-SOTA aggregate source artifacts must reject borrowed resident CUDA dispatch evidence; issues={issues:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_sota_100x_source_artifacts_reject_wrong_backend_contracts() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for CPU-SOTA contract backend test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temp benchmark evidence directory.");
+        let aggregate_source_fingerprint = current_test_source_fingerprint(dir.path());
+        let aggregate_source_tree_fingerprint =
+            vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let artifact = "release/evidence/benchmarks/cuda-wrong-contract.json";
+        std::fs::write(
+            dir.path().join(artifact),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "source_fingerprint": &aggregate_source_fingerprint,
+                "source_tree_fingerprint": &aggregate_source_tree_fingerprint,
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.cpu-sota-wrong-contract",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "contract": {
+                            "baselines": [
+                                {
+                                    "class": "CpuSota",
+                                    "backend_ids": ["wgpu"],
+                                    "min_speedup_x": 100.0
+                                }
+                            ]
+                        },
+                        "metrics": {
+                            "wall_ns": {"p50": 10},
+                            "baseline_wall_ns": {"p50": 2000}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 200.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize wrong-contract CPU-SOTA source artifact."),
+        )
+        .expect("Fix: write wrong-contract CPU-SOTA source artifact.");
+        let proof = serde_json::json!({
+            "source_fingerprint": aggregate_source_fingerprint,
+            "source_tree_fingerprint": aggregate_source_tree_fingerprint,
+            "source_artifacts": [artifact]
+        });
+
+        let issues = cpu_sota_100x_source_artifact_issues(dir.path(), &proof);
+
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/cuda-wrong-contract.json` case `release.cpu-sota-wrong-contract` backend `cuda` has no applicable performance contract baseline"
+            )),
+            "Fix: CPU-SOTA aggregate source artifacts must reject CUDA cases whose performance contract only applies to WGPU; issues={issues:?}"
         );
     }
 
