@@ -1,10 +1,11 @@
 use crate::benchmark_evidence_semantics::{
     backend_consistency_issues, benchmark_report_has_source_provenance,
-    benchmark_source_artifact_paths, contract_backend_issues, cuda_telemetry_label_issues,
-    current_freshness_fingerprint_for_report, launch_plan_label_issues,
+    benchmark_source_artifact_paths, contract_backend_issues, cuda_forbidden_telemetry_issues,
+    cuda_telemetry_label_issues, current_freshness_fingerprint_for_report, launch_plan_label_issues,
     report_freshness_fingerprint, source_fingerprint_freshness_issues, source_fingerprint_issues,
-    BackendConsistencyIssue, ContractBackendIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
-    SourceFingerprintFreshnessIssue, SourceFingerprintIssue,
+    BackendConsistencyIssue, ContractBackendIssue, CudaForbiddenTelemetryIssue,
+    CudaTelemetryLabelIssue, LaunchPlanLabelIssue, SourceFingerprintFreshnessIssue,
+    SourceFingerprintIssue,
 };
 
 pub(crate) fn check_benchmark_report_has_cases(
@@ -224,6 +225,7 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
     check_case_backend_matches_selected_backend(requirement, label, report, failures);
     check_contract_baselines_apply_to_backend(requirement, label, report, failures);
     check_cuda_telemetry_labels_match_counters(requirement, label, report, failures);
+    check_cuda_forbidden_telemetry_is_zero(requirement, label, report, failures);
     let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) else {
         return;
     };
@@ -600,6 +602,24 @@ fn check_cuda_telemetry_labels_match_counters(
                 label: telemetry_label,
             } => failures.push(format!(
                 "requirement `{}` benchmark `{label}` case `{case_id}` lists `{telemetry_label}` but all matching CUDA telemetry counters are zero or missing",
+                requirement.id
+            )),
+        }
+    }
+}
+fn check_cuda_forbidden_telemetry_is_zero(
+    requirement: &Requirement,
+    label: &str,
+    report: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    for issue in cuda_forbidden_telemetry_issues(report) {
+        match issue {
+            CudaForbiddenTelemetryIssue::ResidentBorrowedEscapeHatch {
+                case_id,
+                observed_p50,
+            } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{case_id}` has cuda_resident_borrowed_fallback_dispatches p50={observed_p50}; release CUDA benchmark evidence must use native resident dispatch",
                 requirement.id
             )),
         }
@@ -1174,6 +1194,54 @@ mod tests {
                 "benchmark `wgpu-backend-drift.json` case `release.condition_eval.1m` backend_id `cuda` does not match selected_backend `wgpu`"
             )),
             "Fix: generic benchmark gate must reject cases executed on a backend other than selected_backend; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn benchmark_report_has_cases_rejects_cuda_borrowed_escape_hatch_telemetry() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for CUDA borrowed telemetry gate test.");
+        let artifact = dir.path().join("cuda-borrowed-escape-hatch.json");
+        fs::write(
+            &artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.cuda.resident_graph.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "cuda_resident_borrowed_fallback_dispatches": {"p50": 1.0}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize CUDA borrowed telemetry benchmark evidence."),
+        )
+        .expect("Fix: write CUDA borrowed telemetry benchmark evidence.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "cuda first".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["cuda-borrowed-escape-hatch.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_benchmark_report_has_cases(
+            &requirement,
+            dir.path(),
+            "cuda-borrowed-escape-hatch.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "requirement `cuda-first-path` benchmark `cuda-borrowed-escape-hatch.json` case `release.cuda.resident_graph.1m` has cuda_resident_borrowed_fallback_dispatches p50=1"
+            ) && failure.contains("release CUDA benchmark evidence must use native resident dispatch")),
+            "Fix: generic benchmark gate must reject CUDA evidence polluted by resident borrowed fallback dispatches; failures={failures:?}"
         );
     }
 
