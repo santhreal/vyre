@@ -367,8 +367,17 @@ pub(super) fn write_backend_suite(
     backend: &str,
     artifact_inputs: Vec<BackendSuiteArtifactInput>,
 ) {
+    write_backend_suite_with_extra_blockers(workspace_root, backend, artifact_inputs, Vec::new());
+}
+
+pub(super) fn write_backend_suite_with_extra_blockers(
+    workspace_root: &Path,
+    backend: &str,
+    artifact_inputs: Vec<BackendSuiteArtifactInput>,
+    extra_blockers: Vec<String>,
+) {
     let output = backend_suite_output_path(backend);
-    let mut blockers = Vec::new();
+    let mut blockers = extra_blockers;
     if artifact_inputs.is_empty() {
         blockers.push(format!(
             "backend `{backend}` release suite has zero artifacts"
@@ -970,6 +979,44 @@ mod tests {
             suite.get("backend").and_then(Value::as_str),
             Some("wgpu"),
             "Fix: generated WGPU fallback suite must retain backend provenance."
+        );
+    }
+
+    #[test]
+    fn write_backend_suite_records_workload_run_failures() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for suite run-failure blocker test.");
+
+        write_backend_suite_with_extra_blockers(
+            dir.path(),
+            "wgpu",
+            Vec::new(),
+            vec![
+                "backend `wgpu` comparison family `string-bitmap-scatter` case `release.string_bitmap_scatter.1m` artifact `release/evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json`: Fix: benchmark command failed with exit status 1"
+                    .to_string(),
+            ],
+        );
+
+        let suite_path = dir
+            .path()
+            .join("release/evidence/benchmarks/wgpu-fallback-suite.json");
+        let text = fs::read_to_string(&suite_path)
+            .expect("Fix: read generated WGPU fallback suite JSON for run-failure assertions.");
+        let suite = serde_json::from_str::<Value>(&text)
+            .expect("Fix: generated WGPU fallback suite JSON must be parseable.");
+        let blockers = suite
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated suite must carry blockers array.");
+
+        assert!(
+            blockers.iter().any(|blocker| {
+                blocker.as_str().is_some_and(|blocker| {
+                    blocker.contains("comparison family `string-bitmap-scatter`")
+                        && blocker.contains("benchmark command failed")
+                })
+            }),
+            "Fix: backend suite evidence must record benchmark run failures instead of leaving them only on stderr; blockers={blockers:?}"
         );
     }
 

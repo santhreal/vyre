@@ -7,8 +7,8 @@ use super::runner::{
     benchmark_artifact_is_reusable, copy_artifact, run_command, run_named_benchmark_if_needed,
 };
 use super::suite_inspect::{
-    prefixed_benchmark_artifact, read_text_bounded, run_workload_benchmark, write_backend_suite,
-    write_cpu_100x_proof,
+    prefixed_benchmark_artifact, read_text_bounded, run_workload_benchmark,
+    write_backend_suite_with_extra_blockers, write_cpu_100x_proof,
 };
 use super::types::{
     BackendSuiteArtifactInput, ReleaseWorkloadFamily, ReleaseWorkloadMatrix,
@@ -69,6 +69,7 @@ pub(crate) fn run(args: &[String]) {
     let mut suite_artifacts = Vec::new();
     let mut cpu_100x_artifacts = Vec::new();
     let mut workload_failures = Vec::new();
+    let mut primary_suite_failures = Vec::new();
     let mut ran = 0usize;
     for family in matrix.families.iter().filter(|family| family.required) {
         let cpu_100x_family = config.backend == "cuda"
@@ -109,10 +110,12 @@ pub(crate) fn run(args: &[String]) {
                 config.sample_timeout_secs,
             ) {
                 workload_ok = false;
-                workload_failures.push(format!(
+                let failure = format!(
                     "backend `{}` family `{}` case `{}` artifact `{}`: {error}",
                     config.backend, family.id, case_id, evidence_artifact
-                ));
+                );
+                workload_failures.push(failure.clone());
+                primary_suite_failures.push(failure);
             }
         }
         if !config.refresh_suites_only
@@ -166,6 +169,7 @@ pub(crate) fn run(args: &[String]) {
     }
     if config.only.is_none() && config.backend == "cuda" && config.include_wgpu_comparison {
         let mut wgpu_artifacts = Vec::new();
+        let mut wgpu_suite_failures = Vec::new();
         for family in matrix.families.iter().filter(|family| family.required) {
             let Some(case_id) = select_release_benchmark_case(family, true) else {
                 eprintln!(
@@ -194,10 +198,12 @@ pub(crate) fn run(args: &[String]) {
                     config.measured_samples,
                     config.sample_timeout_secs,
                 ) {
-                    workload_failures.push(format!(
+                    let failure = format!(
                         "backend `wgpu` comparison family `{}` case `{}` artifact `{}`: {error}",
                         family.id, case_id, output
-                    ));
+                    );
+                    workload_failures.push(failure.clone());
+                    wgpu_suite_failures.push(failure);
                 }
             }
             wgpu_artifacts.push(BackendSuiteArtifactInput {
@@ -207,7 +213,12 @@ pub(crate) fn run(args: &[String]) {
                 cpu_sota_100x_required: false,
             });
         }
-        write_backend_suite(&workspace_root, "wgpu", wgpu_artifacts);
+        write_backend_suite_with_extra_blockers(
+            &workspace_root,
+            "wgpu",
+            wgpu_artifacts,
+            wgpu_suite_failures,
+        );
     }
     if workload_failures.is_empty()
         && config.only.is_none()
@@ -291,7 +302,12 @@ pub(crate) fn run(args: &[String]) {
     if config.backend == "cuda" {
         write_cpu_100x_proof(&workspace_root, &cpu_100x_artifacts);
     }
-    write_backend_suite(&workspace_root, &config.backend, suite_artifacts);
+    write_backend_suite_with_extra_blockers(
+        &workspace_root,
+        &config.backend,
+        suite_artifacts,
+        primary_suite_failures,
+    );
     write_release_axes(&workspace_root);
     if !workload_failures.is_empty() {
         for failure in &workload_failures {
