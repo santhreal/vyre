@@ -250,6 +250,45 @@ fn integer_shift_masks_rhs_to_reference_width() {
 }
 
 #[test]
+fn u32_power_of_two_const_mod_emits_mask_without_rem() {
+    let kernel = KernelDescriptor {
+        id: "mod_pow2".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Mod),
+                    operands: vec![0, 1],
+                    result: Some(2),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(37), LiteralValue::U32(8)],
+        },
+    };
+    let s = emit(&kernel).unwrap();
+    assert!(
+        s.contains("and.b32"),
+        "Fix: u32 `% power_of_two` must lower to an integer mask.\n{s}"
+    );
+    assert!(
+        !s.contains("rem.u32"),
+        "Fix: u32 `% power_of_two` must not emit slow total modulo control flow.\n{s}"
+    );
+}
+
+#[test]
 fn unop_negate_emits_neg() {
     let kernel = KernelDescriptor {
         id: "neg".into(),

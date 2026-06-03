@@ -254,6 +254,14 @@ impl BodyCtx<'_> {
                         }
                     }
                 }
+                if matches!(bin_op, vyre_foundation::ir::BinOp::Mod) {
+                    if let Some(divisor) = self.u32_literals.get(&right_id).copied() {
+                        if let Some(result) = self.emit_fast_u32_const_mod(left, divisor) {
+                            self.bind_result(op, result)?;
+                            return Ok(());
+                        }
+                    }
+                }
                 let (result, _result_ty) = self.emit_binop(*bin_op, left, right)?;
                 self.bind_result(op, result)?;
             }

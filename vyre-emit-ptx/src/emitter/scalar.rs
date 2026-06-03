@@ -321,6 +321,23 @@ impl BodyCtx<'_> {
         None
     }
 
+    pub(super) fn emit_fast_u32_const_mod(&mut self, value: Reg, divisor: u32) -> Option<Reg> {
+        if !matches!(value.0, PtxType::U32 | PtxType::Bool) || divisor == 0 {
+            return None;
+        }
+        let out = self.alloc(PtxType::U32);
+        if divisor == 1 {
+            let _ = writeln!(self.text, "    mov.u32    {out}, 0;");
+            return Some(out);
+        }
+        if divisor.is_power_of_two() {
+            let mask = divisor - 1;
+            let _ = writeln!(self.text, "    and.b32    {out}, {value}, {mask};");
+            return Some(out);
+        }
+        None
+    }
+
     fn emit_total_u32_div(&mut self, left: Reg, right: Reg) -> Reg {
         let out = self.alloc(PtxType::U32);
         let pred = self.alloc(PtxType::Bool);

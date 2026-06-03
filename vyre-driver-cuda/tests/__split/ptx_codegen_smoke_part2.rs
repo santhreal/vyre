@@ -33,6 +33,25 @@ fn ptx_emits_bitwise_ops() {
 }
 
 #[test]
+fn grouped_int4_affine_ptx_masks_power_of_two_modulo() {
+    let spec = vyre_libs::nn::QuantizedLinear4BitSpec::affine_grouped(256, 4096, 64);
+    let program =
+        vyre_libs::nn::linear_4bit_affine_grouped_typed(&spec, "x", "w", "scale", "zp", "b", "out")
+            .expect("Fix: grouped INT4 affine release program must build.");
+    let ptx = program_to_ptx_for_sm(&program, &default_config(), 90)
+        .expect("Fix: grouped INT4 affine release program must lower to PTX.");
+
+    assert!(
+        ptx.contains("and.b32"),
+        "Fix: grouped INT4 PTX must use masks for power-of-two modulo in the hot path.\n{ptx}"
+    );
+    assert!(
+        !ptx.contains("rem.u32"),
+        "Fix: grouped INT4 PTX must not emit slow total u32 modulo in the hot path.\n{ptx}"
+    );
+}
+
+#[test]
 fn ptx_emits_integer_comparisons() {
     let ops = [
         (

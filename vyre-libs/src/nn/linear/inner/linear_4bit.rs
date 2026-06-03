@@ -686,7 +686,11 @@ mod tests {
                             Value::from(vec![0u8; out_dim as usize * 4]),
                         ],
                     )
-                    .expect("Fix: generated affine grouped fixture must execute");
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "Fix: generated affine grouped fixture must execute for out_dim={out_dim}, group_size={group_size}, seed={seed}: {error}"
+                        )
+                    });
                     let actual =
                         vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes());
                     let expected = affine_cpu_reference(
