@@ -93,16 +93,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 "requirement `cpu-only-100x-proof` aggregate proof reports {proof_blockers} blocker(s)"
             ));
         }
-        if proof
-            .get("source_fingerprint")
-            .and_then(serde_json::Value::as_str)
-            .is_none_or(str::is_empty)
-        {
-            failures.push(
-                "requirement `cpu-only-100x-proof` aggregate proof must preserve source_fingerprint"
-                    .to_string(),
-            );
-        }
+        check_cpu_100x_aggregate_source_provenance(&proof, failures);
         if proof.get("git").is_none_or(serde_json::Value::is_null) {
             failures.push(
                 "requirement `cpu-only-100x-proof` aggregate proof must preserve git provenance object"
@@ -253,6 +244,32 @@ fn check_duplicate_string_array_values(
     }
 }
 
+fn check_cpu_100x_aggregate_source_provenance(
+    proof: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    if proof
+        .get("source_fingerprint")
+        .and_then(serde_json::Value::as_str)
+        .is_none_or(|value| value.trim().is_empty())
+    {
+        failures.push(
+            "requirement `cpu-only-100x-proof` aggregate proof must preserve source_fingerprint"
+                .to_string(),
+        );
+    }
+    if proof
+        .get("source_tree_fingerprint")
+        .and_then(serde_json::Value::as_str)
+        .is_none_or(|value| value.trim().is_empty())
+    {
+        failures.push(
+            "requirement `cpu-only-100x-proof` aggregate proof must preserve source_tree_fingerprint"
+                .to_string(),
+        );
+    }
+}
+
 fn check_cpu_100x_source_artifact_counts(proof: &serde_json::Value, failures: &mut Vec<String>) {
     let unique_source_artifacts = benchmark_source_artifact_count(proof) as u64;
     let raw_source_artifacts = benchmark_source_artifact_entry_count(proof) as u64;
@@ -368,6 +385,30 @@ mod tests {
                 "aggregate proof has duplicate required_cpu_sota_100x_cases: release.entropy_window.1m"
             )),
             "Fix: CPU-SOTA gate must reject duplicate aggregate required case ids; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_gate_rejects_blank_aggregate_source_provenance() {
+        let proof = serde_json::json!({
+            "source_fingerprint": "   ",
+            "source_tree_fingerprint": "\t"
+        });
+        let mut failures = Vec::new();
+
+        check_cpu_100x_aggregate_source_provenance(&proof, &mut failures);
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("must preserve source_fingerprint")),
+            "Fix: CPU-SOTA release gate must reject blank aggregate source_fingerprint; failures={failures:?}"
+        );
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("must preserve source_tree_fingerprint")),
+            "Fix: CPU-SOTA release gate must reject blank aggregate source_tree_fingerprint; failures={failures:?}"
         );
     }
 }

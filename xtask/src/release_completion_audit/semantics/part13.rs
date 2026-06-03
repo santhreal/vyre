@@ -223,6 +223,7 @@ fn inspect_cpu_100x_benchmark_semantics(
     if selected_backend != Some("cuda") {
         blockers.push(format!("{evidence}: selected_backend must be cuda"));
     }
+    inspect_cpu_100x_aggregate_source_provenance(evidence, value, blockers);
     inspect_cpu_100x_source_artifact_counts(evidence, value, blockers);
     inspect_duplicate_array_values(evidence, value, "required_cpu_sota_100x_cases", blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
@@ -312,6 +313,31 @@ fn inspect_cpu_100x_benchmark_semantics(
                 "{evidence}: case `{id}` must include p50 wall_ns and baseline_wall_ns"
             )),
         }
+    }
+}
+
+fn inspect_cpu_100x_aggregate_source_provenance(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    if value
+        .get("source_fingerprint")
+        .and_then(serde_json::Value::as_str)
+        .is_none_or(|source| source.trim().is_empty())
+    {
+        blockers.push(format!(
+            "{evidence}: aggregate proof must preserve source_fingerprint"
+        ));
+    }
+    if value
+        .get("source_tree_fingerprint")
+        .and_then(serde_json::Value::as_str)
+        .is_none_or(|source| source.trim().is_empty())
+    {
+        blockers.push(format!(
+            "{evidence}: aggregate proof must preserve source_tree_fingerprint"
+        ));
     }
 }
 
@@ -522,6 +548,34 @@ mod part13_tests {
                 "duplicate source_artifacts: release/evidence/benchmarks/workload-01-condition-eval.json"
             )),
             "Fix: completion audit must reject duplicate CPU-SOTA source_artifacts; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_cpu_100x_rejects_blank_aggregate_source_provenance() {
+        let proof = serde_json::json!({
+            "source_fingerprint": "   ",
+            "source_tree_fingerprint": "\t"
+        });
+        let mut blockers = Vec::new();
+
+        inspect_cpu_100x_aggregate_source_provenance(
+            "cpu-only-100x-proof.json",
+            &proof,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers
+                .iter()
+                .any(|blocker| blocker.contains("must preserve source_fingerprint")),
+            "Fix: completion audit must reject blank aggregate source_fingerprint; blockers={blockers:?}"
+        );
+        assert!(
+            blockers
+                .iter()
+                .any(|blocker| blocker.contains("must preserve source_tree_fingerprint")),
+            "Fix: completion audit must reject blank aggregate source_tree_fingerprint; blockers={blockers:?}"
         );
     }
 
