@@ -59,6 +59,9 @@ pub(crate) fn check_benchmark_report_has_cases(
             requirement.id
         ));
     }
+    check_case_backend_matches_selected_backend(requirement, suffix, &report, failures);
+    check_contract_baselines_apply_to_backend(requirement, suffix, &report, failures);
+    check_cuda_telemetry_labels_match_counters(requirement, suffix, &report, failures);
     if suffix.contains("cuda")
         || report
             .get("selected_backend")
@@ -756,6 +759,51 @@ mod tests {
                 "benchmark `wgpu-stale-total-cases.json` has invalid summary: summary total/pass/fail (Some(2)/Some(1)/Some(0)) contradicts case evidence (1/1/0)"
             )),
             "Fix: generic benchmark gate must reject stale summary.total_cases even when the cases array is non-empty; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn benchmark_report_has_cases_rejects_selected_backend_drift() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for backend drift benchmark gate test.");
+        let artifact = dir.path().join("wgpu-backend-drift.json");
+        fs::write(
+            &artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize backend drift benchmark evidence."),
+        )
+        .expect("Fix: write backend drift benchmark evidence.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["wgpu-backend-drift.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_benchmark_report_has_cases(
+            &requirement,
+            dir.path(),
+            "wgpu-backend-drift.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "benchmark `wgpu-backend-drift.json` case `release.condition_eval.1m` backend_id `cuda` does not match selected_backend `wgpu`"
+            )),
+            "Fix: generic benchmark gate must reject cases executed on a backend other than selected_backend; failures={failures:?}"
         );
     }
 
