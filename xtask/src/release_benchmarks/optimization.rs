@@ -1,9 +1,11 @@
 use std::fs;
 use std::path::Path;
 
-use serde_json::Value;
+use serde_json::{json, Value};
 
-use crate::benchmark_evidence_semantics::baseline_applies_to_backend;
+use crate::benchmark_evidence_semantics::{
+    baseline_applies_to_backend, cuda_release_axes_source_artifact_issues,
+};
 
 use super::metrics::{
     max_metric_p50, max_observed_ulp, max_vram_mib, min_first_available_metric_p50, min_metric_p50,
@@ -77,9 +79,12 @@ mod tests {
     #[test]
     fn release_axes_uses_cuda_suite_artifacts_only() {
         let dir = TempDir::new().expect("Fix: create temp workspace for release axes source test.");
+        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
         let benchmark_dir = dir.path().join("release/evidence/benchmarks");
         fs::create_dir_all(&benchmark_dir)
             .expect("Fix: create temporary benchmark evidence directory.");
+        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
         let mut suite_artifacts = Vec::new();
         for index in 1..=12 {
             let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
@@ -88,6 +93,7 @@ mod tests {
                 &artifact_path,
                 serde_json::to_string_pretty(&serde_json::json!({
                     "selected_backend": "cuda",
+                    "source_tree_fingerprint": &source_tree_fingerprint,
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                     "environment": {
                         "gpu_devices": [{"memory_total_mib": 24576}]
@@ -573,6 +579,11 @@ pub(super) fn write_release_axes(workspace_root: &Path) {
         reports.push(value);
     }
     blockers.extend(release_axis_blockers(&reports));
+    blockers.extend(cuda_release_axes_source_artifact_issues(
+        workspace_root,
+        &json!({"source_artifacts": &source_artifacts}),
+        &suite,
+    ));
     let evidence = ReleaseAxesEvidence {
         schema_version: 1,
         warm_us_per_file: min_metric_p50(&reports, "wall_ns").map(|ns| ns as f64 / 1_000.0),
