@@ -680,31 +680,43 @@ pub(super) fn write_release_axes(workspace_root: &Path) {
         source_artifacts.push(artifact.to_string());
         reports.push(value);
     }
+    let warm_us_per_file = min_metric_p50(&reports, "wall_ns").map(|ns| ns as f64 / 1_000.0);
+    let cold_pipeline_build_ms = min_first_available_metric_p50(
+        &reports,
+        &[
+            "cold_compile_ns",
+            "cold_wall_ns",
+            "compile_ns",
+            "lower_ns",
+            "optimize_ns",
+        ],
+    )
+    .map(|ns| ns as f64 / 1_000_000.0);
+    let gbs_scan_throughput = max_metric_p50(&reports, "wall_gb_s_x1000")
+        .or_else(|| max_metric_p50(&reports, "device_gb_s_x1000"))
+        .map(|gb_s_x1000| gb_s_x1000 as f64 / 1_000.0);
+    let ulp_drift_max = Some(max_observed_ulp(&reports).unwrap_or(0));
+    let max_vram_mib = max_vram_mib(&reports);
     blockers.extend(release_axis_blockers(&reports));
     blockers.extend(cuda_release_axes_source_artifact_issues(
         workspace_root,
-        &json!({"source_artifacts": &source_artifacts}),
+        &json!({
+            "warm_us_per_file": warm_us_per_file,
+            "cold_pipeline_build_ms": cold_pipeline_build_ms,
+            "gbs_scan_throughput": gbs_scan_throughput,
+            "ulp_drift_max": ulp_drift_max,
+            "max_vram_mib": max_vram_mib,
+            "source_artifacts": &source_artifacts
+        }),
         &suite,
     ));
     let evidence = ReleaseAxesEvidence {
         schema_version: 1,
-        warm_us_per_file: min_metric_p50(&reports, "wall_ns").map(|ns| ns as f64 / 1_000.0),
-        cold_pipeline_build_ms: min_first_available_metric_p50(
-            &reports,
-            &[
-                "cold_compile_ns",
-                "cold_wall_ns",
-                "compile_ns",
-                "lower_ns",
-                "optimize_ns",
-            ],
-        )
-        .map(|ns| ns as f64 / 1_000_000.0),
-        gbs_scan_throughput: max_metric_p50(&reports, "wall_gb_s_x1000")
-            .or_else(|| max_metric_p50(&reports, "device_gb_s_x1000"))
-            .map(|gb_s_x1000| gb_s_x1000 as f64 / 1_000.0),
-        ulp_drift_max: Some(max_observed_ulp(&reports).unwrap_or(0)),
-        max_vram_mib: max_vram_mib(&reports),
+        warm_us_per_file,
+        cold_pipeline_build_ms,
+        gbs_scan_throughput,
+        ulp_drift_max,
+        max_vram_mib,
         source_artifacts,
         blockers,
     };

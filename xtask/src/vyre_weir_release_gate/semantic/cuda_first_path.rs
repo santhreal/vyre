@@ -189,4 +189,68 @@ mod tests {
             "Fix: CUDA-first release axes must reject source artifacts outside the CUDA suite; failures={failures:?}"
         );
     }
+
+    #[test]
+    fn cuda_first_axes_rejects_missing_scalar_axes() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for release axis scalar gate test.");
+        let release_dir = dir.path().join("release");
+        std::fs::create_dir_all(release_dir.join("evidence/benchmarks"))
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let mut source_artifacts = Vec::new();
+        for index in 0..12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            std::fs::write(
+                dir.path().join(&artifact),
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "environment": {
+                        "gpu_devices": [{"memory_total_mib": 24576}]
+                    },
+                    "cases": [
+                        {
+                            "id": format!("case-{index}"),
+                            "backend_id": "cuda",
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"p50": 17_000},
+                                "cold_compile_ns": {"p50": 2_000_000},
+                                "wall_gb_s_x1000": {"p50": 4_000}
+                            },
+                            "correctness": {
+                                "Toleranced": {"max_observed_ulp": 3}
+                            }
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize temporary CUDA artifact."),
+            )
+            .expect("Fix: write temporary CUDA artifact.");
+            source_artifacts.push(artifact);
+        }
+        let axes = serde_json::json!({
+            "source_artifacts": source_artifacts
+        });
+        let cuda_suite = serde_json::json!({
+            "backend": "cuda",
+            "artifacts": source_artifacts
+        });
+        let mut failures = Vec::new();
+
+        check_release_axes_source_artifacts(&release_dir, &axes, &cuda_suite, &mut failures);
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "requirement `cuda-first-path` bench-release-axes bench-release-axes warm_us_per_file is missing or not numeric"
+            )),
+            "Fix: CUDA-first release gate must reject source-backed axes that omit warm scalar evidence; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "bench-release-axes max_vram_mib is missing or not numeric"
+            )),
+            "Fix: CUDA-first release gate must reject source-backed axes that omit VRAM scalar evidence; failures={failures:?}"
+        );
+    }
 }

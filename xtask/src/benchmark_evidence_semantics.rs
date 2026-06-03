@@ -379,22 +379,8 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
         }
         source_reports.push(report);
     }
-    if release_axes_has_scalar_fields(axes) {
-        inspect_release_axes_scalar_values(axes, &source_reports, &mut issues);
-    }
+    inspect_release_axes_scalar_values(axes, &source_reports, &mut issues);
     issues
-}
-
-fn release_axes_has_scalar_fields(axes: &Value) -> bool {
-    [
-        "warm_us_per_file",
-        "cold_pipeline_build_ms",
-        "gbs_scan_throughput",
-        "ulp_drift_max",
-        "max_vram_mib",
-    ]
-    .iter()
-    .any(|axis| axes.get(*axis).is_some())
 }
 
 fn inspect_release_axes_scalar_values(
@@ -2769,6 +2755,77 @@ mod tests {
             )),
             "Fix: release-axis source artifacts must individually prove GPU memory evidence, not rely on another artifact; issues={issues:?}"
         );
+    }
+
+    #[test]
+    fn cuda_release_axes_require_scalar_axes_from_source_artifacts() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for release axes scalar presence test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temp benchmark evidence directory.");
+        let source_fingerprint = current_test_source_fingerprint(dir.path());
+        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let mut artifacts = Vec::new();
+        for index in 1..=12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            std::fs::write(
+                dir.path().join(&artifact),
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "source_fingerprint": &source_fingerprint,
+                    "source_tree_fingerprint": &source_tree_fingerprint,
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "environment": {
+                        "gpu_devices": [{"memory_total_mib": 24576}]
+                    },
+                    "cases": [
+                        {
+                            "id": format!("release.scalar-required.{index}"),
+                            "backend_id": "cuda",
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"p50": 17_000},
+                                "cold_compile_ns": {"p50": 2_000_000},
+                                "wall_gb_s_x1000": {"p50": 4_000}
+                            },
+                            "correctness": {
+                                "Toleranced": {"max_observed_ulp": 3}
+                            }
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize scalar presence source artifact."),
+            )
+            .expect("Fix: write scalar presence source artifact.");
+            artifacts.push(artifact);
+        }
+        let axes = serde_json::json!({
+            "source_artifacts": artifacts
+        });
+        let cuda_suite = serde_json::json!({
+            "backend": "cuda",
+            "artifacts": artifacts
+        });
+
+        let issues = cuda_release_axes_source_artifact_issues(dir.path(), &axes, &cuda_suite);
+
+        for axis in [
+            "warm_us_per_file",
+            "cold_pipeline_build_ms",
+            "gbs_scan_throughput",
+            "ulp_drift_max",
+            "max_vram_mib",
+        ] {
+            assert!(
+                issues.iter().any(|issue| issue.contains(&format!(
+                    "bench-release-axes {axis} is missing or not numeric"
+                ))),
+                "Fix: release axes must require scalar `{axis}` once source artifacts prove it; issues={issues:?}"
+            );
+        }
     }
 
     #[test]
