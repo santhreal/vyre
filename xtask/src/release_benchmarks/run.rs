@@ -417,6 +417,10 @@ fn generated_benchmark_evidence_blockers(workspace_root: &Path, paths: &[String]
 
 fn collect_generated_suite_status_blockers(path: &str, value: &Value, blockers: &mut Vec<String>) {
     let Some(statuses) = value.get("artifact_statuses") else {
+        if crate::benchmark_evidence_semantics::expected_backend_for_suite_evidence(path).is_some()
+        {
+            blockers.push(format!("`{path}` is missing artifact_statuses array"));
+        }
         return;
     };
     let Some(statuses) = statuses.as_array() else {
@@ -518,9 +522,44 @@ mod tests {
             blockers,
             vec![
                 "`release/evidence/benchmarks/cuda-release-suite.json` blocker[0]: stale source fingerprint"
+                    .to_string(),
+                "`release/evidence/benchmarks/cuda-release-suite.json` is missing artifact_statuses array"
                     .to_string()
             ],
             "Fix: release-benchmarks must fail closed when generated suite evidence carries blockers."
+        );
+    }
+
+    #[test]
+    fn generated_evidence_blockers_reject_suite_missing_artifact_statuses() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for generated suite inventory test.");
+        let artifact = "release/evidence/benchmarks/cuda-release-suite.json".to_string();
+        let artifact_path = dir.path().join(&artifact);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: temporary artifact has a parent directory."),
+        )
+        .expect("Fix: create temporary generated evidence directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "blockers": []
+            }))
+            .expect("Fix: serialize suite evidence without artifact_statuses."),
+        )
+        .expect("Fix: write suite evidence without artifact_statuses.");
+
+        let blockers = generated_benchmark_evidence_blockers(dir.path(), &[artifact]);
+
+        assert_eq!(
+            blockers,
+            vec![
+                "`release/evidence/benchmarks/cuda-release-suite.json` is missing artifact_statuses array"
+                    .to_string()
+            ],
+            "Fix: release-benchmarks must fail closed when generated suite evidence omits artifact_statuses."
         );
     }
 
