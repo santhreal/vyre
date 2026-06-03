@@ -41,6 +41,7 @@ mod tests {
         let source_fingerprint = vyre_bench::probes::source_fingerprint(&git);
         let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
         let mut suite_artifacts = Vec::new();
+        let mut artifact_statuses = Vec::new();
         for index in 1..=12 {
             let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
             let artifact_path = dir.path().join(&artifact);
@@ -70,6 +71,12 @@ mod tests {
                 .expect("Fix: serialize CUDA release axis fixture."),
             )
             .expect("Fix: write CUDA release axis fixture.");
+            artifact_statuses.push(serde_json::json!({
+                "path": artifact,
+                "family_id": format!("release-axis-{index}"),
+                "requested_case_id": format!("release.axis.{index}"),
+                "blockers": []
+            }));
             suite_artifacts.push(artifact);
         }
         fs::write(
@@ -77,7 +84,8 @@ mod tests {
             serde_json::to_string_pretty(&serde_json::json!({
                 "schema_version": 2,
                 "backend": "cuda",
-                "artifacts": suite_artifacts
+                "artifacts": suite_artifacts,
+                "artifact_statuses": artifact_statuses
             }))
             .expect("Fix: serialize CUDA release suite fixture."),
         )

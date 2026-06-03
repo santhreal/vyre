@@ -75,6 +75,7 @@ pub(crate) fn run(args: &[String]) {
     let mut ran = 0usize;
     for family in benchmark_suite_families(&matrix, config.only.as_deref()) {
         let cpu_100x_family = requires_release_cpu_sota_100x_proof(&config.backend, family);
+        let required_reuse_speedup = reusable_cpu_sota_min_speedup(&config.backend, family);
         let prefer_cpu_sota_case = cpu_100x_family || config.backend == "wgpu";
         let Some(case_id) = select_release_benchmark_case(family, prefer_cpu_sota_case) else {
             eprintln!(
@@ -94,7 +95,7 @@ pub(crate) fn run(args: &[String]) {
                     &family.id,
                     case_id,
                     &evidence_artifact,
-                    cpu_100x_family,
+                    required_reuse_speedup,
                 ))
         {
             if let Err(error) = run_workload_benchmark(
@@ -183,7 +184,7 @@ pub(crate) fn run(args: &[String]) {
                         &family.id,
                         case_id,
                         &output,
-                        false,
+                        reusable_cpu_sota_min_speedup("wgpu", family),
                     ))
             {
                 if let Err(error) = run_workload_benchmark(
@@ -373,6 +374,15 @@ fn requires_release_cpu_sota_100x_proof(backend: &str, family: &ReleaseWorkloadF
             .is_some_and(|speedup| speedup >= 100.0)
 }
 
+fn reusable_cpu_sota_min_speedup(backend: &str, family: &ReleaseWorkloadFamily) -> Option<f64> {
+    if backend != "cuda" && backend != "wgpu" {
+        return None;
+    }
+    family
+        .max_cpu_sota_min_speedup_x
+        .filter(|speedup| *speedup > 1.0)
+}
+
 fn backend_workload_artifact(backend: &str, matrix_artifact: &str) -> String {
     if backend == "wgpu" {
         prefixed_benchmark_artifact(matrix_artifact, "wgpu")
@@ -531,6 +541,35 @@ mod tests {
         assert!(
             !requires_release_cpu_sota_100x_proof("wgpu", &required_family),
             "Fix: WGPU comparison evidence must not rewrite the CUDA-only 100x proof aggregate."
+        );
+    }
+
+    #[test]
+    fn optional_cpu_sota_family_requires_reusable_contract_evidence() {
+        let family = ReleaseWorkloadFamily {
+            id: "quantized-linear".to_string(),
+            required: false,
+            matched_cases: vec!["nn.linear_4bit_affine_grouped.1m".to_string()],
+            evidence_artifact: "release/evidence/benchmarks/workload-16-quantized-linear.json"
+                .to_string(),
+            max_cpu_sota_min_speedup_x: Some(100.0),
+            cpu_sota_100x_cases: vec!["nn.linear_4bit_affine_grouped.1m".to_string()],
+        };
+
+        assert_eq!(
+            reusable_cpu_sota_min_speedup("cuda", &family),
+            Some(100.0),
+            "Fix: CUDA optional CPU-SOTA workloads must prove their own contract before reuse."
+        );
+        assert_eq!(
+            reusable_cpu_sota_min_speedup("wgpu", &family),
+            Some(100.0),
+            "Fix: WGPU comparison artifacts must prove the same CPU-SOTA contract before reuse."
+        );
+        assert_eq!(
+            reusable_cpu_sota_min_speedup("cpu-ref", &family),
+            None,
+            "Fix: reusable GPU release contract checks should stay scoped to release GPU backends."
         );
     }
 

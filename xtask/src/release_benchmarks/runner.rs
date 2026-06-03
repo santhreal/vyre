@@ -52,7 +52,7 @@ pub(super) fn run_named_benchmark_if_needed(
     reuse_existing: bool,
 ) {
     if reuse_existing
-        && benchmark_artifact_is_reusable(workspace_root, backend, case_id, case_id, output, false)
+        && benchmark_artifact_is_reusable(workspace_root, backend, case_id, case_id, output, None)
     {
         return;
     }
@@ -72,7 +72,7 @@ pub(super) fn benchmark_artifact_is_reusable(
     family_id: &str,
     case_id: &str,
     output: &str,
-    cpu_sota_100x_required: bool,
+    required_cpu_sota_min_speedup: Option<f64>,
 ) -> bool {
     let path = workspace_root.join(output);
     let text = match read_text_bounded(&path, MAX_RELEASE_BENCHMARK_TEXT_BYTES) {
@@ -109,7 +109,7 @@ pub(super) fn benchmark_artifact_is_reusable(
             backend,
             family_id,
             case_id,
-            cpu_sota_100x_required,
+            required_cpu_sota_min_speedup,
         );
     };
     let current_source_tree_fingerprint =
@@ -122,7 +122,7 @@ pub(super) fn benchmark_artifact_is_reusable(
         backend,
         family_id,
         case_id,
-        cpu_sota_100x_required,
+        required_cpu_sota_min_speedup,
     )
 }
 
@@ -131,7 +131,7 @@ fn benchmark_artifact_report_shape_is_reusable(
     backend: &str,
     family_id: &str,
     case_id: &str,
-    cpu_sota_100x_required: bool,
+    required_cpu_sota_min_speedup: Option<f64>,
 ) -> bool {
     if report.get("selected_backend").and_then(Value::as_str) != Some(backend) {
         return false;
@@ -170,32 +170,42 @@ fn benchmark_artifact_report_shape_is_reusable(
     if !case_has_reusable_timing_metrics(case) {
         return false;
     }
-    if cpu_sota_100x_required
-        && !crate::benchmark_evidence_semantics::benchmark_case_has_cpu_sota_contract(
-            case,
-            Some(backend),
-            100.0,
-        )
-    {
-        return false;
-    }
-    if cpu_sota_100x_required {
-        let contract_passed = case
-            .get("performance")
-            .and_then(|performance| performance.get("contract_passed"))
-            .and_then(Value::as_bool)
-            == Some(true);
-        let speedup_passed = case
-            .get("performance")
-            .and_then(|performance| performance.get("speedup_x"))
-            .and_then(Value::as_f64)
-            .is_some_and(|speedup| speedup >= 100.0);
-        if !contract_passed || !speedup_passed {
+    if let Some(required_speedup) = required_cpu_sota_min_speedup {
+        if !case_has_reusable_cpu_sota_contract(case, backend, required_speedup) {
             return false;
         }
     }
     let _ = family_id;
     true
+}
+
+fn case_has_reusable_cpu_sota_contract(case: &Value, backend: &str, required_speedup: f64) -> bool {
+    crate::benchmark_evidence_semantics::benchmark_case_has_cpu_sota_contract(
+        case,
+        Some(backend),
+        required_speedup,
+    ) && case
+        .get("performance")
+        .and_then(|performance| performance.get("contract_passed"))
+        .and_then(Value::as_bool)
+        == Some(true)
+        && case
+            .get("performance")
+            .and_then(|performance| performance.get("speedup_x"))
+            .and_then(Value::as_f64)
+            .is_some_and(|speedup| speedup >= required_speedup)
+        && measured_speedup(case).is_some_and(|speedup| speedup >= required_speedup)
+}
+
+fn measured_speedup(case: &Value) -> Option<f64> {
+    let metrics = case.get("metrics").and_then(Value::as_object)?;
+    let wall = metrics
+        .get("wall_ns")
+        .and_then(|metric| suite_metric_percentile(Some(metric), "p50"))? as f64;
+    let baseline = metrics
+        .get("baseline_wall_ns")
+        .and_then(|metric| suite_metric_percentile(Some(metric), "p50"))? as f64;
+    (wall > 0.0).then_some(baseline / wall)
 }
 
 fn case_has_reusable_timing_metrics(case: &Value) -> bool {
@@ -310,7 +320,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-condition.json",
-                false,
+                None,
             ),
             "Fix: --reuse-existing should skip valid WGPU fallback artifacts instead of rerunning parity benchmarks."
         );
@@ -345,9 +355,83 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-source-tree.json",
-                false,
+                None,
             ),
             "Fix: reusable benchmark evidence should survive evidence-only commit changes via source_tree_fingerprint."
+        );
+    }
+
+    #[test]
+    fn cuda_reuse_rejects_optional_cpu_sota_contract_failure() {
+        let dir =
+            TempDir::new().expect("Fix: create temp workspace for optional contract reuse test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/workload-16-quantized-linear.json",
+            serde_json::json!({
+                "selected_backend": "cuda",
+                "source_fingerprint": current_test_source_fingerprint(dir.path()),
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "nn.linear_4bit_affine_grouped.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "contract": cpu_sota_contract_json("cuda", 100.0),
+                        "performance": {"contract_passed": false, "speedup_x": 99.0},
+                        "metrics": reusable_timing_metrics()
+                    }
+                ]
+            }),
+        );
+
+        assert!(
+            !benchmark_artifact_is_reusable(
+                dir.path(),
+                "cuda",
+                "quantized-linear",
+                "nn.linear_4bit_affine_grouped.1m",
+                "release/evidence/benchmarks/workload-16-quantized-linear.json",
+                Some(100.0),
+            ),
+            "Fix: --reuse-existing must rerun optional CUDA CPU-SOTA artifacts when their published contract failed."
+        );
+    }
+
+    #[test]
+    fn cuda_reuse_accepts_optional_cpu_sota_contract_with_measured_speedup() {
+        let dir =
+            TempDir::new().expect("Fix: create temp workspace for optional contract reuse test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/workload-16-quantized-linear.json",
+            serde_json::json!({
+                "selected_backend": "cuda",
+                "source_fingerprint": current_test_source_fingerprint(dir.path()),
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "nn.linear_4bit_affine_grouped.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "contract": cpu_sota_contract_json("cuda", 100.0),
+                        "performance": {"contract_passed": true, "speedup_x": 100.0},
+                        "metrics": reusable_timing_metrics()
+                    }
+                ]
+            }),
+        );
+
+        assert!(
+            benchmark_artifact_is_reusable(
+                dir.path(),
+                "cuda",
+                "quantized-linear",
+                "nn.linear_4bit_affine_grouped.1m",
+                "release/evidence/benchmarks/workload-16-quantized-linear.json",
+                Some(100.0),
+            ),
+            "Fix: --reuse-existing should accept optional CUDA CPU-SOTA artifacts only when contract and measured timing evidence agree."
         );
     }
 
@@ -381,7 +465,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-legacy-dirty-source.json",
-                false,
+                None,
             ),
             "Fix: --reuse-existing must rerun artifacts whose dirty source_fingerprint lacks a worktree digest even when source_tree_fingerprint matches."
         );
@@ -416,7 +500,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-missing-source-fingerprint.json",
-                false,
+                None,
             ),
             "Fix: --reuse-existing must rerun artifacts that cannot satisfy backend suite source_fingerprint provenance."
         );
@@ -457,7 +541,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-with-cuda-backend.json",
-                false,
+                None,
             ),
             "Fix: WGPU reuse must reject artifacts whose selected backend drifted to CUDA."
         );
@@ -468,7 +552,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-wrong-case.json",
-                false,
+                None,
             ),
             "Fix: WGPU reuse must reject artifacts that do not contain the requested release case."
         );
@@ -498,7 +582,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-missing-metrics.json",
-                false,
+                None,
             ),
             "Fix: --reuse-existing must rerun pass-only artifacts that lack release timing metrics."
         );
@@ -538,7 +622,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-multi-case.json",
-                false,
+                None,
             ),
             "Fix: --reuse-existing must rerun multi-case artifacts instead of contaminating one-workload backend suite rows."
         );
@@ -577,7 +661,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-hidden-failure.json",
-                false,
+                None,
             ),
             "Fix: --reuse-existing must rerun artifacts whose case evidence contradicts summary.failed and pass status."
         );
@@ -607,7 +691,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-stale-passed.json",
-                false,
+                None,
             ),
             "Fix: --reuse-existing must rerun artifacts whose summary.passed contradicts pass-status case evidence."
         );
@@ -637,7 +721,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-stale-total-cases.json",
-                false,
+                None,
             ),
             "Fix: --reuse-existing must rerun artifacts whose summary.total_cases contradicts the cases array."
         );
@@ -666,7 +750,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-stale-source.json",
-                false,
+                None,
             ),
             "Fix: --reuse-existing must rerun benchmark artifacts captured from a different source fingerprint."
         );
@@ -696,7 +780,7 @@ mod tests {
                 "condition-eval",
                 "release.condition_eval.1m",
                 "release/evidence/benchmarks/wgpu-stale-source-tree.json",
-                false,
+                None,
             ),
             "Fix: source_tree_fingerprint must remain a real freshness gate, not only an optional annotation."
         );
@@ -715,6 +799,21 @@ mod tests {
         serde_json::json!({
             "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
             "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002}
+        })
+    }
+
+    fn cpu_sota_contract_json(backend: &str, min_speedup_x: f64) -> Value {
+        serde_json::json!({
+            "primitive": "fused grouped INT4 linear",
+            "baselines": [
+                {
+                    "name": "Rayon-parallel packed INT4 affine dequantization oracle",
+                    "crate_name": "rayon",
+                    "class": "CpuSota",
+                    "min_speedup_x": min_speedup_x,
+                    "backend_ids": [backend]
+                }
+            ]
         })
     }
 
