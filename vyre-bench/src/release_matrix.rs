@@ -134,8 +134,8 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         title: "PE/header/file metadata condition evaluation",
         release_plan_workload: 4,
         required: true,
-        any_terms: &["metadata.condition", "pe.header", "filesize"],
-        all_terms: &["metadata"],
+        any_terms: &["metadata.condition"],
+        all_terms: &["metadata.condition"],
         bench_target_id: "release.workload.pe_metadata",
         dispatch_policy: "megakernel",
         non_megakernel_justification: None,
@@ -574,7 +574,13 @@ fn build_family_report(
         "release/evidence/benchmarks/workload-{:02}-{}.json",
         family.release_plan_workload, family.id
     );
-    let benchmark_case = preferred_release_case(&matched_cases, &cpu_sota_100x_cases);
+    let benchmark_case = preferred_release_case(
+        &matched_cases,
+        &cpu_sota_100x_cases,
+        REQUIRED_CPU_SOTA_100X_FAMILY_IDS
+            .iter()
+            .any(|required| family.id == *required),
+    );
     let benchmark_command = benchmark_case.map(|case_id| {
         format!(
             "cargo_full run -p vyre-bench -- run --suite release --case {case_id} --backend cuda --enforce-budgets --output {evidence_artifact}"
@@ -623,20 +629,26 @@ fn build_family_report(
 fn preferred_release_case<'a>(
     matched_cases: &'a [String],
     cpu_sota_100x_cases: &'a [String],
+    require_release_defining_cpu_sota: bool,
 ) -> Option<&'a str> {
-    let selected_cases = if cpu_sota_100x_cases.is_empty() {
-        matched_cases
-    } else {
-        cpu_sota_100x_cases
-    };
-    selected_cases
+    if require_release_defining_cpu_sota {
+        return cpu_sota_100x_cases
+            .iter()
+            .find(|case_id| {
+                REQUIRED_CPU_SOTA_100X_CASE_IDS
+                    .iter()
+                    .any(|required| case_id.as_str() == *required)
+            })
+            .map(String::as_str);
+    }
+    matched_cases
         .iter()
         .find(|case_id| {
             REQUIRED_CPU_SOTA_100X_CASE_IDS
                 .iter()
                 .any(|required| case_id.as_str() == *required)
         })
-        .or_else(|| selected_cases.first())
+        .or_else(|| matched_cases.first())
         .map(String::as_str)
 }
 
@@ -709,6 +721,53 @@ fn collect_cpu_sota_contracts(
             max_cpu_sota_min_speedup_x
                 .unwrap_or(0.0)
                 .max(baseline.min_speedup_x),
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn preferred_release_case_rejects_non_release_defining_cpu_sota_cases() {
+        let matched_cases = vec![
+            "conditions.yara_like.batch.16x64k".to_string(),
+            "release.condition_eval.1m".to_string(),
+        ];
+        let cpu_sota_100x_cases = vec!["conditions.yara_like.eval.1m".to_string()];
+
+        assert_eq!(
+            preferred_release_case(&matched_cases, &cpu_sota_100x_cases, true),
+            None,
+            "Fix: release matrix commands must not publish a broad CPU-SOTA case when the 100x case list does not include a release-defining case."
+        );
+    }
+
+    #[test]
+    fn preferred_release_case_falls_back_to_matched_cases_without_cpu_sota_contracts() {
+        let matched_cases = vec![
+            "conditions.yara_like.batch.16x64k".to_string(),
+            "release.condition_eval.1m".to_string(),
+        ];
+        let cpu_sota_100x_cases = Vec::new();
+
+        assert_eq!(
+            preferred_release_case(&matched_cases, &cpu_sota_100x_cases, false),
+            Some("release.condition_eval.1m"),
+            "Fix: non-100x release workload commands should still prefer release-defining matched cases."
+        );
+    }
+
+    #[test]
+    fn preferred_release_case_keeps_non_proof_cpu_sota_workload_commands() {
+        let matched_cases = vec!["nn.linear_4bit_affine_grouped.1m".to_string()];
+        let cpu_sota_100x_cases = vec!["nn.linear_4bit_affine_grouped.1m".to_string()];
+
+        assert_eq!(
+            preferred_release_case(&matched_cases, &cpu_sota_100x_cases, false),
+            Some("nn.linear_4bit_affine_grouped.1m"),
+            "Fix: optional or non-proof 100x workloads should keep reproducible CUDA commands while CPU-SOTA proof workloads require release-defining case ids."
         );
     }
 }

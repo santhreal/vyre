@@ -552,7 +552,7 @@ fn release_matrix_links_workloads_to_artifact_commands() {
 }
 
 #[test]
-fn release_matrix_commands_prefer_release_defining_cpu_sota_cases() {
+fn release_matrix_commands_prefer_canonical_release_workload_cases() {
     let registry = vyre_bench::registry::collect_all();
     let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);
     let expected = [
@@ -567,6 +567,10 @@ fn release_matrix_commands_prefer_release_defining_cpu_sota_cases() {
         ("c-ast-traversal", "release.c_ast_traversal.1m"),
         ("egraph-saturation", "release.egraph_saturation.1m"),
         ("sparse-output-compaction", "sparse.compaction.count.1m"),
+        (
+            "metadata-conditions",
+            "metadata.condition.filesize_header.1m",
+        ),
     ];
 
     for (family_id, case_id) in expected {
@@ -578,7 +582,7 @@ fn release_matrix_commands_prefer_release_defining_cpu_sota_cases() {
         let command = family.benchmark_command.as_deref().unwrap_or("");
         assert!(
             command.contains(&format!("--case {case_id} ")),
-            "Fix: workload `{family_id}` command must prefer release-defining case `{case_id}`, got `{command}`."
+            "Fix: workload `{family_id}` command must prefer canonical release case `{case_id}`, got `{command}`."
         );
     }
 }

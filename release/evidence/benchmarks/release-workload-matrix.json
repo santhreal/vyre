@@ -36,7 +36,7 @@
     "runtime.megakernel.condition.64k",
     "sparse.compaction.count.1m"
   ],
-  "cpu_sota_100x_family_count": 13,
+  "cpu_sota_100x_family_count": 12,
   "cpu_sota_100x_families": [
     "alias-reaching-def",
     "c-ast-traversal",
@@ -45,7 +45,6 @@
     "entropy-window",
     "ifds-witness",
     "megakernel-queued-batches",
-    "metadata-conditions",
     "offset-count-aggregation",
     "quantified-condition-loops",
     "quantized-linear",
@@ -198,36 +197,30 @@
       "dispatch_policy": "megakernel",
       "non_megakernel_justification": null,
       "matched_cases": [
-        "conditions.yara_like.eval.1m",
         "metadata.condition.filesize_header.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-04-metadata-conditions.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case conditions.yara_like.eval.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-04-metadata-conditions.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case metadata.condition.filesize_header.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-04-metadata-conditions.json",
       "bench_target_ids": [
         "release.workload.pe_metadata"
       ],
       "cpu_sota_contracts": [
-        "conditions.yara_like.eval.1m => Rayon-parallel scalar short-circuit rule loop 100x",
         "metadata.condition.filesize_header.1m => optimized CPU PE-header predicate evaluator 50x"
       ],
-      "cpu_sota_100x_cases": [
-        "conditions.yara_like.eval.1m"
-      ],
+      "cpu_sota_100x_cases": [],
       "cpu_sota_baseline_names": [
-        "Rayon-parallel scalar short-circuit rule loop",
         "optimized CPU PE-header predicate evaluator"
       ],
       "cpu_sota_baseline_crates": [
-        "rayon",
         "vyre-libs"
       ],
       "cpu_sota_backend_ids": [
         "cuda",
         "wgpu"
       ],
-      "fair_cpu_sota_baseline_count": 2,
+      "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
-      "max_cpu_sota_min_speedup_x": 100.0
+      "max_cpu_sota_min_speedup_x": 50.0
     },
     {
       "id": "entropy-window",
