@@ -72,6 +72,12 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
                 "100x source artifact `{artifact}` was not produced for cuda"
             ));
         }
+        crate::benchmark_evidence_semantics::inspect_source_artifact_case_integrity(
+            artifact,
+            &report,
+            "CPU-SOTA aggregate proof",
+            &mut blockers,
+        );
         if environment.is_none() {
             environment = report.get("environment").cloned();
         }
@@ -2371,6 +2377,93 @@ mod tests {
                 .and_then(Value::as_u64),
             Some(1),
             "Fix: aggregate CPU-SOTA proof summary must count claimed-only speedup cases as failed."
+        );
+    }
+
+    #[test]
+    fn cpu_100x_proof_surfaces_source_artifact_integrity_blockers() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for CPU-SOTA integrity blocker test.");
+        let artifact_rel = "release/evidence/benchmarks/cuda-integrity-drift.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: CPU-SOTA integrity artifact path must have a parent directory."),
+        )
+        .expect("Fix: create CPU-SOTA integrity artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "summary": {
+                    "total_cases": 1,
+                    "passed": 1,
+                    "failed": 0,
+                    "total_time_ns": 0,
+                    "cache_hit_rate": null
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"],
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002},
+                            "cuda_resident_borrowed_fallback_dispatches": {"p50": 2.0}
+                        },
+                        "contract": {
+                            "primitive": "release condition eval",
+                            "baselines": [
+                                {
+                                    "name": "CPU-SOTA",
+                                    "crate_name": "vyre-runtime",
+                                    "class": "CpuSota",
+                                    "min_speedup_x": 100.0,
+                                    "backend_ids": ["wgpu"]
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 200.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize CPU-SOTA integrity benchmark artifact JSON."),
+        )
+        .expect("Fix: write CPU-SOTA integrity benchmark artifact JSON.");
+
+        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()]);
+
+        let proof_path = dir
+            .path()
+            .join("release/evidence/benchmarks/cpu-only-100x-proof.json");
+        let proof_text = fs::read_to_string(&proof_path)
+            .expect("Fix: read generated CPU-SOTA integrity proof artifact.");
+        let proof = serde_json::from_str::<Value>(&proof_text)
+            .expect("Fix: generated CPU-SOTA integrity proof must be valid JSON.");
+        let blockers = proof
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated CPU-SOTA proof must include blockers array.");
+
+        assert!(
+            blockers.iter().filter_map(Value::as_str).any(|blocker| {
+                blocker.contains(
+                    "source_artifact `release/evidence/benchmarks/cuda-integrity-drift.json` case `release.condition_eval.1m` backend `cuda` has no applicable performance contract baseline",
+                )
+            }),
+            "Fix: aggregate CPU-SOTA proof blockers must expose wrong-backend source artifact contracts; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().filter_map(Value::as_str).any(|blocker| {
+                blocker.contains(
+                    "source_artifact `release/evidence/benchmarks/cuda-integrity-drift.json` case `release.condition_eval.1m` has cuda_resident_borrowed_fallback_dispatches p50=2",
+                ) && blocker.contains("CPU-SOTA aggregate proof must use native resident dispatch")
+            }),
+            "Fix: aggregate CPU-SOTA proof blockers must expose borrowed resident CUDA dispatch telemetry; blockers={blockers:?}"
         );
     }
 

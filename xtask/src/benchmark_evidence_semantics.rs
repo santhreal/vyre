@@ -627,7 +627,7 @@ fn max_release_axis_vram_mib(reports: &[Value]) -> Option<u64> {
     environment_values.chain(metric_values).max()
 }
 
-fn inspect_source_artifact_case_integrity(
+pub(crate) fn inspect_source_artifact_case_integrity(
     artifact: &str,
     report: &Value,
     native_dispatch_context: &str,
