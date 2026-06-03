@@ -279,6 +279,12 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
     if suite_artifacts.is_empty() {
         issues.push("cuda-release-suite artifacts are empty or missing".to_string());
     }
+    for issue in backend_suite_inventory_issues(cuda_suite) {
+        issues.push(format!(
+            "cuda-release-suite {}",
+            describe_backend_suite_inventory_issue(&issue)
+        ));
+    }
     for artifact in source_artifacts.difference(&suite_artifacts) {
         issues.push(format!(
             "source_artifact `{artifact}` is not listed in cuda-release-suite artifacts"
@@ -2064,6 +2070,46 @@ pub(crate) fn backend_suite_inventory_issues(suite: &Value) -> Vec<BackendSuiteI
     issues
 }
 
+pub(crate) fn describe_backend_suite_inventory_issue(issue: &BackendSuiteInventoryIssue) -> String {
+    match issue {
+        BackendSuiteInventoryIssue::CountMismatch {
+            artifact_count,
+            status_count,
+        } => {
+            format!("inventory count mismatch: artifacts={artifact_count}, artifact_statuses={status_count}")
+        }
+        BackendSuiteInventoryIssue::DeclaredFamilyArtifactCountMismatch {
+            family_count,
+            artifact_count,
+        } => {
+            format!("family_count={family_count}, but artifacts has {artifact_count} row(s)")
+        }
+        BackendSuiteInventoryIssue::DeclaredFamilyStatusCountMismatch {
+            family_count,
+            status_family_count,
+        } => {
+            format!(
+                "family_count={family_count}, but artifact_statuses has {status_family_count} unique family_id row(s)"
+            )
+        }
+        BackendSuiteInventoryIssue::MissingStatus { path } => {
+            format!("lists artifact `{path}` without matching artifact_statuses entry")
+        }
+        BackendSuiteInventoryIssue::MissingArtifact { path } => {
+            format!("has artifact_statuses path `{path}` absent from artifacts")
+        }
+        BackendSuiteInventoryIssue::DuplicateArtifact { path } => {
+            format!("has duplicate artifact `{path}`")
+        }
+        BackendSuiteInventoryIssue::DuplicateStatus { path } => {
+            format!("has duplicate artifact_statuses path `{path}`")
+        }
+        BackendSuiteInventoryIssue::DuplicateFamily { family_id, count } => {
+            format!("has {count} artifact_statuses rows for family `{family_id}`")
+        }
+    }
+}
+
 pub(crate) fn backend_suite_parity_issues(
     cuda_suite: &Value,
     wgpu_suite: &Value,
@@ -3455,6 +3501,94 @@ mod tests {
                 "bench-release-axes gbs_scan_throughput=999 does not match source artifacts 4"
             )),
             "Fix: release-axis scalar values must be recomputed from source artifacts instead of trusting stale axes JSON; issues={issues:?}"
+        );
+    }
+
+    #[test]
+    fn cuda_release_axes_reject_suite_status_inventory_drift() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for release axes suite inventory test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temp benchmark evidence directory.");
+        let source_fingerprint = current_test_source_fingerprint(dir.path());
+        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let mut artifacts = Vec::new();
+        for index in 1..=12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            std::fs::write(
+                dir.path().join(&artifact),
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "source_fingerprint": &source_fingerprint,
+                    "source_tree_fingerprint": &source_tree_fingerprint,
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "environment": {
+                        "gpu_devices": [{"memory_total_mib": 24576}]
+                    },
+                    "cases": [
+                        {
+                            "id": format!("release.inventory-drift.{index}"),
+                            "backend_id": "cuda",
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"p50": 17_000},
+                                "cold_compile_ns": {"p50": 2_000_000},
+                                "wall_gb_s_x1000": {"p50": 4_000}
+                            },
+                            "correctness": {
+                                "Toleranced": {"max_observed_ulp": 0}
+                            }
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize suite inventory source artifact."),
+            )
+            .expect("Fix: write suite inventory source artifact.");
+            artifacts.push(artifact);
+        }
+        let mut status_artifacts = artifacts.clone();
+        status_artifacts[11] = "release/evidence/benchmarks/wgpu-workload-12.json".to_string();
+        let artifact_statuses = status_artifacts
+            .iter()
+            .enumerate()
+            .map(|(index, artifact)| {
+                serde_json::json!({
+                    "path": artifact,
+                    "family_id": format!("family-{index:02}"),
+                    "requested_case_id": format!("release.inventory-drift.{index}")
+                })
+            })
+            .collect::<Vec<_>>();
+        let axes = serde_json::json!({
+            "warm_us_per_file": 17.0,
+            "cold_pipeline_build_ms": 2.0,
+            "gbs_scan_throughput": 4.0,
+            "ulp_drift_max": 0,
+            "max_vram_mib": 24576,
+            "source_artifacts": artifacts.clone()
+        });
+        let cuda_suite = serde_json::json!({
+            "backend": "cuda",
+            "artifacts": artifacts,
+            "artifact_statuses": artifact_statuses
+        });
+
+        let issues = cuda_release_axes_source_artifact_issues(dir.path(), &axes, &cuda_suite);
+
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "cuda-release-suite lists artifact `release/evidence/benchmarks/workload-12.json` without matching artifact_statuses entry"
+            )),
+            "Fix: release axes must reject CUDA suite artifacts that lack matching status rows; issues={issues:?}"
+        );
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "cuda-release-suite has artifact_statuses path `release/evidence/benchmarks/wgpu-workload-12.json` absent from artifacts"
+            )),
+            "Fix: release axes must reject stale or cross-backend suite status rows before bench-release consumes clean axes; issues={issues:?}"
         );
     }
 

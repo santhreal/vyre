@@ -551,6 +551,48 @@ mod tests {
     }
 
     #[test]
+    fn bench_release_rejects_suite_status_inventory_drift() {
+        let dir = tempfile::TempDir::new().expect(
+            "Fix: create temporary workspace for bench-release suite inventory drift test.",
+        );
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        let artifacts = write_canonical_axes_fixture(&benchmark_dir, dir.path(), None);
+        let mut artifact_statuses = artifacts
+            .iter()
+            .map(|artifact| {
+                serde_json::json!({
+                    "path": artifact,
+                    "blockers": []
+                })
+            })
+            .collect::<Vec<_>>();
+        artifact_statuses[11]["path"] =
+            Value::String("release/evidence/benchmarks/wgpu-workload-12.json".to_string());
+        fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "artifacts": artifacts,
+                "artifact_statuses": artifact_statuses,
+                "blockers": []
+            }))
+            .expect("Fix: serialize temporary CUDA release suite with inventory drift."),
+        )
+        .expect("Fix: write temporary CUDA release suite with inventory drift.");
+
+        let error = load_release_axes(&benchmark_dir)
+            .expect_err("Fix: suite evidence with status inventory drift must not load.");
+
+        assert!(
+            error.contains(
+                "cuda-release-suite lists artifact `release/evidence/benchmarks/workload-12.json` without matching artifact_statuses entry"
+            ),
+            "Fix: bench-release must reject CUDA suite inventory drift before printing axes; error={error}"
+        );
+    }
+
+    #[test]
     fn bench_release_rejects_mislabeled_cuda_suite_backend() {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for bench-release suite backend test.");

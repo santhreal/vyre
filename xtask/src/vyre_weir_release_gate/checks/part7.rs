@@ -1,8 +1,9 @@
 use crate::benchmark_evidence_semantics::{
     backend_suite_artifact_status_issues, backend_suite_backend_issue,
     backend_suite_inventory_issues, backend_suite_parity_issues,
+    describe_backend_suite_inventory_issue,
     expected_backend_for_suite_evidence, BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue,
-    BackendSuiteInventoryIssue, BackendSuiteParityIssue,
+    BackendSuiteParityIssue,
 };
 
 pub(crate) fn check_backend_suite_report(
@@ -78,51 +79,11 @@ pub(crate) fn check_backend_suite_report(
         )),
     }
     for issue in backend_suite_inventory_issues(&report) {
-        match issue {
-            BackendSuiteInventoryIssue::CountMismatch {
-                artifact_count,
-                status_count,
-            } => failures.push(format!(
-                "requirement `{}` backend suite `{suffix}` inventory count mismatch: artifacts={artifact_count}, artifact_statuses={status_count}",
-                requirement.id
-            )),
-            BackendSuiteInventoryIssue::DeclaredFamilyArtifactCountMismatch {
-                family_count,
-                artifact_count,
-            } => failures.push(format!(
-                "requirement `{}` backend suite `{suffix}` family_count={family_count}, but artifacts has {artifact_count} row(s)",
-                requirement.id
-            )),
-            BackendSuiteInventoryIssue::DeclaredFamilyStatusCountMismatch {
-                family_count,
-                status_family_count,
-            } => failures.push(format!(
-                "requirement `{}` backend suite `{suffix}` family_count={family_count}, but artifact_statuses has {status_family_count} unique family_id row(s)",
-                requirement.id
-            )),
-            BackendSuiteInventoryIssue::MissingStatus { path } => failures.push(format!(
-                "requirement `{}` backend suite `{suffix}` lists artifact `{path}` without matching artifact_statuses entry",
-                requirement.id
-            )),
-            BackendSuiteInventoryIssue::MissingArtifact { path } => failures.push(format!(
-                "requirement `{}` backend suite `{suffix}` has artifact_statuses path `{path}` absent from artifacts",
-                requirement.id
-            )),
-            BackendSuiteInventoryIssue::DuplicateArtifact { path } => failures.push(format!(
-                "requirement `{}` backend suite `{suffix}` lists artifact `{path}` more than once",
-                requirement.id
-            )),
-            BackendSuiteInventoryIssue::DuplicateStatus { path } => failures.push(format!(
-                "requirement `{}` backend suite `{suffix}` has duplicate artifact_statuses path `{path}`",
-                requirement.id
-            )),
-            BackendSuiteInventoryIssue::DuplicateFamily { family_id, count } => {
-                failures.push(format!(
-                    "requirement `{}` backend suite `{suffix}` has {count} artifact_statuses rows for family `{family_id}`",
-                    requirement.id
-                ))
-            }
-        }
+        failures.push(format!(
+            "requirement `{}` backend suite `{suffix}` {}",
+            requirement.id,
+            describe_backend_suite_inventory_issue(&issue)
+        ));
     }
     if let Some(statuses) = report
         .get("artifact_statuses")

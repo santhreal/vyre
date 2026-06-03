@@ -1,9 +1,10 @@
 use crate::benchmark_evidence_semantics::{
     backend_suite_artifact_status_issues, backend_suite_backend_issue,
     backend_suite_inventory_issues, backend_suite_parity_issues,
+    describe_backend_suite_inventory_issue,
     expected_backend_for_suite_evidence, source_fingerprint_issues,
-    BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue, BackendSuiteInventoryIssue,
-    BackendSuiteParityIssue, SourceFingerprintIssue,
+    BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue, BackendSuiteParityIssue,
+    SourceFingerprintIssue,
 };
 
 fn inspect_backend_suite_semantics(
@@ -63,41 +64,10 @@ fn inspect_backend_suite_semantics(
         }
     }
     for issue in backend_suite_inventory_issues(value) {
-        match issue {
-            BackendSuiteInventoryIssue::CountMismatch {
-                artifact_count,
-                status_count,
-            } => blockers.push(format!(
-                "{evidence}: suite inventory count mismatch: artifacts={artifact_count}, artifact_statuses={status_count}"
-            )),
-            BackendSuiteInventoryIssue::DeclaredFamilyArtifactCountMismatch {
-                family_count,
-                artifact_count,
-            } => blockers.push(format!(
-                "{evidence}: family_count={family_count}, but artifacts has {artifact_count} row(s)"
-            )),
-            BackendSuiteInventoryIssue::DeclaredFamilyStatusCountMismatch {
-                family_count,
-                status_family_count,
-            } => blockers.push(format!(
-                "{evidence}: family_count={family_count}, but artifact_statuses has {status_family_count} unique family_id row(s)"
-            )),
-            BackendSuiteInventoryIssue::MissingStatus { path } => blockers.push(format!(
-                "{evidence}: suite lists artifact `{path}` without matching artifact_statuses entry"
-            )),
-            BackendSuiteInventoryIssue::MissingArtifact { path } => blockers.push(format!(
-                "{evidence}: suite artifact_statuses path `{path}` is absent from artifacts"
-            )),
-            BackendSuiteInventoryIssue::DuplicateArtifact { path } => blockers.push(format!(
-                "{evidence}: suite lists artifact `{path}` more than once"
-            )),
-            BackendSuiteInventoryIssue::DuplicateStatus { path } => blockers.push(format!(
-                "{evidence}: suite has duplicate artifact_statuses path `{path}`"
-            )),
-            BackendSuiteInventoryIssue::DuplicateFamily { family_id, count } => blockers.push(
-                format!("{evidence}: suite has {count} artifact_statuses rows for family `{family_id}`"),
-            ),
-        }
+        blockers.push(format!(
+            "{evidence}: suite {}",
+            describe_backend_suite_inventory_issue(&issue)
+        ));
     }
     let Some(statuses) = value
         .get("artifact_statuses")
