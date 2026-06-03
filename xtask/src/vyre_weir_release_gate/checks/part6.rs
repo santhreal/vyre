@@ -68,11 +68,7 @@ pub(crate) fn check_benchmark_report_has_cases(
             requirement.id
         ));
     }
-    check_case_backend_matches_selected_backend(requirement, suffix, &report, failures);
-    check_contract_baselines_apply_to_backend(requirement, suffix, &report, failures);
-    check_cuda_telemetry_labels_match_counters(requirement, suffix, &report, failures);
-    check_benchmark_report_provenance(requirement, suffix, &report, failures);
-    check_benchmark_source_artifact_files(requirement, suffix, base_dir, &report, failures);
+    check_benchmark_reproducibility_provenance(requirement, suffix, base_dir, &report, failures);
     if let (Some((field, source_fingerprint)), Some(current_source_fingerprint)) = (
         report_freshness_fingerprint(&report),
         current_freshness_fingerprint_for_report(&path, &report),
@@ -951,6 +947,71 @@ mod tests {
                 "benchmark `wgpu-missing-source.json` must include source fingerprint or source artifact provenance"
             )),
             "Fix: generic benchmark gate must reject reports with no source provenance; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn benchmark_report_has_cases_rejects_missing_case_reproducibility_provenance() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for case provenance benchmark gate test.");
+        let artifact = dir.path().join("wgpu-missing-case-provenance.json");
+        fs::write(
+            &artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567;dirty=false",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0, "cache_hit_rate": null},
+                "environment": {"cpu_model": "test CPU"},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "contract": {
+                            "baselines": [
+                                {
+                                    "class": "CpuSota",
+                                    "backend_ids": ["wgpu"],
+                                    "min_speedup_x": 1.01
+                                }
+                            ]
+                        },
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 1, "p95": 2, "p99": 3}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize missing case provenance benchmark evidence."),
+        )
+        .expect("Fix: write missing case provenance benchmark evidence.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["wgpu-missing-case-provenance.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_benchmark_report_has_cases(
+            &requirement,
+            dir.path(),
+            "wgpu-missing-case-provenance.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "benchmark `wgpu-missing-case-provenance.json` case `release.condition_eval.1m` must include dataset/corpus/input fingerprint provenance"
+            )),
+            "Fix: generic benchmark gate must reject case rows without input provenance; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "benchmark `wgpu-missing-case-provenance.json` case `release.condition_eval.1m` must include correctness oracle evidence"
+            )),
+            "Fix: generic benchmark gate must reject case rows without correctness proof; failures={failures:?}"
         );
     }
 
