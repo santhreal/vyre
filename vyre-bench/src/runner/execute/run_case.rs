@@ -455,6 +455,7 @@ pub(super) fn evaluate_contract(
         _ => None,
     };
     let mut violations = Vec::new();
+    let mut applicable_baselines = 0usize;
     for baseline in &contract.baselines {
         if !baseline.backend_ids.is_empty()
             && !baseline
@@ -464,6 +465,7 @@ pub(super) fn evaluate_contract(
         {
             continue;
         }
+        applicable_baselines += 1;
         match speedup_x {
             Some(speedup) if speedup >= baseline.min_speedup_x => {}
             Some(speedup) => violations.push(format!(
@@ -475,6 +477,12 @@ pub(super) fn evaluate_contract(
                 contract.primitive, baseline.name
             )),
         }
+    }
+    if applicable_baselines == 0 {
+        violations.push(format!(
+            "{} has no performance baseline that applies to backend `{backend_id}`",
+            contract.primitive
+        ));
     }
     PerformanceEvaluation {
         speedup_x,
@@ -489,6 +497,64 @@ mod tests {
 
     fn stats(value: u64) -> MetricStats {
         single_sample_stats(value)
+    }
+
+    fn contract_for_backends(backends: &[&str], min_speedup_x: f64) -> PerformanceContract {
+        PerformanceContract {
+            primitive: "release workload".to_string(),
+            baselines: vec![crate::api::case::BaselineTarget {
+                name: "cpu sota".to_string(),
+                crate_name: "vyre".to_string(),
+                class: crate::api::case::BaselineClass::CpuSota,
+                min_speedup_x,
+                backend_ids: backends.iter().map(|backend| backend.to_string()).collect(),
+            }],
+        }
+    }
+
+    #[test]
+    fn contract_fails_when_no_baseline_applies_to_backend() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("dispatch_ns".to_string(), stats(1));
+        metrics.insert("baseline_wall_ns".to_string(), stats(1_000));
+
+        let evaluation =
+            evaluate_contract(&contract_for_backends(&["cuda"], 100.0), &metrics, "wgpu");
+
+        assert_eq!(
+            evaluation.speedup_x,
+            Some(1_000.0),
+            "Fix: speedup measurement should still be reported when the contract backend set is wrong."
+        );
+        assert!(
+            !evaluation.contract_passed,
+            "Fix: WGPU benchmark evidence must not pass by skipping a CUDA-only baseline."
+        );
+        assert!(
+            evaluation
+                .violations
+                .iter()
+                .any(|violation| violation.contains("no performance baseline")),
+            "Fix: contract failures must explain that no baseline applies to the active backend."
+        );
+    }
+
+    #[test]
+    fn contract_with_empty_backend_ids_applies_to_every_backend() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("dispatch_ns".to_string(), stats(10));
+        metrics.insert("baseline_wall_ns".to_string(), stats(1_000));
+
+        let evaluation = evaluate_contract(&contract_for_backends(&[], 50.0), &metrics, "wgpu");
+
+        assert!(
+            evaluation.contract_passed,
+            "Fix: backend-agnostic baselines must still apply to WGPU and other backends."
+        );
+        assert!(
+            evaluation.violations.is_empty(),
+            "Fix: backend-agnostic passing contracts must not accumulate baseline applicability violations."
+        );
     }
 
     #[test]

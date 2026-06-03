@@ -23,6 +23,12 @@ pub(crate) enum BackendConsistencyIssue {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ContractBackendIssue {
+    MissingBaselines { case_id: String, backend_id: String },
+    NoApplicableBaseline { case_id: String, backend_id: String },
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum CudaTelemetryLabelIssue {
     MissingLabel {
@@ -340,6 +346,59 @@ pub(crate) fn backend_consistency_issues(report: &Value) -> Vec<BackendConsisten
             }
         })
         .collect()
+}
+
+pub(crate) fn contract_backend_issues(report: &Value) -> Vec<ContractBackendIssue> {
+    let report_backend = report.get("selected_backend").and_then(non_empty_str);
+    let Some(cases) = report.get("cases").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    let mut issues = Vec::new();
+    for case in cases {
+        let case_id = case_id(case);
+        let Some(backend_id) = case
+            .get("backend_id")
+            .and_then(non_empty_str)
+            .or(report_backend)
+        else {
+            continue;
+        };
+        let Some(contract) = case.get("contract").filter(|contract| !contract.is_null()) else {
+            continue;
+        };
+        let Some(baselines) = contract.get("baselines").and_then(Value::as_array) else {
+            issues.push(ContractBackendIssue::MissingBaselines {
+                case_id,
+                backend_id: backend_id.to_string(),
+            });
+            continue;
+        };
+        if baselines.is_empty() {
+            issues.push(ContractBackendIssue::MissingBaselines {
+                case_id,
+                backend_id: backend_id.to_string(),
+            });
+            continue;
+        }
+        let applies = baselines.iter().any(|baseline| {
+            baseline
+                .get("backend_ids")
+                .and_then(Value::as_array)
+                .is_none_or(|backend_ids| {
+                    backend_ids.is_empty()
+                        || backend_ids
+                            .iter()
+                            .any(|candidate| candidate.as_str() == Some(backend_id))
+                })
+        });
+        if !applies {
+            issues.push(ContractBackendIssue::NoApplicableBaseline {
+                case_id,
+                backend_id: backend_id.to_string(),
+            });
+        }
+    }
+    issues
 }
 
 pub(crate) fn cuda_telemetry_label_issues(report: &Value) -> Vec<CudaTelemetryLabelIssue> {
@@ -676,6 +735,84 @@ mod tests {
         assert!(
             backend_consistency_issues(&manifest).is_empty(),
             "Fix: backend consistency applies to benchmark reports that declare selected_backend."
+        );
+    }
+
+    #[test]
+    fn contract_backend_issues_reject_cuda_only_contract_on_wgpu_case() {
+        let report = serde_json::json!({
+            "selected_backend": "wgpu",
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "wgpu",
+                    "contract": {
+                        "primitive": "condition eval",
+                        "baselines": [
+                            {"backend_ids": ["cuda"], "min_speedup_x": 100.0}
+                        ]
+                    }
+                }
+            ]
+        });
+
+        assert_eq!(
+            contract_backend_issues(&report),
+            vec![ContractBackendIssue::NoApplicableBaseline {
+                case_id: "release.condition_eval.1m".to_string(),
+                backend_id: "wgpu".to_string(),
+            }],
+            "Fix: WGPU benchmark evidence must not pass a CUDA-only performance contract by omission."
+        );
+    }
+
+    #[test]
+    fn contract_backend_issues_accept_backend_agnostic_contract() {
+        let report = serde_json::json!({
+            "selected_backend": "wgpu",
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "wgpu",
+                    "contract": {
+                        "primitive": "condition eval",
+                        "baselines": [
+                            {"backend_ids": [], "min_speedup_x": 2.0}
+                        ]
+                    }
+                }
+            ]
+        });
+
+        assert!(
+            contract_backend_issues(&report).is_empty(),
+            "Fix: backend-agnostic contracts must remain valid for fallback backends."
+        );
+    }
+
+    #[test]
+    fn contract_backend_issues_reject_empty_baseline_list() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "contract": {
+                        "primitive": "condition eval",
+                        "baselines": []
+                    }
+                }
+            ]
+        });
+
+        assert_eq!(
+            contract_backend_issues(&report),
+            vec![ContractBackendIssue::MissingBaselines {
+                case_id: "release.condition_eval.1m".to_string(),
+                backend_id: "cuda".to_string(),
+            }],
+            "Fix: a performance contract with no baselines must not prove release performance."
         );
     }
 

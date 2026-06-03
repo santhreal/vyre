@@ -138,6 +138,7 @@ fn inspect_workload_benchmark_provenance(
         ));
     }
     check_case_backend_matches_selected_backend(evidence, value, blockers);
+    inspect_contract_baselines_apply_to_backend(evidence, value, blockers);
     check_cuda_telemetry_labels_match_counters(evidence, value, blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
         return;
@@ -292,6 +293,29 @@ fn check_launch_plan_label_matches_count(
             )),
             LaunchPlanLabelIssue::MultiHasSingle { launch_count } => blockers.push(format!(
                 "{evidence}: case `{case_id}` reports {launch_count:.0} kernel launches but lists `single-dispatch-launch-plan`"
+            )),
+        }
+    }
+}
+
+fn inspect_contract_baselines_apply_to_backend(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    for issue in crate::benchmark_evidence_semantics::contract_backend_issues(value) {
+        match issue {
+            crate::benchmark_evidence_semantics::ContractBackendIssue::MissingBaselines {
+                case_id,
+                backend_id,
+            } => blockers.push(format!(
+                "{evidence}: case `{case_id}` backend `{backend_id}` has a performance contract with no baselines"
+            )),
+            crate::benchmark_evidence_semantics::ContractBackendIssue::NoApplicableBaseline {
+                case_id,
+                backend_id,
+            } => blockers.push(format!(
+                "{evidence}: case `{case_id}` backend `{backend_id}` has no applicable performance contract baseline"
             )),
         }
     }

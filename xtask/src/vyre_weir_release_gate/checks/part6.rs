@@ -1,7 +1,7 @@
 use crate::benchmark_evidence_semantics::{
-    backend_consistency_issues, cuda_telemetry_label_issues, launch_plan_label_issues,
-    source_fingerprint_issues, BackendConsistencyIssue, CudaTelemetryLabelIssue,
-    LaunchPlanLabelIssue, SourceFingerprintIssue,
+    backend_consistency_issues, contract_backend_issues, cuda_telemetry_label_issues,
+    launch_plan_label_issues, source_fingerprint_issues, BackendConsistencyIssue,
+    ContractBackendIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue, SourceFingerprintIssue,
 };
 
 pub(crate) fn check_benchmark_report_has_cases(
@@ -220,6 +220,7 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
         ));
     }
     check_case_backend_matches_selected_backend(requirement, label, report, failures);
+    check_contract_baselines_apply_to_backend(requirement, label, report, failures);
     check_cuda_telemetry_labels_match_counters(requirement, label, report, failures);
     let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) else {
         return;
@@ -315,6 +316,32 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
                 "requirement `{}` benchmark `{label}` case `{id}` must list optimization passes applied",
                 requirement.id
             ));
+        }
+    }
+}
+
+fn check_contract_baselines_apply_to_backend(
+    requirement: &Requirement,
+    label: &str,
+    report: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    for issue in contract_backend_issues(report) {
+        match issue {
+            ContractBackendIssue::MissingBaselines {
+                case_id,
+                backend_id,
+            } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{case_id}` backend `{backend_id}` has a performance contract with no baselines",
+                requirement.id
+            )),
+            ContractBackendIssue::NoApplicableBaseline {
+                case_id,
+                backend_id,
+            } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{case_id}` backend `{backend_id}` has no applicable performance contract baseline",
+                requirement.id
+            )),
         }
     }
 }

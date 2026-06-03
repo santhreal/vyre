@@ -351,6 +351,7 @@ fn inspect_backend_suite_status_artifact_consistency(
             }
         };
         inspect_backend_suite_artifact_status(evidence, status, &artifact_report, blockers);
+        inspect_suite_artifact_contract_baselines(evidence, artifact, &artifact_report, blockers);
         if let Some(source_fingerprint) = artifact_report
             .get("source_fingerprint")
             .and_then(serde_json::Value::as_str)
@@ -362,6 +363,30 @@ fn inspect_backend_suite_status_artifact_consistency(
                 source_fingerprint,
                 blockers,
             );
+        }
+    }
+}
+
+fn inspect_suite_artifact_contract_baselines(
+    evidence: &str,
+    artifact: &str,
+    artifact_report: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    for issue in crate::benchmark_evidence_semantics::contract_backend_issues(artifact_report) {
+        match issue {
+            crate::benchmark_evidence_semantics::ContractBackendIssue::MissingBaselines {
+                case_id,
+                backend_id,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{artifact}` case `{case_id}` backend `{backend_id}` has a performance contract with no baselines"
+            )),
+            crate::benchmark_evidence_semantics::ContractBackendIssue::NoApplicableBaseline {
+                case_id,
+                backend_id,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{artifact}` case `{case_id}` backend `{backend_id}` has no applicable performance contract baseline"
+            )),
         }
     }
 }
