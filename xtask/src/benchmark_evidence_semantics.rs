@@ -135,6 +135,12 @@ pub(crate) enum BackendSuiteArtifactStatusIssue {
         status_failed_count: u64,
         artifact_failed_count: u64,
     },
+    NumericFieldMismatch {
+        path: String,
+        field: &'static str,
+        status_value: u64,
+        artifact_value: u64,
+    },
     CpuSota100xContractCaseCountMismatch {
         path: String,
         status_contract_cases: u64,
@@ -374,6 +380,19 @@ pub(crate) fn backend_suite_artifact_status_issues(
         }
     }
 
+    for (field, artifact_value) in backend_suite_numeric_artifact_fields(artifact_report) {
+        if let Some(status_value) = status.get(field).and_then(Value::as_u64) {
+            if status_value != artifact_value {
+                issues.push(BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: path.clone(),
+                    field,
+                    status_value,
+                    artifact_value,
+                });
+            }
+        }
+    }
+
     let (artifact_contract_cases, artifact_passing_cases) =
         artifact_cpu_sota_100x_contract_counts(artifact_report);
     if let Some(status_contract_cases) = status
@@ -423,6 +442,107 @@ pub(crate) fn backend_suite_artifact_status_issues(
     }
 
     issues
+}
+
+fn backend_suite_numeric_artifact_fields(artifact_report: &Value) -> Vec<(&'static str, u64)> {
+    let fields = [
+        (
+            "min_wall_samples",
+            artifact_min_metric_samples(artifact_report, "wall_ns"),
+        ),
+        (
+            "min_baseline_wall_samples",
+            artifact_min_metric_samples(artifact_report, "baseline_wall_ns"),
+        ),
+        (
+            "min_wall_p50",
+            artifact_min_metric_percentile(artifact_report, "wall_ns", "p50"),
+        ),
+        (
+            "min_wall_p95",
+            artifact_min_metric_percentile(artifact_report, "wall_ns", "p95"),
+        ),
+        (
+            "min_wall_p99",
+            artifact_min_metric_percentile(artifact_report, "wall_ns", "p99"),
+        ),
+        (
+            "min_baseline_wall_p50",
+            artifact_min_metric_percentile(artifact_report, "baseline_wall_ns", "p50"),
+        ),
+        (
+            "min_baseline_wall_p95",
+            artifact_min_metric_percentile(artifact_report, "baseline_wall_ns", "p95"),
+        ),
+        (
+            "min_baseline_wall_p99",
+            artifact_min_metric_percentile(artifact_report, "baseline_wall_ns", "p99"),
+        ),
+        (
+            "min_kernel_launches",
+            artifact_min_metric_percentile(artifact_report, "kernel_launches", "p50"),
+        ),
+        (
+            "min_cuda_ptx_source_cache_entries",
+            artifact_min_metric_percentile(artifact_report, "cuda_ptx_source_cache_entries", "p50"),
+        ),
+        (
+            "min_cuda_ptx_source_cache_hits",
+            artifact_min_metric_percentile(artifact_report, "cuda_ptx_source_cache_hits", "p50"),
+        ),
+        (
+            "min_cuda_ptx_source_cache_misses",
+            artifact_min_metric_percentile(artifact_report, "cuda_ptx_source_cache_misses", "p50"),
+        ),
+    ];
+    fields
+        .into_iter()
+        .filter_map(|(field, value)| value.map(|value| (field, value)))
+        .collect()
+}
+
+fn artifact_min_metric_samples(artifact_report: &Value, metric_name: &str) -> Option<u64> {
+    let cases = artifact_report.get("cases").and_then(Value::as_array)?;
+    if cases.is_empty() {
+        return None;
+    }
+    Some(
+        cases
+            .iter()
+            .map(|case| {
+                case.get("metrics")
+                    .and_then(|metrics| metrics.get(metric_name))
+                    .and_then(|metric| metric.get("samples"))
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0)
+            })
+            .min()
+            .unwrap_or(0),
+    )
+}
+
+fn artifact_min_metric_percentile(
+    artifact_report: &Value,
+    metric_name: &str,
+    percentile: &str,
+) -> Option<u64> {
+    let cases = artifact_report.get("cases").and_then(Value::as_array)?;
+    if cases.is_empty() {
+        return None;
+    }
+    Some(
+        cases
+            .iter()
+            .map(|case| {
+                case.get("metrics")
+                    .and_then(|metrics| metrics.get(metric_name))
+                    .and_then(|metric| metric.get(percentile))
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0)
+            })
+            .min()
+            .unwrap_or(0),
+    )
 }
 
 fn artifact_cpu_sota_100x_contract_counts(artifact_report: &Value) -> (u64, u64) {
@@ -1347,6 +1467,62 @@ mod tests {
         assert!(
             backend_suite_artifact_status_issues(&status, &artifact).is_empty(),
             "Fix: matching suite status and artifact JSON should pass."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_inflated_metric_minima() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+            "selected_backend": "wgpu",
+            "case_count": 1,
+            "failed_count": 0,
+            "requested_case_id": "release.condition_eval.1m",
+            "min_wall_samples": 35,
+            "min_wall_p50": 100,
+            "min_kernel_launches": 1
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "wgpu",
+            "summary": {"failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "wgpu",
+                    "metrics": {
+                        "wall_ns": {"samples": 20, "p50": 150},
+                        "kernel_launches": {"p50": 0}
+                    }
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"
+                        .to_string(),
+                    field: "min_wall_samples",
+                    status_value: 35,
+                    artifact_value: 20,
+                },
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"
+                        .to_string(),
+                    field: "min_wall_p50",
+                    status_value: 100,
+                    artifact_value: 150,
+                },
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"
+                        .to_string(),
+                    field: "min_kernel_launches",
+                    status_value: 1,
+                    artifact_value: 0,
+                },
+            ],
+            "Fix: backend suite status metric minima must be recomputed from the artifact JSON, not trusted as independent proof."
         );
     }
 

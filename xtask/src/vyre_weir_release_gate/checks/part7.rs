@@ -581,6 +581,15 @@ fn check_backend_suite_artifact_status(
                 "requirement `{}` backend suite `{suffix}` artifact `{path}` failed_count mismatch: status {status_failed_count}, artifact {artifact_failed_count}",
                 requirement.id
             )),
+            BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                path,
+                field,
+                status_value,
+                artifact_value,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` artifact `{path}` `{field}` mismatch: status {status_value}, artifact {artifact_value}",
+                requirement.id
+            )),
             BackendSuiteArtifactStatusIssue::CpuSota100xContractCaseCountMismatch {
                 path,
                 status_contract_cases,
