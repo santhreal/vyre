@@ -393,18 +393,11 @@ fn inspect_cpu_100x_source_artifact_counts(
         ));
         return;
     };
-    for artifact in source_artifacts {
-        if let Some(issue) =
-            crate::benchmark_evidence_semantics::benchmark_source_artifact_path_issue(
-                workspace_root,
-                &artifact,
-            )
-        {
-            blockers.push(format!(
-                "{evidence}: {}",
-                issue.describe("source_artifact", &artifact)
-            ));
-        }
+    for issue in crate::benchmark_evidence_semantics::cpu_sota_100x_source_artifact_issues(
+        workspace_root,
+        value,
+    ) {
+        blockers.push(format!("{evidence}: {issue}"));
     }
 }
 
@@ -650,6 +643,69 @@ mod part13_tests {
                 "release/evidence/benchmarks/cpu-only-100x-proof.json: source_artifact `"
             ) && blocker.contains("must be a relative release path")),
             "Fix: completion audit must reject existing absolute CPU-SOTA source_artifact paths; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_cpu_100x_rejects_weak_source_artifact_provenance() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for CPU-SOTA source provenance audit test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        let evidence_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&evidence_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let aggregate_source_tree_fingerprint =
+            vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let mut source_artifacts = Vec::new();
+        for index in 0..10 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            let source_fingerprint = if index == 7 {
+                "git:abc123:dirty=true"
+            } else {
+                "git:aggregate:dirty=false"
+            };
+            std::fs::write(
+                dir.path().join(&artifact),
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "source_fingerprint": source_fingerprint,
+                    "source_tree_fingerprint": &aggregate_source_tree_fingerprint,
+                    "summary": {"total_cases": 0, "passed": 0, "failed": 0},
+                    "cases": []
+                }))
+                .expect("Fix: serialize CPU-SOTA source artifact."),
+            )
+            .expect("Fix: write CPU-SOTA source artifact.");
+            source_artifacts.push(artifact);
+        }
+        let proof_path = evidence_dir.join("cpu-only-100x-proof.json");
+        let proof = serde_json::json!({
+            "source_fingerprint": "git:aggregate:dirty=false",
+            "source_tree_fingerprint": aggregate_source_tree_fingerprint,
+            "source_artifact_count": 10,
+            "source_artifacts": source_artifacts
+        });
+        let mut blockers = Vec::new();
+
+        inspect_cpu_100x_source_artifact_counts(
+            "release/evidence/benchmarks/cpu-only-100x-proof.json",
+            &proof_path,
+            &proof,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "release/evidence/benchmarks/cpu-only-100x-proof.json: source_artifact `release/evidence/benchmarks/workload-07.json` source_fingerprint `git:abc123:dirty=true` is dirty but has no worktree digest"
+            )),
+            "Fix: completion audit must reject weak dirty source artifacts listed by a clean CPU-SOTA aggregate proof; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "source_artifact `release/evidence/benchmarks/workload-07.json` source_fingerprint `git:abc123:dirty=true` does not match aggregate source `git:aggregate:dirty=false`"
+            )),
+            "Fix: completion audit must reject CPU-SOTA aggregate proof source_artifacts from a different source fingerprint; blockers={blockers:?}"
         );
     }
 

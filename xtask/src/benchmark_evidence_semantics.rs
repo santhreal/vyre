@@ -383,6 +383,123 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
     issues
 }
 
+pub(crate) fn cpu_sota_100x_source_artifact_issues(
+    workspace_root: &Path,
+    proof: &Value,
+) -> Vec<String> {
+    let mut issues = Vec::new();
+    let aggregate_source_fingerprint = proof.get("source_fingerprint").and_then(non_empty_str);
+    let aggregate_source_tree_fingerprint =
+        proof.get("source_tree_fingerprint").and_then(non_empty_str);
+    for artifact in benchmark_source_artifact_paths(proof) {
+        if let Some(issue) = benchmark_source_artifact_path_issue(workspace_root, &artifact) {
+            issues.push(issue.describe("source_artifact", &artifact));
+            continue;
+        }
+        let artifact_path = resolve_benchmark_artifact_path(workspace_root, &artifact);
+        let text =
+            match read_text_bounded(&artifact_path, MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES) {
+                Ok(text) => text,
+                Err(error) => {
+                    issues.push(format!(
+                        "source_artifact `{artifact}` is unreadable: {error}"
+                    ));
+                    continue;
+                }
+            };
+        let report = match serde_json::from_str::<Value>(&text) {
+            Ok(report) => report,
+            Err(error) => {
+                issues.push(format!(
+                    "source_artifact `{artifact}` is invalid JSON: {error}"
+                ));
+                continue;
+            }
+        };
+        if report.get("selected_backend").and_then(Value::as_str) != Some("cuda") {
+            issues.push(format!(
+                "source_artifact `{artifact}` was not produced for cuda"
+            ));
+        }
+        let report_source_fingerprint = report.get("source_fingerprint").and_then(non_empty_str);
+        if let Some(fingerprint) = report_source_fingerprint {
+            for issue in source_fingerprint_issues(fingerprint) {
+                match issue {
+                    SourceFingerprintIssue::DirtyUnknownState { source_fingerprint } => {
+                        issues.push(format!(
+                            "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` has unknown dirty state"
+                        ));
+                    }
+                    SourceFingerprintIssue::DirtyMissingWorktree { source_fingerprint } => {
+                        issues.push(format!(
+                            "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` is dirty but has no worktree digest"
+                        ));
+                    }
+                    SourceFingerprintIssue::DirtyUnknownWorktree { source_fingerprint } => {
+                        issues.push(format!(
+                            "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` is dirty but has unknown worktree digest"
+                        ));
+                    }
+                    SourceFingerprintIssue::DirtyInvalidWorktree {
+                        source_fingerprint,
+                        worktree,
+                    } => {
+                        issues.push(format!(
+                            "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`"
+                        ));
+                    }
+                }
+            }
+            if let Some(aggregate) = aggregate_source_fingerprint {
+                if fingerprint != aggregate {
+                    issues.push(format!(
+                        "source_artifact `{artifact}` source_fingerprint `{fingerprint}` does not match aggregate source `{aggregate}`"
+                    ));
+                }
+            }
+        } else {
+            issues.push(format!(
+                "source_artifact `{artifact}` has no source_fingerprint"
+            ));
+        }
+        let report_source_tree_fingerprint = report
+            .get("source_tree_fingerprint")
+            .and_then(non_empty_str);
+        match (
+            aggregate_source_tree_fingerprint,
+            report_source_tree_fingerprint,
+        ) {
+            (_, None) => issues.push(format!(
+                "source_artifact `{artifact}` has no source_tree_fingerprint"
+            )),
+            (Some(aggregate), Some(fingerprint)) if fingerprint != aggregate => {
+                issues.push(format!(
+                    "source_artifact `{artifact}` source_tree_fingerprint `{fingerprint}` does not match aggregate source tree `{aggregate}`"
+                ));
+            }
+            _ => {}
+        }
+        if let (Some((field, source_fingerprint)), Some(current_source_fingerprint)) = (
+            report_freshness_fingerprint(&report),
+            current_freshness_fingerprint_for_report(&artifact_path, &report),
+        ) {
+            for issue in
+                source_fingerprint_freshness_issues(source_fingerprint, &current_source_fingerprint)
+            {
+                match issue {
+                    SourceFingerprintFreshnessIssue::Mismatch {
+                        source_fingerprint,
+                        current_source_fingerprint,
+                    } => issues.push(format!(
+                        "source_artifact `{artifact}` {field} `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`"
+                    )),
+                }
+            }
+        }
+    }
+    issues
+}
+
 fn inspect_release_axes_scalar_values(
     axes: &Value,
     source_reports: &[Value],
@@ -2643,6 +2760,78 @@ mod tests {
                 "source_artifact `release/evidence/benchmarks/workload-weak.json` has no source_tree_fingerprint"
             )),
             "Fix: release-axis source artifacts must preserve source_tree_fingerprint provenance; issues={issues:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_sota_100x_source_artifacts_reject_weak_and_stale_provenance() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for CPU-SOTA source artifact test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temp benchmark evidence directory.");
+        let aggregate_source_fingerprint = current_test_source_fingerprint(dir.path());
+        let aggregate_source_tree_fingerprint =
+            vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let weak_artifact = "release/evidence/benchmarks/cuda-weak-source.json";
+        std::fs::write(
+            dir.path().join(weak_artifact),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "source_fingerprint": "git:abc123:dirty=true",
+                "source_tree_fingerprint": &aggregate_source_tree_fingerprint,
+                "summary": {"total_cases": 0, "passed": 0, "failed": 0},
+                "cases": []
+            }))
+            .expect("Fix: serialize weak CPU-SOTA source artifact."),
+        )
+        .expect("Fix: write weak CPU-SOTA source artifact.");
+        let stale_artifact = "release/evidence/benchmarks/cuda-stale-source-tree.json";
+        std::fs::write(
+            dir.path().join(stale_artifact),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "source_fingerprint": &aggregate_source_fingerprint,
+                "source_tree_fingerprint": "source-tree-v1:stale",
+                "summary": {"total_cases": 0, "passed": 0, "failed": 0},
+                "cases": []
+            }))
+            .expect("Fix: serialize stale CPU-SOTA source artifact."),
+        )
+        .expect("Fix: write stale CPU-SOTA source artifact.");
+        let proof = serde_json::json!({
+            "source_fingerprint": aggregate_source_fingerprint,
+            "source_tree_fingerprint": aggregate_source_tree_fingerprint,
+            "source_artifacts": [weak_artifact, stale_artifact]
+        });
+
+        let issues = cpu_sota_100x_source_artifact_issues(dir.path(), &proof);
+
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/cuda-weak-source.json` source_fingerprint `git:abc123:dirty=true` is dirty but has no worktree digest"
+            )),
+            "Fix: CPU-SOTA aggregate source artifacts must reject weak dirty source_fingerprint provenance; issues={issues:?}"
+        );
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/cuda-weak-source.json` source_fingerprint `git:abc123:dirty=true` does not match aggregate source"
+            )),
+            "Fix: CPU-SOTA aggregate source artifacts must match the aggregate source fingerprint; issues={issues:?}"
+        );
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/cuda-stale-source-tree.json` source_tree_fingerprint `source-tree-v1:stale` does not match aggregate source tree"
+            )),
+            "Fix: CPU-SOTA aggregate source artifacts must match the aggregate source tree fingerprint; issues={issues:?}"
+        );
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/cuda-stale-source-tree.json` source_tree_fingerprint `source-tree-v1:stale` does not match current workspace source"
+            )),
+            "Fix: CPU-SOTA aggregate source artifacts must be fresh against the current workspace; issues={issues:?}"
         );
     }
 
