@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::{Map, Value};
 
@@ -49,6 +49,60 @@ pub(crate) enum BackendSuiteParityIssue {
         cuda_count: usize,
         wgpu_count: usize,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum BackendSuiteInventoryIssue {
+    CountMismatch {
+        artifact_count: usize,
+        status_count: usize,
+    },
+    MissingStatus {
+        path: String,
+    },
+    MissingArtifact {
+        path: String,
+    },
+    DuplicateArtifact {
+        path: String,
+    },
+    DuplicateStatus {
+        path: String,
+    },
+}
+
+pub(crate) fn backend_suite_inventory_issues(suite: &Value) -> Vec<BackendSuiteInventoryIssue> {
+    let artifact_count = suite_array_len(suite, "artifacts");
+    let status_count = suite_array_len(suite, "artifact_statuses");
+    let artifact_counts = suite_artifact_path_counts(suite);
+    let status_counts = suite_status_path_counts(suite);
+    let artifact_paths = artifact_counts.keys().cloned().collect::<BTreeSet<_>>();
+    let status_paths = status_counts.keys().cloned().collect::<BTreeSet<_>>();
+    let mut issues = Vec::new();
+
+    if artifact_count != status_count {
+        issues.push(BackendSuiteInventoryIssue::CountMismatch {
+            artifact_count,
+            status_count,
+        });
+    }
+    for (path, count) in artifact_counts {
+        if count > 1 {
+            issues.push(BackendSuiteInventoryIssue::DuplicateArtifact { path });
+        }
+    }
+    for (path, count) in status_counts {
+        if count > 1 {
+            issues.push(BackendSuiteInventoryIssue::DuplicateStatus { path });
+        }
+    }
+    for path in artifact_paths.difference(&status_paths) {
+        issues.push(BackendSuiteInventoryIssue::MissingStatus { path: path.clone() });
+    }
+    for path in status_paths.difference(&artifact_paths) {
+        issues.push(BackendSuiteInventoryIssue::MissingArtifact { path: path.clone() });
+    }
+    issues
 }
 
 pub(crate) fn backend_suite_parity_issues(
@@ -268,10 +322,44 @@ fn suite_family_case_pairs(suite: &Value) -> BTreeSet<(String, String)> {
 }
 
 fn suite_artifact_status_count(suite: &Value) -> usize {
+    suite_array_len(suite, "artifact_statuses")
+}
+
+fn suite_array_len(suite: &Value, field: &str) -> usize {
+    suite
+        .get(field)
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len)
+}
+
+fn suite_artifact_path_counts(suite: &Value) -> BTreeMap<String, usize> {
+    suite
+        .get("artifacts")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(non_empty_str)
+        .fold(BTreeMap::new(), |mut counts, path| {
+            *counts.entry(path.to_string()).or_default() += 1;
+            counts
+        })
+}
+
+fn suite_status_path_counts(suite: &Value) -> BTreeMap<String, usize> {
     suite
         .get("artifact_statuses")
         .and_then(Value::as_array)
-        .map_or(0, Vec::len)
+        .into_iter()
+        .flatten()
+        .filter_map(|status| status.get("path").and_then(non_empty_str))
+        .fold(BTreeMap::new(), |mut counts, path| {
+            *counts.entry(path.to_string()).or_default() += 1;
+            counts
+        })
+}
+
+fn non_empty_str(value: &Value) -> Option<&str> {
+    value.as_str().filter(|value| !value.trim().is_empty())
 }
 
 #[cfg(test)]
@@ -454,6 +542,60 @@ mod tests {
                 },
             ],
             "Fix: CUDA and WGPU release suites must cover the same family/case contract."
+        );
+    }
+
+    #[test]
+    fn backend_suite_inventory_rejects_missing_cross_entries() {
+        let suite = serde_json::json!({
+            "artifacts": [
+                "release/evidence/benchmarks/cuda/condition.json",
+                "release/evidence/benchmarks/cuda/entropy.json"
+            ],
+            "artifact_statuses": [
+                {"path": "release/evidence/benchmarks/cuda/condition.json"},
+                {"path": "release/evidence/benchmarks/cuda/ifds.json"}
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_inventory_issues(&suite),
+            vec![
+                BackendSuiteInventoryIssue::MissingStatus {
+                    path: "release/evidence/benchmarks/cuda/entropy.json".to_string(),
+                },
+                BackendSuiteInventoryIssue::MissingArtifact {
+                    path: "release/evidence/benchmarks/cuda/ifds.json".to_string(),
+                },
+            ],
+            "Fix: suite artifacts and artifact_statuses must describe the same file set."
+        );
+    }
+
+    #[test]
+    fn backend_suite_inventory_rejects_duplicate_paths_and_count_drift() {
+        let suite = serde_json::json!({
+            "artifacts": [
+                "release/evidence/benchmarks/cuda/condition.json",
+                "release/evidence/benchmarks/cuda/condition.json"
+            ],
+            "artifact_statuses": [
+                {"path": "release/evidence/benchmarks/cuda/condition.json"}
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_inventory_issues(&suite),
+            vec![
+                BackendSuiteInventoryIssue::CountMismatch {
+                    artifact_count: 2,
+                    status_count: 1,
+                },
+                BackendSuiteInventoryIssue::DuplicateArtifact {
+                    path: "release/evidence/benchmarks/cuda/condition.json".to_string(),
+                },
+            ],
+            "Fix: duplicate suite inventory entries must not prove artifact coverage."
         );
     }
 

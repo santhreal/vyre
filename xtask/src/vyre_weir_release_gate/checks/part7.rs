@@ -1,4 +1,7 @@
-use crate::benchmark_evidence_semantics::{backend_suite_parity_issues, BackendSuiteParityIssue};
+use crate::benchmark_evidence_semantics::{
+    backend_suite_inventory_issues, backend_suite_parity_issues, BackendSuiteInventoryIssue,
+    BackendSuiteParityIssue,
+};
 
 pub(crate) fn check_backend_suite_report(
     requirement: &Requirement,
@@ -52,6 +55,33 @@ pub(crate) fn check_backend_suite_report(
                 requirement.id,
                 blocker.as_str().unwrap_or("<non-string blocker>")
             ));
+        }
+    }
+    for issue in backend_suite_inventory_issues(&report) {
+        match issue {
+            BackendSuiteInventoryIssue::CountMismatch {
+                artifact_count,
+                status_count,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` inventory count mismatch: artifacts={artifact_count}, artifact_statuses={status_count}",
+                requirement.id
+            )),
+            BackendSuiteInventoryIssue::MissingStatus { path } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` lists artifact `{path}` without matching artifact_statuses entry",
+                requirement.id
+            )),
+            BackendSuiteInventoryIssue::MissingArtifact { path } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` has artifact_statuses path `{path}` absent from artifacts",
+                requirement.id
+            )),
+            BackendSuiteInventoryIssue::DuplicateArtifact { path } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` lists artifact `{path}` more than once",
+                requirement.id
+            )),
+            BackendSuiteInventoryIssue::DuplicateStatus { path } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` has duplicate artifact_statuses path `{path}`",
+                requirement.id
+            )),
         }
     }
     if let Some(statuses) = report

@@ -1,4 +1,7 @@
-use crate::benchmark_evidence_semantics::{backend_suite_parity_issues, BackendSuiteParityIssue};
+use crate::benchmark_evidence_semantics::{
+    backend_suite_inventory_issues, backend_suite_parity_issues, BackendSuiteInventoryIssue,
+    BackendSuiteParityIssue,
+};
 
 fn inspect_backend_suite_semantics(
     evidence: &str,
@@ -39,6 +42,28 @@ fn inspect_backend_suite_semantics(
                 "{evidence}: suite blocker: {}",
                 blocker.as_str().unwrap_or("<non-string blocker>")
             ));
+        }
+    }
+    for issue in backend_suite_inventory_issues(value) {
+        match issue {
+            BackendSuiteInventoryIssue::CountMismatch {
+                artifact_count,
+                status_count,
+            } => blockers.push(format!(
+                "{evidence}: suite inventory count mismatch: artifacts={artifact_count}, artifact_statuses={status_count}"
+            )),
+            BackendSuiteInventoryIssue::MissingStatus { path } => blockers.push(format!(
+                "{evidence}: suite lists artifact `{path}` without matching artifact_statuses entry"
+            )),
+            BackendSuiteInventoryIssue::MissingArtifact { path } => blockers.push(format!(
+                "{evidence}: suite artifact_statuses path `{path}` is absent from artifacts"
+            )),
+            BackendSuiteInventoryIssue::DuplicateArtifact { path } => blockers.push(format!(
+                "{evidence}: suite lists artifact `{path}` more than once"
+            )),
+            BackendSuiteInventoryIssue::DuplicateStatus { path } => blockers.push(format!(
+                "{evidence}: suite has duplicate artifact_statuses path `{path}`"
+            )),
         }
     }
     let Some(statuses) = value
