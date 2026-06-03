@@ -584,7 +584,7 @@ fn dispatch_conformance_isolates_backend_instance_per_pair() {
 #[test]
 fn release_conformance_static_sizing_uses_packed_buffer_lengths() {
     for path in [
-        "conform/vyre-conform-runner/src/main.rs",
+        "conform/vyre-conform-runner/src/witness_plan.rs",
         "conform/vyre-conform-runner/tests/__split/parity_matrix_chunk1.rs",
         "vyre-libs/src/primitive_catalog.rs",
     ] {
@@ -624,10 +624,7 @@ fn release_conformance_static_sizing_uses_packed_buffer_lengths() {
 
 #[test]
 fn parity_matrix_input_planner_tracks_dynamic_fixture_contract() {
-    for path in [
-        "conform/vyre-conform-runner/src/main.rs",
-        "conform/vyre-conform-runner/tests/__split/parity_matrix_chunk1.rs",
-    ] {
+    for path in ["conform/vyre-conform-runner/src/witness_plan.rs"] {
         let source = repo_file(path);
         assert!(
             source.contains("matching_fixture_bytes(")
@@ -644,6 +641,39 @@ fn parity_matrix_input_planner_tracks_dynamic_fixture_contract() {
             "Fix: `{path}` must not infer read-write fixture presence from a raw fixture count; use per-buffer fixture matching."
         );
     }
+
+    let main = repo_file("conform/vyre-conform-runner/src/main.rs");
+    assert!(
+        main.contains("WitnessInputPlan::for_program(program)")
+            && main.contains("plan_witness_inputs_into(fixture_inputs, plan, backend_inputs)"),
+        "Fix: CLI release conformance must route production witness planning through the shared witness_plan module."
+    );
+
+    let parity = repo_file("conform/vyre-conform-runner/tests/__split/parity_matrix_chunk1.rs");
+    assert!(
+        parity.contains("matching_fixture_bytes(")
+            && parity.contains("fixture_index")
+            && parity.contains("byte_len: Option<usize>")
+            && parity.contains("runtime-sized read-write buffer")
+            && !parity.contains("fixture_buffer_count"),
+        "Fix: parity matrix harness must keep the logical fixture/static-length/read-write witness contract."
+    );
+}
+
+#[test]
+fn bundle_certificate_uses_shared_witness_input_planner() {
+    let source = repo_file("conform/vyre-conform-runner/src/bundle_cert.rs");
+
+    assert!(
+        source.contains("WitnessInputPlan::for_program(program)")
+            && source.contains("plan_witness_inputs_into(&witness.inputs, input_plan")
+            && source.contains("WitnessPlanningFailed"),
+        "Fix: bundle cert issue/verify must dispatch through the same planned logical witness stream as release conformance."
+    );
+    assert!(
+        !source.contains("witness.inputs.iter().map(Vec::as_slice).collect"),
+        "Fix: bundle cert backend verification must not feed raw witness buffers directly to dispatch_borrowed."
+    );
 }
 
 #[test]

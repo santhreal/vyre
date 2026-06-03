@@ -13,6 +13,8 @@ pub mod convergence_lens;
 pub mod dispatch_grid;
 pub mod fp_parity;
 pub mod lens;
+#[doc(hidden)]
+pub mod witness_plan;
 
 pub use bundle_cert::{
     issue_bundle_cert, verify_bundle_against_reference, verify_bundle_with_backend,

@@ -687,7 +687,7 @@ fn prove_precomputes_reference_witnesses_once_per_entry_not_once_per_backend() {
         .find("fn compare_backend_against_reference(")
         .expect("Fix: prove must keep backend comparison isolated.");
     let compare_end = source[compare_start..]
-        .find("#[derive(Clone)]\nenum BackendInputSource")
+        .find("type BackendDispatchPlan = WitnessInputPlan")
         .map(|offset| compare_start + offset)
         .expect("Fix: backend comparison boundary must remain discoverable.");
     let prepare = &source[prepare_start..compare_start];

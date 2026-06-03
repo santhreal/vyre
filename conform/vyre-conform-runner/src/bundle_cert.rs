@@ -51,6 +51,7 @@ use vyre::{BackendError, VyreBackend};
 use vyre_reference::value::Value;
 
 use crate::dispatch_grid;
+use crate::witness_plan::{plan_witness_inputs_into, WitnessInputPlan};
 
 /// Conformance certificate for a whole compiled document (bundle).
 ///
@@ -85,7 +86,8 @@ pub struct CorpusWitness {
     /// Stable label for this witness  -  used as the sort key when
     /// canonicalising the corpus hash.
     pub name: String,
-    /// One byte buffer per Program input buffer, in declaration order.
+    /// Logical witness input buffers. Declared outputs may be omitted; static
+    /// read-write buffers may be omitted and are zero-filled before dispatch.
     pub inputs: Vec<Vec<u8>>,
 }
 
@@ -185,6 +187,17 @@ pub enum BundleCertError {
         /// Count observed on verify.
         observed: u64,
     },
+    /// Logical witness inputs could not be expanded into the Program dispatch
+    /// input stream.
+    #[error(
+        "witness planner rejected witness `{witness}`: {message}. Fix: make corpus inputs follow logical fixture order and provide bytes for runtime-sized read-write buffers."
+    )]
+    WitnessPlanningFailed {
+        /// Name of the witness that tripped.
+        witness: String,
+        /// Planner diagnostic.
+        message: String,
+    },
 }
 
 /// Canonicalise a corpus into a deterministic input stream + hash.
@@ -249,15 +262,23 @@ fn hex32(bytes: &[u8; 32]) -> String {
     hex::encode(bytes)
 }
 
-fn reference_dispatch(
+fn reference_dispatch<'a>(
     program: &Program,
-    witness: &CorpusWitness,
+    witness: &'a CorpusWitness,
+    input_plan: &'a WitnessInputPlan,
+    planned_inputs: &mut Vec<&'a [u8]>,
     values: &mut Vec<Value>,
     outputs: &mut Vec<Vec<u8>>,
 ) -> Result<(), BundleCertError> {
+    plan_witness_inputs_into(&witness.inputs, input_plan, planned_inputs).map_err(|message| {
+        BundleCertError::WitnessPlanningFailed {
+            witness: witness.name.clone(),
+            message,
+        }
+    })?;
     values.clear();
-    for input in &witness.inputs {
-        values.push(Value::from(input.as_slice()));
+    for input in planned_inputs.iter().copied() {
+        values.push(Value::from(input));
     }
     let evaluated = vyre_reference::reference_eval(program, values).map_err(|e| {
         BundleCertError::ReferenceFailed {
@@ -270,22 +291,27 @@ fn reference_dispatch(
     Ok(())
 }
 
-fn backend_dispatch(
+fn backend_dispatch<'a>(
     backend: &dyn VyreBackend,
     program: &Program,
-    witness: &CorpusWitness,
+    witness: &'a CorpusWitness,
+    input_plan: &'a WitnessInputPlan,
     config: &vyre::DispatchConfig,
-    borrowed_inputs: &mut Vec<&[u8]>,
+    borrowed_inputs: &mut Vec<&'a [u8]>,
     outputs: &mut Vec<Vec<u8>>,
 ) -> Result<(), BundleCertError> {
-    let borrowed: Vec<&[u8]> = witness.inputs.iter().map(Vec::as_slice).collect();
+    plan_witness_inputs_into(&witness.inputs, input_plan, borrowed_inputs).map_err(|message| {
+        BundleCertError::WitnessPlanningFailed {
+            witness: witness.name.clone(),
+            message,
+        }
+    })?;
     let dispatched = backend
-        .dispatch_borrowed(program, &borrowed, config)
+        .dispatch_borrowed(program, borrowed_inputs, config)
         .map_err(|source| BundleCertError::BackendFailed {
             witness: witness.name.clone(),
             source,
         })?;
-    borrowed_inputs.clear();
     outputs.clear();
     outputs.extend(dispatched.into_iter());
     Ok(())
@@ -324,8 +350,15 @@ pub fn issue_bundle_cert(
     let bundle_hash = blake3::hash(&wire_bytes);
 
     let (sorted_indices, corpus_hash) = canonicalise_corpus(corpus)?;
+    let input_plan = WitnessInputPlan::for_program(program).map_err(|message| {
+        BundleCertError::WitnessPlanningFailed {
+            witness: "certificate-issue".to_string(),
+            message,
+        }
+    })?;
 
     let mut witness_values = Vec::with_capacity(program.buffers().len());
+    let mut witness_inputs = Vec::with_capacity(input_plan.source_count());
     let mut witness_outputs = Vec::with_capacity(program.buffers().len());
     let mut hasher = blake3::Hasher::new();
     hasher.update(&(sorted_indices.len() as u64).to_le_bytes());
@@ -333,7 +366,15 @@ pub fn issue_bundle_cert(
         let w = &corpus[*idx];
         witness_outputs.clear();
         witness_values.clear();
-        reference_dispatch(program, w, &mut witness_values, &mut witness_outputs)?;
+        witness_inputs.clear();
+        reference_dispatch(
+            program,
+            w,
+            &input_plan,
+            &mut witness_inputs,
+            &mut witness_values,
+            &mut witness_outputs,
+        )?;
         hash_output_stream(&mut hasher, &witness_outputs);
     }
     let output_hash = {
@@ -388,8 +429,8 @@ pub fn verify_bundle_with_backend(
         cert,
         program,
         corpus,
-        |p, w, _values, borrowed_inputs, outputs| {
-            backend_dispatch(backend, p, w, &config, borrowed_inputs, outputs)
+        |p, w, input_plan, _values, borrowed_inputs, outputs| {
+            backend_dispatch(backend, p, w, input_plan, &config, borrowed_inputs, outputs)
         },
     )
 }
@@ -413,7 +454,9 @@ pub fn verify_bundle_against_reference(
         cert,
         program,
         corpus,
-        |p, w, values, _borrowed_inputs, outputs| reference_dispatch(p, w, values, outputs),
+        |p, w, input_plan, values, borrowed_inputs, outputs| {
+            reference_dispatch(p, w, input_plan, borrowed_inputs, values, outputs)
+        },
     )
 }
 
@@ -538,7 +581,6 @@ pub fn verify_cert_signature_hex(
     Ok(())
 }
 
-
 fn verify_bundle_with<F>(
     cert: &BundleCertificate,
     program: &Program,
@@ -546,11 +588,12 @@ fn verify_bundle_with<F>(
     mut dispatch: F,
 ) -> Result<(), BundleCertError>
 where
-    F: FnMut(
+    F: for<'a> FnMut(
         &Program,
-        &CorpusWitness,
+        &'a CorpusWitness,
+        &'a WitnessInputPlan,
         &mut Vec<Value>,
-        &mut Vec<&[u8]>,
+        &mut Vec<&'a [u8]>,
         &mut Vec<Vec<u8>>,
     ) -> Result<(), BundleCertError>,
 {
@@ -590,9 +633,15 @@ where
         });
     }
 
+    let input_plan = WitnessInputPlan::for_program(program).map_err(|message| {
+        BundleCertError::WitnessPlanningFailed {
+            witness: "certificate-verification".to_string(),
+            message,
+        }
+    })?;
     let mut values = Vec::with_capacity(program.buffers().len());
     let mut outputs = Vec::with_capacity(program.buffers().len());
-    let mut borrowed_inputs = Vec::with_capacity(program.buffers().len());
+    let mut borrowed_inputs = Vec::with_capacity(input_plan.source_count());
     let mut hasher = blake3::Hasher::new();
     hasher.update(&(sorted_indices.len() as u64).to_le_bytes());
     for idx in &sorted_indices {
@@ -600,7 +649,14 @@ where
         values.clear();
         borrowed_inputs.clear();
         outputs.clear();
-        dispatch(program, w, &mut values, &mut borrowed_inputs, &mut outputs)?;
+        dispatch(
+            program,
+            w,
+            &input_plan,
+            &mut values,
+            &mut borrowed_inputs,
+            &mut outputs,
+        )?;
         hash_output_stream(&mut hasher, &outputs);
     }
     let observed_output = {
@@ -635,6 +691,22 @@ mod tests {
                 BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
                     .with_count(4),
                 BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(1),
+            ],
+            [1, 1, 1],
+            vec![Node::store(
+                "output",
+                Expr::u32(0),
+                Expr::load("input", Expr::u32(0)),
+            )],
+        )
+    }
+
+    fn output_first_copy_program() -> Program {
+        Program::wrapped(
+            vec![
+                BufferDecl::output("output", 0, DataType::U32).with_count(1),
+                BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32)
                     .with_count(1),
             ],
             [1, 1, 1],
@@ -749,6 +821,52 @@ mod tests {
     }
 
     #[test]
+    fn bundle_cert_accepts_logical_witness_order_after_output_buffer() {
+        let program = output_first_copy_program();
+        let corpus = vec![CorpusWitness {
+            name: "logical-input-only".into(),
+            inputs: vec![bytes_u32(&[0xA5A5_5A5A])],
+        }];
+
+        let cert = issue_bundle_cert(&program, &corpus, "t", "s", "p")
+            .expect("Fix: bundle issue must plan logical witness inputs, not raw buffer order.");
+        verify_bundle_against_reference(&cert, &program, &corpus)
+            .expect("Fix: bundle verify must reuse the same planned witness stream as issue.");
+    }
+
+    #[test]
+    fn bundle_cert_rejects_omitted_runtime_sized_read_write_witness() {
+        let program = Program::wrapped(
+            vec![BufferDecl::storage(
+                "scratch",
+                0,
+                BufferAccess::ReadWrite,
+                DataType::U32,
+            )],
+            [1, 1, 1],
+            Vec::<Node>::new(),
+        );
+        let corpus = vec![CorpusWitness {
+            name: "missing-runtime-scratch".into(),
+            inputs: Vec::new(),
+        }];
+
+        let error = issue_bundle_cert(&program, &corpus, "t", "s", "p")
+            .expect_err("Fix: omitted runtime-sized read-write witnesses must reject.");
+
+        assert!(
+            matches!(error, BundleCertError::WitnessPlanningFailed { .. }),
+            "Fix: planner errors must stay explicit, got: {error}"
+        );
+        assert!(
+            error
+                .to_string()
+                .contains("runtime-sized read-write buffer"),
+            "Fix: planner error must name the dynamic read-write contract, got: {error}"
+        );
+    }
+
+    #[test]
     fn verify_catches_bundle_drift() {
         let program = copy_first_program();
         let corpus = sample_corpus();
@@ -800,4 +918,3 @@ mod tests {
         assert!(matches!(err, BundleCertError::OutputHashMismatch { .. }));
     }
 }
-

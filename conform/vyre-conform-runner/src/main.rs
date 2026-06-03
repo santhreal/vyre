@@ -9,6 +9,9 @@ use vyre::VyreBackend;
 use vyre_conform_runner::convergence_lens;
 use vyre_conform_runner::dispatch_grid;
 use vyre_conform_runner::fp_parity::{compare_output_buffers, BufferParity};
+use vyre_conform_runner::witness_plan::{
+    plan_witness_inputs_into, static_buffer_byte_len, WitnessInputPlan,
+};
 use vyre_driver::{
     backend::{backend_dispatches, registered_backends},
     registry::DialectRegistry,
@@ -916,7 +919,7 @@ fn prepare_reference_cases(
     }
 
     let mut reference_values = Vec::with_capacity(program.buffers().len());
-    let mut planned_inputs: Vec<&[u8]> = Vec::with_capacity(input_plan.sources.len());
+    let mut planned_inputs: Vec<&[u8]> = Vec::with_capacity(input_plan.source_count());
     for (case_index, inputs) in cases.iter().enumerate() {
         backend_dispatch_inputs_with_plan_into(inputs, input_plan, &mut planned_inputs).map_err(
             |error| {
@@ -950,7 +953,7 @@ fn compare_backend_against_reference(
 ) -> PairResult {
     let backend_id = backend_id.to_string();
     let mut checked_cases = 0usize;
-    let mut backend_inputs: Vec<&[u8]> = Vec::with_capacity(prepared.input_plan.sources.len());
+    let mut backend_inputs: Vec<&[u8]> = Vec::with_capacity(prepared.input_plan.source_count());
 
     for (case_index, inputs) in prepared.cases.iter().enumerate() {
         let reference = &prepared.reference_cases[case_index];
@@ -1059,92 +1062,10 @@ fn compare_backend_against_reference(
     }
 }
 
-#[derive(Clone)]
-enum BackendInputSource {
-    Fixture {
-        fixture_index: usize,
-        buffer_index: usize,
-        byte_len: Option<usize>,
-    },
-    ReadWriteOrZero {
-        fixture_index: usize,
-        buffer_index: usize,
-        zero_index: Option<usize>,
-        byte_len: Option<usize>,
-    },
-}
-
-struct BackendDispatchPlan {
-    sources: Vec<BackendInputSource>,
-    zeroed_inputs: Vec<Vec<u8>>,
-    buffer_len: usize,
-}
+type BackendDispatchPlan = WitnessInputPlan;
 
 fn backend_dispatch_plan(program: &vyre::Program) -> Result<BackendDispatchPlan, String> {
-    let mut sources = Vec::with_capacity(program.buffers().len());
-    let mut zeroed_inputs = Vec::with_capacity(program.buffers().len());
-    let mut fixture_index = 0usize;
-    for (buffer_index, buffer) in program.buffers().iter().enumerate() {
-        if buffer.kind() == vyre::ir::MemoryKind::Shared
-            || buffer.is_output()
-            || (buffer.is_pipeline_live_out()
-                && matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite))
-        {
-            continue;
-        }
-        if matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite) {
-            let byte_len = fixture_backed_byte_len(buffer, "read-write witness buffer")?;
-            let zero_index = if let Some(byte_len) = byte_len {
-                let zero_index = zeroed_inputs.len();
-                zeroed_inputs.push(vec![0u8; byte_len]);
-                Some(zero_index)
-            } else {
-                None
-            };
-            sources.push(BackendInputSource::ReadWriteOrZero {
-                fixture_index,
-                buffer_index,
-                zero_index,
-                byte_len,
-            });
-            fixture_index += 1;
-            continue;
-        }
-        let byte_len = fixture_backed_byte_len(buffer, "input witness buffer")?;
-        sources.push(BackendInputSource::Fixture {
-            fixture_index,
-            buffer_index,
-            byte_len,
-        });
-        fixture_index += 1;
-    }
-
-    Ok(BackendDispatchPlan {
-        sources,
-        zeroed_inputs,
-        buffer_len: program.buffers().len(),
-    })
-}
-
-fn fixture_backed_byte_len(
-    buffer: &vyre::ir::BufferDecl,
-    role: &str,
-) -> Result<Option<usize>, String> {
-    buffer
-        .static_byte_len()
-        .map_err(|error| format!("{role} `{}`: {error}", buffer.name()))
-}
-
-fn static_buffer_byte_len(buffer: &vyre::ir::BufferDecl, role: &str) -> Result<usize, String> {
-    buffer
-        .static_byte_len()
-        .map_err(|error| format!("{role} `{}`: {error}", buffer.name()))?
-        .ok_or_else(|| {
-            format!(
-                "{role} `{}` is runtime-sized. Fix: provide explicit witness bytes for dynamically sized buffers.",
-                buffer.name()
-            )
-        })
+    WitnessInputPlan::for_program(program)
 }
 
 fn backend_dispatch_inputs_with_plan_into<'a>(
@@ -1152,86 +1073,7 @@ fn backend_dispatch_inputs_with_plan_into<'a>(
     plan: &'a BackendDispatchPlan,
     backend_inputs: &mut Vec<&'a [u8]>,
 ) -> Result<(), String> {
-    if fixture_inputs.len() > plan.buffer_len {
-        return Err(format!(
-            "witness fixture provided {} buffer(s) but Program declares {}. Fix: fixture cases must not exceed Program::buffers order.",
-            fixture_inputs.len(),
-            plan.buffer_len
-        ));
-    }
-
-    backend_inputs.clear();
-    for source in &plan.sources {
-        match source {
-            BackendInputSource::Fixture {
-                fixture_index,
-                buffer_index,
-                byte_len,
-            } => {
-                if let Some(bytes) =
-                    matching_fixture_bytes(fixture_inputs, *buffer_index, *fixture_index, *byte_len)
-                {
-                    backend_inputs.push(bytes.as_slice());
-                    continue;
-                }
-                return Err(
-                    format!(
-                        "witness omitted required input buffer at fixture index `{fixture_index}` / program index `{buffer_index}`. Fix: every non-output read-only/uniform buffer must be present in the witness case."
-                    )
-                        .to_string(),
-                );
-            }
-            BackendInputSource::ReadWriteOrZero {
-                fixture_index,
-                buffer_index,
-                zero_index,
-                byte_len,
-            } => {
-                if let Some(bytes) =
-                    matching_fixture_bytes(fixture_inputs, *buffer_index, *fixture_index, *byte_len)
-                {
-                    backend_inputs.push(bytes.as_slice());
-                    continue;
-                }
-                if let Some(zero_index) = zero_index {
-                    if let Some(bytes) = plan.zeroed_inputs.get(*zero_index) {
-                        backend_inputs.push(bytes.as_slice());
-                        continue;
-                    }
-                    return Err(
-                        "internal plan mismatch: zeroed input index is invalid.".to_string()
-                    );
-                }
-                return Err(format!(
-                    "witness omitted runtime-sized read-write buffer at fixture index `{fixture_index}` / program index `{buffer_index}`. Fix: provide concrete fixture bytes because dynamic read-write buffers cannot be zero-initialized without a byte length."
-                ));
-            }
-        }
-    }
-    Ok(())
-}
-
-fn matching_fixture_bytes<'a>(
-    fixture_inputs: &'a [Vec<u8>],
-    buffer_index: usize,
-    fixture_index: usize,
-    byte_len: Option<usize>,
-) -> Option<&'a Vec<u8>> {
-    if let Some(byte_len) = byte_len {
-        return fixture_inputs
-            .get(buffer_index)
-            .filter(|bytes| bytes.len() == byte_len)
-            .or_else(|| {
-                fixture_inputs
-                    .get(fixture_index)
-                    .filter(|bytes| bytes.len() == byte_len)
-            })
-            .or_else(|| fixture_inputs.get(fixture_index))
-            .or_else(|| fixture_inputs.get(buffer_index));
-    }
-    fixture_inputs
-        .get(fixture_index)
-        .or_else(|| fixture_inputs.get(buffer_index))
+    plan_witness_inputs_into(fixture_inputs, plan, backend_inputs)
 }
 
 #[cfg(test)]
@@ -2002,8 +1844,8 @@ fn proof_plan_summary(
         execution_hasher.update(entry.id.as_bytes());
         execution_hasher.update(&entry.cases.len().to_le_bytes());
         execution_hasher.update(&entry.program.buffers().len().to_le_bytes());
-        execution_hasher.update(&entry.input_plan.sources.len().to_le_bytes());
-        execution_hasher.update(&entry.input_plan.zeroed_inputs.len().to_le_bytes());
+        execution_hasher.update(&entry.input_plan.source_count().to_le_bytes());
+        execution_hasher.update(&entry.input_plan.zeroed_input_count().to_le_bytes());
         execution_hasher.update(&entry.reference_cases.len().to_le_bytes());
         witness_case_count += entry.cases.len().saturating_mul(backends.len());
     }
