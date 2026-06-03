@@ -433,6 +433,22 @@ pub(crate) fn backend_suite_artifact_status_issues(
         .get("cases")
         .and_then(Value::as_array)
         .map(|cases| cases.len() as u64);
+    let artifact_summary_total_cases = artifact_report
+        .get("summary")
+        .and_then(|summary| summary.get("total_cases"))
+        .and_then(Value::as_u64);
+    if let (Some(summary_total_cases), Some(case_count)) =
+        (artifact_summary_total_cases, artifact_case_count)
+    {
+        if summary_total_cases != case_count {
+            issues.push(BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                path: path.clone(),
+                field: "summary.total_cases",
+                status_value: summary_total_cases,
+                artifact_value: case_count,
+            });
+        }
+    }
     match (status_case_count, artifact_case_count) {
         (None, Some(_)) => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
             path: path.clone(),
@@ -475,6 +491,23 @@ pub(crate) fn backend_suite_artifact_status_issues(
     }
 
     let status_failed_count = status.get("failed_count").and_then(Value::as_u64);
+    let artifact_summary_passed_count = artifact_report
+        .get("summary")
+        .and_then(|summary| summary.get("passed"))
+        .and_then(Value::as_u64);
+    let artifact_case_passed_count = artifact_case_passed_count(artifact_report);
+    if let (Some(summary_passed_count), Some(case_passed_count)) =
+        (artifact_summary_passed_count, artifact_case_passed_count)
+    {
+        if summary_passed_count != case_passed_count {
+            issues.push(BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                path: path.clone(),
+                field: "summary.passed",
+                status_value: summary_passed_count,
+                artifact_value: case_passed_count,
+            });
+        }
+    }
     let artifact_summary_failed_count = artifact_report
         .get("summary")
         .and_then(|summary| summary.get("failed"))
@@ -772,6 +805,19 @@ fn artifact_case_failed_count(artifact_report: &Value) -> Option<u64> {
         cases
             .iter()
             .filter(|case| benchmark_case_failure_reason(case).is_some())
+            .count() as u64,
+    )
+}
+
+fn artifact_case_passed_count(artifact_report: &Value) -> Option<u64> {
+    let cases = artifact_report.get("cases").and_then(Value::as_array)?;
+    Some(
+        cases
+            .iter()
+            .filter(|case| {
+                case.get("status").and_then(Value::as_str) == Some("pass")
+                    && benchmark_case_failure_reason(case).is_none()
+            })
             .count() as u64,
     )
 }
@@ -1940,6 +1986,91 @@ mod tests {
                 },
             ],
             "Fix: suite status must not trust summary.failed when case evidence exposes a contradictory benchmark failure."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_stale_artifact_summary_passed_count() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "selected_backend": "cuda",
+            "case_count": 1,
+            "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
+            "requested_case_id": "release.condition_eval.1m"
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "cuda",
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "status": "pass",
+                    "performance": {"contract_passed": false}
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json"
+                        .to_string(),
+                    field: "summary.passed",
+                    status_value: 1,
+                    artifact_value: 0,
+                },
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json"
+                        .to_string(),
+                    field: "summary.failed",
+                    status_value: 0,
+                    artifact_value: 1,
+                },
+                BackendSuiteArtifactStatusIssue::FailedCountMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json"
+                        .to_string(),
+                    status_failed_count: 0,
+                    artifact_failed_count: 1,
+                },
+            ],
+            "Fix: suite artifact validation must reject stale summary.passed counts derived without case contract evidence."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_stale_artifact_summary_total_cases() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "selected_backend": "cuda",
+            "case_count": 1,
+            "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
+            "requested_case_id": "release.condition_eval.1m"
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "cuda",
+            "summary": {"total_cases": 2, "passed": 1, "failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "status": "pass"
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                field: "summary.total_cases",
+                status_value: 2,
+                artifact_value: 1,
+            }],
+            "Fix: suite artifact validation must reject summary.total_cases drift even when status case_count matches the cases array."
         );
     }
 
