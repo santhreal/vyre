@@ -103,7 +103,7 @@ pub fn try_csr_forward_or_changed_parallel_batch_global_slot(
 /// buffer is sized for `changed_slots` and can be zeroed once before a
 /// fixed-point sequence, allowing each iteration to write a fresh slot instead
 /// of requiring a host zero-upload before every dispatch.
-pub fn try_csr_forward_or_changed_parallel_batch_global_dynamic_slot(
+pub(crate) fn try_csr_forward_or_changed_parallel_batch_global_dynamic_slot(
     shape: ProgramGraphShape,
     frontier_out: &str,
     changed: &str,

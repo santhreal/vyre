@@ -36,7 +36,7 @@ pub fn plan_csr_forward_or_changed_launch(
 ///
 /// Returns an actionable diagnostic when CSR inputs are malformed or the
 /// changed-history fast path cannot be represented by the primitive builders.
-pub fn plan_csr_forward_or_changed_dispatch(
+pub(crate) fn plan_csr_forward_or_changed_dispatch(
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],

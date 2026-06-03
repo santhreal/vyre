@@ -114,7 +114,7 @@ pub fn csr_forward_or_changed_parallel_snapshot_body_prefixed(
 /// scan when `active_gate` is zero. Newly discovered nodes set both
 /// `changed[0]` and `changed[active_changed_index]`.
 #[must_use]
-pub fn csr_forward_or_changed_parallel_snapshot_body_prefixed_with_active(
+pub(crate) fn csr_forward_or_changed_parallel_snapshot_body_prefixed_with_active(
     shape: ProgramGraphShape,
     frontier_out: &str,
     changed: &str,

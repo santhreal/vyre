@@ -72,7 +72,9 @@ pub use validate::{copy_csr_forward_seed_frontier_into, validate_csr_forward_or_
 
 #[cfg(test)]
 pub(crate) use {
-    body::*, cpu_ref::*, dispatch_plan::*, hash::*, launch_plan::*, layout::*, plan::*,
-    program_dispatch::*, program_parallel::*, program_parallel_batch::*,
-    program_parallel_batch_global::*, program_serial::*, validate::*,
+    cpu_ref::cpu_ref_into,
+    layout::{CsrForwardOrChangedLayout, CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE},
+    plan::plan_csr_forward_or_changed_dispatch,
+    program_parallel_batch_global::try_csr_forward_or_changed_parallel_batch_global_dynamic_slot,
+    validate::validate_csr_inputs,
 };

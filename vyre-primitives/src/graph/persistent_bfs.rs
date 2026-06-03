@@ -52,6 +52,9 @@ pub use validate::{
 
 #[cfg(test)]
 pub(crate) use {
-    cpu_ref::*, dispatch_plan::*, hash::*, layout::*, plan::*, program::*, resident_plan::*,
-    validate::*,
+    cpu_ref::{cpu_ref_into, try_cpu_ref_into_with_scratch, PersistentBfsCpuScratch},
+    layout::{
+        PersistentBfsBatchLayout, PersistentBfsFrontierLayout, PersistentBfsLayout,
+        PersistentBfsPlanCacheKind,
+    },
 };

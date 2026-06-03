@@ -1,17 +1,17 @@
 use crate::graph::program_graph::BINDING_PRIMITIVE_START;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::csr_forward_or_changed";
+pub(crate) const OP_ID: &str = "vyre-primitives::graph::csr_forward_or_changed";
 /// Canonical binding index for the frontier accumulator.
-pub const CSR_FORWARD_OR_CHANGED_FRONTIER_BUFFER: u32 = BINDING_PRIMITIVE_START;
+pub(crate) const CSR_FORWARD_OR_CHANGED_FRONTIER_BUFFER: u32 = BINDING_PRIMITIVE_START;
 /// Canonical binding index for the changed flag/history buffer.
-pub const CSR_FORWARD_OR_CHANGED_CHANGED_BUFFER: u32 = BINDING_PRIMITIVE_START + 1;
+pub(crate) const CSR_FORWARD_OR_CHANGED_CHANGED_BUFFER: u32 = BINDING_PRIMITIVE_START + 1;
 /// Canonical one-lane workgroup for CSR forward-or-changed programs.
-pub const CSR_FORWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
+pub(crate) const CSR_FORWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 /// Source-lane workgroup for node-parallel CSR forward-or-changed programs.
-pub const CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+pub(crate) const CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// Iteration ceiling where a changed-history buffer avoids per-iteration zeroing.
-pub const CSR_FORWARD_OR_CHANGED_HISTORY_FAST_PATH_MAX_ITERS: u32 = 64;
+pub(crate) const CSR_FORWARD_OR_CHANGED_HISTORY_FAST_PATH_MAX_ITERS: u32 = 64;
 
 /// Dispatch grid for a node-parallel CSR forward-or-changed pass.
 #[must_use]

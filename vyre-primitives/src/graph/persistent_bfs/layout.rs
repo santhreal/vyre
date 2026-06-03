@@ -14,7 +14,7 @@ pub const BINDING_CHANGED: u32 = BINDING_PRIMITIVE_START + 2;
 /// Canonical workgroup size for persistent BFS programs.
 pub const PERSISTENT_BFS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 /// One-block dispatch grid used by the compact single-workgroup BFS path.
-pub const PERSISTENT_BFS_SINGLE_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
+pub(crate) const PERSISTENT_BFS_SINGLE_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
 
 /// Dispatch grid for a single persistent-BFS query.
 #[must_use]
