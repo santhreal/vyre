@@ -432,7 +432,7 @@ pub(super) fn write_backend_suite_with_extra_blockers(
     }
 }
 
-fn backend_suite_output_path(backend: &str) -> String {
+pub(super) fn backend_suite_output_path(backend: &str) -> String {
     match backend {
         "cuda" => "release/evidence/benchmarks/cuda-release-suite.json".to_string(),
         "wgpu" => "release/evidence/benchmarks/wgpu-fallback-suite.json".to_string(),

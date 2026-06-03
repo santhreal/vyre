@@ -1,14 +1,16 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use serde_json::Value;
+
 use super::args::parse_args;
 use super::optimization::{write_optimization_benchmark_manifest, write_release_axes};
 use super::runner::{
     benchmark_artifact_is_reusable, copy_artifact, run_command, run_named_benchmark_if_needed,
 };
 use super::suite_inspect::{
-    prefixed_benchmark_artifact, read_text_bounded, run_workload_benchmark,
-    write_backend_suite_with_extra_blockers, write_cpu_100x_proof,
+    backend_suite_output_path, prefixed_benchmark_artifact, read_text_bounded,
+    run_workload_benchmark, write_backend_suite_with_extra_blockers, write_cpu_100x_proof,
 };
 use super::types::{
     BackendSuiteArtifactInput, ReleaseWorkloadFamily, ReleaseWorkloadMatrix,
@@ -220,11 +222,11 @@ pub(crate) fn run(args: &[String]) {
             wgpu_suite_failures,
         );
     }
-    if workload_failures.is_empty()
+    let wrote_optimization_manifest = workload_failures.is_empty()
         && config.only.is_none()
         && !config.refresh_suites_only
-        && !config.workload_suite_only
-    {
+        && !config.workload_suite_only;
+    if wrote_optimization_manifest {
         run_named_benchmark_if_needed(
             &workspace_root,
             "lower.rewrites.impact.corpus",
@@ -308,11 +310,25 @@ pub(crate) fn run(args: &[String]) {
         suite_artifacts,
         primary_suite_failures,
     );
-    write_release_axes(&workspace_root);
-    if !workload_failures.is_empty() {
-        for failure in &workload_failures {
-            eprintln!("Fix: release workload benchmark failed: {failure}");
-        }
+    if config.backend == "cuda" {
+        write_release_axes(&workspace_root);
+    }
+    let generated_evidence_paths = generated_release_benchmark_evidence_paths(
+        &config.backend,
+        config.backend == "cuda",
+        config.backend == "cuda",
+        config.include_wgpu_comparison && config.only.is_none() && config.backend == "cuda",
+        wrote_optimization_manifest,
+    );
+    let generated_blockers =
+        generated_benchmark_evidence_blockers(&workspace_root, &generated_evidence_paths);
+    for failure in &workload_failures {
+        eprintln!("Fix: release workload benchmark failed: {failure}");
+    }
+    for blocker in &generated_blockers {
+        eprintln!("Fix: generated release benchmark evidence blocker: {blocker}");
+    }
+    if !workload_failures.is_empty() || !generated_blockers.is_empty() {
         std::process::exit(1);
     }
     if config.refresh_suites_only {
@@ -343,6 +359,59 @@ fn backend_workload_artifact(backend: &str, matrix_artifact: &str) -> String {
     } else {
         matrix_artifact.to_string()
     }
+}
+
+fn generated_release_benchmark_evidence_paths(
+    backend: &str,
+    include_release_axes: bool,
+    include_cpu_100x_proof: bool,
+    include_wgpu_comparison: bool,
+    include_optimization_manifest: bool,
+) -> Vec<String> {
+    let mut paths = vec![backend_suite_output_path(backend)];
+    if include_release_axes {
+        paths.push("release/evidence/benchmarks/bench-release-axes.json".to_string());
+    }
+    if include_cpu_100x_proof {
+        paths.push("release/evidence/benchmarks/cpu-only-100x-proof.json".to_string());
+    }
+    if include_wgpu_comparison {
+        paths.push(backend_suite_output_path("wgpu"));
+    }
+    if include_optimization_manifest {
+        paths.push("release/evidence/optimization/pass-family-benchmark-manifest.json".to_string());
+    }
+    paths
+}
+
+fn generated_benchmark_evidence_blockers(workspace_root: &Path, paths: &[String]) -> Vec<String> {
+    let mut blockers = Vec::new();
+    for path in paths {
+        let artifact_path = workspace_root.join(path);
+        let text = match read_text_bounded(&artifact_path, MAX_RELEASE_BENCHMARK_TEXT_BYTES) {
+            Ok(text) => text,
+            Err(error) => {
+                blockers.push(format!("`{path}` is unreadable: {error}"));
+                continue;
+            }
+        };
+        let value = match serde_json::from_str::<Value>(&text) {
+            Ok(value) => value,
+            Err(error) => {
+                blockers.push(format!("`{path}` is invalid JSON: {error}"));
+                continue;
+            }
+        };
+        let artifact_blockers = value
+            .get("blockers")
+            .and_then(Value::as_array)
+            .map_or(&[][..], Vec::as_slice);
+        for (index, blocker) in artifact_blockers.iter().enumerate() {
+            let blocker = blocker.as_str().unwrap_or("<non-string blocker>");
+            blockers.push(format!("`{path}` blocker[{index}]: {blocker}"));
+        }
+    }
+    blockers
 }
 
 #[cfg(test)]
@@ -390,6 +459,63 @@ mod tests {
                 "release/evidence/benchmarks/workload-01-condition-eval.json"
             ),
             "release/evidence/benchmarks/workload-01-condition-eval.json"
+        );
+    }
+
+    #[test]
+    fn generated_evidence_blockers_surface_written_suite_blockers() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for generated blocker test.");
+        let artifact = "release/evidence/benchmarks/cuda-release-suite.json".to_string();
+        let artifact_path = dir.path().join(&artifact);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: temporary artifact has a parent directory."),
+        )
+        .expect("Fix: create temporary generated evidence directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "blockers": ["stale source fingerprint"]
+            }))
+            .expect("Fix: serialize temporary generated evidence."),
+        )
+        .expect("Fix: write temporary generated evidence.");
+
+        let blockers = generated_benchmark_evidence_blockers(dir.path(), &[artifact]);
+
+        assert_eq!(
+            blockers,
+            vec![
+                "`release/evidence/benchmarks/cuda-release-suite.json` blocker[0]: stale source fingerprint"
+                    .to_string()
+            ],
+            "Fix: release-benchmarks must fail closed when generated suite evidence carries blockers."
+        );
+    }
+
+    #[test]
+    fn generated_evidence_paths_include_release_proof_surfaces() {
+        assert_eq!(
+            generated_release_benchmark_evidence_paths("cuda", true, true, true, true),
+            vec![
+                "release/evidence/benchmarks/cuda-release-suite.json",
+                "release/evidence/benchmarks/bench-release-axes.json",
+                "release/evidence/benchmarks/cpu-only-100x-proof.json",
+                "release/evidence/benchmarks/wgpu-fallback-suite.json",
+                "release/evidence/optimization/pass-family-benchmark-manifest.json"
+            ],
+            "Fix: command-level blocker checks must cover suite, axes, CPU-SOTA proof, WGPU comparison, and optimization proof artifacts generated by release-benchmarks."
+        );
+    }
+
+    #[test]
+    fn wgpu_generated_evidence_paths_do_not_include_cuda_release_axes() {
+        assert_eq!(
+            generated_release_benchmark_evidence_paths("wgpu", false, false, false, false),
+            vec!["release/evidence/benchmarks/wgpu-fallback-suite.json"],
+            "Fix: release-benchmarks --backend wgpu must not rewrite or gate CUDA-only bench-release axes as a fallback-suite side effect."
         );
     }
 }
