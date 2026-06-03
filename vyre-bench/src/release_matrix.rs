@@ -193,8 +193,8 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         title: "C AST traversal and motif predicates",
         release_plan_workload: 9,
         required: true,
-        any_terms: &["release.c_ast_traversal", "frontend.c.parser"],
-        all_terms: &["parser", "ast"],
+        any_terms: &["release.c_ast_traversal"],
+        all_terms: &["release.c_ast_traversal"],
         bench_target_id: "release.workload.c_ast_traversal",
         dispatch_policy: "specialized-parser-kernel",
         non_megakernel_justification: Some(

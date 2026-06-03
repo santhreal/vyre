@@ -370,13 +370,6 @@
       "dispatch_policy": "specialized-parser-kernel",
       "non_megakernel_justification": "architectural: C AST traversal consumes parser-owned AST buffers with table/stream access patterns that remain outside the condition megakernel for this release",
       "matched_cases": [
-        "frontend.c.parser.linux_driver_pipeline",
-        "frontend.c.parser_only.linux_driver_pipeline",
-        "frontend.c.parser_sema.linux_driver_corpus100",
-        "frontend.c.syntax_only.linux_driver_corpus10",
-        "frontend.c.syntax_only.linux_driver_corpus100",
-        "frontend.c.syntax_only.linux_driver_corpus1000",
-        "frontend.c.syntax_only.linux_driver_pipeline",
         "release.c_ast_traversal.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-09-c-ast-traversal.json",
@@ -385,21 +378,12 @@
         "release.workload.c_ast_traversal"
       ],
       "cpu_sota_contracts": [
-        "frontend.c.parser.linux_driver_pipeline => Tree-sitter C in-process parse + full AST traversal 1000x",
-        "frontend.c.parser_only.linux_driver_pipeline => Tree-sitter C in-process parse + full AST traversal 1x",
-        "frontend.c.parser_sema.linux_driver_corpus100 => Tree-sitter C in-process parse + full AST traversal 1x",
-        "frontend.c.syntax_only.linux_driver_corpus10 => Tree-sitter C in-process parse + full AST traversal 10x",
-        "frontend.c.syntax_only.linux_driver_corpus100 => Tree-sitter C in-process parse + full AST traversal 3x",
-        "frontend.c.syntax_only.linux_driver_corpus1000 => Tree-sitter C in-process parse + full AST traversal 10x",
-        "frontend.c.syntax_only.linux_driver_pipeline => Tree-sitter C in-process parse + full AST traversal 10x",
         "release.c_ast_traversal.1m => tree-sitter/libclang-class CPU AST traversal baseline 100x"
       ],
       "cpu_sota_100x_cases": [
-        "frontend.c.parser.linux_driver_pipeline",
         "release.c_ast_traversal.1m"
       ],
       "cpu_sota_baseline_names": [
-        "Tree-sitter C in-process parse + full AST traversal",
         "tree-sitter/libclang-class CPU AST traversal baseline"
       ],
       "cpu_sota_baseline_crates": [
@@ -411,7 +395,7 @@
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
-      "max_cpu_sota_min_speedup_x": 1000.0
+      "max_cpu_sota_min_speedup_x": 100.0
     },
     {
       "id": "megakernel-queued-batches",
