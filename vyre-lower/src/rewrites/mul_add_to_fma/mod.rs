@@ -86,11 +86,7 @@ fn mul_add_to_fma_body(mut body: KernelBody) -> KernelBody {
 
 /// If `result_id` was produced by a `Mul` with exactly one use, return
 /// `(mul_a, mul_b)`. Otherwise return `None`.
-fn candidate_mul(
-    body: &KernelBody,
-    index: &BodyIndex,
-    result_id: u32,
-) -> Option<(u32, u32)> {
+fn candidate_mul(body: &KernelBody, index: &BodyIndex, result_id: u32) -> Option<(u32, u32)> {
     let producer = index.producer(body, result_id)?;
     if !matches!(producer.kind, KernelOpKind::BinOpKind(BinOp::Mul)) {
         return None;
@@ -107,12 +103,7 @@ fn candidate_mul(
 /// Recursive trace: is `result_id` provably produced by float ops?
 const FLOAT_TRACE_DEPTH_LIMIT: usize = 8;
 
-fn is_float_producing(
-    body: &KernelBody,
-    index: &BodyIndex,
-    result_id: u32,
-    depth: usize,
-) -> bool {
+fn is_float_producing(body: &KernelBody, index: &BodyIndex, result_id: u32, depth: usize) -> bool {
     if depth >= FLOAT_TRACE_DEPTH_LIMIT {
         return false;
     }

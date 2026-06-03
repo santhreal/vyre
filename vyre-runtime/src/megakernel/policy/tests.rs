@@ -568,4 +568,3 @@ fn diffuse_priority_reuses_exact_scratch_capacity() {
     assert_eq!(out.as_ptr(), out_ptr);
     assert_eq!(scratch.as_ptr(), scratch_ptr);
 }
-

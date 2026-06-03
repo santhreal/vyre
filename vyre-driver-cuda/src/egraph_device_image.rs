@@ -686,4 +686,3 @@ fn device_span_ptr(
             ),
         })
 }
-

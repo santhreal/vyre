@@ -58,9 +58,7 @@ fn generated_buffers(seed: u32) -> Vec<BufferEntry> {
 fn generated_fingerprint(seed: u32) -> Vec<u32> {
     (0..8)
         .map(|idx| {
-            seed.wrapping_mul(0x45d9_f3b)
-                .rotate_left(idx * 3)
-                ^ idx.wrapping_mul(0x9e37_79b9)
+            seed.wrapping_mul(0x45d9_f3b).rotate_left(idx * 3) ^ idx.wrapping_mul(0x9e37_79b9)
         })
         .collect()
 }
@@ -73,7 +71,11 @@ fn generated_kernel(seed: u32) -> Vec<u8> {
 
 fn generated_artifact(seed: u32) -> CompiledArtifact {
     CompiledArtifact {
-        target: if seed & 1 == 0 { Target::Ptx } else { Target::SpirV },
+        target: if seed & 1 == 0 {
+            Target::Ptx
+        } else {
+            Target::SpirV
+        },
         kernel_bytes: generated_kernel(seed),
         entry_point: format!("entry_{seed:08x}"),
         buffers: generated_buffers(seed),
@@ -114,8 +116,8 @@ fn generated_compiled_artifacts_round_trip_and_preserve_size_accounting() {
             .sum::<u64>();
         assert_eq!(artifact.total_buffer_bytes(), expected_total);
 
-        let json = serde_json::to_vec(&artifact)
-            .expect("Fix: generated CompiledArtifact must serialize.");
+        let json =
+            serde_json::to_vec(&artifact).expect("Fix: generated CompiledArtifact must serialize.");
         let restored: CompiledArtifact =
             serde_json::from_slice(&json).expect("Fix: generated CompiledArtifact must parse.");
         assert_eq!(restored.target, artifact.target);
@@ -132,8 +134,8 @@ fn generated_manifests_round_trip_with_artifact_fields_intact() {
     for seed in 0..512u32 {
         let artifact = generated_artifact(seed ^ 0xa501_7b1d);
         let manifest = manifest_from_artifact(seed, &artifact);
-        let json = serde_json::to_vec_pretty(&manifest)
-            .expect("Fix: generated Manifest must serialize.");
+        let json =
+            serde_json::to_vec_pretty(&manifest).expect("Fix: generated Manifest must serialize.");
         let restored: Manifest =
             serde_json::from_slice(&json).expect("Fix: generated Manifest must parse.");
 
@@ -141,7 +143,10 @@ fn generated_manifests_round_trip_with_artifact_fields_intact() {
         assert_eq!(restored.aot_version, artifact.aot_version);
         assert_eq!(restored.target, artifact.target);
         assert_eq!(restored.entry_point, artifact.entry_point);
-        assert_eq!(restored.dispatch.workgroup_size, artifact.dispatch.workgroup_size);
+        assert_eq!(
+            restored.dispatch.workgroup_size,
+            artifact.dispatch.workgroup_size
+        );
         assert_eq!(restored.dispatch.grid_size, artifact.dispatch.grid_size);
         assert_eq!(restored.buffers.len(), artifact.buffers.len());
         assert_eq!(restored.vsa_fingerprint, artifact.vsa_fingerprint);

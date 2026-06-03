@@ -268,11 +268,7 @@ fn graph_wrapper_path(manifest: &Path, file: &str) -> PathBuf {
     let stem = file
         .strip_suffix(".rs")
         .expect("graph wrapper contract files must use .rs");
-    manifest
-        .join("src")
-        .join("graph")
-        .join(stem)
-        .join("mod.rs")
+    manifest.join("src").join("graph").join(stem).join("mod.rs")
 }
 
 fn read(path: &Path) -> String {

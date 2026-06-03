@@ -464,7 +464,6 @@ impl PassScheduler {
     }
 }
 
-
 impl Default for PassScheduler {
     fn default() -> Self {
         match Self::try_default() {
@@ -502,4 +501,3 @@ pub use topo::{schedule_passes, PassSchedulingError};
 
 #[cfg(test)]
 mod tests;
-

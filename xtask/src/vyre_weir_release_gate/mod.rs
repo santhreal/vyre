@@ -9,14 +9,14 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-mod types;
-mod semantic;
 mod checks;
 mod paths;
+mod semantic;
+mod types;
 
+use checks::check_markdown_evidence_path_ready;
 use paths::{manifest_path_from_args, read_text_bounded, resolve_manifest_path};
 use semantic::run_semantic_requirement_checks;
-use checks::check_markdown_evidence_path_ready;
 use types::EvidenceManifest;
 
 pub(crate) fn run(args: &[String]) {
@@ -207,10 +207,7 @@ pub(crate) fn run(args: &[String]) {
             manifest.release.weir
         );
     } else {
-        eprintln!(
-            "vyre-release-gate: {} release blocker(s):",
-            failures.len()
-        );
+        eprintln!("vyre-release-gate: {} release blocker(s):", failures.len());
         for failure in &failures {
             eprintln!("  - {failure}");
         }

@@ -63,8 +63,8 @@ use vyre_foundation::optimizer::algebraic_rules::{
     binop_identity_replacement, IdentityReplacement, ScalarLiteral,
 };
 
-use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 use crate::operand_semantics::operand_is_result_reference;
+use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 use rustc_hash::FxHashMap;
 
 #[must_use]
@@ -448,7 +448,6 @@ mod tests {
                     result: Some(2),
                 },
                 KernelOp {
-
                     kind: KernelOpKind::StoreGlobal,
                     operands: vec![0, 0, 2],
                     result: None,
@@ -899,7 +898,6 @@ mod tests {
 
     #[test]
     fn fma_with_b_zero_picks_c() {
-
         // Fma(x, 0, c) → c
         let desc = empty_desc(
             vec![
@@ -1022,4 +1020,3 @@ mod tests {
         assert_eq!(out.body.ops[4].operands, vec![0, 0, 3]);
     }
 }
-

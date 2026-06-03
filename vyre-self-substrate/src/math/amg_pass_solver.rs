@@ -678,4 +678,3 @@ mod tests {
         assert!(!via_section.contains("vec![0u32"));
     }
 }
-

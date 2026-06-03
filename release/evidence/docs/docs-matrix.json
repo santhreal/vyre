@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "curated_proof_docs_preserved": true,
   "docs": [
     {
@@ -81,13 +81,8 @@
         "quickstart",
         "release/evidence"
       ],
-      "missing_topics": [
-        "quickstart"
-      ],
-      "unresolved_markers": [
-        "placeholder",
-        "stub"
-      ]
+      "missing_topics": [],
+      "unresolved_markers": []
     },
     {
       "id": "vyre-release",
@@ -417,9 +412,6 @@
   "blockers": [
     "required documentation `release-plan` references 2 missing release evidence artifact(s)",
     "required documentation `release-plan` contains unresolved marker `todo`",
-    "required documentation `vyre-readme` does not cover required topic `quickstart`",
-    "required documentation `vyre-readme` contains unresolved marker `placeholder`",
-    "required documentation `vyre-readme` contains unresolved marker `stub`",
     "required documentation `vyre-release-checklist` does not cover required topic `weir`",
     "required documentation `vyre-publish-gate` contains unresolved marker `todo`",
     "required documentation `vyre-optimization` does not cover required topic `gpu`",

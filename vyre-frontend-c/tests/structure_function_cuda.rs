@@ -1,16 +1,16 @@
 //! CUDA regression coverage for C structure function extraction.
 
+use vyre::ir::BufferAccess;
 use vyre::ir::Expr;
 use vyre::DispatchConfig;
-use vyre::ir::BufferAccess;
 use vyre_driver_cuda::cuda_factory;
 use vyre_libs::parsing::c::lex::tokens::*;
+use vyre_libs::parsing::c::parse::structure::{c11_extract_calls, c11_extract_functions};
 use vyre_libs::parsing::c::parse::vast::{
     c11_build_vast_nodes, c11_build_vast_nodes_uses_global_last_child,
     c11_classify_annotated_vast_node_kinds_precomputed_context, c11_precompute_vast_scopes,
     c11_precompute_vast_scopes_uses_global_stack, c11_prehash_vast_identifiers_packed_haystack,
 };
-use vyre_libs::parsing::c::parse::structure::{c11_extract_calls, c11_extract_functions};
 
 fn u32_bytes(words: &[u32]) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(words.len() * 4);
@@ -61,7 +61,11 @@ fn cuda_c11_build_vast_nodes_initializes_every_sequential_row() {
     let len_bytes = u32_bytes(&lens);
     let last_child_bytes = vec![0u8; nt as usize * 4];
     let stack_bytes = vec![0u8; nt as usize * 4];
-    let inputs3 = [token_bytes.as_slice(), start_bytes.as_slice(), len_bytes.as_slice()];
+    let inputs3 = [
+        token_bytes.as_slice(),
+        start_bytes.as_slice(),
+        len_bytes.as_slice(),
+    ];
     let inputs5 = [
         token_bytes.as_slice(),
         start_bytes.as_slice(),
@@ -278,8 +282,7 @@ fn cuda_c11_extract_calls_reads_three_word_function_records_without_vector_fault
         "out_calls",
         "out_counts",
     );
-    let backend =
-        cuda_factory().expect("Fix: CUDA backend must acquire on the GPU-required host.");
+    let backend = cuda_factory().expect("Fix: CUDA backend must acquire on the GPU-required host.");
     let mut config = DispatchConfig::default();
     config.grid_override = Some([nt.div_ceil(256), 1, 1]);
     config.label = Some("cuda c11 extract calls regression".to_owned());
@@ -316,43 +319,46 @@ fn cuda_c11_extract_calls_reads_three_word_function_records_without_vector_fault
 #[test]
 fn cuda_c11_precompute_vast_scopes_copies_stride_ten_rows_without_vector_fault() {
     for node_count in [35u32, 154u32] {
-    let mut vast_words = Vec::with_capacity(node_count as usize * 10);
-    for node in 0..node_count {
-        let kind = if node == 0 {
-            TOK_LBRACE
-        } else if node == node_count - 1 {
-            TOK_RBRACE
+        let mut vast_words = Vec::with_capacity(node_count as usize * 10);
+        for node in 0..node_count {
+            let kind = if node == 0 {
+                TOK_LBRACE
+            } else if node == node_count - 1 {
+                TOK_RBRACE
+            } else {
+                TOK_IDENTIFIER
+            };
+            vast_words.extend_from_slice(&[kind, 0, 0, 0, 0, 0, 0, 0, u32::MAX, 0]);
+        }
+        let program = mark_single_output(
+            c11_precompute_vast_scopes("vast_nodes", Expr::u32(node_count), "scoped_vast"),
+            "scoped_vast",
+        );
+        let backend =
+            cuda_factory().expect("Fix: CUDA backend must acquire on the GPU-required host.");
+        let config = DispatchConfig::default();
+        let vast_bytes = u32_bytes(&vast_words);
+        let stack_bytes = vec![0u8; node_count as usize * 4];
+        let inputs1 = [vast_bytes.as_slice()];
+        let inputs2 = [vast_bytes.as_slice(), stack_bytes.as_slice()];
+        let inputs: &[&[u8]] = if c11_precompute_vast_scopes_uses_global_stack(node_count) {
+            &inputs2
         } else {
-            TOK_IDENTIFIER
+            &inputs1
         };
-        vast_words.extend_from_slice(&[kind, 0, 0, 0, 0, 0, 0, 0, u32::MAX, 0]);
-    }
-    let program = mark_single_output(
-        c11_precompute_vast_scopes("vast_nodes", Expr::u32(node_count), "scoped_vast"),
-        "scoped_vast",
-    );
-    let backend =
-        cuda_factory().expect("Fix: CUDA backend must acquire on the GPU-required host.");
-    let config = DispatchConfig::default();
-    let vast_bytes = u32_bytes(&vast_words);
-    let stack_bytes = vec![0u8; node_count as usize * 4];
-    let inputs1 = [vast_bytes.as_slice()];
-    let inputs2 = [vast_bytes.as_slice(), stack_bytes.as_slice()];
-    let inputs: &[&[u8]] = if c11_precompute_vast_scopes_uses_global_stack(node_count) {
-        &inputs2
-    } else {
-        &inputs1
-    };
-    let mut outputs: Vec<Vec<u8>> = Vec::new();
+        let mut outputs: Vec<Vec<u8>> = Vec::new();
 
-    backend
-        .dispatch_borrowed_into(&program, inputs, &config, &mut outputs)
-        .expect("Fix: CUDA VAST scope precompute must not fault on stride-ten rows.");
-    outputs.retain(|output| !output.is_empty());
+        backend
+            .dispatch_borrowed_into(&program, inputs, &config, &mut outputs)
+            .expect("Fix: CUDA VAST scope precompute must not fault on stride-ten rows.");
+        outputs.retain(|output| !output.is_empty());
 
-    assert_eq!(outputs.len(), 1);
-    assert_eq!(read_u32(&outputs[0], 8), u32::MAX);
-    assert_eq!(read_u32(&outputs[0], 18), 0);
-    assert_eq!(read_u32(&outputs[0], ((node_count - 1) * 10 + 8) as usize), 0);
+        assert_eq!(outputs.len(), 1);
+        assert_eq!(read_u32(&outputs[0], 8), u32::MAX);
+        assert_eq!(read_u32(&outputs[0], 18), 0);
+        assert_eq!(
+            read_u32(&outputs[0], ((node_count - 1) * 10 + 8) as usize),
+            0
+        );
     }
 }

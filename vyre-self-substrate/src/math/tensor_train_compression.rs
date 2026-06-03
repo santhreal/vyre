@@ -526,4 +526,3 @@ pub fn reference_compress_cost_tensor(
         ranks: target_ranks.to_vec(),
     }
 }
-

@@ -1397,7 +1397,6 @@ fn bin_op_match_body() -> Vec<Node> {
     ]
 }
 
-
 fn rewrite_program_with_actions(program: Program, actions: &[u32]) -> Program {
     super::rewrite_walk::rewrite_program_with_expr_rewriter(program, |expr, counter| {
         rewrite_expr(expr, actions, counter)
@@ -1591,4 +1590,3 @@ mod tests {
         );
     }
 }
-

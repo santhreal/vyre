@@ -103,14 +103,23 @@ fn sample_programs() -> Vec<(&'static str, Program)> {
 }
 
 fn hex_dump(bytes: &[u8]) -> String {
+    use std::fmt::Write as _;
+
     let mut out = String::with_capacity(bytes.len() * 3);
     for (i, b) in bytes.iter().enumerate() {
-        if i > 0 && i % 16 == 0 {
+        if i % 16 == 0 {
+            if i > 0 {
+                out.push('\n');
+            }
+            write!(&mut out, "{i:08x}: ").expect("writing to String cannot fail");
+        } else {
+            out.push(' ');
+        }
+        write!(&mut out, "{b:02x}").expect("writing to String cannot fail");
+        if i + 1 == bytes.len() {
             out.push('\n');
         }
-        out.push_str(&format!("{b:02x} "));
     }
-    out.push('\n');
     out
 }
 

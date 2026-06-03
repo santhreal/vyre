@@ -505,4 +505,3 @@ mod tests {
         assert!(matches!(result, Value::F32(value) if value.to_bits() == 0.0f32.to_bits()));
     }
 }
-

@@ -458,7 +458,6 @@ pub trait BackendObservabilityProvider {
     fn backend_metrics(&self) -> Vec<(&'static str, u64)>;
 }
 
-
 fn trace_events() -> &'static Mutex<VecDeque<SubstrateAuditEvent>> {
     static EVENTS: OnceLock<Mutex<VecDeque<SubstrateAuditEvent>>> = OnceLock::new();
     EVENTS.get_or_init(|| Mutex::new(VecDeque::with_capacity(TRACE_EVENT_CAPACITY)))
@@ -693,4 +692,3 @@ mod tests {
             .contains("kind=\"sync_points\""));
     }
 }
-

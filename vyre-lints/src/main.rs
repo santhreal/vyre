@@ -191,7 +191,8 @@ fn run_module_forks_cli(cli: &Cli) -> Result<()> {
         }
     }
     let root_refs: Vec<&std::path::Path> = roots.iter().map(|root| root.as_path()).collect();
-    let violations = run_module_forks(&root_refs).context("running same-name module fork scanner")?;
+    let violations =
+        run_module_forks(&root_refs).context("running same-name module fork scanner")?;
     match cli.format {
         Format::Text => emit_text(&violations),
         Format::Json => emit_json(&violations)?,

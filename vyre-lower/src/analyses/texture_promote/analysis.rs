@@ -22,7 +22,11 @@ pub fn analyze(desc: &KernelDescriptor) -> TexturePromotionPlan {
 
     let mut load_counts: FxHashMap<u32, u32> =
         FxHashMap::with_capacity_and_hasher(eligible.len(), Default::default());
-    count_global_loads_by_slot(&desc.body, &|slot| eligible.contains(&slot), &mut load_counts);
+    count_global_loads_by_slot(
+        &desc.body,
+        &|slot| eligible.contains(&slot),
+        &mut load_counts,
+    );
 
     let mut candidates = Vec::new();
     for (slot, count) in load_counts {

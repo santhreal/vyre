@@ -37,6 +37,7 @@ fn feature_matrix_drift_is_baselined() {
                 "test-fixtures",
                 "nn-inference",
                 "cpu-parity",
+                "text",
             ],
         ),
         (
@@ -52,8 +53,9 @@ fn feature_matrix_drift_is_baselined() {
             "vyre-runtime",
             &[
                 "default",
-                "subgroup-ops", // declared but currently ungated in source
-                "remote-cache", // dependency-only (enables ureq)
+                "subgroup-ops",       // declared but currently ungated in source
+                "remote-cache",       // dependency-only (enables ureq)
+                "c-frontend-adapter", // adapter surface marker; no source cfg gate
             ],
         ),
         (

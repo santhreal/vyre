@@ -444,7 +444,8 @@ fn csr_frontier_queue_resident_uses_primitive_query_contract() {
         "resident CSR queue query wrapper must delegate queue/frontier validation to vyre-primitives"
     );
     assert!(
-        !query_section.contains("queue_capacity == 0")
+        !query_section.contains("if queue_capacity == 0")
+            && !query_section.contains("frontier_words.is_empty()")
             && !query_section.contains("frontier_words.len() != graph.words"),
         "resident CSR queue query wrapper must not own primitive queue-capacity or frontier-width validation"
     );
@@ -857,7 +858,7 @@ fn exploded_wrapper_uses_primitive_input_layout_contract() {
         .split("pub fn build_ifds_csr_via_with_scratch_into")
         .nth(1)
         .expect("exploded IFDS dispatch wrapper must exist")
-        .split("dispatch_four_u32_outputs_from_prepared_into")
+        .split("dispatch_ifds_csr_outputs_from_prepared_into")
         .next()
         .expect("exploded IFDS wrapper must cross the shared graph dispatch bridge after setup");
 
@@ -868,7 +869,7 @@ fn exploded_wrapper_uses_primitive_input_layout_contract() {
     assert!(
         wrapper_source.contains("pub use dispatch")
             && dispatch_source.contains("refresh_keyed_dispatch_inputs")
-            && dispatch_source.contains("dispatch_four_u32_outputs_from_prepared_into"),
+            && dispatch_source.contains("dispatch_ifds_csr_outputs_from_prepared_into"),
         "exploded IFDS wrapper must reuse the graph dispatch bridge instead of open-coding 17-input/four-output byte plumbing"
     );
     assert!(

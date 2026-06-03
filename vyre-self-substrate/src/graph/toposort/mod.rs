@@ -19,7 +19,7 @@ pub use dispatch::{
     topo_order_csr_via, topo_order_csr_via_with_scratch, topo_order_csr_via_with_scratch_into,
 };
 #[cfg(test)]
-pub use reference::{all_reachable, reference_reachable_set, reference_topo_order};
+pub use reference::{reference_all_reachable, reference_reachable_set, reference_topo_order};
 
 /// Caller-owned GPU dispatch scratch for topological-sort CSR queries.
 #[derive(Debug, Default)]

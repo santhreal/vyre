@@ -157,9 +157,7 @@ fn find_consumer_name(line: &str) -> Option<(usize, &'static str)> {
         while let Some(rel_idx) = lower[search_from..].find(name) {
             let idx = search_from + rel_idx;
             let end = idx + name.len();
-            if is_start_boundary(lower.as_bytes(), idx)
-                && is_end_boundary(lower.as_bytes(), end)
-            {
+            if is_start_boundary(lower.as_bytes(), idx) && is_end_boundary(lower.as_bytes(), end) {
                 return Some((idx, *name));
             }
             search_from = end;
@@ -231,7 +229,9 @@ mod tests {
             "let keyhog_counter = 'k'; let label = \"surgec adapter\"; let raw = r#\"weir phase\"#;",
         );
         assert_eq!(segments.len(), 2);
-        assert!(segments.iter().any(|(_, segment)| *segment == "surgec adapter"));
+        assert!(segments
+            .iter()
+            .any(|(_, segment)| *segment == "surgec adapter"));
         assert!(segments.iter().any(|(_, segment)| *segment == "weir phase"));
     }
 

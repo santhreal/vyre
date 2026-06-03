@@ -559,4 +559,3 @@ mod tests {
         assert_eq!(Semver::new(1, 2, 3).to_string(), "1.2.3");
     }
 }
-

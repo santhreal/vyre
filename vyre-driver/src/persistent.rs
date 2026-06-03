@@ -300,8 +300,10 @@ impl PersistentEngine {
                 Ok(_) => {
                     let slot = self.slots.get(slot_offset)?;
                     let item = slot.load();
-                    self.atomics.ready[slot_offset]
-                        .store(tail.wrapping_add(u64::from(self.ring_size)), Ordering::Release);
+                    self.atomics.ready[slot_offset].store(
+                        tail.wrapping_add(u64::from(self.ring_size)),
+                        Ordering::Release,
+                    );
                     return Some(item);
                 }
                 Err(_) => continue,
@@ -448,7 +450,6 @@ mod tests {
     fn enqueue_claim_fifo_single_thread() {
         let eng = PersistentEngine::new(8);
         for i in 0..8 {
-
             assert_eq!(eng.enqueue(item(i)).unwrap(), i);
         }
         for i in 0..8 {
@@ -614,4 +615,3 @@ mod tests {
         assert!(s.contains("ring buffer"));
     }
 }
-

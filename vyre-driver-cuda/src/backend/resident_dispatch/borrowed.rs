@@ -115,7 +115,7 @@ impl CudaBackend {
                 continue;
             }
             let handle =
-                next_resident_handle(handles, &mut next_handle, "resident fallback dispatch")?;
+                next_resident_handle(handles, &mut next_handle, "resident borrowed dispatch")?;
             if let Some(input_index) = binding.input_index {
                 input_storage.push((input_index, self.download_resident(handle)?));
             }

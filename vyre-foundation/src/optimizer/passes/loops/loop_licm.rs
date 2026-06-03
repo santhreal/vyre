@@ -725,4 +725,3 @@ mod tests {
         assert!(matches!(&inner_body[0], Node::Store { .. }));
     }
 }
-

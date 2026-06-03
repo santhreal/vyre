@@ -455,7 +455,6 @@ fn fuse_control_flow_node(
     }
 }
 
-
 fn is_control_flow_boundary(node: &Node) -> bool {
     matches!(
         node,
@@ -832,4 +831,3 @@ fn push_expr_children<'a>(expr: &'a Expr, stack: &mut SmallVec<[&'a Expr; 16]>) 
 mod tests {
     include!("fusion_tests.rs");
 }
-

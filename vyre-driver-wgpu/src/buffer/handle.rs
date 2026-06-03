@@ -549,7 +549,6 @@ impl GpuBufferHandle {
     }
 }
 
-
 impl std::fmt::Debug for GpuBufferHandle {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter

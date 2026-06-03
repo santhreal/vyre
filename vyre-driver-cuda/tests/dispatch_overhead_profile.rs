@@ -96,12 +96,16 @@ fn cuda_compiled_pipeline_vs_plain_dispatch_overhead() {
     let config = DispatchConfig::default();
 
     for _ in 0..3 {
-        let _ = backend.dispatch(&program, &inputs, &config).expect("warm plain");
+        let _ = backend
+            .dispatch(&program, &inputs, &config)
+            .expect("warm plain");
     }
     const RUNS: u64 = 200;
     let t0 = std::time::Instant::now();
     for _ in 0..RUNS {
-        let _ = backend.dispatch(&program, &inputs, &config).expect("plain dispatch");
+        let _ = backend
+            .dispatch(&program, &inputs, &config)
+            .expect("plain dispatch");
     }
     let plain_ns = u64::try_from(t0.elapsed().as_nanos()).unwrap_or(u64::MAX) / RUNS;
 
@@ -113,23 +117,30 @@ fn cuda_compiled_pipeline_vs_plain_dispatch_overhead() {
     }
     let t1 = std::time::Instant::now();
     for _ in 0..RUNS {
-        let _ = pipeline.dispatch(&inputs, &config).expect("pipeline dispatch");
+        let _ = pipeline
+            .dispatch(&inputs, &config)
+            .expect("pipeline dispatch");
     }
     let pipe_ns = u64::try_from(t1.elapsed().as_nanos()).unwrap_or(u64::MAX) / RUNS;
 
     // Varying inputs defeat the materialized-output cache, so this is the
     // honest repeated-dispatch win for a workload like the borrow checker:
     // same program shape, different buffer data each call.
-    let mut varied: Vec<Vec<Vec<u8>>> =
-        (0..RUNS).map(|i| vec![(i as u32).to_le_bytes().to_vec()]).collect();
+    let mut varied: Vec<Vec<Vec<u8>>> = (0..RUNS)
+        .map(|i| vec![(i as u32).to_le_bytes().to_vec()])
+        .collect();
     let t2 = std::time::Instant::now();
     for v in &varied {
-        let _ = pipeline.dispatch(v, &config).expect("pipeline varied dispatch");
+        let _ = pipeline
+            .dispatch(v, &config)
+            .expect("pipeline varied dispatch");
     }
     let pipe_varied_ns = u64::try_from(t2.elapsed().as_nanos()).unwrap_or(u64::MAX) / RUNS;
     let t3 = std::time::Instant::now();
     for v in &mut varied {
-        let _ = backend.dispatch(&program, v, &config).expect("plain varied dispatch");
+        let _ = backend
+            .dispatch(&program, v, &config)
+            .expect("plain varied dispatch");
     }
     let plain_varied_ns = u64::try_from(t3.elapsed().as_nanos()).unwrap_or(u64::MAX) / RUNS;
 
@@ -138,8 +149,8 @@ fn cuda_compiled_pipeline_vs_plain_dispatch_overhead() {
     const KRUNS: u64 = 1000;
     let t4 = std::time::Instant::now();
     for _ in 0..KRUNS {
-        let _ = vyre_driver::pipeline::try_normalized_program_cache_digest(&program)
-            .expect("digest");
+        let _ =
+            vyre_driver::pipeline::try_normalized_program_cache_digest(&program).expect("digest");
         let _ = vyre_driver::program_vsa_fingerprint_words(&program);
     }
     let digest_ns = u64::try_from(t4.elapsed().as_nanos()).unwrap_or(u64::MAX) / KRUNS;
@@ -149,7 +160,9 @@ fn cuda_compiled_pipeline_vs_plain_dispatch_overhead() {
     println!("plain_dispatch_ns/call          {plain_ns:>10}  (identical inputs)");
     println!("compiled_pipeline_ns/call       {pipe_ns:>10}  (identical inputs, output-cache hit)");
     println!("plain_dispatch_varied_ns/call   {plain_varied_ns:>10}  (varying inputs)");
-    println!("compiled_pipeline_varied_ns     {pipe_varied_ns:>10}  (varying inputs, graph replay)");
+    println!(
+        "compiled_pipeline_varied_ns     {pipe_varied_ns:>10}  (varying inputs, graph replay)"
+    );
     println!("cache_key_digest_ns/call        {digest_ns:>10}  (normalize+hash, redone every plain call)");
     let speedup = plain_varied_ns as f64 / pipe_varied_ns.max(1) as f64;
     println!("--> varying-input speedup       {speedup:>9.2}x  (the honest repeated-dispatch win)");

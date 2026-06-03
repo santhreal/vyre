@@ -798,4 +798,3 @@ mod tests {
         assert!(!via_section.contains("reference_select"));
     }
 }
-

@@ -206,7 +206,9 @@ fn release_surface_coverage(vyre_root: &Path, santh_root: &Path) -> ReleaseSurfa
         wgpu_driver_crate: vyre_root.join("vyre-driver-wgpu/src/lib.rs").is_file(),
         weir_crate: santh_root.join("libs/dataflow/weir/src/lib.rs").is_file(),
         vyrec_tool: santh_root.join("tools/vyrec/src").is_dir(),
-        security_analysis_tool: santh_root.join("libs/tools/security-analysis-consumer/src").is_dir(),
+        security_analysis_tool: santh_root
+            .join("libs/tools/security-analysis-consumer/src")
+            .is_dir(),
         security_grammar_gen: santh_root
             .join("libs/shared/security-grammar-gen/src")
             .is_dir(),
@@ -463,7 +465,6 @@ fn scan_test_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<Hyg
         }
     }
 }
-
 
 fn scan_optional_test_root(
     root: &Path,
@@ -963,7 +964,6 @@ fn scan_test_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<Hyg
     }
 }
 
-
 fn push_test_finding(
     path: &Path,
     line_index: usize,
@@ -1195,4 +1195,3 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
-

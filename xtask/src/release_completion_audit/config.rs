@@ -341,4 +341,3 @@ pub(crate) fn release_checklist() -> Vec<ChecklistItem> {
         },
     ]
 }
-

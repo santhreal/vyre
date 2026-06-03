@@ -1,13 +1,9 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     let Some(matrix) =
         first_json_evidence(requirement, base_dir, "conformance-matrix.json", failures)
     else {
@@ -68,8 +64,7 @@ pub(super) fn check(
         .map_or(usize::MAX, Vec::len);
     if op_count == 0 {
         failures.push(
-            "requirement `conformance-hard-gate` matrix contains zero op entries"
-                .to_string(),
+            "requirement `conformance-hard-gate` matrix contains zero op entries".to_string(),
         );
     }
     if op_count < 49 {
@@ -119,8 +114,7 @@ pub(super) fn check(
         .is_some_and(|duplicates| !duplicates.is_empty())
     {
         failures.push(
-            "requirement `conformance-hard-gate` matrix reports duplicate op id(s)"
-                .to_string(),
+            "requirement `conformance-hard-gate` matrix reports duplicate op id(s)".to_string(),
         );
     }
     let backends = matrix
@@ -299,8 +293,7 @@ pub(super) fn check(
     ] {
         check_backend_conformance_report(requirement, base_dir, suffix, failures);
     }
-    if let Some(log) =
-        first_json_evidence(requirement, base_dir, "release-gate-log.json", failures)
+    if let Some(log) = first_json_evidence(requirement, base_dir, "release-gate-log.json", failures)
     {
         let schema_version = log
             .get("schema_version")
@@ -338,8 +331,7 @@ pub(super) fn check(
         ] {
             if !statuses.iter().any(|status| {
                 status.get("path").and_then(serde_json::Value::as_str) == Some(artifact)
-                    && status.get("exists").and_then(serde_json::Value::as_bool)
-                        == Some(true)
+                    && status.get("exists").and_then(serde_json::Value::as_bool) == Some(true)
                     && status
                         .get("bytes")
                         .and_then(serde_json::Value::as_u64)

@@ -19,7 +19,11 @@ pub(crate) fn combine_rhs_lit_chain(
     out
 }
 
-fn combine_body(mut body: KernelBody, rule: RhsLitChainRule, allocator: &mut ResultAllocator) -> KernelBody {
+fn combine_body(
+    mut body: KernelBody,
+    rule: RhsLitChainRule,
+    allocator: &mut ResultAllocator,
+) -> KernelBody {
     let index = BodyIndex::new(&body);
 
     let mut rewrites = Vec::new();
@@ -32,8 +36,7 @@ fn combine_body(mut body: KernelBody, rule: RhsLitChainRule, allocator: &mut Res
         }
         let lhs = op.operands[0];
         let rhs = op.operands[1];
-        let Some((x, a)) = candidate_with_rhs_lit(&body, &index, lhs, rule.op)
-        else {
+        let Some((x, a)) = candidate_with_rhs_lit(&body, &index, lhs, rule.op) else {
             continue;
         };
         let Some(b) = index.u32_lit(&body, rhs) else {
@@ -45,8 +48,11 @@ fn combine_body(mut body: KernelBody, rule: RhsLitChainRule, allocator: &mut Res
     }
 
     for (op_idx, x_id, combined) in rewrites {
-        let synth_id =
-            allocator.push_literal(&mut body.ops, &mut body.literals, LiteralValue::U32(combined));
+        let synth_id = allocator.push_literal(
+            &mut body.ops,
+            &mut body.literals,
+            LiteralValue::U32(combined),
+        );
         body.ops[op_idx].kind = KernelOpKind::BinOpKind(rule.op);
         body.ops[op_idx].operands = vec![x_id, synth_id];
     }

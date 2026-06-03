@@ -25,9 +25,7 @@ pub(super) fn manifest_path_from_args(args: &[String]) -> Result<PathBuf, String
                 std::process::exit(0);
             }
             other => {
-                return Err(format!(
-                    "Fix: unknown vyre-release-gate option `{other}`."
-                ));
+                return Err(format!("Fix: unknown vyre-release-gate option `{other}`."));
             }
         }
     }

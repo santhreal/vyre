@@ -151,9 +151,8 @@ fn empty_capability_set_rejects_any_program_with_nodes() {
 
     let program = Program::wrapped(vec![], [1, 1, 1], vec![Node::Return]);
     let backend = NoOpBackend;
-    let err = validate_program(&program, &backend).expect_err(
-        "a backend with empty supported_ops must reject a program containing nodes",
-    );
+    let err = validate_program(&program, &backend)
+        .expect_err("a backend with empty supported_ops must reject a program containing nodes");
     let msg = err.to_string();
     assert!(
         msg.contains("Fix:") || msg.contains("unsupported") || msg.contains("supported"),
@@ -294,9 +293,8 @@ fn external_fixture_drives_validation_rejection() {
     }
 
     let program = Program::wrapped(vec![], [1, 1, 1], vec![Node::Return]);
-    let err = validate_program(&program, &DenyAllBackend).expect_err(
-        "validation must reject unsupported ops (fixture op={op_id})",
-    );
+    let err = validate_program(&program, &DenyAllBackend)
+        .expect_err("validation must reject unsupported ops (fixture op={op_id})");
     let msg = err.to_string();
     assert!(
         msg.contains("Fix:"),

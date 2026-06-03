@@ -1,13 +1,9 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     let Some(matrix) = first_json_evidence(
         requirement,
         base_dir,
@@ -35,8 +31,7 @@ pub(super) fn check(
     }
     if analyses == 0 {
         failures.push(
-            "requirement `weir-analysis-integration` matrix contains zero analyses"
-                .to_string(),
+            "requirement `weir-analysis-integration` matrix contains zero analyses".to_string(),
         );
     }
     let inventory_registered = matrix

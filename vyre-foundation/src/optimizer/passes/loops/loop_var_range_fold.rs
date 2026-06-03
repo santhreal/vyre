@@ -740,4 +740,3 @@ mod tests {
         assert_eq!(count_ifs(result.program.entry()), 0);
     }
 }
-

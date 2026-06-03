@@ -554,7 +554,11 @@ mod tests {
         } else {
             return Err("expected BinOp".to_string());
         }
-        assert_eq!(errors.len(), 1, "bool + int must produce exactly one type error");
+        assert_eq!(
+            errors.len(),
+            1,
+            "bool + int must produce exactly one type error"
+        );
         assert!(
             errors[0].message().contains("Bool") || errors[0].message().contains("type"),
             "type error must mention Bool mismatch: {}",
@@ -608,4 +612,3 @@ mod tests {
         assert!(errors.iter().any(|error| error.message().contains("V044")));
     }
 }
-

@@ -834,4 +834,3 @@ fn select_ordered_maximal(
 
 #[cfg(test)]
 mod tests;
-

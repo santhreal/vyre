@@ -525,12 +525,11 @@ impl WgpuPipeline {
         // (Vulkan/DX12); on Metal/GL this is `false` and we compile uncached. A
         // `create_pipeline_cache` call on a device without the feature is a
         // fatal validation abort, not a recoverable error.
-        let pipeline_cache_handle =
-            if device.features().contains(wgpu::Features::PIPELINE_CACHE) {
-                Some(create_compiled_pipeline_cache(device, &artifact_key)?)
-            } else {
-                None
-            };
+        let pipeline_cache_handle = if device.features().contains(wgpu::Features::PIPELINE_CACHE) {
+            Some(create_compiled_pipeline_cache(device, &artifact_key)?)
+        } else {
+            None
+        };
         runtime::shader::dump_wgsl_if_requested("vyre P-6 cached shader module", &wgsl).map_err(
             |error| {
                 BackendError::new(format!(
@@ -671,7 +670,6 @@ impl WgpuPipeline {
         &self.execution_plan
     }
 }
-
 
 impl WgpuPipeline {
     fn readback_persistent_outputs(
@@ -873,4 +871,3 @@ pub mod persistent;
 
 #[cfg(test)]
 mod tests;
-

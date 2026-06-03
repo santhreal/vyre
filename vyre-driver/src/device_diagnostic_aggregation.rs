@@ -447,7 +447,6 @@ pub fn diagnostic_compression_ratio_bps(
     )
 }
 
-
 fn avoided_readback_bytes(raw_candidate_readback_bytes: u64, host_readback_bytes: u64) -> u64 {
     if raw_candidate_readback_bytes >= host_readback_bytes {
         raw_candidate_readback_bytes - host_readback_bytes
@@ -778,4 +777,3 @@ mod tests {
         }
     }
 }
-

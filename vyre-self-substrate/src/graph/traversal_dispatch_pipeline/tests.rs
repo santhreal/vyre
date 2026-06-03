@@ -132,7 +132,10 @@ fn body_builders_emit_composable_ir() {
 #[test]
 fn checked_batch_builders_reject_invalid_dimensions() {
     let shape = ProgramGraphShape::new(4, 4);
-    assert!(matches!(dispatch_csr_forward_batch_checked(shape, "frontier", "changed", 1, 0), Err(_)));
+    assert!(matches!(
+        dispatch_csr_forward_batch_checked(shape, "frontier", "changed", 1, 0),
+        Err(_)
+    ));
     assert!(dispatch_csr_forward_batch_global_slot_checked(
         shape, "frontier", "changed", 1, 1, 2, 2
     )

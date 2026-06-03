@@ -464,7 +464,6 @@ const U32_UNARY_CASES: &[ResidentUnaryCase] = &[
     },
 ];
 
-
 const I32_BINARY_CASES: &[ResidentBinaryCase] = &[
     ResidentBinaryCase {
         name: "resident_i32_add",
@@ -1435,7 +1434,6 @@ fn resident_in_place_reference_outputs(
     (resident_cuda, reference)
 }
 
-
 fn generated_f32_values(salt: u32) -> Vec<f32> {
     const BITS: &[u32] = &[
         0x0000_0000,
@@ -1530,4 +1528,3 @@ fn generated_f32_classification_values() -> Vec<f32> {
         .map(|lane| f32::from_bits(BITS[lane % BITS.len()]))
         .collect()
 }
-

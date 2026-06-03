@@ -98,11 +98,18 @@ fn generated_hardware_registry_shapes_match_declared_surface() {
 
         let fixture_inputs = (entry
             .test_inputs
-            .expect("Fix: hardware entry must expose generated test inputs"))();
+            .expect("Fix: hardware entry must expose generated test inputs"))(
+        );
         let fixture_expected = (entry
             .expected_output
-            .expect("Fix: hardware entry must expose generated expected outputs"))();
-        assert_eq!(fixture_inputs.len(), fixture_expected.len(), "{}", expected.id);
+            .expect("Fix: hardware entry must expose generated expected outputs"))(
+        );
+        assert_eq!(
+            fixture_inputs.len(),
+            fixture_expected.len(),
+            "{}",
+            expected.id
+        );
         for (case_inputs, case_expected) in fixture_inputs.iter().zip(fixture_expected.iter()) {
             assert_eq!(
                 case_inputs.len(),
@@ -123,7 +130,12 @@ fn generated_hardware_registry_shapes_match_declared_surface() {
                     expected.id
                 );
             }
-            assert_eq!(run_cpu(entry, case_inputs), *case_expected, "{}", expected.id);
+            assert_eq!(
+                run_cpu(entry, case_inputs),
+                *case_expected,
+                "{}",
+                expected.id
+            );
         }
     }
 }
@@ -150,7 +162,10 @@ fn generated_hardware_registry_is_stable_across_thousands_of_lookup_paths() {
         assert_eq!(shape, expected.shape);
         assert_eq!(shape.total_buffers() as usize, fixture_inputs[case].len());
         assert_eq!(shape.output_buffers as usize, fixture_expected[case].len());
-        assert_eq!(run_cpu(entry, &fixture_inputs[case]), fixture_expected[case]);
+        assert_eq!(
+            run_cpu(entry, &fixture_inputs[case]),
+            fixture_expected[case]
+        );
         assertions += 6;
     }
 

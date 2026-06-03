@@ -23,8 +23,14 @@ fn generated_i32_binary_storage_graph_semantics_match_contract_matrix() {
         }
 
         if right != 0 && !(left == i32::MIN && right == -1) {
-            assert_eq!(eval_i32_bin(BinOp::Div, left, right).unwrap(), IrValue::I32(left / right));
-            assert_eq!(eval_i32_bin(BinOp::Mod, left, right).unwrap(), IrValue::I32(left % right));
+            assert_eq!(
+                eval_i32_bin(BinOp::Div, left, right).unwrap(),
+                IrValue::I32(left / right)
+            );
+            assert_eq!(
+                eval_i32_bin(BinOp::Mod, left, right).unwrap(),
+                IrValue::I32(left % right)
+            );
             checked += 2;
         }
     }
@@ -49,7 +55,9 @@ fn generated_i32_division_edges_are_actionable_errors() {
             let error = eval_i32_bin(op, left, right)
                 .expect_err("Fix: invalid i32 division/remainder must fail.");
             assert!(
-                error.to_string().contains("undefined target-text semantics"),
+                error
+                    .to_string()
+                    .contains("undefined target-text semantics"),
                 "Fix: invalid i32 division error must explain the signed edge case: {error}"
             );
         }
@@ -115,9 +123,15 @@ type F32UnaryExpected = fn(f32) -> IrValue;
 
 fn i32_total_binary_cases() -> [(BinOp, I32BinaryExpected); 17] {
     [
-        (BinOp::Add, |left, right| IrValue::I32(left.wrapping_add(right))),
-        (BinOp::Sub, |left, right| IrValue::I32(left.wrapping_sub(right))),
-        (BinOp::Mul, |left, right| IrValue::I32(left.wrapping_mul(right))),
+        (BinOp::Add, |left, right| {
+            IrValue::I32(left.wrapping_add(right))
+        }),
+        (BinOp::Sub, |left, right| {
+            IrValue::I32(left.wrapping_sub(right))
+        }),
+        (BinOp::Mul, |left, right| {
+            IrValue::I32(left.wrapping_mul(right))
+        }),
         (BinOp::BitAnd, |left, right| IrValue::I32(left & right)),
         (BinOp::BitOr, |left, right| IrValue::I32(left | right)),
         (BinOp::BitXor, |left, right| IrValue::I32(left ^ right)),
@@ -135,36 +149,60 @@ fn i32_total_binary_cases() -> [(BinOp, I32BinaryExpected); 17] {
         (BinOp::Ge, |left, right| IrValue::Bool(left >= right)),
         (BinOp::Min, |left, right| IrValue::I32(left.min(right))),
         (BinOp::Max, |left, right| IrValue::I32(left.max(right))),
-        (BinOp::SaturatingAdd, |left, right| IrValue::I32(left.saturating_add(right))),
+        (BinOp::SaturatingAdd, |left, right| {
+            IrValue::I32(left.saturating_add(right))
+        }),
     ]
 }
 
 fn f32_binary_cases() -> [(BinOp, F32BinaryExpected); 12] {
     [
-        (BinOp::Add, |left, right| IrValue::F32(canonical_f32(left + right))),
-        (BinOp::Sub, |left, right| IrValue::F32(canonical_f32(left - right))),
-        (BinOp::Mul, |left, right| IrValue::F32(canonical_f32(left * right))),
-        (BinOp::Div, |left, right| IrValue::F32(canonical_f32(left / right))),
+        (BinOp::Add, |left, right| {
+            IrValue::F32(canonical_f32(left + right))
+        }),
+        (BinOp::Sub, |left, right| {
+            IrValue::F32(canonical_f32(left - right))
+        }),
+        (BinOp::Mul, |left, right| {
+            IrValue::F32(canonical_f32(left * right))
+        }),
+        (BinOp::Div, |left, right| {
+            IrValue::F32(canonical_f32(left / right))
+        }),
         (BinOp::Eq, |left, right| {
-            IrValue::Bool(left.partial_cmp(&right).is_some_and(std::cmp::Ordering::is_eq))
+            IrValue::Bool(
+                left.partial_cmp(&right)
+                    .is_some_and(std::cmp::Ordering::is_eq),
+            )
         }),
         (BinOp::Ne, |left, right| {
-            IrValue::Bool(left.partial_cmp(&right).is_none_or(|ordering| !ordering.is_eq()))
+            IrValue::Bool(
+                left.partial_cmp(&right)
+                    .is_none_or(|ordering| !ordering.is_eq()),
+            )
         }),
         (BinOp::Lt, |left, right| IrValue::Bool(left < right)),
         (BinOp::Le, |left, right| IrValue::Bool(left <= right)),
         (BinOp::Gt, |left, right| IrValue::Bool(left > right)),
         (BinOp::Ge, |left, right| IrValue::Bool(left >= right)),
-        (BinOp::Min, |left, right| IrValue::F32(canonical_f32(left.min(right)))),
-        (BinOp::Max, |left, right| IrValue::F32(canonical_f32(left.max(right)))),
+        (BinOp::Min, |left, right| {
+            IrValue::F32(canonical_f32(left.min(right)))
+        }),
+        (BinOp::Max, |left, right| {
+            IrValue::F32(canonical_f32(left.max(right)))
+        }),
     ]
 }
 
 fn f32_unary_cases() -> [(UnOp, F32UnaryExpected); 3] {
     [
         (UnOp::Negate, |value| IrValue::F32(canonical_f32(-value))),
-        (UnOp::InverseSqrt, |value| IrValue::F32(canonical_f32(1.0 / value.sqrt()))),
-        (UnOp::Reciprocal, |value| IrValue::F32(canonical_f32(1.0 / value))),
+        (UnOp::InverseSqrt, |value| {
+            IrValue::F32(canonical_f32(1.0 / value.sqrt()))
+        }),
+        (UnOp::Reciprocal, |value| {
+            IrValue::F32(canonical_f32(1.0 / value))
+        }),
     ]
 }
 
@@ -258,7 +296,9 @@ fn generated_i32_values() -> Vec<i32> {
     let mut state = 0x6a09_e667u32;
     for index in 0..512u32 {
         state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
-        values.push(i32::from_ne_bytes(state.rotate_left(index & 31).to_ne_bytes()));
+        values.push(i32::from_ne_bytes(
+            state.rotate_left(index & 31).to_ne_bytes(),
+        ));
     }
     values.sort_unstable();
     values.dedup();
@@ -311,6 +351,9 @@ fn assert_ir_value_eq(actual: IrValue, expected: IrValue, context: &str) {
             expected.to_bits(),
             "Fix: f32 result bits mismatch for {context}"
         ),
-        (actual, expected) => assert_eq!(actual, expected, "Fix: scalar result mismatch for {context}"),
+        (actual, expected) => assert_eq!(
+            actual, expected,
+            "Fix: scalar result mismatch for {context}"
+        ),
     }
 }

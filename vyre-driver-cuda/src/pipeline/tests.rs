@@ -9,8 +9,8 @@ use crate::backend::CudaDispatchPlan;
 use crate::synthetic_device_caps::blackwell_sm120_caps;
 
 use super::{
-    add_shape_bytes, cuda_graph_lane_count_for_batch, materialized_input_key,
-    MaterializedPipelineOutputCache, MaterializedPipelineOutputCacheEntry,
+    add_shape_bytes, cuda_compiled_pipeline_identity_key, cuda_graph_lane_count_for_batch,
+    materialized_input_key, MaterializedPipelineOutputCache, MaterializedPipelineOutputCacheEntry,
     MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE, MAX_MATERIALIZED_OUTPUT_CACHE_BYTES_PER_PIPELINE,
 };
 
@@ -44,6 +44,81 @@ fn single_input_output_plan(byte_len: usize) -> CudaDispatchPlan {
         cooperative: false,
         fixpoint_iterations: 1,
     }
+}
+
+fn generated_pipeline_identity_key(seed: u32, salt: u32) -> [u8; 32] {
+    let mut out = [0_u8; 32];
+    let mut state = seed ^ salt ^ 0xC0DA_CAFE;
+    for (index, byte) in out.iter_mut().enumerate() {
+        state = state
+            .wrapping_mul(1_664_525)
+            .wrapping_add(1_013_904_223)
+            .rotate_left((index as u32) & 15);
+        *byte = (state >> ((index & 3) * 8)) as u8;
+    }
+    out
+}
+
+fn generated_pipeline_identity_launch(seed: u32) -> LaunchPlan {
+    LaunchPlan {
+        element_count: 1 + (seed % 4096),
+        workgroup: [
+            32 + (seed % 8) * 32,
+            1 + (seed.rotate_left(3) % 4),
+            1 + (seed.rotate_left(5) % 2),
+        ],
+        grid: [
+            1 + (seed % 1024),
+            1 + (seed.rotate_left(7) % 16),
+            1 + (seed.rotate_left(11) % 8),
+        ],
+        param_words: Vec::new(),
+        max_binding_alignment: std::mem::size_of::<u64>(),
+    }
+}
+
+#[test]
+fn cuda_compiled_pipeline_identity_uses_shared_domain_separated_contract() {
+    for seed in 0_u32..2048 {
+        let ptx_key = generated_pipeline_identity_key(seed, 0x5054_5820);
+        let module_key = generated_pipeline_identity_key(seed, 0x4D4F_4420);
+        let launch = generated_pipeline_identity_launch(seed);
+
+        let key = cuda_compiled_pipeline_identity_key(&ptx_key, &module_key, &launch)
+            .expect("Fix: generated CUDA compiled pipeline key must fit");
+        let changed_ptx = cuda_compiled_pipeline_identity_key(
+            &generated_pipeline_identity_key(seed ^ 1, 0x5054_5820),
+            &module_key,
+            &launch,
+        )
+        .expect("Fix: generated CUDA compiled pipeline PTX variant must fit");
+        let changed_module = cuda_compiled_pipeline_identity_key(
+            &ptx_key,
+            &generated_pipeline_identity_key(seed ^ 1, 0x4D4F_4420),
+            &launch,
+        )
+        .expect("Fix: generated CUDA compiled pipeline module variant must fit");
+        let mut changed_launch = launch.clone();
+        changed_launch.grid[0] = changed_launch.grid[0].wrapping_add(1);
+        let changed_launch_key =
+            cuda_compiled_pipeline_identity_key(&ptx_key, &module_key, &changed_launch)
+                .expect("Fix: generated CUDA compiled pipeline launch variant must fit");
+
+        assert_ne!(key, changed_ptx);
+        assert_ne!(key, changed_module);
+        assert_ne!(key, changed_launch_key);
+    }
+}
+
+#[test]
+fn cuda_compiled_pipeline_source_does_not_fork_blake3_tuple_hashing() {
+    let source = include_str!("../pipeline.rs");
+    assert!(
+        source.contains("domain_separated_exact_input_key")
+            && source.contains("cuda_compiled_pipeline_identity_key")
+            && !source.contains(&["blake", "3::Hasher::new()"].concat()),
+        "Fix: CUDA compiled pipeline identity must use the shared domain-separated exact-input key instead of local BLAKE3 tuple hashing."
+    );
 }
 
 #[test]
@@ -544,7 +619,9 @@ fn materialized_output_cache_hit_preserves_existing_output_slots_until_reservati
         .expect("Fix: materialized cache hit must trim stale caller slots only after reservation.");
     let clear_pos = copier
         .find("target.clear();\n        target.extend_from_slice(source);")
-        .expect("Fix: materialized cache hit must rewrite existing output slots after reservation.");
+        .expect(
+            "Fix: materialized cache hit must rewrite existing output slots after reservation.",
+        );
 
     assert!(
         reserve_pos < truncate_pos

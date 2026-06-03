@@ -1,10 +1,7 @@
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use vyre_foundation::ir::BinOp;
 
-pub(super) fn rewrite_self_binops<F>(
-    desc: &KernelDescriptor,
-    should_rewrite: F,
-) -> KernelDescriptor
+pub(super) fn rewrite_self_binops<F>(desc: &KernelDescriptor, should_rewrite: F) -> KernelDescriptor
 where
     F: Fn(BinOp) -> bool + Copy,
 {
@@ -43,8 +40,7 @@ where
 #[cfg(test)]
 pub(crate) mod test_support {
     use crate::{
-        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
-        LiteralValue,
+        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
     };
     use vyre_foundation::ir::BinOp;
 

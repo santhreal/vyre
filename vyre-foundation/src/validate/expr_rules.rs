@@ -449,7 +449,6 @@ mod tests {
         })
     }
 
-
     #[derive(Debug)]
     struct TestExprExtension;
 
@@ -652,4 +651,3 @@ mod tests {
         );
     }
 }
-

@@ -4,7 +4,7 @@ extern crate self as vyre;
 
 mod support;
 
-pub use support::{dialect, ir, optimizer, ops};
+pub use support::{dialect, ir, ops, optimizer};
 
 use vyre_macros::{define_op, vyre_pass, AlgebraicLaws};
 
@@ -84,13 +84,13 @@ macro_rules! define_metadata_matrix_pass {
         $cost_model_family:literal
     ) => {
         #[vyre_pass(
-            name = $pass_name,
-            requires = [],
-            invalidates = [],
-            phase = $phase,
-            boundary_class = $boundary_class,
-            cost_model_family = $cost_model_family
-        )]
+                                                            name = $pass_name,
+                                                            requires = [],
+                                                            invalidates = [],
+                                                            phase = $phase,
+                                                            boundary_class = $boundary_class,
+                                                            cost_model_family = $cost_model_family
+                                                        )]
         pub struct $type_name;
 
         impl $type_name {

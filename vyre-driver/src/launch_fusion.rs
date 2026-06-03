@@ -448,7 +448,6 @@ mod tests {
                     }),
                     other => Err(other),
                 })
-
                 .expect(
                     "Fix: generated launch fusion should only reject singleton over-budget stages",
                 );
@@ -578,4 +577,3 @@ mod tests {
         x
     }
 }
-

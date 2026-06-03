@@ -692,10 +692,11 @@ fn partial_resident_upload_releases_stream_on_copy_errors() {
         );
 
     assert!(
-        source.contains("fn with_resident_stream")
-            && partial_upload.contains("self.with_resident_stream(|stream|")
-            && partial_upload.contains("})?;"),
-        "Fix: partial CUDA resident uploads must route through the resident pooled-stream helper so staging/copy/synchronize errors release the stream before propagation."
+        source.contains("fn with_resident_stream_classified")
+            && partial_upload.contains("self.with_resident_stream_classified(|stream|")
+            && partial_upload.contains("ResidentStreamFailure::CompletionUnproven")
+            && partial_upload.contains("std::mem::forget(host_transfers)"),
+        "Fix: partial CUDA resident uploads must route through the resident pooled-stream helper and retain host staging when stream completion is unproven."
     );
 }
 
@@ -703,8 +704,8 @@ fn partial_resident_upload_releases_stream_on_copy_errors() {
 fn resident_inflight_reference_counting_does_not_saturate_underflow() {
     let source = include_str!("../src/backend/resident.rs");
     assert!(
-        source.contains("checked_sub(1)") && !source.contains(concat!(".", "saturating_sub")),
+        source.contains("checked_atomic_sub_usize_with_order")
+            && !source.contains(concat!(".", "saturating_sub")),
         "Fix: CUDA resident in-flight reference counting must fail loudly on underflow instead of hiding lifetime bugs."
     );
 }
-

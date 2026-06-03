@@ -644,7 +644,11 @@ pub fn program_vsa_fingerprint(program: &Program) -> Vec<u32> {
 #[must_use]
 pub fn program_vsa_fingerprint_words(program: &Program) -> [u32; 8] {
     let fingerprint = program.fingerprint();
-    vyre_primitives::wire::decode_u32x8_le_bytes(&fingerprint)
+    let mut words = [0u32; 8];
+    for (word, chunk) in words.iter_mut().zip(fingerprint.chunks_exact(4)) {
+        *word = u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+    }
+    words
 }
 
 #[cfg(test)]
@@ -657,9 +661,14 @@ mod tests {
     fn program_vsa_fingerprint_words_match_wire_decoder() {
         let program = Program::wrapped(vec![], [64, 1, 1], vec![]);
         let words = program_vsa_fingerprint_words(&program);
-        let decoded = vyre_primitives::wire::decode_u32_le_bytes_all(&program.fingerprint());
+        let fingerprint = program.fingerprint();
 
-        assert_eq!(words.as_slice(), decoded.as_slice());
+        for (index, chunk) in fingerprint.chunks_exact(4).enumerate() {
+            assert_eq!(
+                words[index],
+                u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]])
+            );
+        }
         assert_eq!(program_vsa_fingerprint(&program), words.to_vec());
     }
 

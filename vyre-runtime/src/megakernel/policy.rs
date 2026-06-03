@@ -951,7 +951,6 @@ impl MegakernelLaunchPolicy {
     }
 }
 
-
 fn diffuse_step_into(
     stalks: &[f64],
     restriction_diag: &[f64],
@@ -1050,4 +1049,3 @@ fn classify_pressure(
 
 #[cfg(test)]
 mod tests;
-

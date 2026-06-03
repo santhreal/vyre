@@ -696,4 +696,3 @@ pub(crate) fn workgroup_memory(program: &Program) -> Result<BufferMap, vyre::Err
     }
     Ok(workgroup)
 }
-

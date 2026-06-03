@@ -51,7 +51,9 @@ fn canonical_for(op: &UnOp, input: f32) -> f32 {
         UnOp::Sqrt => canonical_sqrt(input),
         UnOp::Exp => canonical_exp(input),
         UnOp::Log => canonical_log(input),
-        other => panic!("Fix: gap_transcendentals_parity only covers sin/cos/sqrt/exp/log, got {other:?}"),
+        other => panic!(
+            "Fix: gap_transcendentals_parity only covers sin/cos/sqrt/exp/log, got {other:?}"
+        ),
     }
 }
 

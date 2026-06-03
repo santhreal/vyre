@@ -19,7 +19,10 @@ stale="$(mktemp)"
 trap 'rm -f "$actual" "$indexed" "$missing" "$stale"' EXIT
 
 find docs -type f -name '*.md' ! -path "$INDEX" | sort > "$actual"
-grep -Eo '\(docs/[^)]*\.md\)' "$INDEX" | tr -d '()' | sort -u > "$indexed"
+grep -Eo '\((docs/)?[^)]*\.md\)' "$INDEX" \
+  | tr -d '()' \
+  | awk '{ if ($0 ~ /^docs\//) print $0; else print "docs/" $0 }' \
+  | sort -u > "$indexed"
 
 comm -23 "$actual" "$indexed" > "$missing"
 comm -13 "$actual" "$indexed" > "$stale"
@@ -40,7 +43,8 @@ if [[ -s "$stale" ]]; then
 fi
 
 while IFS= read -r path; do
-  line="$(grep -F "]($path)" "$INDEX" || true)"
+  relative_path="${path#docs/}"
+  line="$(grep -F "]($path)" "$INDEX" || grep -F "]($relative_path)" "$INDEX" || true)"
   if [[ -z "$line" ]]; then
     continue
   fi

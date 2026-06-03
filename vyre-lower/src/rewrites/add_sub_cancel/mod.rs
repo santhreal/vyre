@@ -57,9 +57,7 @@ fn add_sub_cancel_body(mut body: KernelBody) -> KernelBody {
             BinOp::Add => {
                 // Add(Sub(x, Lit(a)), Lit(a)) → x
                 if let Some(a_outer) = index.u32_lit(&body, rhs) {
-                    if let Some((x, a_inner)) =
-                        inner_with_rhs_lit(&body, &index, lhs, BinOp::Sub)
-                    {
+                    if let Some((x, a_inner)) = inner_with_rhs_lit(&body, &index, lhs, BinOp::Sub) {
                         if a_inner == a_outer {
                             rewrites.push((idx, x));
                             continue;
@@ -68,9 +66,7 @@ fn add_sub_cancel_body(mut body: KernelBody) -> KernelBody {
                 }
                 // Add(Lit(a), Sub(x, Lit(a))) → x  (commuted)
                 if let Some(a_outer) = index.u32_lit(&body, lhs) {
-                    if let Some((x, a_inner)) =
-                        inner_with_rhs_lit(&body, &index, rhs, BinOp::Sub)
-                    {
+                    if let Some((x, a_inner)) = inner_with_rhs_lit(&body, &index, rhs, BinOp::Sub) {
                         if a_inner == a_outer {
                             rewrites.push((idx, x));
                         }
@@ -80,17 +76,13 @@ fn add_sub_cancel_body(mut body: KernelBody) -> KernelBody {
             BinOp::Sub => {
                 // Sub(Add(x, Lit(a)), Lit(a)) → x
                 if let Some(a_outer) = index.u32_lit(&body, rhs) {
-                    if let Some((x, a_inner)) =
-                        inner_with_rhs_lit(&body, &index, lhs, BinOp::Add)
-                    {
+                    if let Some((x, a_inner)) = inner_with_rhs_lit(&body, &index, lhs, BinOp::Add) {
                         if a_inner == a_outer {
                             rewrites.push((idx, x));
                         }
                     }
                     // Also: Sub(Add(Lit(a), x), Lit(a)) → x  -  Add is commutative.
-                    if let Some((x, a_inner)) =
-                        inner_with_lhs_lit(&body, &index, lhs, BinOp::Add)
-                    {
+                    if let Some((x, a_inner)) = inner_with_lhs_lit(&body, &index, lhs, BinOp::Add) {
                         if a_inner == a_outer {
                             rewrites.push((idx, x));
                         }

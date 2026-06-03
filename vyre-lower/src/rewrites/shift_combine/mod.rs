@@ -88,7 +88,8 @@ fn shift_combine_body(mut body: KernelBody, allocator: &mut ResultAllocator) -> 
     }
 
     for (op_idx, x_id, sum, outer) in rewrites {
-        let synth_id = allocator.push_literal(&mut body.ops, &mut body.literals, LiteralValue::U32(sum));
+        let synth_id =
+            allocator.push_literal(&mut body.ops, &mut body.literals, LiteralValue::U32(sum));
         body.ops[op_idx].kind = KernelOpKind::BinOpKind(outer);
         body.ops[op_idx].operands = vec![x_id, synth_id];
     }

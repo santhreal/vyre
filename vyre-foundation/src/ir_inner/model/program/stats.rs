@@ -494,7 +494,6 @@ fn walk_expr(
     }
 }
 
-
 fn is_subgroup_intrinsic_id(op_id: &str) -> bool {
     const MARKERS: &[&str] = &[
         "subgroup_",
@@ -507,4 +506,3 @@ fn is_subgroup_intrinsic_id(op_id: &str) -> bool {
     ];
     MARKERS.iter().any(|marker| op_id.contains(marker))
 }
-

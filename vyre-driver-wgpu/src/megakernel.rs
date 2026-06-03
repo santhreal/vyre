@@ -453,7 +453,6 @@ impl<'a> WgpuMegakernelDispatcher<'a> {
     }
 }
 
-
 fn strict_done_ring_slots_from_outputs(
     outputs: &[Vec<u8>],
     item_count: usize,
@@ -926,7 +925,6 @@ fn retained_redundant_done_count(
         .try_into()
         .unwrap_or(u64::MAX)
 }
-
 
 fn nanos_u64(nanos: u128) -> Result<u64, BackendError> {
     u64::try_from(nanos).map_err(|source| {
@@ -1497,4 +1495,3 @@ mod tests {
         );
     }
 }
-

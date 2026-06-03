@@ -656,4 +656,3 @@ mod tests {
         assert_eq!(policy().select_unroll_depth(Some(32), &caps), 8);
     }
 }
-

@@ -448,7 +448,6 @@ mod tests {
             CudaMegakernelTopology::SparseFrontier,
         );
         assert_eq!(
-
             sparse_to_hybrid.topology,
             CudaMegakernelTopology::SparseFrontier
         );
@@ -673,4 +672,3 @@ mod tests {
         ));
     }
 }
-

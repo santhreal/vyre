@@ -97,7 +97,11 @@ fn generated_type(seed: u64) -> DataType {
         3 => DataType::U8,
         4 => DataType::U32,
         5 => DataType::Vec4U32,
-        6 => nested_vec(DataType::I4, ((seed >> 8) % 4) as usize + 1, generated_count(seed)),
+        6 => nested_vec(
+            DataType::I4,
+            ((seed >> 8) % 4) as usize + 1,
+            generated_count(seed),
+        ),
         7 => DataType::Quantized {
             storage: Box::new(match (seed >> 12) % 5 {
                 0 => DataType::I4,

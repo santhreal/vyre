@@ -611,4 +611,3 @@ mod tests {
         assert_eq!(out, vec![item(1, 0, 5), item(2, 0, 6)]);
     }
 }
-

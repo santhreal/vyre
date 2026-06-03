@@ -15,9 +15,9 @@ pub mod hash;
 mod indexed_reference_impls;
 /// docs
 pub mod memory;
+mod scalar_reference_impls;
 /// docs
 pub mod scan;
-mod scalar_reference_impls;
 /// docs
 pub mod workgroup;
 pub use common::{EvalError, ReferenceEvaluator};

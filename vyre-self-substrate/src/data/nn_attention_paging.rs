@@ -162,7 +162,10 @@ mod tests {
     fn attention_bodies_are_composable_ir_blocks() {
         assert_ne!(attention_row_max_body("q", "k", 2, 4).len(), 0);
         assert_ne!(attention_row_sum_body("q", "k", 2, 4).len(), 0);
-        assert_ne!(attention_row_write_body("q", "k", "v", 2, 4, "out").len(), 0);
+        assert_ne!(
+            attention_row_write_body("q", "k", "v", 2, 4, "out").len(),
+            0
+        );
     }
 
     #[test]
@@ -186,7 +189,10 @@ mod tests {
     #[test]
     fn quest_bodies_are_composable_ir_blocks() {
         assert_ne!(quest_page_queue_zero_body("queue", 16).len(), 0);
-        assert_ne!(quest_page_score_body("query", "pages", "scores", 16, 4).len(), 0);
+        assert_ne!(
+            quest_page_score_body("query", "pages", "scores", 16, 4).len(),
+            0
+        );
         assert_ne!(
             quest_page_select_top_k_body("scores", "queue", 16, 4, -1.0).len(),
             0

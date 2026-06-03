@@ -681,4 +681,3 @@ mod owned_diagnostic_allocation_tests {
         );
     }
 }
-

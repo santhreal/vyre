@@ -449,7 +449,6 @@ mod tests {
         assert_eq!(inverse_into.len(), inverse.len());
     }
 
-
     #[test]
     fn sinkhorn_and_privacy_references_match_contracts() {
         let (u, v, _) = reference_sinkhorn_quantized(
@@ -513,4 +512,3 @@ mod tests {
         ));
     }
 }
-

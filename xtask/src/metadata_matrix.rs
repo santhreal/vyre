@@ -463,7 +463,6 @@ fn parse_package(
     }))
 }
 
-
 struct PackageExamples {
     example_files: Vec<String>,
     readme_example_count: usize,
@@ -736,4 +735,3 @@ fn default_output() -> PathBuf {
         .map(|path| path.join("release/evidence/metadata/metadata-matrix.json"))
         .unwrap_or_else(|| PathBuf::from("release/evidence/metadata/metadata-matrix.json"))
 }
-

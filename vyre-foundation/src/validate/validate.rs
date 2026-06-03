@@ -667,14 +667,20 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
                 let compatible = val_ty == *elem
                     || matches!(
                         (&val_ty, elem),
-                        (DataType::U32, DataType::Bytes | DataType::Bool)
-                            | (DataType::Bytes | DataType::Bool, DataType::U32)
+                        (DataType::U32, DataType::Bytes) | (DataType::Bytes, DataType::U32)
                     )
                     || matches!((&val_ty, elem), (DataType::F32, DataType::F32));
                 if !compatible {
                     let legal_targets = nodes::store_value_targets(elem);
                     self.errors.push(err(format!(
                         "Node::Store buffer `{buffer}` value has type `{val_ty}` but element type is `{elem}`. Fix: cast/store using one of {legal_targets}."
+                    )));
+                }
+            }
+            if let Some(index_ty) = expr_type(index, &self.buffers, &self.scope) {
+                if index_ty != DataType::U32 {
+                    self.errors.push(err(format!(
+                        "Node::Store buffer `{buffer}` index has type `{index_ty}` but must be `u32`. Fix: cast the index to U32 before storing."
                     )));
                 }
             }
@@ -992,4 +998,3 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
 mod tests {
     include!("validate_tests.rs");
 }
-

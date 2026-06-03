@@ -54,11 +54,19 @@ mod registry;
 #[path = "dominator_tree/tests.rs"]
 mod tests;
 
-pub use program::*;
+pub use program::{
+    dominator_tree_program, try_dominator_tree_program, validate_dominator_tree_inputs,
+    DominatorTreeError, DominatorTreeLayout, IDOM_NONE, OP_ID,
+};
 
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use cooper_harvey_kennedy::*;
+pub use cooper_harvey_kennedy::cooper_harvey_kennedy_idoms;
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use cpu_ref::*;
+pub use cpu_ref::{
+    cpu_ref, idoms_to_dominator_sets, try_cpu_ref, try_cpu_ref_into, try_idoms_to_dominator_sets,
+};
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use lengauer_tarjan::*;
+pub use lengauer_tarjan::{
+    lengauer_tarjan_idoms, try_lengauer_tarjan_idoms, try_lengauer_tarjan_idoms_into,
+    DominatorTreeCpuScratch,
+};

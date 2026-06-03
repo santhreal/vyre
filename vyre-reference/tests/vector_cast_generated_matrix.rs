@@ -61,11 +61,7 @@ fn generated_source(seed: u32, source_kind: u32) -> (Expr, Value, &'static str) 
         }
         _ => {
             let value = generated_f32(seed);
-            (
-                Expr::f32(value),
-                Value::Float(f64::from(value)),
-                "f32",
-            )
+            (Expr::f32(value), Value::Float(f64::from(value)), "f32")
         }
     }
 }

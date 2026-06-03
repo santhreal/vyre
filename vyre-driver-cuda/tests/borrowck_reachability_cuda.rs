@@ -87,7 +87,14 @@ fn cuda_conflicts(dispatcher: &dyn OptimizerDispatcher, facts: &BorrowFacts) -> 
         let mut issue_seed = vec![0u32; words];
         set_bit(&mut issue_seed, facts.loan_issued_at[a]);
         let forward = forward_closure_via_change_flag_gpu(
-            dispatcher, n, &fwd_off, &fwd_tgt, &fwd_msk, &issue_seed, ALLOW_ALL, max_iters,
+            dispatcher,
+            n,
+            &fwd_off,
+            &fwd_tgt,
+            &fwd_msk,
+            &issue_seed,
+            ALLOW_ALL,
+            max_iters,
         )
         .expect("forward closure dispatch must succeed on the CUDA device");
 
@@ -262,7 +269,10 @@ fn cuda_borrow_checker_scales_to_a_long_chain() {
     let gpu = with_cuda_optimizer_dispatcher("cuda borrowck chain", |dispatcher| {
         cuda_conflicts(dispatcher, &f)
     });
-    assert_eq!(gpu, cpu, "CUDA long-chain verdict diverged from the CPU engine");
+    assert_eq!(
+        gpu, cpu,
+        "CUDA long-chain verdict diverged from the CPU engine"
+    );
     assert_eq!(gpu.len(), 1, "expected exactly one conflict, got {gpu:?}");
     assert_eq!(gpu[0].kind, ConflictKind::TwoMutable);
 }
@@ -319,7 +329,10 @@ fn cuda_batched_borrow_checker_many_loans_two_dispatches() {
         gpu, cpu,
         "batched CUDA verdict diverged from the CPU engine on 64 distinct-place loans"
     );
-    assert!(gpu.is_empty(), "distinct-place loans never conflict, got {gpu:?}");
+    assert!(
+        gpu.is_empty(),
+        "distinct-place loans never conflict, got {gpu:?}"
+    );
 }
 
 #[test]
@@ -347,7 +360,12 @@ fn cuda_batched_borrow_checker_many_loans_shared_place_conflict() {
         "batched CUDA verdict diverged from the CPU engine on shared-place &mut loans"
     );
     // n choose 2 over 8 loans = 28 conflicting pairs.
-    assert_eq!(gpu.len(), 28, "expected 28 TwoMutable conflicts, got {}", gpu.len());
+    assert_eq!(
+        gpu.len(),
+        28,
+        "expected 28 TwoMutable conflicts, got {}",
+        gpu.len()
+    );
 }
 
 #[test]
@@ -369,7 +387,10 @@ fn cuda_batched_vs_per_loan_dispatch_speedup() {
         // Warm both paths (PTX/module/resident-graph caches) before timing.
         let warm_per_loan = cuda_conflicts(&dispatcher, &f);
         let warm_batched = cuda_conflicts_batched(&dispatcher, &f);
-        assert_eq!(warm_per_loan, warm_batched, "per-loan and batched must agree");
+        assert_eq!(
+            warm_per_loan, warm_batched,
+            "per-loan and batched must agree"
+        );
 
         let t0 = Instant::now();
         let per_loan = cuda_conflicts(&dispatcher, &f);
@@ -378,11 +399,17 @@ fn cuda_batched_vs_per_loan_dispatch_speedup() {
         let batched = cuda_conflicts_batched(&dispatcher, &f);
         let batched_us = t1.elapsed().as_micros();
 
-        assert_eq!(per_loan, batched, "per-loan and batched verdicts must agree");
+        assert_eq!(
+            per_loan, batched,
+            "per-loan and batched verdicts must agree"
+        );
         let speedup = per_loan_us as f64 / batched_us.max(1) as f64;
         println!();
         println!("=== batched megakernel borrow checker vs per-loan ({loan_count} loans) ===");
-        println!("per-loan   {:>3} dispatches   {per_loan_us:>8} us", 2 * loan_count);
+        println!(
+            "per-loan   {:>3} dispatches   {per_loan_us:>8} us",
+            2 * loan_count
+        );
         println!("batched      2 dispatches   {batched_us:>8} us");
         println!("speedup    {speedup:>6.1}x");
         println!("===");
@@ -420,10 +447,10 @@ fn cuda_crate_batched_matches_cpu_engine_two_dispatches() {
 }
 
 #[test]
-fn cuda_crate_batched_scales_to_many_functions_two_dispatches() {
+fn cuda_crate_batched_scales_to_many_functions_in_ptx_safe_shards() {
     // 128 functions, each a straight-line with one conflicting &mut pair. The
-    // ENTIRE crate's borrow check runs in TWO device dispatches; every
-    // function's conflict must still be found, matching the CPU engine.
+    // crate is split into PTX-safe persistent-BFS shards; every function's
+    // conflict must still be found, matching the CPU engine.
     let one = || {
         facts(
             3,
@@ -440,9 +467,16 @@ fn cuda_crate_batched_scales_to_many_functions_two_dispatches() {
             .expect("crate batch dispatch must succeed on the CUDA device")
     });
     assert_eq!(gpu.len(), 128, "must return a verdict per function");
-    assert_eq!(gpu, cpu, "128-function crate batch diverged from the CPU engine");
+    assert_eq!(
+        gpu, cpu,
+        "128-function crate batch diverged from the CPU engine"
+    );
     for (i, conflicts) in gpu.iter().enumerate() {
-        assert_eq!(conflicts.len(), 1, "function {i} must have exactly one conflict");
+        assert_eq!(
+            conflicts.len(),
+            1,
+            "function {i} must have exactly one conflict"
+        );
         assert_eq!(conflicts[0].kind, ConflictKind::TwoMutable);
     }
 }
@@ -465,5 +499,8 @@ fn cuda_crate_batched_sharding_matches_cpu() {
         cpu.len(),
         "sharded crate batch must return a verdict per function"
     );
-    assert_eq!(gpu, cpu, "sharded crate-batch verdict diverged from the CPU engine");
+    assert_eq!(
+        gpu, cpu,
+        "sharded crate-batch verdict diverged from the CPU engine"
+    );
 }

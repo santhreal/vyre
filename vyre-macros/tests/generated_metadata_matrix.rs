@@ -4,7 +4,7 @@ extern crate self as vyre;
 
 mod support;
 
-pub use support::{dialect, ir, optimizer, ops};
+pub use support::{dialect, ir, ops, optimizer};
 
 use vyre_macros::{define_op, vyre_pass, AlgebraicLaws};
 
@@ -251,5 +251,8 @@ fn generated_define_op_and_law_provider_matrix_remains_runtime_discoverable() {
             ops::AlgebraicLaw::Identity { element: 0 }
         ]
     );
-    assert_eq!(op.compose.expect("compose function must exist")().id, 0xC0DE);
+    assert_eq!(
+        op.compose.expect("compose function must exist")().id,
+        0xC0DE
+    );
 }

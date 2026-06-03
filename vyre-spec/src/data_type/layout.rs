@@ -213,9 +213,7 @@ impl DataType {
                     return Ok(None);
                 };
                 bits.checked_mul(*count as usize).map(Some).ok_or_else(|| {
-                    format!(
-                        "Fix: packed byte sizing overflowed nested bit width for {self}."
-                    )
+                    format!("Fix: packed byte sizing overflowed nested bit width for {self}.")
                 })
             }
             Self::Array { .. }
@@ -243,9 +241,7 @@ impl DataType {
                     return Ok(None);
                 };
                 bytes.checked_mul(*count as usize).map(Some).ok_or_else(|| {
-                    format!(
-                        "Fix: packed byte sizing overflowed nested byte width for {self}."
-                    )
+                    format!("Fix: packed byte sizing overflowed nested byte width for {self}.")
                 })
             }
             Self::Tensor | Self::TensorShaped { .. } => Ok(None),

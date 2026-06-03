@@ -15,7 +15,10 @@ fn flags_consumer_name_in_platform_rust_doc_comment() {
     let violations =
         vyre_lints::run_consumer_coupling(&[src.as_path()]).expect("consumer coupling scan");
     assert_eq!(violations.len(), 1);
-    assert_eq!(violations[0].kind, vyre_lints::ViolationKind::ConsumerCoupling);
+    assert_eq!(
+        violations[0].kind,
+        vyre_lints::ViolationKind::ConsumerCoupling
+    );
     assert!(violations[0].message.contains("surgec"));
     assert!(violations[0].message.contains("Fix:"));
 }
@@ -83,7 +86,10 @@ fn flags_consumer_name_in_platform_rust_string_literal() {
     let violations =
         vyre_lints::run_consumer_coupling(&[src.as_path()]).expect("consumer coupling scan");
     assert_eq!(violations.len(), 1);
-    assert_eq!(violations[0].kind, vyre_lints::ViolationKind::ConsumerCoupling);
+    assert_eq!(
+        violations[0].kind,
+        vyre_lints::ViolationKind::ConsumerCoupling
+    );
     assert!(violations[0].message.contains("string literal"));
     assert!(violations[0].message.contains("keyhog"));
 }
@@ -98,7 +104,10 @@ fn flags_consumer_name_in_platform_path() {
     let violations =
         vyre_lints::run_consumer_coupling(&[dir.path()]).expect("consumer coupling scan");
     assert_eq!(violations.len(), 1);
-    assert_eq!(violations[0].kind, vyre_lints::ViolationKind::ConsumerCoupling);
+    assert_eq!(
+        violations[0].kind,
+        vyre_lints::ViolationKind::ConsumerCoupling
+    );
     assert!(violations[0].message.contains("path"));
     assert!(violations[0].message.contains("surgec"));
 }

@@ -38,7 +38,9 @@ fn clang_oracle_returns_user_file_kinds_for_typeof_fixture() {
     // Sanity: clang must surface at least one user-file declaration node.
     // The fixture contains `int f(void)` so a FunctionDecl is mandatory.
     // Failure here means the JSON walker / sticky-file inheritance is broken.
-    assert_ne!(kinds.len(), 0,
+    assert_ne!(
+        kinds.len(),
+        0,
         "clang oracle returned no user-file kinds; walker is filtering everything out"
     );
     assert_kinds_contain(&kinds, &["FunctionDecl"]);
@@ -54,7 +56,9 @@ fn vyrec_oracle_emits_classified_kind_for_typeof_fixture() {
     let (_path, source) = read("g3_typeof/typeof_uses.c");
     let object = compile_source("ast_oracle_typeof", &source, Vec::new());
     let kinds = vyrec_user_kinds(&object);
-    assert_ne!(kinds.len(), 0,
+    assert_ne!(
+        kinds.len(),
+        0,
         "vyrec oracle returned no classified kinds for a fixture with known classifications; \
          either compile_source did not run the classify pass or the VAST_STRIDE_U32 layout \
          changed and ast_oracle::vyrec_user_kinds drifted"

@@ -74,10 +74,7 @@ fn binary_program(expr: fn(Expr, Expr) -> Expr) -> Program {
 }
 
 fn generated_pair(seed: u32) -> (u32, u32) {
-    let a = seed
-        .wrapping_mul(0x9e37_79b9)
-        .rotate_left(seed & 31)
-        ^ 0xa5a5_5a5a;
+    let a = seed.wrapping_mul(0x9e37_79b9).rotate_left(seed & 31) ^ 0xa5a5_5a5a;
     let b = seed
         .wrapping_add(0x7f4a_7c15)
         .rotate_right((seed >> 5) & 31)

@@ -112,7 +112,9 @@ mod tests {
             Expr::var("t"),
         );
 
-        assert_ne!(nodes.len(), 0,
+        assert_ne!(
+            nodes.len(),
+            0,
             "constant-fold wave must emit executable IR nodes"
         );
     }

@@ -90,8 +90,13 @@ pub(super) fn gpu_filter_source_bytes_with_scratch(
             "filter byte buffer padding overflowed usize. Fix: reduce batch size.".to_string()
         })?
         .max(4);
+    let word_buf_bytes = cap_bucket
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            "filter word buffer padding overflowed usize. Fix: reduce batch size.".to_string()
+        })?;
     scratch.prepare_n_real(n);
-    scratch.prepare_preflight_zero(std::mem::size_of::<u32>())?;
+    scratch.prepare_preflight_zero(word_buf_bytes)?;
 
     dispatcher
         .dispatch_borrowed_into(

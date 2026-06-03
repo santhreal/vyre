@@ -449,7 +449,6 @@ mod tests {
             .filter(|record| record.analysis != DataflowAnalysis::Ifds)
             .collect();
 
-
         assert_eq!(
             validate_analysis_coverage(&records).expect_err("missing IFDS should fail"),
             DataflowAnalysisCoverageError::MissingAnalysis {
@@ -529,4 +528,3 @@ mod tests {
         records
     }
 }
-

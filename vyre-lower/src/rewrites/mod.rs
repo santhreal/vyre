@@ -37,15 +37,15 @@
 use std::hash::{Hash, Hasher};
 
 pub mod add_sub_cancel;
-mod arithmetic_combine;
 pub mod aos_to_soa_promote;
+mod arithmetic_combine;
 pub mod bank_conflict_pad;
 pub mod bitwise_combine;
 mod body_index;
 /// Bitwise idempotence: fold `BitAnd(x, x)` and `BitOr(x, x)` into `Copy(x)`.
 pub mod bitwise_idemp {
-    use crate::KernelDescriptor;
     use crate::rewrites::self_binop::rewrite_self_binops;
+    use crate::KernelDescriptor;
     use vyre_foundation::ir::BinOp;
 
     #[must_use]
@@ -60,8 +60,8 @@ pub mod cmp_normalize;
 pub mod cmp_self_false;
 mod commutative_lit_chain;
 pub mod const_buffer_promote;
-pub mod dead_store;
 mod dataflow_facts;
+pub mod dead_store;
 pub mod descriptor_const_fold;
 pub mod descriptor_cse;
 pub mod descriptor_dce;
@@ -74,19 +74,19 @@ pub mod emit_order;
 pub mod identity_elim;
 pub mod licm;
 mod literal;
-mod memory_address;
-mod rhs_lit_chain;
-mod self_binop;
 pub mod load_forwarding;
 pub mod loop_fission;
 pub mod loop_fusion;
 pub mod loop_unroll;
 pub mod loop_zero_iter;
 pub mod matmul_promote;
+mod memory_address;
+mod rhs_lit_chain;
+mod self_binop;
 /// Min/max idempotence: fold `Min(x, x)` and `Max(x, x)` into `Copy(x)`.
 pub mod min_max_idemp {
-    use crate::KernelDescriptor;
     use crate::rewrites::self_binop::rewrite_self_binops;
+    use crate::KernelDescriptor;
     use vyre_foundation::ir::BinOp;
 
     #[must_use]
@@ -107,10 +107,10 @@ pub mod unary_idemp;
 pub mod xor_self_zero;
 
 pub use add_sub_cancel::add_sub_cancel;
-pub use arithmetic_combine::{add_combine, mul_combine};
+pub use aos_to_soa_promote::{promote as aos_to_soa_promote, LayoutHint as AosSoaLayoutHint};
 pub use arithmetic_combine::add_combine::add_combine;
 pub use arithmetic_combine::mul_combine::mul_combine;
-pub use aos_to_soa_promote::{promote as aos_to_soa_promote, LayoutHint as AosSoaLayoutHint};
+pub use arithmetic_combine::{add_combine, mul_combine};
 pub use bank_conflict_pad::bank_conflict_pad;
 pub use bitwise_combine::bitwise_combine;
 pub use bitwise_idemp::bitwise_idemp;
@@ -1421,4 +1421,3 @@ mod tests {
         assert_eq!(stats.bindings_dropped(), 0);
     }
 }
-

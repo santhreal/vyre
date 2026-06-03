@@ -122,8 +122,14 @@ fn tenant_concurrent_selection_oracle_matrix_matches_independent_greedy_set() {
         assertions += 1;
 
         for window in selected.windows(2) {
-            let i = active.iter().position(|id| *id == window[0]).expect("tenant id");
-            let j = active.iter().position(|id| *id == window[1]).expect("tenant id");
+            let i = active
+                .iter()
+                .position(|id| *id == window[0])
+                .expect("tenant id");
+            let j = active
+                .iter()
+                .position(|id| *id == window[1])
+                .expect("tenant id");
             assert_eq!(conflicts[i * n + j], 0);
             assert_eq!(conflicts[j * n + i], 0);
         }

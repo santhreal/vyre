@@ -450,7 +450,6 @@ impl std::fmt::Display for MultiQueryExecutionError {
     }
 }
 
-
 impl std::error::Error for MultiQueryExecutionError {}
 
 /// Plan multi-query execution over shared resident graphs.
@@ -1229,4 +1228,3 @@ mod tests {
         *state
     }
 }
-

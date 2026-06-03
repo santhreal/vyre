@@ -148,7 +148,10 @@ fn fused_resident_readback_materialization_preflights_output_storage_before_copy
     let borrowed = source
         .split("pub fn download_resident_ranges_into")
         .nth(1)
-        .and_then(|tail| tail.split("pub(crate) fn download_resident_readbacks_many").next())
+        .and_then(|tail| {
+            tail.split("pub(crate) fn download_resident_readbacks_many")
+                .next()
+        })
         .expect("Fix: ranged resident download must precede compiled readback helpers.");
     let borrowed_reserve = borrowed
         .find("reserve_borrowed_resident_readback_outputs(&fused_readbacks.views, outputs)?")
@@ -162,18 +165,26 @@ fn fused_resident_readback_materialization_preflights_output_storage_before_copy
     );
 
     let sequence = sequence_source
-        .split("pub(crate) fn fill_upload_resident_many_repeated_sequence_read_ranges_borrowed_into")
+        .split(
+            "pub(crate) fn fill_upload_resident_many_repeated_sequence_read_ranges_borrowed_into",
+        )
         .nth(1)
         .and_then(|tail| tail.split("pub fn dispatch_resident_timed").next())
-        .expect("Fix: resident sequence readback implementation must precede dispatch_resident_timed.");
+        .expect(
+            "Fix: resident sequence readback implementation must precede dispatch_resident_timed.",
+        );
     let sequence_reserve = sequence
         .find("reserve_borrowed_resident_readback_outputs(&fused_readbacks.views, outputs)?")
         .expect("Fix: resident sequence fused readback must reserve every caller output before staging or materialization.");
     let sequence_stage = sequence
-        .find("let mut readback_host_transfers = HostTransferAllocations::with_capacity")
+        .find("readback_host_transfers = Some(HostTransferAllocations::with_capacity")
         .expect("Fix: resident sequence fused readback must still stage fused host transfers.");
+    assert!(
+        sequence.contains("std::mem::forget(readback_host_transfers)"),
+        "Fix: resident sequence fused readback must retain host transfer ownership for unproven-completion cleanup."
+    );
     let sequence_collect = sequence
-        .find("readback_host_transfers.collect_output_range_into")
+        .find("transfers.collect_output_range_into")
         .expect("Fix: resident sequence fused readback must still collect staged ranges.");
     assert!(
         sequence_reserve < sequence_stage && sequence_reserve < sequence_collect,
@@ -183,7 +194,10 @@ fn fused_resident_readback_materialization_preflights_output_storage_before_copy
     let single = source
         .split("fn download_resident_fused_copies_many_into")
         .nth(1)
-        .and_then(|tail| tail.split("fn download_resident_fused_copy_batches_many_into").next())
+        .and_then(|tail| {
+            tail.split("fn download_resident_fused_copy_batches_many_into")
+                .next()
+        })
         .expect("Fix: single fused readback helper must precede batched fused helper.");
     let single_reserve = single
         .find("reserve_resident_readback_outputs(&fused_readbacks.views, outputs)?")
@@ -199,8 +213,13 @@ fn fused_resident_readback_materialization_preflights_output_storage_before_copy
     let batch = source
         .split("fn download_resident_fused_copy_batches_many_into")
         .nth(1)
-        .and_then(|tail| tail.split("pub(crate) fn download_resident_readback_batches_many_into").next())
-        .expect("Fix: batched fused readback helper must precede public batch readback validation.");
+        .and_then(|tail| {
+            tail.split("pub(crate) fn download_resident_readback_batches_many_into")
+                .next()
+        })
+        .expect(
+            "Fix: batched fused readback helper must precede public batch readback validation.",
+        );
     let batch_reserve = batch
         .find("reserve_resident_readback_batch_outputs(")
         .expect("Fix: batched fused readback helper must reserve nested output storage before staging/collection.");

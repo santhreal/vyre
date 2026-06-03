@@ -869,4 +869,3 @@ mod tests {
         assert_eq!(mz, vec![3.0, 5.0]);
     }
 }
-

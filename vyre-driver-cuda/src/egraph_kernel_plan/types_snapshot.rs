@@ -119,11 +119,11 @@ impl CudaEGraphResidentColumnSnapshot {
                     field: "resident snapshot row child length",
                 }
             })?;
-            let end = start.checked_add(len).ok_or(
-                CudaEGraphKernelPlanError::CountOverflow {
+            let end = start
+                .checked_add(len)
+                .ok_or(CudaEGraphKernelPlanError::CountOverflow {
                     field: "resident snapshot row child end",
-                },
-            )?;
+                })?;
             if end > self.children.len() {
                 return Err(CudaEGraphKernelPlanError::CountOverflow {
                     field: "resident snapshot row child span",

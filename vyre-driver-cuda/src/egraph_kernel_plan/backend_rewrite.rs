@@ -7,17 +7,17 @@ use crate::CudaResidentEGraphDeviceImage;
 use vyre_driver::BackendError;
 use vyre_driver::LaunchPlan;
 
+use super::ptx::{
+    cuda_egraph_canonical_rewrite_kernel_ptx, cuda_egraph_signature_refresh_kernel_ptx,
+};
 use super::{
     args::{EGraphCanonicalRewriteKernelArgs, EGraphSignatureRefreshKernelArgs},
     helpers::ceil_div_u64,
+    helpers::usize_to_u64,
     CudaEGraphCanonicalRewriteDeviceImage, CudaEGraphCanonicalRewriteKernelPtx,
     CudaEGraphCanonicalRewriteKernelResult, CudaEGraphKernelLaunchConfig,
     CudaEGraphKernelPlanError, CudaEGraphSignatureRefreshKernelPtx,
     CudaEGraphSignatureRefreshKernelResult, CUDA_EGRAPH_CANONICAL_REWRITE_RECORD_WORDS,
-    helpers::usize_to_u64,
-};
-use super::ptx::{
-    cuda_egraph_canonical_rewrite_kernel_ptx, cuda_egraph_signature_refresh_kernel_ptx,
 };
 
 impl CudaBackend {

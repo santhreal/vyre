@@ -489,7 +489,6 @@ pub(crate) fn validate_cuda_transient_dispatch_budget(
     Ok(())
 }
 
-
 fn checked_dispatch_bytes_add(
     left: u64,
     right: u64,
@@ -715,4 +714,3 @@ mod tests {
         );
     }
 }
-

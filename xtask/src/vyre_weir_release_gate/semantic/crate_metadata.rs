@@ -1,15 +1,10 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
-    let Some(matrix) =
-        first_json_evidence(requirement, base_dir, "metadata-matrix.json", failures)
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
+    let Some(matrix) = first_json_evidence(requirement, base_dir, "metadata-matrix.json", failures)
     else {
         return;
     };
@@ -22,8 +17,7 @@ pub(super) fn check(
         .and_then(serde_json::Value::as_array)
         .map_or(usize::MAX, Vec::len);
     if packages == 0 {
-        failures
-            .push("requirement `crate-metadata` matrix contains zero packages".to_string());
+        failures.push("requirement `crate-metadata` matrix contains zero packages".to_string());
     }
     if matrix
         .get("root_patch_section_count")
@@ -84,8 +78,7 @@ pub(super) fn check(
         if !entries.iter().any(|entry| {
             entry.get("name").and_then(serde_json::Value::as_str) == Some("vyrec")
                 && entry.get("version").and_then(serde_json::Value::as_str) == Some("0.1.0")
-                && entry.get("readme").and_then(serde_json::Value::as_str)
-                    == Some("README.md")
+                && entry.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
                 && entry
                     .get("release_surface")
                     .and_then(serde_json::Value::as_str)
@@ -99,8 +92,7 @@ pub(super) fn check(
         if !entries.iter().any(|entry| {
             entry.get("name").and_then(serde_json::Value::as_str) == Some("vyre-frontend-c")
                 && entry.get("version").and_then(serde_json::Value::as_str) == Some("0.6.1")
-                && entry.get("readme").and_then(serde_json::Value::as_str)
-                    == Some("README.md")
+                && entry.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
                 && entry
                     .get("release_kind")
                     .and_then(serde_json::Value::as_str)
@@ -121,10 +113,8 @@ pub(super) fn check(
         ] {
             if !entries.iter().any(|entry| {
                 entry.get("name").and_then(serde_json::Value::as_str) == Some(package_name)
-                    && entry.get("version").and_then(serde_json::Value::as_str)
-                        == Some("0.6.1")
-                    && entry.get("readme").and_then(serde_json::Value::as_str)
-                        == Some("README.md")
+                    && entry.get("version").and_then(serde_json::Value::as_str) == Some("0.6.1")
+                    && entry.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
                     && entry
                         .get("release_kind")
                         .and_then(serde_json::Value::as_str)
@@ -219,10 +209,8 @@ pub(super) fn check(
         .and_then(serde_json::Value::as_array)
         .map_or(usize::MAX, Vec::len);
     if feature_packages == 0 {
-        failures.push(
-            "requirement `crate-metadata` feature matrix contains zero packages"
-                .to_string(),
-        );
+        failures
+            .push("requirement `crate-metadata` feature matrix contains zero packages".to_string());
     }
     if feature_blockers != 0 {
         failures.push(format!(
@@ -249,9 +237,10 @@ pub(super) fn check(
         ("vyre-driver-wgpu", &["wgpu"][..]),
         ("weir", &["default", "serde"][..]),
     ] {
-        let Some(entry) = feature_entries.iter().find(|entry| {
-            entry.get("name").and_then(serde_json::Value::as_str) == Some(package)
-        }) else {
+        let Some(entry) = feature_entries
+            .iter()
+            .find(|entry| entry.get("name").and_then(serde_json::Value::as_str) == Some(package))
+        else {
             failures.push(format!(
                 "requirement `crate-metadata` feature matrix is missing `{package}`"
             ));
@@ -277,14 +266,13 @@ pub(super) fn check(
         .iter()
         .any(|entry| entry.get("name").and_then(serde_json::Value::as_str) == Some("vyrec"))
     {
-        failures.push(
-            "requirement `crate-metadata` feature matrix is missing `vyrec`".to_string(),
-        );
+        failures.push("requirement `crate-metadata` feature matrix is missing `vyrec`".to_string());
     }
     for package in ["vyre", "vyre-driver-cuda", "vyre-driver-wgpu"] {
-        let Some(entry) = feature_entries.iter().find(|entry| {
-            entry.get("name").and_then(serde_json::Value::as_str) == Some(package)
-        }) else {
+        let Some(entry) = feature_entries
+            .iter()
+            .find(|entry| entry.get("name").and_then(serde_json::Value::as_str) == Some(package))
+        else {
             failures.push(format!(
                 "requirement `crate-metadata` feature matrix is missing `{package}`"
             ));
@@ -347,9 +335,10 @@ pub(super) fn check(
         "weir",
         "vyre-libs",
     ] {
-        if !publish_order.iter().any(|entry| {
-            entry.get("package").and_then(serde_json::Value::as_str) == Some(required)
-        }) {
+        if !publish_order
+            .iter()
+            .any(|entry| entry.get("package").and_then(serde_json::Value::as_str) == Some(required))
+        {
             failures.push(format!(
                 "requirement `crate-metadata` package readiness publish_order is missing `{required}`"
             ));

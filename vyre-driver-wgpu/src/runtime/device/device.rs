@@ -340,9 +340,8 @@ pub(super) async fn request_device_for_adapter(
 /// backends (`VK_EXT_pipeline_creation_cache_control` / `ID3D12PipelineLibrary`).
 /// Apple's Metal backend (and GL) advertise the `PIPELINE_CACHE` adapter
 /// feature under wgpu 25 but then fail `device_create_pipeline_cache_init`
-/// with a fatal, un-catchable validation error (a downstream `keyhog doctor`
-/// aborted with "Abort trap: 6" on M-series Macs). Gate the request on a
-/// backend that actually honors it.
+/// with a fatal, un-catchable validation error in downstream GPU diagnostics.
+/// Gate the request on a backend that actually honors it.
 fn backend_implements_pipeline_cache(backend: wgpu::Backend) -> bool {
     matches!(backend, wgpu::Backend::Vulkan | wgpu::Backend::Dx12)
 }
@@ -461,7 +460,6 @@ fn gpu_candidate_score(
         | (workgroup_storage_bits << 48)
         | storage_buffers
 }
-
 
 fn subgroup_smoke_compiles(device: &wgpu::Device) -> std::result::Result<(), String> {
     const WGSL: &str = r#"
@@ -654,4 +652,3 @@ mod tests {
         );
     }
 }
-

@@ -58,7 +58,6 @@ struct RequirementAudit {
 
 pub(crate) const MAX_RELEASE_AUDIT_TEXT_BYTES: u64 = 16_777_216;
 
-
 mod config;
 mod paths;
 mod semantics;
@@ -289,4 +288,3 @@ pub(crate) fn run(args: &[String]) {
         std::process::exit(1);
     }
 }
-

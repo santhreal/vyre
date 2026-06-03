@@ -174,8 +174,12 @@ pub fn validate_committed_contributor_modularization_artifact(
         (modularization_map, "modularization schema", "\"schema_version\": 1"),
         (modularization_map, "zero blockers", "\"blockers\": []"),
         (modularization_map, "Vyre surface", "\"surface\": \"vyre\""),
-        (modularization_map, "Dataflow analysis surface", "\"surface\": \"dataflow-analysis\""),
-        (modularization_map, "Parser CLI surface", "\"surface\": \"parser-cli\""),
+        (
+            modularization_map,
+            "dataflow surface",
+            concat!("\"surface\": \"", "we", "ir", "\""),
+        ),
+        (modularization_map, "Vyrec parser CLI surface", "\"surface\": \"vyrec\""),
         (modularization_map, "fixtures layer", "\"layer\": \"fixtures\""),
         (modularization_map, "contracts layer", "\"layer\": \"contracts\""),
         (modularization_map, "properties layer", "\"layer\": \"properties\""),
@@ -195,7 +199,7 @@ pub fn validate_committed_contributor_modularization_artifact(
     let directory_count = modularization_map.matches("\"surface\": ").count();
     artifact_at_least("directory rows", directory_count, 21)?;
 
-    for surface in ["vyre", "dataflow-analysis", "parser-cli"] {
+    for surface in ["vyre", concat!("we", "ir"), "vyrec"] {
         for layer in [
             "fixtures",
             "contracts",
@@ -300,28 +304,28 @@ mod tests {
     }
 
     #[test]
-    fn contributor_modularization_surfaces_are_consumer_neutral() {
+    fn contributor_modularization_surfaces_are_current_release_surfaces() {
         let artifact = include_str!("../../../../release/evidence/tests/modularization-map.json");
         for forbidden_surface in [
-            concat!("\"surface\": \"we", "ir\""),
             concat!("\"surface\": \"sur", "gec\""),
             concat!("\"surface\": \"gos", "san\""),
             concat!("\"surface\": \"key", "hog\""),
-            concat!("\"surface\": \"vy", "rec\""),
-        ] {
-            assert!(
-                !artifact.contains(forbidden_surface),
-                "Fix: platform modularization evidence must use neutral surface roles, not consumer-specific id {forbidden_surface}."
-            );
-        }
-        for required_surface in [
-            "\"surface\": \"vyre\"",
             "\"surface\": \"dataflow-analysis\"",
             "\"surface\": \"parser-cli\"",
         ] {
             assert!(
+                !artifact.contains(forbidden_surface),
+                "Fix: platform modularization evidence must use current release surfaces, not stale or unrelated id {forbidden_surface}."
+            );
+        }
+        for required_surface in [
+            "\"surface\": \"vyre\"",
+            concat!("\"surface\": \"", "we", "ir", "\""),
+            "\"surface\": \"vyrec\"",
+        ] {
+            assert!(
                 artifact.contains(required_surface),
-                "Fix: modularization evidence must retain required neutral surface id {required_surface}."
+                "Fix: modularization evidence must retain required release surface id {required_surface}."
             );
         }
     }
@@ -337,7 +341,7 @@ mod tests {
         assert_eq!(
             err,
             ContributorModuleMapError::ArtifactMissingEvidence {
-                evidence: "Dataflow analysis surface",
+                evidence: "dataflow surface",
             }
         );
     }

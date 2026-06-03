@@ -58,7 +58,8 @@ fn host_ring_done_count_oracle_matrix_matches_independent_status_scan() {
     let mut assertions = 0usize;
     for case in 0..RING_CASES {
         let slot_count = 2 + (case % 8);
-        let mut ring = HostRing::new(slot_count).expect("Fix: ring must construct for done_count matrix.");
+        let mut ring =
+            HostRing::new(slot_count).expect("Fix: ring must construct for done_count matrix.");
         let expected_done = {
             let bytes = ring.as_bytes_mut();
             let mut done = 0u32;

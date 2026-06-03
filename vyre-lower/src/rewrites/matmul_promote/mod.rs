@@ -504,4 +504,3 @@ mod tests {
         assert_eq!(once.body.ops.len(), twice.body.ops.len());
     }
 }
-

@@ -1,13 +1,9 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     if !requirement.evidence.iter().any(|evidence| {
         evidence.contains("cargo_full")
             && evidence.contains("version-matrix")
@@ -18,8 +14,7 @@ pub(super) fn check(
                 .to_string(),
         );
     }
-    let Some(matrix) =
-        first_json_evidence(requirement, base_dir, "version-matrix.json", failures)
+    let Some(matrix) = first_json_evidence(requirement, base_dir, "version-matrix.json", failures)
     else {
         return;
     };
@@ -106,9 +101,8 @@ pub(super) fn check(
         .get("tag_story")
         .and_then(serde_json::Value::as_object)
     else {
-        failures.push(
-            "requirement `version-story` version matrix is missing `tag_story`".to_string(),
-        );
+        failures
+            .push("requirement `version-story` version matrix is missing `tag_story`".to_string());
         return;
     };
     for (field, expected) in [
@@ -147,9 +141,7 @@ pub(super) fn check(
         let present = tag_story
             .get("required_in_release_notes")
             .and_then(serde_json::Value::as_array)
-            .is_some_and(|entries| {
-                entries.iter().any(|entry| entry.as_str() == Some(required))
-            });
+            .is_some_and(|entries| entries.iter().any(|entry| entry.as_str() == Some(required)));
         if !present {
             failures.push(format!(
                 "requirement `version-story` tag_story.required_in_release_notes is missing `{required}`"
@@ -217,8 +209,7 @@ pub(super) fn check(
         ] {
             let rc_index = ordered_tags.iter().position(|tag| *tag == rc);
             let final_index = ordered_tags.iter().position(|tag| *tag == final_tag);
-            if !matches!((rc_index, final_index), (Some(left), Some(right)) if left < right)
-            {
+            if !matches!((rc_index, final_index), (Some(left), Some(right)) if left < right) {
                 failures.push(format!(
                     "requirement `version-story` release-tag-plan must list `{rc}` before `{final_tag}`"
                 ));

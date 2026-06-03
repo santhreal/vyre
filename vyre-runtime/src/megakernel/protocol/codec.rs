@@ -470,7 +470,6 @@ pub fn try_read_metrics_into(
     Ok(())
 }
 
-
 mod debug_log;
 
 pub use debug_log::{
@@ -729,4 +728,3 @@ pub(crate) fn write_word(bytes: &mut [u8], word_idx: usize, value: u32) {
 fn words_to_bytes(words: u32) -> Option<usize> {
     usize::try_from(words).ok()?.checked_mul(4)
 }
-

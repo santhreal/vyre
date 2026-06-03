@@ -193,17 +193,13 @@ pub(super) fn byte_compact_program(n: u32) -> Program {
                     Expr::eq(Expr::var(format!("m_{k}")), Expr::u32(1)),
                     vec![
                         Node::let_bind(format!("cm_{k}"), Expr::load("comment_mask", i.clone())),
-                        Node::let_bind(format!("in_byte_{k}"), Expr::u32(0)),
-                        Node::if_then_else(
-                            Expr::eq(Expr::var(format!("cm_{k}")), Expr::u32(2)),
-                            vec![Node::assign(
-                                &format!("in_byte_{k}"),
+                        Node::let_bind(
+                            format!("in_byte_{k}"),
+                            Expr::select(
+                                Expr::eq(Expr::var(format!("cm_{k}")), Expr::u32(2)),
                                 Expr::u32(b' ' as u32),
-                            )],
-                            vec![Node::assign(
-                                &format!("in_byte_{k}"),
                                 source_byte_load("bytes_in", i.clone()),
-                            )],
+                            ),
                         ),
                         Node::let_bind(
                             format!("out_pos_{k}"),

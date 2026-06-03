@@ -1411,7 +1411,7 @@ fn cuda_resident_launch_handle_cursors_return_typed_errors() {
     );
     assert!(
         source.contains("fn validate_dense_resident_output_indices")
-            && source.contains("expected dense output indexes 0..{expected_len}")
+            && source.contains("expected dense {index_kind} indexes 0..{expected_len}")
             && source.matches("validate_dense_resident_output_indices(").count() >= 2
             && source.contains("\"resident dispatch output handles\"")
             && source.contains("\"resident batch output handles\""),

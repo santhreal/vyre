@@ -455,7 +455,6 @@ fn generated_edge_types() -> Vec<DataType> {
     cases
 }
 
-
 fn leaf_edge_types() -> Vec<DataType> {
     vec![
         DataType::U8,
@@ -610,4 +609,3 @@ fn generated_extension_name(idx: u32) -> String {
         idx.wrapping_mul(0x045D_9F3B).rotate_left(idx % 17)
     )
 }
-

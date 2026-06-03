@@ -64,8 +64,7 @@ pub struct DeviceSignatureTable {
 
 impl DeviceSignature {
     /// Built-in Blackwell signature shipped with the crate.
-    pub const BUILTIN_BLACKWELL_120: &'static str =
-        include_str!("../devices/blackwell_120.toml");
+    pub const BUILTIN_BLACKWELL_120: &'static str = include_str!("../devices/blackwell_120.toml");
 
     /// Parse a device signature from TOML.
     ///

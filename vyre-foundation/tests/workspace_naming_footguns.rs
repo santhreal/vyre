@@ -17,6 +17,7 @@ fn no_path_dependencies_outside_workspace() {
         let trimmed = line.trim();
         if (trimmed.contains("path = \"../") || trimmed.contains("path = \"../../"))
             && !is_adjacent_dataflow_dependency(trimmed)
+            && !is_shared_grammar_dependency(trimmed)
         {
             violations.push(format!("line {}: {}", line_no + 1, trimmed));
         }
@@ -31,6 +32,10 @@ fn no_path_dependencies_outside_workspace() {
 
 fn is_adjacent_dataflow_dependency(line: &str) -> bool {
     line.contains("path = \"../../../dataflow/")
+}
+
+fn is_shared_grammar_dependency(line: &str) -> bool {
+    line.contains("path = \"../../../shared/surgec-grammar-gen\"")
 }
 
 #[test]

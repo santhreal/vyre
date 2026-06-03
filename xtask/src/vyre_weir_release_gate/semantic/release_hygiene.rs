@@ -1,15 +1,10 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
-    let Some(matrix) =
-        first_json_evidence(requirement, base_dir, "hygiene-matrix.json", failures)
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
+    let Some(matrix) = first_json_evidence(requirement, base_dir, "hygiene-matrix.json", failures)
     else {
         return;
     };
@@ -22,8 +17,7 @@ pub(super) fn check(
         .and_then(serde_json::Value::as_array)
         .map_or(usize::MAX, Vec::len);
     if scanned == 0 {
-        failures
-            .push("requirement `release-hygiene` scanned zero source files".to_string());
+        failures.push("requirement `release-hygiene` scanned zero source files".to_string());
     }
     let finding_count = matrix
         .get("findings")

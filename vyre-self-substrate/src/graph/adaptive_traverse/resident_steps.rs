@@ -4,13 +4,14 @@ use super::{
     ResidentAdaptiveSparseQueueGraph, ResidentAdaptiveTraversalGraph,
 };
 
-use crate::dispatch_buffers::write_u32_slice_le_bytes;
+use crate::dispatch_buffers::{u32_word_bytes, write_u32_slice_le_bytes};
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer_for_stats,
     resident_csr_queue_split_low_grid, resident_csr_queue_traverse_grid,
     resident_csr_queue_traverse_kind_for_graph_stats, FrontierWordPrefixScratch,
-    ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind, STRIDED_FORWARD_MIN_ROW_DEGREE,
+    ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
+    RESIDENT_CSR_QUEUE_MULTI_SOURCE_MIN_CAPACITY, STRIDED_FORWARD_MIN_ROW_DEGREE,
 };
 use crate::graph::dispatch_bridge::{
     alloc_resident_buffers, resident_sequence_single_u32_output_into,
@@ -327,12 +328,32 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
         return Ok(());
     }
     let handles = ensure_frontier_handles(dispatcher, scratch, &sparse_plan.frontier)?;
-    let queue_handle = ensure_queue_handle(dispatcher, scratch, sparse_plan.queue_bytes)?;
+    let requested_queue_capacity = if graph.max_row_degree < STRIDED_FORWARD_MIN_ROW_DEGREE
+        && sparse_plan.queue_capacity > 1
+    {
+        sparse_plan
+            .queue_capacity
+            .max(RESIDENT_CSR_QUEUE_MULTI_SOURCE_MIN_CAPACITY)
+            .min(graph.node_count.max(1))
+    } else {
+        sparse_plan.queue_capacity
+    };
+    let requested_queue_bytes = u32_word_bytes(
+        requested_queue_capacity as usize,
+        "adaptive traversal active-source queue",
+    )?;
+    let queue_handle = ensure_queue_handle(dispatcher, scratch, requested_queue_bytes)?;
     write_u32_slice_le_bytes(&mut scratch.frontier_in_bytes, frontier_in);
 
     let words_u32 = sparse_plan.frontier.work.layout.words_u32;
     let words = sparse_plan.frontier.work.layout.words;
-    let queue_capacity = sparse_plan.queue_capacity;
+    let queue_capacity =
+        u32::try_from(scratch.queue_bytes / std::mem::size_of::<u32>()).map_err(|_| {
+            DispatchError::BackendError(format!(
+                "Fix: adaptive traversal resident queue scratch has {} bytes, exceeding u32 queue capacity metadata.",
+                scratch.queue_bytes
+            ))
+        })?;
     let materializer = resident_csr_queue_materializer_for_stats(
         words,
         queue_capacity,
@@ -886,7 +907,7 @@ fn ensure_high_queue_handles(
     high_queue_capacity: u32,
 ) -> Result<[u64; 2], DispatchError> {
     let high_queue_bytes =
-        adaptive_word_bytes(high_queue_capacity as usize, "high-degree active queue")?;
+        u32_word_bytes(high_queue_capacity as usize, "high-degree active queue")?;
     if scratch.high_queue_bytes >= high_queue_bytes {
         if let (Some(high_queue), Some(high_len)) =
             (scratch.high_queue_handle, scratch.high_len_handle)
@@ -936,10 +957,9 @@ fn ensure_word_prefix_handles(
     scratch: &mut AdaptiveTraversalResidentScratch,
     word_prefix: &FrontierWordPrefixScratch,
 ) -> Result<[u64; 2], DispatchError> {
-    let word_partials_bytes =
-        adaptive_word_bytes(word_prefix.partial_words, "word-prefix partials")?;
+    let word_partials_bytes = u32_word_bytes(word_prefix.partial_words, "word-prefix partials")?;
     let word_block_totals_bytes =
-        adaptive_word_bytes(word_prefix.block_total_words, "word-prefix block totals")?;
+        u32_word_bytes(word_prefix.block_total_words, "word-prefix block totals")?;
     if scratch.word_partials_bytes == word_partials_bytes
         && scratch.word_block_totals_bytes == word_block_totals_bytes
     {
@@ -995,14 +1015,4 @@ fn adaptive_word_prefix_scratch(words: usize) -> Result<FrontierWordPrefixScratc
 
 fn adaptive_frontier_word_grid(words: usize) -> Result<[u32; 3], DispatchError> {
     frontier_word_dispatch_grid(words).map_err(DispatchError::BackendError)
-}
-
-fn adaptive_word_bytes(words: usize, label: &str) -> Result<usize, DispatchError> {
-    words
-        .checked_mul(std::mem::size_of::<u32>())
-        .ok_or_else(|| {
-            DispatchError::BackendError(format!(
-                "Fix: adaptive traversal {label} byte count overflows usize for {words} u32 word(s)."
-            ))
-        })
 }

@@ -150,4 +150,3 @@ pub(super) fn max_vram_mib(reports: &[Value]) -> Option<u64> {
     }
     max_mib
 }
-

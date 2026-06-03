@@ -1,15 +1,10 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
-    let Some(matrix) =
-        first_json_evidence(requirement, base_dir, "docs-matrix.json", failures)
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
+    let Some(matrix) = first_json_evidence(requirement, base_dir, "docs-matrix.json", failures)
     else {
         return;
     };
@@ -22,9 +17,7 @@ pub(super) fn check(
         .and_then(serde_json::Value::as_array)
         .map_or(usize::MAX, Vec::len);
     if docs == 0 {
-        failures.push(
-            "requirement `docs-evidence-linked` matrix contains zero docs".to_string(),
-        );
+        failures.push("requirement `docs-evidence-linked` matrix contains zero docs".to_string());
     }
     if matrix
         .get("curated_proof_docs_preserved")

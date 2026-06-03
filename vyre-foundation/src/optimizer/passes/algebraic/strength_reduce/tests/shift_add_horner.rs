@@ -216,7 +216,10 @@ fn horner_cubic_is_semantically_equivalent_under_wrapping() {
 fn horner_quartic_is_semantically_equivalent_under_wrapping() {
     // 2x^4 + 9x^3 + x^2 + 5x + 6
     let x = || Expr::var("x");
-    let q4 = Expr::mul(Expr::mul(Expr::mul(Expr::mul(Expr::u32(2), x()), x()), x()), x());
+    let q4 = Expr::mul(
+        Expr::mul(Expr::mul(Expr::mul(Expr::u32(2), x()), x()), x()),
+        x(),
+    );
     let q3 = Expr::mul(Expr::mul(Expr::mul(Expr::u32(9), x()), x()), x());
     let q2 = Expr::mul(Expr::mul(x(), x()), Expr::u32(1));
     let q1 = Expr::mul(Expr::u32(5), x());
@@ -263,10 +266,18 @@ fn horner_sparse_cubic_emits_no_zero_add_churn() {
     }
     let (mut adds, mut muls, mut zeros) = (0, 0, 0);
     count(&reduced, &mut adds, &mut muls, &mut zeros);
-    assert_eq!((adds, muls, zeros), (1, 3, 0), "sparse Horner churn: {reduced:?}");
+    assert_eq!(
+        (adds, muls, zeros),
+        (1, 3, 0),
+        "sparse Horner churn: {reduced:?}"
+    );
 
     for x in HORNER_FUZZ_INPUTS {
-        assert_eq!(eval_u32(&expanded, x), eval_u32(&reduced, x), "sparse diverged at x={x}");
+        assert_eq!(
+            eval_u32(&expanded, x),
+            eval_u32(&reduced, x),
+            "sparse diverged at x={x}"
+        );
     }
 }
 
@@ -400,7 +411,10 @@ fn mul_by_negative_constant_factors_out_negate() {
 fn mul_by_negative_constant_handles_constant_on_left() {
     let reduced = reduce_expr(&Expr::mul(Expr::i32(-8), Expr::var("x")))
         .expect("Fix: -8 * x must factor out a negate");
-    assert_eq!(reduced, Expr::negate(Expr::mul(Expr::var("x"), Expr::i32(8))));
+    assert_eq!(
+        reduced,
+        Expr::negate(Expr::mul(Expr::var("x"), Expr::i32(8)))
+    );
 }
 
 #[test]

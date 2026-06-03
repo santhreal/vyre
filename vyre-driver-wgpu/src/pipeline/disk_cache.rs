@@ -470,7 +470,6 @@ fn read_metadata<T: serde::de::DeserializeOwned>(meta_path: &Path) -> Result<T, 
     toml::from_str::<T>(&text).map_err(|_| ())
 }
 
-
 fn read_bounded_utf8(path: &Path, max_bytes: u64) -> std::io::Result<String> {
     let bytes = read_bounded_bytes(path, max_bytes)?;
     String::from_utf8(bytes)
@@ -673,4 +672,3 @@ mod tests {
         assert_eq!(hex, hex.to_ascii_lowercase());
     }
 }
-

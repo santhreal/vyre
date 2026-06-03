@@ -248,7 +248,17 @@ fn canonical_ifds_csr(
     reference_canonicalize_csr_within_rows(&row_ptr, &col_idx)
 }
 
-fn generated_ifds_rules(seed: u64) -> (u32, u32, u32, Vec<(u32, u32, u32)>, Vec<(u32, u32, u32, u32)>, Vec<(u32, u32, u32)>, Vec<(u32, u32, u32)>) {
+fn generated_ifds_rules(
+    seed: u64,
+) -> (
+    u32,
+    u32,
+    u32,
+    Vec<(u32, u32, u32)>,
+    Vec<(u32, u32, u32, u32)>,
+    Vec<(u32, u32, u32)>,
+    Vec<(u32, u32, u32)>,
+) {
     let mut rng = Rng::new(seed);
     let num_procs = 1 + rng.range(4);
     let blocks_per_proc = 1 + rng.range(8);
@@ -366,15 +376,8 @@ fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
 fn sweep_exploded_ifds_substrate_matches_primitive_oracle_matrix() {
     let mut assertions = 0usize;
     for case in 0..CASES_PER_FAMILY {
-        let (
-            num_procs,
-            blocks_per_proc,
-            facts_per_proc,
-            intra,
-            inter,
-            gen,
-            kill,
-        ) = generated_ifds_rules(0x1F05_0004 ^ case.wrapping_mul(0x85EB_CA6B));
+        let (num_procs, blocks_per_proc, facts_per_proc, intra, inter, gen, kill) =
+            generated_ifds_rules(0x1F05_0004 ^ case.wrapping_mul(0x85EB_CA6B));
         let expected = canonical_ifds_csr(
             num_procs,
             blocks_per_proc,
@@ -408,15 +411,8 @@ fn sweep_exploded_ifds_via_matches_cpu_oracle_matrix() {
     let dispatcher = CpuOracleDispatcher::new();
     let mut assertions = 0usize;
     for case in 0..CASES_PER_FAMILY {
-        let (
-            num_procs,
-            blocks_per_proc,
-            facts_per_proc,
-            intra,
-            inter,
-            gen,
-            kill,
-        ) = generated_ifds_rules(0x1F05_0005 ^ case.wrapping_mul(0xC2B2_AE35));
+        let (num_procs, blocks_per_proc, facts_per_proc, intra, inter, gen, kill) =
+            generated_ifds_rules(0x1F05_0005 ^ case.wrapping_mul(0xC2B2_AE35));
         let expected = canonical_ifds_csr(
             num_procs,
             blocks_per_proc,
@@ -437,9 +433,7 @@ fn sweep_exploded_ifds_via_matches_cpu_oracle_matrix() {
             &kill,
         )
         .unwrap_or_else(|error| {
-            panic!(
-                "Fix: exploded IFDS via CPU oracle case {case} must dispatch: {error:?}"
-            )
+            panic!("Fix: exploded IFDS via CPU oracle case {case} must dispatch: {error:?}")
         });
         assert_eq!(
             actual, expected,

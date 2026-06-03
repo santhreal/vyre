@@ -67,7 +67,8 @@ fn cmp_self_false_body(mut body: KernelBody, allocator: &mut ResultAllocator) ->
     }
 
     // One synthesised Bool(false) literal shared across all rewrites.
-    let synth_id = allocator.push_literal(&mut body.ops, &mut body.literals, LiteralValue::Bool(false));
+    let synth_id =
+        allocator.push_literal(&mut body.ops, &mut body.literals, LiteralValue::Bool(false));
 
     for op_idx in rewrites {
         body.ops[op_idx].kind = KernelOpKind::Copy;

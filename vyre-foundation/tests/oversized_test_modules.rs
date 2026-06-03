@@ -43,6 +43,18 @@ fn workspace_oversized_test_modules_are_baselined() {
         "vyre-frontend-c/tests/support/ast_oracle.rs".to_string(),
         1012,
     );
+    known.insert(
+        "conform/vyre-conform-runner/tests/release_gate_contracts.rs".to_string(),
+        856,
+    );
+    known.insert(
+        "conform/vyre-conform-runner/tests/cert_artifact.rs".to_string(),
+        823,
+    );
+    known.insert(
+        "vyre-primitives/tests/adversarial_graph_csr_validation_contracts.rs".to_string(),
+        885,
+    );
 
     let known_set: HashSet<String> = known.keys().cloned().collect();
 

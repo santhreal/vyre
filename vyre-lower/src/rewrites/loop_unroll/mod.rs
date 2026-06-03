@@ -448,7 +448,6 @@ mod tests {
     fn loop_with_runtime_bounds_not_unrolled() {
         // for i in tid..hi { ... }  →  loop kept (lo not literal)
         let desc = KernelDescriptor {
-
             id: "runtime".into(),
             bindings: BindingLayout { slots: vec![] },
             dispatch: Dispatch::new(64, 1, 1),
@@ -647,4 +646,3 @@ mod tests {
         assert_eq!(MAX_UNROLL_COUNT, 4);
     }
 }
-

@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn intrinsic_without_primary_text_passes() {
-        // Category C runtime-only op (e.g. core.indirect_dispatch)  - 
+        // Category C runtime-only op (e.g. core.indirect_dispatch)  -
         // Intrinsic category but no target-text arm yet.
         check_opdef("test.cat_c_ok", Category::Intrinsic, None);
     }

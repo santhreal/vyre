@@ -85,7 +85,12 @@ fn generated_leaf(seed: u32) -> Value {
 fn generated_bytes(seed: u32) -> Vec<u8> {
     let len = (mix32(seed ^ 0x9E37_79B9) % 49) as usize;
     (0..len)
-        .map(|index| mix32(seed.wrapping_add(index as u32).rotate_left(index as u32 & 15)) as u8)
+        .map(|index| {
+            mix32(
+                seed.wrapping_add(index as u32)
+                    .rotate_left(index as u32 & 15),
+            ) as u8
+        })
         .collect()
 }
 

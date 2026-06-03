@@ -503,7 +503,6 @@ fn read_memory_regions(
     Ok(())
 }
 
-
 fn reserve_decoded_vec_capacity<T>(
     vec: &mut Vec<T>,
     capacity: usize,
@@ -591,4 +590,3 @@ impl LebReader for Reader<'_> {
 
 #[cfg(test)]
 mod tests;
-

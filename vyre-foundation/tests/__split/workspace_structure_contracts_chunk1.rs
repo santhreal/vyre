@@ -94,6 +94,14 @@ fn foundation_oversized_modules_are_baselined() {
         "src/optimizer/passes/loops/loop_fission.rs",
         "src/optimizer/passes/memory/dead_store_elim.rs",
         "src/optimizer/passes/algebraic/precision_hint.rs",
+        "src/ir_inner/model/node_kind.rs",
+        "src/ir_inner/model/program/stats.rs",
+        "src/optimizer/eqsat_gpu.rs",
+        "src/optimizer/scheduler/mod.rs",
+        "src/optimizer/scheduler/queries.rs",
+        "src/optimizer/scheduler/run.rs",
+        "src/serial/wire/decode/impl_reader.rs",
+        "src/transform/collectives.rs",
     ]
     .iter()
     .map(|s| s.to_string())

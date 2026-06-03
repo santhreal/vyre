@@ -448,7 +448,6 @@ mod tests {
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-2 * (1.0 + a.abs() + b.abs())
-
     }
 
     #[test]
@@ -614,4 +613,3 @@ mod tests {
         assert_eq!(out.as_ptr(), ptr);
     }
 }
-

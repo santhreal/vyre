@@ -268,9 +268,9 @@ impl BodyCtx<'_> {
         for &op_idx in chain.iter().skip(1) {
             let op = &body.ops[op_idx];
             let index_id = match op.kind {
-                KernelOpKind::LoadGlobal | KernelOpKind::LoadShared | KernelOpKind::LoadConstant => {
-                    read_two_operands(op, "vector load")?.1
-                }
+                KernelOpKind::LoadGlobal
+                | KernelOpKind::LoadShared
+                | KernelOpKind::LoadConstant => read_two_operands(op, "vector load")?.1,
                 KernelOpKind::StoreGlobal => read_store_operands(op)?.1,
                 _ => continue,
             };

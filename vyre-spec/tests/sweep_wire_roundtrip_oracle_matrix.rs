@@ -74,16 +74,20 @@ fn sweep_wire_roundtrip_oracle_matrix_preserves_canonical_bytes() {
         let redecoded = Program::from_wire(&reencoded).unwrap_or_else(|error| {
             panic!("Fix: hostile wire case {case} must decode canonical bytes: {error}")
         });
-        let roundtrip_again = redecoded
-            .to_wire()
-            .unwrap_or_else(|error| panic!("Fix: hostile wire case {case} must triple-encode: {error}"));
+        let roundtrip_again = redecoded.to_wire().unwrap_or_else(|error| {
+            panic!("Fix: hostile wire case {case} must triple-encode: {error}")
+        });
         assert_eq!(
             roundtrip_again, encoded,
             "Fix: hostile wire case {case} lost byte identity on second canonical encode"
         );
         assertions += 1;
 
-        assert_ne!(encoded.len(), 0, "Fix: hostile wire case {case} must emit non-empty bytes");
+        assert_ne!(
+            encoded.len(),
+            0,
+            "Fix: hostile wire case {case} must emit non-empty bytes"
+        );
         assertions += 1;
     }
     assert_eq!(assertions, CASES * 3);
@@ -406,12 +410,20 @@ fn sweep_wire_roundtrip_exercises_spec_atomic_tags_in_programs() {
         let reencoded = decoded
             .to_wire()
             .unwrap_or_else(|error| panic!("Fix: atomic wire case {case} must re-encode: {error}"));
-        assert_eq!(reencoded, encoded, "Fix: atomic wire case {case} byte drift");
+        assert_eq!(
+            reencoded, encoded,
+            "Fix: atomic wire case {case} byte drift"
+        );
         let roundtrip_again = Program::from_wire(&reencoded)
             .unwrap_or_else(|error| panic!("Fix: atomic wire case {case} must re-decode: {error}"))
             .to_wire()
-            .unwrap_or_else(|error| panic!("Fix: atomic wire case {case} must triple-encode: {error}"));
-        assert_eq!(roundtrip_again, encoded, "Fix: atomic wire case {case} triple-encode drift");
+            .unwrap_or_else(|error| {
+                panic!("Fix: atomic wire case {case} must triple-encode: {error}")
+            });
+        assert_eq!(
+            roundtrip_again, encoded,
+            "Fix: atomic wire case {case} triple-encode drift"
+        );
         assertions += 2;
     }
     assert_eq!(assertions, 128 * 2);

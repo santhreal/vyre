@@ -94,9 +94,9 @@ fn reachable_self_loop_terminates() {
 fn all_reachable_satisfies_query() {
     let edges = [(0u32, 1u32), (1, 2), (0, 2)];
     // From {0}, can we reach {1, 2}? Yes.
-    assert!(all_reachable(3, &edges, &[0], &[1, 2]).unwrap());
+    assert!(reference_all_reachable(3, &edges, &[0], &[1, 2]).unwrap());
     // From {2}, can we reach {0}? No (DAG is one-way).
-    assert!(!all_reachable(3, &edges, &[2], &[0]).unwrap());
+    assert!(!reference_all_reachable(3, &edges, &[2], &[0]).unwrap());
 }
 
 struct ToposortDispatcher;

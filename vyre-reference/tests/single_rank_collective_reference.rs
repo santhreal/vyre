@@ -3,9 +3,7 @@
 mod common;
 use common::{bytes_to_u32, u32_bytes};
 use proptest::prelude::*;
-use vyre_foundation::ir::{
-    BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Node, Program,
-};
+use vyre_foundation::ir::{BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Node, Program};
 use vyre_reference::{reference_eval, value::Value};
 
 fn copy_program(node: Node, count: u32) -> Program {

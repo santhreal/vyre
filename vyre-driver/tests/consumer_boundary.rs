@@ -71,4 +71,3 @@ fn driver_source_does_not_name_downstream_consumers() {
         violations.join("\n")
     );
 }
-

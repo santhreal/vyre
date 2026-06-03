@@ -53,13 +53,7 @@ fn emit_with_dependencies(
             continue;
         }
         if is_pure_movable(&old_ops[producer_index].kind) {
-            emit_with_dependencies(
-                producer_index,
-                old_ops,
-                body_index,
-                emitted,
-                new_ops,
-            );
+            emit_with_dependencies(producer_index, old_ops, body_index, emitted, new_ops);
         }
     }
     if !emitted[index] {

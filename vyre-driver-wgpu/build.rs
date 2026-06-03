@@ -17,7 +17,10 @@ fn main() {
     }));
     let manifest_path = manifest_dir.join("Cargo.toml");
     let manifest = fs::read_to_string(&manifest_path).unwrap_or_else(|error| {
-        fail(format!("failed to read {}: {error}", manifest_path.display()))
+        fail(format!(
+            "failed to read {}: {error}",
+            manifest_path.display()
+        ))
     });
     let naga_version = manifest
         .lines()

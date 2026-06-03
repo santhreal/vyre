@@ -1,10 +1,5 @@
-# Testing program — vyre-conform-enforce
+# Testing program - vyre-conform-enforce
 
-| Kind | Location |
-|------|----------|
-| unit | `{crate}/tests/`, `src/**/tests.rs` |
-| adversarial | `tests/adversarial*`, `tests/sweep_*` |
-| property | `*proptest*` |
-| contract | `tests/contract/`, workspace `tests/contract/` |
-| integration | `tests/integration*` |
-| conformance | `conform/*` |
+Use [TESTING_PROGRAM.md](../TESTING_PROGRAM.md) as the canonical testing program reference.
+This crate enforces conformance artifacts and should keep crate-specific notes
+inside its own `README.md` or test modules.

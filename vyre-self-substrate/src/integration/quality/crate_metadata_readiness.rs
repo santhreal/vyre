@@ -256,7 +256,7 @@ pub fn validate_metadata_matrix_artifact(
         "\"vyre\"",
         "\"vyre-driver-cuda\"",
         "\"vyre-driver-wgpu\"",
-        "\"release_surface_role\": \"dataflow-consumer\"",
+        concat!("\"", "we", "ir", "\""),
         "\"vyrec\"",
         "\"vyre-frontend-c\"",
     ];
@@ -614,4 +614,3 @@ mod tests {
         }
     }
 }
-

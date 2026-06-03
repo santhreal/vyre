@@ -617,4 +617,3 @@ fn compile_rejects_non_region_programs() {
         "Fix: runtime admission rejection must mention the region invariant, got: {error}"
     );
 }
-

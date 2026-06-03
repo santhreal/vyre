@@ -99,8 +99,7 @@ fn boolean_simplify_body(mut body: KernelBody, allocator: &mut ResultAllocator) 
                     }
                     // Literal compare: Eq/Ne over two U32 literals.
                     BinOp::Eq | BinOp::Ne => {
-                        if let Some((lhs_lit, rhs_lit)) = u32_lit_pair(&body, &index, lhs, rhs)
-                        {
+                        if let Some((lhs_lit, rhs_lit)) = u32_lit_pair(&body, &index, lhs, rhs) {
                             let value = match bin {
                                 BinOp::Eq => lhs_lit == rhs_lit,
                                 BinOp::Ne => lhs_lit != rhs_lit,
@@ -126,14 +125,20 @@ fn boolean_simplify_body(mut body: KernelBody, allocator: &mut ResultAllocator) 
                 body.ops[op_idx].operands = vec![replace_id];
             }
             Rewrite::ReplaceWithBoolLit { op_idx, value } => {
-                let synth_id =
-                    allocator.push_literal(&mut body.ops, &mut body.literals, LiteralValue::Bool(value));
+                let synth_id = allocator.push_literal(
+                    &mut body.ops,
+                    &mut body.literals,
+                    LiteralValue::Bool(value),
+                );
                 body.ops[op_idx].kind = KernelOpKind::Copy;
                 body.ops[op_idx].operands = vec![synth_id];
             }
             Rewrite::ReplaceWithU32Lit { op_idx, value } => {
-                let synth_id =
-                    allocator.push_literal(&mut body.ops, &mut body.literals, LiteralValue::U32(value));
+                let synth_id = allocator.push_literal(
+                    &mut body.ops,
+                    &mut body.literals,
+                    LiteralValue::U32(value),
+                );
                 body.ops[op_idx].kind = KernelOpKind::Copy;
                 body.ops[op_idx].operands = vec![synth_id];
             }
@@ -148,12 +153,7 @@ fn boolean_simplify_body(mut body: KernelBody, allocator: &mut ResultAllocator) 
     body
 }
 
-fn u32_lit_pair(
-    body: &KernelBody,
-    index: &BodyIndex,
-    lhs: u32,
-    rhs: u32,
-) -> Option<(u32, u32)> {
+fn u32_lit_pair(body: &KernelBody, index: &BodyIndex, lhs: u32, rhs: u32) -> Option<(u32, u32)> {
     let lhs_value = index.u32_lit(body, lhs)?;
     let rhs_value = index.u32_lit(body, rhs)?;
     Some((lhs_value, rhs_value))

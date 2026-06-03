@@ -1016,4 +1016,3 @@ mod tests {
         assert!(matches!(err, DispatchError::BadInputs(_)));
     }
 }
-

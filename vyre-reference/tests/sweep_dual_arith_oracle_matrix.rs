@@ -120,8 +120,16 @@ fn sweep_dual_arith_malformed_inputs_zero_fill_without_divergence() {
             resolve_dual(op_id).unwrap_or_else(|| panic!("Fix: {op_id} must be registered."));
         for input in malformed {
             let zero = vec![0; 4];
-            assert_eq!(reference_a(input), zero, "Fix: {op_id} ref_a short-input contract drifted");
-            assert_eq!(reference_b(input), zero, "Fix: {op_id} ref_b short-input contract drifted");
+            assert_eq!(
+                reference_a(input),
+                zero,
+                "Fix: {op_id} ref_a short-input contract drifted"
+            );
+            assert_eq!(
+                reference_b(input),
+                zero,
+                "Fix: {op_id} ref_b short-input contract drifted"
+            );
             assert_ne!(
                 reference_a(input),
                 vec![0xFF; 4],

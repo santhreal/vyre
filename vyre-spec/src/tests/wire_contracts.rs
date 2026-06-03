@@ -8,8 +8,8 @@ use crate::{
     AtomicOp, BinOp, CollectiveOp, CommGroup, Convention, DataType, Layer, MetadataCategory,
     QuantizationScale, QuantizationZeroPoint, Semiring, TernaryOp, TypeId, UnOp,
 };
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 
@@ -210,7 +210,10 @@ fn collective_wire_tags_decode_exactly_and_reject_all_reserved_values() {
     for tag in u8::MIN..=u8::MAX {
         let decoded = CollectiveOp::from_wire_tag(tag);
         if assigned_by_tag.contains(&tag) {
-            assert!(decoded.is_ok(), "Fix: assigned collective tag {tag:#04x} must decode");
+            assert!(
+                decoded.is_ok(),
+                "Fix: assigned collective tag {tag:#04x} must decode"
+            );
         } else {
             let err = decoded.expect_err("Fix: reserved collective tag unexpectedly decoded");
             assert!(
@@ -245,12 +248,18 @@ fn data_type_wire_tags_are_frozen_unique_and_payload_invariant() {
 
     assert_payload_independent_tag(
         "Array",
-        &[DataType::Array { element_size: 1 }, DataType::Array { element_size: 4096 }],
+        &[
+            DataType::Array { element_size: 1 },
+            DataType::Array { element_size: 4096 },
+        ],
         0x08,
     );
     assert_payload_independent_tag(
         "Handle",
-        &[DataType::Handle(TypeId(1)), DataType::Handle(TypeId(u32::MAX))],
+        &[
+            DataType::Handle(TypeId(1)),
+            DataType::Handle(TypeId(u32::MAX)),
+        ],
         0x13,
     );
     assert_payload_independent_tag(
@@ -349,9 +358,18 @@ fn extension_ids_are_deterministic_high_bit_separated_from_builtin_tags() {
         assert_eq!(atomic, ExtensionAtomicOpId::from_name(name));
         assert_eq!(ternary, ExtensionTernaryOpId::from_name(name));
 
-        assert!(dtype.is_extension(), "Fix: dtype extension id lost its high bit");
-        assert!(bin.is_extension(), "Fix: bin extension id lost its high bit");
-        assert!(un.is_extension(), "Fix: unary extension id lost its high bit");
+        assert!(
+            dtype.is_extension(),
+            "Fix: dtype extension id lost its high bit"
+        );
+        assert!(
+            bin.is_extension(),
+            "Fix: bin extension id lost its high bit"
+        );
+        assert!(
+            un.is_extension(),
+            "Fix: unary extension id lost its high bit"
+        );
         assert!(
             atomic.is_extension(),
             "Fix: atomic extension id lost its high bit"
@@ -482,7 +500,6 @@ fn data_type_wire_cases() -> Vec<(&'static str, DataType, u8)> {
     ]
 }
 
-
 fn assert_payload_independent_tag(name: &str, values: &[DataType], expected: u8) {
     for value in values {
         assert_eq!(
@@ -531,4 +548,3 @@ where
         "Fix: JSON round-trip drifted for representative contract value"
     );
 }
-

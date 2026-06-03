@@ -341,4 +341,3 @@ fn brotli_compress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
     }
     Ok(out)
 }
-

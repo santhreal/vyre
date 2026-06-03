@@ -17,8 +17,12 @@ fn lower_wgsl(program: &Program) -> String {
 }
 
 fn lower_bir(program: &Program) -> WgpuProgram {
-    WgpuProgram::from_program(program, &DispatchConfig::default(), &EnabledFeatures::default())
-        .expect("Fix: test program must lower to WgpuProgram backend IR")
+    WgpuProgram::from_program(
+        program,
+        &DispatchConfig::default(),
+        &EnabledFeatures::default(),
+    )
+    .expect("Fix: test program must lower to WgpuProgram backend IR")
 }
 
 fn bindings_from_bir(bir: &WgpuProgram) -> Vec<(u32, u32)> {
@@ -383,10 +387,7 @@ fn non_contiguous_read_only_storage_binding_slots_are_reflected() {
             Expr::u32(0),
             Expr::add(
                 Expr::load("a", Expr::u32(0)),
-                Expr::add(
-                    Expr::load("b", Expr::u32(0)),
-                    Expr::load("c", Expr::u32(0)),
-                ),
+                Expr::add(Expr::load("b", Expr::u32(0)), Expr::load("c", Expr::u32(0))),
             ),
         )],
     );

@@ -456,7 +456,6 @@ pub fn validate_cuda_megakernel_speedup_evidence_csv(
     })
 }
 
-
 fn accumulate_cuda_megakernel_speedup_sample(
     sample: CudaMegakernelSpeedupSample,
     index: usize,
@@ -871,4 +870,3 @@ mod tests {
         }
     }
 }
-

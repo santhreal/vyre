@@ -31,9 +31,9 @@ fn generated_storage_graph_oracle_handles_unordered_multi_output_dags_for_16384_
         let expected = output_ids
             .iter()
             .map(|id| {
-                recursive_value(*id, &graph)
-                    .map(IrValue::U32)
-                    .expect("Fix: generated acyclic storage graph output must evaluate recursively.")
+                recursive_value(*id, &graph).map(IrValue::U32).expect(
+                    "Fix: generated acyclic storage graph output must evaluate recursively.",
+                )
             })
             .collect::<Vec<_>>();
         let mut unordered = graph.clone();
@@ -81,8 +81,8 @@ fn storage_graph_public_oracle_reports_missing_dependencies_and_cycles() {
             },
         ),
     ];
-    let cycle_error = run_storage_graph(&cycle, &[NodeId(0)])
-        .expect_err("Fix: cyclic storage graph must fail.");
+    let cycle_error =
+        run_storage_graph(&cycle, &[NodeId(0)]).expect_err("Fix: cyclic storage graph must fail.");
     assert!(
         cycle_error.to_string().contains("cycle"),
         "Fix: cycle errors must identify the graph-shape bug: {cycle_error}"
@@ -153,10 +153,7 @@ fn shuffle_graph(graph: &mut [(NodeId, NodeStorage)], rng: &mut u64) {
     }
 }
 
-fn recursive_value(
-    id: NodeId,
-    graph: &[(NodeId, NodeStorage)],
-) -> Result<u32, &'static str> {
+fn recursive_value(id: NodeId, graph: &[(NodeId, NodeStorage)]) -> Result<u32, &'static str> {
     let by_id = graph
         .iter()
         .map(|(node_id, node)| (*node_id, node))

@@ -370,10 +370,22 @@ mod tests {
     #[test]
     fn aligned_async_copy_len_rounds_to_cuda_dma_boundary() {
         assert_eq!(aligned_async_copy_len(0).unwrap(), 0);
-        assert_eq!(aligned_async_copy_len(1).unwrap(), CUDA_ASYNC_COPY_ALIGNMENT);
-        assert_eq!(aligned_async_copy_len(15).unwrap(), CUDA_ASYNC_COPY_ALIGNMENT);
-        assert_eq!(aligned_async_copy_len(16).unwrap(), CUDA_ASYNC_COPY_ALIGNMENT);
-        assert_eq!(aligned_async_copy_len(17).unwrap(), CUDA_ASYNC_COPY_ALIGNMENT * 2);
+        assert_eq!(
+            aligned_async_copy_len(1).unwrap(),
+            CUDA_ASYNC_COPY_ALIGNMENT
+        );
+        assert_eq!(
+            aligned_async_copy_len(15).unwrap(),
+            CUDA_ASYNC_COPY_ALIGNMENT
+        );
+        assert_eq!(
+            aligned_async_copy_len(16).unwrap(),
+            CUDA_ASYNC_COPY_ALIGNMENT
+        );
+        assert_eq!(
+            aligned_async_copy_len(17).unwrap(),
+            CUDA_ASYNC_COPY_ALIGNMENT * 2
+        );
         assert!(
             aligned_async_copy_len(usize::MAX).is_err(),
             "Fix: CUDA async copy padding must report usize overflow instead of wrapping."

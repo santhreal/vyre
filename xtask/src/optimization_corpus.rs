@@ -481,7 +481,6 @@ fn analysis_fixture_family_evidence(
     evidence
 }
 
-
 fn write_case_manifest(
     parent: &Path,
     cases: &[vyre_lower::optimization_corpus::OptimizationCorpusCase],
@@ -638,4 +637,3 @@ fn default_output() -> PathBuf {
         .map(|path| path.join("release/evidence/optimization/optimization-corpus.json"))
         .unwrap_or_else(|| PathBuf::from("release/evidence/optimization/optimization-corpus.json"))
 }
-

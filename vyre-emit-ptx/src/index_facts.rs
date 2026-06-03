@@ -136,13 +136,7 @@ impl IndexFacts {
         self.index_mod(body, result_id, modulus, 0)
     }
 
-    fn index_mod(
-        &self,
-        body: &KernelBody,
-        result_id: u32,
-        modulus: u32,
-        depth: u8,
-    ) -> Option<u32> {
+    fn index_mod(&self, body: &KernelBody, result_id: u32, modulus: u32, depth: u8) -> Option<u32> {
         if modulus == 0 || depth > 8 {
             return None;
         }
@@ -372,11 +366,7 @@ fn visit_value_operands(op: &KernelOp, mut visit: impl FnMut(u32)) {
     }
 }
 
-fn combine_affine_add(
-    lhs: AffineModulo,
-    rhs: AffineModulo,
-    modulus: u32,
-) -> Option<AffineModulo> {
+fn combine_affine_add(lhs: AffineModulo, rhs: AffineModulo, modulus: u32) -> Option<AffineModulo> {
     let root = match (lhs.root, rhs.root) {
         (None, root) | (root, None) => root,
         (Some(left), Some(right)) if left == right => Some(left),
@@ -392,8 +382,7 @@ fn combine_affine_add(
 fn scale_affine(value: AffineModulo, factor: u32, modulus: u32) -> AffineModulo {
     AffineModulo {
         root: value.root,
-        coeff: ((u64::from(value.coeff) * u64::from(factor % modulus)) % u64::from(modulus))
-            as u32,
+        coeff: ((u64::from(value.coeff) * u64::from(factor % modulus)) % u64::from(modulus)) as u32,
         offset: ((u64::from(value.offset) * u64::from(factor % modulus)) % u64::from(modulus))
             as u32,
     }

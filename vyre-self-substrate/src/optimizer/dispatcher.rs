@@ -616,7 +616,6 @@ pub trait OptimizerDispatcher {
     }
 }
 
-
 fn free_resident_handles<D: OptimizerDispatcher + ?Sized>(
     dispatcher: &D,
     handles: &[u64],
@@ -720,7 +719,7 @@ pub mod oracle {
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             // Identify the optimizer Program by its top-level Region
             // generator. Self-hosted Programs all wrap their bodies
-            // in a Region with a known op-id (`vyre-primitives::graph::*`).
+            // in a Region with a known op-id.
             let generator = top_level_region_generator(program).ok_or_else(|| {
                 DispatchError::Rejected(
                     "Fix: oracle dispatcher only accepts canonical \
@@ -734,6 +733,7 @@ pub mod oracle {
                 vyre_primitives::graph::persistent_bfs::OP_ID => {
                     persistent_bfs_oracle(program, inputs)
                 }
+                crate::optimizer::dce_program::OP_ID => persistent_bfs_oracle(program, inputs),
                 vyre_primitives::graph::exploded::OP_ID => {
                     exploded_ifds_csr_oracle(program, inputs)
                 }
@@ -827,8 +827,7 @@ pub mod oracle {
 
         let key = vyre_primitives::graph::exploded::ifds_program_cache_key_from_program(program)
             .map_err(DispatchError::BackendError)?;
-        let (intra_edges, inter_edges, flow_gen, flow_kill) =
-            parse_ifds_rule_inputs(&key, inputs)?;
+        let (intra_edges, inter_edges, flow_gen, flow_kill) = parse_ifds_rule_inputs(&key, inputs)?;
 
         let (row_ptr, col_idx) = vyre_primitives::graph::exploded::build_cpu_reference(
             key.num_procs,
@@ -952,8 +951,12 @@ pub mod oracle {
         d: &[u32],
     ) -> Result<Vec<(u32, u32, u32, u32)>, DispatchError> {
         let count = count as usize;
-        for (name, column) in [("src_proc", a), ("src_block", b), ("dst_proc", c), ("dst_block", d)]
-        {
+        for (name, column) in [
+            ("src_proc", a),
+            ("src_block", b),
+            ("dst_proc", c),
+            ("dst_block", d),
+        ] {
             if column.len() < count {
                 return Err(DispatchError::BadInputs(format!(
                     "Fix: exploded IFDS oracle {kind} {name} column has {} word(s), expected {count}."
@@ -1300,4 +1303,3 @@ mod tests {
         );
     }
 }
-

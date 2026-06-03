@@ -81,8 +81,11 @@ fn strength_reduce_body(mut body: KernelBody, allocator: &mut ResultAllocator) -
             Rewrite::Div(lhs, log2, idx) => (BinOp::Shr, lhs, log2, idx),
             Rewrite::Mod(lhs, mask, idx) => (BinOp::BitAnd, lhs, mask, idx),
         };
-        let synth_id =
-            allocator.push_literal(&mut body.ops, &mut body.literals, LiteralValue::U32(lit_value));
+        let synth_id = allocator.push_literal(
+            &mut body.ops,
+            &mut body.literals,
+            LiteralValue::U32(lit_value),
+        );
         body.ops[op_idx as usize].kind = KernelOpKind::BinOpKind(kind);
         body.ops[op_idx as usize].operands = vec![other_id, synth_id];
     }

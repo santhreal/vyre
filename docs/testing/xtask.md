@@ -1,10 +1,5 @@
-# Testing program — xtask
+# Testing program - xtask
 
-| Kind | Location |
-|------|----------|
-| unit | `{crate}/tests/`, `src/**/tests.rs` |
-| adversarial | `tests/adversarial*`, `tests/sweep_*` |
-| property | `*proptest*` |
-| contract | `tests/contract/`, workspace `tests/contract/` |
-| integration | `tests/integration*` |
-| conformance | `conform/*` |
+Use [TESTING_PROGRAM.md](../TESTING_PROGRAM.md) as the canonical testing program reference.
+This crate drives workspace automation and should keep command-specific notes
+inside its own source or help output.

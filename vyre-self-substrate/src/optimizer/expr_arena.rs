@@ -782,4 +782,3 @@ mod tests {
         assert!(matches!(err, EncodeError::Unsupported(_)));
     }
 }
-

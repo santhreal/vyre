@@ -494,7 +494,6 @@ impl Megakernel {
     }
 }
 
-
 impl MegakernelRecoveryPolicy {
     fn allows_retry(self, error: &vyre_driver::BackendError) -> bool {
         self.retry_device_loss_once && backend_error_indicates_device_loss(error)
@@ -631,4 +630,3 @@ fn checked_add_u32(left: u32, right: u32, label: &str) -> Result<u32, PipelineEr
 
 #[cfg(test)]
 mod tests;
-

@@ -36,7 +36,10 @@ fn expr_cases() -> Vec<(GeneratedExpr, &'static str)> {
         (GeneratedExpr::Unary(7), "vyre.generatedexpr.unary"),
         (GeneratedExpr::Pair(3, 5), "vyre.generatedexpr.pair"),
         (
-            GeneratedExpr::Binary { left: 11, right: 13 },
+            GeneratedExpr::Binary {
+                left: 11,
+                right: 13,
+            },
             "vyre.generatedexpr.binary",
         ),
         (

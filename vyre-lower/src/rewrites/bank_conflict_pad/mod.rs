@@ -207,9 +207,9 @@ fn parse_stride_index(body: &KernelBody, index: &BodyIndex, result_id: u32) -> O
                 .or_else(|| parse_stride_index(body, index, op.operands[1]))
         }
         KernelOpKind::BinOpKind(BinOp::Mul) if op.operands.len() == 2 => {
-            parse_mul_stride(body, index, result_id, op.operands[0], op.operands[1]).or_else(
-                || parse_mul_stride(body, index, result_id, op.operands[1], op.operands[0]),
-            )
+            parse_mul_stride(body, index, result_id, op.operands[0], op.operands[1]).or_else(|| {
+                parse_mul_stride(body, index, result_id, op.operands[1], op.operands[0])
+            })
         }
         KernelOpKind::LocalInvocationId => None,
         KernelOpKind::Literal => None,

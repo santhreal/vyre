@@ -602,7 +602,6 @@ impl ProgramFacts {
     }
 }
 
-
 fn build_index(rows: &[(NodeIndex, Ident)]) -> FxHashMap<Ident, Vec<NodeIndex>> {
     let mut out: FxHashMap<Ident, Vec<NodeIndex>> = FxHashMap::default();
     for (idx, name) in rows {
@@ -1453,4 +1452,3 @@ mod tests {
         assert!(escaping.iter().any(|k| k.as_str() == "a"));
     }
 }
-

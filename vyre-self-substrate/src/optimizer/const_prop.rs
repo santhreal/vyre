@@ -522,4 +522,3 @@ fn rewrite_expr(expr: &Expr, env: &ConstEnv) -> Expr {
         _ => expr.clone(),
     }
 }
-

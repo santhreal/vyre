@@ -39,12 +39,12 @@
 pub mod analyses;
 pub mod audit;
 pub mod descriptor;
+pub mod emit_adversarial_corpus;
 pub mod error;
 pub mod lower;
-pub mod emit_adversarial_corpus;
-pub mod optimization_corpus;
 pub(crate) mod op_properties;
 pub(crate) mod operand_semantics;
+pub mod optimization_corpus;
 pub mod pre_emit;
 pub mod rewrites;
 pub mod verify;

@@ -536,7 +536,6 @@ impl<L: ENodeLang> EGraph<L> {
     }
 }
 
-
 fn eclass_id_from_index(index: usize) -> EClassId {
     match try_eclass_id_from_index(index) {
         Ok(id) => id,
@@ -1347,8 +1346,8 @@ mod tests {
 
     #[test]
     fn fallible_add_handles_duplicate_children_without_late_allocation_path() {
-        let mut egraph: EGraph<Arith> =
-            EGraph::try_with_capacity(2).expect("Fix: unit-test oracle precondition - small egraph reservation must succeed");
+        let mut egraph: EGraph<Arith> = EGraph::try_with_capacity(2)
+            .expect("Fix: unit-test oracle precondition - small egraph reservation must succeed");
         let one = egraph
             .try_add(Arith::Const(1))
             .expect("Fix: unit-test oracle precondition - const insert must succeed");
@@ -1380,18 +1379,29 @@ mod tests {
 
     #[test]
     fn fallible_saturate_and_extract_match_infallible_contracts() {
-        let mut egraph: EGraph<Arith> =
-            EGraph::try_with_capacity(4).expect("Fix: unit-test oracle precondition - small egraph reservation must succeed");
-        let one = egraph.try_add(Arith::Const(1)).expect("Fix: unit-test oracle precondition - insert one");
-        let two = egraph.try_add(Arith::Const(2)).expect("Fix: unit-test oracle precondition - insert two");
-        let three = egraph.try_add(Arith::Const(3)).expect("Fix: unit-test oracle precondition - insert three");
-        let add_12 = egraph.try_add(Arith::Add(one, two)).expect("Fix: unit-test oracle precondition - insert add");
+        let mut egraph: EGraph<Arith> = EGraph::try_with_capacity(4)
+            .expect("Fix: unit-test oracle precondition - small egraph reservation must succeed");
+        let one = egraph
+            .try_add(Arith::Const(1))
+            .expect("Fix: unit-test oracle precondition - insert one");
+        let two = egraph
+            .try_add(Arith::Const(2))
+            .expect("Fix: unit-test oracle precondition - insert two");
+        let three = egraph
+            .try_add(Arith::Const(3))
+            .expect("Fix: unit-test oracle precondition - insert three");
+        let add_12 = egraph
+            .try_add(Arith::Add(one, two))
+            .expect("Fix: unit-test oracle precondition - insert add");
         egraph
             .try_union(add_12, three)
             .expect("Fix: unit-test oracle precondition - union equivalent nodes");
-        egraph.try_rebuild().expect("Fix: unit-test oracle precondition - rebuild equivalent nodes");
+        egraph
+            .try_rebuild()
+            .expect("Fix: unit-test oracle precondition - rebuild equivalent nodes");
         let rules: Vec<Box<dyn Rule<Arith>>> = vec![Box::new(UnionEqualConstsRule)];
-        let iters = try_saturate(&mut egraph, &rules, 10).expect("Fix: unit-test oracle precondition - fallible saturation");
+        let iters = try_saturate(&mut egraph, &rules, 10)
+            .expect("Fix: unit-test oracle precondition - fallible saturation");
         assert!(iters <= 10);
         let (best, cost) = try_extract_best(&egraph, add_12, arith_cost)
             .expect("Fix: unit-test oracle precondition - fallible extraction")
@@ -1436,4 +1446,3 @@ mod tests {
         );
     }
 }
-

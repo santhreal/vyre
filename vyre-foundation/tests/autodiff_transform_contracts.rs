@@ -528,4 +528,3 @@ fn bitwise_path_still_fails_with_actionable_not_differentiable_error() {
         other => panic!("expected NotDifferentiable, got {other}"),
     }
 }
-

@@ -226,7 +226,9 @@ mod tests {
             "Fix: C frontend CUDA stage dispatch must bypass cached CUDA graph launch before a graph fault can poison the CUDA context."
         );
         assert!(
-            source.contains("return backend.dispatch_borrowed_into(&program, inputs, config, outputs);"),
+            source.contains(
+                "return backend.dispatch_borrowed_into(&program, inputs, config, outputs);"
+            ),
             "Fix: CUDA stage bypass must execute direct borrowed dispatch."
         );
     }

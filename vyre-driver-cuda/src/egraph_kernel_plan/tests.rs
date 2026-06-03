@@ -1,9 +1,11 @@
 use super::*;
-use crate::CudaEGraphDeviceKernelView;
-use vyre_foundation::optimizer::eqsat_gpu::{GpuEGraphDeviceImage, Equivalence};
-use crate::egraph_kernel_plan::args::{EGraphStructuralKernelArgs, EGraphCanonicalRewriteKernelArgs};
+use crate::egraph_kernel_plan::args::{
+    EGraphCanonicalRewriteKernelArgs, EGraphStructuralKernelArgs,
+};
 use crate::plan_cuda_egraph_device_upload;
+use crate::CudaEGraphDeviceKernelView;
 use vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshot;
+use vyre_foundation::optimizer::eqsat_gpu::{Equivalence, GpuEGraphDeviceImage};
 
 /// Production source of the e-graph kernel planner, concatenated across the
 /// aggregator and every submodule (the `fast-path module splits` refactor
@@ -13,7 +15,10 @@ use vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshot;
 fn planner_production_source() -> String {
     let manifest = env!("CARGO_MANIFEST_DIR");
     let mut sources =
-        vec![std::fs::read_to_string(format!("{manifest}/src/egraph_kernel_plan.rs")).unwrap_or_default()];
+        vec![
+            std::fs::read_to_string(format!("{manifest}/src/egraph_kernel_plan.rs"))
+                .unwrap_or_default(),
+        ];
     if let Ok(entries) = std::fs::read_dir(format!("{manifest}/src/egraph_kernel_plan")) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -942,4 +947,3 @@ fn signature_bucket_planner_rejects_mismatched_image_and_view() {
         }
     );
 }
-

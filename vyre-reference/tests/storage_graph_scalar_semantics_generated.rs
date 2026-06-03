@@ -52,12 +52,27 @@ fn generated_u32_unary_storage_graph_semantics_match_contract_matrix() {
 fn generated_bool_storage_graph_semantics_match_contract_matrix() {
     for &left in &[false, true] {
         for &right in &[false, true] {
-            assert_eq!(eval_bool_bin(BinOp::And, left, right).unwrap(), IrValue::Bool(left && right));
-            assert_eq!(eval_bool_bin(BinOp::Or, left, right).unwrap(), IrValue::Bool(left || right));
-            assert_eq!(eval_bool_bin(BinOp::Eq, left, right).unwrap(), IrValue::Bool(left == right));
-            assert_eq!(eval_bool_bin(BinOp::Ne, left, right).unwrap(), IrValue::Bool(left != right));
+            assert_eq!(
+                eval_bool_bin(BinOp::And, left, right).unwrap(),
+                IrValue::Bool(left && right)
+            );
+            assert_eq!(
+                eval_bool_bin(BinOp::Or, left, right).unwrap(),
+                IrValue::Bool(left || right)
+            );
+            assert_eq!(
+                eval_bool_bin(BinOp::Eq, left, right).unwrap(),
+                IrValue::Bool(left == right)
+            );
+            assert_eq!(
+                eval_bool_bin(BinOp::Ne, left, right).unwrap(),
+                IrValue::Bool(left != right)
+            );
         }
-        assert_eq!(eval_bool_un(UnOp::LogicalNot, left).unwrap(), IrValue::Bool(!left));
+        assert_eq!(
+            eval_bool_un(UnOp::LogicalNot, left).unwrap(),
+            IrValue::Bool(!left)
+        );
     }
 }
 
@@ -88,16 +103,30 @@ type UnExpected = fn(u32) -> IrValue;
 
 fn u32_binary_cases() -> [(BinOp, BinExpected); 27] {
     [
-        (BinOp::Add, |left, right| IrValue::U32(left.wrapping_add(right))),
-        (BinOp::Sub, |left, right| IrValue::U32(left.wrapping_sub(right))),
-        (BinOp::Mul, |left, right| IrValue::U32(left.wrapping_mul(right))),
-        (BinOp::Div, |left, right| IrValue::U32(left.checked_div(right).unwrap_or(u32::MAX))),
-        (BinOp::Mod, |left, right| IrValue::U32(left.checked_rem(right).unwrap_or(0))),
+        (BinOp::Add, |left, right| {
+            IrValue::U32(left.wrapping_add(right))
+        }),
+        (BinOp::Sub, |left, right| {
+            IrValue::U32(left.wrapping_sub(right))
+        }),
+        (BinOp::Mul, |left, right| {
+            IrValue::U32(left.wrapping_mul(right))
+        }),
+        (BinOp::Div, |left, right| {
+            IrValue::U32(left.checked_div(right).unwrap_or(u32::MAX))
+        }),
+        (BinOp::Mod, |left, right| {
+            IrValue::U32(left.checked_rem(right).unwrap_or(0))
+        }),
         (BinOp::BitAnd, |left, right| IrValue::U32(left & right)),
         (BinOp::BitOr, |left, right| IrValue::U32(left | right)),
         (BinOp::BitXor, |left, right| IrValue::U32(left ^ right)),
-        (BinOp::Shl, |left, right| IrValue::U32(left.wrapping_shl(right & 31))),
-        (BinOp::Shr, |left, right| IrValue::U32(left.wrapping_shr(right & 31))),
+        (BinOp::Shl, |left, right| {
+            IrValue::U32(left.wrapping_shl(right & 31))
+        }),
+        (BinOp::Shr, |left, right| {
+            IrValue::U32(left.wrapping_shr(right & 31))
+        }),
         (BinOp::Eq, |left, right| IrValue::Bool(left == right)),
         (BinOp::Ne, |left, right| IrValue::Bool(left != right)),
         (BinOp::Lt, |left, right| IrValue::Bool(left < right)),
@@ -106,17 +135,33 @@ fn u32_binary_cases() -> [(BinOp, BinExpected); 27] {
         (BinOp::Ge, |left, right| IrValue::Bool(left >= right)),
         (BinOp::Min, |left, right| IrValue::U32(left.min(right))),
         (BinOp::Max, |left, right| IrValue::U32(left.max(right))),
-        (BinOp::SaturatingAdd, |left, right| IrValue::U32(left.saturating_add(right))),
-        (BinOp::SaturatingSub, |left, right| IrValue::U32(left.saturating_sub(right))),
-        (BinOp::SaturatingMul, |left, right| IrValue::U32(left.saturating_mul(right))),
-        (BinOp::AbsDiff, |left, right| IrValue::U32(left.abs_diff(right))),
-        (BinOp::RotateLeft, |left, right| IrValue::U32(left.rotate_left(right & 31))),
-        (BinOp::RotateRight, |left, right| IrValue::U32(left.rotate_right(right & 31))),
+        (BinOp::SaturatingAdd, |left, right| {
+            IrValue::U32(left.saturating_add(right))
+        }),
+        (BinOp::SaturatingSub, |left, right| {
+            IrValue::U32(left.saturating_sub(right))
+        }),
+        (BinOp::SaturatingMul, |left, right| {
+            IrValue::U32(left.saturating_mul(right))
+        }),
+        (BinOp::AbsDiff, |left, right| {
+            IrValue::U32(left.abs_diff(right))
+        }),
+        (BinOp::RotateLeft, |left, right| {
+            IrValue::U32(left.rotate_left(right & 31))
+        }),
+        (BinOp::RotateRight, |left, right| {
+            IrValue::U32(left.rotate_right(right & 31))
+        }),
         (BinOp::MulHigh, |left, right| {
             IrValue::U32(((u64::from(left).wrapping_mul(u64::from(right))) >> 32) as u32)
         }),
-        (BinOp::And, |left, right| IrValue::Bool(left != 0 && right != 0)),
-        (BinOp::Or, |left, right| IrValue::Bool(left != 0 || right != 0)),
+        (BinOp::And, |left, right| {
+            IrValue::Bool(left != 0 && right != 0)
+        }),
+        (BinOp::Or, |left, right| {
+            IrValue::Bool(left != 0 || right != 0)
+        }),
     ]
 }
 
@@ -127,7 +172,9 @@ fn u32_unary_cases() -> [(UnOp, UnExpected); 6] {
         (UnOp::Popcount, |value| IrValue::U32(value.count_ones())),
         (UnOp::Clz, |value| IrValue::U32(value.leading_zeros())),
         (UnOp::Ctz, |value| IrValue::U32(value.trailing_zeros())),
-        (UnOp::ReverseBits, |value| IrValue::U32(value.reverse_bits())),
+        (UnOp::ReverseBits, |value| {
+            IrValue::U32(value.reverse_bits())
+        }),
     ]
 }
 

@@ -581,7 +581,6 @@ impl WgpuPendingReadback {
     }
 }
 
-
 fn trimmed_output_bytes<'a>(
     output: &OutputBindingLayout,
     mapped: &'a [u8],

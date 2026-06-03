@@ -190,7 +190,9 @@ fn run_backend_conformance(
     let missing_catalog_ops = catalog
         .required_ops
         .iter()
-        .filter(|op| !seen_ops.contains(op.as_str()) && !RUNTIME_DIALECT_CONTRACT_OPS.contains(&op.as_str()))
+        .filter(|op| {
+            !seen_ops.contains(op.as_str()) && !RUNTIME_DIALECT_CONTRACT_OPS.contains(&op.as_str())
+        })
         .cloned()
         .collect::<Vec<_>>();
     let catalog_covered_op_count = catalog
@@ -454,7 +456,6 @@ fn cargo_runner(workspace_root: &Path) -> PathBuf {
     PathBuf::from("cargo_full")
 }
 
-
 fn parse_pairs(stdout: &[u8]) -> Result<ParsedPairs, String> {
     let text = String::from_utf8_lossy(stdout);
     let trimmed_text = text.trim();
@@ -646,4 +647,3 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
-

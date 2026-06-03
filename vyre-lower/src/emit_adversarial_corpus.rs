@@ -167,11 +167,7 @@ fn hostile_workgroup_1024() -> EmitAdversarialCase {
                 ops: vec![
                     local_x(0),
                     lit(0, 1),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Add),
-                        vec![0, 1],
-                        Some(2),
-                    ),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 1], Some(2)),
                     op(KernelOpKind::StoreGlobal, vec![0, 0, 2], None),
                 ],
                 child_bodies: vec![],
@@ -223,23 +219,17 @@ fn multi_binding_mixed() -> EmitAdversarialCase {
                     lit(0, 1),
                     op(KernelOpKind::LoadGlobal, vec![2, 1], Some(2)),
                     op(KernelOpKind::LoadGlobal, vec![0, 1], Some(3)),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Add),
-                        vec![2, 3],
-                        Some(4),
-                    ),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 3], Some(4)),
                     op(KernelOpKind::StoreGlobal, vec![0, 1, 4], None),
                     op(KernelOpKind::LoadGlobal, vec![1, 1], Some(5)),
                     op(
-                        KernelOpKind::Cast { target: DataType::F32 },
+                        KernelOpKind::Cast {
+                            target: DataType::F32,
+                        },
                         vec![4],
                         Some(6),
                     ),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Add),
-                        vec![5, 6],
-                        Some(7),
-                    ),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![5, 6], Some(7)),
                     op(KernelOpKind::StoreGlobal, vec![1, 1, 7], None),
                 ],
                 child_bodies: vec![],
@@ -299,11 +289,7 @@ fn shared_global_tile() -> EmitAdversarialCase {
                         None,
                     ),
                     op(KernelOpKind::LoadShared, vec![shared_slot, 0], Some(2)),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Add),
-                        vec![2, 1],
-                        Some(3),
-                    ),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 1], Some(3)),
                     op(KernelOpKind::StoreGlobal, vec![1, 0, 3], None),
                 ],
                 child_bodies: vec![],
@@ -426,26 +412,10 @@ fn dead_identity_chain() -> EmitAdversarialCase {
                 ops: vec![
                     lit(0, 0),
                     lit(1, 1),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Add),
-                        vec![1, 0],
-                        Some(2),
-                    ),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Mul),
-                        vec![1, 0],
-                        Some(3),
-                    ),
-                    op(
-                        KernelOpKind::UnOpKind(UnOp::BitNot),
-                        vec![2],
-                        Some(4),
-                    ),
-                    op(
-                        KernelOpKind::UnOpKind(UnOp::BitNot),
-                        vec![4],
-                        Some(5),
-                    ),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![1, 0], Some(2)),
+                    op(KernelOpKind::BinOpKind(BinOp::Mul), vec![1, 0], Some(3)),
+                    op(KernelOpKind::UnOpKind(UnOp::BitNot), vec![2], Some(4)),
+                    op(KernelOpKind::UnOpKind(UnOp::BitNot), vec![4], Some(5)),
                     op(KernelOpKind::StoreGlobal, vec![0, 0, 1], None),
                 ],
                 child_bodies: vec![],
@@ -488,39 +458,15 @@ fn vec_load_fusion() -> EmitAdversarialCase {
                     lit(0, 0),
                     lit(1, 1),
                     op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Add),
-                        vec![0, 1],
-                        Some(3),
-                    ),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 1], Some(3)),
                     op(KernelOpKind::LoadGlobal, vec![0, 3], Some(4)),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Add),
-                        vec![3, 1],
-                        Some(5),
-                    ),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![3, 1], Some(5)),
                     op(KernelOpKind::LoadGlobal, vec![0, 5], Some(6)),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Add),
-                        vec![5, 1],
-                        Some(7),
-                    ),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![5, 1], Some(7)),
                     op(KernelOpKind::LoadGlobal, vec![0, 7], Some(8)),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Add),
-                        vec![2, 4],
-                        Some(9),
-                    ),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Add),
-                        vec![9, 6],
-                        Some(10),
-                    ),
-                    op(
-                        KernelOpKind::BinOpKind(BinOp::Add),
-                        vec![10, 8],
-                        Some(11),
-                    ),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 4], Some(9)),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![9, 6], Some(10)),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), vec![10, 8], Some(11)),
                     op(KernelOpKind::StoreGlobal, vec![1, 0, 11], None),
                 ],
                 child_bodies: vec![],
@@ -636,7 +582,7 @@ mod tests {
         for case in success_cases() {
             let errors = crate::verify(&case.descriptor);
             assert!(
-        matches!(errors, Ok(_)),
+                matches!(errors, Ok(_)),
                 "Fix: adversarial case `{}` must verify before emit testing: {:?}",
                 case.id,
                 errors

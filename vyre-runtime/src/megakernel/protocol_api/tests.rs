@@ -442,8 +442,7 @@ fn read_metrics_on_fresh_control_returns_empty() {
 
 #[test]
 fn validate_control_bytes_rejects_too_short() {
-    let err = validate_control_bytes(&[0u8; 4])
-        .expect_err("must reject undersized control buffer");
+    let err = validate_control_bytes(&[0u8; 4]).expect_err("must reject undersized control buffer");
     assert!(
         err.to_string().contains("expected at least"),
         "unexpected error: {err}"
@@ -506,7 +505,8 @@ fn packed_slot_rejects_overflow() {
     let err = Megakernel::publish_packed_slot(&mut ring, 0, 1, &ops)
         .expect_err("must reject packed slot exceeding arg budget");
     assert!(
-        err.to_string().contains("exceeds the 12-word slot argument budget"),
+        err.to_string()
+            .contains("exceeds the 12-word slot argument budget"),
         "unexpected error: {err}"
     );
 }
@@ -529,4 +529,3 @@ fn write_word(ring: &mut [u8], slot_idx: usize, word_idx: usize, value: u32) {
     let off = base + word_idx * 4;
     ring[off..off + 4].copy_from_slice(&value.to_le_bytes());
 }
-

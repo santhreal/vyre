@@ -28,14 +28,18 @@ fn gpu_unary_many(backend: &WgpuBackend, op: UnOp, xs: &[f32]) -> Vec<f32> {
 }
 
 fn cpu_canonical(op: &UnOp, x: f32) -> f32 {
-    use vyre_reference::ieee754::{canonical_cos, canonical_exp, canonical_log, canonical_sin, canonical_sqrt};
+    use vyre_reference::ieee754::{
+        canonical_cos, canonical_exp, canonical_log, canonical_sin, canonical_sqrt,
+    };
     match op {
         UnOp::Sin => canonical_sin(x),
         UnOp::Cos => canonical_cos(x),
         UnOp::Sqrt => canonical_sqrt(x),
         UnOp::Exp => canonical_exp(x),
         UnOp::Log => canonical_log(x),
-        other => panic!("Fix: gap_transcendentals_parity only covers sin/cos/sqrt/exp/log, got {other:?}"),
+        other => panic!(
+            "Fix: gap_transcendentals_parity only covers sin/cos/sqrt/exp/log, got {other:?}"
+        ),
     }
 }
 

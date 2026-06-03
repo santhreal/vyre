@@ -474,7 +474,6 @@ fn scheduled_thread_slots(launch: &LaunchPlan) -> Option<u64> {
     u64::try_from(exact).ok()
 }
 
-
 fn utilization_bps(used: u64, scheduled: u64) -> u32 {
     crate::numeric::CUDA_NUMERIC
         .ratio_basis_points_u64(used, scheduled, 0, "telemetry utilization")
@@ -685,4 +684,3 @@ mod tests {
         );
     }
 }
-

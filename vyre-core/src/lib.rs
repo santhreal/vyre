@@ -564,4 +564,3 @@ mod optimize_cache_structure_tests {
         );
     }
 }
-

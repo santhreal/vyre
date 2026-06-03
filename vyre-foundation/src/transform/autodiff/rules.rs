@@ -427,7 +427,8 @@ mod tests {
         let l = Expr::var("l");
         let r = Expr::var("r");
         let adj = Expr::var("adj");
-        let err = binop_adjoints(BinOp::BitAnd, &l, &r, &adj).expect_err("BitAnd is not differentiable");
+        let err =
+            binop_adjoints(BinOp::BitAnd, &l, &r, &adj).expect_err("BitAnd is not differentiable");
         assert!(
             matches!(err, AutodiffError::NotDifferentiable { ref op, .. } if op == "BinOp::BitAnd"),
             "non-differentiable binop error: {err:?}"

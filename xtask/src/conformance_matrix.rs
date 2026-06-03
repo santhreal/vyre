@@ -172,7 +172,9 @@ pub(crate) fn run(args: &[String]) {
     let missing_catalog_ops = catalog
         .required_ops
         .iter()
-        .filter(|op| !ids.contains(op.as_str()) && !RUNTIME_DIALECT_CONTRACT_OPS.contains(&op.as_str()))
+        .filter(|op| {
+            !ids.contains(op.as_str()) && !RUNTIME_DIALECT_CONTRACT_OPS.contains(&op.as_str())
+        })
         .cloned()
         .collect::<Vec<_>>();
     let catalog_covered_op_count = catalog
@@ -518,7 +520,6 @@ fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
         errors: Vec::new(),
     }
 }
-
 
 fn inspect_ci_conformance_gates(vyre_root: &Path) -> Vec<CiConformanceGate> {
     let santh_root = vyre_root
@@ -928,10 +929,12 @@ fn check_against_disk(matrix: &ConformanceMatrix, output: &Path) {
     }
     if !matrix.missing_catalog_ops.is_empty() {
         for op in INT4_CONFORMANCE_OPS {
-            if matrix.missing_catalog_ops.iter().any(|missing| missing == *op) {
-                eprintln!(
-                    "Fix: INT4 conformance op `{op}` is listed in missing_catalog_ops."
-                );
+            if matrix
+                .missing_catalog_ops
+                .iter()
+                .any(|missing| missing == *op)
+            {
+                eprintln!("Fix: INT4 conformance op `{op}` is listed in missing_catalog_ops.");
                 std::process::exit(1);
             }
         }
@@ -992,7 +995,10 @@ fn check_against_disk(matrix: &ConformanceMatrix, output: &Path) {
         return;
     }
 
-    eprintln!("conformance-matrix drift detected against `{}`:", output.display());
+    eprintln!(
+        "conformance-matrix drift detected against `{}`:",
+        output.display()
+    );
     for line in &drift {
         eprintln!("  - {line}");
     }
@@ -1002,7 +1008,6 @@ fn check_against_disk(matrix: &ConformanceMatrix, output: &Path) {
     );
     std::process::exit(1);
 }
-
 
 fn parse_args(args: &[String]) -> Result<(PathBuf, bool), String> {
     let mut output = None;
@@ -1057,4 +1062,3 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
-

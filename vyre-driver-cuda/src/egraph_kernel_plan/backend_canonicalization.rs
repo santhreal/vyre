@@ -1,28 +1,25 @@
-
 use crate::backend::staging_reserve::reserved_typed_vec;
 use crate::backend::CudaBackend;
 use crate::egraph_device_image::CudaEGraphDeviceKernelView;
 use crate::egraph_readback::{
-    egraph_column_snapshot_readback_bytes,
-    egraph_column_snapshot_spans, read_resident_u32_range,
+    egraph_column_snapshot_readback_bytes, egraph_column_snapshot_spans, read_resident_u32_range,
 };
 use crate::CudaResidentEGraphDeviceImage;
 use vyre_driver::BackendError;
 use vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImage;
 
 use super::{
-    pack_cuda_egraph_canonical_rewrite_device_image,
+    helpers::usize_to_u64, pack_cuda_egraph_canonical_rewrite_device_image,
     plan_cuda_egraph_signature_buckets, plan_cuda_egraph_signature_buckets_from_resident_snapshot,
     plan_cuda_egraph_signature_buckets_from_signature_snapshot,
     plan_cuda_egraph_structural_equivalence_launch_artifact_from_plan,
-    plan_cuda_egraph_union_compaction,
-    CudaEGraphCanonicalRewriteKernelResult, CudaEGraphFixedPointReadback,
-    CudaEGraphKernelLaunchConfig, CudaEGraphKernelPlanError, CudaEGraphResidentColumnSnapshot,
-    CudaEGraphResidentSignatureSnapshot, CudaEGraphSignatureBucketPlan,
-    CudaEGraphSignatureRefreshKernelResult, CudaEGraphStructuralCanonicalizationFixedPointReport,
+    plan_cuda_egraph_union_compaction, CudaEGraphCanonicalRewriteKernelResult,
+    CudaEGraphFixedPointReadback, CudaEGraphKernelLaunchConfig, CudaEGraphKernelPlanError,
+    CudaEGraphResidentColumnSnapshot, CudaEGraphResidentSignatureSnapshot,
+    CudaEGraphSignatureBucketPlan, CudaEGraphSignatureRefreshKernelResult,
+    CudaEGraphStructuralCanonicalizationFixedPointReport,
     CudaEGraphStructuralCanonicalizationFixedPointResult,
     CudaEGraphStructuralCanonicalizationRoundResult,
-    helpers::usize_to_u64,
 };
 
 impl CudaBackend {
@@ -322,9 +319,9 @@ impl CudaBackend {
         .map_err(|error| BackendError::InvalidProgram {
             fix: error.to_string(),
         })?;
-        let mut signature_snapshot = Some(CudaEGraphResidentSignatureSnapshot::from_column_snapshot(
-            &column_snapshot,
-        ));
+        let mut signature_snapshot = Some(
+            CudaEGraphResidentSignatureSnapshot::from_column_snapshot(&column_snapshot),
+        );
         let mut signature_snapshot_current = true;
         let mut total_discovered_pairs = 0_u64;
         let mut total_rewrites = 0_u64;
@@ -402,7 +399,8 @@ impl CudaBackend {
             CudaEGraphFixedPointReadback::None | CudaEGraphFixedPointReadback::Signatures => None,
         };
         let final_additional_readback_bytes = match final_readback {
-            CudaEGraphFixedPointReadback::FullColumns | CudaEGraphFixedPointReadback::Signatures
+            CudaEGraphFixedPointReadback::FullColumns
+            | CudaEGraphFixedPointReadback::Signatures
             | CudaEGraphFixedPointReadback::None => 0,
         };
         let final_signature_snapshot = match final_readback {

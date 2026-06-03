@@ -93,7 +93,15 @@ pub(crate) fn run(_args: &[String]) {
 
     let mut platform_boundary = Command::new(&cargo);
     platform_boundary
-        .args(["run", "-p", "xtask", "--bin", "xtask", "--", "platform-boundary"])
+        .args([
+            "run",
+            "-p",
+            "xtask",
+            "--bin",
+            "xtask",
+            "--",
+            "platform-boundary",
+        ])
         .current_dir(&root);
     if !run_step("platform-boundary", platform_boundary).success() {
         failed.push("xtask platform-boundary");

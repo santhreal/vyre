@@ -19,9 +19,8 @@ fn flags_same_module_basename_across_authority_roots() {
     )
     .expect("write substrate module");
 
-    let violations =
-        vyre_lints::run_module_forks(&[primitive.as_path(), substrate.as_path()])
-            .expect("module fork scan");
+    let violations = vyre_lints::run_module_forks(&[primitive.as_path(), substrate.as_path()])
+        .expect("module fork scan");
 
     assert_eq!(violations.len(), 2);
     assert!(violations
@@ -42,7 +41,9 @@ fn ignores_generic_rust_module_basenames() {
     let right = dir.path().join("right");
     fs::create_dir_all(&left).expect("create left root");
     fs::create_dir_all(&right).expect("create right root");
-    for name in ["lib.rs", "main.rs", "mod.rs", "tests.rs", "error.rs", "types.rs"] {
+    for name in [
+        "lib.rs", "main.rs", "mod.rs", "tests.rs", "error.rs", "types.rs",
+    ] {
         fs::write(left.join(name), "pub fn left() {}\n").expect("write left module");
         fs::write(right.join(name), "pub fn right() {}\n").expect("write right module");
     }
@@ -61,8 +62,11 @@ fn ignores_same_basename_repeated_inside_one_authority_root() {
     fs::create_dir_all(root.join("right")).expect("create right module");
     fs::write(root.join("left/dispatch.rs"), "pub fn left_dispatch() {}\n")
         .expect("write left dispatch");
-    fs::write(root.join("right/dispatch.rs"), "pub fn right_dispatch() {}\n")
-        .expect("write right dispatch");
+    fs::write(
+        root.join("right/dispatch.rs"),
+        "pub fn right_dispatch() {}\n",
+    )
+    .expect("write right dispatch");
 
     let violations = vyre_lints::run_module_forks(&[root.as_path()]).expect("module scan");
 

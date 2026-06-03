@@ -282,7 +282,10 @@ pub(super) fn wave_count_for(
     ceil_div_u64(item_count, items_per_wave)
 }
 
-pub(super) fn ceil_div_u64(numerator: u64, denominator: u64) -> Result<u64, CudaEGraphKernelPlanError> {
+pub(super) fn ceil_div_u64(
+    numerator: u64,
+    denominator: u64,
+) -> Result<u64, CudaEGraphKernelPlanError> {
     if denominator == 0 {
         return Err(CudaEGraphKernelPlanError::CountOverflow {
             field: "ceil division denominator",
@@ -328,7 +331,10 @@ pub(super) fn signature_pairs_before_row(
         })
 }
 
-pub(crate) fn usize_to_u64(value: usize, field: &'static str) -> Result<u64, CudaEGraphKernelPlanError> {
+pub(crate) fn usize_to_u64(
+    value: usize,
+    field: &'static str,
+) -> Result<u64, CudaEGraphKernelPlanError> {
     CUDA_NUMERIC
         .usize_to_u64(value, field)
         .map_err(|_| CudaEGraphKernelPlanError::CountOverflow { field })

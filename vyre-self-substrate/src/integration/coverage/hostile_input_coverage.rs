@@ -187,9 +187,9 @@ pub fn validate_hostile_input_artifacts(
         ("Vyre adversarial root", "/matching/vyre/"),
         (
             "Dataflow consumer adversarial coverage",
-            "\"file_count\": 1",
+            "\"dataflow_consumer_file_count\": 33",
         ),
-        ("Vyrec adversarial coverage", "\"vyrec_file_count\": 3"),
+        ("Vyrec adversarial coverage", "\"vyrec_file_count\": 2"),
         (
             "hostile parser stream tests",
             "c_parser_hostile_malformed_stream_contracts",

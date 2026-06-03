@@ -625,4 +625,3 @@ mod tests {
         assert!(births.is_empty());
     }
 }
-

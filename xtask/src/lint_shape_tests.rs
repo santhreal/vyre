@@ -115,7 +115,10 @@ pub(crate) fn run(args: &[String]) {
 
     // Additional out-of-workspace crates (optional - skip quietly if absent).
     for (path, name) in [
-        (repo_root.join("libs/tools/security-analysis-consumer"), "security-analysis-consumer"),
+        (
+            repo_root.join("libs/tools/security-analysis-consumer"),
+            "security-analysis-consumer",
+        ),
         (repo_root.join("libs/surge"), "surge"),
     ] {
         if path.exists() {

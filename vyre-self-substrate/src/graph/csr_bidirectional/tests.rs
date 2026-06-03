@@ -563,4 +563,3 @@ fn closure_is_idempotent_at_fixpoint() {
     // Bidirectional step from saturated set keeps everything set.
     assert_eq!(out, saturated);
 }
-

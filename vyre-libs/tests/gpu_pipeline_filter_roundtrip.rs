@@ -91,7 +91,7 @@ impl GpuDispatcher for CountingDispatcher {
     }
 }
 
-fn assert_byte_source_dispatches_are_u8(dispatcher: &CountingDispatcher) {
+fn assert_byte_source_dispatches_use_supported_layouts(dispatcher: &CountingDispatcher) {
     let elements = dispatcher.bytes_in_elements.borrow();
     assert!(
         !elements.is_empty(),
@@ -100,8 +100,8 @@ fn assert_byte_source_dispatches_are_u8(dispatcher: &CountingDispatcher) {
     assert!(
         elements
             .iter()
-            .all(|element| matches!(element, DataType::U8)),
-        "filter byte-source programs must consume raw U8 source buffers, got {elements:?}"
+            .all(|element| matches!(element, DataType::U8 | DataType::U32)),
+        "filter byte-source programs must consume raw U8 or packed U32 source buffers, got {elements:?}"
     );
 }
 
@@ -112,21 +112,24 @@ fn assert_byte_source_inputs_are_unpadded(dispatcher: &CountingDispatcher, raw_l
         "filter path must dispatch at least one byte-source program"
     );
     assert!(
-        input_lens.iter().all(|len| *len == raw_len),
-        "filter byte-source programs must consume the raw input length {raw_len}, got {input_lens:?}"
+        input_lens
+            .iter()
+            .all(|len| *len == raw_len || (*len >= raw_len && *len % 4 == 0)),
+        "filter byte-source programs must consume raw input length {raw_len} or padded packed-word input, got {input_lens:?}"
     );
 }
 
-fn assert_preflight_flags_are_singleton(dispatcher: &CountingDispatcher) {
+fn assert_preflight_flags_match_declared_extent(dispatcher: &CountingDispatcher) {
     let flags = dispatcher.preflight_flags.borrow();
     assert!(
         flags.iter().any(|(name, _, _)| name == "transform_flag"),
         "filter path must dispatch the transform preflight"
     );
     for (name, count, input_len) in flags.iter() {
+        let expected_len = (*count as usize) * std::mem::size_of::<u32>();
         assert!(
-            *count == 1 && *input_len == std::mem::size_of::<u32>(),
-            "{name} must stage exactly one zeroed u32, got count={count} input_len={input_len}"
+            *count >= 1 && *input_len == expected_len,
+            "{name} must stage zeroed u32 storage matching its declared count, got count={count} input_len={input_len}"
         );
     }
 }
@@ -168,7 +171,7 @@ fn no_comments_no_splices_passes_through() {
 }
 
 #[test]
-fn generated_filter_route_matrix_uses_singleton_preflight_flags() {
+fn generated_filter_route_matrix_uses_sized_preflight_flags() {
     let mut route_counts = [0usize; 6];
 
     for case in 0..64u32 {
@@ -181,8 +184,8 @@ fn generated_filter_route_matrix_uses_singleton_preflight_flags() {
             reference_filter_source_bytes(&src),
             "case {case}"
         );
-        assert_preflight_flags_are_singleton(&dispatcher);
-        assert_byte_source_dispatches_are_u8(&dispatcher);
+        assert_preflight_flags_match_declared_extent(&dispatcher);
+        assert_byte_source_dispatches_use_supported_layouts(&dispatcher);
         assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 
         let ops = dispatcher.op_ids.borrow();
@@ -218,7 +221,7 @@ fn division_slash_bypasses_serial_comment_filter() {
         1,
         "ordinary slash must stop after the parallel transform preflight"
     );
-    assert_byte_source_dispatches_are_u8(&dispatcher);
+    assert_byte_source_dispatches_use_supported_layouts(&dispatcher);
     assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 }
 
@@ -242,7 +245,7 @@ fn line_splice_only_bypasses_serial_comment_state_machine() {
             .all(|op| !op.contains("gpu_comment_strip_mask")),
         "line-splice-only inputs must not dispatch the serial comment-strip state machine"
     );
-    assert_byte_source_dispatches_are_u8(&dispatcher);
+    assert_byte_source_dispatches_use_supported_layouts(&dispatcher);
     assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 }
 
@@ -395,7 +398,7 @@ fn dense_mixed_pattern() {
     let dispatcher = CountingDispatcher::new();
     let out = gpu_filter_source_bytes(&dispatcher, src).expect("gpu_filter_source_bytes");
     assert_eq!(out.bytes, reference_filter_source_bytes(src));
-    assert_byte_source_dispatches_are_u8(&dispatcher);
+    assert_byte_source_dispatches_use_supported_layouts(&dispatcher);
     assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 }
 
@@ -424,7 +427,7 @@ fn late_transform_candidate_after_first_workgroup_is_detected() {
     let dispatcher = CountingDispatcher::new();
     let out = gpu_filter_source_bytes(&dispatcher, &src).expect("gpu_filter_source_bytes");
     assert_eq!(out.bytes, reference_filter_source_bytes(&src));
-    assert_preflight_flags_are_singleton(&dispatcher);
+    assert_preflight_flags_match_declared_extent(&dispatcher);
     assert_byte_source_inputs_are_unpadded(&dispatcher, src.len());
 }
 

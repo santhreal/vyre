@@ -31,7 +31,11 @@ impl BodyIndex {
         }
     }
 
-    pub(super) fn producer<'a>(&self, body: &'a KernelBody, result_id: u32) -> Option<&'a KernelOp> {
+    pub(super) fn producer<'a>(
+        &self,
+        body: &'a KernelBody,
+        result_id: u32,
+    ) -> Option<&'a KernelOp> {
         body.ops.get(*self.result_to_idx.get(&result_id)?)
     }
 

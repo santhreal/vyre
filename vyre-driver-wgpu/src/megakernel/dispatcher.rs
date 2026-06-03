@@ -841,7 +841,6 @@ impl BatchDispatcher {
     }
 }
 
-
 fn occupancy_proxy_bps(items_processed: u32, worker_groups: u32, workgroup_size_x: u32) -> u16 {
     let lanes = u64::from(worker_groups.max(1))
         .checked_mul(u64::from(workgroup_size_x.max(1)))
@@ -1479,4 +1478,3 @@ mod tests {
         }
     }
 }
-

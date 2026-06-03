@@ -12,12 +12,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 const EXEMPT_BASENAMES: &[&str] = &[
-    "lib.rs",
-    "main.rs",
-    "mod.rs",
-    "tests.rs",
-    "error.rs",
-    "types.rs",
+    "lib.rs", "main.rs", "mod.rs", "tests.rs", "error.rs", "types.rs",
 ];
 
 pub fn scan_roots(roots: &[&Path]) -> Result<Vec<Violation>> {

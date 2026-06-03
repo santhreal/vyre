@@ -12,17 +12,17 @@
 //! [`analyze_crate_batched`] is the scale engine: it unions every function's
 //! CFG into one *disconnected* graph (disjoint node ranges, so a closure can
 //! never cross a function boundary) and runs every loan in the whole crate
-//! through **two** device dispatches: one forward-batch seeded at every loan's
-//! issue, one backward-batch seeded at every loan's uses. Launch overhead is
-//! amortized across the entire crate, not per function and not per loan, which
-//! is what makes a crate-scale borrow check GPU-fast. [`analyze_batched`] is the
-//! single-function case. Both are backend-agnostic: the caller supplies an
-//! [`OptimizerDispatcher`], which on the fleet is the CUDA backend.
+//! through **two** device dispatches per shard: one forward-batch seeded at
+//! every loan's issue, one backward-batch seeded at every loan's uses. Launch
+//! overhead is amortized across shard groups, not per function and not per loan,
+//! which is what makes a crate-scale borrow check GPU-fast. [`analyze_batched`]
+//! is the single-function case. Both are backend-agnostic: the caller supplies
+//! an [`OptimizerDispatcher`], which on the fleet is the CUDA backend.
 //!
 //! Memory scales as `total_loans * ceil(total_points / 32)` words; for very
-//! large crates the function list is sharded into groups before dispatch (each
-//! shard is still two dispatches), which the caller controls by chunking.
+//! large crates the function list is sharded into groups before dispatch.
 
+use vyre_primitives::graph::persistent_bfs::PERSISTENT_BFS_WORKGROUP_SIZE;
 use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use vyre_self_substrate::persistent_bfs::{
     bfs_expand_resident_graph_batch_with_scratch_into, upload_resident_bfs_graph,
@@ -74,8 +74,8 @@ fn build_csr(n: u32, edges: &[(u32, u32)], reverse: bool) -> (Vec<u32>, Vec<u32>
 }
 
 /// Compute conflicting-borrow violations (rustc E0499 / E0502) for an entire
-/// crate (a slice of per-function [`BorrowFacts`]) on a GPU device, using TWO
-/// total dispatches regardless of function or loan count.
+/// crate (a slice of per-function [`BorrowFacts`]) on a GPU device, using two
+/// dispatches per shard regardless of function or loan count inside the shard.
 ///
 /// Returns one `Vec<Conflict>` per input function, in input order; each is
 /// exactly what the CPU [`analyze`](super::analyze) engine returns for that
@@ -93,14 +93,16 @@ pub fn analyze_crate_batched(
 
 /// Per-shard seed/output buffer budget in u32 words. A shard's batch buffers are
 /// `shard_loans * ceil(shard_points / 32)` words; functions are packed greedily
-/// up to this many words so a crate of any size fits VRAM (each shard is still
-/// two dispatches). ~32 MiB per buffer at the default.
+/// up to this many words so a crate of any size fits VRAM. ~32 MiB per buffer
+/// at the default.
 pub const DEFAULT_SHARD_WORDS: usize = 8 * 1024 * 1024;
+const MAX_GRID_SYNC_FREE_SHARD_POINTS: u32 = PERSISTENT_BFS_WORKGROUP_SIZE[0];
 
 /// Like [`analyze_crate_batched`] but with an explicit per-shard word budget.
-/// Functions are packed into shards under `max_shard_words` (a single function
-/// always forms at least its own shard); each shard runs in two dispatches and
-/// the per-function results are concatenated in input order.
+/// Functions are packed into shards under `max_shard_words` and the persistent
+/// BFS single-workgroup point limit (a single function always forms at least its
+/// own shard); each shard runs in two dispatches and the per-function results
+/// are concatenated in input order.
 ///
 /// # Errors
 ///
@@ -123,8 +125,11 @@ pub fn analyze_crate_batched_with_shard_cap(
             let next_words = next_points.div_ceil(32);
             let next_buffer = next_loans.saturating_mul(next_words);
             // Always take at least one function; otherwise close the shard
-            // before exceeding the budget.
-            if end > start && next_buffer > max_shard_words as u64 {
+            // before exceeding the budget or forcing GridSync into PTX.
+            if end > start
+                && (next_buffer > max_shard_words as u64
+                    || next_points > u64::from(MAX_GRID_SYNC_FREE_SHARD_POINTS))
+            {
                 break;
             }
             shard_points = next_points;

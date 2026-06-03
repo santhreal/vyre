@@ -4,8 +4,8 @@
 //! with structural assertions on lowered `naga::Module` output - not smoke
 //! `is_ok()` checks.
 
-use naga::{AddressSpace, Block, Statement, TypeInner};
 use naga::valid::{Capabilities, ValidationFlags, Validator};
+use naga::{AddressSpace, Block, Statement, TypeInner};
 use proptest::prelude::*;
 use vyre_lower::emit_adversarial_corpus::{
     self, EmitAdversarialCase, EmitAdversarialFamily, EmitOutcome,
@@ -72,8 +72,7 @@ fn assert_naga_structure(case: &EmitAdversarialCase, module: &naga::Module) {
     let entry = &module.entry_points[0];
     assert_eq!(entry.name, "main", "{}: entry must be `main`", case.id);
     assert_eq!(
-        entry.workgroup_size,
-        case.descriptor.dispatch.workgroup_size,
+        entry.workgroup_size, case.descriptor.dispatch.workgroup_size,
         "{}: workgroup size must round-trip",
         case.id
     );
@@ -103,9 +102,10 @@ fn assert_naga_structure(case: &EmitAdversarialCase, module: &naga::Module) {
         }
         EmitAdversarialFamily::SharedGlobalTile => {
             assert!(
-                module.global_variables.iter().any(|(_, global)| {
-                    global.space == AddressSpace::WorkGroup
-                }),
+                module
+                    .global_variables
+                    .iter()
+                    .any(|(_, global)| { global.space == AddressSpace::WorkGroup }),
                 "{}: shared tile must allocate workgroup memory",
                 case.id
             );
@@ -137,7 +137,10 @@ fn assert_naga_structure(case: &EmitAdversarialCase, module: &naga::Module) {
         }
         EmitAdversarialFamily::DeadIdentityChain | EmitAdversarialFamily::VecLoadFusion => {}
         EmitAdversarialFamily::RejectCall | EmitAdversarialFamily::RejectGridSyncBarrier => {
-            panic!("{}: rejection case must not reach naga structure oracle", case.id);
+            panic!(
+                "{}: rejection case must not reach naga structure oracle",
+                case.id
+            );
         }
     }
 }
@@ -165,9 +168,8 @@ fn hostile_success_corpus_emits_structured_naga_modules() {
 #[test]
 fn rejection_corpus_fails_without_panic() {
     for case in emit_adversarial_corpus::rejection_cases() {
-        let err = vyre_emit_naga::emit_optimized(&case.descriptor).expect_err(
-            "Fix: rejection corpus case must be rejected by naga emit",
-        );
+        let err = vyre_emit_naga::emit_optimized(&case.descriptor)
+            .expect_err("Fix: rejection corpus case must be rejected by naga emit");
         let msg = format!("{err:?}");
         assert!(
             msg.contains(&case.id) || msg.contains("Fix:") || !msg.is_empty(),

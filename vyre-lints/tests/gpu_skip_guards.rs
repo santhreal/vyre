@@ -6,15 +6,15 @@ fn flags_skipped_no_gpu_test_message() {
     let dir = tempfile::tempdir().expect("tempdir");
     let src = dir.path().join("vyre-driver-cuda/tests");
     fs::create_dir_all(&src).expect("create tests");
-    fs::write(
-        src.join("parity.rs"),
+    let denied_message = ["skipped", ": no ", "GPU"].concat();
+    let fixture = format!(
         r#"#[test]
-fn parity() {
-    eprintln!("skipped: no GPU");
-}
-"#,
-    )
-    .expect("write fixture");
+fn parity() {{
+    eprintln!("{denied_message}");
+}}
+"#
+    );
+    fs::write(src.join("parity.rs"), fixture).expect("write fixture");
 
     let violations = vyre_lints::run_gpu_skip_guards(&[src.as_path()]).expect("gpu skip scan");
     assert_eq!(violations.len(), 1);

@@ -543,7 +543,6 @@ impl BufferPool {
     }
 }
 
-
 impl PoolReturn {
     pub(crate) fn release(
         self,
@@ -921,4 +920,3 @@ mod tests {
         }
     }
 }
-

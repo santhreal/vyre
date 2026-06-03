@@ -3,13 +3,14 @@ use super::host::read_output_u32;
 use super::program_helpers::{byte_compact_program, combine_keep_mask_program};
 use super::scratch::{copy_output_bytes, write_zero_bytes};
 use super::FilteredBytes;
-use crate::parsing::c::preprocess::gpu_comment_strip_mask::gpu_comment_strip_mask_u8;
+use crate::parsing::c::preprocess::gpu_comment_strip_mask::gpu_comment_strip_mask;
 use crate::parsing::c::preprocess::gpu_pipeline::GpuDispatcher;
-use vyre_primitives::parsing::line_splice_classify::line_splice_classify_u8;
+use vyre_primitives::parsing::line_splice_classify::line_splice_classify;
 
 #[derive(Default)]
 pub(super) struct FullCommentScratch {
     zero_words: Vec<u8>,
+    source_words: Vec<u8>,
     splice_out: Vec<Vec<u8>>,
     comment_out: Vec<Vec<u8>>,
     combine_out: Vec<Vec<u8>>,
@@ -22,6 +23,17 @@ pub(super) struct FullCommentScratch {
 impl FullCommentScratch {
     fn prepare_zero_words(&mut self, byte_len: usize) -> Result<(), String> {
         write_zero_bytes(&mut self.zero_words, byte_len, "full comment zero words")
+    }
+
+    fn prepare_source_words(&mut self, bytes_in: &[u8], byte_len: usize) -> Result<(), String> {
+        write_zero_bytes(
+            &mut self.source_words,
+            byte_len,
+            "full comment packed source words",
+        )?;
+        let end = bytes_in.len().min(self.source_words.len());
+        self.source_words[..end].copy_from_slice(&bytes_in[..end]);
+        Ok(())
     }
 
     fn prepare_compact_inputs(&mut self, compact_len: usize) -> Result<(), String> {
@@ -51,17 +63,21 @@ pub(super) fn gpu_filter_full_comment_state(
     // opening comment bytes into live `/` tokens. The staged path is still
     // fully GPU-resident and only used for complex comment/splice inputs; the
     // hot simple-line/simple-block paths stay specialized above.
-    let splice_prog = line_splice_classify_u8(n_bucket);
-    let comment_prog = gpu_comment_strip_mask_u8(n_bucket);
+    let splice_prog = line_splice_classify(n_bucket);
+    let comment_prog = gpu_comment_strip_mask(n_bucket);
     let combine_prog = combine_keep_mask_program(n_bucket);
     let zero_word_bytes = cap_bucket.checked_mul(4).ok_or_else(|| {
         "full comment zero words overflowed usize. Fix: reduce batch size.".to_string()
     })?;
     scratch.prepare_zero_words(zero_word_bytes)?;
+    scratch.prepare_source_words(bytes_in, byte_buf_pad)?;
     dispatcher
         .dispatch_borrowed_into(
             &splice_prog,
-            &[bytes_in, scratch.zero_words.as_slice()],
+            &[
+                scratch.source_words.as_slice(),
+                scratch.zero_words.as_slice(),
+            ],
             &mut scratch.splice_out,
         )
         .map_err(|e| format!("filter line_splice_classify: {e}"))?;
@@ -74,7 +90,10 @@ pub(super) fn gpu_filter_full_comment_state(
     dispatcher
         .dispatch_borrowed_into(
             &comment_prog,
-            &[bytes_in, scratch.zero_words.as_slice()],
+            &[
+                scratch.source_words.as_slice(),
+                scratch.zero_words.as_slice(),
+            ],
             &mut scratch.comment_out,
         )
         .map_err(|e| format!("filter gpu_comment_strip_mask: {e}"))?;

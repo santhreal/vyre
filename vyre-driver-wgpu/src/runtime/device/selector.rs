@@ -571,4 +571,3 @@ mod tests {
         assert!(production.contains("adapter_name_contains"));
     }
 }
-

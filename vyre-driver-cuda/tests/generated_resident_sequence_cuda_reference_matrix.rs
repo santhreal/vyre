@@ -448,7 +448,6 @@ fn f32_sequence_second_program() -> Program {
     )
 }
 
-
 fn generated_f32_values(salt: u32) -> Vec<f32> {
     (0..LANE_COUNT)
         .map(|lane| {
@@ -881,4 +880,3 @@ fn repeated_f32_step_program() -> Program {
         )],
     )
 }
-

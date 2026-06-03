@@ -2,8 +2,8 @@
 
 fn manifest_dependencies() -> toml::map::Map<String, toml::Value> {
     let manifest = include_str!("../Cargo.toml");
-    let parsed: toml::Value = toml::from_str(manifest)
-        .expect("Fix: vyre-core/Cargo.toml must remain parseable TOML");
+    let parsed: toml::Value =
+        toml::from_str(manifest).expect("Fix: vyre-core/Cargo.toml must remain parseable TOML");
     parsed
         .get("dependencies")
         .and_then(toml::Value::as_table)

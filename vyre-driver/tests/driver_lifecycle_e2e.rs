@@ -8,9 +8,9 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use vyre_driver::persistent::{PersistentEngine, PersistentWorkItem};
 use vyre_driver::pipeline::compile;
 use vyre_driver::validation::LaunchGeometryLimits;
-use vyre_driver::persistent::{PersistentEngine, PersistentWorkItem};
 use vyre_driver::{BindingPlan, DispatchConfig, LaunchPlan, VyreBackend};
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -31,7 +31,10 @@ fn multi_op_program() -> Program {
         ],
         [1, 1, 1],
         vec![
-            Node::let_bind("sum", Expr::add(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0)))),
+            Node::let_bind(
+                "sum",
+                Expr::add(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
+            ),
             Node::let_bind(
                 "diff",
                 Expr::sub(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
@@ -72,12 +75,8 @@ fn driver_lifecycle_e2e_parse_plan_emit_dispatch_readback() {
     let inputs = vec![a_bytes.clone(), b_bytes.clone()];
 
     let binding_plan = BindingPlan::build(&program).expect("Fix: lifecycle program must bind");
-    vyre_driver::validate_program_for_backend(
-        &CpuRefBackend,
-        &program,
-        &DispatchConfig::default(),
-    )
-    .expect("Fix: lifecycle program must pass backend validation");
+    vyre_driver::validate_program_for_backend(&CpuRefBackend, &program, &DispatchConfig::default())
+        .expect("Fix: lifecycle program must pass backend validation");
 
     let launch = LaunchPlan::from_bindings(
         &program,
@@ -91,12 +90,8 @@ fn driver_lifecycle_e2e_parse_plan_emit_dispatch_readback() {
     assert!(!launch.param_words.is_empty());
 
     let backend: Arc<dyn VyreBackend> = Arc::new(CpuRefBackend);
-    let pipeline = compile(
-        Arc::clone(&backend),
-        &program,
-        &DispatchConfig::default(),
-    )
-    .expect("Fix: lifecycle pipeline compile must succeed");
+    let pipeline = compile(Arc::clone(&backend), &program, &DispatchConfig::default())
+        .expect("Fix: lifecycle pipeline compile must succeed");
 
     let outputs = pipeline
         .dispatch(&inputs, &DispatchConfig::default())
@@ -204,7 +199,9 @@ fn persistent_engine_stress_16_prod_16_cons_100k_items() {
     }
 
     for handle in producer_handles {
-        handle.join().expect("Fix: persistent stress producer must not panic");
+        handle
+            .join()
+            .expect("Fix: persistent stress producer must not panic");
     }
     assert_eq!(
         enqueued.load(Ordering::Relaxed),
@@ -214,7 +211,9 @@ fn persistent_engine_stress_16_prod_16_cons_100k_items() {
     wait.mark_producers_done();
 
     for handle in consumer_handles {
-        handle.join().expect("Fix: persistent stress consumer must not panic");
+        handle
+            .join()
+            .expect("Fix: persistent stress consumer must not panic");
     }
 
     let mut consumed = Arc::try_unwrap(shared_consumed)
@@ -228,8 +227,7 @@ fn persistent_engine_stress_16_prod_16_cons_100k_items() {
     consumed.sort_unstable();
     consumed.dedup();
     assert_eq!(
-        raw_count,
-        total_items,
+        raw_count, total_items,
         "Fix: persistent stress claim count must match enqueued workload before dedup"
     );
     assert_eq!(

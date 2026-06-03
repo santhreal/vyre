@@ -448,7 +448,6 @@ mod tests {
         let out_ptr = out.as_ptr();
 
         natural_config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
-
             &DifferentiableDispatcher,
             &[one, one],
             &m_inv_sqrt,
@@ -559,4 +558,3 @@ mod tests {
         assert_eq!(out.as_ptr(), out_ptr);
     }
 }
-

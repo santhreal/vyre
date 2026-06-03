@@ -449,7 +449,6 @@ fn full_linux_lib_math_preprocess_benchmark_report_when_root_is_configured() {
     }
 }
 
-
 fn clang_kernel_predefined_macros() -> Vec<MacroDef> {
     [
         ("__KERNEL__", "1"),
@@ -656,4 +655,3 @@ fn assert_required_preprocess_speedup(report: &DifferentialPreprocessBenchmarkRe
 fn bytes_per_second(bytes: u64, wall_ns: u64) -> u64 {
     ((bytes as u128 * 1_000_000_000_u128) / wall_ns.max(1) as u128) as u64
 }
-

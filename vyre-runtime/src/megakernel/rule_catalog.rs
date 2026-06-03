@@ -561,4 +561,3 @@ mod tests {
         assert_eq!(packed.accept[0], 0);
     }
 }
-

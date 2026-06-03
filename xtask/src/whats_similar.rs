@@ -151,10 +151,7 @@ fn run_target_query(ops: &[OpInfo], op_id: &str, top_n: usize, min_score: f64) {
 }
 
 fn run_all_pairs_query(ops: &[OpInfo], top_n: usize, min_score: f64) {
-    let eligible: Vec<&OpInfo> = ops
-        .iter()
-        .filter(|op| op.fingerprint.len() >= 10)
-        .collect();
+    let eligible: Vec<&OpInfo> = ops.iter().filter(|op| op.fingerprint.len() >= 10).collect();
     let mut pairs: Vec<(f64, &OpInfo, &OpInfo)> = Vec::new();
     let mut contract_variants = 0usize;
     let mut centralized_family_variants = 0usize;
@@ -216,12 +213,7 @@ fn run_all_pairs_query(ops: &[OpInfo], top_n: usize, min_score: f64) {
             s if s >= 0.50 => "SIMILAR",
             _ => "RELATED",
         };
-        println!(
-            "  {:>2}. {:>5.1}%  {}",
-            index + 1,
-            score * 100.0,
-            verdict
-        );
+        println!("  {:>2}. {:>5.1}%  {}", index + 1, score * 100.0, verdict);
         println!(
             "      A: {} tier={} own={} composed={}",
             left.id,
@@ -299,9 +291,7 @@ fn implementation_family_id(op_id: &str) -> Option<&'static str> {
         }
         "vyre-primitives::predicate::literal_of"
         | "vyre-primitives::predicate::node_kind_eq"
-        | "vyre-primitives::label::resolve_family" => {
-            Some("vyre-primitives::nodeset_filter")
-        }
+        | "vyre-primitives::label::resolve_family" => Some("vyre-primitives::nodeset_filter"),
         "vyre-primitives::graph::vast_walk_preorder"
         | "vyre-primitives::graph::vast_walk_postorder" => {
             Some("vyre-primitives::graph::vast_tree_walk_order")
@@ -330,8 +320,7 @@ fn implementation_family_id(op_id: &str) -> Option<&'static str> {
         | "vyre-primitives::math::semiring_gemm" => {
             Some("vyre-primitives::fixed_u32_matmul::u32_matmul_program")
         }
-        "vyre-primitives::math::sinkhorn_scale"
-        | "vyre-primitives::math::gaussian_rdp_step" => {
+        "vyre-primitives::math::sinkhorn_scale" | "vyre-primitives::math::gaussian_rdp_step" => {
             Some("vyre-primitives::math::u32_binary_map")
         }
         "vyre-primitives::math::iht_threshold" | "vyre-primitives::math::mp_edge_clip" => {
@@ -515,7 +504,6 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
     })
 }
 
-
 fn print_usage() {
     eprintln!(
         "Usage: cargo_full run --bin xtask -- whats-similar --op-id <id> [--top N] [--min FLOAT]\n\
@@ -549,7 +537,10 @@ mod tests {
             "vyre-libs::math::matmul".to_string(),
         ];
         let cli = parse_args(&args).unwrap();
-        assert_eq!(cli.mode, Mode::Target("vyre-libs::math::matmul".to_string()));
+        assert_eq!(
+            cli.mode,
+            Mode::Target("vyre-libs::math::matmul".to_string())
+        );
         assert_eq!(cli.top_n, DEFAULT_TOP_N);
         assert!((cli.min_score - DEFAULT_MIN_SCORE).abs() < f64::EPSILON);
     }
@@ -574,7 +565,11 @@ mod tests {
 
     #[test]
     fn parse_all_sets_duplicate_floor() {
-        let args = vec!["xtask".to_string(), "whats-similar".to_string(), "--all".to_string()];
+        let args = vec![
+            "xtask".to_string(),
+            "whats-similar".to_string(),
+            "--all".to_string(),
+        ];
         let cli = parse_args(&args).unwrap();
         assert_eq!(cli.mode, Mode::All);
         assert_eq!(cli.top_n, DEFAULT_TOP_N);
@@ -780,4 +775,3 @@ mod tests {
         assert!(implementation_family_id("unknown::op").is_none());
     }
 }
-

@@ -339,9 +339,9 @@ fn fixed_scalar_storage_width(ty: &vyre::ir::DataType) -> Option<usize> {
             .and_then(|width| width.checked_mul(usize::from(*count))),
         vyre::ir::DataType::TensorShaped { element, shape } => {
             let element_width = fixed_scalar_storage_width(element)?;
-            shape.iter().try_fold(element_width, |width, &dim| {
-                width.checked_mul(dim as usize)
-            })
+            shape
+                .iter()
+                .try_fold(element_width, |width, &dim| width.checked_mul(dim as usize))
         }
         vyre::ir::DataType::Quantized { storage, .. } => fixed_scalar_storage_width(storage),
         _ => None,
@@ -430,12 +430,18 @@ mod tests {
         let positive_subnormal =
             Value::from_element_bytes(vyre::ir::DataType::F32, &1u32.to_le_bytes())
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - f32 positive subnormal decode must succeed");
-        assert_eq!(positive_subnormal.try_as_f32().unwrap().to_bits(), 0x0000_0000);
+        assert_eq!(
+            positive_subnormal.try_as_f32().unwrap().to_bits(),
+            0x0000_0000
+        );
 
         let negative_subnormal =
             Value::from_element_bytes(vyre::ir::DataType::F32, &0x8000_0001u32.to_le_bytes())
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - f32 negative subnormal decode must succeed");
-        assert_eq!(negative_subnormal.try_as_f32().unwrap().to_bits(), 0x8000_0000);
+        assert_eq!(
+            negative_subnormal.try_as_f32().unwrap().to_bits(),
+            0x8000_0000
+        );
 
         let payload_nan =
             Value::from_element_bytes(vyre::ir::DataType::F32, &0x7fa0_0001u32.to_le_bytes())

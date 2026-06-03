@@ -144,8 +144,7 @@ fn trim_decoded_zero_tail(
 #[cfg(test)]
 mod tests {
     use super::{
-        logical_type_bytes_from_lex_buffer, reconcile_compacted_token_count,
-        trim_decoded_zero_tail,
+        logical_type_bytes_from_lex_buffer, reconcile_compacted_token_count, trim_decoded_zero_tail,
     };
 
     #[test]

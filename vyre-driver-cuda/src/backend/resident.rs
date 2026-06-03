@@ -449,7 +449,6 @@ fn release_resident_budget(
     })
 }
 
-
 fn release_resident_budget_or_repair(
     resident_bytes: &AtomicU64,
     released_bytes: u64,
@@ -660,4 +659,3 @@ impl Drop for ResidentUseGuard {
         }
     }
 }
-

@@ -857,4 +857,3 @@ fn requirements_satisfied(metadata: PassMetadata, available: &FxHashSet<&'static
 
 #[cfg(test)]
 mod framework_tests;
-

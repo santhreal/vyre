@@ -540,7 +540,6 @@ impl CudaMegakernelPlanCache {
     }
 }
 
-
 fn density_bucket(frontier_density: f64) -> u16 {
     if !frontier_density.is_finite() {
         return 0;
@@ -1218,4 +1217,3 @@ mod tests {
         );
     }
 }
-

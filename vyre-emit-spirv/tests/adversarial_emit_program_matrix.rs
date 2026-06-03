@@ -75,7 +75,10 @@ fn assert_spirv_structure(case: &EmitAdversarialCase, words: &[u32]) {
         }
         EmitAdversarialFamily::DeadIdentityChain | EmitAdversarialFamily::VecLoadFusion => {}
         EmitAdversarialFamily::RejectCall | EmitAdversarialFamily::RejectGridSyncBarrier => {
-            panic!("{}: rejection case must not reach SPIR-V structure oracle", case.id);
+            panic!(
+                "{}: rejection case must not reach SPIR-V structure oracle",
+                case.id
+            );
         }
     }
 }

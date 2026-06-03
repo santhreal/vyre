@@ -14,13 +14,13 @@ use vyre_driver::BackendError;
 use vyre_driver::LaunchPlan;
 use vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImage;
 
+use super::ptx::cuda_egraph_structural_equivalence_kernel_ptx;
 use super::{
-    args::EGraphStructuralKernelArgs,
-    plan_cuda_egraph_structural_equivalence_launch_artifact_from_plan, plan_cuda_egraph_signature_buckets,
+    args::EGraphStructuralKernelArgs, plan_cuda_egraph_signature_buckets,
+    plan_cuda_egraph_structural_equivalence_launch_artifact_from_plan,
     CudaEGraphKernelLaunchConfig, CudaEGraphStructuralEquivalenceKernelPtx,
     CudaEGraphStructuralEquivalenceKernelResult, CudaEGraphStructuralEquivalenceLaunchArtifact,
 };
-use super::ptx::cuda_egraph_structural_equivalence_kernel_ptx;
 
 impl CudaBackend {
     /// Generate and warm-load the structural e-graph equivalence kernel through

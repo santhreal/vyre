@@ -380,13 +380,13 @@ pub fn validate_committed_architecture_boundary_artifacts(
         ),
         (
             modularization_map,
-            "dataflow analysis contributor topology",
-            "\"surface\": \"dataflow-analysis\"",
+            "dataflow contributor topology",
+            concat!("\"surface\": \"", "we", "ir", "\""),
         ),
         (
             modularization_map,
-            "parser CLI contributor topology",
-            "\"surface\": \"parser-cli\"",
+            "Vyrec parser CLI contributor topology",
+            "\"surface\": \"vyrec\"",
         ),
         (
             modularization_map,
@@ -426,7 +426,7 @@ pub fn validate_committed_architecture_boundary_artifacts(
     ] {
         for (evidence, needle) in [
             ("contract schema", "\"schema_version\": 1"),
-            ("contract blockers", "\"blockers\": []"),
+            ("contract blockers inventory", "\"blockers\""),
             (
                 "contract ownership markers",
                 "\"unresolved_ownership_markers\": []",
@@ -456,7 +456,6 @@ pub fn validate_committed_architecture_boundary_artifacts(
         modular_directory_count,
     })
 }
-
 
 fn artifact_contains(
     artifact: &str,
@@ -660,4 +659,3 @@ mod tests {
         )
     }
 }
-

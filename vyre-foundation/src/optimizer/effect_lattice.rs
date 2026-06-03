@@ -448,7 +448,6 @@ mod tests {
                     suggested_fix.contains("GridSync"),
                     "fix string must name MemoryOrdering::GridSync; got: {suggested_fix}"
                 );
-
             }
             other => panic!(
                 "expected EffectLatticeViolation refusing to fuse Diverging producer with Pure; \
@@ -597,4 +596,3 @@ mod tests {
         );
     }
 }
-

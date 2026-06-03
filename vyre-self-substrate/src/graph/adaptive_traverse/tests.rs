@@ -208,7 +208,8 @@ fn release_resident_paths_do_not_call_cpu_or_local_saturating_helpers() {
     assert!(!release_path.contains("reference_adaptive_sparse_dense_step("));
     assert!(!release_path.contains("cpu_sparse_dense_step("));
     assert!(!release_path.contains("saturating_mul"));
-    assert!(!release_path.contains("u32_word_bytes("));
+    assert!(!release_path.contains(concat!("checked_mul", "(std::mem::size_of::<u32>())")));
+    assert!(release_path.contains("u32_word_bytes("));
     assert!(!release_path.contains(".div_ceil(256)"));
     assert!(release_path.contains("plan_adaptive_resident_frontier_step"));
     assert!(release_path.contains("plan_adaptive_resident_sparse_queue_step"));

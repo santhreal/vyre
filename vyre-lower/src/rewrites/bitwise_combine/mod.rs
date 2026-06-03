@@ -68,8 +68,11 @@ fn bitwise_combine_body(mut body: KernelBody, allocator: &mut ResultAllocator) -
     }
 
     for (op_idx, x_id, combined, op_kind) in rewrites {
-        let synth_id =
-            allocator.push_literal(&mut body.ops, &mut body.literals, LiteralValue::U32(combined));
+        let synth_id = allocator.push_literal(
+            &mut body.ops,
+            &mut body.literals,
+            LiteralValue::U32(combined),
+        );
         body.ops[op_idx].kind = KernelOpKind::BinOpKind(op_kind);
         body.ops[op_idx].operands = vec![x_id, synth_id];
     }

@@ -448,7 +448,6 @@ mod tests {
     #[test]
     fn skips_small_loops_that_unroll_directly() {
         let result = LoopStripMine::transform(program(vec![Node::loop_for(
-
             "i",
             Expr::u32(0),
             Expr::u32(DEFAULT_STRIP_MINE_TILE),
@@ -526,4 +525,3 @@ mod tests {
         );
     }
 }
-

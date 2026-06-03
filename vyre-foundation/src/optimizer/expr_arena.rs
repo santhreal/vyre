@@ -449,7 +449,6 @@ mod tests {
         assert_eq!(arena.len(), 2);
     }
 
-
     #[test]
     fn equal_literals_collapse_to_one_id() {
         let mut arena = ExprArena::default();
@@ -604,4 +603,3 @@ mod tests {
         assert_eq!(arena.len(), 1);
     }
 }
-

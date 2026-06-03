@@ -512,7 +512,6 @@ fn write_derived_evidence(output: &Path, matrix: &OptimizationMatrix) -> Result<
     Ok(())
 }
 
-
 fn write_marker_evidence(
     dir: &Path,
     id: &str,
@@ -803,4 +802,3 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
-

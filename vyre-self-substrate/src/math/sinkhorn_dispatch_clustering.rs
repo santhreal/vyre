@@ -513,7 +513,6 @@ pub fn sinkhorn_clustering_via_with_scratch_into(
     )
 }
 
-
 fn checked_product(
     left: u32,
     right: u32,
@@ -978,4 +977,3 @@ mod tests {
         assert_eq!(scratch.assignment_ptr(), ptr);
     }
 }
-

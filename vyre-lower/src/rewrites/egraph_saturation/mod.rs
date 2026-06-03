@@ -192,8 +192,8 @@ fn reassociate_constant_chain(
     if matches!(kind, BinOp::And | BinOp::Or) {
         return reassociate_bool_constant_chain(kind, left, right, body, index);
     }
-    let (inner_result, outer_const) =
-        split_value_const(left, right, body, index).or_else(|| split_value_const(right, left, body, index))?;
+    let (inner_result, outer_const) = split_value_const(left, right, body, index)
+        .or_else(|| split_value_const(right, left, body, index))?;
     let inner = index.producer(body, inner_result)?;
     let KernelOpKind::BinOpKind(inner_kind) = &inner.kind else {
         return None;
@@ -225,7 +225,9 @@ fn split_value_const(
     body: &KernelBody,
     index: &BodyIndex,
 ) -> Option<(u32, u32)> {
-    index.u32_lit(body, maybe_const).map(|constant| (value, constant))
+    index
+        .u32_lit(body, maybe_const)
+        .map(|constant| (value, constant))
 }
 
 fn reassociate_bool_constant_chain(
@@ -235,8 +237,8 @@ fn reassociate_bool_constant_chain(
     body: &KernelBody,
     index: &BodyIndex,
 ) -> Option<Reassociated> {
-    let (inner_result, outer_const) =
-        split_value_bool(left, right, body, index).or_else(|| split_value_bool(right, left, body, index))?;
+    let (inner_result, outer_const) = split_value_bool(left, right, body, index)
+        .or_else(|| split_value_bool(right, left, body, index))?;
     let inner = index.producer(body, inner_result)?;
     let KernelOpKind::BinOpKind(inner_kind) = &inner.kind else {
         return None;
@@ -262,7 +264,9 @@ fn split_value_bool(
     body: &KernelBody,
     index: &BodyIndex,
 ) -> Option<(u32, bool)> {
-    index.bool_lit(body, maybe_const).map(|constant| (value, constant))
+    index
+        .bool_lit(body, maybe_const)
+        .map(|constant| (value, constant))
 }
 
 #[cfg(test)]

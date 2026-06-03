@@ -263,16 +263,9 @@ fn invalidate_cache_for_write(
     };
 
     entries.retain(|cached_address, cached| {
-        let cached_location = MemoryLocation::new(
-            write_target,
-            cached.index_operand,
-            *cached_address,
-        );
-        let write_location = MemoryLocation::new(
-            write_target,
-            write_index,
-            write_address,
-        );
+        let cached_location =
+            MemoryLocation::new(write_target, cached.index_operand, *cached_address);
+        let write_location = MemoryLocation::new(write_target, write_index, write_address);
         !locations_may_alias(
             cached_location,
             write_location,
@@ -899,7 +892,6 @@ mod tests {
                         kind: KernelOpKind::Literal,
                         operands: vec![0],
                         result: Some(0),
-
                     },
                     KernelOp {
                         kind: KernelOpKind::Literal,
@@ -1233,4 +1225,3 @@ mod tests {
         assert_eq!(out.body.ops[5].operands, vec![0, 0, 1]);
     }
 }
-

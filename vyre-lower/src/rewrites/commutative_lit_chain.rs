@@ -55,8 +55,11 @@ fn combine_body(
     }
 
     for (op_idx, x_id, combined) in rewrites {
-        let synth_id =
-            allocator.push_literal(&mut body.ops, &mut body.literals, LiteralValue::U32(combined));
+        let synth_id = allocator.push_literal(
+            &mut body.ops,
+            &mut body.literals,
+            LiteralValue::U32(combined),
+        );
         body.ops[op_idx].kind = KernelOpKind::BinOpKind(rule.op);
         body.ops[op_idx].operands = vec![x_id, synth_id];
     }
@@ -99,8 +102,7 @@ fn candidate_with_lit(
 #[cfg(test)]
 pub(crate) mod test_support {
     use crate::{
-        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
-        LiteralValue,
+        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
     };
     use vyre_foundation::ir::BinOp;
 

@@ -101,12 +101,18 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
             // const-fold and i32::MIN cannot be negated without overflow.
             if let Expr::LitI32(c) = right.as_ref() {
                 if *c < -1 && *c != i32::MIN {
-                    return Some(Expr::negate(Expr::mul(left.as_ref().clone(), Expr::i32(-*c))));
+                    return Some(Expr::negate(Expr::mul(
+                        left.as_ref().clone(),
+                        Expr::i32(-*c),
+                    )));
                 }
             }
             if let Expr::LitI32(c) = left.as_ref() {
                 if *c < -1 && *c != i32::MIN {
-                    return Some(Expr::negate(Expr::mul(right.as_ref().clone(), Expr::i32(-*c))));
+                    return Some(Expr::negate(Expr::mul(
+                        right.as_ref().clone(),
+                        Expr::i32(-*c),
+                    )));
                 }
             }
             // Float: x * 2.0 → x + x (saves a mul, uses cheaper add).
@@ -189,8 +195,12 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
             // ~40-90 cycle integer umod becomes mulhi + shift + mul + sub.
             // d == 0 falls through here (granlund_montgomery_div guards d <= 1),
             // leaving modulo-by-zero intact for the backend to trap.
-            granlund_montgomery_div(left.as_ref(), *value)
-                .map(|quotient| Expr::sub(left.as_ref().clone(), Expr::mul(quotient, Expr::u32(*value))))
+            granlund_montgomery_div(left.as_ref(), *value).map(|quotient| {
+                Expr::sub(
+                    left.as_ref().clone(),
+                    Expr::mul(quotient, Expr::u32(*value)),
+                )
+            })
         }
         // Float: x + 0.0 → x (additive identity).
         BinOp::Add => {

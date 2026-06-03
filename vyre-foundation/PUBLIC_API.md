@@ -6559,6 +6559,7 @@ pub fn vyre_foundation::ir::BufferDecl::output_byte_range(&self) -> core::option
 pub fn vyre_foundation::ir::BufferDecl::read(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::read_write(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::shape_predicate(&self) -> core::option::Option<&vyre_foundation::ir::ShapePredicate>
+pub fn vyre_foundation::ir::BufferDecl::static_byte_len(&self) -> core::result::Result<core::option::Option<usize>, alloc::string::String>
 pub fn vyre_foundation::ir::BufferDecl::storage(name: &str, binding: u32, access: vyre_spec::buffer_access::BufferAccess, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::uniform(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_bytes_extraction(self, flag: bool) -> Self
@@ -7833,6 +7834,7 @@ pub fn vyre_foundation::ir::BufferDecl::output_byte_range(&self) -> core::option
 pub fn vyre_foundation::ir::BufferDecl::read(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::read_write(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::shape_predicate(&self) -> core::option::Option<&vyre_foundation::ir::ShapePredicate>
+pub fn vyre_foundation::ir::BufferDecl::static_byte_len(&self) -> core::result::Result<core::option::Option<usize>, alloc::string::String>
 pub fn vyre_foundation::ir::BufferDecl::storage(name: &str, binding: u32, access: vyre_spec::buffer_access::BufferAccess, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::uniform(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_bytes_extraction(self, flag: bool) -> Self

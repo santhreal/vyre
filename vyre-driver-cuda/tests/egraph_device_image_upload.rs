@@ -188,12 +188,12 @@ fn egraph_device_image_upload_round_trips_through_cuda_resident_memory() {
 
 #[test]
 fn egraph_structural_discovery_uses_borrowed_upload_plan_without_image_clone() {
-    let source = include_str!("../src/egraph_kernel_plan.rs");
+    let source = include_str!("../src/egraph_kernel_plan/backend_structural.rs");
     let method_start = source
         .find("pub fn discover_egraph_structural_equivalences")
         .expect("Fix: structural discovery method must remain present.");
     let method_end = source[method_start..]
-        .find("    /// Generate and warm-load the canonical e-graph rewrite kernel")
+        .find("    fn run_egraph_structural_equivalence_kernel_inner")
         .map(|offset| method_start + offset)
         .expect("Fix: structural discovery method boundary must remain discoverable.");
     let method = &source[method_start..method_end];
@@ -263,7 +263,7 @@ fn egraph_device_image_upload_uses_zero_staging_byte_view_on_little_endian_hosts
 
 #[test]
 fn egraph_signature_snapshot_uses_range_readback_not_full_slab_download() {
-    let source = include_str!("../src/egraph_kernel_plan.rs");
+    let source = include_str!("../src/egraph_kernel_plan/backend_canonicalization.rs");
     let method_start = source
         .find("pub fn download_egraph_resident_signature_snapshot")
         .expect("Fix: signature snapshot method must remain present.");
@@ -285,7 +285,7 @@ fn egraph_signature_snapshot_uses_range_readback_not_full_slab_download() {
 
 #[test]
 fn egraph_column_snapshot_uses_fused_range_readbacks_not_full_slab_download() {
-    let source = include_str!("../src/egraph_kernel_plan.rs");
+    let source = include_str!("../src/egraph_kernel_plan/backend_canonicalization.rs");
     let method_start = source
         .find("pub fn download_egraph_resident_column_snapshot")
         .expect("Fix: column snapshot method must remain present.");
@@ -307,7 +307,7 @@ fn egraph_column_snapshot_uses_fused_range_readbacks_not_full_slab_download() {
 
 #[test]
 fn egraph_u32_scratch_upload_uses_zero_staging_byte_view_on_little_endian_hosts() {
-    let source = include_str!("../src/egraph_kernel_plan.rs");
+    let source = include_str!("../src/egraph_readback.rs");
     let function_start = source
         .find("fn upload_u32_words(")
         .expect("Fix: e-graph u32 scratch upload helper must remain present.");

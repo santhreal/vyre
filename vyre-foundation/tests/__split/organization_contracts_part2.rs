@@ -331,6 +331,14 @@ fn foundation_inline_test_modules_are_baselined() {
         "src/optimizer/pass_order.rs",
         "src/optimizer/pass_selection.rs",
         "src/optimizer/scheduler/run.rs",
+        "src/allocation.rs",
+        "src/optimizer/derived_order.rs",
+        "src/optimizer/passes/algebraic/const_fold/cast_rules.rs",
+        "src/optimizer/planar_batch.rs",
+        "src/optimizer/scheduler/queries.rs",
+        "src/serial/wire/decode/from_wire.rs",
+        "src/serial/wire/tags/op_tag_decode.rs",
+        "src/transform/collectives.rs",
     ]
     .iter()
     .map(|s| s.to_string())

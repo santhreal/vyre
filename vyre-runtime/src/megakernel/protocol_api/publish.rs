@@ -504,7 +504,6 @@ impl Megakernel {
     }
 }
 
-
 fn validate_publish_payload(opcode: u32, args: &[u32]) -> Result<(), PipelineError> {
     if args.len() > ARGS_PER_SLOT_USIZE {
         return Err(PipelineError::QueueFull {
@@ -696,4 +695,3 @@ fn write_packed_metadata_byte(args: &mut [u32; ARGS_PER_SLOT_USIZE], byte_index:
     });
     args[word_index] |= u32::from(value) << shift;
 }
-

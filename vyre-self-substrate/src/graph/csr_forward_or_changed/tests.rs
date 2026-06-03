@@ -574,7 +574,7 @@ fn release_gpu_path_uses_changed_history_for_short_fixpoints() {
     );
 
     assert!(
-        primitive_source.contains("pub fn plan_csr_forward_or_changed_dispatch")
+        primitive_source.contains("pub(crate) fn plan_csr_forward_or_changed_dispatch")
             && primitive_source
                 .contains("try_csr_forward_or_changed_parallel_batch_global_dynamic_slot"),
         "Fix: short CSR fixpoint loops must use the primitive dynamic changed-slot kernel through the plan."
@@ -658,4 +658,3 @@ fn generated_gpu_seed_copy_bounds_to_primitive_frontier_words() {
         }
     }
 }
-

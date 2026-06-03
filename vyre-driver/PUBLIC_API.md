@@ -3662,6 +3662,59 @@ impl<T> tracing::instrument::Instrument for vyre_driver::device_work_queue::Devi
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::device_work_queue::DeviceWorkQueueBackpressurePlan
 impl<T> typenum::type_operators::Same for vyre_driver::device_work_queue::DeviceWorkQueueBackpressurePlan
 pub type vyre_driver::device_work_queue::DeviceWorkQueueBackpressurePlan::Output = T
+pub struct vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+pub vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::budget_bytes: u64
+pub vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::control_bytes: u64
+pub vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::entry_bytes: u64
+pub vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::expansion_items: u64
+pub vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::host_sync: vyre_driver::device_work_queue::WorkQueueHostSync
+pub vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::initial_items: u64
+impl core::clone::Clone for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::clone(&self) -> vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl core::cmp::Eq for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl core::cmp::PartialEq for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::eq(&self, other: &vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile) -> bool
+impl core::fmt::Debug for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl core::marker::StructuralPartialEq for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl core::marker::Freeze for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl core::marker::Send for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl core::marker::Sync for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl core::marker::Unpin for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl core::marker::UnsafeUnpin for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl core::panic::unwind_safe::RefUnwindSafe for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl core::panic::unwind_safe::UnwindSafe for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl<Q, K> equivalent::Equivalent<K> for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile where U: core::convert::From<T>
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile where U: core::convert::Into<T>
+pub type vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::Error = core::convert::Infallible
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile where U: core::convert::TryFrom<T>
+pub type vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile where T: core::clone::Clone
+pub type vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::Owned = T
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::clone_into(&self, target: &mut T)
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::to_owned(&self) -> T
+impl<T> core::any::Any for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile where T: 'static + ?core::marker::Sized
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile where T: ?core::marker::Sized
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile where T: ?core::marker::Sized
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile where T: core::clone::Clone
+pub unsafe fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+pub fn vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl<T> tracing::instrument::WithSubscriber for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+impl<T> typenum::type_operators::Same for vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile
+pub type vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile::Output = T
 pub struct vyre_driver::device_work_queue::DeviceWorkQueuePlan
 pub vyre_driver::device_work_queue::DeviceWorkQueuePlan::control_bytes: u64
 pub vyre_driver::device_work_queue::DeviceWorkQueuePlan::final_only_host_sync: bool
@@ -3769,6 +3822,7 @@ impl<T> typenum::type_operators::Same for vyre_driver::device_work_queue::Device
 pub type vyre_driver::device_work_queue::DeviceWorkQueueProfile::Output = T
 pub fn vyre_driver::device_work_queue::plan_device_work_queue(profile: vyre_driver::device_work_queue::DeviceWorkQueueProfile) -> core::result::Result<vyre_driver::device_work_queue::DeviceWorkQueuePlan, vyre_driver::device_work_queue::DeviceWorkQueueError>
 pub fn vyre_driver::device_work_queue::plan_device_work_queue_backpressure(profile: vyre_driver::device_work_queue::DeviceWorkQueueProfile, max_items_per_drain_launch: u64) -> core::result::Result<vyre_driver::device_work_queue::DeviceWorkQueueBackpressurePlan, vyre_driver::device_work_queue::DeviceWorkQueueError>
+pub fn vyre_driver::device_work_queue::plan_device_work_queue_with_expansion(profile: vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile) -> core::result::Result<vyre_driver::device_work_queue::DeviceWorkQueuePlan, vyre_driver::device_work_queue::DeviceWorkQueueError>
 pub mod vyre_driver::diagnostics
 #[non_exhaustive] pub enum vyre_driver::diagnostics::Severity
 pub vyre_driver::diagnostics::Severity::Error
@@ -5627,6 +5681,7 @@ impl<T> tracing::instrument::Instrument for vyre_driver::megakernel_frontier::Me
 impl<T> tracing::instrument::WithSubscriber for vyre_driver::megakernel_frontier::MegakernelFrontierWave
 impl<T> typenum::type_operators::Same for vyre_driver::megakernel_frontier::MegakernelFrontierWave
 pub type vyre_driver::megakernel_frontier::MegakernelFrontierWave::Output = T
+pub fn vyre_driver::megakernel_frontier::megakernel_frontier_fused_wave_budget_bytes(wave: vyre_driver::megakernel_frontier::MegakernelFrontierWave) -> core::result::Result<u64, vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError>
 pub fn vyre_driver::megakernel_frontier::plan_megakernel_frontier_memory_with_scratch(waves: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave], dependencies: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency], resident_graph_bytes: u64, budget_bytes: u64, readback_bytes: u64, scratch: &mut vyre_driver::megakernel_barrier::MegakernelBarrierScratch) -> core::result::Result<vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlan, vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError>
 pub mod vyre_driver::multi_query_execution
 pub enum vyre_driver::multi_query_execution::MultiQueryExecutionError

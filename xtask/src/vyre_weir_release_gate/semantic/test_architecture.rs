@@ -1,15 +1,10 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
-    let Some(matrix) =
-        first_json_evidence(requirement, base_dir, "test-matrix.json", failures)
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
+    let Some(matrix) = first_json_evidence(requirement, base_dir, "test-matrix.json", failures)
     else {
         return;
     };
@@ -101,19 +96,11 @@ pub(super) fn check(
                 "oversized-test-closure.json",
                 "release-surface-suite-coverage.json",
             ] {
-                check_json_evidence_has_no_blockers(
-                    requirement,
-                    base_dir,
-                    suffix,
-                    failures,
-                );
+                check_json_evidence_has_no_blockers(requirement, base_dir, suffix, failures);
             }
-            if let Some(modularization) = first_json_evidence(
-                requirement,
-                base_dir,
-                "modularization-map.json",
-                failures,
-            ) {
+            if let Some(modularization) =
+                first_json_evidence(requirement, base_dir, "modularization-map.json", failures)
+            {
                 let directories = modularization
                     .get("directories")
                     .and_then(serde_json::Value::as_array)
@@ -136,8 +123,7 @@ pub(super) fn check(
                 "oversized-test-closure.json",
                 failures,
             ) {
-                if closure.get("closed").and_then(serde_json::Value::as_bool) != Some(true)
-                {
+                if closure.get("closed").and_then(serde_json::Value::as_bool) != Some(true) {
                     failures.push(
                         "requirement `modular-test-architecture` oversized-test closure is not closed"
                             .to_string(),
@@ -178,15 +164,8 @@ pub(super) fn check(
                 "gap-suite.json",
                 "fuzz-suite.json",
             ] {
-                check_json_evidence_has_no_blockers(
-                    requirement,
-                    base_dir,
-                    suffix,
-                    failures,
-                );
-                if let Some(suite) =
-                    first_json_evidence(requirement, base_dir, suffix, failures)
-                {
+                check_json_evidence_has_no_blockers(requirement, base_dir, suffix, failures);
+                if let Some(suite) = first_json_evidence(requirement, base_dir, suffix, failures) {
                     if suite
                         .get("file_count")
                         .and_then(serde_json::Value::as_u64)

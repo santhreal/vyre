@@ -448,7 +448,6 @@ mod tests {
 
     struct ExtraSpectrumDispatcher;
 
-
     impl OptimizerDispatcher for ExtraSpectrumDispatcher {
         fn dispatch(
             &self,
@@ -572,4 +571,3 @@ mod tests {
         );
     }
 }
-

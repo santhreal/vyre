@@ -11,14 +11,16 @@ conformance system, and shared primitives are active. Some frontends and future
 backends remain beta or planned. That status split is intentionally explicit so
 contributors can decide what to use in production today.
 
-For `0.4.2`, the release semantic unit is `vyre::Program`: programs are built as
+For `0.6.1`, the release semantic unit is `vyre::Program`: programs are built as
 IR, validated against frozen specs, checked through the CPU reference oracle, and
 then parity-checked against GPU backends. CUDA is the release path on NVIDIA
 systems; WGPU is the portable GPU fallback.
 
-## Production Proven
+## Production Surface
 
-[KeyHog](https://github.com/santhsecurity/keyhog) is the first project to use Vyre in production for GPU-accelerated scanning, utilizing its high-throughput sequential matching logic on GPU compute backends.
+Vyre is used by downstream security and analysis tools that need
+GPU-accelerated scanning, high-throughput sequential matching, and
+reference-checked GPU compute backends.
 
 ## Workspace architecture
 
@@ -26,7 +28,7 @@ systems; WGPU is the portable GPU fallback.
 flowchart TB
     classDef active fill:#0f766e,color:#fff,stroke:#045a55;
     classDef beta fill:#b45309,color:#fff,stroke:#78350f;
-    classDef stub fill:#6b7280,color:#fff,stroke:#374151;
+    classDef external fill:#6b7280,color:#fff,stroke:#374151;
     classDef planned fill:#4b5563,color:#fff,stroke:#1f2937;
 
     subgraph S0["Tier-1 foundations"]
@@ -75,7 +77,7 @@ flowchart TB
     subgraph S4["Consumer-facing / external roadmap"]
       FC["vyre-frontend-c\nC frontend pipeline"]
       FR["vyre-frontend-rust\nRust frontend pipeline"]
-      Intg["Keyhog\nfirst public integration\n(consumer repo)"]
+      Intg["External integrations\nconsumer repositories"]
       MT["Metal backend\nplanned"]
       DX["DXIL/DirectX\nplanned"]
       WG["Wasm/WebGPU\nplanned"]
@@ -132,21 +134,21 @@ flowchart TB
 
     class Vcore,Fnd,Spec,Macros,Intr,Ref,Primitives,Libs,SelfSS,Drv,Cuda,Wgpu,Spirv,Lower,EmitPtx,EmitNaga,EmitSpv,RefDrv,RT,Aot,Hs,Debug,Bench,Fuzz,Lints,XTask,ConSpec,ConGen,ConEnf,ConRun,TestHarness active
     class FC,FR beta
-    class Intg stub
+    class Intg external
     class MT,DX,WG planned
 ```
 
 The older SVG remains in [docs/architecture.svg](docs/architecture.svg), but
 the diagram above is the README source of truth because it names every
 workspace crate and release-support status and separates active, beta,
-and planned/stubbed surfaces.
+and planned surfaces.
 
 Legend:
 
-- `active`: release-gated surface for the `0.4.2` train.
+- `active`: release-gated surface for the `0.6.1` train.
 - `beta`: implemented and usable but currently excluded from release gate status.
 - `planned`: target architecture work planned in repo docs and roadmap.
-- `stub`: docs-only references and external-facing placeholders.
+- `external`: separately released integrations and documentation-only references.
 
 ## The 10-second pitch
 
@@ -214,23 +216,23 @@ parser and type-front end parity is still maturing. `conform` and
 `vyre-test-harness` backpressure and corpus coverage are the primary reason they
 are not release gates.
 
-## `0.4.2` release execution contract
+## `0.6.1` Release Execution Contract
 
-The release route is explicit: `0.4.2` is a Vyre platform release, not a
+The release route is explicit: `0.6.1` is a Vyre platform release, not a
 production C compiler release.
 
 | Package | Version | Role |
 | --- | --- | --- |
-| `vyre@0.4.2` | `0.4.2` | Public IR, lowering, optimizer, and backend trait surface |
-| `vyre-driver-cuda@0.4.2` | `0.4.2` | NVIDIA/CUDA fast path for release workloads |
-| `vyre-driver-wgpu@0.4.2` | `0.4.2` | Portable GPU fallback path for non-CUDA systems |
+| `vyre@0.6.1` | `0.6.1` | Public IR, lowering, optimizer, and backend trait surface |
+| `vyre-driver-cuda@0.6.1` | `0.6.1` | NVIDIA/CUDA fast path for release workloads |
+| `vyre-driver-wgpu@0.6.1` | `0.6.1` | Portable GPU fallback path for non-CUDA systems |
 | `dataflow-integration@0.0.1` | `0.0.1` | Dataflow and witness primitives over Vyre IR |
 
-Keyhog is the first public Vyre integration and is a useful end-to-end reference
-for contribution direction. `vyre-frontend-c` and `vyre-frontend-rust` are
+External integrations exercise the public Vyre surface and provide end-to-end
+feedback for contribution direction. `vyre-frontend-c` and `vyre-frontend-rust` are
 beta/active-development consumers of Vyre.
 They are included to show the intended compiler-front-end direction, but they
-are not the release gate for `0.4.2`, are not advertised as clang-parity, and
+are not the release gate for `0.6.1`, are not advertised as clang-parity, and
 must not be treated as production-ready C compiler components until their own
 corpus, parity, and performance gates are green.
 
@@ -311,7 +313,7 @@ Every significant surface in vyre has a canonical doc. When onboarding:
 | Benchmark baselines | `benches/RESULTS.md` + `docs/BENCHMARKS.md` |
 | Public-API snapshots (diff gate) | `<crate>/PUBLIC_API.md` |
 
-## Try it in 2 minutes
+## Quickstart
 
 ```sh
 cargo add vyre vyre-reference vyre-driver-cuda vyre-driver-wgpu
@@ -358,7 +360,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-Run the same program on a GPU through an explicit backend. CUDA is the `0.4.2` release fast path on NVIDIA systems; WGPU remains the portable fallback:
+Run the same program on a GPU through an explicit backend. CUDA is the `0.6.1` release fast path on NVIDIA systems; WGPU remains the portable fallback:
 
 ```rust
 use vyre::VyreBackend;
@@ -416,7 +418,7 @@ fn dispatch_wgpu(program: &vyre::ir::Program) -> Result<(), Box<dyn std::error::
 }
 ```
 
-The wire format provides lossless binary transport: `program.to_wire()` serializes, `Program::from_wire()` reconstructs, and round-trip equality is invariant I4. The former general-purpose bytecode VM and NFA-scan micro-interpreter are absent from the `0.4.2` release line: every detection primitive (string scanning, taint flow, AST motif, decode chain, binary structural, neural suspicion filter, exploit-graph reconstruction, …) composes from vyre ops. No legacy host micro-interpreter remains in core; the resident megakernel is the GPU execution path. A downstream detection engine can compose scan, taint, decode, parse, fixpoint, graph, and neural stages in vyre IR. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for architecture, [docs/wire-format.md](docs/wire-format.md) for the wire format, and [docs/inventory-contract.md](docs/inventory-contract.md) for the extension model.
+The wire format provides lossless binary transport: `program.to_wire()` serializes, `Program::from_wire()` reconstructs, and round-trip equality is invariant I4. The former general-purpose bytecode VM and NFA-scan micro-interpreter are absent from the `0.6.1` release line: every detection primitive (string scanning, taint flow, AST motif, decode chain, binary structural, neural suspicion filter, exploit-graph reconstruction, …) composes from vyre ops. No legacy host micro-interpreter remains in core; the resident megakernel is the GPU execution path. A downstream detection engine can compose scan, taint, decode, parse, fixpoint, graph, and neural stages in vyre IR. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for architecture, [docs/wire-format.md](docs/wire-format.md) for the wire format, and [docs/inventory-contract.md](docs/inventory-contract.md) for the extension model.
 
 ## Standard library
 
@@ -477,7 +479,7 @@ It introduces no backend-specific lowering and no hidden interpreter. The
 filesystem is still the registry boundary: one domain, one responsibility,
 and no central hand-edited list.
 
-**Category B: Forbidden CPU coupling.** Cat B is the immune system's reject list. No general runtime interpretation engine, stack-machine evaluator, or host-dispatch substitute may exist in vyre. The `nfa_scan` micro-interpreter is absent from the `0.4.2` release line: those scans are expressed as composed ops in vyre IR and lower to GPU. Any construct that forces the host CPU to step into the execution loop of a GPU program is a Category B violation and is rewritten or deleted.
+**Category B: Forbidden CPU coupling.** Cat B is the immune system's reject list. No general runtime interpretation engine, stack-machine evaluator, or host-dispatch substitute may exist in vyre. The `nfa_scan` micro-interpreter is absent from the `0.6.1` release line: those scans are expressed as composed ops in vyre IR and lower to GPU. Any construct that forces the host CPU to step into the execution loop of a GPU program is a Category B violation and is rewritten or deleted.
 
 CI enforces this with tripwire gates that scan for forbidden patterns: `typetag`, `#[ctor]`, `Any::downcast`, dynamic async futures, pub-use globs, fake functions with `todo!()`, and frozen trait signature edits. These patterns break the black-box invariant, so their absence is load-bearing. `inventory::submit!` is the sanctioned link-time registration mechanism; it is not a runtime dispatch path. GPU programs are expected to run on GPU backends. If a backend lacks a Category C hardware intrinsic, it returns `UnsupportedByBackend`; it never substitutes slow host execution. `vyre-reference` is a test oracle, not a runtime path.
 
@@ -527,9 +529,9 @@ Community knowledge that does not require Rust can be expressed as TOML rules. D
 
 ## Who uses vyre
 
-- **First public integration.** Start with Keyhog in action:
-  [Consumer showcase](docs/consumer-showcase.md), and jump to
-  [Keyhog on GitHub](https://github.com/santhsecurity/keyhog).
+- **External integrations.** Start with the generic consumer integration guide:
+  [Consumer showcase](docs/consumer-showcase.md), then wire a repository through
+  the same reference/GPU parity loop.
 
 - **Security and analysis tools.** Rule compilers can lower detector DSLs into
   Vyre programs and drive evaluation through the same reference/GPU parity

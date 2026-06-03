@@ -79,12 +79,12 @@ mod tests {
     #[test]
     #[test]
     fn missing_allowlist_file_errors() {
-    fn missing_allowlist_file_errors() {
-        let r = load(Path::new("/nonexistent/path/allowlist.toml"));
-        let r = load(Path::new("/nonexistent/path/allowlist.toml"));
-        assert!(matches!(r, Err(_)));
-        assert!(matches!(r, Err(_)));
-    }
+        fn missing_allowlist_file_errors() {
+            let r = load(Path::new("/nonexistent/path/allowlist.toml"));
+            let r = load(Path::new("/nonexistent/path/allowlist.toml"));
+            assert!(matches!(r, Err(_)));
+            assert!(matches!(r, Err(_)));
+        }
     }
 
     #[test]

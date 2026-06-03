@@ -188,7 +188,14 @@ fn f32_comparison_ops_preserve_unordered_nan_and_signed_zero_semantics() {
         (-1.0, 1.0),
         (2.0, 2.0),
     ];
-    let ops = [BinOp::Eq, BinOp::Ne, BinOp::Lt, BinOp::Le, BinOp::Gt, BinOp::Ge];
+    let ops = [
+        BinOp::Eq,
+        BinOp::Ne,
+        BinOp::Lt,
+        BinOp::Le,
+        BinOp::Gt,
+        BinOp::Ge,
+    ];
     let mut body = Vec::with_capacity(pairs.len() * ops.len());
     let mut expected_words = Vec::with_capacity(pairs.len() * ops.len());
 

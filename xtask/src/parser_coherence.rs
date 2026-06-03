@@ -477,7 +477,6 @@ fn write_sibling_contracts(output: &Path, matrix: &ParserCoherence) {
     }
 }
 
-
 fn component_contract_artifact(component_id: &str) -> String {
     match component_id {
         "vyrec" => "vyrec-cli-contracts.json".to_string(),
@@ -597,4 +596,3 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
-

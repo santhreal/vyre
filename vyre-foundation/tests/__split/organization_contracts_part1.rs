@@ -327,6 +327,8 @@ fn no_root_stray_plan_docs() {
         "GEMINI.md",
         "README.md",
         "SECURITY.md",
+        "STATUS.md",
+        "ADVERSARIAL_TEST_STRATEGY.md",
         // Gitignored working-set files that local checkouts may carry
         // but CI never sees. Baselining them here keeps the local test
         // green without weakening the contract  -  the .gitignore is

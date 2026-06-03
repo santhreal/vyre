@@ -448,7 +448,6 @@ mod tests {
         None
     }
 
-
     /// Positive: `let z = 0u; store(buf, 0, z)` rematerializes to
     /// `store(buf, 0, 0u)`.
     #[test]
@@ -709,4 +708,3 @@ mod tests {
         }
     }
 }
-

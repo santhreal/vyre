@@ -5,11 +5,14 @@ use vyre_foundation::optimizer::eqsat_gpu::{Equivalence, GpuEGraphDeviceImage};
 
 use super::{
     constants::SIGNATURE_BUCKET_RECORD_WORDS,
-    helpers::{cuda_egraph_signature_pair_rows, packed_rows_structurally_equal, validate_image_view_matches},
-    plan_cuda_egraph_signature_buckets,
-    CudaEGraphKernelLaunchConfig, CudaEGraphKernelPlanError,
-    CudaEGraphSignatureBucketDeviceImage, CudaEGraphSignatureBucketPlan, CudaEGraphStructuralEquivalenceLaunchArtifact,
-    CudaEGraphStructuralEquivalenceOutputPlan, CudaEGraphStructuralEquivalencePlan,
+    helpers::{
+        cuda_egraph_signature_pair_rows, packed_rows_structurally_equal,
+        validate_image_view_matches,
+    },
+    plan_cuda_egraph_signature_buckets, CudaEGraphKernelLaunchConfig, CudaEGraphKernelPlanError,
+    CudaEGraphSignatureBucketDeviceImage, CudaEGraphSignatureBucketPlan,
+    CudaEGraphStructuralEquivalenceLaunchArtifact, CudaEGraphStructuralEquivalenceOutputPlan,
+    CudaEGraphStructuralEquivalencePlan,
 };
 
 /// Build signature buckets and emit exact structural e-class equivalences from

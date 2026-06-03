@@ -40,7 +40,6 @@ self-substrate-adapters = ["dep:vyre-self-substrate"]
 
 [dependencies]
 vyre-foundation = { workspace = true }
-vyre-primitives = { workspace = true }
 vyre-self-substrate = { workspace = true, optional = true }
 vyre-spec.workspace = true
 vyre-macros.workspace = true

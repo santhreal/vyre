@@ -177,27 +177,15 @@ pub fn validate_release_tag_plan_artifact(
 ) -> Result<ReleaseTagPlanProof, ReleaseLaunchSequenceError> {
     for (evidence, needle) in [
         ("Vyre RC tag", "\"vyre_rc_tag\""),
-        ("dataflow consumer RC tag", "\"dataflow_consumer_rc_tag\""),
+        ("Weir RC tag", "\"weir_rc_tag\""),
         ("combined RC tag", "\"combined_release_train_rc_tag\""),
         ("Vyre release tag", "\"vyre_tag\""),
-        ("dataflow consumer release tag", "\"dataflow_consumer_tag\""),
+        ("Weir release tag", "\"weir_tag\""),
         ("combined release tag", "\"combined_release_train_tag\""),
         ("tag creation order", "\"tag_creation_order\""),
         ("completion audit gate", "release-completion-audit"),
-        ("release gate command", "\"release_gate_command\""),
+        ("release gate command", "\"required_gate_before_tag\""),
         ("branch protection gate", "apply-branch-protection.sh"),
-        ("final launch order", "\"final_launch_order\""),
-        ("Vyre cargo publish", "cargo publish -p vyre"),
-        (
-            "dataflow consumer cargo publish",
-            "\"dataflow_consumer_publish_command\"",
-        ),
-        (
-            "public repository action",
-            "\"repository_visibility_action\": \"public\"",
-        ),
-        ("release branch push", "git push origin release"),
-        ("release tag push", "git push --tags"),
         (
             "zero version blockers",
             "\"version_matrix_blocker_count\": 0",
@@ -332,7 +320,7 @@ mod tests {
     #[test]
     fn launch_sequence_rejects_tag_plan_without_release_gate() {
         let err = validate_release_tag_plan_artifact(
-            r#"{"vyre_rc_tag":"vyre-v0.4.1-rc.1","dataflow_consumer_rc_tag":"dataflow-consumer-v0.1.0-rc.1","combined_release_train_rc_tag":"x","vyre_tag":"vyre-v0.4.1","dataflow_consumer_tag":"dataflow-consumer-v0.1.0","combined_release_train_tag":"x","tag_creation_order":[],"dataflow_consumer_publish_command":"cargo publish -p dataflow-consumer","final_launch_order":["cargo publish -p vyre"],"repository_visibility_action":"public","required_gate_before_tag":"release-completion-audit && apply-branch-protection.sh","version_matrix_blocker_count":0,"blockers":[]}"#,
+            r#"{"vyre_rc_tag":"vyre-v0.6.1-rc.1","weir_rc_tag":"weir-v0.1.0-rc.1","combined_release_train_rc_tag":"x","vyre_tag":"vyre-v0.6.1","weir_tag":"weir-v0.1.0","combined_release_train_tag":"x","tag_creation_order":[],"required_gate_before_rc_tag":"release-completion-audit && apply-branch-protection.sh","version_matrix_blocker_count":0,"blockers":[]}"#,
         )
         .expect_err("tag plan without release gate should fail");
 

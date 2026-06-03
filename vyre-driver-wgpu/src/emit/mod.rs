@@ -448,7 +448,6 @@ mod tests {
                         visibility: vyre_lower::BindingVisibility::ReadWrite,
                         name: "scratch".to_owned(),
                     },
-
                     vyre_lower::BindingSlot {
                         slot: 1,
                         element_type: DataType::U32,
@@ -506,4 +505,3 @@ mod tests {
         assert_eq!(static_workgroups(&descriptor, [16, 1, 1]), [16, 1, 1]);
     }
 }
-

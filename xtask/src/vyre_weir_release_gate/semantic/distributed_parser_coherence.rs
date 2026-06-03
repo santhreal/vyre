@@ -1,13 +1,9 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     let Some(matrix) = first_json_evidence(
         requirement,
         base_dir,
@@ -44,8 +40,7 @@ pub(super) fn check(
     ] {
         if !component_ids.iter().any(|component| {
             component.get("id").and_then(serde_json::Value::as_str) == Some(required)
-                && component.get("exists").and_then(serde_json::Value::as_bool)
-                    == Some(true)
+                && component.get("exists").and_then(serde_json::Value::as_bool) == Some(true)
                 && component
                     .get("missing_terms")
                     .and_then(serde_json::Value::as_array)

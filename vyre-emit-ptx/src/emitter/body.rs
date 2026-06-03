@@ -2,7 +2,7 @@ use std::fmt::Write as _;
 
 use smallvec::SmallVec;
 use vyre_foundation::ir::BinOp;
-use vyre_lower::{KernelBody, KernelOp, KernelOpKind};
+use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 use super::facts::EmitFacts;
 use super::schedule::{
@@ -38,6 +38,7 @@ impl BodyCtx<'_> {
                 for _ in 0..MAX_LOAD_GAP_FILLERS {
                     let Some(filler_idx) = self.find_latency_filler_avoiding_results(
                         body,
+                        &facts,
                         idx,
                         &blocked_results,
                         &skip,
@@ -81,6 +82,7 @@ impl BodyCtx<'_> {
                 for _ in 0..MAX_LOAD_GAP_FILLERS {
                     let Some(filler_idx) = self.find_latency_filler_avoiding_results(
                         body,
+                        &facts,
                         idx,
                         &blocked_results,
                         &skip,
@@ -103,6 +105,7 @@ impl BodyCtx<'_> {
     fn find_latency_filler_avoiding_results(
         &self,
         body: &KernelBody,
+        facts: &EmitFacts,
         anchor_idx: usize,
         blocked_results: &[u32],
         skip: &[bool],
@@ -123,6 +126,9 @@ impl BodyCtx<'_> {
                 .iter()
                 .any(|result| op_reads_operand(candidate, *result))
             {
+                continue;
+            }
+            if self.should_defer_integer_mul_for_mad(body, facts, candidate_idx) {
                 continue;
             }
             if self.is_ready_pure_op(candidate) {
@@ -185,8 +191,11 @@ impl BodyCtx<'_> {
         }
         let lhs = consumer.operands[0];
         let rhs = consumer.operands[1];
-        self.integer_mad_parts(body, facts, lhs, rhs).is_some()
-            || self.integer_mad_parts(body, facts, rhs, lhs).is_some()
+        self.structural_integer_mad_type(body, facts, lhs, rhs)
+            .is_some()
+            || self
+                .structural_integer_mad_type(body, facts, rhs, lhs)
+                .is_some()
     }
 
     fn emit_integer_mad_from_add(
@@ -254,6 +263,113 @@ impl BodyCtx<'_> {
         match a.0 {
             PtxType::U32 => Some((a, b, c, "u32", PtxType::U32)),
             PtxType::I32 => Some((a, b, c, "s32", PtxType::I32)),
+            _ => None,
+        }
+    }
+
+    fn structural_integer_mad_type(
+        &self,
+        body: &KernelBody,
+        facts: &EmitFacts,
+        mul_result_id: u32,
+        addend_id: u32,
+    ) -> Option<PtxType> {
+        if facts.result_use_count(mul_result_id) != 1 {
+            return None;
+        }
+        let producer_idx = facts.producer_idx(mul_result_id)?;
+        let producer = body.ops.get(producer_idx)?;
+        if !matches!(producer.kind, KernelOpKind::BinOpKind(BinOp::Mul))
+            || producer.operands.len() != 2
+            || producer.result != Some(mul_result_id)
+        {
+            return None;
+        }
+
+        let a_ty = self.result_ptx_type(body, facts, producer.operands[0], 0)?;
+        let b_ty = self.result_ptx_type(body, facts, producer.operands[1], 0)?;
+        let c_ty = self.result_ptx_type(body, facts, addend_id, 0)?;
+        if a_ty != b_ty || a_ty != c_ty {
+            return None;
+        }
+        matches!(a_ty, PtxType::U32 | PtxType::I32).then_some(a_ty)
+    }
+
+    fn result_ptx_type(
+        &self,
+        body: &KernelBody,
+        facts: &EmitFacts,
+        result_id: u32,
+        depth: usize,
+    ) -> Option<PtxType> {
+        const RESULT_TYPE_DEPTH_LIMIT: usize = 12;
+        if depth >= RESULT_TYPE_DEPTH_LIMIT {
+            return None;
+        }
+        if let Some(reg) = self.operand_to_reg.get(&result_id) {
+            return Some(reg.0);
+        }
+        let producer_idx = facts.producer_idx(result_id)?;
+        let producer = body.ops.get(producer_idx)?;
+        match &producer.kind {
+            KernelOpKind::Literal => {
+                let literal_idx = *producer.operands.first()? as usize;
+                match body.literals.get(literal_idx)? {
+                    LiteralValue::U32(_) => Some(PtxType::U32),
+                    LiteralValue::I32(_) => Some(PtxType::I32),
+                    LiteralValue::F32(_) => Some(PtxType::F32),
+                    LiteralValue::Bool(_) => Some(PtxType::Bool),
+                }
+            }
+            KernelOpKind::LoadGlobal | KernelOpKind::LoadShared | KernelOpKind::LoadConstant => {
+                let binding_slot = *producer.operands.first()?;
+                let binding = self.binding_for_slot(binding_slot).ok()?;
+                PtxType::from_dtype(&binding.element_type).ok()
+            }
+            KernelOpKind::BufferLength
+            | KernelOpKind::GlobalInvocationId
+            | KernelOpKind::LocalInvocationId
+            | KernelOpKind::WorkgroupId
+            | KernelOpKind::LoopIndex { .. }
+            | KernelOpKind::SubgroupLocalId
+            | KernelOpKind::SubgroupSize
+            | KernelOpKind::SubgroupBallot => Some(PtxType::U32),
+            KernelOpKind::Copy | KernelOpKind::SubgroupAdd => {
+                self.result_ptx_type(body, facts, *producer.operands.first()?, depth + 1)
+            }
+            KernelOpKind::Cast { target } => PtxType::from_dtype(target).ok(),
+            KernelOpKind::BinOpKind(op)
+                if matches!(
+                    op,
+                    BinOp::Eq | BinOp::Ne | BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge
+                ) =>
+            {
+                Some(PtxType::Bool)
+            }
+            KernelOpKind::BinOpKind(BinOp::And | BinOp::Or) => {
+                let left_ty =
+                    self.result_ptx_type(body, facts, *producer.operands.first()?, depth + 1)?;
+                if left_ty == PtxType::Bool {
+                    Some(PtxType::Bool)
+                } else {
+                    Some(left_ty)
+                }
+            }
+            KernelOpKind::BinOpKind(_)
+            | KernelOpKind::Fma
+            | KernelOpKind::Select
+            | KernelOpKind::SubgroupShuffle => {
+                self.result_ptx_type(body, facts, *producer.operands.first()?, depth + 1)
+            }
+            KernelOpKind::UnOpKind(_) => {
+                self.result_ptx_type(body, facts, *producer.operands.first()?, depth + 1)
+            }
+            KernelOpKind::Atomic { .. } => {
+                let binding_slot = *producer.operands.first()?;
+                let binding = self.binding_for_slot(binding_slot).ok()?;
+                PtxType::from_dtype(&binding.element_type).ok()
+            }
+            KernelOpKind::MatrixMma { .. } => Some(PtxType::F32),
             _ => None,
         }
     }

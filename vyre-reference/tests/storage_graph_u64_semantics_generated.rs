@@ -69,9 +69,15 @@ type U64UnaryExpected = fn(u64) -> IrValue;
 
 fn u64_binary_cases() -> [(BinOp, U64BinaryExpected); 27] {
     [
-        (BinOp::Add, |left, right| IrValue::U64(left.wrapping_add(right))),
-        (BinOp::Sub, |left, right| IrValue::U64(left.wrapping_sub(right))),
-        (BinOp::Mul, |left, right| IrValue::U64(left.wrapping_mul(right))),
+        (BinOp::Add, |left, right| {
+            IrValue::U64(left.wrapping_add(right))
+        }),
+        (BinOp::Sub, |left, right| {
+            IrValue::U64(left.wrapping_sub(right))
+        }),
+        (BinOp::Mul, |left, right| {
+            IrValue::U64(left.wrapping_mul(right))
+        }),
         (BinOp::Div, |left, right| {
             IrValue::U64(if right == 0 { u64::MAX } else { left / right })
         }),
@@ -81,8 +87,12 @@ fn u64_binary_cases() -> [(BinOp, U64BinaryExpected); 27] {
         (BinOp::BitAnd, |left, right| IrValue::U64(left & right)),
         (BinOp::BitOr, |left, right| IrValue::U64(left | right)),
         (BinOp::BitXor, |left, right| IrValue::U64(left ^ right)),
-        (BinOp::Shl, |left, right| IrValue::U64(left.wrapping_shl((right & 63) as u32))),
-        (BinOp::Shr, |left, right| IrValue::U64(left.wrapping_shr((right & 63) as u32))),
+        (BinOp::Shl, |left, right| {
+            IrValue::U64(left.wrapping_shl((right & 63) as u32))
+        }),
+        (BinOp::Shr, |left, right| {
+            IrValue::U64(left.wrapping_shr((right & 63) as u32))
+        }),
         (BinOp::Eq, |left, right| IrValue::Bool(left == right)),
         (BinOp::Ne, |left, right| IrValue::Bool(left != right)),
         (BinOp::Lt, |left, right| IrValue::Bool(left < right)),
@@ -91,17 +101,33 @@ fn u64_binary_cases() -> [(BinOp, U64BinaryExpected); 27] {
         (BinOp::Ge, |left, right| IrValue::Bool(left >= right)),
         (BinOp::Min, |left, right| IrValue::U64(left.min(right))),
         (BinOp::Max, |left, right| IrValue::U64(left.max(right))),
-        (BinOp::SaturatingAdd, |left, right| IrValue::U64(left.saturating_add(right))),
-        (BinOp::SaturatingSub, |left, right| IrValue::U64(left.saturating_sub(right))),
-        (BinOp::SaturatingMul, |left, right| IrValue::U64(left.saturating_mul(right))),
-        (BinOp::AbsDiff, |left, right| IrValue::U64(left.abs_diff(right))),
-        (BinOp::WrappingAdd, |left, right| IrValue::U64(left.wrapping_add(right))),
-        (BinOp::WrappingSub, |left, right| IrValue::U64(left.wrapping_sub(right))),
+        (BinOp::SaturatingAdd, |left, right| {
+            IrValue::U64(left.saturating_add(right))
+        }),
+        (BinOp::SaturatingSub, |left, right| {
+            IrValue::U64(left.saturating_sub(right))
+        }),
+        (BinOp::SaturatingMul, |left, right| {
+            IrValue::U64(left.saturating_mul(right))
+        }),
+        (BinOp::AbsDiff, |left, right| {
+            IrValue::U64(left.abs_diff(right))
+        }),
+        (BinOp::WrappingAdd, |left, right| {
+            IrValue::U64(left.wrapping_add(right))
+        }),
+        (BinOp::WrappingSub, |left, right| {
+            IrValue::U64(left.wrapping_sub(right))
+        }),
         (BinOp::MulHigh, |left, right| {
             IrValue::U64(((left as u128).wrapping_mul(right as u128) >> 64) as u64)
         }),
-        (BinOp::And, |left, right| IrValue::Bool(left != 0 && right != 0)),
-        (BinOp::Or, |left, right| IrValue::Bool(left != 0 || right != 0)),
+        (BinOp::And, |left, right| {
+            IrValue::Bool(left != 0 && right != 0)
+        }),
+        (BinOp::Or, |left, right| {
+            IrValue::Bool(left != 0 || right != 0)
+        }),
     ]
 }
 
@@ -110,10 +136,18 @@ fn u64_unary_cases() -> [(UnOp, U64UnaryExpected); 7] {
         (UnOp::Negate, |value| IrValue::U64(0u64.wrapping_sub(value))),
         (UnOp::BitNot, |value| IrValue::U64(!value)),
         (UnOp::LogicalNot, |value| IrValue::Bool(value == 0)),
-        (UnOp::Popcount, |value| IrValue::U64(u64::from(value.count_ones()))),
-        (UnOp::Clz, |value| IrValue::U64(u64::from(value.leading_zeros()))),
-        (UnOp::Ctz, |value| IrValue::U64(u64::from(value.trailing_zeros()))),
-        (UnOp::ReverseBits, |value| IrValue::U64(value.reverse_bits())),
+        (UnOp::Popcount, |value| {
+            IrValue::U64(u64::from(value.count_ones()))
+        }),
+        (UnOp::Clz, |value| {
+            IrValue::U64(u64::from(value.leading_zeros()))
+        }),
+        (UnOp::Ctz, |value| {
+            IrValue::U64(u64::from(value.trailing_zeros()))
+        }),
+        (UnOp::ReverseBits, |value| {
+            IrValue::U64(value.reverse_bits())
+        }),
     ]
 }
 

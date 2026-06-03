@@ -533,8 +533,7 @@ mod tests {
     #[test]
     fn source_similarity_check_reports_duplicate_source_pairs() {
         let dir = TempDir::new().unwrap();
-        let body_a = "pub fn alpha(input: &[u32]) -> u32 {\n    let mut acc = 0;\n"
-            .to_string()
+        let body_a = "pub fn alpha(input: &[u32]) -> u32 {\n    let mut acc = 0;\n".to_string()
             + &"    for value in input { acc = acc.wrapping_add(*value); }\n".repeat(24)
             + "    acc\n}\n";
         let body_b = body_a.replace("alpha", "beta").replace("acc", "sum");

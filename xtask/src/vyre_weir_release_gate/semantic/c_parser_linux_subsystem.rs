@@ -1,13 +1,9 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     if !requirement.evidence.iter().any(|evidence| {
         evidence.contains("cargo_full")
             && evidence.contains("c-parser-corpus")

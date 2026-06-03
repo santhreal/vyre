@@ -448,7 +448,6 @@ mod tests {
 
     #[test]
     fn linux_corpus_parity_accepts_provenanced_clang_slices() {
-
         let proof = validate_linux_corpus_parity(&[
             slice(
                 "sched-core",
@@ -593,4 +592,3 @@ linux_subsystem must be one of `kernel`, `fs`, `mm`, `net`, or `drivers`.";
         }
     }
 }
-

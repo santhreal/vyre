@@ -857,4 +857,3 @@ mod tests {
         Ok(vec![f32_slice_to_le_bytes(&out)])
     }
 }
-

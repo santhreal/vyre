@@ -74,14 +74,37 @@ mod rule_column_tests;
 #[path = "exploded/tests/cpu_reference_tests.rs"]
 mod cpu_reference_tests;
 
-pub use abi::*;
-pub use canonicalize::*;
+pub use abi::{
+    ifds_csr_dispatch_grid, IFDS_CSR_COL_IDX_BUFFER, IFDS_CSR_COL_LEN_BUFFER,
+    IFDS_CSR_EMPTY_DISPATCH_GRID, IFDS_CSR_GEN_BLOCK_BUFFER, IFDS_CSR_GEN_FACT_BUFFER,
+    IFDS_CSR_GEN_PROC_BUFFER, IFDS_CSR_INTER_DST_BLOCK_BUFFER, IFDS_CSR_INTER_DST_PROC_BUFFER,
+    IFDS_CSR_INTER_SRC_BLOCK_BUFFER, IFDS_CSR_INTER_SRC_PROC_BUFFER,
+    IFDS_CSR_INTRA_DST_BLOCK_BUFFER, IFDS_CSR_INTRA_PROC_BUFFER, IFDS_CSR_INTRA_SRC_BLOCK_BUFFER,
+    IFDS_CSR_KILLED_BUFFER, IFDS_CSR_KILL_BLOCK_BUFFER, IFDS_CSR_KILL_FACT_BUFFER,
+    IFDS_CSR_KILL_PROC_BUFFER, IFDS_CSR_ROW_CURSOR_BUFFER, IFDS_CSR_ROW_PTR_BUFFER,
+    IFDS_CSR_WORKGROUP_SIZE, OP_ID,
+};
+pub use canonicalize::{canonicalize_csr_within_rows, canonicalize_csr_within_rows_in_place};
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use cpu_ref::*;
-pub use dispatch_plan::*;
-pub use encoding::*;
-pub use layout::*;
-pub use program_ir::*;
+pub use cpu_ref::{
+    build_cpu_reference, try_build_cpu_reference, try_build_cpu_reference_into,
+    ExplodedIfdsCpuScratch,
+};
+pub use dispatch_plan::{
+    plan_ifds_csr_dispatch, split_ifds_rule_quads_into, split_ifds_rule_triples_into,
+    IfdsCsrDispatchPlan, IfdsCsrRuleColumns,
+};
+pub use encoding::{
+    decode_node, dense_to_encoded, encode_node, encoded_to_dense, fits, BLOCK_BITS,
+    FACTS_PER_WORKGROUP, FACT_BITS, MAX_BLOCK_ID, MAX_FACT_ID, MAX_PROC_ID, PROC_BITS,
+};
+pub use layout::{
+    IfdsCsrLayout, IfdsCsrProgramCacheKey, IfdsCsrRuleInputFingerprint, IfdsCsrStaticInputKey,
+};
+pub use program_ir::build_ifds_csr_program;
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use program_key::*;
-pub use validation::*;
+pub use program_key::ifds_program_cache_key_from_program;
+pub use validation::{
+    ifds_node_count_checked, ifds_node_count_saturating, max_ifds_col_count,
+    validate_ifds_csr_inputs, validate_ifds_csr_layout, validate_ifds_csr_readback,
+};

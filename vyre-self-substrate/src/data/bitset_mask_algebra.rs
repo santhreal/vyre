@@ -453,7 +453,6 @@ fn checked_words(len: usize, context: &'static str) -> Result<u32, DispatchError
     })
 }
 
-
 fn decode_first_output(
     outputs: &[Vec<u8>],
     words: usize,
@@ -670,4 +669,3 @@ mod tests {
         assert!(err.to_string().contains("Fix: mask_binary_via requires"));
     }
 }
-

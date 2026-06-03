@@ -702,4 +702,3 @@ mod tests {
         assert_eq!(super::gcd_u32(12, 18), 6);
     }
 }
-

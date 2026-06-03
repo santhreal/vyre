@@ -790,4 +790,3 @@ mod tests {
         assert_eq!(u, IntRange { min: 0, max: 10 });
     }
 }
-

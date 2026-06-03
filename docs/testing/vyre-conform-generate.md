@@ -1,10 +1,5 @@
-# Testing program — vyre-conform-generate
+# Testing program - vyre-conform-generate
 
-| Kind | Location |
-|------|----------|
-| unit | `{crate}/tests/`, `src/**/tests.rs` |
-| adversarial | `tests/adversarial*`, `tests/sweep_*` |
-| property | `*proptest*` |
-| contract | `tests/contract/`, workspace `tests/contract/` |
-| integration | `tests/integration*` |
-| conformance | `conform/*` |
+Use [TESTING_PROGRAM.md](../TESTING_PROGRAM.md) as the canonical testing program reference.
+This crate generates conformance cases and should keep generator-specific notes
+inside its own `README.md` or test modules.

@@ -625,7 +625,6 @@ pub(crate) fn run(args: &[String]) {
     }
 }
 
-
 fn collect_standalone_examples(
     weir_root: &Path,
     blockers: &mut Vec<String>,
@@ -1077,4 +1076,3 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     }
     Ok(text)
 }
-

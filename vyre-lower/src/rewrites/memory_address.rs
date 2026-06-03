@@ -161,10 +161,8 @@ mod tests {
 
     #[test]
     fn memory_location_equality_ignores_equivalent_index_operand_ids() {
-        let left =
-            MemoryLocation::new(MemoryTarget::global(0), 7, AddressKey::Const(128));
-        let right =
-            MemoryLocation::new(MemoryTarget::global(0), 9, AddressKey::Const(128));
+        let left = MemoryLocation::new(MemoryTarget::global(0), 7, AddressKey::Const(128));
+        let right = MemoryLocation::new(MemoryTarget::global(0), 9, AddressKey::Const(128));
 
         assert_eq!(left, right);
     }

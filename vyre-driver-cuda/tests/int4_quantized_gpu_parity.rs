@@ -270,9 +270,8 @@ fn cuda_dispatch_matches_packed_int4_dot_i32_oracle() {
             .collect::<Vec<_>>();
         let lhs_packed = pack_i4x8(&lhs);
         let rhs_packed = pack_i4x8(&rhs);
-        let program = vyre_primitives::math::quantized::i4x8_dot_i32(
-            "lhs", "rhs", "out", lane_count,
-        );
+        let program =
+            vyre_primitives::math::quantized::i4x8_dot_i32("lhs", "rhs", "out", lane_count);
         let outputs = backend
             .dispatch(
                 &program,
@@ -664,9 +663,8 @@ fn generated_cuda_int4_release_parity_sweeps_boundary_shapes() {
             let lhs_packed = pack_i4x8(&lhs);
             let rhs_packed = pack_i4x8(&rhs);
 
-            let dot_program = vyre_primitives::math::quantized::i4x8_dot_i32(
-                "lhs", "rhs", "out", lane_count,
-            );
+            let dot_program =
+                vyre_primitives::math::quantized::i4x8_dot_i32("lhs", "rhs", "out", lane_count);
             let dot_outputs = backend
                 .dispatch(
                     &dot_program,
@@ -899,4 +897,3 @@ fn generated_cuda_int4_release_parity_sweeps_boundary_shapes() {
         }
     }
 }
-

@@ -11,7 +11,10 @@ macro_rules! impl_indexed_select_reference {
     };
 }
 
-fn indexed_select_u32(inputs: &[Memory], op_name: &'static str) -> Result<Memory, common::EvalError> {
+fn indexed_select_u32(
+    inputs: &[Memory],
+    op_name: &'static str,
+) -> Result<Memory, common::EvalError> {
     let (values, indices) = common::two_inputs(inputs, op_name)?;
     let values = common::u32_words(values, op_name)?;
     let indices = common::u32_words(indices, op_name)?;

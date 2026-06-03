@@ -86,12 +86,24 @@ fn crate_tier(member_path: &str) -> u32 {
         "vyre-primitives" => 25,
         "vyre-self-substrate" => 28,
         "vyre-libs" | "vyre-frontend-c" => 30,
-        "vyre-reference" | "vyre-lower" | "vyre-emit-naga" | "vyre-emit-ptx" | "vyre-emit-spirv" => 35,
-        "vyre-conform-spec" | "vyre-conform-generate" | "vyre-conform-enforce"
-        | "vyre-conform-runner" | "vyre-test-harness" => 35,
-        "vyre-driver" | "vyre-driver-wgpu" | "vyre-driver-cuda" | "vyre-driver-spirv"
-        | "vyre-driver-reference" | "vyre-runtime" | "vyre-harness" | "vyre-aot"
-        | "vyre-bench" | "vyre-debug" | "vyre-lints" => 40,
+        "vyre-reference" | "vyre-lower" | "vyre-emit-naga" | "vyre-emit-ptx"
+        | "vyre-emit-spirv" => 35,
+        "vyre-conform-spec"
+        | "vyre-conform-generate"
+        | "vyre-conform-enforce"
+        | "vyre-conform-runner"
+        | "vyre-test-harness" => 35,
+        "vyre-driver"
+        | "vyre-driver-wgpu"
+        | "vyre-driver-cuda"
+        | "vyre-driver-spirv"
+        | "vyre-driver-reference"
+        | "vyre-runtime"
+        | "vyre-harness"
+        | "vyre-aot"
+        | "vyre-bench"
+        | "vyre-debug"
+        | "vyre-lints" => 40,
         "xtask" => 99,
         _ => 45,
     }
@@ -146,9 +158,7 @@ fn scan_manifest(member: &str, tier: u32, table: &Value, failures: &mut Vec<Stri
             };
             let resolved = resolve_path_dep(member, path);
             let fallback = dep_crate_name(key, value);
-            let dep_name = resolved
-                .or(fallback)
-                .unwrap_or_else(|| key.to_string());
+            let dep_name = resolved.or(fallback).unwrap_or_else(|| key.to_string());
             let dep_tier = crate_tier(&dep_name);
             if dep_tier > tier && tier < 99 {
                 failures.push(format!(

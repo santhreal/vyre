@@ -462,7 +462,6 @@ fn assert_two_u32_output_buffers(
     lane_count * 2
 }
 
-
 fn generated_old_sentinel_values() -> Vec<u32> {
     (0..BUCKET_COUNT)
         .map(|lane| 0xf00d_cafe_u32.rotate_left(lane as u32) ^ lane as u32)
@@ -521,4 +520,3 @@ fn generated_exchange_initial_values() -> Vec<u32> {
         .map(|bucket| 0xf000_0000 | bucket as u32)
         .collect()
 }
-

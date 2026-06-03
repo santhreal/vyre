@@ -1239,4 +1239,3 @@ mod tests {
         assert_eq!(comps, vec![0, 1, 2]);
     }
 }
-

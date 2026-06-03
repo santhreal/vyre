@@ -66,8 +66,16 @@ fn arithmetic_dual_references_treat_malformed_short_input_as_zero_word() {
         let (reference_a, reference_b) =
             resolve_dual(op_id).unwrap_or_else(|| panic!("Fix: {op_id} must be registered."));
         for input in [&[][..], &[0xFF][..], &[0x01, 0x02, 0x03, 0x04][..]] {
-            assert_eq!(reference_a(input), vec![0; 4], "Fix: {op_id} ref_a short-input contract drifted");
-            assert_eq!(reference_b(input), vec![0; 4], "Fix: {op_id} ref_b short-input contract drifted");
+            assert_eq!(
+                reference_a(input),
+                vec![0; 4],
+                "Fix: {op_id} ref_a short-input contract drifted"
+            );
+            assert_eq!(
+                reference_b(input),
+                vec![0; 4],
+                "Fix: {op_id} ref_b short-input contract drifted"
+            );
         }
     }
 }

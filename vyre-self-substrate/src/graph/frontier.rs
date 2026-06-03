@@ -13,6 +13,21 @@ use vyre_primitives::bitset::frontier as primitive_frontier;
 #[cfg(test)]
 pub(crate) use primitive_frontier::{frontier_tail_mask, mask_frontier_tail_bits};
 
+/// Count active frontier bits through the primitive frontier authority.
+///
+/// # Errors
+///
+/// Returns [`DispatchError::BadInputs`] when the primitive count overflows the
+/// compact u32 frontier count representation.
+#[cfg(test)]
+pub(crate) fn frontier_popcount(frontier: &[u32]) -> Result<u32, DispatchError> {
+    primitive_frontier::checked_frontier_popcount(frontier).map_err(|err| {
+        DispatchError::BadInputs(format!(
+            "Fix: graph frontier primitive popcount rejected input: {err}"
+        ))
+    })
+}
+
 /// Merge a neighbor frontier into a visited set and materialize only new bits.
 ///
 /// `visited`, `neighbors`, and `next_wave` use the canonical packed bitset
@@ -50,6 +65,15 @@ mod tests {
         assert_eq!(frontier_tail_mask(31), 0x7FFF_FFFF);
         assert_eq!(frontier_tail_mask(32), u32::MAX);
         assert_eq!(frontier_tail_mask(35), 0b111);
+    }
+
+    #[test]
+    fn popcount_delegates_to_primitive_authority() {
+        assert_eq!(
+            frontier_popcount(&[0b1011, 0x8000_0000])
+                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - fixed frontier bitset is valid"),
+            4
+        );
     }
 
     #[test]
@@ -133,24 +157,14 @@ mod tests {
             let mut long_visited = vec![0; words + 1];
             let neighbors = vec![0; words];
             assert!(matches!(
-                absorb_new_frontier_bits(
-                    node_count,
-                    &mut long_visited,
-                    &neighbors,
-                    &mut next_wave,
-                ),
+                absorb_new_frontier_bits(node_count, &mut long_visited, &neighbors, &mut next_wave,),
                 Err(_)
             ));
 
             let mut visited = vec![0; words];
             let long_neighbors = vec![0; words + 1];
             assert!(matches!(
-                absorb_new_frontier_bits(
-                    node_count,
-                    &mut visited,
-                    &long_neighbors,
-                    &mut next_wave,
-                ),
+                absorb_new_frontier_bits(node_count, &mut visited, &long_neighbors, &mut next_wave,),
                 Err(_)
             ));
         }

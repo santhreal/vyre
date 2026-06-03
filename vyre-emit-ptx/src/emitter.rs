@@ -448,7 +448,6 @@ impl BodyCtx<'_> {
                     offset_id,
                     size_id,
                     AsyncCopyDirection::Store,
-
                 )?;
             }
             AsyncWait { tag } => {
@@ -589,4 +588,3 @@ impl BodyCtx<'_> {
         Ok(())
     }
 }
-

@@ -387,7 +387,9 @@ fn r2_kernel_scripts_pass_rate() {
 
     let corpus_root = Path::new(env!("CARGO_MANIFEST_DIR")).join(CORPUS_ROOT);
     let files = collect_corpus(&corpus_root);
-    assert_ne!(files.len(), 0,
+    assert_ne!(
+        files.len(),
+        0,
         "Fix: Linux kernel scripts/ corpus must contain at least one .c file under {}",
         corpus_root.display()
     );
@@ -894,4 +896,3 @@ fn r2_kernel_scripts_cold_per_file_throughput() {
         (580_000.0_f64) / mean.max(1) as f64
     );
 }
-

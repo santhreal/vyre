@@ -1112,6 +1112,7 @@ impl CudaBackend {
             aligned_async_copy_len(param_bytes)?
         };
         let params_device_ptr = if param_bytes != 0 {
+            // SAFETY: param_bytes is u32-aligned and non-zero in this branch.
             let params_device_ptr =
                 alloc_cuda_ptr(param_copy_bytes, "cuMemAlloc_v2 (cuda_graph param buffer)")?;
             self.telemetry

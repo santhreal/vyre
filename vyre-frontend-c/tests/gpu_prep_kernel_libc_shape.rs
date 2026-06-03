@@ -53,7 +53,9 @@ fn gpu_preprocess_returns_non_empty_for_kernel_libc_shaped_source() {
         &res.bytes[..res.bytes.len().min(64)]
     );
 
-    assert_ne!(res.bytes.len(), 0,
+    assert_ne!(
+        res.bytes.len(),
+        0,
         "Fix: GPU preprocessor must emit non-empty output for a fixture that contains \
          no preprocessor directives. Got empty output for a {}-byte source.",
         raw.len()
@@ -259,7 +261,9 @@ fn gpu_preprocess_returns_non_empty_for_int_main() {
         std::str::from_utf8(&res.bytes).unwrap_or("<non-utf8>")
     );
 
-    assert_ne!(res.bytes.len(), 0,
+    assert_ne!(
+        res.bytes.len(),
+        0,
         "GPU preprocessor must emit non-empty output for int main(void) {{ return 0; }}"
     );
 }
@@ -1046,4 +1050,3 @@ fn gpu_preprocess_reuses_header_analysis_by_path_flags_defines_and_triple() {
         .iter()
         .any(|event| event.stored && event.defines_hash != first_store.defines_hash));
 }
-

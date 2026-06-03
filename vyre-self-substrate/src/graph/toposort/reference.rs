@@ -13,6 +13,7 @@ use vyre_primitives::graph::toposort::{toposort as toposort_cpu, ToposortError};
 /// Forwards `ToposortError::Cycle` when the graph has a cycle and
 /// `ToposortError::UnknownNode` when an edge references an
 /// out-of-range node id.
+#[cfg(test)]
 pub fn reference_topo_order(
     node_count: u32,
     edges: &[(u32, u32)],
@@ -30,6 +31,7 @@ pub fn reference_topo_order(
 ///
 /// Returns `UnknownNode` when an edge names a node id outside
 /// `0..node_count`.
+#[cfg(test)]
 pub fn reference_reachable_set(
     node_count: u32,
     edges: &[(u32, u32)],
@@ -43,7 +45,8 @@ pub fn reference_reachable_set(
 /// Convenience: returns true iff every node in `targets` is in the
 /// reachable set of `sources`. Useful for "would running pass set
 /// S leave every required predecessor satisfied?" queries.
-pub fn all_reachable(
+#[cfg(test)]
+pub fn reference_all_reachable(
     node_count: u32,
     edges: &[(u32, u32)],
     sources: &[u32],

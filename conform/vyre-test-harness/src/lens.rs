@@ -597,7 +597,6 @@ pub fn convergence(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome {
     LensOutcome::Pass { cases: cases.len() }
 }
 
-
 fn infer_fixpoint_buffers(program: &Program) -> Result<(&str, &str, u32), String> {
     let ro_buffers: Vec<_> = program
         .buffers()
@@ -906,4 +905,3 @@ mod convergence_tests {
         );
     }
 }
-

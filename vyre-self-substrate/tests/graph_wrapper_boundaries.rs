@@ -30,7 +30,7 @@ fn graph_wrappers_remain_thin_primitive_dispatch_layers() {
         let primitive = workspace
             .join("vyre-primitives/src/graph")
             .join(format!("{wrapper}.rs"));
-        let substrate = root.join("src/graph").join(format!("{wrapper}.rs"));
+        let substrate = module_source_path(&root.join("src/graph"), wrapper);
 
         let primitive_source = read_source(&primitive);
         let substrate_source = read_source(&substrate);
@@ -61,8 +61,19 @@ fn read_source(path: &Path) -> String {
     })
 }
 
+fn module_source_path(root: &Path, module: &str) -> PathBuf {
+    let flat = root.join(format!("{module}.rs"));
+    if flat.is_file() {
+        return flat;
+    }
+    root.join(module).join("mod.rs")
+}
+
 fn source_lines(source: &str) -> usize {
-    source.lines().filter(|line| !line.trim().is_empty()).count()
+    source
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .count()
 }
 
 fn wrapper_mentions_primitive(root: &Path, wrapper: &str, substrate_source: &str) -> bool {

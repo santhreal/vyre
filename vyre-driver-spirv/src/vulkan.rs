@@ -769,4 +769,3 @@ fn infer_grid(program: &Program, workgroup_size: [u32; 3]) -> Result<[u32; 3], B
     let x = max_count.div_ceil(lanes).max(1);
     Ok([x, 1, 1])
 }
-

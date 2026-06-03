@@ -19,7 +19,11 @@ fn run(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<u8> {
         .collect();
     let outputs = vyre_reference::reference_eval(program, &values)
         .expect("Fix: f32 hardware intrinsic builder must execute on the CPU oracle.");
-    assert_eq!(outputs.len(), 1, "Fix: f32 hardware intrinsic emits one output buffer.");
+    assert_eq!(
+        outputs.len(),
+        1,
+        "Fix: f32 hardware intrinsic emits one output buffer."
+    );
     outputs[0].to_bytes()
 }
 
@@ -46,7 +50,11 @@ fn generated_finite(len: usize, seed: u32) -> Vec<f32> {
             } else {
                 state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
                 let unit = f32::from_bits((state >> 9) | 0x3f00_0000) - 1.0;
-                if idx & 1 == 0 { unit } else { -unit }
+                if idx & 1 == 0 {
+                    unit
+                } else {
+                    -unit
+                }
             }
         })
         .collect()
@@ -86,9 +94,8 @@ fn generated_fma_f32_matrix_matches_mul_add_bits() {
         let a = generated_finite(len, 0x0f1a_a011 ^ len as u32);
         let b = generated_finite(len, 0x0f1a_a012 ^ len as u32);
         let c = generated_finite(len, 0x0f1a_a013 ^ len as u32);
-        let program = vyre_intrinsics::hardware::fma_f32::fma_f32::fma_f32(
-            "a", "b", "c", "out", len as u32,
-        );
+        let program =
+            vyre_intrinsics::hardware::fma_f32::fma_f32::fma_f32("a", "b", "c", "out", len as u32);
         let got = run(
             &program,
             vec![pack(&a), pack(&b), pack(&c), vec![0u8; len.max(1) * 4]],
@@ -113,11 +120,10 @@ fn generated_inverse_sqrt_f32_matrix_matches_clamped_host_semantics() {
 
     for &len in &lengths {
         let input = generated_inverse_sqrt_inputs(len, 0x0f1a_b005 ^ len as u32);
-        let program = vyre_intrinsics::hardware::inverse_sqrt_f32::inverse_sqrt_f32::inverse_sqrt_f32(
-            "input",
-            "out",
-            len as u32,
-        );
+        let program =
+            vyre_intrinsics::hardware::inverse_sqrt_f32::inverse_sqrt_f32::inverse_sqrt_f32(
+                "input", "out", len as u32,
+            );
         let got = run(&program, vec![pack(&input), vec![0u8; len.max(1) * 4]]);
         let expected = input
             .iter()

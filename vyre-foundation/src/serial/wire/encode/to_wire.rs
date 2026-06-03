@@ -486,7 +486,6 @@ fn put_memory_regions_with_scratch(
     Ok(())
 }
 
-
 fn put_hints_payload(out: &mut Vec<u8>, hints: crate::ir::MemoryHints) {
     match hints.coalesce_axis {
         Some(axis) => {
@@ -648,4 +647,3 @@ fn put_leb_u64(out: &mut Vec<u8>, mut value: u64) {
 
 #[cfg(test)]
 mod tests;
-

@@ -512,7 +512,6 @@ fn rewrite_expr(expr: Expr, changed: &mut bool) -> Expr {
     }
 }
 
-
 fn pop_owned_expr_result(results: &mut Vec<Expr>, context: &'static str) -> Expr {
     results.pop().unwrap_or_else(|| {
         unreachable!(
@@ -1098,4 +1097,3 @@ mod tests {
         false
     }
 }
-

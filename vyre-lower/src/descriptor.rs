@@ -1591,4 +1591,3 @@ mod tests {
         assert_eq!(d.workgroup_size, [64, 4, 2]);
     }
 }
-

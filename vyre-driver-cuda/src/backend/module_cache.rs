@@ -467,7 +467,6 @@ fn load_ptx_from_disk(key: &PtxSourceCacheKey) -> Result<Option<String>, Backend
     }
 }
 
-
 fn validate_ptx_disk_cache_file_len(
     byte_len: u64,
     path: &std::path::Path,
@@ -1041,7 +1040,6 @@ impl CudaModuleCache {
     }
 }
 
-
 fn release_cached_source_bytes(
     cached_source_bytes: &AtomicUsize,
     dropped_bytes: usize,
@@ -1417,4 +1415,3 @@ fn write_ptx_dump(
     })?;
     Ok(path)
 }
-

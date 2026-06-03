@@ -689,4 +689,3 @@ fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {
         "fourth MatrixMma result id must be usable by later ops"
     );
 }
-

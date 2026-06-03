@@ -507,7 +507,6 @@ fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
     }
 }
 
-
 fn rename_var_in_expr(expr: Expr, from: &Ident, to: &Ident) -> Expr {
     match expr {
         Expr::Var(name) if name == *from => Expr::Var(to.clone()),
@@ -848,4 +847,3 @@ mod tests {
         );
     }
 }
-

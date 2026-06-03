@@ -552,4 +552,3 @@ fn cuda_const_prop_preserves_non_literal_var() {
         );
     }
 }
-

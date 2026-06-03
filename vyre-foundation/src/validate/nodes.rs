@@ -202,16 +202,20 @@ fn validate_node_inner(
                     let compatible = val_ty == *elem
                         || matches!(
                             (&val_ty, elem),
-                            (DataType::U32, DataType::Bytes)
-                                | (DataType::Bytes, DataType::U32)
-                                | (DataType::U32, DataType::Bool)
-                                | (DataType::Bool, DataType::U32)
+                            (DataType::U32, DataType::Bytes) | (DataType::Bytes, DataType::U32)
                         )
                         || matches!((&val_ty, elem), (DataType::F32, DataType::F32));
                     if !compatible {
                         let legal_targets = store_value_targets(elem);
                         report.errors.push(err(format!(
                             "Node::Store buffer `{buffer}` value has type `{val_ty}` but element type is `{elem}`. Fix: cast/store using one of {}.", legal_targets
+                        )));
+                    }
+                }
+                if let Some(index_ty) = expr_type(index, buffers, scope) {
+                    if index_ty != DataType::U32 {
+                        report.errors.push(err(format!(
+                            "Node::Store buffer `{buffer}` index has type `{index_ty}` but must be `u32`. Fix: cast the index to U32 before storing."
                         )));
                     }
                 }
@@ -563,8 +567,8 @@ pub(crate) fn restore_scope(scope: &mut FxHashMap<Ident, Binding>, mut scope_log
 pub(crate) fn store_value_targets(element: &DataType) -> String {
     let mut targets = vec![element.clone()];
     let legal = match element {
-        DataType::U32 => vec![DataType::Bytes, DataType::Bool],
-        DataType::Bytes | DataType::Bool => vec![DataType::U32],
+        DataType::U32 => vec![DataType::Bytes],
+        DataType::Bytes => vec![DataType::U32],
         _ => Vec::new(),
     };
     for target in legal {
@@ -586,7 +590,7 @@ mod tests {
     use crate::ir::{BufferDecl, DataType, Expr, Ident};
 
     #[test]
-    fn store_value_targets_u32_includes_bytes_and_bool() {
+    fn store_value_targets_u32_includes_bytes_only() {
         let targets = store_value_targets(&DataType::U32);
         assert!(
             targets.contains("u32"),
@@ -597,8 +601,8 @@ mod tests {
             "target list should contain bytes: {targets}"
         );
         assert!(
-            targets.contains("bool"),
-            "target list should contain bool: {targets}"
+            !targets.contains("bool"),
+            "target list must not allow bool/u32 store coercion: {targets}"
         );
     }
 
@@ -656,4 +660,3 @@ mod tests {
         assert!(errors.is_empty(), "dynamic index must be accepted");
     }
 }
-

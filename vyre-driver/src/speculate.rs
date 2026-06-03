@@ -846,4 +846,3 @@ mod tests {
         assert_eq!(outcome.outputs, vec![b"confirmed".to_vec()]);
     }
 }
-

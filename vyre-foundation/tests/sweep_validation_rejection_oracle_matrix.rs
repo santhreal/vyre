@@ -160,7 +160,9 @@ fn sweep_validation_rejection_matrix_workgroup_axes() {
                 assert_eq!(
                     errors
                         .iter()
-                        .find(|e| e.message().contains(&format!("workgroup_size[{axis}] is 0")))
+                        .find(|e| e
+                            .message()
+                            .contains(&format!("workgroup_size[{axis}] is 0")))
                         .map(|e| e.message()),
                     Some(expected.as_str()),
                     "workgroup {wg:?} axis {axis}: {:?}",

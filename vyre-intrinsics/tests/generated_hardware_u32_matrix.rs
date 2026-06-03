@@ -74,13 +74,19 @@ fn run(program: &Program, input: &[u32]) -> Vec<u8> {
     ];
     let outputs = vyre_reference::reference_eval(program, &values)
         .expect("Fix: u32 hardware intrinsic builder must execute on the CPU oracle.");
-    assert_eq!(outputs.len(), 1, "Fix: each u32 intrinsic emits one output buffer.");
+    assert_eq!(
+        outputs.len(),
+        1,
+        "Fix: each u32 intrinsic emits one output buffer."
+    );
     outputs[0].to_bytes()
 }
 
 #[test]
 fn generated_u32_hardware_intrinsics_match_host_semantics() {
-    let lengths = [1usize, 2, 3, 4, 31, 32, 63, 64, 65, 127, 128, 257, 1024, 4096];
+    let lengths = [
+        1usize, 2, 3, 4, 31, 32, 63, 64, 65, 127, 128, 257, 1024, 4096,
+    ];
     let mut checked_lanes = 0usize;
 
     for case in CASES {

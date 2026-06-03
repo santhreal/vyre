@@ -451,7 +451,6 @@ fn cuda_artifact_at_least(
     }
 }
 
-
 fn suite_artifact_contains(
     artifact: &str,
     field: &'static str,
@@ -655,4 +654,3 @@ mod tests {
         }
     }
 }
-

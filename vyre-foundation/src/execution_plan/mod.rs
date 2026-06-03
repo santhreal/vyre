@@ -453,7 +453,6 @@ fn infer_static_problem_size(program: &Program) -> Option<u32> {
         .min()
 }
 
-
 fn track_decisions(
     fusion: &FusionPlan,
     memory: &MemoryPlan,
@@ -738,4 +737,3 @@ mod tests {
         assert_eq!(wide_plan.autotune.recommended_unroll_depth, 8);
     }
 }
-

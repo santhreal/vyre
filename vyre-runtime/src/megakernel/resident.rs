@@ -448,7 +448,6 @@ mod tests {
     use std::sync::Arc;
     use vyre_driver::backend::{CompiledPipeline, DispatchConfig, VyreBackend};
 
-
     struct ResidentEchoPipeline;
 
     impl vyre_driver::backend::private::Sealed for ResidentEchoPipeline {}
@@ -695,4 +694,3 @@ mod tests {
         assert!(buffers.retained_default_output_bytes() > 0);
     }
 }
-

@@ -110,21 +110,14 @@ fn rewrite_body(
             name: format!("{}_shared_tile", source_binding.name),
         });
 
-        let local_id = allocator.push_result(
-            &mut prefix,
-            KernelOpKind::LocalInvocationId,
-            vec![0],
-        );
+        let local_id = allocator.push_result(&mut prefix, KernelOpKind::LocalInvocationId, vec![0]);
         let offset_id = match candidate.index_kind {
             TileIndexKind::LocalX => {
                 allocator.push_literal(&mut prefix, &mut body.literals, LiteralValue::U32(0))
             }
             TileIndexKind::GlobalX => {
-                let workgroup_id = allocator.push_result(
-                    &mut prefix,
-                    KernelOpKind::WorkgroupId,
-                    vec![0],
-                );
+                let workgroup_id =
+                    allocator.push_result(&mut prefix, KernelOpKind::WorkgroupId, vec![0]);
                 let tile_bytes = allocator.push_literal(
                     &mut prefix,
                     &mut body.literals,

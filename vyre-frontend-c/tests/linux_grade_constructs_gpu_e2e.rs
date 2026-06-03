@@ -52,7 +52,11 @@ fn linux_grade_gnu_c11_constructs_compile_on_gpu_frontend() {
     object.assert_elf();
 
     assert_ne!(object.section(SECTION_LEX).len(), 0, "lex section present");
-    assert_ne!(object.section(SECTION_VAST).len(), 0, "VAST section present");
+    assert_ne!(
+        object.section(SECTION_VAST).len(),
+        0,
+        "VAST section present"
+    );
     assert_ne!(
         object.section(SECTION_PROGRAM_GRAPH).len(),
         0,

@@ -1026,4 +1026,3 @@ mod tests {
             .any(|e| matches!(e.kind, VerifyErrorKind::WorkgroupBindingInHostRange { .. })));
     }
 }
-

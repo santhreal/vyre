@@ -13,7 +13,7 @@
 //! - `literal_type` / `type_for_data_type` / `binary_result_type`  -
 //!   IR-type → naga-type lookups.
 
-use naga::{Expression, Span, Statement, Type};
+use naga::{BinaryOperator, Expression, Span, Statement, Type};
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::{KernelBody, KernelOp, LiteralValue};
 
@@ -107,7 +107,19 @@ impl BodyBuilder<'_> {
                 reason: "no global variable was declared for this slot".to_owned(),
             })?;
         let pointer = self.append_expr(Expression::GlobalVariable(global));
-        Ok(self.append_expr(Expression::ArrayLength(pointer)))
+        let words = self.append_expr(Expression::ArrayLength(pointer));
+        if matches!(
+            self.binding_data_types.get(&slot),
+            Some(DataType::U8 | DataType::I8)
+        ) {
+            let bytes_per_word = self.literal_u32(4);
+            return Ok(self.append_expr(Expression::Binary {
+                op: BinaryOperator::Multiply,
+                left: words,
+                right: bytes_per_word,
+            }));
+        }
+        Ok(words)
     }
 
     pub(super) fn child_block(

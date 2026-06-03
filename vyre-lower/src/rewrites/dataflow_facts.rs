@@ -3,10 +3,7 @@
 use crate::analyses::reaching_def_facts::ReachingDefFactSet;
 use rustc_hash::FxHashMap;
 
-pub(super) fn resolve_reaching_def_id(
-    id: u32,
-    reaching_defs: Option<&ReachingDefFactSet>,
-) -> u32 {
+pub(super) fn resolve_reaching_def_id(id: u32, reaching_defs: Option<&ReachingDefFactSet>) -> u32 {
     let Some(facts) = reaching_defs else {
         return id;
     };

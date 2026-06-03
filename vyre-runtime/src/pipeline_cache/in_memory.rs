@@ -5,8 +5,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use rustc_hash::FxHashMap;
 use vyre_driver::accounting::{
-    checked_add_u64_lazy, checked_add_usize_lazy, checked_sub_usize_lazy,
-    checked_usize_to_u64_lazy,
+    checked_add_u64_lazy, checked_add_usize_lazy, checked_sub_usize_lazy, checked_usize_to_u64_lazy,
 };
 
 use super::fingerprint::PipelineFingerprint;
@@ -172,12 +171,8 @@ impl InMemoryCacheShard {
                     "byte accounting during eviction",
                     "rebuild the cache",
                 );
-                evictions = cache_u64_add(
-                    evictions,
-                    1,
-                    "eviction count",
-                    "shard cache eviction work",
-                );
+                evictions =
+                    cache_u64_add(evictions, 1, "eviction count", "shard cache eviction work");
                 evicted_bytes = cache_u64_add(
                     evicted_bytes,
                     cache_usize_to_u64(

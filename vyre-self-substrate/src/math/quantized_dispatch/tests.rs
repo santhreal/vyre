@@ -1540,4 +1540,3 @@ fn generated_quantized_wrappers_match_oracles_across_boundary_shapes() {
         );
     }
 }
-

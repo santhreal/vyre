@@ -18,11 +18,16 @@ pub(crate) const WORD_PREFIX_MIN_FRONTIER_WORDS: usize = 256;
 
 /// Active-source queue bucket where deterministic word-prefix queue
 /// materialization starts paying for its extra scan/scatter launches.
-pub(crate) const WORD_PREFIX_MIN_QUEUE_CAPACITY: u32 = 1024;
+pub(crate) const WORD_PREFIX_MIN_QUEUE_CAPACITY: u32 = 512;
 
 /// Nonzero packed frontier words needed before word-level atomic reservations
 /// are expected to be more expensive than deterministic prefix scatter.
-pub(crate) const WORD_PREFIX_MIN_NONZERO_WORDS: usize = 256;
+pub(crate) const WORD_PREFIX_MIN_NONZERO_WORDS: usize = 64;
+
+/// Smallest resident multi-source queue Program shape for low-degree sparse
+/// traversal. Single-source frontiers stay exact; multi-source frontiers avoid
+/// compiling short-lived 2/4/8/16/32-slot Programs on streaming workloads.
+pub(crate) const RESIDENT_CSR_QUEUE_MULTI_SOURCE_MIN_CAPACITY: u32 = 64;
 
 /// Maximum word-prefix scan blocks whose offsets are summed inside the scatter
 /// pass instead of paying a separate block-offset scan launch.

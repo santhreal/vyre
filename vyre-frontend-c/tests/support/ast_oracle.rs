@@ -461,7 +461,6 @@ fn declaration_location(
     (file, line, column)
 }
 
-
 fn walk_clang_symbol_scope_facts(
     node: &Value,
     target: &Path,
@@ -1018,4 +1017,3 @@ mod tests {
         assert_eq!(vast_kind_label(0xDEAD_BEEF), "Other(0xDEADBEEF)");
     }
 }
-

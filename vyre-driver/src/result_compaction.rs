@@ -448,7 +448,6 @@ mod tests {
         assert!(
             !src.contains(concat!("FxHashSet::with_capacity", "_and_hasher")),
             "Fix: result compaction scratch hash storage must not allocate infallibly."
-
         );
         assert!(
             !src.contains(concat!("Vec::with_capacity", "(slot_count)"))
@@ -532,4 +531,3 @@ mod tests {
         }
     }
 }
-

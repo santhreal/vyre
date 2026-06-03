@@ -166,7 +166,11 @@ fn reserve_resident_readback_outputs(
     if outputs.len() < views.len() {
         reserve_vec(outputs, views.len(), "resident readback output slots")?;
     }
-    for (view, output) in views.iter().take(existing_slots_to_copy).zip(outputs.iter_mut()) {
+    for (view, output) in views
+        .iter()
+        .take(existing_slots_to_copy)
+        .zip(outputs.iter_mut())
+    {
         reserve_vec(output, view.byte_len, "resident readback output bytes")?;
     }
     let mut appended_outputs = reserved_vec(
@@ -229,11 +233,7 @@ fn reserve_resident_readback_batch_outputs(
     {
         let existing_items_to_copy = batch_outputs.len().min(copies.len());
         if batch_outputs.len() < copies.len() {
-            reserve_vec(
-                batch_outputs,
-                copies.len(),
-                "batched readback item slots",
-            )?;
+            reserve_vec(batch_outputs, copies.len(), "batched readback item slots")?;
         }
         for output in batch_outputs.iter_mut().take(existing_items_to_copy) {
             let view = next_resident_readback_view(views, &mut view_index, total_copy_slots)?;
@@ -768,11 +768,7 @@ impl CudaBackend {
             total_copy_slots,
             "resident fused batched readback",
         )?;
-        reserve_resident_readback_batch_outputs(
-            copy_batches,
-            &fused_readbacks.views,
-            outputs,
-        )?;
+        reserve_resident_readback_batch_outputs(copy_batches, &fused_readbacks.views, outputs)?;
         if fused_readbacks.non_empty_copy_count == 0 {
             for batch_outputs in outputs.iter_mut() {
                 clear_vec_slots(batch_outputs);

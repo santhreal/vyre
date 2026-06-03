@@ -4,7 +4,7 @@ extern crate self as vyre;
 
 mod support;
 
-pub use support::{dialect, ir, ir_inner, optimizer, ops};
+pub use support::{dialect, ir, ir_inner, ops, optimizer};
 
 use vyre_macros::{define_op, skip_builder, vyre_ast_registry, vyre_pass, AlgebraicLaws};
 

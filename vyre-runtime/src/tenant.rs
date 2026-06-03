@@ -325,13 +325,16 @@ impl TenantHandle {
             Ordering::Acquire,
             |published| {
                 let drained = self.state.drained_count.load(Ordering::Acquire);
-                let outstanding =
-                    vyre_driver::accounting::checked_sub_u64_lazy(published, drained, || {
+                let outstanding = vyre_driver::accounting::checked_sub_u64_lazy(
+                    published,
+                    drained,
+                    || {
                         TenantError::Pipeline(PipelineError::QueueFull {
                             queue: "tenant",
                             fix: "tenant drained_count exceeded published_count; rebuild tenant accounting state",
                         })
-                    })?;
+                    },
+                )?;
                 if outstanding >= cap {
                     return Err(TenantError::Backpressure {
                         tenant_id: self.state.id,
@@ -505,9 +508,7 @@ fn checked_atomic_sub_u64(counter: &AtomicU64, value: u64, label: &'static str) 
         Ordering::Acquire,
         Ordering::AcqRel,
         Ordering::Acquire,
-        |_, _| {
-            format!("{label} underflowed u64. Fix: rebuild tenant accounting state.")
-        },
+        |_, _| format!("{label} underflowed u64. Fix: rebuild tenant accounting state."),
     )
     .unwrap_or_else(|message| panic!("{message}"));
 }
@@ -569,7 +570,7 @@ impl TenantRegistry {
                     },
                 )?;
                 Ok(())
-            }
+            },
         )?;
         let id = issued.max(1);
 
@@ -1058,4 +1059,3 @@ mod tests {
         assert_eq!(sorted.len(), ids.len(), "concurrent ids must be unique");
     }
 }
-

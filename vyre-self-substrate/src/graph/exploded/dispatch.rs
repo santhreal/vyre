@@ -11,7 +11,7 @@ use vyre_primitives::graph::exploded::{
     IFDS_CSR_KILL_PROC_BUFFER, IFDS_CSR_ROW_CURSOR_BUFFER, IFDS_CSR_ROW_PTR_BUFFER,
 };
 
-use crate::dispatch_buffers::decode_u32_output_exact;
+use crate::dispatch_buffers::{decode_u32_output_exact, u32_word_bytes};
 use crate::graph::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 
@@ -268,14 +268,8 @@ fn dispatch_ifds_csr_outputs_from_prepared_into(
     let output_base = match outputs.len() {
         4 => 0,
         5 => {
-            let expected_killed_bytes = plan
-                .killed_words
-                .checked_mul(std::mem::size_of::<u32>())
-                .ok_or_else(|| {
-                DispatchError::BackendError(
-                    "Fix: exploded IFDS killed scratch byte count overflowed usize.".to_string(),
-                )
-            })?;
+            let expected_killed_bytes =
+                u32_word_bytes(plan.killed_words, "exploded IFDS killed scratch")?;
             if outputs[0].len() != expected_killed_bytes {
                 return Err(DispatchError::BackendError(format!(
                     "Fix: {IFDS_CSR_KILLED_BUFFER} expected {expected_killed_bytes} byte(s), got {}.",

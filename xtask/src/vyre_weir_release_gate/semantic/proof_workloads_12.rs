@@ -1,13 +1,9 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     let Some(matrix) = first_json_evidence(
         requirement,
         base_dir,
@@ -59,12 +55,5 @@ pub(super) fn check(
     }
     check_release_bench_targets(requirement, base_dir, failures);
     check_workload_matrix_artifact_coverage(requirement, base_dir, &matrix, failures);
-    check_benchmark_evidence_reports(
-        requirement,
-        base_dir,
-        "workload-",
-        true,
-        None,
-        failures,
-    );
+    check_benchmark_evidence_reports(requirement, base_dir, "workload-", true, None, failures);
 }

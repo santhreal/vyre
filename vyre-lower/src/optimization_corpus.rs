@@ -493,7 +493,6 @@ fn dataflow_dse_case(seed: u32) -> OptimizationCorpusCase {
     }
 }
 
-
 fn push_control_cases(seed: u32, cases: &mut Vec<OptimizationCorpusCase>) {
     let mut desc = literal_descriptor("control", "branch_collapse", seed);
     desc.body.literals = vec![LiteralValue::Bool(seed & 1 == 0)];
@@ -966,7 +965,6 @@ fn vec_pack_fixture_case(seed: u32) -> OptimizationCorpusCase {
     }
 }
 
-
 fn buffer_slot(
     slot: u32,
     memory_class: MemoryClass,
@@ -1171,4 +1169,3 @@ fn literal_descriptor(family: &str, name: &str, seed: u32) -> KernelDescriptor {
         },
     }
 }
-

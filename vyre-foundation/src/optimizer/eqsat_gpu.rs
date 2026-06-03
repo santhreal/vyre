@@ -1235,4 +1235,3 @@ mod tests {
         assert_ne!(egraph.find(a), egraph.find(c));
     }
 }
-

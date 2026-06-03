@@ -1,13 +1,9 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     let Some(matrix) = first_json_evidence(
         requirement,
         base_dir,
@@ -58,9 +54,7 @@ pub(super) fn check(
                 "pass-family-benchmark-manifest.json",
                 failures,
             ) {
-                if manifest.get("backend").and_then(serde_json::Value::as_str)
-                    != Some("cuda")
-                {
+                if manifest.get("backend").and_then(serde_json::Value::as_str) != Some("cuda") {
                     failures.push(
                         "requirement `optimization-benchmark-proof` pass-family benchmark manifest must be cuda"
                             .to_string(),
@@ -105,8 +99,7 @@ pub(super) fn check(
                     if !cases.iter().any(|case| {
                         case.get("case_id").and_then(serde_json::Value::as_str)
                             == Some(required_case)
-                            && case.get("exists").and_then(serde_json::Value::as_bool)
-                                == Some(true)
+                            && case.get("exists").and_then(serde_json::Value::as_bool) == Some(true)
                             && case
                                 .get("read_error")
                                 .is_some_and(serde_json::Value::is_null)
@@ -125,8 +118,7 @@ pub(super) fn check(
                     }
                 }
                 for case in &cases {
-                    let Some(artifact) =
-                        case.get("artifact").and_then(serde_json::Value::as_str)
+                    let Some(artifact) = case.get("artifact").and_then(serde_json::Value::as_str)
                     else {
                         failures.push(
                             "requirement `optimization-benchmark-proof` pass-family manifest case is missing artifact"
@@ -300,12 +292,9 @@ pub(super) fn check(
                 "egraph-before-after.json",
                 failures,
             );
-            if let Some(report) = first_json_evidence(
-                requirement,
-                base_dir,
-                "egraph-before-after.json",
-                failures,
-            ) {
+            if let Some(report) =
+                first_json_evidence(requirement, base_dir, "egraph-before-after.json", failures)
+            {
                 require_case_metric_positive(
                     requirement,
                     "egraph-before-after.json",
@@ -343,12 +332,7 @@ pub(super) fn check(
                 "alias-aware-licm.json",
                 "alias-aware-fusion-fission.json",
             ] {
-                check_json_evidence_has_no_blockers(
-                    requirement,
-                    base_dir,
-                    suffix,
-                    failures,
-                );
+                check_json_evidence_has_no_blockers(requirement, base_dir, suffix, failures);
                 check_marker_evidence_has_markers(requirement, base_dir, suffix, failures);
             }
             check_before_after_benchmark_report(

@@ -465,7 +465,6 @@ fn dependency_version(
         })
 }
 
-
 fn dependency_uses_workspace(spec: &toml::Value) -> bool {
     spec.get("workspace").and_then(toml::Value::as_bool) == Some(true)
 }
@@ -541,4 +540,3 @@ fn default_output() -> PathBuf {
         .map(|path| path.join("release/evidence/package/publish-readiness.json"))
         .unwrap_or_else(|| PathBuf::from("release/evidence/package/publish-readiness.json"))
 }
-

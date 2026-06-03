@@ -98,9 +98,8 @@ fn generated_descriptors_emit_valid_raw_and_optimized_spirv() {
         let desc = generated_descriptor(seed.wrapping_mul(0x45d9_f3b));
         let raw = vyre_emit_spirv::emit(&desc)
             .unwrap_or_else(|err| panic!("raw SPIR-V emit failed for {}: {err:?}", desc.id));
-        let optimized = vyre_emit_spirv::emit_optimized(&desc).unwrap_or_else(|err| {
-            panic!("optimized SPIR-V emit failed for {}: {err:?}", desc.id)
-        });
+        let optimized = vyre_emit_spirv::emit_optimized(&desc)
+            .unwrap_or_else(|err| panic!("optimized SPIR-V emit failed for {}: {err:?}", desc.id));
 
         assert_eq!(raw[0], vyre_emit_spirv::SPIRV_MAGIC, "{}", desc.id);
         assert_eq!(
@@ -145,6 +144,10 @@ fn generated_descriptors_return_optimization_stats() {
             "{}",
             desc.id
         );
-        assert!(stats.iterations >= 1, "{} stats must record at least one pass", desc.id);
+        assert!(
+            stats.iterations >= 1,
+            "{} stats must record at least one pass",
+            desc.id
+        );
     }
 }

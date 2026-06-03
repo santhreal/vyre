@@ -1,13 +1,9 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
 use super::super::checks::*;
+use super::super::types::Requirement;
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     if !requirement.evidence.iter().any(|evidence| {
         evidence.contains("cargo_full")
             && evidence.contains("xtask")
@@ -39,8 +35,7 @@ pub(super) fn check(
         );
     }
 
-    let Some(audit) =
-        first_json_evidence(requirement, base_dir, "completion-audit.json", failures)
+    let Some(audit) = first_json_evidence(requirement, base_dir, "completion-audit.json", failures)
     else {
         return;
     };

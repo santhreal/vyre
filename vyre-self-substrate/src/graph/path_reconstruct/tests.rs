@@ -58,14 +58,14 @@ impl OptimizerDispatcher for RecordingPathDispatcher {
 fn reconstructs_chain_to_root() {
     // 0 is root (parent[0] = 0); 1 -> 0; 2 -> 1; 3 -> 2.
     let parent = vec![0, 0, 1, 2];
-    let path = path_to_root(&parent, 3, 4);
+    let path = reference_path_to_root(&parent, 3, 4);
     assert_eq!(path, vec![3, 2, 1, 0]);
 }
 
 #[test]
 fn reconstructs_root_yields_singleton() {
     let parent = vec![0, 0, 1];
-    let path = path_to_root(&parent, 0, 4);
+    let path = reference_path_to_root(&parent, 0, 4);
     assert_eq!(path, vec![0]);
 }
 
@@ -87,7 +87,7 @@ fn matches_primitive_directly() {
 fn max_depth_terminates_on_cycle() {
     // 0 -> 1 -> 2 -> 0 (cycle, no real root).
     let parent = vec![1, 2, 0];
-    let path = path_to_root(&parent, 0, 5);
+    let path = reference_path_to_root(&parent, 0, 5);
     assert_eq!(path.len(), 5);
 }
 

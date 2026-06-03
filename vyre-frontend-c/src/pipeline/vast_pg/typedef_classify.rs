@@ -133,11 +133,11 @@ fn classify_typedef_vast_unfused(
         }
         scoped_vast_blob.to_vec()
     } else {
-    let annotate_key = super::stage_pipeline_cache_key(
-        "c11_annotate_typedef_names",
-        &[
-            haystack_len.max(1) as u64,
-            vast_count.max(1) as u64,
+        let annotate_key = super::stage_pipeline_cache_key(
+            "c11_annotate_typedef_names",
+            &[
+                haystack_len.max(1) as u64,
+                vast_count.max(1) as u64,
                 packed_haystack as u64,
                 global_typedef_count as u64,
             ],

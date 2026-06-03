@@ -448,7 +448,6 @@ mod tests {
         assert!(proof.total_source_bytes >= 4 * 1024 * 1024);
         assert!(proof.total_semantic_graph_bytes >= 1024 * 1024);
         assert!(proof.speedup_x1000 >= 100_000);
-
     }
 
     #[test]
@@ -533,4 +532,3 @@ mod tests {
         }
     }
 }
-

@@ -49,7 +49,9 @@ mod tests {
     #[test]
     fn arithmetic_and_literals_are_dead_eliminable_when_unused() {
         assert!(kernel_op_kind_is_dce_pure(&KernelOpKind::Literal));
-        assert!(kernel_op_kind_is_dce_pure(&KernelOpKind::BinOpKind(BinOp::Add)));
+        assert!(kernel_op_kind_is_dce_pure(&KernelOpKind::BinOpKind(
+            BinOp::Add
+        )));
     }
 
     #[test]

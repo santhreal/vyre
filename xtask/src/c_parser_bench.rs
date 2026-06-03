@@ -1173,7 +1173,6 @@ fn summary_from_c_parse(summary: CParseSummary) -> VyreBenchSummary {
     }
 }
 
-
 fn summary_from_syntax_parse(summary: SyntaxParseSummary) -> VyreBenchSummary {
     VyreBenchSummary {
         token_count: summary.token_count,
@@ -1662,7 +1661,6 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
     })
 }
 
-
 fn parse_define(value: &str) -> (String, Option<String>) {
     match value.split_once('=') {
         Some((name, body)) => (name.to_string(), Some(body.to_string())),
@@ -1933,4 +1931,3 @@ mod tests {
         assert!(err.contains("--max-batch-bytes >= 536870912"));
     }
 }
-

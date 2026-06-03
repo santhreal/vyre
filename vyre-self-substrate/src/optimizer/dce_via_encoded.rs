@@ -1,8 +1,8 @@
 //! Dead-code elimination as a dispatched vyre Program.
 //!
 //! The encoder turns the user's `Program` into the canonical 5-buffer
-//! ProgramGraph CSR; we ask an `OptimizerDispatcher` to run
-//! `vyre_primitives::graph::persistent_bfs` against those buffers; the
+//! ProgramGraph CSR; we ask an `OptimizerDispatcher` to run the optimizer
+//! DCE BFS program against those buffers; the
 //! returned live-frontier bitset drives a structural rewrite of the
 //! input Program. There is no host-reference escape in production. If the
 //! encoder cannot yet handle a Program shape it returns `EncodeError`;
@@ -15,13 +15,13 @@
 
 use vyre_foundation::ir::Program;
 use vyre_primitives::bitset::bitset_words;
-use vyre_primitives::graph::persistent_bfs;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
 use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 
+use super::dce_program::build_dce_bfs_program;
 use super::dispatcher::{DispatchError, OptimizerDispatcher};
 use super::encode::{apply_live_mask, encode_program, EncodeError, EncodedProgram, ROOT_GRAPH_ID};
 
@@ -82,11 +82,12 @@ fn compute_live_mask_with_scratch_into(
         return Ok(());
     }
 
-    // Build the persistent_bfs analysis Program for this exact graph
-    // shape. Buffer names + binding indices are fixed by `program_graph`.
+    // Build the DCE analysis Program for this exact graph shape. Buffer
+    // names + binding indices match the persistent BFS layout, but the DCE
+    // variant exposes only the final changed flag instead of large-graph
+    // active scratch.
     let shape = ProgramGraphShape::new(encoded.node_count, encoded.edge_count);
-    let analysis =
-        persistent_bfs::persistent_bfs(shape, "frontier_in", "frontier_out", u32::MAX, n.max(1));
+    let analysis = build_dce_bfs_program(shape, n.max(1));
 
     let words = bitset_words(n) as usize;
     scratch.seed.clear();

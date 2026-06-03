@@ -45,7 +45,10 @@ fn append_literal_ops(desc: &mut vyre_lower::KernelDescriptor, count: usize) {
 }
 
 fn root_delta(diff: &DescriptorDiff) -> i64 {
-    diff.op_count_delta.get(&Vec::<usize>::new()).copied().unwrap_or(0)
+    diff.op_count_delta
+        .get(&Vec::<usize>::new())
+        .copied()
+        .unwrap_or(0)
 }
 
 #[test]

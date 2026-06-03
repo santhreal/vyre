@@ -1171,7 +1171,6 @@ fn require_area(area: &str) -> Result<(), String> {
     }
 }
 
-
 fn require_cuda_gates_probe_gpu() -> Result<(), String> {
     let missing = RELEASE_VALIDATION_MATRIX
         .iter()
@@ -1561,4 +1560,3 @@ mod tests {
         assert!(err.contains("missing manifest path"), "{err}");
     }
 }
-

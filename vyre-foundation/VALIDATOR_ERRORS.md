@@ -33,6 +33,7 @@
 - [V043  -  barrier uses memory ordering `...`, but barriers must synchronize memory](#v043)
 - [V044  -  binary operation `Mod` has a statically-zero divisor](#v044)
 - [V045  -  assignment to `...` has type `...` but the binding was declared as `...`](#v045)
+- [V046  -  distributed collective node validation failure](#v046)
 
 ## V001  -  Validation error V001
 
@@ -51,6 +52,26 @@ let bad_ir = ...;
 
 // Corrected input
 // (See error message for details)
+let good_ir = ...;
+```
+
+## V046  -  distributed collective node validation failure
+
+**Description**: distributed collective nodes require backend collective support, valid buffer references, global/device-visible storage, and matching input/output element types.
+
+**Common Cause**: A collective node was validated without distributed collective backend support, referenced an unknown or workgroup-local buffer, or paired buffers with mismatched element types.
+
+**Recommended Fix**: validate with backend collective support, declare every referenced collective buffer, keep collective buffers in device/global storage, and use matching element types before collective lowering.
+
+### Example
+
+```rust
+// Bad input
+// (Causes V046)
+let bad_ir = ...;
+
+// Corrected input
+// (validate with collective-capable backend settings and matching device-visible buffers.)
 let good_ir = ...;
 ```
 
@@ -653,4 +674,3 @@ let bad_ir = ...;
 // (cast the value to `{declared}` or introduce a new binding with the intended type.)
 let good_ir = ...;
 ```
-

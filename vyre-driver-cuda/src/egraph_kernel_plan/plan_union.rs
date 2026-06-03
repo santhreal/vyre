@@ -3,13 +3,14 @@ use crate::backend::staging_reserve::reserved_typed_vec;
 use rustc_hash::FxHashMap;
 use vyre_foundation::optimizer::eqsat_gpu::Equivalence;
 
+use super::helpers::usize_to_u64;
 use super::{
     helpers::{ceil_div_u64, wave_count_for},
-    CudaEGraphCanonicalRewrite, CudaEGraphCanonicalRewriteDeviceImage, CudaEGraphKernelLaunchConfig,
-    CudaEGraphKernelPlanError, CudaEGraphUnionCompactionPass, CudaEGraphUnionCompactionPlan,
-    CudaEGraphUnionCompactionWave, CUDA_EGRAPH_CANONICAL_REWRITE_RECORD_WORDS,
+    CudaEGraphCanonicalRewrite, CudaEGraphCanonicalRewriteDeviceImage,
+    CudaEGraphKernelLaunchConfig, CudaEGraphKernelPlanError, CudaEGraphUnionCompactionPass,
+    CudaEGraphUnionCompactionPlan, CudaEGraphUnionCompactionWave,
+    CUDA_EGRAPH_CANONICAL_REWRITE_RECORD_WORDS,
 };
-use super::helpers::usize_to_u64;
 
 /// Generate the concrete PTX kernel that compares packed e-graph rows inside
 /// one signature bucket wave and emits exact e-class equivalences.

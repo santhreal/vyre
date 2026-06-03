@@ -448,7 +448,6 @@ fn define_actions(macros: &[(String, Option<String>)]) -> Vec<CliMacroAction> {
         .collect()
 }
 
-
 fn remove_temp_object(object: &Path, cleanup_failures: &mut Vec<String>) {
     match fs::remove_file(object) {
         Ok(()) => {}
@@ -900,7 +899,6 @@ fn render_macros(macros: &[(String, Option<String>)]) -> Vec<String> {
         .collect()
 }
 
-
 fn collect_c_sources(
     dir: &Path,
     out: &mut Vec<PathBuf>,
@@ -972,4 +970,3 @@ fn default_output() -> PathBuf {
         .map(|path| path.join("release/evidence/parser/c-parser-linux-subsystem.json"))
         .unwrap_or_else(|| PathBuf::from("release/evidence/parser/c-parser-linux-subsystem.json"))
 }
-

@@ -247,7 +247,9 @@ fn generated_define_op_matrix_registers_every_category_signature_and_law_shape()
         assert!(!op.signature.bytes_extraction, "{}", expected.id);
         assert_eq!(op.laws, expected.laws, "{}", expected.id);
         assert_eq!(
-            (op.compose.expect("generated op must expose compose factory"))().id,
+            (op.compose
+                .expect("generated op must expose compose factory"))()
+            .id,
             expected.program_id,
             "{}",
             expected.id
@@ -274,7 +276,9 @@ fn generated_define_op_inventory_is_stable_across_thousands_of_lookups() {
         assert_eq!(op.signature.outputs.len(), expected.outputs.len());
         assert_eq!(op.laws.len(), expected.laws.len());
         assert_eq!(
-            (op.compose.expect("generated op must expose compose factory"))().id,
+            (op.compose
+                .expect("generated op must expose compose factory"))()
+            .id,
             expected.program_id
         );
         assertions += 7;

@@ -9,8 +9,8 @@
 use vyre::ir::{Expr, Node, Program};
 
 use crate::{
-    execution::node_tree::{contains_barrier, node_id},
     execution::expr as eval_expr,
+    execution::node_tree::{contains_barrier, node_id},
     oob,
     workgroup::{AsyncTransfer, Frame, Invocation, Memory},
 };
@@ -450,7 +450,6 @@ fn ensure_writable_buffer(memory: &mut Memory, program: &Program, name: &str) ->
     eval_expr::buffer_mut(memory, program, name).map(|_| ())
 }
 
-
 fn apply_async_transfer(
     transfer: AsyncTransfer,
     memory: &mut Memory,
@@ -646,4 +645,3 @@ mod tests {
         assert_eq!(bytes(&memory, "dst"), vec![0, 0, 0, 21, 22, 23, 24, 0]);
     }
 }
-
