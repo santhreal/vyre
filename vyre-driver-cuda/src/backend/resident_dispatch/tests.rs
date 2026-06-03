@@ -373,10 +373,18 @@ mod tests {
             .expect("Fix: CUDA resident sequence parameter cache must be reserved before upload staging.");
 
         assert!(
-            cache_section.contains("reserve_smallvec(\n            &mut sequence_param_cache")
+            production.contains(
+                "let mut sequence_param_cache = FxHashMap::<SmallVec<[u32; 8]>, u64>::default();"
+            )
+                && cache_section.contains("reserve_hash_map(\n            &mut sequence_param_cache")
                 && cache_section.contains("prepared_steps.len()")
-                && cache_section.contains("\"resident sequence parameter cache\""),
-            "Fix: CUDA resident sequence parameter-cache growth must be fallibly reserved to the prepared-step bound before hot-path pushes."
+                && cache_section.contains("\"resident sequence parameter cache\"")
+                && production.contains(
+                    "sequence_param_cache.get(step.prepared.launch.param_words.as_slice())"
+                )
+                && production.contains("sequence_param_cache.insert(cached_param_words, params_ptr)")
+                && !production.contains("sequence_param_cache.iter().find"),
+            "Fix: CUDA resident sequence parameter-cache growth must be fallibly reserved to the prepared-step bound and use exact hash lookup instead of rescanning cached launch words."
         );
     }
 

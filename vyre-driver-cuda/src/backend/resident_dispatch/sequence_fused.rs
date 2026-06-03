@@ -1,6 +1,7 @@
 use std::ffi::c_void;
 use std::sync::Arc;
 
+use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use vyre_driver::BackendError;
 
@@ -20,7 +21,7 @@ use crate::backend::resident_io::reserve_borrowed_resident_readback_outputs;
 use crate::backend::resident_readback_fusion::{
     fuse_resident_readback_copies, validate_fused_resident_readbacks, ResidentReadbackCopy,
 };
-use crate::backend::staging_reserve::reserve_smallvec;
+use crate::backend::staging_reserve::{reserve_hash_map, reserve_smallvec};
 
 impl CudaBackend {
     pub(crate) fn fill_upload_resident_many_repeated_sequence_read_ranges_borrowed_into(
@@ -221,8 +222,8 @@ impl CudaBackend {
             prepared_steps.len(),
             "resident sequence host transfers",
         )?;
-        let mut sequence_param_cache = SmallVec::<[(SmallVec<[u32; 8]>, u64); 8]>::new();
-        reserve_smallvec(
+        let mut sequence_param_cache = FxHashMap::<SmallVec<[u32; 8]>, u64>::default();
+        reserve_hash_map(
             &mut sequence_param_cache,
             prepared_steps.len(),
             "resident sequence parameter cache",
@@ -291,10 +292,8 @@ impl CudaBackend {
                 )?;
                 let params_ptr = if param_bytes == 0 {
                     0
-                } else if let Some((_, params_ptr)) =
-                    sequence_param_cache.iter().find(|(words, _)| {
-                        words.as_slice() == step.prepared.launch.param_words.as_slice()
-                    })
+                } else if let Some(params_ptr) =
+                    sequence_param_cache.get(step.prepared.launch.param_words.as_slice())
                 {
                     *params_ptr
                 } else {
@@ -344,7 +343,7 @@ impl CudaBackend {
                         "resident sequence cached parameter words",
                     )?;
                     cached_param_words.extend_from_slice(&step.prepared.launch.param_words);
-                    sequence_param_cache.push((cached_param_words, params_ptr));
+                    sequence_param_cache.insert(cached_param_words, params_ptr);
                     params_ptr
                 };
                 resolved_steps.push(ResolvedStep {
