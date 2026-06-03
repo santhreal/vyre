@@ -225,6 +225,7 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
                 "source_artifact `{artifact}` has no benchmark cases"
             ));
         }
+        inspect_release_axis_source_artifact_metrics(&artifact, &report, &mut issues);
         if let Some(mismatch) = benchmark_report_summary_case_evidence_mismatch(&report) {
             issues.push(format!(
                 "source_artifact `{artifact}` summary does not match case evidence: {mismatch}"
@@ -242,6 +243,73 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
         }
     }
     issues
+}
+
+fn inspect_release_axis_source_artifact_metrics(
+    artifact: &str,
+    report: &Value,
+    issues: &mut Vec<String>,
+) {
+    if artifact_positive_metric_percentile(report, "wall_ns", "p50").is_none() {
+        issues.push(format!(
+            "source_artifact `{artifact}` has no positive p50 wall_ns metric for warm_us_per_file"
+        ));
+    }
+    if first_positive_artifact_metric_percentile(
+        report,
+        &[
+            "cold_compile_ns",
+            "cold_wall_ns",
+            "compile_ns",
+            "lower_ns",
+            "optimize_ns",
+        ],
+        "p50",
+    )
+    .is_none()
+    {
+        issues.push(format!(
+            "source_artifact `{artifact}` has no positive p50 cold/compile metric for cold_pipeline_build_ms"
+        ));
+    }
+    if first_positive_artifact_metric_percentile(
+        report,
+        &["wall_gb_s_x1000", "device_gb_s_x1000"],
+        "p50",
+    )
+    .is_none()
+    {
+        issues.push(format!(
+            "source_artifact `{artifact}` has no positive p50 throughput metric for gbs_scan_throughput"
+        ));
+    }
+    if artifact_environment_first_gpu_u64(report, "memory_total_mib")
+        .filter(|value| *value > 0)
+        .or_else(|| artifact_positive_metric_percentile(report, "memory_total_mib", "p50"))
+        .is_none()
+    {
+        issues.push(format!(
+            "source_artifact `{artifact}` has no GPU memory_total_mib evidence for max_vram_mib"
+        ));
+    }
+}
+
+fn first_positive_artifact_metric_percentile(
+    report: &Value,
+    metric_names: &[&str],
+    percentile: &str,
+) -> Option<u64> {
+    metric_names.iter().find_map(|metric_name| {
+        artifact_positive_metric_percentile(report, metric_name, percentile)
+    })
+}
+
+fn artifact_positive_metric_percentile(
+    report: &Value,
+    metric_name: &str,
+    percentile: &str,
+) -> Option<u64> {
+    artifact_min_metric_percentile(report, metric_name, percentile).filter(|value| *value > 0)
 }
 
 fn inspect_release_axis_source_artifact_provenance(
@@ -2033,6 +2101,67 @@ mod tests {
                 "source_artifact `release/evidence/benchmarks/workload-backend-drift.json` case `release.backend-drift` backend_id `wgpu` does not match selected_backend `cuda`"
             )),
             "Fix: release-axis CUDA source artifact validation must reject case-level backend drift, not only artifact-level selected_backend; issues={issues:?}"
+        );
+    }
+
+    #[test]
+    fn cuda_release_axes_reject_source_artifacts_missing_axis_metrics() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for release axes metric test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temp benchmark evidence directory.");
+        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let artifact = "release/evidence/benchmarks/workload-missing-axis-metrics.json";
+        std::fs::write(
+            dir.path().join(artifact),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "source_tree_fingerprint": source_tree_fingerprint,
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.missing-axis-metrics",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"p50": 10}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize missing metric source artifact."),
+        )
+        .expect("Fix: write missing metric source artifact.");
+        let axes = serde_json::json!({
+            "source_artifacts": [artifact]
+        });
+        let cuda_suite = serde_json::json!({
+            "backend": "cuda",
+            "artifacts": [artifact]
+        });
+
+        let issues = cuda_release_axes_source_artifact_issues(dir.path(), &axes, &cuda_suite);
+
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/workload-missing-axis-metrics.json` has no positive p50 cold/compile metric for cold_pipeline_build_ms"
+            )),
+            "Fix: release-axis source artifacts must individually prove cold/compile metrics, not rely on another artifact; issues={issues:?}"
+        );
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/workload-missing-axis-metrics.json` has no positive p50 throughput metric for gbs_scan_throughput"
+            )),
+            "Fix: release-axis source artifacts must individually prove throughput metrics, not rely on another artifact; issues={issues:?}"
+        );
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/workload-missing-axis-metrics.json` has no GPU memory_total_mib evidence for max_vram_mib"
+            )),
+            "Fix: release-axis source artifacts must individually prove GPU memory evidence, not rely on another artifact; issues={issues:?}"
         );
     }
 

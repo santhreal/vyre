@@ -349,6 +349,38 @@ mod tests {
     }
 
     #[test]
+    fn bench_release_rejects_source_artifacts_missing_axis_metrics() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for bench-release axis metric test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        let artifacts = write_canonical_axes_fixture(&benchmark_dir, dir.path(), None);
+        let missing_metric_path = dir.path().join(&artifacts[5]);
+        let mut artifact = serde_json::from_str::<Value>(
+            &fs::read_to_string(&missing_metric_path)
+                .expect("Fix: read temporary CUDA axis artifact."),
+        )
+        .expect("Fix: temporary CUDA axis artifact must be JSON.");
+        artifact["cases"][0]["metrics"]["cold_compile_ns"] = Value::Null;
+        artifact["cases"][0]["metrics"]["wall_gb_s_x1000"] = Value::Null;
+        artifact["environment"] = Value::Null;
+        artifact["cases"][0]["metrics"]["memory_total_mib"] = Value::Null;
+        fs::write(
+            &missing_metric_path,
+            serde_json::to_string_pretty(&artifact)
+                .expect("Fix: serialize metric-poisoned temporary CUDA axis artifact."),
+        )
+        .expect("Fix: write metric-poisoned temporary CUDA axis artifact.");
+
+        let error = load_release_axes(&benchmark_dir)
+            .expect_err("Fix: source artifacts missing axis metrics must not load.");
+
+        assert!(
+            error.contains("has no positive p50 cold/compile metric for cold_pipeline_build_ms"),
+            "Fix: bench-release must reject old clean axes when a source artifact lacks required release-axis metrics; error={error}"
+        );
+    }
+
+    #[test]
     fn bench_release_rejects_mislabeled_cuda_suite_backend() {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for bench-release suite backend test.");
