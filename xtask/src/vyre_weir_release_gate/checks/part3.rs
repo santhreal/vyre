@@ -125,16 +125,21 @@ pub(crate) fn check_single_benchmark_report(
         .and_then(|summary| summary.get("failed"))
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(u64::MAX);
-    if failed != 0 {
-        let failed_cases =
-            crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(report);
+    let failed_cases = crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(report);
+    let case_failed = failed_cases.len() as u64;
+    if failed != 0 || case_failed != 0 {
         let detail = if failed_cases.is_empty() {
             String::new()
         } else {
             format!(": {}", failed_cases.join("; "))
         };
+        let count_detail = if failed == case_failed {
+            String::new()
+        } else {
+            format!("; case evidence reports {case_failed} failed case(s)")
+        };
         failures.push(format!(
-            "requirement `{}` benchmark `{}` reports {failed} failed case(s){detail}",
+            "requirement `{}` benchmark `{}` reports {failed} failed case(s){count_detail}{detail}",
             requirement.id,
             path.display()
         ));
@@ -477,6 +482,64 @@ mod part3_tests {
                 "reports 1 failed case(s): `sparse.compaction.count.1m`: Performance contract failed"
             ) && failure.contains("observed 86.90x")),
             "Fix: direct benchmark summary failures must include failed case identity and reason; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn single_benchmark_report_rejects_hidden_failed_case_summary_zero() {
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let report = serde_json::json!({
+            "selected_backend": "wgpu",
+            "summary": {"failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "wgpu",
+                    "status": "pass",
+                    "correctness": {
+                        "Invalid": {
+                            "reason": "CUDA/WGPU output mismatch at row 17"
+                        }
+                    },
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["wgpu"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "metrics": {
+                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                        "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002}
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 200.0}
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_single_benchmark_report(
+            &requirement,
+            Path::new("wgpu-hidden-invalid.json"),
+            &report,
+            false,
+            None,
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "reports 0 failed case(s); case evidence reports 1 failed case(s): `release.condition_eval.1m`: CUDA/WGPU output mismatch at row 17"
+            )),
+            "Fix: direct benchmark gate must reject hidden case failures even when summary.failed is zero; failures={failures:?}"
         );
     }
 }
