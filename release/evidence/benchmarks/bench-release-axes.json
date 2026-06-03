@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "warm_us_per_file": 605.361,
-  "cold_pipeline_build_ms": 1.572533,
+  "warm_us_per_file": 35.036,
+  "cold_pipeline_build_ms": 1.523812,
   "gbs_scan_throughput": 8.304,
   "ulp_drift_max": 0,
   "max_vram_mib": 32607,
@@ -18,7 +18,10 @@
     "release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
     "release/evidence/benchmarks/workload-11-egraph-saturation.json",
     "release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
-    "release/evidence/benchmarks/workload-13-callgraph-reachability.json"
+    "release/evidence/benchmarks/workload-13-callgraph-reachability.json",
+    "release/evidence/benchmarks/workload-14-compound-fused-filter.json",
+    "release/evidence/benchmarks/workload-15-adaptive-routing.json",
+    "release/evidence/benchmarks/workload-16-quantized-linear.json"
   ],
   "blockers": [
     "source_artifact `release/evidence/benchmarks/workload-01-condition-eval.json` source_fingerprint `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true` is dirty but has no worktree digest",

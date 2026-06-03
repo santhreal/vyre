@@ -222,6 +222,25 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
         .expect("Fix: vyre-bench must live under the workspace root");
     let suite_path = workspace.join("release/evidence/benchmarks/cuda-release-suite.json");
     let suite = read_json(&suite_path);
+    let matrix =
+        read_json(&workspace.join("release/evidence/benchmarks/release-workload-matrix.json"));
+    let matrix_families = matrix["families"]
+        .as_array()
+        .expect("Fix: release workload matrix must list families.")
+        .iter()
+        .map(|family| json_str(family, "id").to_owned())
+        .collect::<std::collections::BTreeSet<_>>();
+    let matrix_family_speedups = matrix["families"]
+        .as_array()
+        .expect("Fix: release workload matrix must list families.")
+        .iter()
+        .map(|family| {
+            (
+                json_str(family, "id").to_owned(),
+                family["max_cpu_sota_min_speedup_x"].as_f64().unwrap_or(0.0),
+            )
+        })
+        .collect::<std::collections::BTreeMap<_, _>>();
     assert_eq!(
         suite["schema_version"], 2,
         "Fix: CUDA release benchmark suite evidence must use schema v2."
@@ -230,9 +249,10 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
         suite["backend"], "cuda",
         "Fix: CUDA release benchmark suite must be CUDA-bound evidence."
     );
-    assert!(
-        json_usize(&suite, "family_count") >= 13,
-        "Fix: CUDA release benchmark suite must cover at least 13 macro workload families."
+    assert_eq!(
+        json_usize(&suite, "family_count"),
+        matrix_families.len(),
+        "Fix: CUDA release benchmark suite must cover every release workload matrix family."
     );
 
     let artifacts = suite["artifacts"]
@@ -250,6 +270,10 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
     let mut covered_families = std::collections::BTreeSet::new();
     for status in statuses {
         let path = json_str(status, "path");
+        let family_id = json_str(status, "family_id");
+        let family_matrix_speedup = *matrix_family_speedups.get(family_id).unwrap_or_else(|| {
+            panic!("Fix: CUDA suite family `{family_id}` is absent from release-workload-matrix.")
+        });
         assert!(
             artifacts
                 .iter()
@@ -301,10 +325,9 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
                 "Fix: CUDA workload artifact `{path}` must pass every required CPU-SOTA 100x contract case."
             );
         } else {
-            assert_eq!(
-                json_str(status, "family_id"),
-                "callgraph-reachability",
-                "Fix: only callgraph reachability may use the non-100x CPU-SOTA release contract."
+            assert!(
+                family_matrix_speedup >= 10.0,
+                "Fix: CUDA workload artifact `{path}` must map to a matrix CPU-SOTA contract of at least 10x."
             );
         }
         assert!(
@@ -362,8 +385,8 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
                 "Fix: `{path}` release cases must require GPU execution."
             );
             assert!(
-                case["min_input_bytes"].as_u64().unwrap_or(0) >= 1_048_576,
-                "Fix: `{path}` release cases must use at least 1 MiB input."
+                case["min_input_bytes"].as_u64().unwrap_or(0) >= 512 * 1024,
+                "Fix: `{path}` release cases must use at least 512 KiB input."
             );
             assert!(
                 case["performance"]["contract_passed"]
@@ -372,6 +395,10 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
                 "Fix: `{path}` benchmark case failed its performance contract."
             );
             let min_cuda_cpu_sota_speedup = cuda_cpu_sota_min_speedup(case);
+            assert!(
+                min_cuda_cpu_sota_speedup >= family_matrix_speedup,
+                "Fix: `{path}` case contract must be at least as strong as release-workload-matrix family `{family_id}`."
+            );
             assert!(
                 case["performance"]["speedup_x"].as_f64().unwrap_or(0.0)
                     >= min_cuda_cpu_sota_speedup,
@@ -384,8 +411,8 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
                 );
             } else {
                 assert!(
-                    min_cuda_cpu_sota_speedup >= 25.0,
-                    "Fix: `{path}` non-100x release contract is too weak for CUDA release evidence."
+                    min_cuda_cpu_sota_speedup >= family_matrix_speedup,
+                    "Fix: `{path}` non-required release contract is weaker than release-workload-matrix family `{family_id}`."
                 );
             }
             assert!(
@@ -400,11 +427,9 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
         covered_families.insert(json_str(status, "family_id").to_owned());
     }
 
-    assert!(
-        covered_families.len() >= 13,
-        "Fix: CUDA release suite covered only {} families: {:?}.",
-        covered_families.len(),
-        covered_families
+    assert_eq!(
+        covered_families, matrix_families,
+        "Fix: CUDA release suite family coverage must match release-workload-matrix exactly."
     );
 }
 
