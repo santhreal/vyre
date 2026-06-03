@@ -48,7 +48,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json",
@@ -80,7 +81,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json",
@@ -112,7 +114,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-04-metadata-conditions.json",
@@ -144,7 +147,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-05-entropy-window.json",
@@ -176,7 +180,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json",
@@ -208,7 +213,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-07-alias-reaching-def.json",
@@ -240,7 +246,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-08-ifds-witness.json",
@@ -272,7 +279,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-09-c-ast-traversal.json",
@@ -304,7 +312,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-10-megakernel-queued-batches.json",
@@ -336,7 +345,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-11-egraph-saturation.json",
@@ -368,7 +378,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-12-sparse-output-compaction.json",
@@ -400,7 +411,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-13-callgraph-reachability.json",
@@ -432,7 +444,8 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
-      "blockers": []
+      "blockers": [],
+      "min_kernel_launches": 1
     }
   ],
   "blockers": []

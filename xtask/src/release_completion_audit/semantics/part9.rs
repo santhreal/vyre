@@ -132,7 +132,19 @@ fn inspect_backend_suite_semantics(
                 "{evidence}: suite artifact `{path}` has backend-mismatched case(s)"
             ));
         }
-        if value.get("backend").and_then(serde_json::Value::as_str) == Some("cuda") {
+        let suite_backend = value.get("backend").and_then(serde_json::Value::as_str);
+        if matches!(suite_backend, Some("cuda" | "wgpu"))
+            && status
+                .get("min_kernel_launches")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0)
+                == 0
+        {
+            blockers.push(format!(
+                "{evidence}: GPU suite artifact `{path}` has non-positive `min_kernel_launches`"
+            ));
+        }
+        if suite_backend == Some("cuda") {
             for field in ["gpu_model", "nvidia_driver_version", "nvidia_cuda_version"] {
                 if status
                     .get(field)
@@ -171,16 +183,6 @@ fn inspect_backend_suite_semantics(
                 _ => blockers.push(format!(
                     "{evidence}: CUDA suite artifact `{path}` has no compute capability provenance"
                 )),
-            }
-            if status
-                .get("min_kernel_launches")
-                .and_then(serde_json::Value::as_u64)
-                .unwrap_or(0)
-                == 0
-            {
-                blockers.push(format!(
-                    "{evidence}: CUDA suite artifact `{path}` has non-positive `min_kernel_launches`"
-                ));
             }
             if status
                 .get("min_cuda_ptx_source_cache_entries")

@@ -669,7 +669,7 @@ pub(super) fn inspect_backend_suite_artifact(
             &mut blockers,
             case_id,
         );
-        if backend == "cuda" {
+        if matches!(backend, "cuda" | "wgpu") {
             record_required_metric_percentile(
                 &mut min_kernel_launches,
                 metrics,
@@ -678,6 +678,8 @@ pub(super) fn inspect_backend_suite_artifact(
                 &mut blockers,
                 case_id,
             );
+        }
+        if backend == "cuda" {
             record_required_metric_percentile(
                 &mut min_cuda_ptx_source_cache_entries,
                 metrics,

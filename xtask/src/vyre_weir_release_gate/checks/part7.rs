@@ -152,7 +152,20 @@ pub(crate) fn check_backend_suite_report(
                     requirement.id
                 ));
             }
-            if report.get("backend").and_then(serde_json::Value::as_str) == Some("cuda") {
+            let suite_backend = report.get("backend").and_then(serde_json::Value::as_str);
+            if matches!(suite_backend, Some("cuda" | "wgpu"))
+                && status
+                    .get("min_kernel_launches")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0)
+                    == 0
+            {
+                failures.push(format!(
+                    "requirement `{}` backend suite `{suffix}` GPU artifact `{path}` has non-positive `min_kernel_launches`",
+                    requirement.id
+                ));
+            }
+            if suite_backend == Some("cuda") {
                 for field in ["gpu_model", "nvidia_driver_version", "nvidia_cuda_version"] {
                     if status
                         .get(field)
@@ -196,17 +209,6 @@ pub(crate) fn check_backend_suite_report(
                         "requirement `{}` backend suite `{suffix}` CUDA artifact `{path}` has no compute capability provenance",
                         requirement.id
                     )),
-                }
-                if status
-                    .get("min_kernel_launches")
-                    .and_then(serde_json::Value::as_u64)
-                    .unwrap_or(0)
-                    == 0
-                {
-                    failures.push(format!(
-                        "requirement `{}` backend suite `{suffix}` CUDA artifact `{path}` has non-positive `min_kernel_launches`",
-                        requirement.id
-                    ));
                 }
                 if status
                     .get("min_cuda_ptx_source_cache_entries")
@@ -358,10 +360,26 @@ pub(crate) fn check_backend_suite_report(
                         selected_backend
                     ));
                 }
+                if matches!(expected_backend, "cuda" | "wgpu") {
+                    let artifact_label = path.display().to_string();
+                    require_case_metric_present(
+                        requirement,
+                        &artifact_label,
+                        &report,
+                        "kernel_launches",
+                        failures,
+                    );
+                    require_case_metric_positive(
+                        requirement,
+                        &artifact_label,
+                        &report,
+                        "kernel_launches",
+                        failures,
+                    );
+                }
                 if expected_backend == "cuda" {
                     let artifact_label = path.display().to_string();
                     for metric in [
-                        "kernel_launches",
                         "cuda_ptx_source_cache_entries",
                         "cuda_ptx_source_cache_hits",
                         "cuda_ptx_source_cache_misses",
@@ -383,13 +401,6 @@ pub(crate) fn check_backend_suite_report(
                             failures,
                         );
                     }
-                    require_case_metric_positive(
-                        requirement,
-                        &artifact_label,
-                        &report,
-                        "kernel_launches",
-                        failures,
-                    );
                 }
                 if let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) {
                     for case in cases {
