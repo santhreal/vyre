@@ -178,16 +178,22 @@ pub(crate) fn check_before_after_benchmark_report(
         .and_then(|summary| summary.get("failed"))
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(u64::MAX);
-    if failed != 0 {
-        let failed_cases =
-            crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&report);
+    let failed_cases =
+        crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&report);
+    let case_failed = failed_cases.len() as u64;
+    if failed != 0 || case_failed != 0 {
         let detail = if failed_cases.is_empty() {
             String::new()
         } else {
             format!(": {}", failed_cases.join("; "))
         };
+        let count_detail = if failed == case_failed {
+            String::new()
+        } else {
+            format!("; case evidence reports {case_failed} failed case(s)")
+        };
         failures.push(format!(
-            "requirement `{}` benchmark `{suffix}` reports {failed} failed case(s){detail}",
+            "requirement `{}` benchmark `{suffix}` reports {failed} failed case(s){count_detail}{detail}",
             requirement.id
         ));
     }

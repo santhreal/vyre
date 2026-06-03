@@ -20,16 +20,22 @@ pub(crate) fn check_benchmark_report_has_cases(
         .and_then(|summary| summary.get("failed"))
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(u64::MAX);
-    if failed != 0 {
-        let failed_cases =
-            crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&report);
+    let failed_cases =
+        crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&report);
+    let case_failed = failed_cases.len() as u64;
+    if failed != 0 || case_failed != 0 {
         let detail = if failed_cases.is_empty() {
             String::new()
         } else {
             format!(": {}", failed_cases.join("; "))
         };
+        let count_detail = if failed == case_failed {
+            String::new()
+        } else {
+            format!("; case evidence reports {case_failed} failed case(s)")
+        };
         failures.push(format!(
-            "requirement `{}` benchmark `{suffix}` reports {failed} failed case(s){detail}",
+            "requirement `{}` benchmark `{suffix}` reports {failed} failed case(s){count_detail}{detail}",
             requirement.id
         ));
     }
@@ -643,6 +649,60 @@ pub(crate) fn require_case_metric_present(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::fs;
+
+    use tempfile::TempDir;
+
+    #[test]
+    fn benchmark_report_has_cases_rejects_hidden_failed_case_summary_zero() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for hidden benchmark gate test.");
+        let artifact = dir.path().join("wgpu-hidden-invalid.json");
+        fs::write(
+            &artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "correctness": {
+                            "Invalid": {
+                                "reason": "CUDA/WGPU output mismatch at row 17"
+                            }
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize hidden failed benchmark evidence."),
+        )
+        .expect("Fix: write hidden failed benchmark evidence.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["wgpu-hidden-invalid.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_benchmark_report_has_cases(
+            &requirement,
+            dir.path(),
+            "wgpu-hidden-invalid.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "benchmark `wgpu-hidden-invalid.json` reports 0 failed case(s); case evidence reports 1 failed case(s): `release.condition_eval.1m`: CUDA/WGPU output mismatch at row 17"
+            )),
+            "Fix: generic benchmark gate must reject hidden case failures even when summary.failed is zero; failures={failures:?}"
+        );
+    }
 
     #[test]
     fn launch_metric_presence_requires_positive_value() {
