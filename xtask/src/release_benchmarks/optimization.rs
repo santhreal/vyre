@@ -305,10 +305,140 @@ mod tests {
             "Fix: write_release_axes must record suite backend identity drift in bench-release-axes; blockers={blockers:?}"
         );
     }
+
+    #[test]
+    fn optimization_artifact_inspection_surfaces_backend_and_source_integrity_blockers() {
+        let dir = TempDir::new()
+            .expect("Fix: create temp workspace for optimization artifact integrity test.");
+        let artifact = "release/evidence/optimization/optimizer-backend-drift.json";
+        let artifact_path = dir.path().join(artifact);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: optimization artifact path must have a parent directory."),
+        )
+        .expect("Fix: create optimization artifact integrity parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "foundation.optimizer.impact",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"],
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "optimizer_input_nodes": {"p50": 20},
+                            "optimizer_output_nodes": {"p50": 5},
+                            "optimizer_nodes_eliminated": {"p50": 15},
+                            "benchmark_repeats": {"p50": 30}
+                        },
+                        "contract": {
+                            "primitive": "foundation optimizer impact",
+                            "baselines": [
+                                {
+                                    "class": "CpuSota",
+                                    "backend_ids": ["cuda"],
+                                    "min_speedup_x": 100.0
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 100.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize optimization artifact integrity fixture."),
+        )
+        .expect("Fix: write optimization artifact integrity fixture.");
+
+        let inspection = inspect_optimization_benchmark_artifact(
+            dir.path(),
+            "cuda",
+            artifact,
+            &[
+                "optimizer_input_nodes",
+                "optimizer_output_nodes",
+                "optimizer_nodes_eliminated",
+            ],
+            &["optimizer_input_nodes", "optimizer_output_nodes"],
+        );
+
+        assert!(
+            inspection.blockers.iter().any(|blocker| blocker.contains(
+                "selected_backend `Some(\"wgpu\")` does not match requested backend `cuda`"
+            )),
+            "Fix: optimization benchmark inspection must expose backend identity drift; blockers={:?}",
+            inspection.blockers
+        );
+        assert!(
+            inspection.blockers.iter().any(|blocker| blocker.contains(
+                "source_artifact `release/evidence/optimization/optimizer-backend-drift.json` case `foundation.optimizer.impact` backend `wgpu` has no applicable performance contract baseline"
+            )),
+            "Fix: optimization benchmark inspection must expose wrong-backend performance contracts; blockers={:?}",
+            inspection.blockers
+        );
+        let borrowed_artifact = "release/evidence/optimization/optimizer-borrowed-cuda.json";
+        let borrowed_path = dir.path().join(borrowed_artifact);
+        fs::write(
+            &borrowed_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "foundation.optimizer.impact",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"],
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "optimizer_input_nodes": {"p50": 20},
+                            "optimizer_output_nodes": {"p50": 5},
+                            "optimizer_nodes_eliminated": {"p50": 15},
+                            "cuda_resident_borrowed_fallback_dispatches": {"p50": 2.0}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 100.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize borrowed CUDA optimization artifact fixture."),
+        )
+        .expect("Fix: write borrowed CUDA optimization artifact fixture.");
+
+        let borrowed_inspection = inspect_optimization_benchmark_artifact(
+            dir.path(),
+            "cuda",
+            borrowed_artifact,
+            &[
+                "optimizer_input_nodes",
+                "optimizer_output_nodes",
+                "optimizer_nodes_eliminated",
+            ],
+            &["optimizer_input_nodes", "optimizer_output_nodes"],
+        );
+
+        assert!(
+            borrowed_inspection.blockers.iter().any(|blocker| {
+                blocker.contains(
+                    "source_artifact `release/evidence/optimization/optimizer-borrowed-cuda.json` case `foundation.optimizer.impact` has cuda_resident_borrowed_fallback_dispatches p50=2",
+                ) && blocker.contains("optimization benchmark `release/evidence/optimization/optimizer-borrowed-cuda.json` must use native resident dispatch")
+            }),
+            "Fix: optimization benchmark inspection must expose borrowed resident CUDA dispatch telemetry; blockers={:?}",
+            borrowed_inspection.blockers
+        );
+    }
 }
 
 pub(super) fn inspect_optimization_benchmark_artifact(
     workspace_root: &Path,
+    expected_backend: &str,
     artifact: &str,
     required_custom_metrics: &[&str],
     required_positive_metrics: &[&str],
@@ -380,6 +510,18 @@ pub(super) fn inspect_optimization_benchmark_artifact(
             }
         }
     };
+    if report.get("selected_backend").and_then(Value::as_str) != Some(expected_backend) {
+        blockers.push(format!(
+            "selected_backend `{:?}` does not match requested backend `{expected_backend}`",
+            report.get("selected_backend").and_then(Value::as_str)
+        ));
+    }
+    crate::benchmark_evidence_semantics::inspect_source_artifact_case_integrity(
+        artifact,
+        &report,
+        &format!("optimization benchmark `{artifact}`"),
+        &mut blockers,
+    );
     let cases = report
         .get("cases")
         .and_then(Value::as_array)
@@ -857,6 +999,7 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
         )| {
             let inspection = inspect_optimization_benchmark_artifact(
                 workspace_root,
+                backend,
                 artifact,
                 &required_custom_metrics,
                 &required_positive_metrics,
