@@ -453,6 +453,7 @@ pub(crate) fn check_backend_conformance_report(
             requirement.id
         ));
     }
+    check_duplicate_backend_conformance_pair_op_ids(requirement, suffix, &report, failures);
     if let (Some(expected), Some(pairs)) = (
         expected_backend,
         report.get("pairs").and_then(serde_json::Value::as_array),
@@ -471,5 +472,78 @@ pub(crate) fn check_backend_conformance_report(
                 ));
             }
         }
+    }
+}
+
+fn check_duplicate_backend_conformance_pair_op_ids(
+    requirement: &Requirement,
+    suffix: &str,
+    report: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    let duplicates =
+        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
+            report, "pairs", "op_id",
+        );
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        failures.push(format!(
+            "requirement `{}` backend conformance `{suffix}` has duplicate pair op_id rows: {duplicates}",
+            requirement.id
+        ));
+    }
+}
+
+#[cfg(test)]
+mod part5_tests {
+    use super::*;
+
+    #[test]
+    fn backend_conformance_rejects_duplicate_pair_op_ids() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for backend conformance duplicate pair test.");
+        let report = serde_json::json!({
+            "schema_version": 2,
+            "backend_id": "cuda",
+            "total_pairs": 49,
+            "failed_pairs": 0,
+            "distinct_op_count": 49,
+            "catalog_required_op_count": 49,
+            "catalog_covered_op_count": 49,
+            "missing_catalog_ops": [],
+            "op_matrix_blocked_release_count": 0,
+            "release_backend_row_count": 147,
+            "missing_release_backend_rows": [],
+            "op_matrix_errors": [],
+            "duplicate_op_ids": [],
+            "pairs": [
+                {"op_id": "vyre.add", "backend_id": "cuda"},
+                {"op_id": "vyre.add", "backend_id": "cuda"}
+            ]
+        });
+        std::fs::write(dir.path().join("cuda-conformance.json"), report.to_string())
+            .expect("Fix: write backend conformance duplicate pair fixture.");
+        let requirement = Requirement {
+            id: "conformance-hard-gate".to_string(),
+            title: "conformance".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["cuda-conformance.json".to_string()],
+            minimum_evidence: 1,
+        };
+        let mut failures = Vec::new();
+
+        check_backend_conformance_report(
+            &requirement,
+            dir.path(),
+            "cuda-conformance.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("duplicate pair op_id rows: vyre.add")),
+            "Fix: backend conformance gate must reject duplicate pairs[].op_id even when duplicate_op_ids claims clean evidence; failures={failures:?}"
+        );
     }
 }

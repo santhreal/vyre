@@ -348,5 +348,59 @@ fn inspect_backend_conformance_semantics(
     {
         blockers.push(format!("{evidence}: duplicate_op_ids must be empty"));
     }
+    inspect_duplicate_backend_conformance_pair_op_ids(evidence, value, blockers);
 }
 
+fn inspect_duplicate_backend_conformance_pair_op_ids(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let duplicates =
+        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
+            value, "pairs", "op_id",
+        );
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        blockers.push(format!(
+            "{evidence}: duplicate backend conformance pair op_id rows: {duplicates}"
+        ));
+    }
+}
+
+#[cfg(test)]
+mod part2_tests {
+    use super::*;
+
+    #[test]
+    fn completion_audit_rejects_duplicate_backend_conformance_pair_op_ids() {
+        let report = serde_json::json!({
+            "schema_version": 2,
+            "backend_id": "cuda",
+            "total_pairs": 49,
+            "failed_pairs": 0,
+            "distinct_op_count": 49,
+            "catalog_required_op_count": 49,
+            "catalog_covered_op_count": 49,
+            "missing_catalog_ops": [],
+            "op_matrix_blocked_release_count": 0,
+            "release_backend_row_count": 147,
+            "missing_release_backend_rows": [],
+            "op_matrix_errors": [],
+            "duplicate_op_ids": [],
+            "pairs": [
+                {"op_id": "vyre.add", "backend_id": "cuda"},
+                {"op_id": "vyre.add", "backend_id": "cuda"}
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_backend_conformance_semantics("cuda-conformance.json", &report, &mut blockers);
+
+        assert!(
+            blockers.iter().any(|blocker| blocker
+                .contains("duplicate backend conformance pair op_id rows: vyre.add")),
+            "Fix: completion audit must reject duplicate backend conformance pairs[].op_id even when duplicate_op_ids claims clean evidence; blockers={blockers:?}"
+        );
+    }
+}
