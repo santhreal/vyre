@@ -10,10 +10,15 @@ use serde_json::Value;
 use vyre_bench::api::case::{BaselineClass, WorkloadClass};
 use vyre_bench::api::suite::SuiteKind;
 
-fn bench_targets_manifest() -> toml::Value {
-    let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+fn workspace_root() -> std::path::PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
-        .expect("Fix: vyre-bench must live under the workspace root.");
+        .expect("Fix: vyre-bench must live under the workspace root.")
+        .to_path_buf()
+}
+
+fn bench_targets_manifest() -> toml::Value {
+    let workspace = workspace_root();
     let targets_text =
         std::fs::read_to_string(workspace.join("docs/optimization/BENCH_TARGETS.toml"))
             .expect("Fix: BENCH_TARGETS.toml must be readable.");
@@ -711,6 +716,28 @@ fn release_matrix_covers_all_release_workload_bench_targets() {
             "Fix: release-workload BENCH_TARGETS target `{target_id}` must be linked from a release matrix family."
         );
     }
+}
+
+#[test]
+fn release_matrix_committed_evidence_matches_generated_matrix() {
+    let workspace = workspace_root();
+    let expected_path = workspace.join("release/evidence/benchmarks/release-workload-matrix.json");
+    let expected = std::fs::read_to_string(&expected_path)
+        .expect("Fix: release-workload-matrix.json must be readable.");
+    let registry = vyre_bench::registry::collect_all();
+    let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);
+    let generated = format!(
+        "{}\n",
+        serde_json::to_string_pretty(&matrix)
+            .expect("Fix: release workload matrix must serialize as JSON.")
+    );
+
+    assert_eq!(
+        expected,
+        generated,
+        "Fix: regenerate `{}` from vyre-bench release-matrix after changing release workload source data.",
+        expected_path.display()
+    );
 }
 
 #[test]
