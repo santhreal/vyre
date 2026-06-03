@@ -689,6 +689,79 @@ mod part7_tests {
     }
 
     #[test]
+    fn backend_suite_parity_reports_source_provenance_drift_for_matching_rows() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for backend suite parity test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create benchmark evidence directory for backend suite parity test.");
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/cuda-workload-01-condition-eval.json",
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m",
+                        "case_count": 1,
+                        "failed_count": 0,
+                        "nonmatching_case_backend_count": 0,
+                        "source_fingerprint": "git:cuda:dirty=false",
+                        "source_tree_fingerprint": "source-tree-v1:cuda"
+                    }
+                ],
+                "artifacts": ["release/evidence/benchmarks/cuda-workload-01-condition-eval.json"]
+            }))
+            .expect("Fix: serialize CUDA suite for backend suite parity test."),
+        )
+        .expect("Fix: write CUDA suite for backend suite parity test.");
+        std::fs::write(
+            benchmark_dir.join("wgpu-fallback-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m",
+                        "case_count": 1,
+                        "failed_count": 0,
+                        "nonmatching_case_backend_count": 0,
+                        "source_fingerprint": "git:wgpu:dirty=false",
+                        "source_tree_fingerprint": "source-tree-v1:wgpu"
+                    }
+                ],
+                "artifacts": ["release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"]
+            }))
+            .expect("Fix: serialize WGPU suite for backend suite parity test."),
+        )
+        .expect("Fix: write WGPU suite for backend suite parity test.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "WGPU fallback".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_parity(&requirement, &release_dir, &mut failures);
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "field `source_fingerprint` mismatch for family `condition-eval` case `release.condition_eval.1m`: cuda=Some(\"git:cuda:dirty=false\"), wgpu=Some(\"git:wgpu:dirty=false\")"
+            )),
+            "Fix: WGPU parity gate must report source_fingerprint drift on matching suite rows; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "field `source_tree_fingerprint` mismatch for family `condition-eval` case `release.condition_eval.1m`: cuda=Some(\"source-tree-v1:cuda\"), wgpu=Some(\"source-tree-v1:wgpu\")"
+            )),
+            "Fix: WGPU parity gate must report source_tree_fingerprint drift on matching suite rows; failures={failures:?}"
+        );
+    }
+
+    #[test]
     fn backend_suite_report_rejects_filename_backend_identity_drift() {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for backend suite identity test.");

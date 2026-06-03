@@ -696,6 +696,72 @@ mod part9_tests {
     }
 
     #[test]
+    fn completion_audit_reports_wgpu_cuda_source_provenance_parity_drift() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for completion suite parity test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create benchmark evidence directory for completion suite parity test.");
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/cuda-workload-01-condition-eval.json",
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m",
+                        "case_count": 1,
+                        "failed_count": 0,
+                        "nonmatching_case_backend_count": 0,
+                        "source_fingerprint": "git:cuda:dirty=false",
+                        "source_tree_fingerprint": "source-tree-v1:cuda"
+                    }
+                ],
+                "artifacts": ["release/evidence/benchmarks/cuda-workload-01-condition-eval.json"]
+            }))
+            .expect("Fix: serialize CUDA suite for completion suite parity test."),
+        )
+        .expect("Fix: write CUDA suite for completion suite parity test.");
+        let wgpu_path = benchmark_dir.join("wgpu-fallback-suite.json");
+        let wgpu_suite = serde_json::json!({
+            "artifact_statuses": [
+                {
+                    "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "case_count": 1,
+                    "failed_count": 0,
+                    "nonmatching_case_backend_count": 0,
+                    "source_fingerprint": "git:wgpu:dirty=false",
+                    "source_tree_fingerprint": "source-tree-v1:wgpu"
+                }
+            ],
+            "artifacts": ["release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_wgpu_cuda_suite_parity(
+            "release/evidence/benchmarks/wgpu-fallback-suite.json",
+            &wgpu_path,
+            &wgpu_suite,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "field `source_fingerprint` mismatch for family `condition-eval` case `release.condition_eval.1m`: cuda=Some(\"git:cuda:dirty=false\"), wgpu=Some(\"git:wgpu:dirty=false\")"
+            )),
+            "Fix: completion audit must report source_fingerprint drift on matching WGPU/CUDA suite rows; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "field `source_tree_fingerprint` mismatch for family `condition-eval` case `release.condition_eval.1m`: cuda=Some(\"source-tree-v1:cuda\"), wgpu=Some(\"source-tree-v1:wgpu\")"
+            )),
+            "Fix: completion audit must report source_tree_fingerprint drift on matching WGPU/CUDA suite rows; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
     fn completion_audit_rejects_filename_backend_identity_drift() {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for completion backend suite identity test.");
