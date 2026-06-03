@@ -44,7 +44,7 @@ fn inspect_backend_suite_semantics(
         .get("artifacts")
         .and_then(serde_json::Value::as_array)
         .map_or(0, Vec::len) as u64;
-    if family_count == 0 || artifact_count == 0 || family_count != artifact_count {
+    if family_count == 0 || artifact_count == 0 {
         blockers.push(format!(
             "{evidence}: family_count={family_count}, artifact_count={artifact_count}"
         ));
@@ -69,6 +69,18 @@ fn inspect_backend_suite_semantics(
                 status_count,
             } => blockers.push(format!(
                 "{evidence}: suite inventory count mismatch: artifacts={artifact_count}, artifact_statuses={status_count}"
+            )),
+            BackendSuiteInventoryIssue::DeclaredFamilyArtifactCountMismatch {
+                family_count,
+                artifact_count,
+            } => blockers.push(format!(
+                "{evidence}: family_count={family_count}, but artifacts has {artifact_count} row(s)"
+            )),
+            BackendSuiteInventoryIssue::DeclaredFamilyStatusCountMismatch {
+                family_count,
+                status_family_count,
+            } => blockers.push(format!(
+                "{evidence}: family_count={family_count}, but artifact_statuses has {status_family_count} unique family_id row(s)"
             )),
             BackendSuiteInventoryIssue::MissingStatus { path } => blockers.push(format!(
                 "{evidence}: suite lists artifact `{path}` without matching artifact_statuses entry"
@@ -1014,6 +1026,74 @@ mod part9_tests {
             )),
             "Fix: completion audit must reject repeated workload family coverage; blockers={blockers:?}"
         );
+    }
+
+    #[test]
+    fn completion_audit_rejects_declared_backend_suite_family_count_drift() {
+        let dir = tempfile::TempDir::new().expect(
+            "Fix: create temporary workspace for completion backend family count drift test.",
+        );
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir).expect(
+            "Fix: create benchmark evidence directory for completion backend count drift test.",
+        );
+        let artifacts = (0..12)
+            .map(|index| format!("release/evidence/benchmarks/cuda-workload-{index}.json"))
+            .collect::<Vec<_>>();
+        let artifact_statuses = artifacts
+            .iter()
+            .enumerate()
+            .map(|(index, path)| {
+                serde_json::json!({
+                    "path": path,
+                    "exists": true,
+                    "bytes": 1,
+                    "read_error": null,
+                    "family_id": format!("workload-{index}"),
+                    "requested_case_id": format!("release.workload_{index}.1m"),
+                    "source_fingerprint": "git:abc:dirty=false",
+                    "host_cpu_model": "test CPU",
+                    "selected_backend": "cuda",
+                    "case_count": 1,
+                    "failed_count": 0,
+                    "nonmatching_case_backend_count": 0,
+                    "min_kernel_launches": 1,
+                    "gpu_model": "RTX 5090",
+                    "nvidia_driver_version": "580.0",
+                    "nvidia_cuda_version": "13.0",
+                    "gpu_memory_total_mib": 24576,
+                    "gpu_compute_capability_major": 8,
+                    "gpu_compute_capability_minor": 9
+                })
+            })
+            .collect::<Vec<_>>();
+        let suite_path = benchmark_dir.join("cuda-release-suite.json");
+        let suite = serde_json::json!({
+            "schema_version": 2,
+            "backend": "cuda",
+            "family_count": 13,
+            "artifacts": artifacts,
+            "artifact_statuses": artifact_statuses,
+            "blockers": []
+        });
+        let mut blockers = Vec::new();
+
+        inspect_backend_suite_semantics(
+            "release/evidence/benchmarks/cuda-release-suite.json",
+            &suite_path,
+            &suite,
+            &mut blockers,
+        );
+
+        for expected in [
+            "family_count=13, but artifacts has 12 row(s)",
+            "family_count=13, but artifact_statuses has 12 unique family_id row(s)",
+        ] {
+            assert!(
+                blockers.iter().any(|blocker| blocker.contains(expected)),
+                "Fix: completion audit must reject stale backend suite declared family totals; blockers={blockers:?}"
+            );
+        }
     }
 
     #[test]

@@ -62,12 +62,6 @@ pub(crate) fn check_backend_suite_report(
             requirement.id
         ));
     }
-    if family_count as usize != artifact_count {
-        failures.push(format!(
-            "requirement `{}` backend suite `{suffix}` family_count={family_count} does not match artifact count {artifact_count}",
-            requirement.id
-        ));
-    }
     if let Some(blockers) = report.get("blockers").and_then(serde_json::Value::as_array) {
         for blocker in blockers {
             failures.push(format!(
@@ -84,6 +78,20 @@ pub(crate) fn check_backend_suite_report(
                 status_count,
             } => failures.push(format!(
                 "requirement `{}` backend suite `{suffix}` inventory count mismatch: artifacts={artifact_count}, artifact_statuses={status_count}",
+                requirement.id
+            )),
+            BackendSuiteInventoryIssue::DeclaredFamilyArtifactCountMismatch {
+                family_count,
+                artifact_count,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` family_count={family_count}, but artifacts has {artifact_count} row(s)",
+                requirement.id
+            )),
+            BackendSuiteInventoryIssue::DeclaredFamilyStatusCountMismatch {
+                family_count,
+                status_family_count,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` family_count={family_count}, but artifact_statuses has {status_family_count} unique family_id row(s)",
                 requirement.id
             )),
             BackendSuiteInventoryIssue::MissingStatus { path } => failures.push(format!(
@@ -1057,6 +1065,84 @@ mod part7_tests {
             )),
             "Fix: backend suite gate must reject repeated workload family coverage; failures={failures:?}"
         );
+    }
+
+    #[test]
+    fn backend_suite_report_rejects_declared_family_count_drift() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for backend suite family count drift test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create benchmark evidence directory for backend suite count drift test.");
+        let artifacts = (0..12)
+            .map(|index| format!("release/evidence/benchmarks/cuda-workload-{index}.json"))
+            .collect::<Vec<_>>();
+        let artifact_statuses = artifacts
+            .iter()
+            .enumerate()
+            .map(|(index, path)| {
+                serde_json::json!({
+                    "path": path,
+                    "exists": true,
+                    "bytes": 1,
+                    "read_error": null,
+                    "family_id": format!("workload-{index}"),
+                    "requested_case_id": format!("release.workload_{index}.1m"),
+                    "source_fingerprint": "git:abc:dirty=false",
+                    "host_cpu_model": "test CPU",
+                    "selected_backend": "cuda",
+                    "case_count": 1,
+                    "failed_count": 0,
+                    "nonmatching_case_backend_count": 0,
+                    "min_kernel_launches": 1,
+                    "gpu_model": "RTX 5090",
+                    "nvidia_driver_version": "580.0",
+                    "nvidia_cuda_version": "13.0",
+                    "gpu_memory_total_mib": 24576,
+                    "gpu_compute_capability_major": 8,
+                    "gpu_compute_capability_minor": 9
+                })
+            })
+            .collect::<Vec<_>>();
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "family_count": 13,
+                "artifacts": artifacts,
+                "artifact_statuses": artifact_statuses,
+                "blockers": []
+            }))
+            .expect("Fix: serialize CUDA suite with stale family_count."),
+        )
+        .expect("Fix: write CUDA suite with stale family_count.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
+            minimum_evidence: 1,
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_report(
+            &requirement,
+            &release_dir,
+            "cuda-release-suite.json",
+            &mut failures,
+        );
+
+        for expected in [
+            "family_count=13, but artifacts has 12 row(s)",
+            "family_count=13, but artifact_statuses has 12 unique family_id row(s)",
+        ] {
+            assert!(
+                failures.iter().any(|failure| failure.contains(expected)),
+                "Fix: release gate must reject stale backend suite declared family totals; failures={failures:?}"
+            );
+        }
     }
 
     #[test]

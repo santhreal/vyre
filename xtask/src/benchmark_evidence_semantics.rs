@@ -838,6 +838,14 @@ pub(crate) enum BackendSuiteInventoryIssue {
         artifact_count: usize,
         status_count: usize,
     },
+    DeclaredFamilyArtifactCountMismatch {
+        family_count: u64,
+        artifact_count: usize,
+    },
+    DeclaredFamilyStatusCountMismatch {
+        family_count: u64,
+        status_family_count: usize,
+    },
     MissingStatus {
         path: String,
     },
@@ -1702,6 +1710,7 @@ pub(crate) fn backend_suite_inventory_issues(suite: &Value) -> Vec<BackendSuiteI
     let status_count = suite_array_len(suite, "artifact_statuses");
     let artifact_counts = suite_artifact_path_counts(suite);
     let status_counts = suite_status_path_counts(suite);
+    let status_family_counts = suite_status_family_counts(suite);
     let artifact_paths = artifact_counts.keys().cloned().collect::<BTreeSet<_>>();
     let status_paths = status_counts.keys().cloned().collect::<BTreeSet<_>>();
     let mut issues = Vec::new();
@@ -1711,6 +1720,24 @@ pub(crate) fn backend_suite_inventory_issues(suite: &Value) -> Vec<BackendSuiteI
             artifact_count,
             status_count,
         });
+    }
+    if let Some(family_count) = suite.get("family_count").and_then(Value::as_u64) {
+        if family_count as usize != artifact_count {
+            issues.push(
+                BackendSuiteInventoryIssue::DeclaredFamilyArtifactCountMismatch {
+                    family_count,
+                    artifact_count,
+                },
+            );
+        }
+        if family_count as usize != status_family_counts.len() {
+            issues.push(
+                BackendSuiteInventoryIssue::DeclaredFamilyStatusCountMismatch {
+                    family_count,
+                    status_family_count: status_family_counts.len(),
+                },
+            );
+        }
     }
     for (path, count) in artifact_counts {
         if count > 1 {
@@ -1722,7 +1749,7 @@ pub(crate) fn backend_suite_inventory_issues(suite: &Value) -> Vec<BackendSuiteI
             issues.push(BackendSuiteInventoryIssue::DuplicateStatus { path });
         }
     }
-    for (family_id, count) in suite_status_family_counts(suite) {
+    for (family_id, count) in status_family_counts {
         if count > 1 {
             issues.push(BackendSuiteInventoryIssue::DuplicateFamily { family_id, count });
         }
@@ -3339,6 +3366,44 @@ mod tests {
                 count: 2,
             }],
             "Fix: backend suite family_count must represent unique workload families, not repeated family rows."
+        );
+    }
+
+    #[test]
+    fn backend_suite_inventory_rejects_declared_family_count_drift() {
+        let artifacts = (0..12)
+            .map(|index| format!("release/evidence/benchmarks/cuda/workload-{index}.json"))
+            .collect::<Vec<_>>();
+        let artifact_statuses = artifacts
+            .iter()
+            .enumerate()
+            .map(|(index, path)| {
+                serde_json::json!({
+                    "path": path,
+                    "family_id": format!("workload-{index}"),
+                    "requested_case_id": format!("release.workload_{index}.1m")
+                })
+            })
+            .collect::<Vec<_>>();
+        let suite = serde_json::json!({
+            "family_count": 13,
+            "artifacts": artifacts,
+            "artifact_statuses": artifact_statuses
+        });
+
+        assert_eq!(
+            backend_suite_inventory_issues(&suite),
+            vec![
+                BackendSuiteInventoryIssue::DeclaredFamilyArtifactCountMismatch {
+                    family_count: 13,
+                    artifact_count: 12,
+                },
+                BackendSuiteInventoryIssue::DeclaredFamilyStatusCountMismatch {
+                    family_count: 13,
+                    status_family_count: 12,
+                },
+            ],
+            "Fix: backend suite family_count must be derived from suite rows, not trusted as a stale release total."
         );
     }
 
