@@ -207,6 +207,11 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
                 BackendConsistencyIssue::MissingCaseId { case_index } => issues.push(format!(
                     "source_artifact `{artifact}` case index {case_index} must include a nonblank id"
                 )),
+                BackendConsistencyIssue::DuplicateCaseId { case_id, count } => {
+                    issues.push(format!(
+                        "source_artifact `{artifact}` has {count} cases with id `{case_id}`"
+                    ))
+                }
                 BackendConsistencyIssue::MissingCaseBackend {
                     case_id,
                     expected_backend,
@@ -678,6 +683,10 @@ pub(crate) enum LaunchPlanLabelIssue {
 pub(crate) enum BackendConsistencyIssue {
     MissingCaseId {
         case_index: usize,
+    },
+    DuplicateCaseId {
+        case_id: String,
+        count: usize,
     },
     MissingCaseBackend {
         case_id: String,
@@ -1820,10 +1829,14 @@ pub(crate) fn backend_consistency_issues(report: &Value) -> Vec<BackendConsisten
     };
 
     let mut issues = Vec::new();
+    let mut case_id_counts = BTreeMap::new();
     for (case_index, case) in cases.iter().enumerate() {
         let case_id = case.get("id").and_then(non_empty_str).map(str::to_string);
         if case_id.is_none() {
             issues.push(BackendConsistencyIssue::MissingCaseId { case_index });
+        }
+        if let Some(case_id) = &case_id {
+            *case_id_counts.entry(case_id.clone()).or_insert(0) += 1;
         }
         let case_id = case_id.unwrap_or_else(|| "<unknown>".to_string());
         match case
@@ -1841,6 +1854,11 @@ pub(crate) fn backend_consistency_issues(report: &Value) -> Vec<BackendConsisten
                 case_id,
                 expected_backend: expected_backend.to_string(),
             }),
+        }
+    }
+    for (case_id, count) in case_id_counts {
+        if count > 1 {
+            issues.push(BackendConsistencyIssue::DuplicateCaseId { case_id, count });
         }
     }
     issues
@@ -2782,6 +2800,27 @@ mod tests {
                 BackendConsistencyIssue::MissingCaseId { case_index: 1 },
             ],
             "Fix: backend consistency must require nonblank case ids before benchmark rows can prove release backend identity."
+        );
+    }
+
+    #[test]
+    fn backend_consistency_rejects_duplicate_case_identity() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "cases": [
+                {"id": "release.condition_eval.1m", "backend_id": "cuda"},
+                {"id": "release.condition_eval.1m", "backend_id": "cuda"},
+                {"id": "release.entropy_window.1m", "backend_id": "cuda"}
+            ]
+        });
+
+        assert_eq!(
+            backend_consistency_issues(&report),
+            vec![BackendConsistencyIssue::DuplicateCaseId {
+                case_id: "release.condition_eval.1m".to_string(),
+                count: 2,
+            }],
+            "Fix: duplicate benchmark case ids must not prove distinct release cases."
         );
     }
 

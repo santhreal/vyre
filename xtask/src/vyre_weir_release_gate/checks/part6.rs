@@ -546,6 +546,10 @@ fn check_case_backend_matches_selected_backend(
                 "requirement `{}` benchmark `{label}` case index {case_index} must include a nonblank id",
                 requirement.id
             )),
+            BackendConsistencyIssue::DuplicateCaseId { case_id, count } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` has {count} cases with id `{case_id}`",
+                requirement.id
+            )),
             BackendConsistencyIssue::MissingCaseBackend {
                 case_id,
                 expected_backend,
@@ -1036,6 +1040,56 @@ mod tests {
                 "benchmark `wgpu-blank-case-id.json` case index 0 must include a nonblank id"
             )),
             "Fix: generic benchmark gate must reject blank case ids before backend identity can be considered proven; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn benchmark_report_has_cases_rejects_duplicate_case_identity() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for duplicate case id benchmark gate test.");
+        let artifact = dir.path().join("wgpu-duplicate-case-id.json");
+        fs::write(
+            &artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 2, "passed": 2, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    },
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize duplicate case id benchmark evidence."),
+        )
+        .expect("Fix: write duplicate case id benchmark evidence.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["wgpu-duplicate-case-id.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_benchmark_report_has_cases(
+            &requirement,
+            dir.path(),
+            "wgpu-duplicate-case-id.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "benchmark `wgpu-duplicate-case-id.json` has 2 cases with id `release.condition_eval.1m`"
+            )),
+            "Fix: generic benchmark gate must reject duplicate case ids before case counts can prove release coverage; failures={failures:?}"
         );
     }
 
