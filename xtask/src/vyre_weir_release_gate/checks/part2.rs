@@ -223,6 +223,7 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
         ));
         return;
     };
+    check_duplicate_workload_family_ids(requirement, matrix, failures);
 
     let mut required_family_count = 0usize;
     let mut covered_family_count = 0usize;
@@ -458,5 +459,60 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
             "requirement `{}` has concrete artifacts for {covered_family_count} required workload families; needs at least 12",
             requirement.id
         ));
+    }
+}
+
+fn check_duplicate_workload_family_ids(
+    requirement: &Requirement,
+    matrix: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    let duplicates =
+        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
+            matrix, "families", "id",
+        );
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        failures.push(format!(
+            "requirement `{}` workload matrix has duplicate family ids: {duplicates}",
+            requirement.id
+        ));
+    }
+}
+
+#[cfg(test)]
+mod part2_tests {
+    use super::*;
+
+    #[test]
+    fn workload_matrix_rejects_duplicate_family_ids() {
+        let requirement = Requirement {
+            id: "proof-workloads-12".to_string(),
+            title: "proof workloads".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let matrix = serde_json::json!({
+            "families": [
+                {"id": "condition-eval", "required": true},
+                {"id": "condition-eval", "required": true}
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_workload_matrix_artifact_coverage(
+            &requirement,
+            Path::new("."),
+            &matrix,
+            &mut failures,
+        );
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("duplicate family ids: condition-eval")),
+            "Fix: release gate must reject duplicate workload matrix family ids before row counts can prove coverage; failures={failures:?}"
+        );
     }
 }

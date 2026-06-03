@@ -316,6 +316,7 @@ fn inspect_release_workload_matrix_semantics(
         blockers.push(format!("{evidence}: missing workload families array"));
         return;
     };
+    inspect_duplicate_workload_family_ids(evidence, value, blockers);
     let mut required_family_count = 0usize;
     let mut covered_family_count = 0usize;
     let mut artifacts = BTreeSet::new();
@@ -488,6 +489,23 @@ fn inspect_release_workload_matrix_semantics(
     }
 }
 
+fn inspect_duplicate_workload_family_ids(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let duplicates =
+        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
+            value, "families", "id",
+        );
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        blockers.push(format!(
+            "{evidence}: duplicate workload family ids: {duplicates}"
+        ));
+    }
+}
+
 fn inspect_duplicate_array_values(
     evidence: &str,
     value: &serde_json::Value,
@@ -553,6 +571,59 @@ mod part10_tests {
                 "duplicate required_cpu_sota_100x_families: release.condition-eval"
             )),
             "Fix: completion audit must reject duplicate CPU-SOTA matrix required family ids; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_duplicate_workload_matrix_family_ids() {
+        let matrix = serde_json::json!({
+            "required_closed_families": 12,
+            "matched_required_families": 12,
+            "release_suite_case_count": 12,
+            "cpu_sota_100x_family_count": 10,
+            "required_cpu_sota_100x_families": [
+                "release.condition-eval",
+                "release.entropy-window",
+                "release.ifds-witness",
+                "release.loop-carried",
+                "release.sparse-frontier",
+                "release.memory-coalescing",
+                "release.bank-conflict",
+                "release.vec-pack",
+                "release.control-flow",
+                "release.dataflow-dse"
+            ],
+            "missing_required_cpu_sota_100x_families": [],
+            "cpu_sota_100x_contract_cases": [
+                "release.condition_eval.1m",
+                "release.entropy_window.1m",
+                "release.ifds_witness.1m",
+                "release.loop_carried.1m",
+                "release.sparse_frontier.1m",
+                "release.memory_coalescing.1m",
+                "release.bank_conflict.1m",
+                "release.vec_pack.1m",
+                "release.control_flow.1m",
+                "release.dataflow_dse.1m"
+            ],
+            "families": [
+                {"id": "condition-eval", "required": true},
+                {"id": "condition-eval", "required": true}
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_release_workload_matrix_semantics(
+            "release-workload-matrix.json",
+            &matrix,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers
+                .iter()
+                .any(|blocker| blocker.contains("duplicate workload family ids: condition-eval")),
+            "Fix: completion audit must reject duplicate workload matrix family ids before row counts can prove coverage; blockers={blockers:?}"
         );
     }
 }
