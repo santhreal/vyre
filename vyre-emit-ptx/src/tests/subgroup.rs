@@ -62,6 +62,39 @@ fn subgroup_shuffle_emits_shfl_sync_idx() {
 }
 
 #[test]
+fn f32_subgroup_shuffle_bitcasts_through_b32() {
+    let kernel = KernelDescriptor {
+        id: "shuffle_f32".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(64, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::SubgroupShuffle,
+                    operands: vec![0, 1],
+                    result: Some(2),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::F32(7.0), LiteralValue::U32(3)],
+        },
+    };
+    let s = emit(&kernel).unwrap();
+    assert!(s.contains("mov.b32"));
+    assert!(s.contains("shfl.sync.idx.b32"));
+}
+
+#[test]
 fn f32_subgroup_add_emits_shuffle_tree() {
     let kernel = KernelDescriptor {
         id: "add".into(),

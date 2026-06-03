@@ -56,13 +56,7 @@ pub(crate) fn eval_subgroup_shuffle(
     snapshots: &[HashmapInvocationSnapshot],
     memory: &HashmapMemory,
 ) -> Result<Value, Error> {
-    let values = collect_lane_u32s(
-        value,
-        invocation.linear_local_index,
-        snapshots,
-        memory,
-        "subgroup_shuffle value is not a u32. Fix: use subgroup collectives with integer lanes only.",
-    )?;
+    let values = collect_lane_values(value, invocation.linear_local_index, snapshots, memory)?;
     let src_lanes = collect_lane_u32s(
         lane,
         invocation.linear_local_index,
@@ -70,9 +64,25 @@ pub(crate) fn eval_subgroup_shuffle(
         memory,
         "subgroup_shuffle lane index is not a u32. Fix: use a scalar u32 lane argument.",
     )?;
-    let shuffled = subgroup_simulator().shuffle(&values, &src_lanes);
     let local_offset = (invocation.linear_local_index as usize) % subgroup_simulator().width();
-    Ok(Value::U32(shuffled.get(local_offset).copied().unwrap_or(0)))
+    let src_lane = src_lanes.get(local_offset).copied().unwrap_or(u32::MAX) as usize;
+    if values.iter().all(|value| matches!(value, Value::U32(_))) {
+        let lanes = values
+            .iter()
+            .filter_map(Value::try_as_u32)
+            .collect::<SmallVec<[u32; 32]>>();
+        let shuffled = subgroup_simulator().shuffle(&lanes, &src_lanes);
+        return Ok(Value::U32(shuffled.get(local_offset).copied().unwrap_or(0)));
+    }
+    if values.iter().all(|value| matches!(value, Value::Float(_))) {
+        return match values.get(src_lane) {
+            Some(Value::Float(value)) => Ok(Value::Float(*value)),
+            _ => Ok(Value::Float(0.0)),
+        };
+    }
+    Err(Error::interp(
+        "subgroup_shuffle lanes have mixed or unsupported value types. Fix: cast every lane value to the same primitive u32 or f32 type before the subgroup collective.",
+    ))
 }
 
 #[cfg(feature = "subgroup-ops")]
@@ -144,4 +154,75 @@ fn collect_lane_values(
         .iter()
         .map(|lane| eval_expr_snapshot(expr, lane, snapshots, memory))
         .collect()
+}
+
+#[cfg(all(test, feature = "subgroup-ops"))]
+mod tests {
+    use super::*;
+    use crate::workgroup::InvocationIds;
+    use rustc_hash::FxHashMap;
+    use vyre::ir::Node;
+
+    fn snapshot_lane(index: u32, value: Value, source_lane: u32) -> HashmapInvocationSnapshot {
+        let entry: &[Node] = &[];
+        let mut invocation = HashmapInvocation::new(InvocationIds::ZERO, index, entry);
+        invocation
+            .locals
+            .bind("lane_value", value)
+            .expect("Fix: lane_value binding must be unique.");
+        invocation
+            .locals
+            .bind("source_lane", Value::U32(source_lane))
+            .expect("Fix: source_lane binding must be unique.");
+        HashmapInvocationSnapshot {
+            ids: invocation.ids,
+            linear_local_index: invocation.linear_local_index,
+            locals: invocation.locals.snapshot(),
+        }
+    }
+
+    #[test]
+    fn f32_shuffle_preserves_selected_lane_value() {
+        let snapshots = vec![
+            snapshot_lane(0, Value::Float(1.25), 2),
+            snapshot_lane(1, Value::Float(2.5), 0),
+            snapshot_lane(2, Value::Float(3.75), 1),
+        ];
+        let entry: &[Node] = &[];
+        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
+        let memory = HashmapMemory::new(FxHashMap::default());
+
+        let value = eval_subgroup_shuffle(
+            &Expr::var("lane_value"),
+            &Expr::var("source_lane"),
+            &invocation,
+            &snapshots,
+            &memory,
+        )
+        .expect("Fix: f32 subgroup shuffle must evaluate.");
+
+        assert_eq!(value, Value::Float(3.75));
+    }
+
+    #[test]
+    fn f32_shuffle_zeroes_out_of_range_lane() {
+        let snapshots = vec![
+            snapshot_lane(0, Value::Float(1.25), 9),
+            snapshot_lane(1, Value::Float(2.5), 0),
+        ];
+        let entry: &[Node] = &[];
+        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
+        let memory = HashmapMemory::new(FxHashMap::default());
+
+        let value = eval_subgroup_shuffle(
+            &Expr::var("lane_value"),
+            &Expr::var("source_lane"),
+            &invocation,
+            &snapshots,
+            &memory,
+        )
+        .expect("Fix: f32 subgroup shuffle must evaluate.");
+
+        assert_eq!(value, Value::Float(0.0));
+    }
 }

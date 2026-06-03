@@ -484,10 +484,21 @@ impl BodyCtx<'_> {
                 let mask = self.alloc(PtxType::U32);
                 let lane_mask = self.subgroup_lane_mask();
                 let _ = writeln!(self.text, "    activemask.b32    {mask};");
-                let _ = writeln!(
-                    self.text,
-                    "    shfl.sync.idx.b32    {result}, {value}, {lane}, 0x{lane_mask:x}, {mask};"
-                );
+                if value.0 == PtxType::F32 {
+                    let bits = self.alloc(PtxType::U32);
+                    let shuffled_bits = self.alloc(PtxType::U32);
+                    let _ = writeln!(self.text, "    mov.b32    {bits}, {value};");
+                    let _ = writeln!(
+                        self.text,
+                        "    shfl.sync.idx.b32    {shuffled_bits}, {bits}, {lane}, 0x{lane_mask:x}, {mask};"
+                    );
+                    let _ = writeln!(self.text, "    mov.b32    {result}, {shuffled_bits};");
+                } else {
+                    let _ = writeln!(
+                        self.text,
+                        "    shfl.sync.idx.b32    {result}, {value}, {lane}, 0x{lane_mask:x}, {mask};"
+                    );
+                }
                 self.bind_result(op, result)?;
             }
             SubgroupAdd => {
