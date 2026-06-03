@@ -31,6 +31,7 @@ fn inspect_optimization_family_manifest_semantics(
             "{evidence}: missing_required_families reports {missing_required} missing required optimization family/families"
         ));
     }
+    inspect_duplicate_optimization_family_rows(evidence, value, blockers);
     for family in families {
         let name = family
             .get("family")
@@ -75,6 +76,23 @@ fn inspect_optimization_family_manifest_semantics(
                 "{evidence}: required optimization family `{required}` has {required_cases} generated case(s), needs at least 128"
             ));
         }
+    }
+}
+
+fn inspect_duplicate_optimization_family_rows(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let duplicates =
+        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
+            value, "families", "family",
+        );
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        blockers.push(format!(
+            "{evidence}: duplicate optimization family rows: {duplicates}"
+        ));
     }
 }
 
@@ -200,6 +218,35 @@ fn is_test_suite_evidence(evidence: &str) -> bool {
     ]
     .iter()
     .any(|suffix| evidence.ends_with(suffix))
+}
+
+#[cfg(test)]
+mod part6_tests {
+    use super::*;
+
+    #[test]
+    fn completion_audit_rejects_duplicate_optimization_family_rows() {
+        let family_manifest = serde_json::json!({
+            "families": [
+                {"family": "algebraic", "cases": 128},
+                {"family": "algebraic", "cases": 128}
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_optimization_family_manifest_semantics(
+            "optimization-family-manifest.json",
+            &family_manifest,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers
+                .iter()
+                .any(|blocker| blocker.contains("duplicate optimization family rows: algebraic")),
+            "Fix: completion audit must reject duplicate optimization family manifest rows; blockers={blockers:?}"
+        );
+    }
 }
 
 fn inspect_oversized_test_closure_semantics(
@@ -458,4 +505,3 @@ fn inspect_modularization_map_semantics(
         }
     }
 }
-

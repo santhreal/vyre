@@ -143,6 +143,30 @@ pub(crate) fn duplicate_nonblank_string_array_values(
         })
 }
 
+pub(crate) fn duplicate_nonblank_object_array_field_values(
+    value: &Value,
+    array_field: &str,
+    object_field: &str,
+) -> BTreeSet<String> {
+    let mut seen = BTreeSet::new();
+    value
+        .get(array_field)
+        .and_then(Value::as_array)
+        .map_or_else(BTreeSet::new, |items| {
+            items
+                .iter()
+                .filter_map(|item| item.get(object_field).and_then(non_empty_str))
+                .filter_map(|item| {
+                    if seen.insert(item.to_string()) {
+                        None
+                    } else {
+                        Some(item.to_string())
+                    }
+                })
+                .collect::<BTreeSet<_>>()
+        })
+}
+
 pub(crate) fn cuda_release_axes_source_artifact_issues(
     workspace_root: &Path,
     axes: &Value,
@@ -2798,6 +2822,26 @@ mod tests {
                 "release.entropy_window.1m".to_string(),
             ]),
             "Fix: release aggregate proof arrays must expose duplicate nonblank ids without counting blank placeholders."
+        );
+    }
+
+    #[test]
+    fn duplicate_nonblank_object_array_field_values_reports_repeated_entries() {
+        let report = serde_json::json!({
+            "families": [
+                {"family": "algebraic"},
+                {"family": "predicate"},
+                {"family": "algebraic"},
+                {"family": " "},
+                {"family": null},
+                {"family": "predicate"}
+            ]
+        });
+
+        assert_eq!(
+            duplicate_nonblank_object_array_field_values(&report, "families", "family"),
+            BTreeSet::from(["algebraic".to_string(), "predicate".to_string()]),
+            "Fix: release manifest object arrays must expose duplicate nonblank ids without counting blank placeholders."
         );
     }
 
