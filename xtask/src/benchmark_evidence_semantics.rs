@@ -15,29 +15,31 @@ pub(crate) fn benchmark_case_failure_reason(case: &Value) -> Option<String> {
         .and_then(|performance| performance.get("contract_passed"))
         .and_then(Value::as_bool)
         == Some(false);
-    if status == Some("pass") && !contract_failed {
-        return None;
-    }
-    case.get("correctness")
+    let invalid_reason = case
+        .get("correctness")
         .and_then(|correctness| correctness.get("Invalid"))
         .and_then(|invalid| invalid.get("reason"))
         .and_then(Value::as_str)
         .filter(|reason| !reason.is_empty())
-        .map(str::to_string)
-        .or_else(|| {
-            let violations = case
-                .get("performance")
-                .and_then(|performance| performance.get("violations"))
-                .and_then(Value::as_array)?
+        .map(str::to_string);
+    let violation_reason = case
+        .get("performance")
+        .and_then(|performance| performance.get("violations"))
+        .and_then(Value::as_array)
+        .map(|violations| {
+            violations
                 .iter()
                 .filter_map(Value::as_str)
                 .filter(|violation| !violation.is_empty())
-                .collect::<Vec<_>>();
-            (!violations.is_empty()).then(|| violations.join("; "))
+                .collect::<Vec<_>>()
         })
+        .and_then(|violations| (!violations.is_empty()).then(|| violations.join("; ")));
+    invalid_reason
+        .or(violation_reason)
         .or_else(|| {
             status
                 .filter(|status| !status.is_empty())
+                .filter(|status| *status != "pass")
                 .map(|status| format!("status `{status}`"))
         })
         .or_else(|| contract_failed.then(|| "performance contract failed".to_string()))
@@ -1226,6 +1228,64 @@ fn is_blake3_hex_digest(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn failed_case_summary_rejects_pass_status_with_invalid_correctness() {
+        let case = serde_json::json!({
+            "id": "release.condition_eval.1m",
+            "status": "pass",
+            "correctness": {
+                "Invalid": {
+                    "reason": "dispatch output mismatch at row 17"
+                }
+            },
+            "performance": {"contract_passed": true}
+        });
+
+        assert_eq!(
+            benchmark_case_failure_reason(&case),
+            Some("dispatch output mismatch at row 17".to_string()),
+            "Fix: explicit invalid correctness evidence must not be hidden by a contradictory pass status."
+        );
+    }
+
+    #[test]
+    fn failed_case_summary_rejects_pass_status_with_performance_violations() {
+        let case = serde_json::json!({
+            "id": "release.condition_eval.1m",
+            "status": "pass",
+            "correctness": {"Valid": {}},
+            "performance": {
+                "contract_passed": true,
+                "violations": [
+                    "speedup below CUDA release floor",
+                    "p95 latency regression"
+                ]
+            }
+        });
+
+        assert_eq!(
+            benchmark_case_failure_reason(&case),
+            Some("speedup below CUDA release floor; p95 latency regression".to_string()),
+            "Fix: performance violation evidence must stay visible even when status is pass."
+        );
+    }
+
+    #[test]
+    fn failed_case_summary_reports_contract_failed_pass_as_contract_failure() {
+        let case = serde_json::json!({
+            "id": "release.condition_eval.1m",
+            "status": "pass",
+            "correctness": {"Valid": {}},
+            "performance": {"contract_passed": false}
+        });
+
+        assert_eq!(
+            benchmark_case_failure_reason(&case),
+            Some("performance contract failed".to_string()),
+            "Fix: contradictory pass status must not hide contract_passed=false evidence."
+        );
+    }
 
     #[test]
     fn launch_plan_issues_reject_single_label_for_multi_launch_count() {
