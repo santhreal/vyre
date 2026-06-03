@@ -71,15 +71,20 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
             .get("source_fingerprint")
             .and_then(Value::as_str)
             .filter(|value| !value.is_empty())
-            .map(str::to_string)
-            .or_else(|| {
-                report
-                    .get("git")
-                    .and_then(|git| git.get("commit"))
-                    .and_then(Value::as_str)
-                    .filter(|value| !value.is_empty())
-                    .map(|commit| format!("git:{commit}"))
-            });
+            .map(str::to_string);
+        if let Some(fingerprint) = &report_source_fingerprint {
+            if !crate::benchmark_evidence_semantics::source_fingerprint_issues(fingerprint)
+                .is_empty()
+            {
+                blockers.push(format!(
+                    "100x source artifact `{artifact}` source_fingerprint `{fingerprint}` is not release-grade provenance"
+                ));
+            }
+        } else {
+            blockers.push(format!(
+                "100x source artifact `{artifact}` has no source_fingerprint"
+            ));
+        }
         match (&source_fingerprint, &report_source_fingerprint) {
             (None, Some(fingerprint)) => source_fingerprint = Some(fingerprint.clone()),
             (Some(expected), Some(actual)) if expected != actual => blockers.push(format!(
@@ -1553,6 +1558,113 @@ mod tests {
                     "100x source artifact `release/evidence/benchmarks/cuda-missing-status.json` case `release.condition_eval.1m` failed: missing pass status"
                 )),
             "Fix: aggregate CPU-SOTA proof blockers must expose missing pass status; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_proof_rejects_missing_and_weak_source_fingerprint() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for CPU-SOTA provenance proof test.");
+        let artifacts = [
+            (
+                "release/evidence/benchmarks/cuda-no-source-fingerprint.json",
+                None,
+            ),
+            (
+                "release/evidence/benchmarks/cuda-legacy-dirty-source.json",
+                Some("git:abc123:dirty=true"),
+            ),
+        ];
+        for (artifact_rel, source_fingerprint) in artifacts {
+            let artifact_path = dir.path().join(artifact_rel);
+            fs::create_dir_all(
+                artifact_path
+                    .parent()
+                    .expect("Fix: CPU-SOTA provenance artifact path must have a parent directory."),
+            )
+            .expect("Fix: create CPU-SOTA provenance proof artifact parent directory.");
+            let mut artifact = json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "source_tree_fingerprint": "source-tree-v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "summary": {
+                    "total_cases": 1,
+                    "passed": 1,
+                    "failed": 0,
+                    "total_time_ns": 0,
+                    "cache_hit_rate": null
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002}
+                        },
+                        "contract": {
+                            "primitive": "release condition eval",
+                            "baselines": [
+                                {
+                                    "name": "CPU-SOTA",
+                                    "crate_name": "vyre-runtime",
+                                    "class": "CpuSota",
+                                    "min_speedup_x": 100.0,
+                                    "backend_ids": ["cuda"]
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 200.0}
+                    }
+                ]
+            });
+            if let Some(source_fingerprint) = source_fingerprint {
+                artifact["source_fingerprint"] = Value::String(source_fingerprint.to_string());
+            }
+            fs::write(
+                &artifact_path,
+                serde_json::to_string_pretty(&artifact)
+                    .expect("Fix: serialize CPU-SOTA provenance benchmark artifact JSON."),
+            )
+            .expect("Fix: write CPU-SOTA provenance benchmark artifact JSON.");
+        }
+
+        write_cpu_100x_proof(
+            dir.path(),
+            &artifacts
+                .iter()
+                .map(|(artifact, _)| artifact.to_string())
+                .collect::<Vec<_>>(),
+        );
+
+        let proof_path = dir
+            .path()
+            .join("release/evidence/benchmarks/cpu-only-100x-proof.json");
+        let proof_text = fs::read_to_string(&proof_path)
+            .expect("Fix: read generated CPU-SOTA 100x proof artifact.");
+        let proof = serde_json::from_str::<Value>(&proof_text)
+            .expect("Fix: generated CPU-SOTA 100x proof must be valid JSON.");
+        let blockers = proof
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated CPU-SOTA proof must include blockers array.");
+
+        assert!(
+            blockers.iter().filter_map(Value::as_str).any(|blocker| {
+                blocker.contains(
+                    "100x source artifact `release/evidence/benchmarks/cuda-no-source-fingerprint.json` has no source_fingerprint",
+                )
+            }),
+            "Fix: aggregate CPU-SOTA proof must reject source artifacts without explicit source_fingerprint; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().filter_map(Value::as_str).any(|blocker| {
+                blocker.contains(
+                    "100x source artifact `release/evidence/benchmarks/cuda-legacy-dirty-source.json` source_fingerprint `git:abc123:dirty=true` is not release-grade provenance",
+                )
+            }),
+            "Fix: aggregate CPU-SOTA proof must reject weak dirty source_fingerprint provenance; blockers={blockers:?}"
         );
     }
 
