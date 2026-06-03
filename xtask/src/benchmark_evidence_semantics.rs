@@ -352,6 +352,26 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
                 )),
             }
         }
+        for issue in cuda_forbidden_telemetry_issues(&report) {
+            match issue {
+                CudaForbiddenTelemetryIssue::ResidentBorrowedEscapeHatch {
+                    case_id,
+                    observed_p50,
+                } => issues.push(format!(
+                    "source_artifact `{artifact}` case `{case_id}` has cuda_resident_borrowed_fallback_dispatches p50={observed_p50}; canonical CUDA release axes must use native resident dispatch"
+                )),
+            }
+        }
+        for issue in cuda_telemetry_label_issues(&report) {
+            match issue {
+                CudaTelemetryLabelIssue::MissingLabel { case_id, label } => issues.push(format!(
+                    "source_artifact `{artifact}` case `{case_id}` has positive CUDA telemetry counters but is missing `{label}`"
+                )),
+                CudaTelemetryLabelIssue::LabelWithoutCounters { case_id, label } => issues.push(format!(
+                    "source_artifact `{artifact}` case `{case_id}` lists `{label}` but all matching CUDA telemetry counters are zero or missing"
+                )),
+            }
+        }
         if report
             .get("cases")
             .and_then(Value::as_array)
@@ -2913,6 +2933,67 @@ mod tests {
                 "source_artifact `release/evidence/benchmarks/workload-backend-drift.json` case `release.backend-drift` backend_id `wgpu` does not match selected_backend `cuda`"
             )),
             "Fix: release-axis CUDA source artifact validation must reject case-level backend drift, not only artifact-level selected_backend; issues={issues:?}"
+        );
+    }
+
+    #[test]
+    fn cuda_release_axes_reject_borrowed_resident_fallback_source_artifact() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for release axes CUDA telemetry test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temp benchmark evidence directory.");
+        let source_fingerprint = current_test_source_fingerprint(dir.path());
+        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let artifact = "release/evidence/benchmarks/workload-borrowed-resident.json";
+        std::fs::write(
+            dir.path().join(artifact),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "source_fingerprint": source_fingerprint,
+                "source_tree_fingerprint": source_tree_fingerprint,
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.borrowed-resident",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"],
+                        "metrics": {
+                            "wall_ns": {"p50": 17_000},
+                            "cold_compile_ns": {"p50": 2_000_000},
+                            "wall_gb_s_x1000": {"p50": 4_000},
+                            "memory_total_mib": {"p50": 24_576},
+                            "cuda_resident_borrowed_fallback_dispatches": {"p50": 2.0}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize borrowed resident source artifact."),
+        )
+        .expect("Fix: write borrowed resident source artifact.");
+        let axes = serde_json::json!({
+            "warm_us_per_file": 17.0,
+            "cold_pipeline_build_ms": 2.0,
+            "gbs_scan_throughput": 4.0,
+            "ulp_drift_max": 0,
+            "max_vram_mib": 24_576,
+            "source_artifacts": [artifact]
+        });
+        let cuda_suite = serde_json::json!({
+            "backend": "cuda",
+            "artifacts": [artifact]
+        });
+
+        let issues = cuda_release_axes_source_artifact_issues(dir.path(), &axes, &cuda_suite);
+
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/workload-borrowed-resident.json` case `release.borrowed-resident` has cuda_resident_borrowed_fallback_dispatches p50=2"
+            ) && issue.contains("canonical CUDA release axes must use native resident dispatch")),
+            "Fix: canonical CUDA release axes must reject source artifacts measured through the borrowed resident fallback escape hatch; issues={issues:?}"
         );
     }
 

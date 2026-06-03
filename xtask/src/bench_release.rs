@@ -352,6 +352,38 @@ mod tests {
     }
 
     #[test]
+    fn bench_release_rejects_borrowed_resident_fallback_source_artifacts() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for bench-release CUDA telemetry test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        let artifacts = write_canonical_axes_fixture(&benchmark_dir, dir.path(), None);
+        let polluted_path = dir.path().join(&artifacts[6]);
+        let mut artifact = serde_json::from_str::<Value>(
+            &fs::read_to_string(&polluted_path).expect("Fix: read temporary CUDA axis artifact."),
+        )
+        .expect("Fix: temporary CUDA axis artifact must be JSON.");
+        artifact["cases"][0]["optimization_passes_applied"] =
+            serde_json::json!(["cuda-resident-borrowed-escape-hatch"]);
+        artifact["cases"][0]["metrics"]["cuda_resident_borrowed_fallback_dispatches"] =
+            serde_json::json!({"p50": 2.0});
+        fs::write(
+            &polluted_path,
+            serde_json::to_string_pretty(&artifact)
+                .expect("Fix: serialize polluted temporary CUDA axis artifact."),
+        )
+        .expect("Fix: write polluted temporary CUDA axis artifact.");
+
+        let error = load_release_axes(&benchmark_dir)
+            .expect_err("Fix: borrowed resident fallback source artifacts must not load.");
+
+        assert!(
+            error.contains("cuda_resident_borrowed_fallback_dispatches p50=2")
+                && error.contains("canonical CUDA release axes must use native resident dispatch"),
+            "Fix: bench-release must reject canonical axes backed by borrowed resident fallback dispatches; error={error}"
+        );
+    }
+
+    #[test]
     fn bench_release_rejects_source_artifacts_missing_axis_metrics() {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for bench-release axis metric test.");
