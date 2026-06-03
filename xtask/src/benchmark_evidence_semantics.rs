@@ -36,11 +36,10 @@ pub(crate) fn benchmark_case_failure_reason(case: &Value) -> Option<String> {
         .and_then(|violations| (!violations.is_empty()).then(|| violations.join("; ")));
     invalid_reason
         .or(violation_reason)
-        .or_else(|| {
-            status
-                .filter(|status| !status.is_empty())
-                .filter(|status| *status != "pass")
-                .map(|status| format!("status `{status}`"))
+        .or_else(|| match status {
+            Some("pass") => None,
+            Some(status) if !status.is_empty() => Some(format!("status `{status}`")),
+            _ => Some("missing pass status".to_string()),
         })
         .or_else(|| contract_failed.then(|| "performance contract failed".to_string()))
 }
@@ -976,7 +975,12 @@ fn artifact_cpu_sota_100x_contract_counts(artifact_report: &Value) -> (u64, u64)
                 .is_some_and(|speedup| speedup >= 100.0);
             (
                 contract_count + 1,
-                passing_count + u64::from(contract_passed && speedup_passed),
+                passing_count
+                    + u64::from(
+                        benchmark_case_passes_summary_evidence(case)
+                            && contract_passed
+                            && speedup_passed,
+                    ),
             )
         })
 }
@@ -1444,6 +1448,21 @@ mod tests {
             benchmark_case_failure_reason(&case),
             Some("performance contract failed".to_string()),
             "Fix: contradictory pass status must not hide contract_passed=false evidence."
+        );
+    }
+
+    #[test]
+    fn failed_case_summary_rejects_missing_pass_status() {
+        let case = serde_json::json!({
+            "id": "release.condition_eval.1m",
+            "correctness": {"Valid": {}},
+            "performance": {"contract_passed": true}
+        });
+
+        assert_eq!(
+            benchmark_case_failure_reason(&case),
+            Some("missing pass status".to_string()),
+            "Fix: benchmark evidence must require an explicit pass status before a case can prove release performance."
         );
     }
 
@@ -2662,6 +2681,52 @@ mod tests {
                 },
             ],
             "Fix: WGPU suite status must not count a CUDA-only CpuSota baseline as WGPU proof."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_unproven_cpu_sota_pass_status() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+            "selected_backend": "wgpu",
+            "case_count": 1,
+            "failed_count": 1,
+            "nonmatching_case_backend_count": 0,
+            "requested_case_id": "release.condition_eval.1m",
+            "cpu_sota_100x_contract_cases": 1,
+            "cpu_sota_100x_passing_cases": 1
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "wgpu",
+            "summary": {"total_cases": 1, "passed": 0, "failed": 1},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "wgpu",
+                    "contract": {
+                        "primitive": "condition eval",
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["wgpu"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 120.0}
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![BackendSuiteArtifactStatusIssue::CpuSota100xPassingCaseCountMismatch {
+                path: "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"
+                    .to_string(),
+                status_passing_cases: 1,
+                artifact_passing_cases: 0,
+            }],
+            "Fix: CPU-SOTA suite status must not count contract_passed speedup evidence without an explicit passing case status."
         );
     }
 
