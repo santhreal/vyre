@@ -173,6 +173,16 @@ fn inspect_backend_suite_semantics(
                 )),
             }
             if status
+                .get("min_kernel_launches")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0)
+                == 0
+            {
+                blockers.push(format!(
+                    "{evidence}: CUDA suite artifact `{path}` has non-positive `min_kernel_launches`"
+                ));
+            }
+            if status
                 .get("min_cuda_ptx_source_cache_entries")
                 .and_then(serde_json::Value::as_u64)
                 .unwrap_or(0)
@@ -432,4 +442,3 @@ fn benchmark_report_metric_p50_equals(
             })
         })
 }
-

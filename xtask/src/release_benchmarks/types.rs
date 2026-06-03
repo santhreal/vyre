@@ -66,6 +66,7 @@ pub(super) struct BackendSuiteArtifact {
     pub(super) min_cuda_ptx_source_cache_entries: Option<u64>,
     pub(super) min_cuda_ptx_source_cache_hits: Option<u64>,
     pub(super) min_cuda_ptx_source_cache_misses: Option<u64>,
+    pub(super) min_kernel_launches: Option<u64>,
     pub(super) case_count: usize,
     pub(super) failed_count: Option<u64>,
     pub(super) nonmatching_case_backend_count: usize,
@@ -159,4 +160,3 @@ pub(super) struct OptimizationArtifactInspection {
     pub(super) non_winning_cases: Vec<String>,
     pub(super) blockers: Vec<String>,
 }
-

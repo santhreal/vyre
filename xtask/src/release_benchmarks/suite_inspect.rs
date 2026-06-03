@@ -420,6 +420,7 @@ pub(super) fn inspect_backend_suite_artifact(
             min_cuda_ptx_source_cache_entries: None,
             min_cuda_ptx_source_cache_hits: None,
             min_cuda_ptx_source_cache_misses: None,
+            min_kernel_launches: None,
             case_count: 0,
             failed_count: None,
             nonmatching_case_backend_count: 0,
@@ -583,6 +584,7 @@ pub(super) fn inspect_backend_suite_artifact(
     let mut min_cuda_ptx_source_cache_entries = None::<u64>;
     let mut min_cuda_ptx_source_cache_hits = None::<u64>;
     let mut min_cuda_ptx_source_cache_misses = None::<u64>;
+    let mut min_kernel_launches = None::<u64>;
     let mut cpu_sota_100x_contract_cases = 0usize;
     let mut cpu_sota_100x_passing_cases = 0usize;
     let mut requested_case_present = false;
@@ -669,6 +671,14 @@ pub(super) fn inspect_backend_suite_artifact(
         );
         if backend == "cuda" {
             record_required_metric_percentile(
+                &mut min_kernel_launches,
+                metrics,
+                "kernel_launches",
+                "p50",
+                &mut blockers,
+                case_id,
+            );
+            record_required_metric_percentile(
                 &mut min_cuda_ptx_source_cache_entries,
                 metrics,
                 "cuda_ptx_source_cache_entries",
@@ -747,6 +757,7 @@ pub(super) fn inspect_backend_suite_artifact(
         min_cuda_ptx_source_cache_entries,
         min_cuda_ptx_source_cache_hits,
         min_cuda_ptx_source_cache_misses,
+        min_kernel_launches,
         case_count: cases.len(),
         failed_count,
         nonmatching_case_backend_count,
@@ -821,4 +832,3 @@ pub(super) fn record_observed_metric_percentile(
         )),
     }
 }
-

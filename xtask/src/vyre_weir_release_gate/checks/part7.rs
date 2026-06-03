@@ -198,6 +198,17 @@ pub(crate) fn check_backend_suite_report(
                     )),
                 }
                 if status
+                    .get("min_kernel_launches")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0)
+                    == 0
+                {
+                    failures.push(format!(
+                        "requirement `{}` backend suite `{suffix}` CUDA artifact `{path}` has non-positive `min_kernel_launches`",
+                        requirement.id
+                    ));
+                }
+                if status
                     .get("min_cuda_ptx_source_cache_entries")
                     .and_then(serde_json::Value::as_u64)
                     .unwrap_or(0)
@@ -350,6 +361,7 @@ pub(crate) fn check_backend_suite_report(
                 if expected_backend == "cuda" {
                     let artifact_label = path.display().to_string();
                     for metric in [
+                        "kernel_launches",
                         "cuda_ptx_source_cache_entries",
                         "cuda_ptx_source_cache_hits",
                         "cuda_ptx_source_cache_misses",
@@ -371,6 +383,13 @@ pub(crate) fn check_backend_suite_report(
                             failures,
                         );
                     }
+                    require_case_metric_positive(
+                        requirement,
+                        &artifact_label,
+                        &report,
+                        "kernel_launches",
+                        failures,
+                    );
                 }
                 if let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) {
                     for case in cases {
