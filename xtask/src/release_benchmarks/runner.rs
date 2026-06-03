@@ -140,6 +140,10 @@ fn benchmark_artifact_report_shape_is_reusable(
     {
         return false;
     }
+    if !crate::benchmark_evidence_semantics::benchmark_report_summary_matches_case_evidence(report)
+    {
+        return false;
+    }
     if !crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(report).is_empty() {
         return false;
     }
@@ -250,7 +254,7 @@ mod tests {
             serde_json::json!({
                 "selected_backend": "wgpu",
                 "source_fingerprint": current_test_source_fingerprint(dir.path()),
-                "summary": {"failed": 0},
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
                     {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
                 ]
@@ -280,7 +284,7 @@ mod tests {
                 "selected_backend": "wgpu",
                 "source_fingerprint": "git:stale:dirty=false",
                 "source_tree_fingerprint": current_test_source_tree_fingerprint(dir.path()),
-                "summary": {"failed": 0},
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
                     {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
                 ]
@@ -309,7 +313,7 @@ mod tests {
             serde_json::json!({
                 "selected_backend": "cuda",
                 "source_fingerprint": current_test_source_fingerprint(dir.path()),
-                "summary": {"failed": 0},
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
                     {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"}
                 ]
@@ -321,7 +325,7 @@ mod tests {
             serde_json::json!({
                 "selected_backend": "wgpu",
                 "source_fingerprint": current_test_source_fingerprint(dir.path()),
-                "summary": {"failed": 0},
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
                     {"id": "release.other.1m", "backend_id": "wgpu", "status": "pass"}
                 ]
@@ -362,7 +366,7 @@ mod tests {
             serde_json::json!({
                 "selected_backend": "wgpu",
                 "source_fingerprint": current_test_source_fingerprint(dir.path()),
-                "summary": {"failed": 0},
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",
@@ -392,6 +396,66 @@ mod tests {
     }
 
     #[test]
+    fn reuse_rejects_stale_summary_passed_count() {
+        let dir = TempDir::new()
+            .expect("Fix: create temp workspace for stale summary passed reuse test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-stale-passed.json",
+            serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": current_test_source_fingerprint(dir.path()),
+                "summary": {"total_cases": 1, "passed": 0, "failed": 0},
+                "cases": [
+                    {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
+                ]
+            }),
+        );
+
+        assert!(
+            !benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-stale-passed.json",
+                false,
+            ),
+            "Fix: --reuse-existing must rerun artifacts whose summary.passed contradicts pass-status case evidence."
+        );
+    }
+
+    #[test]
+    fn reuse_rejects_stale_summary_total_cases() {
+        let dir = TempDir::new()
+            .expect("Fix: create temp workspace for stale summary total_cases reuse test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-stale-total-cases.json",
+            serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": current_test_source_fingerprint(dir.path()),
+                "summary": {"total_cases": 2, "passed": 1, "failed": 0},
+                "cases": [
+                    {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
+                ]
+            }),
+        );
+
+        assert!(
+            !benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-stale-total-cases.json",
+                false,
+            ),
+            "Fix: --reuse-existing must rerun artifacts whose summary.total_cases contradicts the cases array."
+        );
+    }
+
+    #[test]
     fn reuse_rejects_stale_source_fingerprint() {
         let dir = TempDir::new().expect("Fix: create temp workspace for stale source test.");
         write_benchmark_artifact(
@@ -400,7 +464,7 @@ mod tests {
             serde_json::json!({
                 "selected_backend": "wgpu",
                 "source_fingerprint": "git:stale:dirty=false",
-                "summary": {"failed": 0},
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
                     {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
                 ]
@@ -430,7 +494,7 @@ mod tests {
                 "selected_backend": "wgpu",
                 "source_fingerprint": current_test_source_fingerprint(dir.path()),
                 "source_tree_fingerprint": "source-tree-v1:stale",
-                "summary": {"failed": 0},
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
                     {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
                 ]

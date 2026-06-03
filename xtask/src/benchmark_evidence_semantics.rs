@@ -45,6 +45,28 @@ pub(crate) fn benchmark_case_failure_reason(case: &Value) -> Option<String> {
         .or_else(|| contract_failed.then(|| "performance contract failed".to_string()))
 }
 
+pub(crate) fn benchmark_case_passes_summary_evidence(case: &Value) -> bool {
+    case.get("status").and_then(Value::as_str) == Some("pass")
+        && benchmark_case_failure_reason(case).is_none()
+}
+
+pub(crate) fn benchmark_report_summary_matches_case_evidence(report: &Value) -> bool {
+    let Some(cases) = report.get("cases").and_then(Value::as_array) else {
+        return false;
+    };
+    let Some(summary) = report.get("summary") else {
+        return false;
+    };
+    let passed = cases
+        .iter()
+        .filter(|case| benchmark_case_passes_summary_evidence(case))
+        .count() as u64;
+    let failed = cases.len() as u64 - passed;
+    summary.get("total_cases").and_then(Value::as_u64) == Some(cases.len() as u64)
+        && summary.get("passed").and_then(Value::as_u64) == Some(passed)
+        && summary.get("failed").and_then(Value::as_u64) == Some(failed)
+}
+
 pub(crate) fn benchmark_failed_case_summaries(report: &Value) -> Vec<String> {
     report
         .get("cases")
@@ -814,10 +836,7 @@ fn artifact_case_passed_count(artifact_report: &Value) -> Option<u64> {
     Some(
         cases
             .iter()
-            .filter(|case| {
-                case.get("status").and_then(Value::as_str) == Some("pass")
-                    && benchmark_case_failure_reason(case).is_none()
-            })
+            .filter(|case| benchmark_case_passes_summary_evidence(case))
             .count() as u64,
     )
 }
