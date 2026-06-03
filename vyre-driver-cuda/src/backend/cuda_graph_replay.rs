@@ -3,21 +3,28 @@
 use std::ptr::NonNull;
 use std::sync::Arc;
 
+use smallvec::SmallVec;
 use vyre_driver::BackendError;
 
 use super::allocations::cuda_check;
 use super::cuda_graph::{CachedCudaGraph, GraphExecGuard, StreamGuard};
 use super::dispatch::CudaBackend;
-use super::staging_reserve::{reserve_vec, reserved_vec, resize_vec_slots};
+use super::staging_reserve::{reserve_smallvec, reserve_vec, reserved_vec, resize_vec_slots};
 use crate::input_identity::{exact_input_key, ExactInputKey};
 
 impl CachedCudaGraph {
     pub(crate) fn input_shape_matches(&self, inputs: &[&[u8]]) -> bool {
         inputs.len() == self.expected_input_lens.len()
-            && inputs
+            && self.input_indices.len() == self.expected_input_lens.len()
+            && self
+                .input_indices
                 .iter()
                 .zip(self.expected_input_lens.iter())
-                .all(|(input, expected)| input.len() == *expected)
+                .all(|(input_index, expected)| {
+                    inputs
+                        .get(*input_index)
+                        .is_some_and(|input| input.len() == *expected)
+                })
     }
 
     pub(crate) fn materialized_output_cache_matches(
@@ -140,7 +147,13 @@ fn cached_input_bytes_match_after_key_match(
             ),
         });
     }
-    for (slot, src) in cached.input_host_bufs.iter().zip(inputs.iter()) {
+    for (slot_index, (slot, input_index)) in cached
+        .input_host_bufs
+        .iter()
+        .zip(cached.input_indices.iter())
+        .enumerate()
+    {
+        let src = cached_graph_input(inputs, *input_index, slot_index, "cached input compare")?;
         if src.len() > slot.byte_len {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
@@ -158,7 +171,7 @@ fn cached_input_bytes_match_after_key_match(
             // bytes, and the length check above proves `src.len() <= slot.byte_len`.
             unsafe { std::slice::from_raw_parts(slot.as_ptr().cast::<u8>(), src.len()) }
         };
-        if cached_bytes != *src {
+        if cached_bytes != src {
             return Ok(false);
         }
     }
@@ -402,12 +415,14 @@ fn prepare_cuda_graph_replay(
         && cached_input_bytes_match_with_key(cached, inputs, &input_state.input_key)?;
 
     if !resident_input_replay {
-        for ((slot, src), transfer_len) in cached
+        for (slot_index, ((slot, input_index), transfer_len)) in cached
             .input_host_bufs
             .iter_mut()
-            .zip(inputs.iter())
+            .zip(cached.input_indices.iter())
             .zip(cached.input_transfer_lens.iter())
+            .enumerate()
         {
+            let src = cached_graph_input(inputs, *input_index, slot_index, "input replay staging")?;
             slot.copy_from_slice(src)?;
             if *transfer_len > src.len() {
                 slot.zero_range(src.len(), transfer_len - src.len())?;
@@ -466,6 +481,55 @@ fn prepare_cuda_graph_replay_input_state_with_key(
     Ok(CudaGraphReplayInputState { input_key })
 }
 
+fn cached_graph_input<'a>(
+    inputs: &[&'a [u8]],
+    input_index: usize,
+    slot_index: usize,
+    context: &'static str,
+) -> Result<&'a [u8], BackendError> {
+    inputs
+        .get(input_index)
+        .copied()
+        .ok_or_else(|| BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: cached cuda graph {context} slot {slot_index} maps to logical input {input_index}, but replay received only {} input(s). Re-record the graph from a valid BindingPlan.",
+                inputs.len()
+            ),
+        })
+}
+
+fn validate_cached_graph_input_index_map(
+    input_indices: &[usize],
+    expected_len: usize,
+) -> Result<(), BackendError> {
+    if input_indices.len() != expected_len {
+        return Err(BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: cached cuda graph has {} logical input index(es) but {expected_len} expected input length(s). Re-record the graph; descriptor-ordered graph inputs must map back to Program::buffers input slots.",
+                input_indices.len(),
+            ),
+        });
+    }
+    let mut sorted_input_indices = SmallVec::<[usize; 8]>::new();
+    reserve_smallvec(
+        &mut sorted_input_indices,
+        input_indices.len(),
+        "cuda graph input index validation",
+    )?;
+    sorted_input_indices.extend(input_indices.iter().copied());
+    crate::backend::ordering::sort_unstable_if_needed(sorted_input_indices.as_mut_slice());
+    for (expected_index, input_index) in sorted_input_indices.iter().copied().enumerate() {
+        if input_index != expected_index {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: cached cuda graph logical input index {input_index} at sorted slot {expected_index} is not dense over 0..{expected_len}. Re-record the graph from Program::buffers logical input order.",
+                ),
+            });
+        }
+    }
+    Ok(())
+}
+
 fn validate_cached_graph_inputs(
     cached: &CachedCudaGraph,
     inputs: &[&[u8]],
@@ -488,6 +552,7 @@ fn validate_cached_graph_inputs(
             ),
         });
     }
+    validate_cached_graph_input_index_map(&cached.input_indices, cached.expected_input_lens.len())?;
     if inputs.len() != cached.expected_input_lens.len() {
         return Err(BackendError::InvalidProgram {
             fix: format!(
@@ -497,12 +562,14 @@ fn validate_cached_graph_inputs(
             ),
         });
     }
-    for (idx, ((input, expected_len), transfer_len)) in inputs
+    for (idx, ((input_index, expected_len), transfer_len)) in cached
+        .input_indices
         .iter()
         .zip(cached.expected_input_lens.iter())
         .zip(cached.input_transfer_lens.iter())
         .enumerate()
     {
+        let input = cached_graph_input(inputs, *input_index, idx, "shape validation")?;
         let received_len = input.len();
         if received_len != *expected_len {
             return Err(BackendError::InvalidProgram {
@@ -588,11 +655,59 @@ impl CudaBackend {
 
 #[cfg(test)]
 mod source_contract_tests {
+    use super::{cached_graph_input, validate_cached_graph_input_index_map};
+
+    #[test]
+    fn cached_graph_replay_input_index_map_accepts_reordered_descriptor_inputs() {
+        validate_cached_graph_input_index_map(&[2, 0, 1], 3).expect(
+            "Fix: descriptor-ordered CUDA graph inputs may map to reordered logical slots.",
+        );
+
+        let first = [0xA1, 0xA2];
+        let second = [0xB1];
+        let third = [0xC1, 0xC2, 0xC3];
+        let inputs: &[&[u8]] = &[first.as_slice(), second.as_slice(), third.as_slice()];
+
+        assert_eq!(
+            cached_graph_input(inputs, 2, 0, "test replay")
+                .expect("Fix: graph replay should resolve logical input 2 for descriptor slot 0."),
+            third.as_slice()
+        );
+        assert_eq!(
+            cached_graph_input(inputs, 0, 1, "test replay")
+                .expect("Fix: graph replay should resolve logical input 0 for descriptor slot 1."),
+            first.as_slice()
+        );
+    }
+
+    #[test]
+    fn cached_graph_replay_input_index_map_rejects_stale_or_non_dense_maps() {
+        assert!(
+            validate_cached_graph_input_index_map(&[0, 0, 2], 3).is_err(),
+            "Fix: duplicate CUDA graph logical input indexes must fail before replay can alias an input slot."
+        );
+        assert!(
+            validate_cached_graph_input_index_map(&[0, 2, 3], 3).is_err(),
+            "Fix: sparse CUDA graph logical input indexes must fail before replay can skip an input slot."
+        );
+        assert!(
+            validate_cached_graph_input_index_map(&[0, 1], 3).is_err(),
+            "Fix: truncated CUDA graph logical input maps must fail before zip-based replay staging."
+        );
+
+        let only = [0xAA];
+        let inputs: &[&[u8]] = &[only.as_slice()];
+        assert!(
+            cached_graph_input(inputs, 1, 0, "test replay").is_err(),
+            "Fix: stale CUDA graph logical input indexes must become BackendError, not a panic or wrong-slot replay."
+        );
+    }
+
     #[test]
     fn cuda_graph_replay_uses_fallible_output_staging_reservation() {
         let source = include_str!("cuda_graph_replay.rs");
         assert!(source.contains(
-            "use super::staging_reserve::{reserve_vec, reserved_vec, resize_vec_slots};"
+            "use super::staging_reserve::{reserve_smallvec, reserve_vec, reserved_vec, resize_vec_slots};"
         ));
         assert!(source.contains("fn collect_cuda_graph_outputs("));
         assert!(source.contains(") -> Result<(), BackendError>"));
@@ -636,11 +751,14 @@ mod source_contract_tests {
         assert!(
             source.contains("cached.input_host_bufs.len() != cached.expected_input_lens.len()")
                 && source.contains("cached.input_transfer_lens.len() != cached.expected_input_lens.len()")
+                && source.contains("validate_cached_graph_input_index_map(&cached.input_indices")
+                && source.contains("cached_graph_input(inputs, *input_index")
+                && source.contains("descriptor-ordered graph inputs must map back to Program::buffers input slots")
                 && source.contains("zip-based replay would skip or truncate input uploads")
                 && source.contains("*transfer_len < *expected_len")
                 && source.contains("truncated graph memcpy would leave stale device input bytes")
                 && source.contains("zip-based replay would skip input uploads")
-                && source.contains(".zip(cached.expected_input_lens.iter())")
+                && source.contains(".zip(cached.input_indices.iter())")
                 && source.contains(".zip(cached.input_transfer_lens.iter())")
                 && !source.contains(concat!("inputs", "[idx]"))
                 && source.contains("cached.output_host_bufs.len() != cached.output_lens.len()"),

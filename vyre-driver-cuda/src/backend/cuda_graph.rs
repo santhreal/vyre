@@ -759,6 +759,10 @@ pub struct CachedCudaGraph {
     /// Per-input host buffers. Callers write new input bytes here before
     /// each replay; the captured memcpy reads from these addresses.
     pub(crate) input_host_bufs: SmallVec<[PinnedHostAllocation; 8]>,
+    /// Logical caller input index for each descriptor-ordered input host
+    /// buffer. CUDA graph capture records memcpy nodes in descriptor order,
+    /// while public replay inputs follow Program::buffers logical order.
+    pub(crate) input_indices: SmallVec<[usize; 8]>,
     /// Per-input device pointers (allocated via `cuMemAlloc_v2`). Freed in
     /// `drop`.
     pub(crate) input_device_ptrs: SmallVec<[DevicePtrGuard; 8]>,
@@ -927,6 +931,12 @@ impl CudaBackend {
             input_capacity,
             "cuda graph input device pointer guards",
         )?;
+        let mut input_indices = SmallVec::<[usize; 8]>::new();
+        reserve_smallvec(
+            &mut input_indices,
+            input_capacity,
+            "cuda graph logical input indices",
+        )?;
         let mut output_device_ptrs = SmallVec::<[DevicePtrGuard; 8]>::new();
         reserve_smallvec(
             &mut output_device_ptrs,
@@ -1030,6 +1040,7 @@ impl CudaBackend {
                     )?;
                 }
                 host_buffers.push_input_padded(sample_input, input_transfer_len)?;
+                input_indices.push(input_index);
                 input_device_ptrs.push(DevicePtrGuard::new(device_ptr));
             } else {
                 output_device_ptrs.push(DevicePtrGuard::new(device_ptr));
@@ -1347,6 +1358,7 @@ impl CudaBackend {
             resident_input_graph,
             stream,
             input_host_bufs,
+            input_indices,
             input_device_ptrs,
             output_device_ptrs,
             output_host_bufs,
