@@ -92,15 +92,16 @@ pub(crate) fn run(args: &[String]) {
         if config.only.as_ref().is_some_and(|only| only != &family.id) {
             continue;
         }
-        if !config.reuse_existing
-            || !benchmark_artifact_is_reusable(
-                &workspace_root,
-                &config.backend,
-                &family.id,
-                case_id,
-                &family.evidence_artifact,
-                cpu_100x_family,
-            )
+        if !config.refresh_suites_only
+            && (!config.reuse_existing
+                || !benchmark_artifact_is_reusable(
+                    &workspace_root,
+                    &config.backend,
+                    &family.id,
+                    case_id,
+                    &family.evidence_artifact,
+                    cpu_100x_family,
+                ))
         {
             run_workload_benchmark(
                 &workspace_root,
@@ -111,7 +112,10 @@ pub(crate) fn run(args: &[String]) {
                 config.sample_timeout_secs,
             );
         }
-        if config.backend == "cuda" && family.id == "megakernel-queued-batches" {
+        if !config.refresh_suites_only
+            && config.backend == "cuda"
+            && family.id == "megakernel-queued-batches"
+        {
             copy_artifact(
                 &workspace_root,
                 &family.evidence_artifact,
@@ -126,14 +130,20 @@ pub(crate) fn run(args: &[String]) {
         if cpu_100x_family {
             cpu_100x_artifacts.push(family.evidence_artifact.clone());
         }
-        if config.backend == "cuda" && family.id == "megakernel-queued-batches" {
+        if !config.refresh_suites_only
+            && config.backend == "cuda"
+            && family.id == "megakernel-queued-batches"
+        {
             copy_artifact(
                 &workspace_root,
                 &family.evidence_artifact,
                 "release/evidence/benchmarks/megakernel-latency-cuda.json",
             );
         }
-        if config.backend == "cuda" && family.id == "alias-reaching-def" {
+        if !config.refresh_suites_only
+            && config.backend == "cuda"
+            && family.id == "alias-reaching-def"
+        {
             copy_artifact(
                 &workspace_root,
                 &family.evidence_artifact,
@@ -159,15 +169,16 @@ pub(crate) fn run(args: &[String]) {
                 std::process::exit(1);
             };
             let output = prefixed_benchmark_artifact(&family.evidence_artifact, "wgpu");
-            if !config.reuse_existing
-                || !benchmark_artifact_is_reusable(
-                    &workspace_root,
-                    "wgpu",
-                    &family.id,
-                    case_id,
-                    &output,
-                    false,
-                )
+            if !config.refresh_suites_only
+                && (!config.reuse_existing
+                    || !benchmark_artifact_is_reusable(
+                        &workspace_root,
+                        "wgpu",
+                        &family.id,
+                        case_id,
+                        &output,
+                        false,
+                    ))
             {
                 run_workload_benchmark(
                     &workspace_root,
@@ -187,7 +198,7 @@ pub(crate) fn run(args: &[String]) {
         }
         write_backend_suite(&workspace_root, "wgpu", wgpu_artifacts);
     }
-    if config.only.is_none() {
+    if config.only.is_none() && !config.refresh_suites_only {
         run_named_benchmark_if_needed(
             &workspace_root,
             "lower.rewrites.impact.corpus",
@@ -267,5 +278,9 @@ pub(crate) fn run(args: &[String]) {
     }
     write_backend_suite(&workspace_root, &config.backend, suite_artifacts);
     write_release_axes(&workspace_root);
-    println!("release-benchmarks: wrote {ran} benchmark artifact(s)");
+    if config.refresh_suites_only {
+        println!("release-benchmarks: refreshed suite evidence for {ran} benchmark artifact(s)");
+    } else {
+        println!("release-benchmarks: wrote {ran} benchmark artifact(s)");
+    }
 }

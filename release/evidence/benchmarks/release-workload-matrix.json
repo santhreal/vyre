@@ -16,8 +16,8 @@
   ],
   "missing_required_cpu_sota_100x_families": [],
   "matched_required_families": 13,
-  "release_suite_case_count": 52,
-  "cpu_sota_contract_count": 35,
+  "release_suite_case_count": 66,
+  "cpu_sota_contract_count": 39,
   "cpu_sota_100x_contract_count": 15,
   "cpu_sota_100x_contract_cases": [
     "conditions.yara_like.eval.1m",
@@ -108,7 +108,8 @@
         "vyre-runtime"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 4,
       "reproducible_cuda_command": true,
@@ -142,7 +143,8 @@
         "vyre-libs"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
@@ -181,7 +183,8 @@
         "vyre-libs"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 2,
       "reproducible_cuda_command": true,
@@ -219,7 +222,8 @@
         "vyre-libs"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 2,
       "reproducible_cuda_command": true,
@@ -258,7 +262,8 @@
         "vyre-libs"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 2,
       "reproducible_cuda_command": true,
@@ -292,7 +297,8 @@
         "vyre"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
@@ -327,7 +333,8 @@
         "vyre-bench"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
@@ -341,10 +348,14 @@
       "dispatch_policy": "specialized-dataflow-kernel",
       "non_megakernel_justification": "architectural: IFDS witness extraction uses frontier/fact-table scheduling and predecessor reconstruction that need dataflow-specific kernels",
       "matched_cases": [
+        "dataflow.ifds.skewed.closure.1m",
+        "dataflow.ifds.skewed.queue_closure.1m",
+        "dataflow.ifds.skewed.queue_step.1m",
+        "dataflow.ifds.skewed.step.1m",
         "release.ifds_witness.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-08-ifds-witness.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.ifds_witness.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-08-ifds-witness.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case dataflow.ifds.skewed.closure.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-08-ifds-witness.json",
       "bench_target_ids": [
         "release.workload.ifds_witness"
       ],
@@ -361,7 +372,8 @@
         "vyre-bench"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
@@ -411,7 +423,8 @@
         "vyre-frontend-c"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
@@ -450,7 +463,8 @@
         "vyre-runtime"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
@@ -487,7 +501,8 @@
         "vyre-lower"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
@@ -502,6 +517,8 @@
       "non_megakernel_justification": null,
       "matched_cases": [
         "conditions.yara_like.batch.16x64k",
+        "dataflow.ifds.skewed.queue_closure.1m",
+        "primitives.graph.csr_skewed_queue_closure.1m",
         "sparse.compaction.count.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
@@ -522,7 +539,8 @@
         "vyre-runtime"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
@@ -536,7 +554,9 @@
       "dispatch_policy": "specialized-graph-kernel",
       "non_megakernel_justification": "architectural: callgraph reachability is frontier graph traversal with convergence state, not independent rule-condition slot evaluation",
       "matched_cases": [
-        "callgraph.reachability.step.262k"
+        "callgraph.reachability.step.262k",
+        "dataflow.ifds.skewed.closure.1m",
+        "primitives.graph.csr_skewed_queue_closure.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-13-callgraph-reachability.json",
       "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case callgraph.reachability.step.262k --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-13-callgraph-reachability.json",
@@ -554,7 +574,8 @@
         "vyre-primitives"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
@@ -568,7 +589,10 @@
       "dispatch_policy": "resident-fused-kernel",
       "non_megakernel_justification": "architectural: compound filtering fuses independent matching, dataflow, score, and taint-class predicates into one resident pass without condition-slot queue orchestration",
       "matched_cases": [
-        "compound.pipeline.fused_filter.1m"
+        "compound.pipeline.fused_filter.1m",
+        "dataflow.ifds.skewed.closure.1m",
+        "dataflow.ifds.skewed.queue_closure.1m",
+        "dataflow.ifds.skewed.queue_step.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-14-compound-fused-filter.json",
       "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case compound.pipeline.fused_filter.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-14-compound-fused-filter.json",
@@ -586,7 +610,8 @@
         "rayon"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
@@ -618,7 +643,8 @@
         "rayon"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
@@ -652,7 +678,8 @@
         "rayon"
       ],
       "cpu_sota_backend_ids": [
-        "cuda"
+        "cuda",
+        "wgpu"
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,

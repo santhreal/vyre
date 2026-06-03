@@ -5,6 +5,7 @@ pub(super) struct Config {
     pub(super) sample_timeout_secs: u64,
     pub(super) include_wgpu_comparison: bool,
     pub(super) reuse_existing: bool,
+    pub(super) refresh_suites_only: bool,
 }
 
 pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
@@ -14,6 +15,7 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut sample_timeout_secs = 120u64;
     let mut include_wgpu_comparison = false;
     let mut reuse_existing = false;
+    let mut refresh_suites_only = false;
     let mut index = 2;
     while index < args.len() {
         match args[index].as_str() {
@@ -76,10 +78,14 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
                 reuse_existing = true;
                 index += 1;
             }
+            "--refresh-suites-only" => {
+                refresh_suites_only = true;
+                index += 1;
+            }
             "--help" | "-h" => {
                 println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- release-benchmarks [--backend cuda] [--only FAMILY] [--measured-samples N] [--sample-timeout-secs N] [--include-wgpu-comparison] [--reuse-existing]\n\n\
-                     Generates CUDA-first release benchmark JSON artifacts from the release workload matrix. WGPU comparison evidence is opt-in so CUDA release validation time is not spent on non-release-path backends by default. --reuse-existing validates already-written artifacts and reruns only missing or invalid cases."
+                    "USAGE:\n  cargo_full run --bin xtask -- release-benchmarks [--backend cuda] [--only FAMILY] [--measured-samples N] [--sample-timeout-secs N] [--include-wgpu-comparison] [--reuse-existing] [--refresh-suites-only]\n\n\
+                     Generates CUDA-first release benchmark JSON artifacts from the release workload matrix. WGPU comparison evidence is opt-in so CUDA release validation time is not spent on non-release-path backends by default. --reuse-existing validates already-written artifacts and reruns only missing or invalid cases. --refresh-suites-only rewrites suite/proof summaries from existing artifact JSON without running benchmarks."
                 );
                 std::process::exit(0);
             }
@@ -93,5 +99,37 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
         sample_timeout_secs,
         include_wgpu_comparison,
         reuse_existing,
+        refresh_suites_only,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args(extra: &[&str]) -> Vec<String> {
+        std::iter::once("cargo".to_string())
+            .chain(std::iter::once("release-benchmarks".to_string()))
+            .chain(extra.iter().map(|arg| arg.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn refresh_suites_only_parses_without_forcing_benchmark_reuse() {
+        let config = parse_args(&args(&[
+            "--backend",
+            "cuda",
+            "--include-wgpu-comparison",
+            "--refresh-suites-only",
+        ]))
+        .expect("Fix: release-benchmarks refresh-only args should parse.");
+
+        assert_eq!(config.backend, "cuda");
+        assert!(config.include_wgpu_comparison);
+        assert!(config.refresh_suites_only);
+        assert!(
+            !config.reuse_existing,
+            "Fix: suite summary refresh must be distinct from freshness-based benchmark reuse."
+        );
+    }
 }

@@ -20,6 +20,7 @@
     "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
     "release/evidence/benchmarks/wgpu-workload-05-entropy-window.json",
     "release/evidence/benchmarks/wgpu-workload-11-egraph-saturation.json",
+    "release/evidence/benchmarks/dataflow-analysis-release.json",
     "release/evidence/benchmarks/alias-aware-before-after.json",
     "release/evidence/benchmarks/egraph-before-after.json",
     "release/evidence/benchmarks/wgpu-workload-07-alias-reaching-def.json",
