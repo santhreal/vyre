@@ -7,7 +7,13 @@
 
 use crate::region::wrap_anonymous;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use vyre_spec::{QuantizationScale, QuantizationZeroPoint};
+
+const INT4_LINEAR_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+const AFFINE_GROUPED_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+const AFFINE_GROUPED_OP_ID: &str = "vyre-libs::nn::linear_4bit_affine_grouped";
+const AFFINE_GROUPED_SCRATCH: &str = "q4_affine_grouped_scratch";
 
 /// Typed metadata for fused grouped INT4 linear.
 ///
@@ -158,7 +164,7 @@ pub fn linear_4bit(
             BufferDecl::storage(b, 2, BufferAccess::ReadOnly, DataType::F32).with_count(out_dim),
             BufferDecl::output(out, 3, DataType::F32).with_count(out_dim),
         ],
-        [64, 1, 1],
+        INT4_LINEAR_WORKGROUP_SIZE,
         vec![wrap_anonymous("vyre-libs::nn::linear_4bit", body)],
     ))
 }
@@ -224,107 +230,96 @@ pub fn linear_4bit_affine_grouped(
             .to_string()
     })?;
 
-    let i = Expr::var("i");
-    let mut then_body = Vec::with_capacity(if group_count <= 256 {
-        2 + (group_count as usize).saturating_mul(3)
-    } else {
-        3
-    });
-    then_body.push(Node::let_bind("acc", Expr::load(b, i.clone())));
+    let tile = AFFINE_GROUPED_WORKGROUP_SIZE[0].max(1);
+    let chunks = in_dim.div_ceil(tile);
+    let out_idx = Expr::var("out_idx");
+    let local = Expr::var("local");
+    let k = Expr::var("k");
+    let packed_idx = Expr::add(
+        Expr::mul(Expr::div(k.clone(), Expr::u32(8)), Expr::u32(out_dim)),
+        out_idx.clone(),
+    );
+    let shift = Expr::mul(Expr::rem(k.clone(), Expr::u32(8)), Expr::u32(4));
+    let nibble = Expr::bitand(
+        Expr::shr(Expr::load(w_packed, packed_idx), shift),
+        Expr::u32(0xF),
+    );
+    let group = Expr::div(k.clone(), Expr::u32(group_size));
+    let sidecar_idx = Expr::add(Expr::mul(group, Expr::u32(out_dim)), out_idx.clone());
+    let weight_f32 = Expr::mul(
+        Expr::sub(
+            Expr::cast(DataType::F32, nibble),
+            Expr::cast(DataType::F32, Expr::load(zero_point, sidecar_idx.clone())),
+        ),
+        Expr::load(scale, sidecar_idx),
+    );
 
-    if group_count <= 256 {
-        for group_idx in 0..group_count {
-            let group_start = group_idx.saturating_mul(group_size);
-            let group_end = group_start.saturating_add(group_size).min(in_dim);
-            let sidecar_idx = Expr::add(
-                Expr::mul(Expr::u32(group_idx), Expr::u32(out_dim)),
-                i.clone(),
-            );
-            let scale_var = format!("q4_scale_g{group_idx}");
-            let zero_point_var = format!("q4_zp_g{group_idx}");
-            let k = Expr::var("k");
-            let packed_idx = Expr::add(
-                Expr::mul(Expr::div(k.clone(), Expr::u32(8)), Expr::u32(out_dim)),
-                i.clone(),
-            );
-            let shift = Expr::mul(Expr::rem(k.clone(), Expr::u32(8)), Expr::u32(4));
-            let nibble = Expr::bitand(
-                Expr::shr(Expr::load(w_packed, packed_idx), shift),
-                Expr::u32(0xF),
-            );
-            let weight_f32 = Expr::mul(
-                Expr::sub(
-                    Expr::cast(DataType::F32, nibble),
-                    Expr::var(zero_point_var.clone()),
-                ),
-                Expr::var(scale_var.clone()),
-            );
-
-            then_body.push(Node::let_bind(
-                scale_var,
-                Expr::load(scale, sidecar_idx.clone()),
-            ));
-            then_body.push(Node::let_bind(
-                zero_point_var,
-                Expr::cast(DataType::F32, Expr::load(zero_point, sidecar_idx)),
-            ));
-            then_body.push(Node::loop_for(
-                "k",
-                Expr::u32(group_start),
-                Expr::u32(group_end),
-                vec![Node::assign(
-                    "acc",
-                    Expr::add(
-                        Expr::var("acc"),
-                        Expr::mul(Expr::load(x, k.clone()), weight_f32),
-                    ),
-                )],
-            ));
-        }
-    } else {
-        let k = Expr::var("k");
-        let packed_idx = Expr::add(
-            Expr::mul(Expr::div(k.clone(), Expr::u32(8)), Expr::u32(out_dim)),
-            i.clone(),
-        );
-        let shift = Expr::mul(Expr::rem(k.clone(), Expr::u32(8)), Expr::u32(4));
-        let nibble = Expr::bitand(
-            Expr::shr(Expr::load(w_packed, packed_idx), shift),
-            Expr::u32(0xF),
-        );
-        let group = Expr::div(k.clone(), Expr::u32(group_size));
-        let sidecar_idx = Expr::add(Expr::mul(group, Expr::u32(out_dim)), i.clone());
-        let weight_f32 = Expr::mul(
-            Expr::sub(
-                Expr::cast(DataType::F32, nibble),
-                Expr::cast(DataType::F32, Expr::load(zero_point, sidecar_idx.clone())),
-            ),
-            Expr::load(scale, sidecar_idx),
-        );
-        then_body.push(Node::loop_for(
-            "k",
+    let mut per_output = vec![
+        Node::let_bind("local_acc", Expr::f32(0.0)),
+        Node::loop_for(
+            "chunk",
             Expr::u32(0),
-            Expr::u32(in_dim),
-            vec![Node::assign(
-                "acc",
-                Expr::add(
-                    Expr::var("acc"),
-                    Expr::mul(Expr::load(x, k.clone()), weight_f32),
+            Expr::u32(chunks),
+            vec![
+                Node::let_bind(
+                    "k",
+                    Expr::add(
+                        Expr::mul(Expr::var("chunk"), Expr::u32(tile)),
+                        local.clone(),
+                    ),
                 ),
-            )],
-        ));
-    }
-
-    then_body.push(Node::Store {
-        buffer: out.into(),
-        index: i.clone(),
-        value: Expr::var("acc"),
-    });
+                Node::if_then(
+                    Expr::lt(k.clone(), Expr::u32(in_dim)),
+                    vec![Node::assign(
+                        "local_acc",
+                        Expr::add(
+                            Expr::var("local_acc"),
+                            Expr::mul(Expr::load(x, k.clone()), weight_f32),
+                        ),
+                    )],
+                ),
+            ],
+        ),
+        Node::store(
+            AFFINE_GROUPED_SCRATCH,
+            local.clone(),
+            Expr::var("local_acc"),
+        ),
+        Node::barrier(),
+    ];
+    per_output.push(workgroup_tree::sum_f32_child(
+        AFFINE_GROUPED_OP_ID,
+        tile,
+        AFFINE_GROUPED_SCRATCH,
+        WorkgroupReductionScope::EveryWorkgroup,
+    ));
+    per_output.push(Node::if_then(
+        Expr::eq(local.clone(), Expr::u32(0)),
+        vec![Node::Store {
+            buffer: out.into(),
+            index: out_idx.clone(),
+            value: Expr::add(
+                Expr::load(b, out_idx.clone()),
+                Expr::load(AFFINE_GROUPED_SCRATCH, Expr::u32(0)),
+            ),
+        }],
+    ));
 
     let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(Expr::lt(i.clone(), Expr::u32(out_dim)), then_body),
+        Node::let_bind("local", Expr::LocalId { axis: 0 }),
+        Node::let_bind("out_idx", Expr::WorkgroupId { axis: 0 }),
+        Node::if_then(Expr::lt(out_idx.clone(), Expr::u32(out_dim)), per_output),
     ];
+    let padded_output_count = out_dim.checked_mul(tile).ok_or_else(|| {
+        "Fix: linear_4bit_affine_grouped out_dim*workgroup_size overflows u32; reduce dimensions."
+            .to_string()
+    })?;
+    let output_byte_len = (out_dim as usize)
+        .checked_mul(core::mem::size_of::<f32>())
+        .ok_or_else(|| {
+            "Fix: linear_4bit_affine_grouped output byte length overflows usize; reduce dimensions."
+                .to_string()
+        })?;
 
     Ok(Program::wrapped(
         vec![
@@ -336,13 +331,13 @@ pub fn linear_4bit_affine_grouped(
             BufferDecl::storage(zero_point, 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(sidecar_count),
             BufferDecl::storage(b, 4, BufferAccess::ReadOnly, DataType::F32).with_count(out_dim),
-            BufferDecl::output(out, 5, DataType::F32).with_count(out_dim),
+            BufferDecl::workgroup(AFFINE_GROUPED_SCRATCH, tile, DataType::F32),
+            BufferDecl::output(out, 5, DataType::F32)
+                .with_count(padded_output_count)
+                .with_output_byte_range(0..output_byte_len),
         ],
-        [64, 1, 1],
-        vec![wrap_anonymous(
-            "vyre-libs::nn::linear_4bit_affine_grouped",
-            body,
-        )],
+        AFFINE_GROUPED_WORKGROUP_SIZE,
+        vec![wrap_anonymous(AFFINE_GROUPED_OP_ID, body)],
     ))
 }
 
@@ -471,6 +466,11 @@ mod tests {
 
         let program = linear_4bit_affine_grouped("x", "w", "scale", "zp", "b", "out", 8, 2, 4)
             .expect("Fix: affine grouped int4 linear fixture must build");
+        assert_eq!(
+            program.workgroup_size(),
+            AFFINE_GROUPED_WORKGROUP_SIZE,
+            "Fix: grouped INT4 linear must keep the CUDA-measured cooperative release launch shape."
+        );
         let outputs = vyre_reference::reference_eval(
             &program,
             &[

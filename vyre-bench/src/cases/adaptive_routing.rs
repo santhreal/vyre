@@ -111,7 +111,12 @@ impl BenchCase for GpuResidentAdaptiveRouting {
             .filter(|&&route| (route >> 24) == 3)
             .count() as u64;
         let baseline_output = u32_bytes(&baseline_words);
-        let resident = ResidentInputSet::upload_optional(ctx, &inputs, "adaptive routing bench")?;
+        let resident = ResidentInputSet::upload_with_zeroed_outputs_optional(
+            ctx,
+            &inputs,
+            &[baseline_output.len()],
+            "adaptive routing bench",
+        )?;
 
         Ok(Box::new(AdaptiveRoutingPrepared {
             program,

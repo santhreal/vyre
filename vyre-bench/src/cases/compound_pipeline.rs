@@ -102,7 +102,12 @@ impl BenchCase for CompoundFusedFilter {
             u64::try_from(baseline_start.elapsed().as_nanos()).unwrap_or(u64::MAX);
         let accepted_count = baseline_words.iter().filter(|&&value| value != 0).count() as u64;
         let baseline_output = u32_bytes(&baseline_words);
-        let resident = ResidentInputSet::upload_optional(ctx, &inputs, "compound fused filter")?;
+        let resident = ResidentInputSet::upload_with_zeroed_outputs_optional(
+            ctx,
+            &inputs,
+            &[baseline_output.len()],
+            "compound fused filter",
+        )?;
 
         Ok(Box::new(CompoundFusedFilterPrepared {
             program,

@@ -26,6 +26,7 @@ const PACKED_WORDS: u32 = (IN_DIM / 8) * OUT_DIM;
 const GROUP_COUNT: u32 = (IN_DIM + GROUP_SIZE - 1) / GROUP_SIZE;
 const SIDECAR_WORDS: u32 = GROUP_COUNT * OUT_DIM;
 const MAC_COUNT: u64 = (IN_DIM as u64) * (OUT_DIM as u64);
+const CPU_BASELINE_SAMPLES: usize = 9;
 
 const SUITES: &[SuiteKind] = &[
     SuiteKind::Release,
@@ -108,6 +109,9 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
             &spec, "x", "w", "scale", "zp", "b", "out",
         )
         .map_err(BenchError::ExecutionFailed)?;
+        ctx.dispatch_config
+            .workgroup_override
+            .get_or_insert(program.workgroup_size());
         let (x, packed, scale, zero_point, bias) = quantized_inputs();
         let inputs = vec![
             f32_bytes(&x),
@@ -117,12 +121,16 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
             f32_bytes(&bias),
         ];
         let input_bytes_total = input_bytes_total(&inputs);
-        let baseline_start = std::time::Instant::now();
-        let baseline = cpu_oracle_checked(&x, &packed, &scale, &zero_point, &bias)?;
-        let baseline_wall_ns =
-            u64::try_from(baseline_start.elapsed().as_nanos()).unwrap_or(u64::MAX);
+        let (baseline, baseline_wall_ns) =
+            measured_cpu_oracle_checked(&x, &packed, &scale, &zero_point, &bias)?;
         let baseline_output = f32_bytes(&baseline);
-        let resident = ResidentInputSet::upload_optional(ctx, &inputs, "quantized linear")?;
+        let resident_output_len = resident_output_byte_len(&program)?;
+        let resident = ResidentInputSet::upload_with_zeroed_outputs_optional(
+            ctx,
+            &inputs,
+            &[resident_output_len],
+            "quantized linear",
+        )?;
 
         Ok(Box::new(QuantizedLinearPrepared {
             program,
@@ -339,6 +347,62 @@ fn cpu_oracle_checked(
             acc
         })
         .collect())
+}
+
+fn measured_cpu_oracle_checked(
+    x: &[f32],
+    packed: &[u32],
+    scale: &[f32],
+    zero_point: &[u32],
+    bias: &[f32],
+) -> Result<(Vec<f32>, u64), BenchError> {
+    let mut durations = Vec::with_capacity(CPU_BASELINE_SAMPLES);
+    let mut expected_output: Option<Vec<f32>> = None;
+    for sample_idx in 0..CPU_BASELINE_SAMPLES {
+        let baseline_start = std::time::Instant::now();
+        let output = cpu_oracle_checked(x, packed, scale, zero_point, bias)?;
+        let elapsed_ns = u64::try_from(baseline_start.elapsed().as_nanos()).unwrap_or(u64::MAX);
+        if let Some(expected) = expected_output.as_ref() {
+            if output != *expected {
+                return Err(BenchError::ExecutionFailed(format!(
+                    "quantized linear CPU oracle sample {sample_idx} diverged from the first deterministic baseline"
+                )));
+            }
+        } else {
+            expected_output = Some(output);
+        }
+        durations.push(elapsed_ns);
+    }
+    durations.sort_unstable();
+    let baseline_wall_ns = durations
+        .get(durations.len() / 2)
+        .copied()
+        .ok_or_else(|| {
+            BenchError::ExecutionFailed(
+                "quantized linear CPU oracle produced no baseline samples".to_string(),
+            )
+        })?
+        .max(1);
+    let output = expected_output.ok_or_else(|| {
+        BenchError::ExecutionFailed(
+            "quantized linear CPU oracle produced no baseline output".to_string(),
+        )
+    })?;
+    Ok((output, baseline_wall_ns))
+}
+
+fn resident_output_byte_len(program: &Program) -> Result<usize, BenchError> {
+    let workgroup_x = program.workgroup_size()[0] as usize;
+    OUT_DIM
+        .try_into()
+        .ok()
+        .and_then(|out_dim: usize| out_dim.checked_mul(workgroup_x))
+        .and_then(|element_count| element_count.checked_mul(core::mem::size_of::<f32>()))
+        .ok_or_else(|| {
+            BenchError::ExecutionFailed(
+                "quantized linear resident output allocation length overflowed usize".to_string(),
+            )
+        })
 }
 
 inventory::submit! {
