@@ -328,14 +328,18 @@ fn inspect_backend_suite_semantics(
                 "{evidence}: suite artifact `{path}` requires CPU-SOTA 100x proof but has zero passing 100x case(s)"
             ));
         }
-        if let Some(status_blockers) = status.get("blockers").and_then(serde_json::Value::as_array)
-        {
-            for blocker in status_blockers {
-                blockers.push(format!(
-                    "{evidence}: suite artifact `{path}` blocker: {}",
-                    blocker.as_str().unwrap_or("<non-string blocker>")
-                ));
+        match status.get("blockers").and_then(serde_json::Value::as_array) {
+            Some(status_blockers) => {
+                for blocker in status_blockers {
+                    blockers.push(format!(
+                        "{evidence}: suite artifact `{path}` blocker: {}",
+                        blocker.as_str().unwrap_or("<non-string blocker>")
+                    ));
+                }
             }
+            None => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` is missing blockers array"
+            )),
         }
     }
     inspect_backend_suite_status_artifact_consistency(evidence, path, value, blockers);
@@ -980,6 +984,103 @@ mod part9_tests {
                 "Fix: completion audit must reject whitespace-only suite status field `{expected}`; blockers={blockers:?}"
             );
         }
+    }
+
+    #[test]
+    fn completion_audit_rejects_suite_status_missing_blockers_array() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for suite status blocker audit test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir).expect(
+            "Fix: create benchmark evidence directory for suite status blocker audit test.",
+        );
+        std::fs::write(
+            benchmark_dir.join("workload-01-condition-eval.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567:dirty=false",
+                "source_tree_fingerprint": "source-tree-v1:test",
+                "environment": {"host_cpu_model": "test CPU"},
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "kernel_launches": {"samples": 30, "p50": 1}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 120.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize CUDA benchmark artifact for suite status blocker audit test."),
+        )
+        .expect("Fix: write CUDA benchmark artifact for suite status blocker audit test.");
+        let suite_path = benchmark_dir.join("cuda-release-suite.json");
+        let suite = serde_json::json!({
+            "schema_version": 2,
+            "backend": "cuda",
+            "family_count": 1,
+            "artifacts": ["release/evidence/benchmarks/workload-01-condition-eval.json"],
+            "artifact_statuses": [
+                {
+                    "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+                    "exists": true,
+                    "bytes": 1,
+                    "read_error": null,
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567:dirty=false",
+                    "source_tree_fingerprint": "source-tree-v1:test",
+                    "host_cpu_model": "test CPU",
+                    "selected_backend": "cuda",
+                    "case_count": 1,
+                    "failed_count": 0,
+                    "nonmatching_case_backend_count": 0,
+                    "min_wall_samples": 30,
+                    "min_baseline_wall_samples": 30,
+                    "min_wall_p50": 10,
+                    "min_wall_p95": 11,
+                    "min_wall_p99": 12,
+                    "min_baseline_wall_p50": 1000,
+                    "min_baseline_wall_p95": 1001,
+                    "min_baseline_wall_p99": 1002,
+                    "min_kernel_launches": 1,
+                    "gpu_model": "RTX 5090",
+                    "nvidia_driver_version": "580.0",
+                    "nvidia_cuda_version": "13.0",
+                    "gpu_memory_total_mib": 24576,
+                    "gpu_compute_capability_major": 8,
+                    "gpu_compute_capability_minor": 9,
+                    "min_cuda_ptx_source_cache_entries": 1,
+                    "min_cuda_ptx_source_cache_hits": 0,
+                    "min_cuda_ptx_source_cache_misses": 1,
+                    "cpu_sota_100x_required": false,
+                    "cpu_sota_100x_contract_cases": 0,
+                    "cpu_sota_100x_passing_cases": 0
+                }
+            ],
+            "blockers": []
+        });
+        let mut blockers = Vec::new();
+
+        inspect_backend_suite_semantics(
+            "release/evidence/benchmarks/cuda-release-suite.json",
+            &suite_path,
+            &suite,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "suite artifact `release/evidence/benchmarks/workload-01-condition-eval.json` is missing blockers array"
+            )),
+            "Fix: completion audit must fail closed when generated suite status rows omit blockers; blockers={blockers:?}"
+        );
     }
 
     #[test]

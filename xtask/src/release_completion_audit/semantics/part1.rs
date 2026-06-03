@@ -70,13 +70,7 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
         }
     };
     inspect_current_source_fingerprint_freshness(evidence, path, &value, blockers);
-    let blocker_count = value
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(0, Vec::len);
-    if blocker_count != 0 {
-        blockers.push(format!("{evidence}: reports {blocker_count} blocker(s)"));
-    }
+    inspect_generated_blockers_array(evidence, &value, blockers);
     let failed = value
         .get("summary")
         .and_then(|summary| summary.get("failed"))
@@ -321,6 +315,39 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
             "{evidence}: completion audit reports {open} blocked/open requirement(s)"
         ));
     }
+}
+
+fn inspect_generated_blockers_array(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let requires_blockers = evidence_requires_blockers_array(evidence);
+    match value.get("blockers") {
+        Some(blockers_value) => {
+            let Some(blocker_items) = blockers_value.as_array() else {
+                blockers.push(format!("{evidence}: blockers must be an array"));
+                return;
+            };
+            if !blocker_items.is_empty() {
+                blockers.push(format!(
+                    "{evidence}: reports {} blocker(s)",
+                    blocker_items.len()
+                ));
+            }
+        }
+        None if requires_blockers => blockers.push(format!("{evidence}: missing blockers array")),
+        None => {}
+    }
+}
+
+fn evidence_requires_blockers_array(evidence: &str) -> bool {
+    evidence.ends_with("cuda-release-suite.json")
+        || evidence.ends_with("wgpu-fallback-suite.json")
+        || evidence.ends_with("bench-release-axes.json")
+        || evidence.ends_with("cpu-only-100x-proof.json")
+        || evidence.ends_with("pass-family-benchmark-manifest.json")
+        || evidence.ends_with("release-workload-matrix.json")
 }
 
 fn inspect_current_source_fingerprint_freshness(
@@ -628,6 +655,41 @@ mod part1_tests {
                 "release/evidence/benchmarks/wgpu-missing-source.json: benchmark report must include source_fingerprint provenance"
             )),
             "Fix: completion audit must reject generic benchmark reports with no source provenance; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_generated_evidence_missing_blockers_array() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for generated blockers audit test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create benchmark evidence directory for generated blockers test.");
+        let path = benchmark_dir.join("bench-release-axes.json");
+        fs::write(
+            &path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "source_artifacts": []
+            }))
+            .expect("Fix: serialize generated evidence without blockers."),
+        )
+        .expect("Fix: write generated evidence without blockers.");
+
+        let mut blockers = Vec::new();
+        inspect_json_evidence(
+            "release/evidence/benchmarks/bench-release-axes.json",
+            &path,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "release/evidence/benchmarks/bench-release-axes.json: missing blockers array"
+            )),
+            "Fix: completion audit must fail closed when generated release benchmark evidence omits blockers; blockers={blockers:?}"
         );
     }
 }
