@@ -11,7 +11,7 @@ use blake3::Hash;
 use inventory::iter;
 use vyre::backend::backend_dispatches;
 use vyre::backend::registered_backends;
-use vyre::ir::{DataType, Expr, ExprNode, Node, Program};
+use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, Program};
 use vyre::{BackendRegistration, DispatchConfig, VyreBackend};
 use vyre_conform_runner::dispatch_grid;
 use vyre_conform_runner::fp_parity::{compare_output_buffers, BufferParity};
@@ -146,8 +146,15 @@ impl BackendRunner {
         match &self.kind {
             BackendKind::ReferenceBackend => {
                 values.clear();
-                for bytes in inputs {
-                    values.push(Value::from(bytes.as_slice()));
+                if let Some(plan) = plan {
+                    backend_dispatch_inputs_with_plan_into(inputs, plan, backend_inputs)?;
+                    for bytes in backend_inputs.iter() {
+                        values.push(Value::from(*bytes));
+                    }
+                } else {
+                    for bytes in inputs {
+                        values.push(Value::from(bytes.as_slice()));
+                    }
                 }
                 vyre_reference::reference_eval(program, values)
                     .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
@@ -172,7 +179,7 @@ impl BackendRunner {
                     backend_dispatch_inputs_with_plan_into(inputs, plan, backend_inputs)?;
                     run_dispatch(backend_inputs)
                 } else {
-                    let plan_storage = backend_dispatch_plan(program, inputs.len())?;
+                    let plan_storage = backend_dispatch_plan(program)?;
                     let mut local_inputs = Vec::new();
                     backend_dispatch_inputs_with_plan_into(
                         inputs,
@@ -188,8 +195,17 @@ impl BackendRunner {
 
 #[derive(Clone)]
 enum BackendInputSource {
-    Fixture(usize),
-    Zeroed(usize),
+    Fixture {
+        fixture_index: usize,
+        buffer_index: usize,
+        byte_len: Option<usize>,
+    },
+    ReadWriteOrZero {
+        fixture_index: usize,
+        buffer_index: usize,
+        zero_index: Option<usize>,
+        byte_len: Option<usize>,
+    },
 }
 
 struct BackendDispatchPlan {
@@ -198,12 +214,10 @@ struct BackendDispatchPlan {
     buffer_len: usize,
 }
 
-fn backend_dispatch_plan(
-    program: &Program,
-    fixture_buffer_count: usize,
-) -> Result<BackendDispatchPlan, String> {
+fn backend_dispatch_plan(program: &Program) -> Result<BackendDispatchPlan, String> {
     let mut sources = Vec::with_capacity(program.buffers().len());
     let mut zeroed_inputs = Vec::with_capacity(program.buffers().len());
+    let mut fixture_index = 0usize;
     for (buffer_index, buffer) in program.buffers().iter().enumerate() {
         if buffer.kind() == vyre::ir::MemoryKind::Shared
             || buffer.is_output()
@@ -212,35 +226,46 @@ fn backend_dispatch_plan(
         {
             continue;
         }
-        if matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite)
-            && buffer_index >= fixture_buffer_count
-        {
-            let byte_len = buffer
-                .static_byte_len()
-                .map_err(|error| {
-                    format!(
-                        "buffer `{}` has no fixture and its static byte length could not be computed: {error}. Fix: add fixture bytes for this read-write buffer.",
-                        buffer.name(),
-                    )
-                })?
-                .ok_or_else(|| {
-                    format!(
-                        "buffer `{}` has no fixture and is runtime-sized. Fix: add fixture bytes for this read-write buffer.",
-                        buffer.name()
-                    )
-                })?;
-            let zero_index = zeroed_inputs.len();
-            zeroed_inputs.push(vec![0u8; byte_len]);
-            sources.push(BackendInputSource::Zeroed(zero_index));
+        if matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite) {
+            let byte_len = fixture_backed_byte_len(buffer)?;
+            let zero_index = if let Some(byte_len) = byte_len {
+                let zero_index = zeroed_inputs.len();
+                zeroed_inputs.push(vec![0u8; byte_len]);
+                Some(zero_index)
+            } else {
+                None
+            };
+            sources.push(BackendInputSource::ReadWriteOrZero {
+                fixture_index,
+                buffer_index,
+                zero_index,
+                byte_len,
+            });
+            fixture_index += 1;
             continue;
         }
-        sources.push(BackendInputSource::Fixture(buffer_index));
+        let byte_len = fixture_backed_byte_len(buffer)?;
+        sources.push(BackendInputSource::Fixture {
+            fixture_index,
+            buffer_index,
+            byte_len,
+        });
+        fixture_index += 1;
     }
 
     Ok(BackendDispatchPlan {
         sources,
         zeroed_inputs,
         buffer_len: program.buffers().len(),
+    })
+}
+
+fn fixture_backed_byte_len(buffer: &BufferDecl) -> Result<Option<usize>, String> {
+    buffer.static_byte_len().map_err(|error| {
+        format!(
+            "buffer `{}` static byte length could not be computed: {error}. Fix: use a fixed-width buffer type or provide concrete fixture bytes.",
+            buffer.name(),
+        )
     })
 }
 
@@ -260,26 +285,190 @@ fn backend_dispatch_inputs_with_plan_into<'a>(
     backend_inputs.clear();
     for source in &plan.sources {
         match source {
-            BackendInputSource::Fixture(buffer_index) => {
-                if let Some(bytes) = fixture_inputs.get(*buffer_index) {
+            BackendInputSource::Fixture {
+                fixture_index,
+                buffer_index,
+                byte_len,
+            } => {
+                if let Some(bytes) =
+                    matching_fixture_bytes(fixture_inputs, *buffer_index, *fixture_index, *byte_len)
+                {
                     backend_inputs.push(bytes.as_slice());
                     continue;
                 }
-                return Err(
-                    "fixture omitted required input buffer. Fix: every non-output read-only/uniform buffer must be present in the witness case."
-                        .to_string(),
-                );
+                return Err(format!(
+                    "fixture omitted required input buffer at fixture index `{fixture_index}` / program index `{buffer_index}`. Fix: every non-output read-only/uniform buffer must be present in the witness case."
+                ));
             }
-            BackendInputSource::Zeroed(index) => {
-                if let Some(bytes) = plan.zeroed_inputs.get(*index) {
+            BackendInputSource::ReadWriteOrZero {
+                fixture_index,
+                buffer_index,
+                zero_index,
+                byte_len,
+            } => {
+                if let Some(bytes) =
+                    matching_fixture_bytes(fixture_inputs, *buffer_index, *fixture_index, *byte_len)
+                {
                     backend_inputs.push(bytes.as_slice());
                     continue;
                 }
-                return Err("internal plan mismatch: zeroed input index is invalid.".to_string());
+                if let Some(zero_index) = zero_index {
+                    if let Some(bytes) = plan.zeroed_inputs.get(*zero_index) {
+                        backend_inputs.push(bytes.as_slice());
+                        continue;
+                    }
+                    return Err(
+                        "internal plan mismatch: zeroed input index is invalid.".to_string()
+                    );
+                }
+                return Err(format!(
+                    "fixture omitted runtime-sized read-write buffer at fixture index `{fixture_index}` / program index `{buffer_index}`. Fix: provide concrete fixture bytes because dynamic read-write buffers cannot be zero-initialized without a byte length."
+                ));
             }
         }
     }
     Ok(())
+}
+
+fn matching_fixture_bytes<'a>(
+    fixture_inputs: &'a [Vec<u8>],
+    buffer_index: usize,
+    fixture_index: usize,
+    byte_len: Option<usize>,
+) -> Option<&'a Vec<u8>> {
+    if let Some(byte_len) = byte_len {
+        return fixture_inputs
+            .get(buffer_index)
+            .filter(|bytes| bytes.len() == byte_len)
+            .or_else(|| {
+                fixture_inputs
+                    .get(fixture_index)
+                    .filter(|bytes| bytes.len() == byte_len)
+            })
+            .or_else(|| fixture_inputs.get(fixture_index))
+            .or_else(|| fixture_inputs.get(buffer_index));
+    }
+    fixture_inputs
+        .get(fixture_index)
+        .or_else(|| fixture_inputs.get(buffer_index))
+}
+
+#[test]
+fn parity_backend_input_plan_accepts_logical_fixture_order_after_output_buffer() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::output("out", 0, DataType::U32).with_count(1),
+            BufferDecl::storage("input", 1, BufferAccess::ReadOnly, DataType::U32).with_count(2),
+        ],
+        [1, 1, 1],
+        Vec::<Node>::new(),
+    );
+    let plan =
+        backend_dispatch_plan(&program).expect("Fix: static logical input planning must succeed.");
+    let case = vec![vec![1, 0, 0, 0, 2, 0, 0, 0]];
+    let mut backend_inputs = Vec::new();
+
+    backend_dispatch_inputs_with_plan_into(&case, &plan, &mut backend_inputs)
+        .expect("Fix: logical fixture order must route input bytes even when output buffers precede inputs.");
+
+    assert_eq!(
+        backend_inputs,
+        vec![case[0].as_slice()],
+        "Fix: parity matrix must use logical fixture order, not raw Program::buffers indices."
+    );
+}
+
+#[test]
+fn parity_backend_input_plan_accepts_fixture_backed_runtime_sized_input() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        Vec::<Node>::new(),
+    );
+    let plan = backend_dispatch_plan(&program)
+        .expect("Fix: runtime-sized read-only buffers must be fixture-backed.");
+    let case = vec![vec![0xAA; 12]];
+    let mut backend_inputs = Vec::new();
+
+    backend_dispatch_inputs_with_plan_into(&case, &plan, &mut backend_inputs)
+        .expect("Fix: concrete fixture bytes must satisfy runtime-sized parity inputs.");
+
+    assert_eq!(
+        backend_inputs,
+        vec![case[0].as_slice()],
+        "Fix: dynamic fixture bytes must pass through unchanged."
+    );
+}
+
+#[test]
+fn parity_backend_input_plan_rejects_omitted_runtime_sized_read_write_input() {
+    let program = Program::wrapped(
+        vec![BufferDecl::storage(
+            "scratch",
+            0,
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )],
+        [1, 1, 1],
+        Vec::<Node>::new(),
+    );
+    let plan = backend_dispatch_plan(&program)
+        .expect("Fix: dynamic read-write input may be fixture-backed.");
+    let mut backend_inputs = Vec::new();
+
+    let error = backend_dispatch_inputs_with_plan_into(&[], &plan, &mut backend_inputs)
+        .expect_err("Fix: omitted dynamic read-write inputs must not be silently zeroed.");
+
+    assert!(
+        error.contains("runtime-sized read-write buffer"),
+        "Fix: error must preserve dynamic read-write fixture guidance, got: {error}"
+    );
+}
+
+#[test]
+fn parity_reference_runner_uses_planned_zeroed_read_write_inputs() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "scratch",
+            Expr::u32(0),
+            Expr::load("input", Expr::u32(0)),
+        )],
+    );
+    let plan = backend_dispatch_plan(&program)
+        .expect("Fix: static read-write zero-fill planning must succeed.");
+    let runner = BackendRunner {
+        id: "reference",
+        kind: BackendKind::ReferenceBackend,
+    };
+    let config = DispatchConfig::default();
+    let inputs = vec![1u32.to_le_bytes().to_vec()];
+    let mut values = Vec::new();
+    let mut borrowed_inputs = Vec::new();
+
+    let outputs = runner
+        .dispatch_with_plan(
+            &program,
+            &inputs,
+            &mut values,
+            Some(&plan),
+            &mut borrowed_inputs,
+            &config,
+        )
+        .expect("Fix: reference parity runner must receive planned zeroed read-write inputs.");
+
+    assert_eq!(
+        outputs,
+        vec![1u32.to_le_bytes().to_vec()],
+        "Fix: reference and backend parity paths must use the same planned input buffer expansion."
+    );
 }
 
 // Asserts `runners.len() >= 2`, which means at least one dispatch-capable
@@ -362,10 +551,9 @@ fn parity_matrix_across_all_registered_ops() {
         );
 
         summary.ops_covered += 1;
-        let input_plan =
-            backend_dispatch_plan(&program, input_cases[0].len()).unwrap_or_else(|error| {
-                panic!("Fix: {} backend input plan failed: {error}", entry.id);
-            });
+        let input_plan = backend_dispatch_plan(&program).unwrap_or_else(|error| {
+            panic!("Fix: {} backend input plan failed: {error}", entry.id);
+        });
         let grid_config = dispatch_grid::config_for_program(&program).unwrap_or_else(|error| {
             panic!("Fix: {} config_for_program failed: {error}", entry.id);
         });
@@ -381,7 +569,14 @@ fn parity_matrix_across_all_registered_ops() {
             borrowed_inputs.clear();
 
             let reference_output = runners[0]
-                .dispatch(&program, inputs, &mut reference_values)
+                .dispatch_with_plan(
+                    &program,
+                    inputs,
+                    &mut reference_values,
+                    Some(&input_plan),
+                    &mut borrowed_inputs,
+                    &grid_config,
+                )
                 .unwrap_or_else(|error| {
                     panic!(
                         "Fix: {} case {} reference failed: {error}",

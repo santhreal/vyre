@@ -623,6 +623,30 @@ fn release_conformance_static_sizing_uses_packed_buffer_lengths() {
 }
 
 #[test]
+fn parity_matrix_input_planner_tracks_dynamic_fixture_contract() {
+    for path in [
+        "conform/vyre-conform-runner/src/main.rs",
+        "conform/vyre-conform-runner/tests/__split/parity_matrix_chunk1.rs",
+    ] {
+        let source = repo_file(path);
+        assert!(
+            source.contains("matching_fixture_bytes(")
+                && source.contains("fixture_index")
+                && source.contains("byte_len: Option<usize>"),
+            "Fix: `{path}` must route backend witness inputs by logical fixture order with optional static byte lengths, not only raw Program::buffers indices."
+        );
+        assert!(
+            source.contains("runtime-sized read-write buffer"),
+            "Fix: `{path}` must reject omitted runtime-sized read-write buffers instead of silently zeroing an unknown byte length."
+        );
+        assert!(
+            !source.contains("fixture_buffer_count"),
+            "Fix: `{path}` must not infer read-write fixture presence from a raw fixture count; use per-buffer fixture matching."
+        );
+    }
+}
+
+#[test]
 fn conformance_tests_do_not_compile_out_gpu_gates() {
     let tests_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
     let mut findings = Vec::new();
