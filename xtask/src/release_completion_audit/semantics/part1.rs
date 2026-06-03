@@ -69,6 +69,7 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
             return;
         }
     };
+    inspect_current_source_fingerprint_freshness(evidence, path, &value, blockers);
     let blocker_count = value
         .get("blockers")
         .and_then(serde_json::Value::as_array)
@@ -285,6 +286,39 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
         blockers.push(format!(
             "{evidence}: completion audit reports {open} blocked/open requirement(s)"
         ));
+    }
+}
+
+fn inspect_current_source_fingerprint_freshness(
+    evidence: &str,
+    path: &Path,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let Some(source_fingerprint) = value
+        .get("source_fingerprint")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+    else {
+        return;
+    };
+    let Some(current_source_fingerprint) =
+        crate::benchmark_evidence_semantics::current_source_fingerprint_for_evidence_path(path)
+    else {
+        return;
+    };
+    for issue in crate::benchmark_evidence_semantics::source_fingerprint_freshness_issues(
+        source_fingerprint,
+        &current_source_fingerprint,
+    ) {
+        match issue {
+            crate::benchmark_evidence_semantics::SourceFingerprintFreshnessIssue::Mismatch {
+                source_fingerprint,
+                current_source_fingerprint,
+            } => blockers.push(format!(
+                "{evidence}: source_fingerprint `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`"
+            )),
+        }
     }
 }
 

@@ -1,7 +1,9 @@
 use crate::benchmark_evidence_semantics::{
     backend_consistency_issues, contract_backend_issues, cuda_telemetry_label_issues,
-    launch_plan_label_issues, source_fingerprint_issues, BackendConsistencyIssue,
-    ContractBackendIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue, SourceFingerprintIssue,
+    current_source_fingerprint_for_evidence_path, launch_plan_label_issues,
+    source_fingerprint_freshness_issues, source_fingerprint_issues, BackendConsistencyIssue,
+    ContractBackendIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
+    SourceFingerprintFreshnessIssue, SourceFingerprintIssue,
 };
 
 pub(crate) fn check_benchmark_report_has_cases(
@@ -381,6 +383,27 @@ fn check_source_fingerprint_shape(
                     requirement.id
                 ));
             }
+        }
+    }
+}
+
+fn check_source_fingerprint_freshness(
+    requirement: &Requirement,
+    label: &str,
+    source_fingerprint: &str,
+    current_source_fingerprint: &str,
+    failures: &mut Vec<String>,
+) {
+    for issue in source_fingerprint_freshness_issues(source_fingerprint, current_source_fingerprint)
+    {
+        match issue {
+            SourceFingerprintFreshnessIssue::Mismatch {
+                source_fingerprint,
+                current_source_fingerprint,
+            } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` source_fingerprint `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`",
+                requirement.id
+            )),
         }
     }
 }

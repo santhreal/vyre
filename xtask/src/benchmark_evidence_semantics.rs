@@ -1,6 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 use serde_json::{Map, Value};
+
+static CURRENT_SOURCE_FINGERPRINTS: OnceLock<Mutex<BTreeMap<PathBuf, String>>> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum LaunchPlanLabelIssue {
@@ -55,6 +59,14 @@ pub(crate) enum SourceFingerprintIssue {
     DirtyInvalidWorktree {
         source_fingerprint: String,
         worktree: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum SourceFingerprintFreshnessIssue {
+    Mismatch {
+        source_fingerprint: String,
+        current_source_fingerprint: String,
     },
 }
 
@@ -153,6 +165,54 @@ pub(crate) fn source_fingerprint_issues(source_fingerprint: &str) -> Vec<SourceF
         });
     }
     issues
+}
+
+pub(crate) fn source_fingerprint_freshness_issues(
+    source_fingerprint: &str,
+    current_source_fingerprint: &str,
+) -> Vec<SourceFingerprintFreshnessIssue> {
+    if source_fingerprint == current_source_fingerprint {
+        Vec::new()
+    } else {
+        vec![SourceFingerprintFreshnessIssue::Mismatch {
+            source_fingerprint: source_fingerprint.to_string(),
+            current_source_fingerprint: current_source_fingerprint.to_string(),
+        }]
+    }
+}
+
+pub(crate) fn current_source_fingerprint_for_evidence_path(path: &Path) -> Option<String> {
+    let workspace_root = workspace_root_for_evidence_path(path)?;
+    Some(current_source_fingerprint_at(&workspace_root))
+}
+
+fn current_source_fingerprint_at(workspace_root: &Path) -> String {
+    let key = workspace_root
+        .canonicalize()
+        .unwrap_or_else(|_| workspace_root.to_path_buf());
+    let cache = CURRENT_SOURCE_FINGERPRINTS.get_or_init(|| Mutex::new(BTreeMap::new()));
+    if let Ok(cache) = cache.lock() {
+        if let Some(fingerprint) = cache.get(&key) {
+            return fingerprint.clone();
+        }
+    }
+
+    let git = vyre_bench::probes::capture_git_info_at(workspace_root);
+    let fingerprint = vyre_bench::probes::source_fingerprint(&git);
+    if let Ok(mut cache) = cache.lock() {
+        cache.insert(key, fingerprint.clone());
+    }
+    fingerprint
+}
+
+fn workspace_root_for_evidence_path(path: &Path) -> Option<PathBuf> {
+    let mut cursor = if path.is_dir() { path } else { path.parent()? };
+    loop {
+        if cursor.join("Cargo.toml").is_file() && cursor.join("release").is_dir() {
+            return Some(cursor.to_path_buf());
+        }
+        cursor = cursor.parent()?;
+    }
 }
 
 pub(crate) fn backend_suite_artifact_status_issues(
@@ -681,6 +741,53 @@ mod tests {
             ))
             .is_empty(),
             "Fix: precise dirty source fingerprints must remain valid release evidence."
+        );
+    }
+
+    #[test]
+    fn source_fingerprint_freshness_rejects_non_current_evidence() {
+        assert_eq!(
+            source_fingerprint_freshness_issues(
+                "git:old:dirty=false",
+                "git:new:dirty=true:worktree=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            ),
+            vec![SourceFingerprintFreshnessIssue::Mismatch {
+                source_fingerprint: "git:old:dirty=false".to_string(),
+                current_source_fingerprint:
+                    "git:new:dirty=true:worktree=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                        .to_string(),
+            }],
+            "Fix: release evidence must be regenerated after source changes, not carried forward by matching old artifact metadata."
+        );
+    }
+
+    #[test]
+    fn source_fingerprint_freshness_accepts_current_evidence() {
+        let fingerprint =
+            "git:abc:dirty=true:worktree=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+        assert!(
+            source_fingerprint_freshness_issues(fingerprint, fingerprint).is_empty(),
+            "Fix: current source evidence should not be rejected by the freshness gate."
+        );
+    }
+
+    #[test]
+    fn current_source_fingerprint_resolves_from_release_evidence_path() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for evidence source fingerprint test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        std::fs::create_dir_all(dir.path().join("release/evidence/benchmarks"))
+            .expect("Fix: create temp release evidence directory.");
+        let evidence = dir.path().join("release/evidence/benchmarks/workload.json");
+
+        let fingerprint = current_source_fingerprint_for_evidence_path(&evidence)
+            .expect("Fix: resolve workspace source fingerprint from nested release evidence path.");
+
+        assert!(
+            fingerprint.starts_with("crate:"),
+            "Fix: non-git test workspaces should still produce deterministic crate source provenance, got {fingerprint}."
         );
     }
 

@@ -322,6 +322,10 @@ fn inspect_backend_suite_status_artifact_consistency(
     let Some(artifacts) = suite.get("artifacts").and_then(serde_json::Value::as_array) else {
         return;
     };
+    let current_source_fingerprint =
+        crate::benchmark_evidence_semantics::current_source_fingerprint_for_evidence_path(
+            workspace_root,
+        );
     for artifact in artifacts {
         let Some(artifact) = artifact.as_str() else {
             continue;
@@ -363,6 +367,15 @@ fn inspect_backend_suite_status_artifact_consistency(
                 source_fingerprint,
                 blockers,
             );
+            if let Some(current_source_fingerprint) = current_source_fingerprint.as_deref() {
+                inspect_suite_artifact_source_fingerprint_freshness(
+                    evidence,
+                    artifact,
+                    source_fingerprint,
+                    current_source_fingerprint,
+                    blockers,
+                );
+            }
         }
     }
 }
@@ -492,6 +505,28 @@ fn inspect_suite_artifact_source_fingerprint(
                 worktree,
             } => blockers.push(format!(
                 "{evidence}: suite artifact `{artifact}` source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`; expected 64 hex chars"
+            )),
+        }
+    }
+}
+
+fn inspect_suite_artifact_source_fingerprint_freshness(
+    evidence: &str,
+    artifact: &str,
+    source_fingerprint: &str,
+    current_source_fingerprint: &str,
+    blockers: &mut Vec<String>,
+) {
+    for issue in crate::benchmark_evidence_semantics::source_fingerprint_freshness_issues(
+        source_fingerprint,
+        current_source_fingerprint,
+    ) {
+        match issue {
+            crate::benchmark_evidence_semantics::SourceFingerprintFreshnessIssue::Mismatch {
+                source_fingerprint,
+                current_source_fingerprint,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{artifact}` source_fingerprint `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`"
             )),
         }
     }

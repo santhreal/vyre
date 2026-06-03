@@ -89,6 +89,7 @@ pub(crate) fn check_backend_suite_report(
         .get("artifact_statuses")
         .and_then(serde_json::Value::as_array)
     {
+        let current_source_fingerprint = current_source_fingerprint_for_evidence_path(base_dir);
         for status in statuses {
             let path = status
                 .get("path")
@@ -152,6 +153,21 @@ pub(crate) fn check_backend_suite_report(
                         requirement.id
                     ));
                 }
+            }
+            if let (Some(source_fingerprint), Some(current_source_fingerprint)) = (
+                status
+                    .get("source_fingerprint")
+                    .and_then(serde_json::Value::as_str)
+                    .filter(|value| !value.trim().is_empty()),
+                current_source_fingerprint.as_deref(),
+            ) {
+                check_source_fingerprint_freshness(
+                    requirement,
+                    &format!("backend suite `{suffix}` artifact `{path}`"),
+                    source_fingerprint,
+                    current_source_fingerprint,
+                    failures,
+                );
             }
             if status
                 .get("case_count")

@@ -157,6 +157,21 @@ pub(crate) fn check_single_benchmark_report(
         report,
         failures,
     );
+    if let (Some(source_fingerprint), Some(current_source_fingerprint)) = (
+        report
+            .get("source_fingerprint")
+            .and_then(serde_json::Value::as_str)
+            .filter(|value| !value.trim().is_empty()),
+        current_source_fingerprint_for_evidence_path(path),
+    ) {
+        check_source_fingerprint_freshness(
+            requirement,
+            &path.display().to_string(),
+            source_fingerprint,
+            &current_source_fingerprint,
+            failures,
+        );
+    }
     let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) else {
         failures.push(format!(
             "requirement `{}` benchmark `{}` has no cases array",
