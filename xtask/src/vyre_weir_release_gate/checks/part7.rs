@@ -845,6 +845,16 @@ pub(crate) fn check_backend_suite_parity(
                 "requirement `{}` WGPU/CUDA suite parity field `{field}` mismatch for family `{family_id}` case `{requested_case_id}`: cuda={cuda_value:?}, wgpu={wgpu_value:?}",
                 requirement.id
             )),
+            BackendSuiteParityIssue::StatusStringFieldMismatch {
+                family_id,
+                requested_case_id,
+                field,
+                cuda_value,
+                wgpu_value,
+            } => failures.push(format!(
+                "requirement `{}` WGPU/CUDA suite parity field `{field}` mismatch for family `{family_id}` case `{requested_case_id}`: cuda={cuda_value:?}, wgpu={wgpu_value:?}",
+                requirement.id
+            )),
         }
     }
 }

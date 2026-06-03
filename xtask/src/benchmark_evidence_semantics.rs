@@ -749,6 +749,13 @@ pub(crate) enum BackendSuiteParityIssue {
         cuda_value: Option<u64>,
         wgpu_value: Option<u64>,
     },
+    StatusStringFieldMismatch {
+        family_id: String,
+        requested_case_id: String,
+        field: &'static str,
+        cuda_value: Option<String>,
+        wgpu_value: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1677,6 +1684,25 @@ pub(crate) fn backend_suite_parity_issues(
             let wgpu_value = wgpu_status.get(field).and_then(Value::as_u64);
             if cuda_value != wgpu_value {
                 issues.push(BackendSuiteParityIssue::StatusFieldMismatch {
+                    family_id: pair.0.clone(),
+                    requested_case_id: pair.1.clone(),
+                    field,
+                    cuda_value,
+                    wgpu_value,
+                });
+            }
+        }
+        for field in ["source_fingerprint", "source_tree_fingerprint"] {
+            let cuda_value = cuda_status
+                .get(field)
+                .and_then(non_empty_str)
+                .map(str::to_string);
+            let wgpu_value = wgpu_status
+                .get(field)
+                .and_then(non_empty_str)
+                .map(str::to_string);
+            if cuda_value != wgpu_value {
+                issues.push(BackendSuiteParityIssue::StatusStringFieldMismatch {
                     family_id: pair.0.clone(),
                     requested_case_id: pair.1.clone(),
                     field,
@@ -2823,7 +2849,9 @@ mod tests {
                     "requested_case_id": "release.condition_eval.1m",
                     "case_count": 1,
                     "failed_count": 0,
-                    "nonmatching_case_backend_count": 0
+                    "nonmatching_case_backend_count": 0,
+                    "source_fingerprint": "git:cuda-source:dirty=false",
+                    "source_tree_fingerprint": "source-tree-v1:cuda"
                 }
             ]
         });
@@ -2834,7 +2862,9 @@ mod tests {
                     "requested_case_id": "release.condition_eval.1m",
                     "case_count": 0,
                     "failed_count": 1,
-                    "nonmatching_case_backend_count": 0
+                    "nonmatching_case_backend_count": 0,
+                    "source_fingerprint": "git:wgpu-source:dirty=false",
+                    "source_tree_fingerprint": "source-tree-v1:wgpu"
                 }
             ]
         });
@@ -2856,8 +2886,22 @@ mod tests {
                     cuda_value: Some(0),
                     wgpu_value: Some(1),
                 },
+                BackendSuiteParityIssue::StatusStringFieldMismatch {
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                    field: "source_fingerprint",
+                    cuda_value: Some("git:cuda-source:dirty=false".to_string()),
+                    wgpu_value: Some("git:wgpu-source:dirty=false".to_string()),
+                },
+                BackendSuiteParityIssue::StatusStringFieldMismatch {
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                    field: "source_tree_fingerprint",
+                    cuda_value: Some("source-tree-v1:cuda".to_string()),
+                    wgpu_value: Some("source-tree-v1:wgpu".to_string()),
+                },
             ],
-            "Fix: WGPU parity must compare the proof strength of matching suite rows, not only family/case labels."
+            "Fix: WGPU parity must compare proof strength and source provenance of matching suite rows, not only family/case labels."
         );
     }
 
