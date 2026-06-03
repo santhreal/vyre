@@ -73,7 +73,7 @@ pub(crate) fn run(args: &[String]) {
     let mut workload_failures = Vec::new();
     let mut primary_suite_failures = Vec::new();
     let mut ran = 0usize;
-    for family in matrix.families.iter().filter(|family| family.required) {
+    for family in benchmark_suite_families(&matrix, config.only.as_deref()) {
         let cpu_100x_family = config.backend == "cuda"
             && family
                 .max_cpu_sota_min_speedup_x
@@ -81,14 +81,11 @@ pub(crate) fn run(args: &[String]) {
         let prefer_cpu_sota_case = cpu_100x_family || config.backend == "wgpu";
         let Some(case_id) = select_release_benchmark_case(family, prefer_cpu_sota_case) else {
             eprintln!(
-                "Fix: required release workload `{}` has no matched benchmark case.",
+                "Fix: release workload `{}` has no matched benchmark case.",
                 family.id
             );
             std::process::exit(1);
         };
-        if config.only.as_ref().is_some_and(|only| only != &family.id) {
-            continue;
-        }
         let evidence_artifact =
             backend_workload_artifact(&config.backend, &family.evidence_artifact);
         let mut workload_ok = true;
@@ -172,10 +169,10 @@ pub(crate) fn run(args: &[String]) {
     if config.only.is_none() && config.backend == "cuda" && config.include_wgpu_comparison {
         let mut wgpu_artifacts = Vec::new();
         let mut wgpu_suite_failures = Vec::new();
-        for family in matrix.families.iter().filter(|family| family.required) {
+        for family in benchmark_suite_families(&matrix, None) {
             let Some(case_id) = select_release_benchmark_case(family, true) else {
                 eprintln!(
-                    "Fix: required release workload `{}` has no matched benchmark case.",
+                    "Fix: release workload `{}` has no matched benchmark case.",
                     family.id
                 );
                 std::process::exit(1);
@@ -338,6 +335,17 @@ pub(crate) fn run(args: &[String]) {
     }
 }
 
+fn benchmark_suite_families<'a>(
+    matrix: &'a ReleaseWorkloadMatrix,
+    only: Option<&str>,
+) -> Vec<&'a ReleaseWorkloadFamily> {
+    matrix
+        .families
+        .iter()
+        .filter(|family| only.is_none_or(|only| only == family.id))
+        .collect()
+}
+
 fn select_release_benchmark_case<'a>(
     family: &'a ReleaseWorkloadFamily,
     prefer_cpu_sota_100x: bool,
@@ -478,6 +486,81 @@ mod tests {
                 "release/evidence/benchmarks/workload-01-condition-eval.json"
             ),
             "release/evidence/benchmarks/workload-01-condition-eval.json"
+        );
+    }
+
+    #[test]
+    fn benchmark_suite_families_include_optional_release_workloads() {
+        let matrix = ReleaseWorkloadMatrix {
+            families: vec![
+                ReleaseWorkloadFamily {
+                    id: "condition-eval".to_string(),
+                    required: true,
+                    matched_cases: vec!["release.condition_eval.1m".to_string()],
+                    evidence_artifact:
+                        "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    max_cpu_sota_min_speedup_x: Some(100.0),
+                    cpu_sota_100x_cases: vec!["release.condition_eval.1m".to_string()],
+                },
+                ReleaseWorkloadFamily {
+                    id: "adaptive-routing".to_string(),
+                    required: false,
+                    matched_cases: vec!["runtime.adaptive_routing.gpu_resident.1m".to_string()],
+                    evidence_artifact:
+                        "release/evidence/benchmarks/workload-15-adaptive-routing.json".to_string(),
+                    max_cpu_sota_min_speedup_x: Some(10.0),
+                    cpu_sota_100x_cases: Vec::new(),
+                },
+            ],
+        };
+
+        let families = benchmark_suite_families(&matrix, None)
+            .into_iter()
+            .map(|family| family.id.as_str())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            families,
+            vec!["condition-eval", "adaptive-routing"],
+            "Fix: release-benchmarks must generate suite evidence for every release matrix family, including non-required CUDA acceleration workloads."
+        );
+    }
+
+    #[test]
+    fn benchmark_suite_only_filter_can_select_optional_workload() {
+        let matrix = ReleaseWorkloadMatrix {
+            families: vec![
+                ReleaseWorkloadFamily {
+                    id: "condition-eval".to_string(),
+                    required: true,
+                    matched_cases: vec!["release.condition_eval.1m".to_string()],
+                    evidence_artifact:
+                        "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    max_cpu_sota_min_speedup_x: Some(100.0),
+                    cpu_sota_100x_cases: vec!["release.condition_eval.1m".to_string()],
+                },
+                ReleaseWorkloadFamily {
+                    id: "compound-fused-filter".to_string(),
+                    required: false,
+                    matched_cases: vec!["compound.pipeline.fused_filter.1m".to_string()],
+                    evidence_artifact:
+                        "release/evidence/benchmarks/workload-14-compound-fused-filter.json"
+                            .to_string(),
+                    max_cpu_sota_min_speedup_x: Some(10.0),
+                    cpu_sota_100x_cases: Vec::new(),
+                },
+            ],
+        };
+
+        let families = benchmark_suite_families(&matrix, Some("compound-fused-filter"))
+            .into_iter()
+            .map(|family| family.id.as_str())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            families,
+            vec!["compound-fused-filter"],
+            "Fix: --only must allow dogfooding optional release workload families instead of limiting selection to required rows."
         );
     }
 
