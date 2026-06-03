@@ -1,7 +1,8 @@
 use crate::benchmark_evidence_semantics::{
     backend_suite_artifact_status_issues, backend_suite_backend_issue,
-    backend_suite_inventory_issues, backend_suite_parity_issues,
-    describe_backend_suite_inventory_issue,
+    backend_suite_inventory_issues, backend_suite_matrix_coverage_issues,
+    backend_suite_parity_issues, describe_backend_suite_inventory_issue,
+    describe_backend_suite_matrix_coverage_issue,
     expected_backend_for_suite_evidence, BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue,
     BackendSuiteParityIssue,
 };
@@ -85,6 +86,7 @@ pub(crate) fn check_backend_suite_report(
             describe_backend_suite_inventory_issue(&issue)
         ));
     }
+    check_backend_suite_matrix_coverage(requirement, base_dir, suffix, &report, failures);
     if let Some(statuses) = report
         .get("artifact_statuses")
         .and_then(serde_json::Value::as_array)
@@ -523,6 +525,48 @@ pub(crate) fn check_backend_suite_report(
                 }
             }
         }
+    }
+}
+
+fn check_backend_suite_matrix_coverage(
+    requirement: &Requirement,
+    base_dir: &Path,
+    suffix: &str,
+    report: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    let matrix_path = base_dir.join("evidence/benchmarks/release-workload-matrix.json");
+    if !matrix_path.is_file() {
+        return;
+    }
+    let text = match read_text_bounded(&matrix_path) {
+        Ok(text) => text,
+        Err(error) => {
+            failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` failed to read release workload matrix `{}`: {error}",
+                requirement.id,
+                matrix_path.display()
+            ));
+            return;
+        }
+    };
+    let matrix = match serde_json::from_str::<serde_json::Value>(&text) {
+        Ok(matrix) => matrix,
+        Err(error) => {
+            failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` release workload matrix `{}` is invalid JSON: {error}",
+                requirement.id,
+                matrix_path.display()
+            ));
+            return;
+        }
+    };
+    for issue in backend_suite_matrix_coverage_issues(&matrix, report) {
+        failures.push(format!(
+            "requirement `{}` backend suite `{suffix}` {}",
+            requirement.id,
+            describe_backend_suite_matrix_coverage_issue(&issue)
+        ));
     }
 }
 

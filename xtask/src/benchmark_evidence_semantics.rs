@@ -1147,6 +1147,20 @@ pub(crate) enum BackendSuiteInventoryIssue {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum BackendSuiteMatrixCoverageIssue {
+    FamilyCountMismatch {
+        matrix_family_count: usize,
+        suite_family_count: usize,
+    },
+    MissingMatrixFamily {
+        family_id: String,
+    },
+    ExtraSuiteFamily {
+        family_id: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum BackendSuiteBackendIssue {
     Missing {
         expected_backend: String,
@@ -2067,6 +2081,61 @@ pub(crate) fn backend_suite_inventory_issues(suite: &Value) -> Vec<BackendSuiteI
         issues.push(BackendSuiteInventoryIssue::MissingArtifact { path: path.clone() });
     }
     issues
+}
+
+pub(crate) fn backend_suite_matrix_coverage_issues(
+    matrix: &Value,
+    suite: &Value,
+) -> Vec<BackendSuiteMatrixCoverageIssue> {
+    let matrix_family_ids = matrix
+        .get("families")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|family| family.get("id").and_then(non_empty_str))
+        .map(str::to_string)
+        .collect::<BTreeSet<_>>();
+    let suite_family_ids = suite_status_family_counts(suite)
+        .into_keys()
+        .collect::<BTreeSet<_>>();
+    let mut issues = Vec::new();
+
+    if matrix_family_ids.len() != suite_family_ids.len() {
+        issues.push(BackendSuiteMatrixCoverageIssue::FamilyCountMismatch {
+            matrix_family_count: matrix_family_ids.len(),
+            suite_family_count: suite_family_ids.len(),
+        });
+    }
+    for family_id in matrix_family_ids.difference(&suite_family_ids) {
+        issues.push(BackendSuiteMatrixCoverageIssue::MissingMatrixFamily {
+            family_id: family_id.clone(),
+        });
+    }
+    for family_id in suite_family_ids.difference(&matrix_family_ids) {
+        issues.push(BackendSuiteMatrixCoverageIssue::ExtraSuiteFamily {
+            family_id: family_id.clone(),
+        });
+    }
+    issues
+}
+
+pub(crate) fn describe_backend_suite_matrix_coverage_issue(
+    issue: &BackendSuiteMatrixCoverageIssue,
+) -> String {
+    match issue {
+        BackendSuiteMatrixCoverageIssue::FamilyCountMismatch {
+            matrix_family_count,
+            suite_family_count,
+        } => format!(
+            "covers {suite_family_count} workload family/families, but release-workload-matrix lists {matrix_family_count}"
+        ),
+        BackendSuiteMatrixCoverageIssue::MissingMatrixFamily { family_id } => {
+            format!("is missing release-workload-matrix family `{family_id}`")
+        }
+        BackendSuiteMatrixCoverageIssue::ExtraSuiteFamily { family_id } => {
+            format!("contains family `{family_id}` absent from release-workload-matrix")
+        }
+    }
 }
 
 pub(crate) fn describe_backend_suite_inventory_issue(issue: &BackendSuiteInventoryIssue) -> String {
@@ -4695,6 +4764,68 @@ mod tests {
                 },
             ],
             "Fix: backend suite family_count must be derived from suite rows, not trusted as a stale release total."
+        );
+    }
+
+    #[test]
+    fn backend_suite_matrix_coverage_rejects_missing_optional_workloads() {
+        let matrix = serde_json::json!({
+            "families": [
+                {"id": "condition-eval"},
+                {"id": "compound-fused-filter"},
+                {"id": "adaptive-routing"}
+            ]
+        });
+        let suite = serde_json::json!({
+            "artifact_statuses": [
+                {"family_id": "condition-eval"}
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_matrix_coverage_issues(&matrix, &suite),
+            vec![
+                BackendSuiteMatrixCoverageIssue::FamilyCountMismatch {
+                    matrix_family_count: 3,
+                    suite_family_count: 1,
+                },
+                BackendSuiteMatrixCoverageIssue::MissingMatrixFamily {
+                    family_id: "adaptive-routing".to_string(),
+                },
+                BackendSuiteMatrixCoverageIssue::MissingMatrixFamily {
+                    family_id: "compound-fused-filter".to_string(),
+                },
+            ],
+            "Fix: backend suites must cover every release workload matrix family, including optional acceleration workloads."
+        );
+    }
+
+    #[test]
+    fn backend_suite_matrix_coverage_rejects_extra_suite_family() {
+        let matrix = serde_json::json!({
+            "families": [
+                {"id": "condition-eval"}
+            ]
+        });
+        let suite = serde_json::json!({
+            "artifact_statuses": [
+                {"family_id": "condition-eval"},
+                {"family_id": "stale-family"}
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_matrix_coverage_issues(&matrix, &suite),
+            vec![
+                BackendSuiteMatrixCoverageIssue::FamilyCountMismatch {
+                    matrix_family_count: 1,
+                    suite_family_count: 2,
+                },
+                BackendSuiteMatrixCoverageIssue::ExtraSuiteFamily {
+                    family_id: "stale-family".to_string(),
+                },
+            ],
+            "Fix: backend suites must not carry stale family rows outside the release workload matrix."
         );
     }
 

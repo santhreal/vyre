@@ -1,7 +1,8 @@
 use crate::benchmark_evidence_semantics::{
     backend_suite_artifact_status_issues, backend_suite_backend_issue,
-    backend_suite_inventory_issues, backend_suite_parity_issues,
-    describe_backend_suite_inventory_issue,
+    backend_suite_inventory_issues, backend_suite_matrix_coverage_issues,
+    backend_suite_parity_issues, describe_backend_suite_inventory_issue,
+    describe_backend_suite_matrix_coverage_issue,
     expected_backend_for_suite_evidence, source_fingerprint_issues,
     BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue, BackendSuiteParityIssue,
     SourceFingerprintIssue,
@@ -69,6 +70,7 @@ fn inspect_backend_suite_semantics(
             describe_backend_suite_inventory_issue(&issue)
         ));
     }
+    inspect_backend_suite_matrix_coverage(evidence, path, value, blockers);
     let Some(statuses) = value
         .get("artifact_statuses")
         .and_then(serde_json::Value::as_array)
@@ -315,6 +317,47 @@ fn inspect_backend_suite_semantics(
     inspect_backend_suite_status_artifact_consistency(evidence, path, value, blockers);
     if evidence.ends_with("wgpu-fallback-suite.json") {
         inspect_wgpu_cuda_suite_parity(evidence, path, value, blockers);
+    }
+}
+
+fn inspect_backend_suite_matrix_coverage(
+    evidence: &str,
+    suite_path: &Path,
+    suite: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let Some(workspace_root) = backend_suite_workspace_root(suite_path) else {
+        return;
+    };
+    let matrix_path = workspace_root.join("release/evidence/benchmarks/release-workload-matrix.json");
+    if !matrix_path.is_file() {
+        return;
+    }
+    let text = match read_text_bounded(&matrix_path) {
+        Ok(text) => text,
+        Err(error) => {
+            blockers.push(format!(
+                "{evidence}: failed to read release workload matrix `{}`: {error}",
+                matrix_path.display()
+            ));
+            return;
+        }
+    };
+    let matrix = match serde_json::from_str::<serde_json::Value>(&text) {
+        Ok(value) => value,
+        Err(error) => {
+            blockers.push(format!(
+                "{evidence}: release workload matrix `{}` is invalid JSON: {error}",
+                matrix_path.display()
+            ));
+            return;
+        }
+    };
+    for issue in backend_suite_matrix_coverage_issues(&matrix, suite) {
+        blockers.push(format!(
+            "{evidence}: suite {}",
+            describe_backend_suite_matrix_coverage_issue(&issue)
+        ));
     }
 }
 
