@@ -4,7 +4,8 @@ use std::path::Path;
 use serde_json::{json, Value};
 
 use crate::benchmark_evidence_semantics::{
-    baseline_applies_to_backend, cuda_release_axes_source_artifact_issues,
+    backend_suite_backend_issue, baseline_applies_to_backend,
+    cuda_release_axes_source_artifact_issues, BackendSuiteBackendIssue,
 };
 
 use super::metrics::{
@@ -272,6 +273,78 @@ mod tests {
                 )
             )),
             "Fix: write_release_axes must record source provenance blockers in bench-release-axes instead of leaving them only to the CLI/gate; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn release_axes_records_mislabeled_cuda_suite_backend_blocker() {
+        let dir = TempDir::new()
+            .expect("Fix: create temp workspace for release axes suite backend test.");
+        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let mut suite_artifacts = Vec::new();
+        for index in 1..=12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            fs::write(
+                dir.path().join(&artifact),
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "source_tree_fingerprint": &source_tree_fingerprint,
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "environment": {
+                        "gpu_devices": [{"memory_total_mib": 24576}]
+                    },
+                    "cases": [
+                        {
+                            "id": format!("release.axis.suite-backend.{index}"),
+                            "backend_id": "cuda",
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"p50": 10 + index},
+                                "cold_compile_ns": {"p50": 1000 + index},
+                                "wall_gb_s_x1000": {"p50": 2000 + index}
+                            }
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize mislabeled-suite release axis fixture."),
+            )
+            .expect("Fix: write mislabeled-suite release axis fixture.");
+            suite_artifacts.push(artifact);
+        }
+        fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "wgpu",
+                "artifacts": suite_artifacts
+            }))
+            .expect("Fix: serialize mislabeled CUDA release suite fixture."),
+        )
+        .expect("Fix: write mislabeled CUDA release suite fixture.");
+
+        write_release_axes(dir.path());
+
+        let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
+            .expect("Fix: read generated release axes evidence.");
+        let axes = serde_json::from_str::<Value>(&axes_text)
+            .expect("Fix: generated release axes evidence must be JSON.");
+        let blockers = axes
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated release axes evidence must include blockers.");
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.as_str().is_some_and(
+                |blocker| blocker.contains(
+                    "CUDA release suite backend `wgpu` does not match required `cuda`"
+                )
+            )),
+            "Fix: write_release_axes must record suite backend identity drift in bench-release-axes; blockers={blockers:?}"
         );
     }
 }
@@ -588,6 +661,7 @@ pub(super) fn write_release_axes(workspace_root: &Path) {
             }
         }
     };
+    record_cuda_release_suite_backend_issue(&suite, &mut blockers);
     let suite_artifacts = suite
         .get("artifacts")
         .and_then(Value::as_array)
@@ -681,6 +755,22 @@ pub(super) fn write_release_axes(workspace_root: &Path) {
         &workspace_root.join("release/evidence/benchmarks/bench-release-axes.json"),
         &evidence,
     );
+}
+
+fn record_cuda_release_suite_backend_issue(suite: &Value, blockers: &mut Vec<String>) {
+    if let Some(issue) = backend_suite_backend_issue(suite, "cuda") {
+        match issue {
+            BackendSuiteBackendIssue::Missing { expected_backend } => blockers.push(format!(
+                "CUDA release suite is missing backend identity `{expected_backend}`"
+            )),
+            BackendSuiteBackendIssue::Mismatch {
+                expected_backend,
+                actual_backend,
+            } => blockers.push(format!(
+                "CUDA release suite backend `{actual_backend}` does not match required `{expected_backend}`"
+            )),
+        }
+    }
 }
 
 pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backend: &str) {
