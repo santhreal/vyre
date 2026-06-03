@@ -5308,6 +5308,14 @@ mod tests {
             "case_count": 1,
             "failed_count": 0,
             "nonmatching_case_backend_count": 0,
+            "min_wall_samples": 30,
+            "min_wall_p50": 10,
+            "min_wall_p95": 11,
+            "min_wall_p99": 12,
+            "min_baseline_wall_samples": 30,
+            "min_baseline_wall_p50": 1200,
+            "min_baseline_wall_p95": 1201,
+            "min_baseline_wall_p99": 1202,
             "requested_case_id": "release.condition_eval.1m",
             "cpu_sota_100x_contract_cases": 1,
             "cpu_sota_100x_passing_cases": 1
@@ -5329,6 +5337,10 @@ mod tests {
                                 "min_speedup_x": 100.0
                             }
                         ]
+                    },
+                    "metrics": {
+                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                        "baseline_wall_ns": {"samples": 30, "p50": 1200, "p95": 1201, "p99": 1202}
                     },
                     "performance": {"contract_passed": true, "speedup_x": 120.0}
                 }

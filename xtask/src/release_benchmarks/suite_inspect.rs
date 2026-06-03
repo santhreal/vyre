@@ -755,6 +755,12 @@ pub(super) fn inspect_backend_suite_artifact(
     {
         blockers.push(format!("benchmark summary is invalid: {mismatch}"));
     }
+    crate::benchmark_evidence_semantics::inspect_source_artifact_case_integrity(
+        &artifact.path,
+        &report,
+        &format!("backend `{backend}` release suite artifact"),
+        &mut blockers,
+    );
     let mut case_failed_count = 0u64;
     let mut nonmatching_case_backend_count = 0usize;
     let mut min_wall_samples = None::<u64>;
@@ -1755,6 +1761,103 @@ mod tests {
                 status.blockers
             );
         }
+    }
+
+    #[test]
+    fn suite_artifact_status_surfaces_source_integrity_blockers() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for CUDA suite integrity test.");
+        let artifact_rel = "release/evidence/benchmarks/cuda-suite-integrity-drift.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: suite artifact must have parent directory."),
+        )
+        .expect("Fix: create CUDA suite integrity artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "source_fingerprint": "git:abc:dirty=false",
+                "source_tree_fingerprint": "source-tree-v1:abc",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "environment": {
+                    "host_cpu_model": "test CPU",
+                    "gpu_devices": [
+                        {
+                            "name": "RTX 5090",
+                            "memory_total_mib": 24576,
+                            "compute_capability_major": 8,
+                            "compute_capability_minor": 9
+                        }
+                    ],
+                    "nvidia_driver_version": "580.0",
+                    "nvidia_cuda_version": "13.0"
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"],
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002},
+                            "kernel_launches": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0},
+                            "cuda_resident_borrowed_fallback_dispatches": {"p50": 2.0}
+                        },
+                        "contract": {
+                            "primitive": "release condition eval",
+                            "baselines": [
+                                {
+                                    "name": "CPU-SOTA",
+                                    "crate_name": "vyre-runtime",
+                                    "class": "CpuSota",
+                                    "min_speedup_x": 100.0,
+                                    "backend_ids": ["wgpu"]
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 200.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize CUDA suite integrity benchmark artifact JSON."),
+        )
+        .expect("Fix: write CUDA suite integrity benchmark artifact JSON.");
+
+        let status = inspect_backend_suite_artifact(
+            dir.path(),
+            "cuda",
+            &BackendSuiteArtifactInput {
+                path: artifact_rel.to_string(),
+                family_id: "condition-eval".to_string(),
+                requested_case_id: "release.condition_eval.1m".to_string(),
+                cpu_sota_100x_required: true,
+            },
+        );
+
+        assert!(
+            status.blockers.iter().any(|blocker| blocker.contains(
+                "source_artifact `release/evidence/benchmarks/cuda-suite-integrity-drift.json` case `release.condition_eval.1m` backend `cuda` has no applicable performance contract baseline"
+            )),
+            "Fix: generated CUDA suite status must expose wrong-backend source artifact contracts; blockers={:?}",
+            status.blockers
+        );
+        assert!(
+            status.blockers.iter().any(|blocker| {
+                blocker.contains(
+                    "source_artifact `release/evidence/benchmarks/cuda-suite-integrity-drift.json` case `release.condition_eval.1m` has cuda_resident_borrowed_fallback_dispatches p50=2",
+                ) && blocker.contains("backend `cuda` release suite artifact must use native resident dispatch")
+            }),
+            "Fix: generated CUDA suite status must expose borrowed resident dispatch telemetry; blockers={:?}",
+            status.blockers
+        );
     }
 
     #[test]
