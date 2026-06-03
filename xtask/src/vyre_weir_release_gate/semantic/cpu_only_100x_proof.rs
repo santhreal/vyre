@@ -170,6 +170,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 "requirement `cpu-only-100x-proof` aggregate proof artifact contains {proof_contract_case_count} case(s) listed in cpu_sota_100x_contract_cases; needs at least 10"
             ));
         }
+        check_cpu_100x_aggregate_case_counts(&proof, failures);
         let aggregate_contract_cases = proof
             .get("cpu_sota_100x_contract_case_count")
             .and_then(serde_json::Value::as_u64)
@@ -322,6 +323,105 @@ fn check_cpu_100x_source_artifact_counts(
     }
 }
 
+fn check_cpu_100x_aggregate_case_counts(proof: &serde_json::Value, failures: &mut Vec<String>) {
+    let aggregate_contract_cases = proof
+        .get("cpu_sota_100x_contract_case_count")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    let derived_contract_cases = cpu_100x_contract_case_count(proof) as u64;
+    if aggregate_contract_cases != derived_contract_cases {
+        failures.push(format!(
+            "requirement `cpu-only-100x-proof` aggregate proof cpu_sota_100x_contract_case_count={aggregate_contract_cases}, but cases prove {derived_contract_cases}"
+        ));
+    }
+    let aggregate_passing_cases = proof
+        .get("cpu_sota_100x_passing_case_count")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    let derived_passing_cases = cpu_100x_passing_case_count(proof) as u64;
+    if aggregate_passing_cases != derived_passing_cases {
+        failures.push(format!(
+            "requirement `cpu-only-100x-proof` aggregate proof cpu_sota_100x_passing_case_count={aggregate_passing_cases}, but cases prove {derived_passing_cases}"
+        ));
+    }
+}
+
+fn cpu_100x_contract_case_count(proof: &serde_json::Value) -> usize {
+    let selected_backend = proof
+        .get("selected_backend")
+        .and_then(serde_json::Value::as_str);
+    proof
+        .get("cases")
+        .and_then(serde_json::Value::as_array)
+        .map_or(0, |cases| {
+            cases
+                .iter()
+                .filter(|case| {
+                    let backend_id = case
+                        .get("backend_id")
+                        .and_then(serde_json::Value::as_str)
+                        .or(selected_backend);
+                    case_has_cpu_sota_contract(case, backend_id, 100.0)
+                })
+                .count()
+        })
+}
+
+fn cpu_100x_passing_case_count(proof: &serde_json::Value) -> usize {
+    let selected_backend = proof
+        .get("selected_backend")
+        .and_then(serde_json::Value::as_str);
+    proof
+        .get("cases")
+        .and_then(serde_json::Value::as_array)
+        .map_or(0, |cases| {
+            cases
+                .iter()
+                .filter(|case| {
+                    let backend_id = case
+                        .get("backend_id")
+                        .and_then(serde_json::Value::as_str)
+                        .or(selected_backend);
+                    case_has_cpu_sota_contract(case, backend_id, 100.0)
+                        && crate::benchmark_evidence_semantics::benchmark_case_passes_summary_evidence(case)
+                        && case
+                            .get("performance")
+                            .and_then(|performance| performance.get("contract_passed"))
+                            .and_then(serde_json::Value::as_bool)
+                            == Some(true)
+                        && case
+                            .get("performance")
+                            .and_then(|performance| performance.get("speedup_x"))
+                            .and_then(serde_json::Value::as_f64)
+                            .is_some_and(|speedup| speedup >= 100.0)
+                })
+                .count()
+        })
+}
+
+fn case_has_cpu_sota_contract(
+    case: &serde_json::Value,
+    backend_id: Option<&str>,
+    required_speedup: f64,
+) -> bool {
+    case.get("contract")
+        .and_then(|contract| contract.get("baselines"))
+        .and_then(serde_json::Value::as_array)
+        .is_some_and(|baselines| {
+            baselines.iter().any(|baseline| {
+                baseline.get("class").and_then(serde_json::Value::as_str) == Some("CpuSota")
+                    && baseline
+                        .get("min_speedup_x")
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap_or(0.0)
+                        >= required_speedup
+                    && crate::benchmark_evidence_semantics::baseline_applies_to_backend(
+                        baseline, backend_id,
+                    )
+            })
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -386,6 +486,48 @@ mod tests {
                 "aggregate proof source_artifact `"
             ) && failure.contains("must be a relative release path")),
             "Fix: CPU-SOTA release gate must reject existing absolute aggregate source_artifact paths; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_gate_rejects_inflated_aggregate_case_counts() {
+        let proof = serde_json::json!({
+            "selected_backend": "cuda",
+            "cpu_sota_100x_contract_case_count": 10,
+            "cpu_sota_100x_passing_case_count": 10,
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "status": "pass",
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 200.0}
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_cpu_100x_aggregate_case_counts(&proof, &mut failures);
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "cpu_sota_100x_contract_case_count=10, but cases prove 1"
+            )),
+            "Fix: CPU-SOTA release gate must reject inflated aggregate contract case counts; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "cpu_sota_100x_passing_case_count=10, but cases prove 1"
+            )),
+            "Fix: CPU-SOTA release gate must reject inflated aggregate passing case counts; failures={failures:?}"
         );
     }
 
