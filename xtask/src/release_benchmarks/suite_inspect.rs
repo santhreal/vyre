@@ -605,6 +605,13 @@ pub(super) fn inspect_backend_suite_artifact(
     if cases.is_empty() {
         blockers.push("cases array is empty or missing".to_string());
     }
+    if let Some(mismatch) =
+        crate::benchmark_evidence_semantics::benchmark_report_summary_case_evidence_mismatch(
+            &report,
+        )
+    {
+        blockers.push(format!("benchmark summary is invalid: {mismatch}"));
+    }
     let mut case_failed_count = 0u64;
     let mut nonmatching_case_backend_count = 0usize;
     let mut min_wall_samples = None::<u64>;
@@ -1115,6 +1122,80 @@ mod tests {
                 "summary.failed is `Some(0)` but case evidence reports 1 failed case(s)"
             )),
             "Fix: backend suite blockers must expose stale summary.failed drift; blockers={:?}",
+            status.blockers
+        );
+    }
+
+    #[test]
+    fn suite_artifact_status_rejects_stale_summary_passed_count() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for stale suite summary test.");
+        let artifact_rel = "release/evidence/benchmarks/wgpu-stale-passed.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: suite artifact must have parent directory."),
+        )
+        .expect("Fix: create stale summary suite artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "wgpu",
+                "summary": {
+                    "total_cases": 1,
+                    "passed": 0,
+                    "failed": 0,
+                    "total_time_ns": 0,
+                    "cache_hit_rate": null
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002},
+                            "kernel_launches": {"samples": 1, "p50": 1}
+                        },
+                        "contract": {
+                            "primitive": "release condition eval",
+                            "baselines": [
+                                {
+                                    "name": "CPU-SOTA",
+                                    "crate_name": "vyre-runtime",
+                                    "class": "CpuSota",
+                                    "min_speedup_x": 100.0,
+                                    "backend_ids": ["wgpu"]
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 200.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize stale-passed WGPU benchmark artifact JSON."),
+        )
+        .expect("Fix: write stale-passed WGPU benchmark artifact JSON.");
+
+        let status = inspect_backend_suite_artifact(
+            dir.path(),
+            "wgpu",
+            &BackendSuiteArtifactInput {
+                path: artifact_rel.to_string(),
+                family_id: "condition-eval".to_string(),
+                requested_case_id: "release.condition_eval.1m".to_string(),
+                cpu_sota_100x_required: true,
+            },
+        );
+
+        assert!(
+            status.blockers.iter().any(|blocker| blocker.contains(
+                "benchmark summary is invalid: summary total/pass/fail (Some(1)/Some(0)/Some(0)) contradicts case evidence (1/1/0)"
+            )),
+            "Fix: backend suite inspector must reject stale summary.passed drift before suite rows prove release evidence; blockers={:?}",
             status.blockers
         );
     }
