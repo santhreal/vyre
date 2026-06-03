@@ -199,6 +199,13 @@ pub(super) fn copy_artifact(workspace_root: &Path, source: &str, target: &str) {
 }
 
 pub(super) fn run_command(workspace_root: &Path, args: &[&str]) {
+    if let Err(message) = run_command_status(workspace_root, args) {
+        eprintln!("{message}");
+        std::process::exit(1);
+    }
+}
+
+pub(super) fn run_command_status(workspace_root: &Path, args: &[&str]) -> Result<(), String> {
     let runner = cargo_runner(workspace_root);
     let status = Command::new(&runner)
         .args(args)
@@ -206,17 +213,11 @@ pub(super) fn run_command(workspace_root: &Path, args: &[&str]) {
         .status();
     let display = format!("{} {}", runner.display(), args.join(" "));
     match status {
-        Ok(status) if status.success() => {}
-        Ok(status) => {
-            eprintln!("Fix: `{display}` failed with {status}");
-            std::process::exit(1);
-        }
-        Err(error) => {
-            eprintln!(
-                "Fix: failed to run `{display}`: {error}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`."
-            );
-            std::process::exit(1);
-        }
+        Ok(status) if status.success() => Ok(()),
+        Ok(status) => Err(format!("Fix: `{display}` failed with {status}")),
+        Err(error) => Err(format!(
+            "Fix: failed to run `{display}`: {error}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`."
+        )),
     }
 }
 

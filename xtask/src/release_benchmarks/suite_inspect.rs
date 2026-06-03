@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 
 use super::metrics::write_json;
 use super::optimization::suite_case_has_cpu_sota_contract;
-use super::runner::run_command;
+use super::runner::run_command_status;
 use super::types::{
     BackendSuiteArtifact, BackendSuiteArtifactInput, BackendSuiteEvidence,
     MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CPU_SOTA_100X_RELEASE_CASES,
@@ -293,7 +293,7 @@ pub(super) fn run_workload_benchmark(
     output: &str,
     measured_samples: Option<usize>,
     sample_timeout_secs: u64,
-) {
+) -> Result<(), String> {
     let mut owned_args = vec![
         "run".to_string(),
         "-p".to_string(),
@@ -318,7 +318,7 @@ pub(super) fn run_workload_benchmark(
         owned_args.push(samples.to_string());
     }
     let borrowed = owned_args.iter().map(String::as_str).collect::<Vec<_>>();
-    run_command(workspace_root, &borrowed);
+    run_command_status(workspace_root, &borrowed)
 }
 
 pub(super) fn prefixed_benchmark_artifact(path: &str, prefix: &str) -> String {

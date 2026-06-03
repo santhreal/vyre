@@ -6,6 +6,7 @@ pub(super) struct Config {
     pub(super) include_wgpu_comparison: bool,
     pub(super) reuse_existing: bool,
     pub(super) refresh_suites_only: bool,
+    pub(super) workload_suite_only: bool,
 }
 
 pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
@@ -16,6 +17,7 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut include_wgpu_comparison = false;
     let mut reuse_existing = false;
     let mut refresh_suites_only = false;
+    let mut workload_suite_only = false;
     let mut index = 2;
     while index < args.len() {
         match args[index].as_str() {
@@ -82,10 +84,14 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
                 refresh_suites_only = true;
                 index += 1;
             }
+            "--workload-suite-only" => {
+                workload_suite_only = true;
+                index += 1;
+            }
             "--help" | "-h" => {
                 println!(
-                    "USAGE:\n  cargo_full run --bin xtask -- release-benchmarks [--backend cuda] [--only FAMILY] [--measured-samples N] [--sample-timeout-secs N] [--include-wgpu-comparison] [--reuse-existing] [--refresh-suites-only]\n\n\
-                     Generates CUDA-first release benchmark JSON artifacts from the release workload matrix. WGPU comparison evidence is opt-in so CUDA release validation time is not spent on non-release-path backends by default. --reuse-existing validates already-written artifacts and reruns only missing or invalid cases. --refresh-suites-only rewrites suite/proof summaries from existing artifact JSON without running benchmarks."
+                    "USAGE:\n  cargo_full run --bin xtask -- release-benchmarks [--backend cuda] [--only FAMILY] [--measured-samples N] [--sample-timeout-secs N] [--include-wgpu-comparison] [--reuse-existing] [--refresh-suites-only] [--workload-suite-only]\n\n\
+                     Generates CUDA-first release benchmark JSON artifacts from the release workload matrix. WGPU comparison evidence is opt-in so CUDA release validation time is not spent on non-release-path backends by default. --reuse-existing validates already-written artifacts and reruns only missing or invalid cases. --refresh-suites-only rewrites suite/proof summaries from existing artifact JSON without running benchmarks. --workload-suite-only runs workload artifacts and suite summaries without auxiliary optimization artifacts."
                 );
                 std::process::exit(0);
             }
@@ -100,6 +106,7 @@ pub(super) fn parse_args(args: &[String]) -> Result<Config, String> {
         include_wgpu_comparison,
         reuse_existing,
         refresh_suites_only,
+        workload_suite_only,
     })
 }
 
@@ -130,6 +137,19 @@ mod tests {
         assert!(
             !config.reuse_existing,
             "Fix: suite summary refresh must be distinct from freshness-based benchmark reuse."
+        );
+    }
+
+    #[test]
+    fn workload_suite_only_parses_as_auxiliary_skip() {
+        let config = parse_args(&args(&["--backend", "wgpu", "--workload-suite-only"]))
+            .expect("Fix: release-benchmarks workload-suite args should parse.");
+
+        assert_eq!(config.backend, "wgpu");
+        assert!(config.workload_suite_only);
+        assert!(
+            !config.refresh_suites_only,
+            "Fix: workload-suite execution must still run benchmark artifacts unless refresh-only is also explicit."
         );
     }
 }

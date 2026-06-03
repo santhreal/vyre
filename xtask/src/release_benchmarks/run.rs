@@ -68,13 +68,15 @@ pub(crate) fn run(args: &[String]) {
 
     let mut suite_artifacts = Vec::new();
     let mut cpu_100x_artifacts = Vec::new();
+    let mut workload_failures = Vec::new();
     let mut ran = 0usize;
     for family in matrix.families.iter().filter(|family| family.required) {
         let cpu_100x_family = config.backend == "cuda"
             && family
                 .max_cpu_sota_min_speedup_x
                 .is_some_and(|speedup| speedup >= 100.0);
-        let Some(case_id) = select_release_benchmark_case(family, cpu_100x_family) else {
+        let prefer_cpu_sota_case = cpu_100x_family || config.backend == "wgpu";
+        let Some(case_id) = select_release_benchmark_case(family, prefer_cpu_sota_case) else {
             eprintln!(
                 "Fix: required release workload `{}` has no matched benchmark case.",
                 family.id
@@ -84,6 +86,9 @@ pub(crate) fn run(args: &[String]) {
         if config.only.as_ref().is_some_and(|only| only != &family.id) {
             continue;
         }
+        let evidence_artifact =
+            backend_workload_artifact(&config.backend, &family.evidence_artifact);
+        let mut workload_ok = true;
         if !config.refresh_suites_only
             && (!config.reuse_existing
                 || !benchmark_artifact_is_reusable(
@@ -91,59 +96,68 @@ pub(crate) fn run(args: &[String]) {
                     &config.backend,
                     &family.id,
                     case_id,
-                    &family.evidence_artifact,
+                    &evidence_artifact,
                     cpu_100x_family,
                 ))
         {
-            run_workload_benchmark(
+            if let Err(error) = run_workload_benchmark(
                 &workspace_root,
                 case_id,
                 &config.backend,
-                &family.evidence_artifact,
+                &evidence_artifact,
                 config.measured_samples,
                 config.sample_timeout_secs,
-            );
+            ) {
+                workload_ok = false;
+                workload_failures.push(format!(
+                    "backend `{}` family `{}` case `{}` artifact `{}`: {error}",
+                    config.backend, family.id, case_id, evidence_artifact
+                ));
+            }
         }
         if !config.refresh_suites_only
+            && workload_ok
             && config.backend == "cuda"
             && family.id == "megakernel-queued-batches"
         {
             copy_artifact(
                 &workspace_root,
-                &family.evidence_artifact,
+                &evidence_artifact,
                 "release/evidence/benchmarks/megakernel-condition-cuda.json",
             );
             copy_artifact(
                 &workspace_root,
-                &family.evidence_artifact,
+                &evidence_artifact,
                 "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
             );
         }
         if cpu_100x_family {
-            cpu_100x_artifacts.push(family.evidence_artifact.clone());
+            cpu_100x_artifacts.push(evidence_artifact.clone());
         }
         if !config.refresh_suites_only
+            && workload_ok
             && config.backend == "cuda"
             && family.id == "megakernel-queued-batches"
         {
             copy_artifact(
                 &workspace_root,
-                &family.evidence_artifact,
+                &evidence_artifact,
                 "release/evidence/benchmarks/megakernel-latency-cuda.json",
             );
         }
         if !config.refresh_suites_only
+            && workload_ok
             && config.backend == "cuda"
             && family.id == "alias-reaching-def"
         {
             copy_artifact(
                 &workspace_root,
-                &family.evidence_artifact,
+                &evidence_artifact,
                 "release/evidence/benchmarks/dataflow-analysis-release.json",
             );
         }
         suite_artifacts.push(BackendSuiteArtifactInput {
-            path: family.evidence_artifact.clone(),
+            path: evidence_artifact,
             family_id: family.id.clone(),
             requested_case_id: case_id.clone(),
             cpu_sota_100x_required: cpu_100x_family,
@@ -172,14 +186,19 @@ pub(crate) fn run(args: &[String]) {
                         false,
                     ))
             {
-                run_workload_benchmark(
+                if let Err(error) = run_workload_benchmark(
                     &workspace_root,
                     case_id,
                     "wgpu",
                     &output,
                     config.measured_samples,
                     config.sample_timeout_secs,
-                );
+                ) {
+                    workload_failures.push(format!(
+                        "backend `wgpu` comparison family `{}` case `{}` artifact `{}`: {error}",
+                        family.id, case_id, output
+                    ));
+                }
             }
             wgpu_artifacts.push(BackendSuiteArtifactInput {
                 path: output,
@@ -190,7 +209,11 @@ pub(crate) fn run(args: &[String]) {
         }
         write_backend_suite(&workspace_root, "wgpu", wgpu_artifacts);
     }
-    if config.only.is_none() && !config.refresh_suites_only {
+    if workload_failures.is_empty()
+        && config.only.is_none()
+        && !config.refresh_suites_only
+        && !config.workload_suite_only
+    {
         run_named_benchmark_if_needed(
             &workspace_root,
             "lower.rewrites.impact.corpus",
@@ -270,6 +293,12 @@ pub(crate) fn run(args: &[String]) {
     }
     write_backend_suite(&workspace_root, &config.backend, suite_artifacts);
     write_release_axes(&workspace_root);
+    if !workload_failures.is_empty() {
+        for failure in &workload_failures {
+            eprintln!("Fix: release workload benchmark failed: {failure}");
+        }
+        std::process::exit(1);
+    }
     if config.refresh_suites_only {
         println!("release-benchmarks: refreshed suite evidence for {ran} benchmark artifact(s)");
     } else {
@@ -290,6 +319,14 @@ fn select_release_benchmark_case<'a>(
         .iter()
         .find(|case_id| REQUIRED_CPU_SOTA_100X_CASES.contains(&case_id.as_str()))
         .or_else(|| selected_cases.first())
+}
+
+fn backend_workload_artifact(backend: &str, matrix_artifact: &str) -> String {
+    if backend == "wgpu" {
+        prefixed_benchmark_artifact(matrix_artifact, "wgpu")
+    } else {
+        matrix_artifact.to_string()
+    }
 }
 
 #[cfg(test)]
@@ -318,6 +355,25 @@ mod tests {
             select_release_benchmark_case(&family, true).map(String::as_str),
             Some("release.condition_eval.1m"),
             "Fix: WGPU comparison suite generation must not drift to a broad matched case when a release-defining CPU-SOTA case exists."
+        );
+    }
+
+    #[test]
+    fn wgpu_primary_backend_uses_prefixed_workload_artifacts() {
+        assert_eq!(
+            backend_workload_artifact(
+                "wgpu",
+                "release/evidence/benchmarks/workload-01-condition-eval.json"
+            ),
+            "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+            "Fix: running release-benchmarks --backend wgpu must not overwrite CUDA workload evidence."
+        );
+        assert_eq!(
+            backend_workload_artifact(
+                "cuda",
+                "release/evidence/benchmarks/workload-01-condition-eval.json"
+            ),
+            "release/evidence/benchmarks/workload-01-condition-eval.json"
         );
     }
 }
