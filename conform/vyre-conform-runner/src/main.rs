@@ -529,6 +529,7 @@ fn prepare_entry(entry: UnifiedEntry) -> Result<PreparedEntry, String> {
         entry.id,
         &program,
         &cases,
+        &input_plan,
         expected_cases,
         convergence_max_iterations,
     )?;
@@ -888,6 +889,7 @@ fn prepare_reference_cases(
     op_id: &str,
     program: &vyre::Program,
     cases: &FixtureCases,
+    input_plan: &BackendDispatchPlan,
     expected_cases: Option<FixtureCases>,
     convergence_max_iterations: Option<u32>,
 ) -> Result<FixtureCases, String> {
@@ -914,10 +916,18 @@ fn prepare_reference_cases(
     }
 
     let mut reference_values = Vec::with_capacity(program.buffers().len());
+    let mut planned_inputs: Vec<&[u8]> = Vec::with_capacity(input_plan.sources.len());
     for (case_index, inputs) in cases.iter().enumerate() {
+        backend_dispatch_inputs_with_plan_into(inputs, input_plan, &mut planned_inputs).map_err(
+            |error| {
+                format!(
+                    "{op_id}: reference input planning failed while preparing case {case_index}: {error}"
+                )
+            },
+        )?;
         reference_values.clear();
-        for input in inputs {
-            reference_values.push(Value::from(input.as_slice()));
+        for input in &planned_inputs {
+            reference_values.push(Value::from(*input));
         }
         let outputs = vyre_reference::reference_eval(program, &reference_values)
             .map_err(|error| {
@@ -1276,6 +1286,43 @@ mod tests {
         assert!(
             error.contains("runtime-sized read-write buffer"),
             "Fix: error must explain that dynamic read-write buffers need concrete fixture bytes, got: {error}"
+        );
+    }
+
+    #[test]
+    fn prepare_reference_cases_uses_planned_zeroed_read_write_inputs() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(1),
+                BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(1),
+            ],
+            [1, 1, 1],
+            vec![Node::store(
+                "scratch",
+                vyre::ir::Expr::u32(0),
+                vyre::ir::Expr::load("input", vyre::ir::Expr::u32(0)),
+            )],
+        );
+        let input_plan = backend_dispatch_plan(&program)
+            .expect("Fix: static read-write zero-fill planning must succeed.");
+        let cases = vec![vec![1u32.to_le_bytes().to_vec()]];
+
+        let reference_cases = prepare_reference_cases(
+            "test.planned_reference",
+            &program,
+            &cases,
+            &input_plan,
+            None,
+            None,
+        )
+        .expect("Fix: reference preparation must use planned zeroed read-write inputs.");
+
+        assert_eq!(
+            reference_cases,
+            vec![vec![1u32.to_le_bytes().to_vec()]],
+            "Fix: prove reference preparation must match the input stream used by backend dispatch."
         );
     }
 }

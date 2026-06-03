@@ -696,8 +696,9 @@ fn prove_precomputes_reference_witnesses_once_per_entry_not_once_per_backend() {
     assert!(
         prepare.contains("vyre_reference::reference_eval")
             && prepare.contains("run_cpu_fixpoint_to_convergence")
+            && prepare.contains("backend_dispatch_inputs_with_plan_into(inputs, input_plan")
             && prepare.contains("reference_cases.push"),
-        "Fix: prove must build reference witness outputs once during entry preparation."
+        "Fix: prove must build reference witness outputs once during entry preparation using the same planned witness stream as backend dispatch."
     );
     let convergence_pos = prepare
         .find("if let Some(max_iterations) = convergence_max_iterations")
@@ -750,7 +751,7 @@ fn prove_runs_selected_backends_in_parallel_workers() {
     assert!(
         source.contains("let instance = match backend.acquire()")
             && source.contains("let instance = instance.as_ref();")
-            && source.contains("compare_backend_against_reference(\n                                instance,"),
+            && source.contains("compare_backend_against_reference(instance, &backend.id, entry)"),
         "Fix: each backend proof must acquire one backend instance and share it across shard workers so WGPU/CUDA caches are reused instead of rebuilding per shard."
     );
     assert!(
@@ -801,8 +802,9 @@ fn release_scripts_make_sharded_conformance_certificate_load_bearing() {
         "Fix: release proof must build vyre-conform-runner once, then use the binary for prove and merge."
     );
 
-    let signoff = std::fs::read_to_string(repo.join("scripts/check_signed_conformance_certificate.sh"))
-        .expect("Fix: signed conformance gate must be readable");
+    let signoff =
+        std::fs::read_to_string(repo.join("scripts/check_signed_conformance_certificate.sh"))
+            .expect("Fix: signed conformance gate must be readable");
     assert!(
         signoff.contains("scripts/prove-release-shards.sh")
             && signoff.contains("VYRE_RELEASE_BACKEND")
@@ -819,4 +821,3 @@ fn release_scripts_make_sharded_conformance_certificate_load_bearing() {
         "Fix: final launch must make the merged sharded certificate load-bearing release evidence before publish."
     );
 }
-
