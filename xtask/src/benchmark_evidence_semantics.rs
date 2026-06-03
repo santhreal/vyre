@@ -71,6 +71,127 @@ pub(crate) enum BackendSuiteInventoryIssue {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum BackendSuiteArtifactStatusIssue {
+    SourceFingerprintMismatch {
+        path: String,
+        status_source_fingerprint: String,
+        artifact_source_fingerprint: String,
+    },
+    SelectedBackendMismatch {
+        path: String,
+        status_selected_backend: String,
+        artifact_selected_backend: String,
+    },
+    CaseCountMismatch {
+        path: String,
+        status_case_count: u64,
+        artifact_case_count: u64,
+    },
+    FailedCountMismatch {
+        path: String,
+        status_failed_count: u64,
+        artifact_failed_count: u64,
+    },
+    MissingRequestedCase {
+        path: String,
+        requested_case_id: String,
+    },
+}
+
+pub(crate) fn backend_suite_artifact_status_issues(
+    status: &Value,
+    artifact_report: &Value,
+) -> Vec<BackendSuiteArtifactStatusIssue> {
+    let path = status
+        .get("path")
+        .and_then(Value::as_str)
+        .unwrap_or("<unknown>")
+        .to_string();
+    let mut issues = Vec::new();
+
+    let status_source = status.get("source_fingerprint").and_then(non_empty_str);
+    let artifact_source = artifact_report
+        .get("source_fingerprint")
+        .and_then(non_empty_str);
+    if let (Some(status_source), Some(artifact_source)) = (status_source, artifact_source) {
+        if status_source != artifact_source {
+            issues.push(BackendSuiteArtifactStatusIssue::SourceFingerprintMismatch {
+                path: path.clone(),
+                status_source_fingerprint: status_source.to_string(),
+                artifact_source_fingerprint: artifact_source.to_string(),
+            });
+        }
+    }
+
+    let status_backend = status.get("selected_backend").and_then(non_empty_str);
+    let artifact_backend = artifact_report
+        .get("selected_backend")
+        .and_then(non_empty_str);
+    if let (Some(status_backend), Some(artifact_backend)) = (status_backend, artifact_backend) {
+        if status_backend != artifact_backend {
+            issues.push(BackendSuiteArtifactStatusIssue::SelectedBackendMismatch {
+                path: path.clone(),
+                status_selected_backend: status_backend.to_string(),
+                artifact_selected_backend: artifact_backend.to_string(),
+            });
+        }
+    }
+
+    let status_case_count = status.get("case_count").and_then(Value::as_u64);
+    let artifact_case_count = artifact_report
+        .get("cases")
+        .and_then(Value::as_array)
+        .map(|cases| cases.len() as u64);
+    if let (Some(status_case_count), Some(artifact_case_count)) =
+        (status_case_count, artifact_case_count)
+    {
+        if status_case_count != artifact_case_count {
+            issues.push(BackendSuiteArtifactStatusIssue::CaseCountMismatch {
+                path: path.clone(),
+                status_case_count,
+                artifact_case_count,
+            });
+        }
+    }
+
+    let status_failed_count = status.get("failed_count").and_then(Value::as_u64);
+    let artifact_failed_count = artifact_report
+        .get("summary")
+        .and_then(|summary| summary.get("failed"))
+        .and_then(Value::as_u64);
+    if let (Some(status_failed_count), Some(artifact_failed_count)) =
+        (status_failed_count, artifact_failed_count)
+    {
+        if status_failed_count != artifact_failed_count {
+            issues.push(BackendSuiteArtifactStatusIssue::FailedCountMismatch {
+                path: path.clone(),
+                status_failed_count,
+                artifact_failed_count,
+            });
+        }
+    }
+
+    if let Some(requested_case_id) = status.get("requested_case_id").and_then(non_empty_str) {
+        let contains_requested_case = artifact_report
+            .get("cases")
+            .and_then(Value::as_array)
+            .is_some_and(|cases| {
+                cases
+                    .iter()
+                    .any(|case| case.get("id").and_then(Value::as_str) == Some(requested_case_id))
+            });
+        if !contains_requested_case {
+            issues.push(BackendSuiteArtifactStatusIssue::MissingRequestedCase {
+                path,
+                requested_case_id: requested_case_id.to_string(),
+            });
+        }
+    }
+
+    issues
+}
+
 pub(crate) fn backend_suite_inventory_issues(suite: &Value) -> Vec<BackendSuiteInventoryIssue> {
     let artifact_count = suite_array_len(suite, "artifacts");
     let status_count = suite_array_len(suite, "artifact_statuses");
@@ -596,6 +717,82 @@ mod tests {
                 },
             ],
             "Fix: duplicate suite inventory entries must not prove artifact coverage."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_stale_artifact_metadata() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "source_fingerprint": "git:old:dirty=false",
+            "selected_backend": "cuda",
+            "case_count": 2,
+            "failed_count": 0,
+            "requested_case_id": "release.condition_eval.1m"
+        });
+        let artifact = serde_json::json!({
+            "source_fingerprint": "git:new:dirty=false",
+            "selected_backend": "wgpu",
+            "summary": {"failed": 1},
+            "cases": [
+                {"id": "release.other.1m"}
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![
+                BackendSuiteArtifactStatusIssue::SourceFingerprintMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    status_source_fingerprint: "git:old:dirty=false".to_string(),
+                    artifact_source_fingerprint: "git:new:dirty=false".to_string(),
+                },
+                BackendSuiteArtifactStatusIssue::SelectedBackendMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    status_selected_backend: "cuda".to_string(),
+                    artifact_selected_backend: "wgpu".to_string(),
+                },
+                BackendSuiteArtifactStatusIssue::CaseCountMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    status_case_count: 2,
+                    artifact_case_count: 1,
+                },
+                BackendSuiteArtifactStatusIssue::FailedCountMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    status_failed_count: 0,
+                    artifact_failed_count: 1,
+                },
+                BackendSuiteArtifactStatusIssue::MissingRequestedCase {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                },
+            ],
+            "Fix: backend suite status rows must be proven against the listed artifact JSON."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_accepts_matching_metadata() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "source_fingerprint": "git:abc:dirty=false",
+            "selected_backend": "cuda",
+            "case_count": 1,
+            "failed_count": 0,
+            "requested_case_id": "release.condition_eval.1m"
+        });
+        let artifact = serde_json::json!({
+            "source_fingerprint": "git:abc:dirty=false",
+            "selected_backend": "cuda",
+            "summary": {"failed": 0},
+            "cases": [
+                {"id": "release.condition_eval.1m"}
+            ]
+        });
+
+        assert!(
+            backend_suite_artifact_status_issues(&status, &artifact).is_empty(),
+            "Fix: matching suite status and artifact JSON should pass."
         );
     }
 

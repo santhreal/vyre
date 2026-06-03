@@ -1,5 +1,6 @@
 use crate::benchmark_evidence_semantics::{
-    backend_suite_inventory_issues, backend_suite_parity_issues, BackendSuiteInventoryIssue,
+    backend_suite_artifact_status_issues, backend_suite_inventory_issues,
+    backend_suite_parity_issues, BackendSuiteArtifactStatusIssue, BackendSuiteInventoryIssue,
     BackendSuiteParityIssue,
 };
 
@@ -368,7 +369,7 @@ pub(crate) fn check_backend_suite_report(
                     continue;
                 }
             };
-            let report = match serde_json::from_str::<serde_json::Value>(&text) {
+            let artifact_report = match serde_json::from_str::<serde_json::Value>(&text) {
                 Ok(report) => report,
                 Err(error) => {
                     failures.push(format!(
@@ -379,9 +380,25 @@ pub(crate) fn check_backend_suite_report(
                     continue;
                 }
             };
-            check_single_benchmark_report(requirement, &path, &report, false, None, failures);
+            if let Some(status) = report_status_for_path(&report, artifact) {
+                check_backend_suite_artifact_status(
+                    requirement,
+                    suffix,
+                    status,
+                    &artifact_report,
+                    failures,
+                );
+            }
+            check_single_benchmark_report(
+                requirement,
+                &path,
+                &artifact_report,
+                false,
+                None,
+                failures,
+            );
             if let Some(expected_backend) = expected_backend {
-                let selected_backend = report
+                let selected_backend = artifact_report
                     .get("selected_backend")
                     .and_then(serde_json::Value::as_str);
                 if selected_backend != Some(expected_backend) {
@@ -397,14 +414,14 @@ pub(crate) fn check_backend_suite_report(
                     require_case_metric_present(
                         requirement,
                         &artifact_label,
-                        &report,
+                        &artifact_report,
                         "kernel_launches",
                         failures,
                     );
                     require_case_metric_positive(
                         requirement,
                         &artifact_label,
-                        &report,
+                        &artifact_report,
                         "kernel_launches",
                         failures,
                     );
@@ -419,7 +436,7 @@ pub(crate) fn check_backend_suite_report(
                         require_case_metric_present(
                             requirement,
                             &artifact_label,
-                            &report,
+                            &artifact_report,
                             metric,
                             failures,
                         );
@@ -428,13 +445,16 @@ pub(crate) fn check_backend_suite_report(
                         require_case_metric_positive(
                             requirement,
                             &artifact_label,
-                            &report,
+                            &artifact_report,
                             metric,
                             failures,
                         );
                     }
                 }
-                if let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) {
+                if let Some(cases) = artifact_report
+                    .get("cases")
+                    .and_then(serde_json::Value::as_array)
+                {
                     for case in cases {
                         let id = case
                             .get("id")
@@ -455,6 +475,73 @@ pub(crate) fn check_backend_suite_report(
         }
     }
 }
+
+fn report_status_for_path<'a>(
+    suite_report: &'a serde_json::Value,
+    artifact: &str,
+) -> Option<&'a serde_json::Value> {
+    suite_report
+        .get("artifact_statuses")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|statuses| {
+            statuses.iter().find(|status| {
+                status.get("path").and_then(serde_json::Value::as_str) == Some(artifact)
+            })
+        })
+}
+
+fn check_backend_suite_artifact_status(
+    requirement: &Requirement,
+    suffix: &str,
+    status: &serde_json::Value,
+    artifact_report: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    for issue in backend_suite_artifact_status_issues(status, artifact_report) {
+        match issue {
+            BackendSuiteArtifactStatusIssue::SourceFingerprintMismatch {
+                path,
+                status_source_fingerprint,
+                artifact_source_fingerprint,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` artifact `{path}` source_fingerprint mismatch: status `{status_source_fingerprint}`, artifact `{artifact_source_fingerprint}`",
+                requirement.id
+            )),
+            BackendSuiteArtifactStatusIssue::SelectedBackendMismatch {
+                path,
+                status_selected_backend,
+                artifact_selected_backend,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` artifact `{path}` selected_backend mismatch: status `{status_selected_backend}`, artifact `{artifact_selected_backend}`",
+                requirement.id
+            )),
+            BackendSuiteArtifactStatusIssue::CaseCountMismatch {
+                path,
+                status_case_count,
+                artifact_case_count,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` artifact `{path}` case_count mismatch: status {status_case_count}, artifact {artifact_case_count}",
+                requirement.id
+            )),
+            BackendSuiteArtifactStatusIssue::FailedCountMismatch {
+                path,
+                status_failed_count,
+                artifact_failed_count,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` artifact `{path}` failed_count mismatch: status {status_failed_count}, artifact {artifact_failed_count}",
+                requirement.id
+            )),
+            BackendSuiteArtifactStatusIssue::MissingRequestedCase {
+                path,
+                requested_case_id,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` artifact `{path}` does not contain requested_case_id `{requested_case_id}`",
+                requirement.id
+            )),
+        }
+    }
+}
+
 pub(crate) fn check_backend_suite_parity(
     requirement: &Requirement,
     base_dir: &Path,

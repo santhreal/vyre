@@ -1,5 +1,6 @@
 use crate::benchmark_evidence_semantics::{
-    backend_suite_inventory_issues, backend_suite_parity_issues, BackendSuiteInventoryIssue,
+    backend_suite_artifact_status_issues, backend_suite_inventory_issues,
+    backend_suite_parity_issues, BackendSuiteArtifactStatusIssue, BackendSuiteInventoryIssue,
     BackendSuiteParityIssue,
 };
 
@@ -300,8 +301,129 @@ fn inspect_backend_suite_semantics(
             }
         }
     }
+    inspect_backend_suite_status_artifact_consistency(evidence, path, value, blockers);
     if evidence.ends_with("wgpu-fallback-suite.json") {
         inspect_wgpu_cuda_suite_parity(evidence, path, value, blockers);
+    }
+}
+
+fn inspect_backend_suite_status_artifact_consistency(
+    evidence: &str,
+    suite_path: &Path,
+    suite: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let Some(workspace_root) = backend_suite_workspace_root(suite_path) else {
+        blockers.push(format!(
+            "{evidence}: cannot resolve workspace root for listed backend suite artifacts"
+        ));
+        return;
+    };
+    let Some(artifacts) = suite.get("artifacts").and_then(serde_json::Value::as_array) else {
+        return;
+    };
+    for artifact in artifacts {
+        let Some(artifact) = artifact.as_str() else {
+            continue;
+        };
+        let Some(status) = report_status_for_path(suite, artifact) else {
+            continue;
+        };
+        let artifact_path = resolve_suite_artifact_path(workspace_root, artifact);
+        let text = match read_text_bounded(&artifact_path) {
+            Ok(text) => text,
+            Err(error) => {
+                blockers.push(format!(
+                    "{evidence}: failed to read suite artifact `{}`: {error}",
+                    artifact_path.display()
+                ));
+                continue;
+            }
+        };
+        let artifact_report = match serde_json::from_str::<serde_json::Value>(&text) {
+            Ok(value) => value,
+            Err(error) => {
+                blockers.push(format!(
+                    "{evidence}: suite artifact `{}` is invalid JSON: {error}",
+                    artifact_path.display()
+                ));
+                continue;
+            }
+        };
+        inspect_backend_suite_artifact_status(evidence, status, &artifact_report, blockers);
+    }
+}
+
+fn backend_suite_workspace_root(path: &Path) -> Option<&Path> {
+    Some(path.parent()?.parent()?.parent()?.parent()?)
+}
+
+fn resolve_suite_artifact_path(workspace_root: &Path, artifact: &str) -> PathBuf {
+    let candidate = PathBuf::from(artifact);
+    if candidate.is_absolute() {
+        candidate
+    } else {
+        workspace_root.join(candidate)
+    }
+}
+
+fn report_status_for_path<'a>(
+    suite: &'a serde_json::Value,
+    artifact: &str,
+) -> Option<&'a serde_json::Value> {
+    suite
+        .get("artifact_statuses")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|statuses| {
+            statuses.iter().find(|status| {
+                status.get("path").and_then(serde_json::Value::as_str) == Some(artifact)
+            })
+        })
+}
+
+fn inspect_backend_suite_artifact_status(
+    evidence: &str,
+    status: &serde_json::Value,
+    artifact_report: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    for issue in backend_suite_artifact_status_issues(status, artifact_report) {
+        match issue {
+            BackendSuiteArtifactStatusIssue::SourceFingerprintMismatch {
+                path,
+                status_source_fingerprint,
+                artifact_source_fingerprint,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` source_fingerprint mismatch: status `{status_source_fingerprint}`, artifact `{artifact_source_fingerprint}`"
+            )),
+            BackendSuiteArtifactStatusIssue::SelectedBackendMismatch {
+                path,
+                status_selected_backend,
+                artifact_selected_backend,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` selected_backend mismatch: status `{status_selected_backend}`, artifact `{artifact_selected_backend}`"
+            )),
+            BackendSuiteArtifactStatusIssue::CaseCountMismatch {
+                path,
+                status_case_count,
+                artifact_case_count,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` case_count mismatch: status {status_case_count}, artifact {artifact_case_count}"
+            )),
+            BackendSuiteArtifactStatusIssue::FailedCountMismatch {
+                path,
+                status_failed_count,
+                artifact_failed_count,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` failed_count mismatch: status {status_failed_count}, artifact {artifact_failed_count}"
+            )),
+            BackendSuiteArtifactStatusIssue::MissingRequestedCase {
+                path,
+                requested_case_id,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` does not contain requested_case_id `{requested_case_id}`"
+            )),
+        }
     }
 }
 
