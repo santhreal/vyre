@@ -593,14 +593,7 @@ pub(super) fn inspect_backend_suite_artifact(
     let source_fingerprint = report
         .get("source_fingerprint")
         .and_then(nonblank_str)
-        .map(str::to_string)
-        .or_else(|| {
-            report
-                .get("git")
-                .and_then(|git| git.get("commit"))
-                .and_then(nonblank_str)
-                .map(|commit| format!("git:{commit}"))
-        });
+        .map(str::to_string);
     let source_tree_fingerprint = report
         .get("source_tree_fingerprint")
         .and_then(nonblank_str)
@@ -1372,16 +1365,24 @@ mod tests {
             (
                 "release/evidence/benchmarks/cuda-missing-source-fingerprint.json",
                 None,
+                None,
+                "artifact has no source_fingerprint provenance",
+            ),
+            (
+                "release/evidence/benchmarks/cuda-git-commit-only-source.json",
+                None,
+                Some(json!({"commit": "abc123", "dirty": false})),
                 "artifact has no source_fingerprint provenance",
             ),
             (
                 "release/evidence/benchmarks/cuda-legacy-dirty-source-fingerprint.json",
                 Some("git:abc123:dirty=true"),
+                None,
                 "source_fingerprint `git:abc123:dirty=true` is not release-grade provenance",
             ),
         ];
 
-        for (artifact_rel, source_fingerprint, expected_blocker) in artifacts {
+        for (artifact_rel, source_fingerprint, git, expected_blocker) in artifacts {
             let artifact_path = dir.path().join(artifact_rel);
             fs::create_dir_all(
                 artifact_path
@@ -1426,6 +1427,9 @@ mod tests {
             });
             if let Some(source_fingerprint) = source_fingerprint {
                 artifact["source_fingerprint"] = Value::String(source_fingerprint.to_string());
+            }
+            if let Some(git) = git {
+                artifact["git"] = git;
             }
             fs::write(
                 &artifact_path,
