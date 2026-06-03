@@ -260,6 +260,21 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
             continue;
         }
         required_family_count += 1;
+        let duplicate_matched_cases =
+            crate::benchmark_evidence_semantics::duplicate_nonblank_string_array_values(
+                family,
+                "matched_cases",
+            );
+        if !duplicate_matched_cases.is_empty() {
+            let duplicates = duplicate_matched_cases
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(", ");
+            failures.push(format!(
+                "requirement `{}` workload family `{id}` has duplicate matched_cases: {duplicates}",
+                requirement.id
+            ));
+        }
         let matched_cases = family
             .get("matched_cases")
             .and_then(serde_json::Value::as_array)
@@ -341,6 +356,21 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
                     requirement.id
                 ));
             }
+        }
+        let duplicate_hundred_x_cases =
+            crate::benchmark_evidence_semantics::duplicate_nonblank_string_array_values(
+                family,
+                "cpu_sota_100x_cases",
+            );
+        if !duplicate_hundred_x_cases.is_empty() {
+            let duplicates = duplicate_hundred_x_cases
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(", ");
+            failures.push(format!(
+                "requirement `{}` workload family `{id}` has duplicate cpu_sota_100x_cases: {duplicates}",
+                requirement.id
+            ));
         }
         let workload_number = family
             .get("release_plan_workload")
@@ -531,6 +561,53 @@ mod part2_tests {
                 .iter()
                 .any(|failure| failure.contains("duplicate family ids: condition-eval")),
             "Fix: release gate must reject duplicate workload matrix family ids before row counts can prove coverage; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn workload_matrix_rejects_duplicate_family_case_rows() {
+        let requirement = Requirement {
+            id: "proof-workloads-12".to_string(),
+            title: "proof workloads".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let matrix = serde_json::json!({
+            "families": [
+                {
+                    "id": "condition-eval",
+                    "required": true,
+                    "matched_cases": [
+                        "release.condition_eval.1m",
+                        "release.condition_eval.1m"
+                    ],
+                    "max_cpu_sota_min_speedup_x": 100.0,
+                    "cpu_sota_100x_cases": [
+                        "release.condition_eval.1m",
+                        "release.condition_eval.1m"
+                    ]
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_workload_matrix_artifact_coverage(
+            &requirement,
+            Path::new("."),
+            &matrix,
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure
+                .contains("workload family `condition-eval` has duplicate matched_cases: release.condition_eval.1m")),
+            "Fix: release gate must reject duplicate family matched_cases before row counts can prove workload coverage; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure
+                .contains("workload family `condition-eval` has duplicate cpu_sota_100x_cases: release.condition_eval.1m")),
+            "Fix: release gate must reject duplicate family cpu_sota_100x_cases before 100x coverage can be inflated; failures={failures:?}"
         );
     }
 

@@ -330,6 +330,20 @@ fn inspect_release_workload_matrix_semantics(
             continue;
         }
         required_family_count += 1;
+        let duplicate_matched_cases =
+            crate::benchmark_evidence_semantics::duplicate_nonblank_string_array_values(
+                family,
+                "matched_cases",
+            );
+        if !duplicate_matched_cases.is_empty() {
+            let duplicates = duplicate_matched_cases
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(", ");
+            blockers.push(format!(
+                "{evidence}: required workload family `{id}` has duplicate matched_cases: {duplicates}"
+            ));
+        }
         let matched_cases = family
             .get("matched_cases")
             .and_then(serde_json::Value::as_array)
@@ -408,6 +422,20 @@ fn inspect_release_workload_matrix_semantics(
                     "{evidence}: required workload family `{id}` declares a 100x contract but lists no cpu_sota_100x_cases"
                 ));
             }
+        }
+        let duplicate_hundred_x_cases =
+            crate::benchmark_evidence_semantics::duplicate_nonblank_string_array_values(
+                family,
+                "cpu_sota_100x_cases",
+            );
+        if !duplicate_hundred_x_cases.is_empty() {
+            let duplicates = duplicate_hundred_x_cases
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(", ");
+            blockers.push(format!(
+                "{evidence}: required workload family `{id}` has duplicate cpu_sota_100x_cases: {duplicates}"
+            ));
         }
         let workload_number = family
             .get("release_plan_workload")
@@ -624,6 +652,85 @@ mod part10_tests {
                 .iter()
                 .any(|blocker| blocker.contains("duplicate workload family ids: condition-eval")),
             "Fix: completion audit must reject duplicate workload matrix family ids before row counts can prove coverage; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_duplicate_workload_family_case_rows() {
+        let matrix = serde_json::json!({
+            "required_closed_families": 12,
+            "matched_required_families": 12,
+            "release_suite_case_count": 12,
+            "cpu_sota_100x_family_count": 10,
+            "required_cpu_sota_100x_families": [
+                "release.condition-eval",
+                "release.string-bitmap-scatter",
+                "release.offset-count-aggregation",
+                "release.entropy-window",
+                "release.quantified-condition-loops",
+                "release.alias-reaching-def",
+                "release.ifds-witness",
+                "release.c-ast-traversal",
+                "release.megakernel-queue",
+                "release.egraph-saturation"
+            ],
+            "missing_required_cpu_sota_100x_families": [],
+            "cpu_sota_100x_contract_cases": [
+                "release.condition_eval.1m",
+                "release.string_bitmap_scatter.1m",
+                "release.offset_count_aggregation.1m",
+                "release.entropy_window.1m",
+                "release.quantified_condition_loops.1m",
+                "release.alias_reaching_def.1m",
+                "release.ifds_witness.1m",
+                "release.c_ast_traversal.1m",
+                "release.megakernel_queue.1m",
+                "release.egraph_saturation.1m"
+            ],
+            "families": [
+                {
+                    "id": "condition-eval",
+                    "required": true,
+                    "matched_cases": [
+                        "release.condition_eval.1m",
+                        "release.condition_eval.1m"
+                    ],
+                    "dispatch_policy": "megakernel",
+                    "bench_target_ids": ["release.workload.condition_eval"],
+                    "cpu_sota_contracts": [{"class": "CpuSota"}],
+                    "max_cpu_sota_min_speedup_x": 100.0,
+                    "cpu_sota_100x_cases": [
+                        "release.condition_eval.1m",
+                        "release.condition_eval.1m"
+                    ],
+                    "release_plan_workload": 1,
+                    "evidence_artifact": "release/evidence/benchmarks/workload-01-condition-eval.json",
+                    "benchmark_command": "cargo_full run --release -- release/evidence/benchmarks/workload-01-condition-eval.json",
+                    "fair_cpu_sota_baseline_count": 1,
+                    "cpu_sota_baseline_names": ["CPU baseline"],
+                    "reproducible_cuda_command": true
+                }
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_release_workload_matrix_semantics(
+            "release-workload-matrix.json",
+            &matrix,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "required workload family `condition-eval` has duplicate matched_cases: release.condition_eval.1m"
+            )),
+            "Fix: completion audit must reject duplicate family matched_cases before row counts can prove workload coverage; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "required workload family `condition-eval` has duplicate cpu_sota_100x_cases: release.condition_eval.1m"
+            )),
+            "Fix: completion audit must reject duplicate family cpu_sota_100x_cases before 100x coverage can be inflated; blockers={blockers:?}"
         );
     }
 }
