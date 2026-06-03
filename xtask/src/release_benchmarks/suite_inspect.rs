@@ -57,27 +57,37 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         if git.is_none() {
             git = report.get("git").cloned();
         }
-        if source_fingerprint.is_none() {
-            source_fingerprint = report
-                .get("source_fingerprint")
-                .and_then(Value::as_str)
-                .filter(|value| !value.is_empty())
-                .map(str::to_string)
-                .or_else(|| {
-                    report
-                        .get("git")
-                        .and_then(|git| git.get("commit"))
-                        .and_then(Value::as_str)
-                        .filter(|value| !value.is_empty())
-                        .map(|commit| format!("git:{commit}"))
-                });
+        let report_source_fingerprint = report
+            .get("source_fingerprint")
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+            .or_else(|| {
+                report
+                    .get("git")
+                    .and_then(|git| git.get("commit"))
+                    .and_then(Value::as_str)
+                    .filter(|value| !value.is_empty())
+                    .map(|commit| format!("git:{commit}"))
+            });
+        match (&source_fingerprint, &report_source_fingerprint) {
+            (None, Some(fingerprint)) => source_fingerprint = Some(fingerprint.clone()),
+            (Some(expected), Some(actual)) if expected != actual => blockers.push(format!(
+                "100x source artifact `{artifact}` source_fingerprint `{actual}` does not match aggregate source `{expected}`"
+            )),
+            _ => {}
         }
-        if source_tree_fingerprint.is_none() {
-            source_tree_fingerprint = report
-                .get("source_tree_fingerprint")
-                .and_then(Value::as_str)
-                .filter(|value| !value.is_empty())
-                .map(str::to_string);
+        let report_source_tree_fingerprint = report
+            .get("source_tree_fingerprint")
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string);
+        match (&source_tree_fingerprint, &report_source_tree_fingerprint) {
+            (None, Some(fingerprint)) => source_tree_fingerprint = Some(fingerprint.clone()),
+            (Some(expected), Some(actual)) if expected != actual => blockers.push(format!(
+                "100x source artifact `{artifact}` source_tree_fingerprint `{actual}` does not match aggregate source tree `{expected}`"
+            )),
+            _ => {}
         }
         let Some(report_cases) = report.get("cases").and_then(Value::as_array) else {
             blockers.push(format!(
@@ -1486,6 +1496,111 @@ mod tests {
                     "100x source artifact `release/evidence/benchmarks/cuda-missing-status.json` case `release.condition_eval.1m` failed: missing pass status"
                 )),
             "Fix: aggregate CPU-SOTA proof blockers must expose missing pass status; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_proof_rejects_mixed_source_fingerprints() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for mixed-source CPU-SOTA proof test.");
+        let artifacts = [
+            (
+                "release/evidence/benchmarks/cuda-source-a.json",
+                "git:source-a:dirty=false",
+                "source-tree-v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            ),
+            (
+                "release/evidence/benchmarks/cuda-source-b.json",
+                "git:source-b:dirty=false",
+                "source-tree-v1:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            ),
+        ];
+        for (artifact_rel, source_fingerprint, source_tree_fingerprint) in artifacts {
+            let artifact_path = dir.path().join(artifact_rel);
+            fs::create_dir_all(
+                artifact_path
+                    .parent()
+                    .expect("Fix: mixed-source proof artifact path must have a parent directory."),
+            )
+            .expect("Fix: create mixed-source proof artifact parent directory.");
+            fs::write(
+                &artifact_path,
+                serde_json::to_string_pretty(&json!({
+                    "schema_version": 2,
+                    "selected_backend": "cuda",
+                    "source_fingerprint": source_fingerprint,
+                    "source_tree_fingerprint": source_tree_fingerprint,
+                    "summary": {
+                        "total_cases": 1,
+                        "passed": 1,
+                        "failed": 0,
+                        "total_time_ns": 0,
+                        "cache_hit_rate": null
+                    },
+                    "cases": [
+                        {
+                            "id": "release.condition_eval.1m",
+                            "backend_id": "cuda",
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                                "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002}
+                            },
+                            "contract": {
+                                "primitive": "release condition eval",
+                                "baselines": [
+                                    {
+                                        "name": "CPU-SOTA",
+                                        "crate_name": "vyre-runtime",
+                                        "class": "CpuSota",
+                                        "min_speedup_x": 100.0,
+                                        "backend_ids": ["cuda"]
+                                    }
+                                ]
+                            },
+                            "performance": {"contract_passed": true, "speedup_x": 200.0}
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize mixed-source CUDA benchmark artifact JSON."),
+            )
+            .expect("Fix: write mixed-source CUDA benchmark artifact JSON.");
+        }
+        write_cpu_100x_proof(
+            dir.path(),
+            &artifacts
+                .iter()
+                .map(|(artifact, _, _)| artifact.to_string())
+                .collect::<Vec<_>>(),
+        );
+
+        let proof_path = dir
+            .path()
+            .join("release/evidence/benchmarks/cpu-only-100x-proof.json");
+        let proof_text = fs::read_to_string(&proof_path)
+            .expect("Fix: read generated CPU-SOTA 100x proof artifact.");
+        let proof = serde_json::from_str::<Value>(&proof_text)
+            .expect("Fix: generated CPU-SOTA 100x proof must be valid JSON.");
+        let blockers = proof
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated CPU-SOTA proof must include blockers array.");
+
+        assert!(
+            blockers.iter().filter_map(Value::as_str).any(|blocker| {
+                blocker.contains(
+                    "100x source artifact `release/evidence/benchmarks/cuda-source-b.json` source_fingerprint `git:source-b:dirty=false` does not match aggregate source `git:source-a:dirty=false`",
+                )
+            }),
+            "Fix: aggregate CPU-SOTA proof must reject mixed source_fingerprint inputs; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().filter_map(Value::as_str).any(|blocker| {
+                blocker.contains(
+                    "100x source artifact `release/evidence/benchmarks/cuda-source-b.json` source_tree_fingerprint `source-tree-v1:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` does not match aggregate source tree `source-tree-v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`",
+                )
+            }),
+            "Fix: aggregate CPU-SOTA proof must reject mixed source_tree_fingerprint inputs; blockers={blockers:?}"
         );
     }
 }
