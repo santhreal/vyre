@@ -64,6 +64,7 @@ pub(crate) fn check_benchmark_report_has_cases(
     check_case_backend_matches_selected_backend(requirement, suffix, &report, failures);
     check_contract_baselines_apply_to_backend(requirement, suffix, &report, failures);
     check_cuda_telemetry_labels_match_counters(requirement, suffix, &report, failures);
+    check_benchmark_report_provenance(requirement, suffix, &report, failures);
     if let (Some((field, source_fingerprint)), Some(current_source_fingerprint)) = (
         report_freshness_fingerprint(&report),
         current_freshness_fingerprint_for_report(&path, &report),
@@ -213,55 +214,7 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
     report: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
-    if !json_has_nonempty_string_any(
-        report,
-        &[
-            "source_fingerprint",
-            "source_revision",
-            "source_artifact_fingerprint",
-            "commit_fingerprint",
-        ],
-    ) && !report
-        .get("source_artifacts")
-        .and_then(serde_json::Value::as_array)
-        .is_some_and(|items| !items.is_empty())
-        && !report
-            .get("git")
-            .is_some_and(|git| json_has_nonempty_string_any(git, &["commit"]))
-    {
-        failures.push(format!(
-            "requirement `{}` benchmark `{label}` must include source fingerprint or source artifact provenance",
-            requirement.id
-        ));
-    }
-    if let Some(source_fingerprint) = report
-        .get("source_fingerprint")
-        .and_then(serde_json::Value::as_str)
-        .filter(|value| !value.trim().is_empty())
-    {
-        check_source_fingerprint_shape(requirement, label, source_fingerprint, failures);
-    }
-    let environment = report.get("environment");
-    if !environment.is_some_and(|environment| {
-        json_has_nonempty_string_any(
-            environment,
-            &["host_cpu_model", "cpu_model", "host_cpu", "processor_model"],
-        )
-    }) {
-        failures.push(format!(
-            "requirement `{}` benchmark `{label}` must include host CPU model provenance",
-            requirement.id
-        ));
-    }
-    if !report
-        .get("summary")
-        .is_some_and(|summary| summary.get("cache_hit_rate").is_some())
-    {
-        failures.push(format!(
-            "requirement `{}` benchmark `{label}` summary must include cache_hit_rate, even when null",
-            requirement.id
-        ));
-    }
+    check_benchmark_report_provenance(requirement, label, report, failures);
     check_case_backend_matches_selected_backend(requirement, label, report, failures);
     check_contract_baselines_apply_to_backend(requirement, label, report, failures);
     check_cuda_telemetry_labels_match_counters(requirement, label, report, failures);
@@ -360,6 +313,63 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
                 requirement.id
             ));
         }
+    }
+}
+
+fn check_benchmark_report_provenance(
+    requirement: &Requirement,
+    label: &str,
+    report: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    if !json_has_nonempty_string_any(
+        report,
+        &[
+            "source_fingerprint",
+            "source_revision",
+            "source_artifact_fingerprint",
+            "commit_fingerprint",
+        ],
+    ) && !report
+        .get("source_artifacts")
+        .and_then(serde_json::Value::as_array)
+        .is_some_and(|items| !items.is_empty())
+        && !report
+            .get("git")
+            .is_some_and(|git| json_has_nonempty_string_any(git, &["commit"]))
+    {
+        failures.push(format!(
+            "requirement `{}` benchmark `{label}` must include source fingerprint or source artifact provenance",
+            requirement.id
+        ));
+    }
+    if let Some(source_fingerprint) = report
+        .get("source_fingerprint")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+    {
+        check_source_fingerprint_shape(requirement, label, source_fingerprint, failures);
+    }
+    let environment = report.get("environment");
+    if !environment.is_some_and(|environment| {
+        json_has_nonempty_string_any(
+            environment,
+            &["host_cpu_model", "cpu_model", "host_cpu", "processor_model"],
+        )
+    }) {
+        failures.push(format!(
+            "requirement `{}` benchmark `{label}` must include host CPU model provenance",
+            requirement.id
+        ));
+    }
+    if !report
+        .get("summary")
+        .is_some_and(|summary| summary.get("cache_hit_rate").is_some())
+    {
+        failures.push(format!(
+            "requirement `{}` benchmark `{label}` summary must include cache_hit_rate, even when null",
+            requirement.id
+        ));
     }
 }
 
@@ -774,6 +784,52 @@ mod tests {
                 "benchmark `wgpu-stale-total-cases.json` has invalid summary: summary total/pass/fail (Some(2)/Some(1)/Some(0)) contradicts case evidence (1/1/0)"
             )),
             "Fix: generic benchmark gate must reject stale summary.total_cases even when the cases array is non-empty; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn benchmark_report_has_cases_rejects_missing_source_provenance() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for source provenance benchmark gate test.");
+        let artifact = dir.path().join("wgpu-missing-source.json");
+        fs::write(
+            &artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0, "cache_hit_rate": null},
+                "environment": {"cpu_model": "test CPU"},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize missing-source benchmark evidence."),
+        )
+        .expect("Fix: write missing-source benchmark evidence.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["wgpu-missing-source.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_benchmark_report_has_cases(
+            &requirement,
+            dir.path(),
+            "wgpu-missing-source.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "benchmark `wgpu-missing-source.json` must include source fingerprint or source artifact provenance"
+            )),
+            "Fix: generic benchmark gate must reject reports with no source provenance; failures={failures:?}"
         );
     }
 
