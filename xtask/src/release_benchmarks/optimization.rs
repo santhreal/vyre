@@ -48,6 +48,8 @@ pub(super) fn suite_case_has_cpu_sota_contract(
 mod tests {
     use super::*;
 
+    use tempfile::TempDir;
+
     #[test]
     fn cpu_sota_contract_requires_matching_backend_id() {
         let case = serde_json::json!({
@@ -69,6 +71,130 @@ mod tests {
         assert!(
             !suite_case_has_cpu_sota_contract(&case, "wgpu", 100.0),
             "Fix: WGPU must not inherit CUDA-scoped CpuSota contract counters."
+        );
+    }
+
+    #[test]
+    fn release_axes_uses_cuda_suite_artifacts_only() {
+        let dir = TempDir::new().expect("Fix: create temp workspace for release axes source test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let mut suite_artifacts = Vec::new();
+        for index in 1..=12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            let artifact_path = dir.path().join(&artifact);
+            fs::write(
+                &artifact_path,
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "environment": {
+                        "gpu_devices": [{"memory_total_mib": 24576}]
+                    },
+                    "cases": [
+                        {
+                            "id": format!("release.axis.{index}"),
+                            "backend_id": "cuda",
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"p50": 10 + index},
+                                "cold_compile_ns": {"p50": 1000 + index},
+                                "wall_gb_s_x1000": {"p50": 2000 + index}
+                            }
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize CUDA release axis fixture."),
+            )
+            .expect("Fix: write CUDA release axis fixture.");
+            suite_artifacts.push(artifact);
+        }
+        fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "artifacts": suite_artifacts
+            }))
+            .expect("Fix: serialize CUDA release suite fixture."),
+        )
+        .expect("Fix: write CUDA release suite fixture.");
+        fs::write(
+            benchmark_dir.join("wgpu-workload-01.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.axis.wgpu",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"p50": 1},
+                            "cold_compile_ns": {"p50": 1},
+                            "wall_gb_s_x1000": {"p50": 99_999}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize WGPU release axis decoy."),
+        )
+        .expect("Fix: write WGPU release axis decoy.");
+        fs::write(
+            benchmark_dir.join("cpu-only-100x-proof.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.axis.aggregate-proof",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"p50": 1},
+                            "cold_compile_ns": {"p50": 1},
+                            "wall_gb_s_x1000": {"p50": 99_999}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize aggregate proof release axis decoy."),
+        )
+        .expect("Fix: write aggregate proof release axis decoy.");
+
+        write_release_axes(dir.path());
+
+        let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
+            .expect("Fix: read generated release axes evidence.");
+        let axes = serde_json::from_str::<Value>(&axes_text)
+            .expect("Fix: generated release axes evidence must be JSON.");
+        let source_artifacts = axes
+            .get("source_artifacts")
+            .and_then(Value::as_array)
+            .expect("Fix: release axes evidence must include source_artifacts.");
+
+        assert_eq!(
+            source_artifacts.len(),
+            12,
+            "Fix: release axes must count CUDA suite workload artifacts, not directory-wide benchmark JSON."
+        );
+        assert!(
+            !source_artifacts.iter().any(|artifact| artifact
+                .as_str()
+                .is_some_and(|artifact| artifact.contains("wgpu") || artifact.contains("100x"))),
+            "Fix: release axes must not include WGPU fallback artifacts or aggregate CPU-SOTA proof reports; source_artifacts={source_artifacts:?}"
+        );
+        assert_eq!(
+            axes.get("warm_us_per_file").and_then(Value::as_f64),
+            Some(0.011),
+            "Fix: WGPU/proof decoy metrics must not drive CUDA release-axis minima."
+        );
+        assert!(
+            axes.get("blockers")
+                .and_then(Value::as_array)
+                .is_some_and(Vec::is_empty),
+            "Fix: valid CUDA suite artifacts should generate clean release-axis evidence; axes={axes:?}"
         );
     }
 }
@@ -357,62 +483,94 @@ pub(super) fn optimization_semantic_win(
 }
 
 pub(super) fn write_release_axes(workspace_root: &Path) {
-    let evidence_dir = workspace_root.join("release/evidence/benchmarks");
+    let suite_path = workspace_root.join("release/evidence/benchmarks/cuda-release-suite.json");
     let mut reports = Vec::new();
     let mut source_artifacts = Vec::new();
     let mut blockers = Vec::new();
-    match fs::read_dir(&evidence_dir) {
-        Ok(entries) => {
-            for entry in entries {
-                let entry = match entry {
-                    Ok(entry) => entry,
-                    Err(error) => {
-                        blockers.push(format!(
-                            "failed to read benchmark evidence directory entry: {error}"
-                        ));
-                        continue;
-                    }
-                };
-                let path = entry.path();
-                if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-                    continue;
-                }
-                let text = match read_text_bounded(&path, MAX_RELEASE_BENCHMARK_TEXT_BYTES) {
-                    Ok(text) => text,
-                    Err(error) => {
-                        blockers.push(format!(
-                            "failed to read benchmark evidence `{}`: {error}",
-                            path.display()
-                        ));
-                        continue;
-                    }
-                };
-                let value = match serde_json::from_str::<Value>(&text) {
-                    Ok(value) => value,
-                    Err(error) => {
-                        blockers.push(format!(
-                            "invalid benchmark evidence JSON `{}`: {error}",
-                            path.display()
-                        ));
-                        continue;
-                    }
-                };
-                if value.get("cases").and_then(Value::as_array).is_none() {
-                    continue;
-                }
-                source_artifacts.push(
-                    path.strip_prefix(workspace_root)
-                        .unwrap_or(&path)
-                        .display()
-                        .to_string(),
-                );
-                reports.push(value);
+    let suite_text = match read_text_bounded(&suite_path, MAX_RELEASE_BENCHMARK_TEXT_BYTES) {
+        Ok(text) => text,
+        Err(error) => {
+            blockers.push(format!(
+                "failed to read CUDA release suite `{}`: {error}",
+                suite_path.display()
+            ));
+            String::new()
+        }
+    };
+    let suite = if suite_text.is_empty() {
+        Value::Null
+    } else {
+        match serde_json::from_str::<Value>(&suite_text) {
+            Ok(value) => value,
+            Err(error) => {
+                blockers.push(format!(
+                    "invalid CUDA release suite JSON `{}`: {error}",
+                    suite_path.display()
+                ));
+                Value::Null
             }
         }
-        Err(error) => blockers.push(format!(
-            "failed to read benchmark evidence directory `{}`: {error}",
-            evidence_dir.display()
-        )),
+    };
+    let suite_artifacts = suite
+        .get("artifacts")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if suite_artifacts.is_empty() {
+        blockers.push("CUDA release suite has no artifacts for release axes".to_string());
+    }
+    for artifact in suite_artifacts {
+        let Some(artifact) = artifact
+            .as_str()
+            .filter(|artifact| !artifact.trim().is_empty())
+        else {
+            blockers.push("CUDA release suite has a non-string or blank artifact path".to_string());
+            continue;
+        };
+        let path = workspace_root.join(artifact);
+        let text = match read_text_bounded(&path, MAX_RELEASE_BENCHMARK_TEXT_BYTES) {
+            Ok(text) => text,
+            Err(error) => {
+                blockers.push(format!(
+                    "failed to read CUDA release axis artifact `{artifact}`: {error}"
+                ));
+                continue;
+            }
+        };
+        let value = match serde_json::from_str::<Value>(&text) {
+            Ok(value) => value,
+            Err(error) => {
+                blockers.push(format!(
+                    "invalid CUDA release axis artifact JSON `{artifact}`: {error}"
+                ));
+                continue;
+            }
+        };
+        if value.get("selected_backend").and_then(Value::as_str) != Some("cuda") {
+            blockers.push(format!(
+                "CUDA release axis artifact `{artifact}` was not produced for cuda"
+            ));
+            continue;
+        }
+        if value.get("cases").and_then(Value::as_array).is_none() {
+            blockers.push(format!(
+                "CUDA release axis artifact `{artifact}` has no cases array"
+            ));
+            continue;
+        }
+        if value
+            .get("summary")
+            .and_then(|summary| summary.get("failed"))
+            .and_then(Value::as_u64)
+            != Some(0)
+        {
+            blockers.push(format!(
+                "CUDA release axis artifact `{artifact}` has nonzero or missing summary.failed"
+            ));
+            continue;
+        }
+        source_artifacts.push(artifact.to_string());
+        reports.push(value);
     }
     blockers.extend(release_axis_blockers(&reports));
     let evidence = ReleaseAxesEvidence {
