@@ -2,7 +2,8 @@ use std::path::Path;
 
 use crate::benchmark_evidence_semantics::{
     benchmark_duplicate_source_artifact_paths, benchmark_source_artifact_count,
-    benchmark_source_artifact_entry_count, duplicate_nonblank_string_array_values,
+    benchmark_source_artifact_entry_count, benchmark_source_artifact_paths,
+    duplicate_nonblank_string_array_values,
 };
 
 use super::super::checks::*;
@@ -100,7 +101,13 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                     .to_string(),
             );
         }
-        check_cpu_100x_source_artifact_counts(&proof, failures);
+        let workspace_root = base_dir
+            .file_name()
+            .is_some_and(|name| name == "release")
+            .then(|| base_dir.parent())
+            .flatten()
+            .unwrap_or(base_dir);
+        check_cpu_100x_source_artifact_counts(&proof, workspace_root, failures);
         let required_proof_cases = proof
             .get("required_cpu_sota_100x_cases")
             .and_then(serde_json::Value::as_array)
@@ -270,7 +277,11 @@ fn check_cpu_100x_aggregate_source_provenance(
     }
 }
 
-fn check_cpu_100x_source_artifact_counts(proof: &serde_json::Value, failures: &mut Vec<String>) {
+fn check_cpu_100x_source_artifact_counts(
+    proof: &serde_json::Value,
+    workspace_root: &Path,
+    failures: &mut Vec<String>,
+) {
     let unique_source_artifacts = benchmark_source_artifact_count(proof) as u64;
     let raw_source_artifacts = benchmark_source_artifact_entry_count(proof) as u64;
     let declared_source_artifacts = proof
@@ -296,6 +307,19 @@ fn check_cpu_100x_source_artifact_counts(proof: &serde_json::Value, failures: &m
             "requirement `cpu-only-100x-proof` aggregate proof has duplicate source_artifacts: {duplicates}"
         ));
     }
+    for artifact in benchmark_source_artifact_paths(proof) {
+        if let Some(issue) =
+            crate::benchmark_evidence_semantics::benchmark_source_artifact_path_issue(
+                workspace_root,
+                &artifact,
+            )
+        {
+            failures.push(format!(
+                "requirement `cpu-only-100x-proof` aggregate proof {}",
+                issue.describe("source_artifact", &artifact)
+            ));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -304,6 +328,8 @@ mod tests {
 
     #[test]
     fn cpu_100x_gate_rejects_duplicate_source_artifact_count_inflation() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for CPU-SOTA duplicate source artifact test.");
         let proof = serde_json::json!({
             "source_artifact_count": 10,
             "source_artifacts": [
@@ -313,7 +339,7 @@ mod tests {
         });
         let mut failures = Vec::new();
 
-        check_cpu_100x_source_artifact_counts(&proof, &mut failures);
+        check_cpu_100x_source_artifact_counts(&proof, dir.path(), &mut failures);
 
         assert!(
             failures.iter().any(|failure| failure.contains(
@@ -326,6 +352,40 @@ mod tests {
                 "duplicate source_artifacts: release/evidence/benchmarks/workload-01-condition-eval.json"
             )),
             "Fix: CPU-SOTA release gate must reject duplicate aggregate source_artifacts; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_gate_rejects_absolute_source_artifact_path() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for CPU-SOTA absolute source artifact test.");
+        let external_artifact = dir.path().join("external-source-artifact.json");
+        std::fs::write(&external_artifact, "{}")
+            .expect("Fix: write external CPU-SOTA source artifact.");
+        let proof = serde_json::json!({
+            "source_artifact_count": 10,
+            "source_artifacts": [
+                external_artifact.display().to_string(),
+                "release/evidence/benchmarks/workload-02.json",
+                "release/evidence/benchmarks/workload-03.json",
+                "release/evidence/benchmarks/workload-04.json",
+                "release/evidence/benchmarks/workload-05.json",
+                "release/evidence/benchmarks/workload-06.json",
+                "release/evidence/benchmarks/workload-07.json",
+                "release/evidence/benchmarks/workload-08.json",
+                "release/evidence/benchmarks/workload-09.json",
+                "release/evidence/benchmarks/workload-10.json"
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_cpu_100x_source_artifact_counts(&proof, dir.path(), &mut failures);
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "aggregate proof source_artifact `"
+            ) && failure.contains("must be a relative release path")),
+            "Fix: CPU-SOTA release gate must reject existing absolute aggregate source_artifact paths; failures={failures:?}"
         );
     }
 

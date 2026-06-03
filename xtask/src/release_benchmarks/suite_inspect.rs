@@ -42,6 +42,18 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
     }
     let artifacts = unique_artifacts.into_iter().collect::<Vec<_>>();
     for artifact in &artifacts {
+        if let Some(issue) =
+            crate::benchmark_evidence_semantics::benchmark_source_artifact_path_issue(
+                workspace_root,
+                artifact,
+            )
+        {
+            blockers.push(format!(
+                "100x {}",
+                issue.describe("source_artifact", artifact)
+            ));
+            continue;
+        }
         let path = workspace_root.join(artifact);
         let text = match read_text_bounded(&path, MAX_RELEASE_BENCHMARK_TEXT_BYTES) {
             Ok(text) => text,
@@ -2692,6 +2704,36 @@ mod tests {
                 )
             }),
             "Fix: aggregate CPU-SOTA proof must report duplicated source_artifacts; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_proof_rejects_absolute_source_artifact_path() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for absolute-source CPU-SOTA proof test.");
+        let external_artifact = dir.path().join("external-cuda-source.json");
+        fs::write(&external_artifact, "{}").expect("Fix: write external CUDA benchmark artifact.");
+
+        write_cpu_100x_proof(dir.path(), &[external_artifact.display().to_string()]);
+
+        let proof_path = dir
+            .path()
+            .join("release/evidence/benchmarks/cpu-only-100x-proof.json");
+        let proof_text = fs::read_to_string(&proof_path)
+            .expect("Fix: read generated CPU-SOTA 100x proof artifact.");
+        let proof = serde_json::from_str::<Value>(&proof_text)
+            .expect("Fix: generated CPU-SOTA 100x proof must be valid JSON.");
+        let blockers = proof
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated CPU-SOTA proof must include blockers array.");
+
+        assert!(
+            blockers.iter().filter_map(Value::as_str).any(|blocker| {
+                blocker.contains("100x source_artifact `")
+                    && blocker.contains("must be a relative release path")
+            }),
+            "Fix: aggregate CPU-SOTA proof generation must reject existing absolute source_artifact paths before reading them; blockers={blockers:?}"
         );
     }
 }

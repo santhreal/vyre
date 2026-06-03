@@ -227,7 +227,7 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
         inspect_workload_benchmark_semantics(evidence, path, &value, blockers);
     }
     if evidence.ends_with("cpu-only-100x-proof.json") {
-        inspect_cpu_100x_benchmark_semantics(evidence, &value, blockers);
+        inspect_cpu_100x_benchmark_semantics(evidence, path, &value, blockers);
     }
     if is_before_after_benchmark_evidence(evidence) {
         inspect_before_after_benchmark_semantics(evidence, &value, blockers);

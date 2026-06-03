@@ -214,6 +214,7 @@ fn inspect_duplicate_parser_contract_object_rows(
 
 fn inspect_cpu_100x_benchmark_semantics(
     evidence: &str,
+    path: &std::path::Path,
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
@@ -224,7 +225,7 @@ fn inspect_cpu_100x_benchmark_semantics(
         blockers.push(format!("{evidence}: selected_backend must be cuda"));
     }
     inspect_cpu_100x_aggregate_source_provenance(evidence, value, blockers);
-    inspect_cpu_100x_source_artifact_counts(evidence, value, blockers);
+    inspect_cpu_100x_source_artifact_counts(evidence, path, value, blockers);
     inspect_duplicate_array_values(evidence, value, "required_cpu_sota_100x_cases", blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
         blockers.push(format!("{evidence}: missing cases array"));
@@ -343,6 +344,7 @@ fn inspect_cpu_100x_aggregate_source_provenance(
 
 fn inspect_cpu_100x_source_artifact_counts(
     evidence: &str,
+    path: &std::path::Path,
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
@@ -374,6 +376,37 @@ fn inspect_cpu_100x_source_artifact_counts(
             "{evidence}: duplicate source_artifacts: {duplicates}"
         ));
     }
+    let source_artifacts =
+        crate::benchmark_evidence_semantics::benchmark_source_artifact_paths(value);
+    if source_artifacts.is_empty() {
+        return;
+    }
+    let Some(workspace_root) = cpu_100x_workspace_root(path) else {
+        blockers.push(format!(
+            "{evidence}: could not resolve workspace root for source_artifacts from {}",
+            path.display()
+        ));
+        return;
+    };
+    for artifact in source_artifacts {
+        if let Some(issue) =
+            crate::benchmark_evidence_semantics::benchmark_source_artifact_path_issue(
+                workspace_root,
+                &artifact,
+            )
+        {
+            blockers.push(format!(
+                "{evidence}: {}",
+                issue.describe("source_artifact", &artifact)
+            ));
+        }
+    }
+}
+
+fn cpu_100x_workspace_root(path: &std::path::Path) -> Option<&std::path::Path> {
+    path.ancestors().find(|candidate| {
+        candidate.join("Cargo.toml").is_file() && candidate.join("release").is_dir()
+    })
 }
 
 fn case_has_cpu_sota_contract(
@@ -471,7 +504,12 @@ mod part13_tests {
         });
         let mut blockers = Vec::new();
 
-        inspect_cpu_100x_benchmark_semantics("cpu-100x.json", &report, &mut blockers);
+        inspect_cpu_100x_benchmark_semantics(
+            "cpu-100x.json",
+            std::path::Path::new("cpu-100x.json"),
+            &report,
+            &mut blockers,
+        );
 
         assert!(
             blockers.iter().any(|blocker| blocker.contains(
@@ -514,7 +552,12 @@ mod part13_tests {
         });
         let mut blockers = Vec::new();
 
-        inspect_cpu_100x_benchmark_semantics("cpu-100x.json", &report, &mut blockers);
+        inspect_cpu_100x_benchmark_semantics(
+            "cpu-100x.json",
+            std::path::Path::new("cpu-100x.json"),
+            &report,
+            &mut blockers,
+        );
 
         assert!(
             blockers.iter().any(|blocker| blocker.contains(
@@ -535,7 +578,12 @@ mod part13_tests {
         });
         let mut blockers = Vec::new();
 
-        inspect_cpu_100x_source_artifact_counts("cpu-only-100x-proof.json", &proof, &mut blockers);
+        inspect_cpu_100x_source_artifact_counts(
+            "cpu-only-100x-proof.json",
+            std::path::Path::new("cpu-only-100x-proof.json"),
+            &proof,
+            &mut blockers,
+        );
 
         assert!(
             blockers.iter().any(|blocker| blocker.contains(
@@ -548,6 +596,51 @@ mod part13_tests {
                 "duplicate source_artifacts: release/evidence/benchmarks/workload-01-condition-eval.json"
             )),
             "Fix: completion audit must reject duplicate CPU-SOTA source_artifacts; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_cpu_100x_rejects_absolute_source_artifact_path() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for CPU-SOTA absolute source artifact audit.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        let evidence_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&evidence_dir)
+            .expect("Fix: create temporary CPU-SOTA evidence directory.");
+        let proof_path = evidence_dir.join("cpu-only-100x-proof.json");
+        let external_artifact = dir.path().join("external-source-artifact.json");
+        std::fs::write(&external_artifact, "{}")
+            .expect("Fix: write external CPU-SOTA source artifact.");
+        let proof = serde_json::json!({
+            "source_artifact_count": 10,
+            "source_artifacts": [
+                external_artifact.display().to_string(),
+                "release/evidence/benchmarks/workload-02.json",
+                "release/evidence/benchmarks/workload-03.json",
+                "release/evidence/benchmarks/workload-04.json",
+                "release/evidence/benchmarks/workload-05.json",
+                "release/evidence/benchmarks/workload-06.json",
+                "release/evidence/benchmarks/workload-07.json",
+                "release/evidence/benchmarks/workload-08.json",
+                "release/evidence/benchmarks/workload-09.json",
+                "release/evidence/benchmarks/workload-10.json"
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_cpu_100x_source_artifact_counts(
+            "release/evidence/benchmarks/cpu-only-100x-proof.json",
+            &proof_path,
+            &proof,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "release/evidence/benchmarks/cpu-only-100x-proof.json: source_artifact `"
+            ) && blocker.contains("must be a relative release path")),
+            "Fix: completion audit must reject existing absolute CPU-SOTA source_artifact paths; blockers={blockers:?}"
         );
     }
 
