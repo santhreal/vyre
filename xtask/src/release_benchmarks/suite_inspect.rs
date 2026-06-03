@@ -91,6 +91,13 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
                 .get("id")
                 .and_then(Value::as_str)
                 .unwrap_or("<unknown>");
+            let case_failure_reason =
+                crate::benchmark_evidence_semantics::benchmark_case_failure_reason(case);
+            if let Some(reason) = &case_failure_reason {
+                blockers.push(format!(
+                    "100x source artifact `{artifact}` case `{case_id}` failed: {reason}"
+                ));
+            }
             let metrics = case.get("metrics").and_then(Value::as_object);
             if REQUIRED_CPU_SOTA_100X_CASES.contains(&case_id) {
                 observed_required_cases.insert(case_id.to_string());
@@ -183,7 +190,7 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
                     .and_then(|performance| performance.get("speedup_x"))
                     .and_then(Value::as_f64)
                     .is_some_and(|speedup| speedup >= 100.0);
-                if contract_passed && speedup_passed {
+                if case_failure_reason.is_none() && contract_passed && speedup_passed {
                     passing_contract_case_count += 1;
                 }
             }
@@ -999,6 +1006,104 @@ mod tests {
             ) && blocker.contains("observed 91.75x")),
             "Fix: WGPU suite blockers must preserve the benchmark case failure reason instead of exposing only missing metric fallout: {:?}",
             status.blockers
+        );
+    }
+
+    #[test]
+    fn cpu_100x_proof_rejects_case_failure_hidden_by_passing_contract() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for CPU-SOTA proof regression test.");
+        let artifact_rel = "release/evidence/benchmarks/cuda-hidden-invalid.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: CPU-SOTA proof artifact path must have a parent directory."),
+        )
+        .expect("Fix: create CPU-SOTA proof artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "summary": {
+                    "total_cases": 1,
+                    "passed": 1,
+                    "failed": 0,
+                    "total_time_ns": 0,
+                    "cache_hit_rate": null
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "correctness": {
+                            "Invalid": {
+                                "reason": "CUDA/WGPU output mismatch at row 17"
+                            }
+                        },
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002}
+                        },
+                        "contract": {
+                            "primitive": "release condition eval",
+                            "baselines": [
+                                {
+                                    "name": "CPU-SOTA",
+                                    "crate_name": "vyre-runtime",
+                                    "class": "CpuSota",
+                                    "min_speedup_x": 100.0,
+                                    "backend_ids": ["cuda"]
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 200.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize hidden-invalid CUDA benchmark artifact JSON."),
+        )
+        .expect("Fix: write hidden-invalid CUDA benchmark artifact JSON.");
+
+        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()]);
+
+        let proof_path = dir
+            .path()
+            .join("release/evidence/benchmarks/cpu-only-100x-proof.json");
+        let proof_text = fs::read_to_string(&proof_path)
+            .expect("Fix: read generated CPU-SOTA 100x proof artifact.");
+        let proof = serde_json::from_str::<Value>(&proof_text)
+            .expect("Fix: generated CPU-SOTA 100x proof must be valid JSON.");
+
+        assert_eq!(
+            proof
+                .get("cpu_sota_100x_passing_case_count")
+                .and_then(Value::as_u64),
+            Some(0),
+            "Fix: invalid correctness evidence must disqualify a case from passing CPU-SOTA proof even when performance says contract_passed=true."
+        );
+        assert_eq!(
+            proof
+                .get("summary")
+                .and_then(|summary| summary.get("failed"))
+                .and_then(Value::as_u64),
+            Some(1),
+            "Fix: aggregate CPU-SOTA proof summary must count hidden invalid cases as failed."
+        );
+        let blockers = proof
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated CPU-SOTA proof must include blockers array.");
+        assert!(
+            blockers
+                .iter()
+                .filter_map(Value::as_str)
+                .any(|blocker| blocker.contains(
+                    "100x source artifact `release/evidence/benchmarks/cuda-hidden-invalid.json` case `release.condition_eval.1m` failed: CUDA/WGPU output mismatch at row 17"
+                )),
+            "Fix: aggregate CPU-SOTA proof blockers must preserve hidden case failure reasons; blockers={blockers:?}"
         );
     }
 }
