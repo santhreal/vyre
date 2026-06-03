@@ -12,7 +12,7 @@ use vyre_driver::{
     BindingRole, CompiledPipeline, DispatchConfig, OutputBuffers, Resource,
 };
 
-use crate::backend::cuda_graph_replay::CudaGraphReplayStats;
+use crate::backend::cuda_graph_replay::{CudaGraphReplayInputState, CudaGraphReplayStats};
 use crate::backend::resident_dispatch::{next_resident_handle, CudaResidentDispatch};
 use crate::backend::staging_reserve::{reserve_smallvec, reserved_vec, resize_vec_slots};
 use crate::backend::CachedCudaGraph;
@@ -112,6 +112,12 @@ struct LaunchedMaterializedBatch {
     replay_stats: CudaGraphReplayStats,
 }
 
+#[derive(Debug)]
+struct CachedGraphReplaySelection {
+    graph: CachedCudaGraph,
+    input_state: CudaGraphReplayInputState,
+}
+
 impl CompiledPipeline for CudaCompiledPipeline {
     fn id(&self) -> &str {
         &self.id
@@ -190,15 +196,20 @@ impl CompiledPipeline for CudaCompiledPipeline {
                 wait_ns: None,
             });
         }
-        let mut cached = match self.take_cached_graph_with_key(inputs, &input_key)? {
-            Some(cached) => cached,
-            None => self
-                .backend
-                .record_cuda_graph_borrowed(&self.program, inputs, config)?,
+        let (mut cached, input_state) = match self
+            .take_cached_graph_with_replay_state(inputs, &input_key)?
+        {
+            Some(selection) => (selection.graph, selection.input_state),
+            None => {
+                let cached =
+                    self.backend
+                        .record_cuda_graph_borrowed(&self.program, inputs, config)?;
+                let input_state = self
+                    .backend
+                    .prepare_cuda_graph_replay_input_state_with_key(&cached, inputs, input_key)?;
+                (cached, input_state)
+            }
         };
-        let input_state = self
-            .backend
-            .prepare_cuda_graph_replay_input_state_with_key(&cached, inputs, input_key)?;
         let replay_result = self
             .backend
             .dispatch_via_cuda_graph_timed_with_input_state_into(
@@ -263,15 +274,20 @@ impl CompiledPipeline for CudaCompiledPipeline {
         if self.materialized_output_cache_hit_with_key_into(inputs, &input_key, outputs)? {
             return Ok(());
         }
-        let mut cached = match self.take_cached_graph_with_key(inputs, &input_key)? {
-            Some(cached) => cached,
-            None => self
-                .backend
-                .record_cuda_graph_borrowed(&self.program, inputs, config)?,
+        let (mut cached, input_state) = match self
+            .take_cached_graph_with_replay_state(inputs, &input_key)?
+        {
+            Some(selection) => (selection.graph, selection.input_state),
+            None => {
+                let cached =
+                    self.backend
+                        .record_cuda_graph_borrowed(&self.program, inputs, config)?;
+                let input_state = self
+                    .backend
+                    .prepare_cuda_graph_replay_input_state_with_key(&cached, inputs, input_key)?;
+                (cached, input_state)
+            }
         };
-        let input_state = self
-            .backend
-            .prepare_cuda_graph_replay_input_state_with_key(&cached, inputs, input_key)?;
         let replay_result = self.backend.dispatch_via_cuda_graph_with_input_state_into(
             &mut cached,
             inputs,
@@ -1089,6 +1105,16 @@ impl CudaCompiledPipeline {
         inputs: &[&[u8]],
         input_key: &MaterializedInputKey,
     ) -> Result<Option<CachedCudaGraph>, BackendError> {
+        Ok(self
+            .take_cached_graph_with_replay_state(inputs, input_key)?
+            .map(|selection| selection.graph))
+    }
+
+    fn take_cached_graph_with_replay_state(
+        &self,
+        inputs: &[&[u8]],
+        input_key: &MaterializedInputKey,
+    ) -> Result<Option<CachedGraphReplaySelection>, BackendError> {
         let mut graphs = self.graph_cache.lock().map_err(|_| {
             BackendError::DispatchFailed {
                 code: None,
@@ -1100,17 +1126,25 @@ impl CudaCompiledPipeline {
             if !cached.input_shape_matches(inputs) {
                 continue;
             }
-            if first_shape_match.is_none() {
-                first_shape_match = Some(index);
-            }
             let input_state = self
                 .backend
                 .prepare_cuda_graph_replay_input_state_with_key(cached, inputs, *input_key)?;
             if cached.materialized_output_cache_matches_with_input_state(inputs, &input_state)? {
-                return Ok(Some(graphs.swap_remove(index)));
+                return Ok(Some(CachedGraphReplaySelection {
+                    graph: graphs.swap_remove(index),
+                    input_state,
+                }));
+            }
+            if first_shape_match.is_none() {
+                first_shape_match = Some((index, input_state));
             }
         }
-        Ok(first_shape_match.map(|index| graphs.swap_remove(index)))
+        Ok(
+            first_shape_match.map(|(index, input_state)| CachedGraphReplaySelection {
+                graph: graphs.swap_remove(index),
+                input_state,
+            }),
+        )
     }
 
     fn return_cached_graph(&self, cached: CachedCudaGraph) -> Result<(), BackendError> {
