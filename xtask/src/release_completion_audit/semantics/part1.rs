@@ -97,6 +97,14 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
         check_case_backend_matches_selected_backend(evidence, &value, blockers);
         inspect_contract_baselines_apply_to_backend(evidence, &value, blockers);
         check_cuda_telemetry_labels_match_counters(evidence, &value, blockers);
+        if value.get("cases").is_some()
+            || value
+                .get("selected_backend")
+                .and_then(serde_json::Value::as_str)
+                .is_some()
+        {
+            inspect_benchmark_report_provenance(evidence, &value, blockers);
+        }
     }
     if failed != 0 || case_failed != 0 {
         let detail = if failed_cases.is_empty() {
@@ -580,6 +588,44 @@ mod part1_tests {
                 "release/evidence/benchmarks/wgpu-backend-drift.json: case `release.condition_eval.1m` backend_id `cuda` does not match selected_backend `wgpu`"
             )),
             "Fix: completion audit must reject generic benchmark cases executed on a backend other than selected_backend; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_generic_benchmark_missing_source_provenance() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for missing-source benchmark audit test.");
+        let path = dir.path().join("wgpu-missing-source.json");
+        fs::write(
+            &path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0, "cache_hit_rate": null},
+                "environment": {"cpu_model": "test CPU"},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize missing-source benchmark JSON."),
+        )
+        .expect("Fix: write missing-source benchmark JSON.");
+
+        let mut blockers = Vec::new();
+        inspect_json_evidence(
+            "release/evidence/benchmarks/wgpu-missing-source.json",
+            &path,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "release/evidence/benchmarks/wgpu-missing-source.json: benchmark report must include source fingerprint or source artifact provenance"
+            )),
+            "Fix: completion audit must reject generic benchmark reports with no source provenance; blockers={blockers:?}"
         );
     }
 }

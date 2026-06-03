@@ -96,50 +96,7 @@ fn inspect_workload_benchmark_provenance(
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    if !has_nonempty_string_any(
-        value,
-        &[
-            "source_fingerprint",
-            "source_revision",
-            "source_artifact_fingerprint",
-            "commit_fingerprint",
-        ],
-    ) && !value
-        .get("source_artifacts")
-        .and_then(serde_json::Value::as_array)
-        .is_some_and(|items| !items.is_empty())
-        && !value
-            .get("git")
-            .is_some_and(|git| has_nonempty_string_any(git, &["commit"]))
-    {
-        blockers.push(format!(
-            "{evidence}: benchmark report must include source fingerprint or source artifact provenance"
-        ));
-    }
-    if let Some(source_fingerprint) = value
-        .get("source_fingerprint")
-        .and_then(serde_json::Value::as_str)
-        .filter(|value| !value.trim().is_empty())
-    {
-        inspect_source_fingerprint_shape(evidence, source_fingerprint, blockers);
-    }
-    let environment = value.get("environment");
-    if !environment.is_some_and(|environment| {
-        has_nonempty_string_any(
-            environment,
-            &["host_cpu_model", "cpu_model", "host_cpu", "processor_model"],
-        )
-    }) {
-        blockers.push(format!(
-            "{evidence}: benchmark environment must include host CPU model provenance"
-        ));
-    }
-    let summary = value.get("summary");
-    if !summary.is_some_and(|summary| summary.get("cache_hit_rate").is_some()) {
-        blockers.push(format!(
-            "{evidence}: benchmark summary must include cache_hit_rate, even when null"
-        ));
-    }
+    inspect_benchmark_report_provenance(evidence, value, blockers);
     check_case_backend_matches_selected_backend(evidence, value, blockers);
     inspect_contract_baselines_apply_to_backend(evidence, value, blockers);
     check_cuda_telemetry_labels_match_counters(evidence, value, blockers);
@@ -233,6 +190,57 @@ fn inspect_workload_benchmark_provenance(
                 "{evidence}: case `{id}` must list optimization passes applied"
             ));
         }
+    }
+}
+
+fn inspect_benchmark_report_provenance(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    if !has_nonempty_string_any(
+        value,
+        &[
+            "source_fingerprint",
+            "source_revision",
+            "source_artifact_fingerprint",
+            "commit_fingerprint",
+        ],
+    ) && !value
+        .get("source_artifacts")
+        .and_then(serde_json::Value::as_array)
+        .is_some_and(|items| !items.is_empty())
+        && !value
+            .get("git")
+            .is_some_and(|git| has_nonempty_string_any(git, &["commit"]))
+    {
+        blockers.push(format!(
+            "{evidence}: benchmark report must include source fingerprint or source artifact provenance"
+        ));
+    }
+    if let Some(source_fingerprint) = value
+        .get("source_fingerprint")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+    {
+        inspect_source_fingerprint_shape(evidence, source_fingerprint, blockers);
+    }
+    let environment = value.get("environment");
+    if !environment.is_some_and(|environment| {
+        has_nonempty_string_any(
+            environment,
+            &["host_cpu_model", "cpu_model", "host_cpu", "processor_model"],
+        )
+    }) {
+        blockers.push(format!(
+            "{evidence}: benchmark environment must include host CPU model provenance"
+        ));
+    }
+    let summary = value.get("summary");
+    if !summary.is_some_and(|summary| summary.get("cache_hit_rate").is_some()) {
+        blockers.push(format!(
+            "{evidence}: benchmark summary must include cache_hit_rate, even when null"
+        ));
     }
 }
 
