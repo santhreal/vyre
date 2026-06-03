@@ -1,4 +1,7 @@
-use crate::benchmark_evidence_semantics::{launch_plan_label_issues, LaunchPlanLabelIssue};
+use crate::benchmark_evidence_semantics::{
+    backend_consistency_issues, launch_plan_label_issues, BackendConsistencyIssue,
+    LaunchPlanLabelIssue,
+};
 
 pub(crate) fn check_benchmark_report_has_cases(
     requirement: &Requirement,
@@ -208,6 +211,7 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
             requirement.id
         ));
     }
+    check_case_backend_matches_selected_backend(requirement, label, report, failures);
     let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) else {
         return;
     };
@@ -366,6 +370,32 @@ fn check_launch_plan_label_matches_count(
             )),
             LaunchPlanLabelIssue::MultiHasSingle { launch_count } => failures.push(format!(
                 "requirement `{}` benchmark `{label}` case `{case_id}` reports {launch_count:.0} kernel launches but lists `single-dispatch-launch-plan`",
+                requirement.id
+            )),
+        }
+    }
+}
+fn check_case_backend_matches_selected_backend(
+    requirement: &Requirement,
+    label: &str,
+    report: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    for issue in backend_consistency_issues(report) {
+        match issue {
+            BackendConsistencyIssue::MissingCaseBackend {
+                case_id,
+                expected_backend,
+            } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{case_id}` must include backend_id `{expected_backend}` matching selected_backend",
+                requirement.id
+            )),
+            BackendConsistencyIssue::CaseBackendMismatch {
+                case_id,
+                expected_backend,
+                actual_backend,
+            } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{case_id}` backend_id `{actual_backend}` does not match selected_backend `{expected_backend}`",
                 requirement.id
             )),
         }

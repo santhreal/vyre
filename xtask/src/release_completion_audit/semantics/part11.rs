@@ -1,4 +1,7 @@
-use crate::benchmark_evidence_semantics::{launch_plan_label_issues, LaunchPlanLabelIssue};
+use crate::benchmark_evidence_semantics::{
+    backend_consistency_issues, launch_plan_label_issues, BackendConsistencyIssue,
+    LaunchPlanLabelIssue,
+};
 
 fn inspect_workload_benchmark_semantics(
     evidence: &str,
@@ -127,6 +130,7 @@ fn inspect_workload_benchmark_provenance(
             "{evidence}: benchmark summary must include cache_hit_rate, even when null"
         ));
     }
+    check_case_backend_matches_selected_backend(evidence, value, blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
         return;
     };
@@ -280,6 +284,30 @@ fn check_launch_plan_label_matches_count(
             )),
             LaunchPlanLabelIssue::MultiHasSingle { launch_count } => blockers.push(format!(
                 "{evidence}: case `{case_id}` reports {launch_count:.0} kernel launches but lists `single-dispatch-launch-plan`"
+            )),
+        }
+    }
+}
+
+fn check_case_backend_matches_selected_backend(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    for issue in backend_consistency_issues(value) {
+        match issue {
+            BackendConsistencyIssue::MissingCaseBackend {
+                case_id,
+                expected_backend,
+            } => blockers.push(format!(
+                "{evidence}: case `{case_id}` must include backend_id `{expected_backend}` matching selected_backend"
+            )),
+            BackendConsistencyIssue::CaseBackendMismatch {
+                case_id,
+                expected_backend,
+                actual_backend,
+            } => blockers.push(format!(
+                "{evidence}: case `{case_id}` backend_id `{actual_backend}` does not match selected_backend `{expected_backend}`"
             )),
         }
     }

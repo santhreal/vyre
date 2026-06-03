@@ -8,6 +8,55 @@ pub(crate) enum LaunchPlanLabelIssue {
     MultiHasSingle { launch_count: f64 },
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum BackendConsistencyIssue {
+    MissingCaseBackend {
+        case_id: String,
+        expected_backend: String,
+    },
+    CaseBackendMismatch {
+        case_id: String,
+        expected_backend: String,
+        actual_backend: String,
+    },
+}
+
+pub(crate) fn backend_consistency_issues(report: &Value) -> Vec<BackendConsistencyIssue> {
+    let Some(expected_backend) = report
+        .get("selected_backend")
+        .and_then(Value::as_str)
+        .filter(|backend| !backend.trim().is_empty())
+    else {
+        return Vec::new();
+    };
+    let Some(cases) = report.get("cases").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+
+    cases
+        .iter()
+        .filter_map(|case| {
+            let case_id = case_id(case);
+            match case
+                .get("backend_id")
+                .and_then(Value::as_str)
+                .filter(|backend| !backend.trim().is_empty())
+            {
+                Some(actual_backend) if actual_backend == expected_backend => None,
+                Some(actual_backend) => Some(BackendConsistencyIssue::CaseBackendMismatch {
+                    case_id,
+                    expected_backend: expected_backend.to_string(),
+                    actual_backend: actual_backend.to_string(),
+                }),
+                None => Some(BackendConsistencyIssue::MissingCaseBackend {
+                    case_id,
+                    expected_backend: expected_backend.to_string(),
+                }),
+            }
+        })
+        .collect()
+}
+
 pub(crate) fn launch_plan_label_issues(
     case: &Value,
     metrics: Option<&Map<String, Value>>,
@@ -75,6 +124,13 @@ fn optimization_passes_contain(case: &Value, expected: &str) -> bool {
         })
 }
 
+fn case_id(case: &Value) -> String {
+    case.get("id")
+        .and_then(Value::as_str)
+        .unwrap_or("<unknown>")
+        .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -119,5 +175,47 @@ mod tests {
                 "Fix: matching launch-plan label/count evidence should pass: {issues:?}"
             );
         }
+    }
+
+    #[test]
+    fn backend_consistency_rejects_case_backend_drift() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "cases": [
+                {"id": "same", "backend_id": "cuda"},
+                {"id": "fallback", "backend_id": "wgpu"},
+                {"id": "missing"}
+            ]
+        });
+
+        assert_eq!(
+            backend_consistency_issues(&report),
+            vec![
+                BackendConsistencyIssue::CaseBackendMismatch {
+                    case_id: "fallback".to_string(),
+                    expected_backend: "cuda".to_string(),
+                    actual_backend: "wgpu".to_string(),
+                },
+                BackendConsistencyIssue::MissingCaseBackend {
+                    case_id: "missing".to_string(),
+                    expected_backend: "cuda".to_string(),
+                },
+            ],
+            "Fix: report-level backend selection must be proven by every benchmark case."
+        );
+    }
+
+    #[test]
+    fn backend_consistency_allows_non_benchmark_manifest_without_selected_backend() {
+        let manifest = serde_json::json!({
+            "cases": [
+                {"id": "manifest-row"}
+            ]
+        });
+
+        assert!(
+            backend_consistency_issues(&manifest).is_empty(),
+            "Fix: backend consistency applies to benchmark reports that declare selected_backend."
+        );
     }
 }
