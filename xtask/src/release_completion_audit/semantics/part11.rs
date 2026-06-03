@@ -189,16 +189,17 @@ fn inspect_workload_benchmark_provenance(
                     "bytes_d2h",
                 ][..],
             ),
-            (
-                "kernel launch count",
-                &["kernel_launches", "launch_count", "launches"][..],
-            ),
         ] {
             if !metrics_has_any(metrics, metric_names) {
                 blockers.push(format!(
                     "{evidence}: case `{id}` must include {label} metric"
                 ));
             }
+        }
+        if !metrics_has_positive_any(metrics, &["kernel_launches", "launch_count", "launches"]) {
+            blockers.push(format!(
+                "{evidence}: case `{id}` must include positive kernel launch count metric"
+            ));
         }
         if !case
             .get("optimization_passes")
@@ -236,6 +237,21 @@ fn metrics_has_any(
                     || metric_p50(Some(value)).is_some_and(|sample| sample > 0.0)
                     || value.as_u64().is_some()
                     || value.as_f64().is_some_and(|number| number >= 0.0)
+            })
+        })
+    })
+}
+
+fn metrics_has_positive_any(
+    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
+    fields: &[&str],
+) -> bool {
+    metrics.is_some_and(|metrics| {
+        fields.iter().any(|field| {
+            metrics.get(*field).is_some_and(|value| {
+                metric_p50(Some(value)).is_some_and(|sample| sample > 0.0)
+                    || value.as_u64().is_some_and(|number| number > 0)
+                    || value.as_f64().is_some_and(|number| number > 0.0)
             })
         })
     })
@@ -283,6 +299,53 @@ fn inspect_weir_readme_contract_semantics(
         .is_none_or(|items| !items.is_empty())
     {
         blockers.push(format!("{evidence}: blockers must exist and be empty"));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn completion_audit_launch_metric_rejects_zero_sampled_counts() {
+        let metrics = serde_json::json!({
+            "kernel_launches": {
+                "p50": 0,
+                "samples": 30
+            }
+        });
+        let metrics = metrics.as_object();
+
+        assert!(
+            metrics_has_any(metrics, &["kernel_launches"]),
+            "Fix: this fixture must still demonstrate the old presence-only weakness."
+        );
+        assert!(
+            !metrics_has_positive_any(metrics, &["kernel_launches", "launch_count", "launches"]),
+            "Fix: completion audit launch evidence must reject zero-valued launch metrics even when samples are present."
+        );
+    }
+
+    #[test]
+    fn completion_audit_launch_metric_accepts_positive_aliases() {
+        let percentile = serde_json::json!({
+            "launches": {
+                "p50": 2,
+                "samples": 30
+            }
+        });
+        assert!(metrics_has_positive_any(
+            percentile.as_object(),
+            &["kernel_launches", "launch_count", "launches"]
+        ));
+
+        let scalar = serde_json::json!({
+            "kernel_launches": 1
+        });
+        assert!(metrics_has_positive_any(
+            scalar.as_object(),
+            &["kernel_launches", "launch_count", "launches"]
+        ));
     }
 }
 
@@ -405,4 +468,3 @@ fn inspect_c_parser_corpus_semantics(
         ));
     }
 }
-

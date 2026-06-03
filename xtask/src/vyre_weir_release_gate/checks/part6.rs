@@ -272,10 +272,6 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
                     "bytes_d2h",
                 ][..],
             ),
-            (
-                "kernel launch count",
-                &["kernel_launches", "launch_count", "launches"][..],
-            ),
         ] {
             if !metrics_has_any(metrics, metric_names) {
                 failures.push(format!(
@@ -283,6 +279,12 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
                     requirement.id
                 ));
             }
+        }
+        if !metrics_has_positive_any(metrics, &["kernel_launches", "launch_count", "launches"]) {
+            failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{id}` must include positive kernel launch count metric",
+                requirement.id
+            ));
         }
         if !case
             .get("optimization_passes")
@@ -319,6 +321,20 @@ pub(crate) fn metrics_has_any(
                     || metric_p50(Some(value)).is_some_and(|sample| sample > 0.0)
                     || value.as_u64().is_some()
                     || value.as_f64().is_some_and(|number| number >= 0.0)
+            })
+        })
+    })
+}
+pub(crate) fn metrics_has_positive_any(
+    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
+    fields: &[&str],
+) -> bool {
+    metrics.is_some_and(|metrics| {
+        fields.iter().any(|field| {
+            metrics.get(*field).is_some_and(|value| {
+                metric_p50(Some(value)).is_some_and(|sample| sample > 0.0)
+                    || value.as_u64().is_some_and(|number| number > 0)
+                    || value.as_f64().is_some_and(|number| number > 0.0)
             })
         })
     })
@@ -426,6 +442,53 @@ pub(crate) fn require_case_metric_present(
         failures.push(format!(
             "requirement `{}` benchmark `{suffix}` has no `{metric}` metric claimed by pass-family manifest",
             requirement.id
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn launch_metric_presence_requires_positive_value() {
+        let metrics = serde_json::json!({
+            "kernel_launches": {
+                "p50": 0,
+                "samples": 30
+            }
+        });
+        let metrics = metrics.as_object();
+
+        assert!(
+            metrics_has_any(metrics, &["kernel_launches"]),
+            "Fix: this fixture must still demonstrate why raw presence is too weak."
+        );
+        assert!(
+            !metrics_has_positive_any(metrics, &["kernel_launches", "launch_count", "launches"]),
+            "Fix: release-gate launch evidence must reject zero-valued launch metrics even when samples are present."
+        );
+    }
+
+    #[test]
+    fn launch_metric_positive_helper_accepts_scalar_and_percentile_counts() {
+        let percentile = serde_json::json!({
+            "kernel_launches": {
+                "p50": 4,
+                "samples": 30
+            }
+        });
+        assert!(metrics_has_positive_any(
+            percentile.as_object(),
+            &["kernel_launches", "launch_count", "launches"]
+        ));
+
+        let scalar = serde_json::json!({
+            "launch_count": 1
+        });
+        assert!(metrics_has_positive_any(
+            scalar.as_object(),
+            &["kernel_launches", "launch_count", "launches"]
         ));
     }
 }
