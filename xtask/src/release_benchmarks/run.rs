@@ -342,15 +342,17 @@ fn select_release_benchmark_case<'a>(
     family: &'a ReleaseWorkloadFamily,
     prefer_cpu_sota_100x: bool,
 ) -> Option<&'a String> {
-    let selected_cases = if prefer_cpu_sota_100x && !family.cpu_sota_100x_cases.is_empty() {
-        &family.cpu_sota_100x_cases
-    } else {
-        &family.matched_cases
-    };
-    selected_cases
+    if prefer_cpu_sota_100x && !family.cpu_sota_100x_cases.is_empty() {
+        return family
+            .cpu_sota_100x_cases
+            .iter()
+            .find(|case_id| REQUIRED_CPU_SOTA_100X_CASES.contains(&case_id.as_str()));
+    }
+    family
+        .matched_cases
         .iter()
         .find(|case_id| REQUIRED_CPU_SOTA_100X_CASES.contains(&case_id.as_str()))
-        .or_else(|| selected_cases.first())
+        .or_else(|| family.matched_cases.first())
 }
 
 fn backend_workload_artifact(backend: &str, matrix_artifact: &str) -> String {
@@ -435,6 +437,28 @@ mod tests {
             select_release_benchmark_case(&family, true).map(String::as_str),
             Some("release.condition_eval.1m"),
             "Fix: WGPU comparison suite generation must not drift to a broad matched case when a release-defining CPU-SOTA case exists."
+        );
+    }
+
+    #[test]
+    fn cpu_sota_selection_rejects_non_release_defining_cpu_sota_cases() {
+        let family = ReleaseWorkloadFamily {
+            id: "condition-eval".to_string(),
+            required: true,
+            matched_cases: vec![
+                "conditions.yara_like.batch.16x64k".to_string(),
+                "release.condition_eval.1m".to_string(),
+            ],
+            evidence_artifact: "release/evidence/benchmarks/workload-01-condition-eval.json"
+                .to_string(),
+            max_cpu_sota_min_speedup_x: Some(100.0),
+            cpu_sota_100x_cases: vec!["conditions.yara_like.eval.1m".to_string()],
+        };
+
+        assert_eq!(
+            select_release_benchmark_case(&family, true),
+            None,
+            "Fix: release-benchmarks must fail before dispatch when the CPU-SOTA case list cannot prove a required release-defining 100x case."
         );
     }
 
