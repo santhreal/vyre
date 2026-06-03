@@ -150,7 +150,12 @@ impl BenchCase for AesCtrEncrypt {
         ];
         let inputs = vec![plaintext_bytes.clone(), aes_table_bytes(key_bytes)];
         let input_bytes_total = input_bytes_total(&inputs);
-        let resident = ResidentInputSet::upload_optional(ctx, &inputs, "aes-ctr bench")?;
+        let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+            ctx,
+            &prog,
+            &inputs,
+            "aes-ctr bench",
+        )?;
         Ok(Box::new(AesCtrPrepared {
             program: prog,
             plaintext_bytes,

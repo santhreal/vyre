@@ -13,7 +13,8 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
-    dispatch_compiled_timed, input_bytes_total, transfer_accounting, ResidentInputPool,
+    dispatch_compiled_timed, input_bytes_total, resident_output_byte_lengths, transfer_accounting,
+    ResidentInputPool,
 };
 use crate::api::suite::SuiteKind;
 use rayon::prelude::*;
@@ -128,11 +129,11 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
         let (baseline, baseline_wall_ns) =
             measured_cpu_oracle_checked(&x, &packed, &scale, &zero_point, &bias)?;
         let baseline_output = f32_bytes(&baseline);
-        let resident_output_len = resident_output_byte_len(&program)?;
+        let resident_output_sizes = resident_output_byte_lengths(&program, "quantized linear")?;
         let resident = ResidentInputPool::upload_with_zeroed_outputs_optional(
             ctx,
             &inputs,
-            &[resident_output_len],
+            &resident_output_sizes,
             RESIDENT_SAMPLE_SETS,
             "quantized linear",
         )?;
@@ -411,36 +412,6 @@ fn measured_cpu_oracle_checked(
         )
     })?;
     Ok((output, baseline_wall_ns))
-}
-
-fn resident_output_byte_len(program: &Program) -> Result<usize, BenchError> {
-    let output_indices = program.output_buffer_indices();
-    if output_indices.len() != 1 {
-        return Err(BenchError::ExecutionFailed(format!(
-            "quantized linear expected exactly one output buffer, got {}",
-            output_indices.len()
-        )));
-    }
-    let index = usize::try_from(output_indices[0]).map_err(|error| {
-        BenchError::ExecutionFailed(format!(
-            "quantized linear output buffer index {} does not fit usize: {error}",
-            output_indices[0]
-        ))
-    })?;
-    let decl = program.buffers().get(index).ok_or_else(|| {
-        BenchError::ExecutionFailed(format!(
-            "quantized linear output buffer index {index} is outside {} declared buffers",
-            program.buffers().len()
-        ))
-    })?;
-    decl.static_byte_len()
-        .map_err(BenchError::ExecutionFailed)?
-        .ok_or_else(|| {
-            BenchError::ExecutionFailed(
-                "quantized linear output buffer must have a static byte length for resident allocation"
-                    .to_string(),
-            )
-        })
 }
 
 inventory::submit! {

@@ -201,7 +201,12 @@ impl BenchCase for HashtableProbe {
         let probe_keys_bytes = vyre_primitives::wire::pack_u32_slice(&probe_keys);
         let inputs = vec![table_keys_bytes, table_vals_bytes, probe_keys_bytes];
         let input_bytes_total = input_bytes_total(&inputs);
-        let resident = ResidentInputSet::upload_optional(ctx, &inputs, "hashtable probe bench")?;
+        let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+            ctx,
+            &program,
+            &inputs,
+            "hashtable probe bench",
+        )?;
         Ok(Box::new(HashtableProbePrepared {
             program,
             inputs,

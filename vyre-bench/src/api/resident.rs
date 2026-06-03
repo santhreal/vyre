@@ -44,9 +44,115 @@ pub struct TransferAccounting {
     pub bytes_written: u64,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum ResidentResourcePayload<'a> {
+    Input(&'a [u8]),
+    Zeroed(usize),
+}
+
+impl ResidentResourcePayload<'_> {
+    fn byte_len(self) -> usize {
+        match self {
+            Self::Input(payload) => payload.len(),
+            Self::Zeroed(byte_len) => byte_len,
+        }
+    }
+
+    fn is_empty_upload(self) -> bool {
+        self.byte_len() == 0
+    }
+}
+
 /// Sum encoded benchmark input bytes once during preparation.
 pub fn input_bytes_total(inputs: &[Vec<u8>]) -> u64 {
     inputs.iter().map(Vec::len).sum::<usize>() as u64
+}
+
+/// Static byte lengths for every externally visible output buffer in binding order.
+pub fn resident_output_byte_lengths(
+    program: &Program,
+    context: &str,
+) -> Result<Vec<usize>, BenchError> {
+    let output_indices = program.output_buffer_indices();
+    let mut output_sizes = Vec::new();
+    output_sizes
+        .try_reserve_exact(output_indices.len())
+        .map_err(|error| {
+            BenchError::ExecutionFailed(format!(
+            "{context} resident output sizing could not reserve {} output length slot(s): {error}",
+            output_indices.len()
+        ))
+        })?;
+    for &raw_index in output_indices {
+        let index = usize::try_from(raw_index).map_err(|error| {
+            BenchError::ExecutionFailed(format!(
+                "{context} output buffer index {raw_index} does not fit usize: {error}"
+            ))
+        })?;
+        let decl = program.buffers().get(index).ok_or_else(|| {
+            BenchError::ExecutionFailed(format!(
+                "{context} output buffer index {index} is outside {} declared buffers",
+                program.buffers().len()
+            ))
+        })?;
+        output_sizes.push(static_resident_output_byte_len(decl, context)?);
+    }
+    Ok(output_sizes)
+}
+
+fn program_order_resident_payloads<'a>(
+    program: &Program,
+    inputs: &'a [Vec<u8>],
+    context: &str,
+) -> Result<Vec<ResidentResourcePayload<'a>>, BenchError> {
+    let bound_buffer_count = program
+        .buffers()
+        .iter()
+        .filter(|decl| decl.access != BufferAccess::Workgroup)
+        .count();
+    let mut payloads = Vec::with_capacity(bound_buffer_count);
+    let mut consumed_inputs = 0usize;
+
+    for decl in program.buffers() {
+        if decl.access == BufferAccess::Workgroup {
+            continue;
+        }
+        if decl.is_output() {
+            payloads.push(ResidentResourcePayload::Zeroed(
+                static_resident_output_byte_len(decl, context)?,
+            ));
+            continue;
+        }
+
+        let input = inputs.get(consumed_inputs).ok_or_else(|| {
+            BenchError::ExecutionFailed(format!(
+                "{context} resident upload is missing input payload {} for buffer `{}`",
+                consumed_inputs, decl.name
+            ))
+        })?;
+        payloads.push(ResidentResourcePayload::Input(input));
+        consumed_inputs = consumed_inputs.saturating_add(1);
+    }
+
+    if consumed_inputs != inputs.len() {
+        return Err(BenchError::ExecutionFailed(format!(
+            "{context} resident upload consumed {consumed_inputs} input payload(s) from the program binding layout but caller supplied {}",
+            inputs.len()
+        )));
+    }
+
+    Ok(payloads)
+}
+
+fn static_resident_output_byte_len(decl: &BufferDecl, context: &str) -> Result<usize, BenchError> {
+    decl.static_byte_len()
+        .map_err(BenchError::ExecutionFailed)?
+        .ok_or_else(|| {
+            BenchError::ExecutionFailed(format!(
+                "{context} output buffer `{}` must have a static byte length for resident allocation",
+                decl.name
+            ))
+        })
 }
 
 /// Build a one-lane resident reset program for sparse-output `u32` counters.
@@ -179,6 +285,30 @@ impl ResidentInputSet {
         }
     }
 
+    /// Upload host inputs plus zero-filled outputs in the program's bound-buffer order.
+    ///
+    /// Use this for raw IR dispatch where resident handles must match the
+    /// program binding layout exactly. Non-output buffers consume `inputs` in
+    /// declaration order; output buffers are allocated at their declared
+    /// static size and zero-filled before the first dispatch.
+    pub fn upload_program_ordered_with_zeroed_outputs_optional(
+        ctx: &BenchContext,
+        program: &Program,
+        inputs: &[Vec<u8>],
+        cleanup_label: &'static str,
+    ) -> Result<Option<Self>, BenchError> {
+        let payloads = program_order_resident_payloads(program, inputs, cleanup_label)?;
+        match Self::upload_payloads(ctx, &payloads, cleanup_label) {
+            Ok(resident) => Ok(Some(resident)),
+            Err(BackendError::UnsupportedFeature { name, .. })
+                if name == "resident buffer allocation" =>
+            {
+                Ok(None)
+            }
+            Err(error) => Err(BenchError::BackendFailed(error.to_string())),
+        }
+    }
+
     /// Dispatch against the uploaded resident resources.
     pub fn dispatch_timed(
         &self,
@@ -246,6 +376,37 @@ impl ResidentInputSet {
             &mut resources,
             inputs,
             output_sizes,
+            &mut zero_scratch,
+        );
+
+        if let Err(error) = result {
+            for resource in resources {
+                if let Err(cleanup_error) = backend.free_resident(resource) {
+                    eprintln!("{cleanup_label} resident rollback cleanup failed: {cleanup_error}");
+                }
+            }
+            return Err(error);
+        }
+
+        Ok(Self {
+            backend,
+            resources,
+            cleanup_label,
+        })
+    }
+
+    fn upload_payloads(
+        ctx: &BenchContext,
+        payloads: &[ResidentResourcePayload<'_>],
+        cleanup_label: &'static str,
+    ) -> Result<Self, BackendError> {
+        let backend = Arc::clone(&ctx.preferred_backend);
+        let mut resources = Vec::with_capacity(payloads.len());
+        let mut zero_scratch = Vec::new();
+        let result = allocate_and_upload_resident_payloads(
+            backend.as_ref(),
+            &mut resources,
+            payloads,
             &mut zero_scratch,
         );
 
@@ -436,32 +597,54 @@ fn allocate_and_upload_resident_set(
     output_sizes: &[usize],
     zero_scratch: &mut Vec<u8>,
 ) -> Result<(), BackendError> {
+    let mut payloads = Vec::with_capacity(resident_set_resource_count(inputs, output_sizes));
+    payloads.extend(
+        inputs
+            .iter()
+            .map(|input| ResidentResourcePayload::Input(input.as_slice())),
+    );
+    payloads.extend(
+        output_sizes
+            .iter()
+            .copied()
+            .map(ResidentResourcePayload::Zeroed),
+    );
+    allocate_and_upload_resident_payloads(backend, resources, &payloads, zero_scratch)
+}
+
+fn allocate_and_upload_resident_payloads(
+    backend: &dyn VyreBackend,
+    resources: &mut Vec<Resource>,
+    payloads: &[ResidentResourcePayload<'_>],
+    zero_scratch: &mut Vec<u8>,
+) -> Result<(), BackendError> {
     let start = resources.len();
-    for input in inputs {
-        resources.push(backend.allocate_resident(input.len())?);
+    for payload in payloads {
+        resources.push(backend.allocate_resident(payload.byte_len())?);
     }
-    for &output_size in output_sizes {
-        resources.push(backend.allocate_resident(output_size)?);
-    }
-    if let Some(max_output_size) = output_sizes.iter().copied().max() {
+    if let Some(max_output_size) = payloads
+        .iter()
+        .filter_map(|payload| match payload {
+            ResidentResourcePayload::Input(_) => None,
+            ResidentResourcePayload::Zeroed(byte_len) => Some(*byte_len),
+        })
+        .max()
+    {
         if zero_scratch.len() < max_output_size {
             zero_scratch.resize(max_output_size, 0);
         }
     }
 
-    let mut uploads = Vec::with_capacity(non_empty_upload_count(inputs, output_sizes));
-    for (resource, input) in resources[start..start + inputs.len()]
-        .iter()
-        .zip(inputs.iter())
-    {
-        if !input.is_empty() {
-            uploads.push((resource, input.as_slice()));
-        }
-    }
-    let output_start = start + inputs.len();
-    for (resource, &output_size) in resources[output_start..].iter().zip(output_sizes.iter()) {
-        if output_size != 0 {
-            uploads.push((resource, &zero_scratch[..output_size]));
+    let mut uploads = Vec::with_capacity(non_empty_payload_upload_count(payloads));
+    for (resource, payload) in resources[start..].iter().zip(payloads.iter()) {
+        match payload {
+            ResidentResourcePayload::Input(input) if !input.is_empty() => {
+                uploads.push((resource, *input));
+            }
+            ResidentResourcePayload::Zeroed(byte_len) if *byte_len != 0 => {
+                uploads.push((resource, &zero_scratch[..*byte_len]));
+            }
+            _ => {}
         }
     }
     if !uploads.is_empty() {
@@ -493,6 +676,13 @@ fn non_empty_upload_count(inputs: &[Vec<u8>], output_sizes: &[usize]) -> usize {
             .iter()
             .filter(|&&output_size| output_size != 0)
             .count()
+}
+
+fn non_empty_payload_upload_count(payloads: &[ResidentResourcePayload<'_>]) -> usize {
+    payloads
+        .iter()
+        .filter(|payload| !payload.is_empty_upload())
+        .count()
 }
 
 fn resident_set_resource_count(inputs: &[Vec<u8>], output_sizes: &[usize]) -> usize {
@@ -582,6 +772,96 @@ mod tests {
         assert_eq!(accounting.bytes_read, u64::MAX);
         assert_eq!(accounting.bytes_written, 4096);
         assert_eq!(accounting.bytes_touched, u64::MAX);
+    }
+
+    #[test]
+    fn resident_output_byte_lengths_follow_program_outputs() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::read("input", 0, DataType::U32).with_count(4),
+                BufferDecl::output("out_a", 1, DataType::U32).with_count(3),
+                BufferDecl::output("out_b", 2, DataType::F32).with_count(5),
+            ],
+            [1, 1, 1],
+            vec![],
+        );
+
+        let sizes = resident_output_byte_lengths(&program, "resident output test")
+            .expect("Fix: static output buffers must size for resident allocation.");
+
+        assert_eq!(sizes, vec![12, 20]);
+    }
+
+    #[test]
+    fn resident_output_byte_lengths_reject_dynamic_outputs() {
+        let program = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::Bytes)],
+            [1, 1, 1],
+            vec![],
+        );
+
+        let error = resident_output_byte_lengths(&program, "resident output dynamic")
+            .expect_err("Fix: dynamic resident outputs require an explicit allocation size.");
+
+        assert!(
+            error.to_string().contains("must have a static byte length"),
+            "error must explain the static sizing contract: {error}"
+        );
+    }
+
+    #[test]
+    fn program_order_resident_payloads_interleaves_outputs_in_binding_layout() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::read("plaintext", 0, DataType::U32).with_count(4),
+                BufferDecl::output("ciphertext", 1, DataType::U32).with_count(4),
+                BufferDecl::read("aes_tables", 2, DataType::U32).with_count(3),
+                BufferDecl::storage("scratch", 3, BufferAccess::Workgroup, DataType::U32)
+                    .with_count(8),
+            ],
+            [1, 1, 1],
+            vec![],
+        );
+        let inputs = vec![vec![0x11; 16], vec![0x22; 12]];
+
+        let payloads = program_order_resident_payloads(&program, &inputs, "aes layout test")
+            .expect("Fix: interleaved output resident layouts must be planned by program order.");
+
+        assert_eq!(
+            payloads.len(),
+            3,
+            "workgroup-local declarations must not consume resident resource handles"
+        );
+        assert!(
+            matches!(payloads[0], ResidentResourcePayload::Input(input) if input == inputs[0].as_slice()),
+            "binding 0 must receive plaintext input bytes"
+        );
+        assert!(
+            matches!(payloads[1], ResidentResourcePayload::Zeroed(16)),
+            "binding 1 must allocate zeroed ciphertext output before later inputs"
+        );
+        assert!(
+            matches!(payloads[2], ResidentResourcePayload::Input(input) if input == inputs[1].as_slice()),
+            "binding 2 must receive AES table bytes"
+        );
+    }
+
+    #[test]
+    fn program_order_resident_payloads_rejects_extra_inputs() {
+        let program = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            vec![],
+        );
+        let inputs = vec![vec![1, 2, 3, 4]];
+
+        let error = program_order_resident_payloads(&program, &inputs, "extra input test")
+            .expect_err("Fix: resident binding planning must fail closed on stray host inputs.");
+
+        assert!(
+            error.to_string().contains("consumed 0 input payload"),
+            "error must name the input-count mismatch: {error}"
+        );
     }
 
     #[test]
