@@ -1,6 +1,7 @@
 use crate::benchmark_evidence_semantics::{
-    backend_consistency_issues, cuda_telemetry_label_issues, launch_plan_label_issues,
-    BackendConsistencyIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
+    backend_consistency_issues, benchmark_report_has_source_provenance,
+    cuda_telemetry_label_issues, launch_plan_label_issues, BackendConsistencyIssue,
+    CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
 };
 
 fn inspect_workload_benchmark_semantics(
@@ -198,22 +199,7 @@ fn inspect_benchmark_report_provenance(
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    if !has_nonempty_string_any(
-        value,
-        &[
-            "source_fingerprint",
-            "source_revision",
-            "source_artifact_fingerprint",
-            "commit_fingerprint",
-        ],
-    ) && !value
-        .get("source_artifacts")
-        .and_then(serde_json::Value::as_array)
-        .is_some_and(|items| !items.is_empty())
-        && !value
-            .get("git")
-            .is_some_and(|git| has_nonempty_string_any(git, &["commit"]))
-    {
+    if !benchmark_report_has_source_provenance(value) {
         blockers.push(format!(
             "{evidence}: benchmark report must include source fingerprint or source artifact provenance"
         ));

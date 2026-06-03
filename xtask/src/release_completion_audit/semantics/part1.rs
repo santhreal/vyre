@@ -600,6 +600,7 @@ mod part1_tests {
             &path,
             serde_json::to_string_pretty(&serde_json::json!({
                 "selected_backend": "wgpu",
+                "source_artifacts": ["", null],
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0, "cache_hit_rate": null},
                 "environment": {"cpu_model": "test CPU"},
                 "cases": [

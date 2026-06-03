@@ -1,9 +1,10 @@
 use crate::benchmark_evidence_semantics::{
-    backend_consistency_issues, contract_backend_issues, cuda_telemetry_label_issues,
-    current_freshness_fingerprint_for_report, launch_plan_label_issues,
-    report_freshness_fingerprint, source_fingerprint_freshness_issues, source_fingerprint_issues,
-    BackendConsistencyIssue, ContractBackendIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
-    SourceFingerprintFreshnessIssue, SourceFingerprintIssue,
+    backend_consistency_issues, benchmark_report_has_source_provenance, contract_backend_issues,
+    cuda_telemetry_label_issues, current_freshness_fingerprint_for_report,
+    launch_plan_label_issues, report_freshness_fingerprint, source_fingerprint_freshness_issues,
+    source_fingerprint_issues, BackendConsistencyIssue, ContractBackendIssue,
+    CudaTelemetryLabelIssue, LaunchPlanLabelIssue, SourceFingerprintFreshnessIssue,
+    SourceFingerprintIssue,
 };
 
 pub(crate) fn check_benchmark_report_has_cases(
@@ -322,22 +323,7 @@ fn check_benchmark_report_provenance(
     report: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
-    if !json_has_nonempty_string_any(
-        report,
-        &[
-            "source_fingerprint",
-            "source_revision",
-            "source_artifact_fingerprint",
-            "commit_fingerprint",
-        ],
-    ) && !report
-        .get("source_artifacts")
-        .and_then(serde_json::Value::as_array)
-        .is_some_and(|items| !items.is_empty())
-        && !report
-            .get("git")
-            .is_some_and(|git| json_has_nonempty_string_any(git, &["commit"]))
-    {
+    if !benchmark_report_has_source_provenance(report) {
         failures.push(format!(
             "requirement `{}` benchmark `{label}` must include source fingerprint or source artifact provenance",
             requirement.id
@@ -796,6 +782,7 @@ mod tests {
             &artifact,
             serde_json::to_string_pretty(&serde_json::json!({
                 "selected_backend": "wgpu",
+                "source_artifacts": ["", null],
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0, "cache_hit_rate": null},
                 "environment": {"cpu_model": "test CPU"},
                 "cases": [

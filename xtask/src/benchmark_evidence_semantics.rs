@@ -53,6 +53,24 @@ pub(crate) fn benchmark_report_summary_matches_case_evidence(report: &Value) -> 
     benchmark_report_summary_case_evidence_mismatch(report).is_none()
 }
 
+pub(crate) fn benchmark_report_has_source_provenance(report: &Value) -> bool {
+    [
+        "source_fingerprint",
+        "source_revision",
+        "source_artifact_fingerprint",
+        "commit_fingerprint",
+    ]
+    .iter()
+    .any(|field| report.get(*field).and_then(non_empty_str).is_some())
+        || report
+            .get("source_artifacts")
+            .and_then(Value::as_array)
+            .is_some_and(|items| items.iter().any(|item| non_empty_str(item).is_some()))
+        || report
+            .get("git")
+            .is_some_and(|git| git.get("commit").and_then(non_empty_str).is_some())
+}
+
 pub(crate) fn benchmark_report_summary_case_evidence_mismatch(report: &Value) -> Option<String> {
     let Some(cases) = report.get("cases").and_then(Value::as_array) else {
         return Some("missing cases array".to_string());
@@ -1648,6 +1666,34 @@ mod tests {
                 worktree: "not-a-digest".to_string(),
             }],
             "Fix: dirty source fingerprints must carry a stable 64-hex digest."
+        );
+    }
+
+    #[test]
+    fn benchmark_source_provenance_rejects_blank_source_artifacts() {
+        let report = serde_json::json!({
+            "source_artifacts": ["", "   ", null]
+        });
+
+        assert!(
+            !benchmark_report_has_source_provenance(&report),
+            "Fix: blank or non-string source_artifacts entries must not satisfy benchmark source provenance."
+        );
+    }
+
+    #[test]
+    fn benchmark_source_provenance_accepts_valid_artifact_or_commit() {
+        assert!(
+            benchmark_report_has_source_provenance(&serde_json::json!({
+                "source_artifacts": ["release/evidence/benchmarks/cuda.json"]
+            })),
+            "Fix: a non-empty source artifact path must satisfy benchmark source provenance."
+        );
+        assert!(
+            benchmark_report_has_source_provenance(&serde_json::json!({
+                "git": {"commit": "abcdef"}
+            })),
+            "Fix: git commit provenance must satisfy benchmark source provenance."
         );
     }
 
