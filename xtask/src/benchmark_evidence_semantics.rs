@@ -327,76 +327,13 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
                 "source_artifact `{artifact}` selected_backend must be cuda"
             ));
         }
-        for issue in backend_consistency_issues(&report) {
-            match issue {
-                BackendConsistencyIssue::MissingCaseId { case_index } => issues.push(format!(
-                    "source_artifact `{artifact}` case index {case_index} must include a nonblank id"
-                )),
-                BackendConsistencyIssue::DuplicateCaseId { case_id, count } => {
-                    issues.push(format!(
-                        "source_artifact `{artifact}` has {count} cases with id `{case_id}`"
-                    ))
-                }
-                BackendConsistencyIssue::MissingCaseBackend {
-                    case_id,
-                    expected_backend,
-                } => issues.push(format!(
-                    "source_artifact `{artifact}` case `{case_id}` must include backend_id `{expected_backend}` matching selected_backend"
-                )),
-                BackendConsistencyIssue::CaseBackendMismatch {
-                    case_id,
-                    expected_backend,
-                    actual_backend,
-                } => issues.push(format!(
-                    "source_artifact `{artifact}` case `{case_id}` backend_id `{actual_backend}` does not match selected_backend `{expected_backend}`"
-                )),
-            }
-        }
-        for issue in cuda_forbidden_telemetry_issues(&report) {
-            match issue {
-                CudaForbiddenTelemetryIssue::ResidentBorrowedEscapeHatch {
-                    case_id,
-                    observed_p50,
-                } => issues.push(format!(
-                    "source_artifact `{artifact}` case `{case_id}` has cuda_resident_borrowed_fallback_dispatches p50={observed_p50}; canonical CUDA release axes must use native resident dispatch"
-                )),
-            }
-        }
-        for issue in cuda_telemetry_label_issues(&report) {
-            match issue {
-                CudaTelemetryLabelIssue::MissingLabel { case_id, label } => issues.push(format!(
-                    "source_artifact `{artifact}` case `{case_id}` has positive CUDA telemetry counters but is missing `{label}`"
-                )),
-                CudaTelemetryLabelIssue::LabelWithoutCounters { case_id, label } => issues.push(format!(
-                    "source_artifact `{artifact}` case `{case_id}` lists `{label}` but all matching CUDA telemetry counters are zero or missing"
-                )),
-            }
-        }
-        if report
-            .get("cases")
-            .and_then(Value::as_array)
-            .is_none_or(Vec::is_empty)
-        {
-            issues.push(format!(
-                "source_artifact `{artifact}` has no benchmark cases"
-            ));
-        }
+        inspect_source_artifact_case_integrity(
+            &artifact,
+            &report,
+            "canonical CUDA release axes",
+            &mut issues,
+        );
         inspect_release_axis_source_artifact_metrics(&artifact, &report, &mut issues);
-        if let Some(mismatch) = benchmark_report_summary_case_evidence_mismatch(&report) {
-            issues.push(format!(
-                "source_artifact `{artifact}` summary does not match case evidence: {mismatch}"
-            ));
-        }
-        if report
-            .get("summary")
-            .and_then(|summary| summary.get("failed"))
-            .and_then(Value::as_u64)
-            != Some(0)
-        {
-            issues.push(format!(
-                "source_artifact `{artifact}` summary.failed must be 0"
-            ));
-        }
         source_reports.push(report);
     }
     inspect_release_axes_scalar_values(axes, &source_reports, &mut issues);
@@ -441,6 +378,12 @@ pub(crate) fn cpu_sota_100x_source_artifact_issues(
                 "source_artifact `{artifact}` was not produced for cuda"
             ));
         }
+        inspect_source_artifact_case_integrity(
+            &artifact,
+            &report,
+            "CPU-SOTA aggregate proof",
+            &mut issues,
+        );
         let report_source_fingerprint = report.get("source_fingerprint").and_then(non_empty_str);
         if let Some(fingerprint) = report_source_fingerprint {
             for issue in source_fingerprint_issues(fingerprint) {
@@ -682,6 +625,81 @@ fn max_release_axis_vram_mib(reports: &[Value]) -> Option<u64> {
         artifact_positive_metric_percentile(report, "memory_total_mib", "p50")
     });
     environment_values.chain(metric_values).max()
+}
+
+fn inspect_source_artifact_case_integrity(
+    artifact: &str,
+    report: &Value,
+    native_dispatch_context: &str,
+    issues: &mut Vec<String>,
+) {
+    for issue in backend_consistency_issues(report) {
+        match issue {
+            BackendConsistencyIssue::MissingCaseId { case_index } => issues.push(format!(
+                "source_artifact `{artifact}` case index {case_index} must include a nonblank id"
+            )),
+            BackendConsistencyIssue::DuplicateCaseId { case_id, count } => issues.push(format!(
+                "source_artifact `{artifact}` has {count} cases with id `{case_id}`"
+            )),
+            BackendConsistencyIssue::MissingCaseBackend {
+                case_id,
+                expected_backend,
+            } => issues.push(format!(
+                "source_artifact `{artifact}` case `{case_id}` must include backend_id `{expected_backend}` matching selected_backend"
+            )),
+            BackendConsistencyIssue::CaseBackendMismatch {
+                case_id,
+                expected_backend,
+                actual_backend,
+            } => issues.push(format!(
+                "source_artifact `{artifact}` case `{case_id}` backend_id `{actual_backend}` does not match selected_backend `{expected_backend}`"
+            )),
+        }
+    }
+    for issue in cuda_forbidden_telemetry_issues(report) {
+        match issue {
+            CudaForbiddenTelemetryIssue::ResidentBorrowedEscapeHatch {
+                case_id,
+                observed_p50,
+            } => issues.push(format!(
+                "source_artifact `{artifact}` case `{case_id}` has cuda_resident_borrowed_fallback_dispatches p50={observed_p50}; {native_dispatch_context} must use native resident dispatch"
+            )),
+        }
+    }
+    for issue in cuda_telemetry_label_issues(report) {
+        match issue {
+            CudaTelemetryLabelIssue::MissingLabel { case_id, label } => issues.push(format!(
+                "source_artifact `{artifact}` case `{case_id}` has positive CUDA telemetry counters but is missing `{label}`"
+            )),
+            CudaTelemetryLabelIssue::LabelWithoutCounters { case_id, label } => issues.push(format!(
+                "source_artifact `{artifact}` case `{case_id}` lists `{label}` but all matching CUDA telemetry counters are zero or missing"
+            )),
+        }
+    }
+    if report
+        .get("cases")
+        .and_then(Value::as_array)
+        .is_none_or(Vec::is_empty)
+    {
+        issues.push(format!(
+            "source_artifact `{artifact}` has no benchmark cases"
+        ));
+    }
+    if let Some(mismatch) = benchmark_report_summary_case_evidence_mismatch(report) {
+        issues.push(format!(
+            "source_artifact `{artifact}` summary does not match case evidence: {mismatch}"
+        ));
+    }
+    if report
+        .get("summary")
+        .and_then(|summary| summary.get("failed"))
+        .and_then(Value::as_u64)
+        != Some(0)
+    {
+        issues.push(format!(
+            "source_artifact `{artifact}` summary.failed must be 0"
+        ));
+    }
 }
 
 fn inspect_release_axis_source_artifact_metrics(
@@ -2885,6 +2903,63 @@ mod tests {
                 "source_artifact `release/evidence/benchmarks/cuda-stale-source-tree.json` source_tree_fingerprint `source-tree-v1:stale` does not match current workspace source"
             )),
             "Fix: CPU-SOTA aggregate source artifacts must be fresh against the current workspace; issues={issues:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_sota_100x_source_artifacts_reject_backend_drift_and_borrowed_cuda_telemetry() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for CPU-SOTA backend drift test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temp benchmark evidence directory.");
+        let aggregate_source_fingerprint = current_test_source_fingerprint(dir.path());
+        let aggregate_source_tree_fingerprint =
+            vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let artifact = "release/evidence/benchmarks/cuda-cpu-sota-drift.json";
+        std::fs::write(
+            dir.path().join(artifact),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "source_fingerprint": &aggregate_source_fingerprint,
+                "source_tree_fingerprint": &aggregate_source_tree_fingerprint,
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.cpu-sota-drift",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"],
+                        "metrics": {
+                            "cuda_resident_borrowed_fallback_dispatches": {"p50": 3.0}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize drifted CPU-SOTA source artifact."),
+        )
+        .expect("Fix: write drifted CPU-SOTA source artifact.");
+        let proof = serde_json::json!({
+            "source_fingerprint": aggregate_source_fingerprint,
+            "source_tree_fingerprint": aggregate_source_tree_fingerprint,
+            "source_artifacts": [artifact]
+        });
+
+        let issues = cpu_sota_100x_source_artifact_issues(dir.path(), &proof);
+
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/cuda-cpu-sota-drift.json` case `release.cpu-sota-drift` backend_id `wgpu` does not match selected_backend `cuda`"
+            )),
+            "Fix: CPU-SOTA aggregate source artifacts must reject case-level backend drift before proof counts can imply CUDA coverage; issues={issues:?}"
+        );
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/cuda-cpu-sota-drift.json` case `release.cpu-sota-drift` has cuda_resident_borrowed_fallback_dispatches p50=3"
+            ) && issue.contains("CPU-SOTA aggregate proof must use native resident dispatch")),
+            "Fix: CPU-SOTA aggregate source artifacts must reject borrowed resident CUDA dispatch evidence; issues={issues:?}"
         );
     }
 
