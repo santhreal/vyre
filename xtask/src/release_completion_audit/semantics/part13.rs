@@ -237,8 +237,11 @@ fn inspect_cpu_100x_benchmark_semantics(
             .and_then(serde_json::Value::as_bool)
             .unwrap_or(false)
         {
+            let reason = crate::benchmark_evidence_semantics::benchmark_case_failure_reason(case)
+                .map(|reason| format!(": {reason}"))
+                .unwrap_or_default();
             blockers.push(format!(
-                "{evidence}: case `{id}` must pass its performance contract"
+                "{evidence}: case `{id}` must pass its performance contract{reason}"
             ));
         }
         let metrics = case.get("metrics").and_then(serde_json::Value::as_object);
@@ -336,6 +339,49 @@ mod part13_tests {
                 "must carry an applicable CPU-SOTA performance contract"
             )),
             "Fix: completion audit must expose CPU-SOTA contracts scoped to the wrong backend; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_cpu_100x_failure_preserves_case_reason() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "status": "failed",
+                    "correctness": {
+                        "Invalid": {
+                            "reason": "Performance contract failed: release condition eval requires 100.00x over CPU-SOTA, observed 42.00x"
+                        }
+                    },
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": null,
+                    "metrics": {
+                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                        "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002}
+                    }
+                }
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_cpu_100x_benchmark_semantics("cpu-100x.json", &report, &mut blockers);
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "case `release.condition_eval.1m` must pass its performance contract: Performance contract failed"
+            ) && blocker.contains("observed 42.00x")),
+            "Fix: completion audit CPU-SOTA proof blockers must preserve failed benchmark case reasons; blockers={blockers:?}"
         );
     }
 }

@@ -41,8 +41,11 @@ fn inspect_workload_benchmark_semantics(
             .and_then(serde_json::Value::as_bool)
             .unwrap_or(false)
         {
+            let reason = crate::benchmark_evidence_semantics::benchmark_case_failure_reason(case)
+                .map(|reason| format!(": {reason}"))
+                .unwrap_or_default();
             blockers.push(format!(
-                "{evidence}: case `{id}` must pass its performance contract"
+                "{evidence}: case `{id}` must pass its performance contract{reason}"
             ));
         }
         let metrics = case.get("metrics").and_then(serde_json::Value::as_object);
@@ -490,6 +493,86 @@ mod tests {
             scalar.as_object(),
             &["kernel_launches", "launch_count", "launches"]
         ));
+    }
+
+    #[test]
+    fn completion_audit_workload_failure_preserves_case_reason() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "git": {"commit": "0123456789abcdef0123456789abcdef01234567"},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "status": "failed",
+                    "correctness": {
+                        "Invalid": {
+                            "reason": "Performance contract failed: release condition eval requires 100.00x over CPU-SOTA, observed 42.00x"
+                        }
+                    },
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": null,
+                    "metrics": {
+                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                        "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002}
+                    }
+                }
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_workload_benchmark_semantics("workload-failed.json", &report, &mut blockers);
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "case `release.condition_eval.1m` must pass its performance contract: Performance contract failed"
+            ) && blocker.contains("observed 42.00x")),
+            "Fix: completion audit workload blockers must preserve failed benchmark case reasons; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_json_summary_preserves_failed_case_reason() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for completion audit JSON test.");
+        let path = dir.path().join("wgpu-workload-failed.json");
+        std::fs::write(
+            &path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "summary": {"failed": 1},
+                "cases": [
+                    {
+                        "id": "sparse.compaction.count.1m",
+                        "status": "failed",
+                        "correctness": {
+                            "Invalid": {
+                                "reason": "Performance contract failed: sparse output compaction count requires 100.00x over CPU-SOTA, observed 86.90x"
+                            }
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize failed completion audit JSON fixture."),
+        )
+        .expect("Fix: write failed completion audit JSON fixture.");
+        let mut blockers = Vec::new();
+
+        inspect_json_evidence("wgpu-workload-failed.json", &path, &mut blockers);
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "benchmark summary reports 1 failed case(s): `sparse.compaction.count.1m`: Performance contract failed"
+            ) && blocker.contains("observed 86.90x")),
+            "Fix: completion audit JSON summary blockers must preserve failed benchmark case reasons; blockers={blockers:?}"
+        );
     }
 }
 

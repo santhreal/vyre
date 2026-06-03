@@ -83,8 +83,15 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(0);
     if failed != 0 {
+        let failed_cases =
+            crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&value);
+        let detail = if failed_cases.is_empty() {
+            String::new()
+        } else {
+            format!(": {}", failed_cases.join("; "))
+        };
         blockers.push(format!(
-            "{evidence}: benchmark summary reports {failed} failed case(s)"
+            "{evidence}: benchmark summary reports {failed} failed case(s){detail}"
         ));
     }
     if let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) {
