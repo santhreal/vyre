@@ -498,36 +498,52 @@ fn cached_graph_input<'a>(
         })
 }
 
-fn validate_cached_graph_input_index_map(
-    input_indices: &[usize],
+fn validate_cached_graph_slot_index_map(
+    indices: &[usize],
     expected_len: usize,
+    slot_kind: &'static str,
+    action: &'static str,
 ) -> Result<(), BackendError> {
-    if input_indices.len() != expected_len {
+    if indices.len() != expected_len {
         return Err(BackendError::InvalidProgram {
             fix: format!(
-                "Fix: cached cuda graph has {} logical input index(es) but {expected_len} expected input length(s). Re-record the graph; descriptor-ordered graph inputs must map back to Program::buffers input slots.",
-                input_indices.len(),
+                "Fix: cached cuda graph has {} logical {slot_kind} index(es) but {expected_len} expected {slot_kind} length(s). Re-record the graph; descriptor-ordered graph {slot_kind}s must map back to Program::buffers {slot_kind} slots.",
+                indices.len(),
             ),
         });
     }
-    let mut sorted_input_indices = SmallVec::<[usize; 8]>::new();
+    let mut sorted_indices = SmallVec::<[usize; 8]>::new();
     reserve_smallvec(
-        &mut sorted_input_indices,
-        input_indices.len(),
-        "cuda graph input index validation",
+        &mut sorted_indices,
+        indices.len(),
+        "cuda graph slot index validation",
     )?;
-    sorted_input_indices.extend(input_indices.iter().copied());
-    crate::backend::ordering::sort_unstable_if_needed(sorted_input_indices.as_mut_slice());
-    for (expected_index, input_index) in sorted_input_indices.iter().copied().enumerate() {
-        if input_index != expected_index {
+    sorted_indices.extend(indices.iter().copied());
+    crate::backend::ordering::sort_unstable_if_needed(sorted_indices.as_mut_slice());
+    for (expected_index, index) in sorted_indices.iter().copied().enumerate() {
+        if index != expected_index {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: cached cuda graph logical input index {input_index} at sorted slot {expected_index} is not dense over 0..{expected_len}. Re-record the graph from Program::buffers logical input order.",
+                    "Fix: cached cuda graph logical {slot_kind} index {index} at sorted slot {expected_index} is not dense over 0..{expected_len}. Re-record the graph from Program::buffers logical {slot_kind} order before {action}.",
                 ),
             });
         }
     }
     Ok(())
+}
+
+fn validate_cached_graph_input_index_map(
+    input_indices: &[usize],
+    expected_len: usize,
+) -> Result<(), BackendError> {
+    validate_cached_graph_slot_index_map(input_indices, expected_len, "input", "replay")
+}
+
+fn validate_cached_graph_output_index_map(
+    output_indices: &[usize],
+    expected_len: usize,
+) -> Result<(), BackendError> {
+    validate_cached_graph_slot_index_map(output_indices, expected_len, "output", "collection")
 }
 
 fn validate_cached_graph_inputs(
@@ -595,47 +611,73 @@ fn collect_cuda_graph_outputs(
     cached: &CachedCudaGraph,
     outputs: &mut Vec<Vec<u8>>,
 ) -> Result<(), BackendError> {
-    if cached.output_host_bufs.len() != cached.output_lens.len() {
+    if cached.output_host_bufs.len() != cached.output_lens.len()
+        || cached.output_indices.len() != cached.output_lens.len()
+    {
         return Err(BackendError::InvalidProgram {
             fix: format!(
-                "Fix: cached cuda graph has {} pinned output buffer(s) but {} output length(s). Re-record the graph before collecting outputs.",
+                "Fix: cached cuda graph has {} pinned output buffer(s), {} logical output index(es), and {} output length(s). Re-record the graph before collecting outputs.",
                 cached.output_host_bufs.len(),
+                cached.output_indices.len(),
                 cached.output_lens.len()
             ),
         });
     }
+    validate_cached_graph_output_index_map(&cached.output_indices, cached.output_lens.len())?;
     resize_vec_slots(
         outputs,
-        cached.output_host_bufs.len(),
+        cached.output_lens.len(),
         "cuda graph replay output vector",
     )?;
-    reserve_cuda_graph_output_slots(&cached.output_lens, outputs)?;
-    for (output, (buf, byte_len)) in outputs.iter_mut().zip(
-        cached
-            .output_host_bufs
-            .iter()
-            .zip(cached.output_lens.iter()),
-    ) {
+    reserve_cuda_graph_output_slots(&cached.output_indices, &cached.output_lens, outputs)?;
+    let output_count = outputs.len();
+    for (slot_index, (buf, (output_index, byte_len))) in cached
+        .output_host_bufs
+        .iter()
+        .zip(cached.output_indices.iter().zip(cached.output_lens.iter()))
+        .enumerate()
+    {
+        let output = outputs
+            .get_mut(*output_index)
+            .ok_or_else(|| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: cached cuda graph output slot {slot_index} maps to logical output {output_index}, but collection has only {} output slot(s). Re-record the graph from a valid BindingPlan.",
+                    output_count
+                ),
+            })?;
         buf.copy_prefix_into(*byte_len, output)?;
     }
     Ok(())
 }
 
 fn reserve_cuda_graph_output_slots(
+    output_indices: &[usize],
     output_lens: &[usize],
     outputs: &mut [Vec<u8>],
 ) -> Result<(), BackendError> {
-    if output_lens.len() != outputs.len() {
+    if output_indices.len() != output_lens.len() || output_lens.len() != outputs.len() {
         return Err(BackendError::InvalidProgram {
             fix: format!(
-                "Fix: cached cuda graph output preflight expected {} caller output slot(s) but received {}. Re-record the graph before collecting outputs.",
+                "Fix: cached cuda graph output preflight expected {} logical output index(es), {} output length(s), and {} caller output slot(s). Re-record the graph before collecting outputs.",
+                output_indices.len(),
                 output_lens.len(),
                 outputs.len()
             ),
         });
     }
-    for (&byte_len, output) in output_lens.iter().zip(outputs.iter_mut()) {
-        reserve_vec(output, byte_len, "cuda graph replay output bytes")?;
+    let output_count = outputs.len();
+    for (slot_index, (output_index, byte_len)) in
+        output_indices.iter().zip(output_lens.iter()).enumerate()
+    {
+        let output = outputs
+            .get_mut(*output_index)
+            .ok_or_else(|| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: cached cuda graph output preflight slot {slot_index} maps to logical output {output_index}, but collection has only {} output slot(s). Re-record the graph from a valid BindingPlan.",
+                    output_count
+                ),
+            })?;
+        reserve_vec(output, *byte_len, "cuda graph replay output bytes")?;
     }
     Ok(())
 }
@@ -655,7 +697,10 @@ impl CudaBackend {
 
 #[cfg(test)]
 mod source_contract_tests {
-    use super::{cached_graph_input, validate_cached_graph_input_index_map};
+    use super::{
+        cached_graph_input, validate_cached_graph_input_index_map,
+        validate_cached_graph_output_index_map,
+    };
 
     #[test]
     fn cached_graph_replay_input_index_map_accepts_reordered_descriptor_inputs() {
@@ -704,6 +749,25 @@ mod source_contract_tests {
     }
 
     #[test]
+    fn cached_graph_replay_output_index_map_accepts_reordered_descriptor_outputs() {
+        validate_cached_graph_output_index_map(&[1, 0, 2], 3).expect(
+            "Fix: descriptor-ordered CUDA graph outputs may map to reordered logical slots.",
+        );
+        assert!(
+            validate_cached_graph_output_index_map(&[0, 0, 2], 3).is_err(),
+            "Fix: duplicate CUDA graph logical output indexes must fail before collection can alias an output slot."
+        );
+        assert!(
+            validate_cached_graph_output_index_map(&[0, 2, 3], 3).is_err(),
+            "Fix: sparse CUDA graph logical output indexes must fail before collection can skip an output slot."
+        );
+        assert!(
+            validate_cached_graph_output_index_map(&[0, 1], 3).is_err(),
+            "Fix: truncated CUDA graph logical output maps must fail before positional collection can drop a slot."
+        );
+    }
+
+    #[test]
     fn cuda_graph_replay_uses_fallible_output_staging_reservation() {
         let source = include_str!("cuda_graph_replay.rs");
         assert!(source.contains(
@@ -727,15 +791,20 @@ mod source_contract_tests {
             .and_then(|tail| tail.split("fn reserve_cuda_graph_output_slots(").next())
             .expect("Fix: CUDA graph replay must expose output collection before output-slot preflight.");
         let preflight = collector
-            .find("reserve_cuda_graph_output_slots(&cached.output_lens, outputs)?")
+            .find(
+                "reserve_cuda_graph_output_slots(&cached.output_indices, &cached.output_lens, outputs)?",
+            )
             .expect(
                 "Fix: CUDA graph replay output collection must preflight every caller output slot.",
             );
+        let output_lookup = collector
+            .find(".get_mut(*output_index)")
+            .expect("Fix: CUDA graph replay output collection must route by logical output index.");
         let copy = collector
             .find("buf.copy_prefix_into(*byte_len, output)?")
             .expect("Fix: CUDA graph replay output collection must copy pinned graph outputs.");
         assert!(
-            preflight < copy,
+            preflight < output_lookup && output_lookup < copy,
             "Fix: CUDA graph replay must reserve every caller output before copying any pinned graph output bytes."
         );
         let preflight_helper = source
@@ -744,9 +813,10 @@ mod source_contract_tests {
             .and_then(|tail| tail.split("impl CudaBackend").next())
             .expect("Fix: CUDA graph replay must expose output-slot preflight before backend telemetry.");
         assert!(
-            preflight_helper.contains("output_lens.len() != outputs.len()")
-                && preflight_helper.contains("reserve_vec(output, byte_len, \"cuda graph replay output bytes\")?"),
-            "Fix: CUDA graph replay output preflight must validate cardinality and reserve every destination byte capacity."
+            preflight_helper.contains("output_indices.len() != output_lens.len()")
+                && preflight_helper.contains(".get_mut(*output_index)")
+                && preflight_helper.contains("reserve_vec(output, *byte_len, \"cuda graph replay output bytes\")?"),
+            "Fix: CUDA graph replay output preflight must validate cardinality, route by logical output index, and reserve every destination byte capacity."
         );
         assert!(
             source.contains("cached.input_host_bufs.len() != cached.expected_input_lens.len()")
@@ -761,7 +831,10 @@ mod source_contract_tests {
                 && source.contains(".zip(cached.input_indices.iter())")
                 && source.contains(".zip(cached.input_transfer_lens.iter())")
                 && !source.contains(concat!("inputs", "[idx]"))
-                && source.contains("cached.output_host_bufs.len() != cached.output_lens.len()"),
+                && source.contains("cached.output_host_bufs.len() != cached.output_lens.len()")
+                && source.contains("cached.output_indices.len() != cached.output_lens.len()")
+                && source.contains("validate_cached_graph_output_index_map(&cached.output_indices")
+                && source.contains(".zip(cached.output_indices.iter().zip(cached.output_lens.iter()))"),
             "Fix: CUDA graph replay must validate cached graph input/output metadata before zip-based staging."
         );
         assert_eq!(

@@ -772,6 +772,10 @@ pub struct CachedCudaGraph {
     /// Per-output pinned host buffers. The captured DtoH memcpy writes into
     /// these stable addresses on every replay.
     pub(crate) output_host_bufs: SmallVec<[PinnedHostAllocation; 8]>,
+    /// Logical output index for each descriptor-ordered output host buffer.
+    /// CUDA graph readback nodes stay in descriptor order, while public
+    /// result vectors follow Program::buffers logical output order.
+    pub(crate) output_indices: SmallVec<[usize; 8]>,
     /// Exact byte lengths for each output. Pinned allocations are bucketed and
     /// can be larger than the logical output buffer.
     pub(crate) output_lens: SmallVec<[usize; 8]>,
@@ -943,6 +947,12 @@ impl CudaBackend {
             output_device_capacity,
             "cuda graph output device pointer guards",
         )?;
+        let mut output_indices = SmallVec::<[usize; 8]>::new();
+        reserve_smallvec(
+            &mut output_indices,
+            output_readback_capacity,
+            "cuda graph logical output indices",
+        )?;
         let mut readback_device_ptrs = SmallVec::<[u64; 8]>::new();
         reserve_smallvec(
             &mut readback_device_ptrs,
@@ -1045,7 +1055,7 @@ impl CudaBackend {
             } else {
                 output_device_ptrs.push(DevicePtrGuard::new(device_ptr));
             }
-            if binding.output_index.is_some() {
+            if let Some(output_index) = binding.output_index {
                 let readback = cuda_output_readback_for_binding(
                     program.buffers(),
                     binding.buffer_index,
@@ -1054,6 +1064,7 @@ impl CudaBackend {
                     "graph capture output readback",
                 )?;
                 host_buffers.push_output(readback.byte_len)?;
+                output_indices.push(output_index);
                 output_lens.push(readback.byte_len);
                 add_cuda_graph_replay_bytes(
                     &mut replay_output_bytes,
@@ -1362,6 +1373,7 @@ impl CudaBackend {
             input_device_ptrs,
             output_device_ptrs,
             output_host_bufs,
+            output_indices,
             output_lens,
             input_transfer_lens,
             replay_input_bytes,
