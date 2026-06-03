@@ -610,6 +610,26 @@ pub(super) fn inspect_backend_suite_artifact(
         None => blockers.push("artifact has no source_fingerprint provenance".to_string()),
         Some(_) => {}
     }
+    if let (Some((field, fingerprint)), Some(current_fingerprint)) = (
+        crate::benchmark_evidence_semantics::report_freshness_fingerprint(&report),
+        crate::benchmark_evidence_semantics::current_freshness_fingerprint_for_report(
+            &path, &report,
+        ),
+    ) {
+        for issue in crate::benchmark_evidence_semantics::source_fingerprint_freshness_issues(
+            fingerprint,
+            &current_fingerprint,
+        ) {
+            match issue {
+                crate::benchmark_evidence_semantics::SourceFingerprintFreshnessIssue::Mismatch {
+                    source_fingerprint,
+                    current_source_fingerprint,
+                } => blockers.push(format!(
+                    "{field} `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`"
+                )),
+            }
+        }
+    }
     if selected_backend.as_deref() != Some(backend) {
         blockers.push(format!(
             "selected_backend `{:?}` does not match requested backend `{backend}`",
@@ -1458,6 +1478,83 @@ mod tests {
                 status.blockers
             );
         }
+    }
+
+    #[test]
+    fn suite_artifact_status_rejects_stale_source_tree_fingerprint() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for stale suite source-tree test.");
+        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: create temp workspace Cargo.toml for source-tree freshness test.");
+        let artifact_rel = "release/evidence/benchmarks/cuda-stale-source-tree.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: suite artifact must have parent directory."),
+        )
+        .expect("Fix: create stale source-tree suite artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "source_fingerprint": "git:abc:dirty=false",
+                "source_tree_fingerprint": "source-tree-v1:stale",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "environment": {
+                    "host_cpu_model": "test CPU",
+                    "gpu_devices": [
+                        {
+                            "name": "RTX 5090",
+                            "memory_total_mib": 24576,
+                            "compute_capability_major": 8,
+                            "compute_capability_minor": 9
+                        }
+                    ],
+                    "nvidia_driver_version": "580.0",
+                    "nvidia_cuda_version": "13.0"
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "kernel_launches": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 120.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize stale source-tree benchmark artifact JSON."),
+        )
+        .expect("Fix: write stale source-tree benchmark artifact JSON.");
+
+        let status = inspect_backend_suite_artifact(
+            dir.path(),
+            "cuda",
+            &BackendSuiteArtifactInput {
+                path: artifact_rel.to_string(),
+                family_id: "condition-eval".to_string(),
+                requested_case_id: "release.condition_eval.1m".to_string(),
+                cpu_sota_100x_required: false,
+            },
+        );
+
+        assert!(
+            status.blockers.iter().any(|blocker| {
+                blocker.contains("source_tree_fingerprint `source-tree-v1:stale`")
+                    && blocker.contains("does not match current workspace source")
+            }),
+            "Fix: generated CUDA suite evidence must reject stale source-tree benchmark artifacts; blockers={:?}",
+            status.blockers
+        );
     }
 
     #[test]
