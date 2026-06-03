@@ -83,25 +83,23 @@ pub(super) fn benchmark_artifact_is_reusable(
     let Ok(report) = serde_json::from_str::<Value>(&text) else {
         return false;
     };
-    let report_source_fingerprint = report
+    let Some(report_source_fingerprint) = report
         .get("source_fingerprint")
         .and_then(Value::as_str)
-        .filter(|fingerprint| !fingerprint.trim().is_empty());
-    if let Some(source_fingerprint) = report_source_fingerprint {
-        if !crate::benchmark_evidence_semantics::source_fingerprint_issues(source_fingerprint)
-            .is_empty()
-        {
-            return false;
-        }
+        .filter(|fingerprint| !fingerprint.trim().is_empty())
+    else {
+        return false;
+    };
+    if !crate::benchmark_evidence_semantics::source_fingerprint_issues(report_source_fingerprint)
+        .is_empty()
+    {
+        return false;
     }
     let Some(report_source_tree_fingerprint) = report
         .get("source_tree_fingerprint")
         .and_then(Value::as_str)
         .filter(|fingerprint| !fingerprint.trim().is_empty())
     else {
-        let Some(report_source_fingerprint) = report_source_fingerprint else {
-            return false;
-        };
         let current_git = vyre_bench::probes::capture_git_info_at(workspace_root);
         let current_source_fingerprint = vyre_bench::probes::source_fingerprint(&current_git);
         if report_source_fingerprint != current_source_fingerprint {
@@ -382,6 +380,41 @@ mod tests {
                 false,
             ),
             "Fix: --reuse-existing must rerun artifacts whose dirty source_fingerprint lacks a worktree digest even when source_tree_fingerprint matches."
+        );
+    }
+
+    #[test]
+    fn reuse_rejects_matching_source_tree_without_source_fingerprint() {
+        let dir = TempDir::new()
+            .expect("Fix: create temp workspace for missing source provenance reuse test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-missing-source-fingerprint.json",
+            serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_tree_fingerprint": current_test_source_tree_fingerprint(dir.path()),
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": reusable_timing_metrics()
+                    }
+                ]
+            }),
+        );
+
+        assert!(
+            !benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-missing-source-fingerprint.json",
+                false,
+            ),
+            "Fix: --reuse-existing must rerun artifacts that cannot satisfy backend suite source_fingerprint provenance."
         );
     }
 
