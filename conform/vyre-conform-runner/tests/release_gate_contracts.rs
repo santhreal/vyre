@@ -647,6 +647,32 @@ fn parity_matrix_input_planner_tracks_dynamic_fixture_contract() {
 }
 
 #[test]
+fn ulp_audit_input_planner_tracks_release_witness_contract() {
+    let source = repo_file("conform/vyre-conform-runner/tests/ulp_audit.rs");
+    let split = repo_file("conform/vyre-conform-runner/tests/__split/ulp_audit_part1.rs");
+
+    assert!(
+        source.contains("fn backend_dispatch_plan(")
+            && source.contains("matching_fixture_bytes(")
+            && source.contains("ReadWriteOrZero")
+            && source.contains("runtime-sized read-write buffer"),
+        "Fix: ULP audit must use the same logical fixture/static-length/read-write witness planning contract as release conformance."
+    );
+    assert!(
+        split.contains("backend_dispatch_plan(&program)")
+            && split.contains("backend_inputs_from_fixture_into(inputs, &input_plan")
+            && split.contains("backend_input_buffer_indices(&input_plan)"),
+        "Fix: release_per_op_f32_ulp_audit must dispatch fixture and adversarial cases through the planned backend input stream."
+    );
+    assert!(
+        !source.contains("BindingPlan")
+            && !source.contains("backend_input_map")
+            && !source.contains("fixture_len"),
+        "Fix: ULP audit must not infer backend inputs from raw fixture counts or BindingPlan-only buffer indices."
+    );
+}
+
+#[test]
 fn conformance_tests_do_not_compile_out_gpu_gates() {
     let tests_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
     let mut findings = Vec::new();
