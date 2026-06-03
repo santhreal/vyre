@@ -141,6 +141,12 @@ pub(crate) enum BackendSuiteArtifactStatusIssue {
         status_value: u64,
         artifact_value: u64,
     },
+    StringFieldMismatch {
+        path: String,
+        field: &'static str,
+        status_value: String,
+        artifact_value: String,
+    },
     CpuSota100xContractCaseCountMismatch {
         path: String,
         status_contract_cases: u64,
@@ -392,6 +398,18 @@ pub(crate) fn backend_suite_artifact_status_issues(
             }
         }
     }
+    for (field, artifact_value) in backend_suite_string_artifact_fields(artifact_report) {
+        if let Some(status_value) = status.get(field).and_then(non_empty_str) {
+            if status_value != artifact_value {
+                issues.push(BackendSuiteArtifactStatusIssue::StringFieldMismatch {
+                    path: path.clone(),
+                    field,
+                    status_value: status_value.to_string(),
+                    artifact_value,
+                });
+            }
+        }
+    }
 
     let (artifact_contract_cases, artifact_passing_cases) =
         artifact_cpu_sota_100x_contract_counts(artifact_report);
@@ -494,11 +512,92 @@ fn backend_suite_numeric_artifact_fields(artifact_report: &Value) -> Vec<(&'stat
             "min_cuda_ptx_source_cache_misses",
             artifact_min_metric_percentile(artifact_report, "cuda_ptx_source_cache_misses", "p50"),
         ),
+        (
+            "gpu_memory_total_mib",
+            artifact_environment_first_gpu_u64(artifact_report, "memory_total_mib"),
+        ),
+        (
+            "gpu_compute_capability_major",
+            artifact_environment_first_gpu_u64(artifact_report, "compute_capability_major"),
+        ),
+        (
+            "gpu_compute_capability_minor",
+            artifact_environment_first_gpu_u64(artifact_report, "compute_capability_minor"),
+        ),
     ];
     fields
         .into_iter()
         .filter_map(|(field, value)| value.map(|value| (field, value)))
         .collect()
+}
+
+fn backend_suite_string_artifact_fields(artifact_report: &Value) -> Vec<(&'static str, String)> {
+    let fields = [
+        (
+            "host_cpu_model",
+            artifact_environment_host_cpu_model(artifact_report),
+        ),
+        (
+            "gpu_model",
+            artifact_environment_first_gpu_str(artifact_report, "name"),
+        ),
+        (
+            "nvidia_driver_version",
+            artifact_environment_str(artifact_report, "nvidia_driver_version"),
+        ),
+        (
+            "nvidia_cuda_version",
+            artifact_environment_str(artifact_report, "nvidia_cuda_version"),
+        ),
+    ];
+    fields
+        .into_iter()
+        .filter_map(|(field, value)| value.map(|value| (field, value)))
+        .collect()
+}
+
+fn artifact_environment<'a>(artifact_report: &'a Value) -> Option<&'a Value> {
+    artifact_report.get("environment")
+}
+
+fn artifact_environment_str(artifact_report: &Value, field: &str) -> Option<String> {
+    artifact_environment(artifact_report)?
+        .get(field)
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+fn artifact_environment_host_cpu_model(artifact_report: &Value) -> Option<String> {
+    let environment = artifact_environment(artifact_report)?;
+    environment
+        .get("host_cpu_model")
+        .or_else(|| environment.get("cpu_model"))
+        .or_else(|| environment.get("host_cpu"))
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+fn artifact_environment_first_gpu<'a>(artifact_report: &'a Value) -> Option<&'a Value> {
+    artifact_environment(artifact_report)?
+        .get("gpu_devices")
+        .and_then(Value::as_array)
+        .and_then(|devices| devices.first())
+}
+
+fn artifact_environment_first_gpu_str(artifact_report: &Value, field: &str) -> Option<String> {
+    artifact_environment_first_gpu(artifact_report)?
+        .get(field)
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+fn artifact_environment_first_gpu_u64(artifact_report: &Value, field: &str) -> Option<u64> {
+    artifact_environment_first_gpu(artifact_report)?
+        .get(field)
+        .and_then(Value::as_u64)
 }
 
 fn artifact_min_metric_samples(artifact_report: &Value, metric_name: &str) -> Option<u64> {
@@ -1523,6 +1622,93 @@ mod tests {
                 },
             ],
             "Fix: backend suite status metric minima must be recomputed from the artifact JSON, not trusted as independent proof."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_provenance_drift() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "selected_backend": "cuda",
+            "case_count": 1,
+            "failed_count": 0,
+            "requested_case_id": "release.condition_eval.1m",
+            "host_cpu_model": "different CPU",
+            "gpu_model": "different GPU",
+            "gpu_memory_total_mib": 1,
+            "gpu_compute_capability_major": 7,
+            "gpu_compute_capability_minor": 5,
+            "nvidia_driver_version": "000.000",
+            "nvidia_cuda_version": "0.0"
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "cuda",
+            "summary": {"failed": 0},
+            "environment": {
+                "cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
+                "gpu_devices": [
+                    {
+                        "name": "NVIDIA GeForce RTX 5090",
+                        "memory_total_mib": 32607,
+                        "compute_capability_major": 12,
+                        "compute_capability_minor": 0
+                    }
+                ],
+                "nvidia_driver_version": "570.211.01",
+                "nvidia_cuda_version": "12.8"
+            },
+            "cases": [
+                {"id": "release.condition_eval.1m", "backend_id": "cuda"}
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    field: "gpu_memory_total_mib",
+                    status_value: 1,
+                    artifact_value: 32607,
+                },
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    field: "gpu_compute_capability_major",
+                    status_value: 7,
+                    artifact_value: 12,
+                },
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    field: "gpu_compute_capability_minor",
+                    status_value: 5,
+                    artifact_value: 0,
+                },
+                BackendSuiteArtifactStatusIssue::StringFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    field: "host_cpu_model",
+                    status_value: "different CPU".to_string(),
+                    artifact_value: "AMD Ryzen 9 9950X 16-Core Processor".to_string(),
+                },
+                BackendSuiteArtifactStatusIssue::StringFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    field: "gpu_model",
+                    status_value: "different GPU".to_string(),
+                    artifact_value: "NVIDIA GeForce RTX 5090".to_string(),
+                },
+                BackendSuiteArtifactStatusIssue::StringFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    field: "nvidia_driver_version",
+                    status_value: "000.000".to_string(),
+                    artifact_value: "570.211.01".to_string(),
+                },
+                BackendSuiteArtifactStatusIssue::StringFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    field: "nvidia_cuda_version",
+                    status_value: "0.0".to_string(),
+                    artifact_value: "12.8".to_string(),
+                },
+            ],
+            "Fix: backend suite status provenance must be proven by the artifact environment."
         );
     }
 

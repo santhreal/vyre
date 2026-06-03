@@ -526,6 +526,14 @@ fn inspect_backend_suite_artifact_status(
             } => blockers.push(format!(
                 "{evidence}: suite artifact `{path}` `{field}` mismatch: status {status_value}, artifact {artifact_value}"
             )),
+            BackendSuiteArtifactStatusIssue::StringFieldMismatch {
+                path,
+                field,
+                status_value,
+                artifact_value,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` `{field}` mismatch: status `{status_value}`, artifact `{artifact_value}`"
+            )),
             BackendSuiteArtifactStatusIssue::CpuSota100xContractCaseCountMismatch {
                 path,
                 status_contract_cases,
