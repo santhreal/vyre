@@ -9,6 +9,23 @@ use serde_json::Value;
 use vyre_bench::api::case::{BaselineClass, WorkloadClass};
 use vyre_bench::api::suite::SuiteKind;
 
+fn bench_targets_manifest() -> toml::Value {
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("Fix: vyre-bench must live under the workspace root.");
+    let targets_text =
+        std::fs::read_to_string(workspace.join("docs/optimization/BENCH_TARGETS.toml"))
+            .expect("Fix: BENCH_TARGETS.toml must be readable.");
+    toml::from_str(&targets_text).expect("Fix: BENCH_TARGETS.toml must parse as TOML.")
+}
+
+fn bench_target_rows(targets: &toml::Value) -> &[toml::Value] {
+    targets
+        .get("target")
+        .and_then(toml::Value::as_array)
+        .expect("Fix: BENCH_TARGETS.toml must contain target rows.")
+}
+
 #[test]
 fn release_matrix_covers_required_workload_families() {
     let registry = vyre_bench::registry::collect_all();
@@ -589,18 +606,8 @@ fn release_matrix_commands_prefer_canonical_release_workload_cases() {
 
 #[test]
 fn release_matrix_commands_match_bench_target_case_ids() {
-    let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: vyre-bench must live under the workspace root.");
-    let targets_text =
-        std::fs::read_to_string(workspace.join("docs/optimization/BENCH_TARGETS.toml"))
-            .expect("Fix: BENCH_TARGETS.toml must be readable.");
-    let targets: toml::Value =
-        toml::from_str(&targets_text).expect("Fix: BENCH_TARGETS.toml must parse as TOML.");
-    let target_rows = targets
-        .get("target")
-        .and_then(toml::Value::as_array)
-        .expect("Fix: BENCH_TARGETS.toml must contain target rows.");
+    let targets = bench_targets_manifest();
+    let target_rows = bench_target_rows(&targets);
     let registry = vyre_bench::registry::collect_all();
     let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);
 
@@ -640,6 +647,42 @@ fn release_matrix_commands_match_bench_target_case_ids() {
                 "Fix: BENCH_TARGETS target `{target_id}` bench_case_id `{bench_case_id}` must match release matrix command `{command}`."
             );
         }
+    }
+}
+
+#[test]
+fn release_matrix_bench_targets_reference_active_release_cases() {
+    let targets = bench_targets_manifest();
+    let target_rows = bench_target_rows(&targets);
+    let registry = vyre_bench::registry::collect_all();
+
+    for target in target_rows.iter().filter(|target| {
+        target.get("suite").and_then(toml::Value::as_str) == Some("release-workload")
+    }) {
+        let target_id = target
+            .get("id")
+            .and_then(toml::Value::as_str)
+            .expect("Fix: every release-workload BENCH_TARGETS target needs an id.");
+        let bench_case_id = target
+            .get("bench_case_id")
+            .and_then(toml::Value::as_str)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Fix: release-workload BENCH_TARGETS target `{target_id}` must declare bench_case_id."
+                )
+            });
+        let Some(case) = registry
+            .iter()
+            .find(|case| case.id().0.as_str() == bench_case_id)
+        else {
+            panic!(
+                "Fix: release-workload BENCH_TARGETS target `{target_id}` references missing bench_case_id `{bench_case_id}`."
+            );
+        };
+        assert!(
+            case.active_in_suite(SuiteKind::Release),
+            "Fix: release-workload BENCH_TARGETS target `{target_id}` bench_case_id `{bench_case_id}` must be active in the release suite."
+        );
     }
 }
 
