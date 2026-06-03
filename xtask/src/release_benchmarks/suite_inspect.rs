@@ -723,7 +723,7 @@ pub(super) fn inspect_backend_suite_artifact(
     let mut min_kernel_launches = None::<u64>;
     let mut cpu_sota_100x_contract_cases = 0usize;
     let mut cpu_sota_100x_passing_cases = 0usize;
-    let mut requested_case_present = false;
+    let mut requested_case_count = 0usize;
     for case in &cases {
         let case_id = case
             .get("id")
@@ -736,7 +736,7 @@ pub(super) fn inspect_backend_suite_artifact(
             blockers.push(format!("case `{case_id}` failed: {reason}"));
         }
         if case_id == artifact.requested_case_id {
-            requested_case_present = true;
+            requested_case_count += 1;
         }
         if case.get("backend_id").and_then(Value::as_str) != Some(backend) {
             nonmatching_case_backend_count += 1;
@@ -882,9 +882,14 @@ pub(super) fn inspect_backend_suite_artifact(
             "{nonmatching_case_backend_count} case(s) do not match requested backend `{backend}`"
         ));
     }
-    if !requested_case_present {
+    if requested_case_count == 0 {
         blockers.push(format!(
             "requested case `{}` is absent from artifact cases",
+            artifact.requested_case_id
+        ));
+    } else if requested_case_count > 1 {
+        blockers.push(format!(
+            "requested case `{}` appears {requested_case_count} times in artifact cases",
             artifact.requested_case_id
         ));
     }
@@ -1345,6 +1350,94 @@ mod tests {
                 status.blockers
             );
         }
+    }
+
+    #[test]
+    fn suite_artifact_status_rejects_duplicate_requested_case_rows() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for duplicate requested-case suite test.");
+        let artifact_rel = "release/evidence/benchmarks/cuda-duplicate-requested-case.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: suite artifact must have parent directory."),
+        )
+        .expect("Fix: create duplicate requested-case suite artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "source_fingerprint": "git:abc:dirty=false",
+                "source_tree_fingerprint": "source-tree-v1:abc",
+                "summary": {"total_cases": 2, "passed": 2, "failed": 0},
+                "environment": {
+                    "host_cpu_model": "test CPU",
+                    "gpu_devices": [
+                        {
+                            "name": "RTX 5090",
+                            "memory_total_mib": 24576,
+                            "compute_capability_major": 8,
+                            "compute_capability_minor": 9
+                        }
+                    ],
+                    "nvidia_driver_version": "580.0",
+                    "nvidia_cuda_version": "13.0"
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "kernel_launches": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 120.0}
+                    },
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 12, "p95": 13, "p99": 14},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1200, "p95": 1201, "p99": 1202},
+                            "kernel_launches": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 100.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize duplicate requested-case benchmark artifact JSON."),
+        )
+        .expect("Fix: write duplicate requested-case benchmark artifact JSON.");
+
+        let status = inspect_backend_suite_artifact(
+            dir.path(),
+            "cuda",
+            &BackendSuiteArtifactInput {
+                path: artifact_rel.to_string(),
+                family_id: "condition-eval".to_string(),
+                requested_case_id: "release.condition_eval.1m".to_string(),
+                cpu_sota_100x_required: false,
+            },
+        );
+
+        assert!(
+            status.blockers.iter().any(|blocker| blocker.contains(
+                "requested case `release.condition_eval.1m` appears 2 times in artifact cases"
+            )),
+            "Fix: generated CUDA suite evidence must reject artifacts where the requested_case_id resolves to multiple benchmark rows; blockers={:?}",
+            status.blockers
+        );
     }
 
     #[test]
