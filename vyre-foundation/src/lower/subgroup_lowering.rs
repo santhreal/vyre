@@ -23,11 +23,10 @@ enum ReductionScope {
 
 /// Lower workgroup-tree reductions to subgroup ops when the adapter supports it.
 ///
-/// The pass is gated by `caps.supports_subgroup_ops`.  It also requires the
-/// total workgroup invocation count to be `<= caps.subgroup_size` so that a
-/// single `subgroup_add` covers every active lane.  Larger workgroups are
-/// left untouched  -  a future extension can implement the two-level
-/// subgroup-then-shared reduction.
+/// The pass is gated by `caps.supports_subgroup_ops`. A workgroup that fits
+/// in one subgroup lowers to one `subgroup_add`. A larger workgroup lowers to
+/// a subgroup-then-shared reduction when its subgroup count fits in one
+/// subgroup.
 #[must_use]
 pub fn lower_subgroup_reductions(program: Program, caps: &AdapterCaps) -> Program {
     if !caps.supports_subgroup_ops || caps.subgroup_size == 0 {
@@ -38,21 +37,34 @@ pub fn lower_subgroup_reductions(program: Program, caps: &AdapterCaps) -> Progra
         .saturating_mul(program.workgroup_size()[1])
         .saturating_mul(program.workgroup_size()[2]);
 
-    // Only apply when every lane fits in one subgroup.
-    if workgroup_total > caps.subgroup_size {
+    if workgroup_total > subgroup_reduce_lane_limit(caps.subgroup_size) {
         return program;
     }
 
-    match rewrite_nodes(program.entry()) {
+    let plan = SubgroupReductionPlan {
+        subgroup_size: caps.subgroup_size,
+        workgroup_total,
+    };
+    match rewrite_nodes(program.entry(), plan) {
         Cow::Borrowed(_) => program,
         Cow::Owned(entry) => program.with_rewritten_entry(entry),
     }
 }
 
-fn rewrite_nodes(nodes: &[Node]) -> Cow<'_, [Node]> {
+#[derive(Clone, Copy)]
+struct SubgroupReductionPlan {
+    subgroup_size: u32,
+    workgroup_total: u32,
+}
+
+fn subgroup_reduce_lane_limit(subgroup_size: u32) -> u32 {
+    subgroup_size.saturating_mul(subgroup_size)
+}
+
+fn rewrite_nodes(nodes: &[Node], plan: SubgroupReductionPlan) -> Cow<'_, [Node]> {
     let mut rewritten: Option<Vec<Node>> = None;
     for (index, node) in nodes.iter().enumerate() {
-        match rewrite_node(node) {
+        match rewrite_node(node, plan) {
             Cow::Borrowed(_) if rewritten.is_none() => {}
             Cow::Borrowed(borrowed) => {
                 if let Some(out) = rewritten.as_mut() {
@@ -68,7 +80,7 @@ fn rewrite_nodes(nodes: &[Node]) -> Cow<'_, [Node]> {
     rewritten.map_or(Cow::Borrowed(nodes), Cow::Owned)
 }
 
-fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
+fn rewrite_node(node: &Node, plan: SubgroupReductionPlan) -> Cow<'_, [Node]> {
     match node {
         Node::Region {
             generator,
@@ -76,14 +88,14 @@ fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
             body,
         } => {
             let generator_name = generator.as_str();
-            if let Some(lowered) = try_lower_workgroup_reduction(generator_name, body) {
+            if let Some(lowered) = try_lower_workgroup_reduction(generator_name, body, plan) {
                 return Cow::Owned(vec![Node::Region {
                     generator: generator.clone(),
                     source_region: source_region.clone(),
                     body: Arc::new(lowered),
                 }]);
             }
-            match rewrite_nodes(body) {
+            match rewrite_nodes(body, plan) {
                 Cow::Borrowed(_) => Cow::Borrowed(std::slice::from_ref(node)),
                 Cow::Owned(new_body) => Cow::Owned(vec![Node::Region {
                     generator: generator.clone(),
@@ -97,8 +109,8 @@ fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
             then,
             otherwise,
         } => {
-            let t = rewrite_nodes(then);
-            let o = rewrite_nodes(otherwise);
+            let t = rewrite_nodes(then, plan);
+            let o = rewrite_nodes(otherwise, plan);
             if matches!((&t, &o), (Cow::Borrowed(_), Cow::Borrowed(_))) {
                 Cow::Borrowed(std::slice::from_ref(node))
             } else {
@@ -115,7 +127,7 @@ fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
             to,
             body,
         } => {
-            let b = rewrite_nodes(body);
+            let b = rewrite_nodes(body, plan);
             if matches!(b, Cow::Borrowed(_)) {
                 Cow::Borrowed(std::slice::from_ref(node))
             } else {
@@ -127,7 +139,7 @@ fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
                 )])
             }
         }
-        Node::Block(body) => match rewrite_nodes(body) {
+        Node::Block(body) => match rewrite_nodes(body, plan) {
             Cow::Borrowed(_) => Cow::Borrowed(std::slice::from_ref(node)),
             Cow::Owned(b) => Cow::Owned(vec![Node::block(b)]),
         },
@@ -136,12 +148,16 @@ fn rewrite_node(node: &Node) -> Cow<'_, [Node]> {
 }
 
 /// Attempt to lower a workgroup reduction region body to subgroup ops.
-fn try_lower_workgroup_reduction(generator: &str, body: &[Node]) -> Option<Vec<Node>> {
+fn try_lower_workgroup_reduction(
+    generator: &str,
+    body: &[Node],
+    plan: SubgroupReductionPlan,
+) -> Option<Vec<Node>> {
     let scratch = extract_scratch_buffer(body)?;
     let scope = detect_scope(body)?;
 
     if generator.starts_with(WORKGROUP_SUM_PREFIX) {
-        Some(subgroup_sum_body(&scratch, scope))
+        Some(subgroup_sum_body(&scratch, scope, plan))
     } else if generator.starts_with(WORKGROUP_MAX_PREFIX) {
         // Max reductions are lowered via a shuffle-based tree using
         // subgroup_shuffle.  For simplicity we emit the same load+
@@ -215,7 +231,18 @@ fn contains_workgroup_zero_guard(expr: &Expr) -> bool {
     }
 }
 
-fn subgroup_sum_body(scratch: &str, scope: ReductionScope) -> Vec<Node> {
+fn subgroup_sum_body(
+    scratch: &str,
+    scope: ReductionScope,
+    plan: SubgroupReductionPlan,
+) -> Vec<Node> {
+    if plan.workgroup_total <= plan.subgroup_size {
+        return single_subgroup_sum_body(scratch, scope);
+    }
+    two_level_subgroup_sum_body(scratch, scope, plan)
+}
+
+fn single_subgroup_sum_body(scratch: &str, scope: ReductionScope) -> Vec<Node> {
     let load_expr = Expr::load(scratch, Expr::var("local"));
     let subgroup_expr = Expr::subgroup_add(load_expr);
     let store_node = Node::store(scratch, Expr::var("local"), subgroup_expr);
@@ -226,6 +253,66 @@ fn subgroup_sum_body(scratch: &str, scope: ReductionScope) -> Vec<Node> {
             Node::if_then(
                 Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
                 vec![store_node],
+            ),
+            Node::barrier(),
+        ],
+    }
+}
+
+fn two_level_subgroup_sum_body(
+    scratch: &str,
+    scope: ReductionScope,
+    plan: SubgroupReductionPlan,
+) -> Vec<Node> {
+    let subgroup_count = plan.workgroup_total.div_ceil(plan.subgroup_size);
+    let subgroup_slot = Expr::div(Expr::var("local"), Expr::u32(plan.subgroup_size));
+    let subgroup_sum = Expr::subgroup_add(Expr::load(scratch, Expr::var("local")));
+    let subgroup_head = Expr::eq(Expr::subgroup_local_id(), Expr::u32(0));
+    let first_level = vec![
+        Node::let_bind("vyre_subgroup_sum", subgroup_sum),
+        Node::if_then(
+            subgroup_head,
+            vec![Node::store(
+                scratch,
+                subgroup_slot,
+                Expr::var("vyre_subgroup_sum"),
+            )],
+        ),
+    ];
+    let second_level_sum = Expr::subgroup_add(Expr::select(
+        Expr::lt(Expr::var("local"), Expr::u32(subgroup_count)),
+        Expr::load(scratch, Expr::var("local")),
+        Expr::f32(0.0),
+    ));
+    let second_level = vec![
+        Node::let_bind("vyre_workgroup_sum", second_level_sum),
+        Node::if_then(
+            Expr::eq(Expr::var("local"), Expr::u32(0)),
+            vec![Node::store(
+                scratch,
+                Expr::u32(0),
+                Expr::var("vyre_workgroup_sum"),
+            )],
+        ),
+    ];
+
+    match scope {
+        ReductionScope::EveryWorkgroup => {
+            let mut nodes = first_level;
+            nodes.push(Node::barrier());
+            nodes.extend(second_level);
+            nodes.push(Node::barrier());
+            nodes
+        }
+        ReductionScope::FirstWorkgroup => vec![
+            Node::if_then(
+                Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+                first_level,
+            ),
+            Node::barrier(),
+            Node::if_then(
+                Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+                second_level,
             ),
             Node::barrier(),
         ],
@@ -331,8 +418,8 @@ mod tests {
     fn no_change_when_workgroup_larger_than_subgroup() {
         let region = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup);
         let program = Program::wrapped(
-            vec![BufferDecl::workgroup("scratch", 64, DataType::F32)],
-            [64, 1, 1],
+            vec![BufferDecl::workgroup("scratch", 2048, DataType::F32)],
+            [2048, 1, 1],
             vec![region],
         );
         let caps = caps_with_subgroup(32);
@@ -368,6 +455,35 @@ mod tests {
             body[0]
         );
         assert!(matches!(&body[1], Node::Barrier { .. }));
+    }
+
+    #[test]
+    fn lowers_two_level_workgroup_sum_for_large_cuda_blocks() {
+        let region = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup);
+        let program = Program::wrapped(
+            vec![BufferDecl::workgroup("scratch", 256, DataType::F32)],
+            [256, 1, 1],
+            vec![region],
+        );
+        let caps = caps_with_subgroup(32);
+        let lowered = lower_subgroup_reductions(program, &caps);
+
+        let entry = lowered.entry();
+        assert_eq!(entry.len(), 1);
+        let Node::Region { body, .. } = &entry[0] else {
+            panic!("expected Region");
+        };
+        assert_eq!(
+            body.len(),
+            6,
+            "Fix: two-level subgroup lowering should emit first-level subgroup work, a barrier, full-warp second-level subgroup work, and a final barrier."
+        );
+        assert!(
+            node_contains_subgroup_add(&body[0]) && node_contains_subgroup_add(&body[3]),
+            "Fix: both levels of the 256-lane reduction must use subgroup_add instead of the shared-memory tree: {body:?}"
+        );
+        assert!(matches!(&body[2], Node::Barrier { .. }));
+        assert!(matches!(&body[5], Node::Barrier { .. }));
     }
 
     #[test]
@@ -433,5 +549,99 @@ mod tests {
             lowered.stats().subgroup_ops(),
             "lowering must set the subgroup_ops capability bit"
         );
+    }
+
+    fn node_contains_subgroup_add(node: &Node) -> bool {
+        match node {
+            Node::Let { value, .. } | Node::Assign { value, .. } => {
+                expr_contains_subgroup_add(value)
+            }
+            Node::Store { index, value, .. } => {
+                expr_contains_subgroup_add(index) || expr_contains_subgroup_add(value)
+            }
+            Node::If {
+                cond,
+                then,
+                otherwise,
+            } => {
+                expr_contains_subgroup_add(cond)
+                    || then.iter().any(node_contains_subgroup_add)
+                    || otherwise.iter().any(node_contains_subgroup_add)
+            }
+            Node::Loop { from, to, body, .. } => {
+                expr_contains_subgroup_add(from)
+                    || expr_contains_subgroup_add(to)
+                    || body.iter().any(node_contains_subgroup_add)
+            }
+            Node::Block(body) => body.iter().any(node_contains_subgroup_add),
+            Node::Region { body, .. } => body.iter().any(node_contains_subgroup_add),
+            Node::Barrier { .. }
+            | Node::IndirectDispatch { .. }
+            | Node::AsyncWait { .. }
+            | Node::Trap { .. }
+            | Node::Resume { .. }
+            | Node::AllReduce { .. }
+            | Node::AllGather { .. }
+            | Node::ReduceScatter { .. }
+            | Node::Broadcast { .. }
+            | Node::Opaque(_)
+            | Node::Return => false,
+            Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
+                expr_contains_subgroup_add(offset) || expr_contains_subgroup_add(size)
+            }
+        }
+    }
+
+    fn expr_contains_subgroup_add(expr: &Expr) -> bool {
+        match expr {
+            Expr::SubgroupAdd { .. } => true,
+            Expr::Load { index, .. }
+            | Expr::Cast { value: index, .. }
+            | Expr::SubgroupShuffle { value: index, .. }
+            | Expr::SubgroupBallot { cond: index } => expr_contains_subgroup_add(index),
+            Expr::BinOp { left, right, .. } => {
+                expr_contains_subgroup_add(left) || expr_contains_subgroup_add(right)
+            }
+            Expr::UnOp { operand, .. } => expr_contains_subgroup_add(operand),
+            Expr::Call { args, .. } => args.iter().any(expr_contains_subgroup_add),
+            Expr::Select {
+                cond,
+                true_val,
+                false_val,
+            } => {
+                expr_contains_subgroup_add(cond)
+                    || expr_contains_subgroup_add(true_val)
+                    || expr_contains_subgroup_add(false_val)
+            }
+            Expr::Fma { a, b, c } => {
+                expr_contains_subgroup_add(a)
+                    || expr_contains_subgroup_add(b)
+                    || expr_contains_subgroup_add(c)
+            }
+            Expr::Atomic {
+                index,
+                expected,
+                value,
+                ..
+            } => {
+                expr_contains_subgroup_add(index)
+                    || expected
+                        .as_ref()
+                        .is_some_and(|expr| expr_contains_subgroup_add(expr))
+                    || expr_contains_subgroup_add(value)
+            }
+            Expr::LitU32(_)
+            | Expr::LitI32(_)
+            | Expr::LitF32(_)
+            | Expr::LitBool(_)
+            | Expr::Var(_)
+            | Expr::InvocationId { .. }
+            | Expr::WorkgroupId { .. }
+            | Expr::LocalId { .. }
+            | Expr::BufLen { .. }
+            | Expr::SubgroupLocalId
+            | Expr::SubgroupSize
+            | Expr::Opaque(_) => false,
+        }
     }
 }

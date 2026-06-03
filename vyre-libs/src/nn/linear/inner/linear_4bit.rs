@@ -7,13 +7,17 @@
 
 use crate::region::wrap_anonymous;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use vyre_spec::{QuantizationScale, QuantizationZeroPoint};
 
 const INT4_LINEAR_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 const AFFINE_GROUPED_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+const AFFINE_GROUPED_LANES_PER_OUTPUT: u32 = 32;
+const AFFINE_GROUPED_OUTPUTS_PER_WARP: u32 = 1;
+const AFFINE_GROUPED_WARPS_PER_WORKGROUP: u32 =
+    AFFINE_GROUPED_WORKGROUP_SIZE[0] / AFFINE_GROUPED_LANES_PER_OUTPUT;
+const AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP: u32 =
+    AFFINE_GROUPED_WARPS_PER_WORKGROUP * AFFINE_GROUPED_OUTPUTS_PER_WARP;
 const AFFINE_GROUPED_OP_ID: &str = "vyre-libs::nn::linear_4bit_affine_grouped";
-const AFFINE_GROUPED_SCRATCH: &str = "q4_affine_grouped_scratch";
 
 /// Typed metadata for fused grouped INT4 linear.
 ///
@@ -230,10 +234,11 @@ pub fn linear_4bit_affine_grouped(
             .to_string()
     })?;
 
-    let tile = AFFINE_GROUPED_WORKGROUP_SIZE[0].max(1);
+    let tile = AFFINE_GROUPED_LANES_PER_OUTPUT;
     let chunks = in_dim.div_ceil(tile);
     let out_idx = Expr::var("out_idx");
     let local = Expr::var("local");
+    let lane = Expr::var("lane");
     let k = Expr::var("k");
     let packed_idx = Expr::add(
         Expr::mul(Expr::div(k.clone(), Expr::u32(8)), Expr::u32(out_dim)),
@@ -263,10 +268,7 @@ pub fn linear_4bit_affine_grouped(
             vec![
                 Node::let_bind(
                     "k",
-                    Expr::add(
-                        Expr::mul(Expr::var("chunk"), Expr::u32(tile)),
-                        local.clone(),
-                    ),
+                    Expr::add(Expr::mul(Expr::var("chunk"), Expr::u32(tile)), lane.clone()),
                 ),
                 Node::if_then(
                     Expr::lt(k.clone(), Expr::u32(in_dim)),
@@ -280,40 +282,59 @@ pub fn linear_4bit_affine_grouped(
                 ),
             ],
         ),
-        Node::store(
-            AFFINE_GROUPED_SCRATCH,
-            local.clone(),
-            Expr::var("local_acc"),
-        ),
-        Node::barrier(),
+        Node::let_bind("warp_sum", Expr::subgroup_add(Expr::var("local_acc"))),
     ];
-    per_output.push(workgroup_tree::sum_f32_child(
-        AFFINE_GROUPED_OP_ID,
-        tile,
-        AFFINE_GROUPED_SCRATCH,
-        WorkgroupReductionScope::EveryWorkgroup,
-    ));
     per_output.push(Node::if_then(
-        Expr::eq(local.clone(), Expr::u32(0)),
+        Expr::eq(lane.clone(), Expr::u32(0)),
         vec![Node::Store {
             buffer: out.into(),
             index: out_idx.clone(),
-            value: Expr::add(
-                Expr::load(b, out_idx.clone()),
-                Expr::load(AFFINE_GROUPED_SCRATCH, Expr::u32(0)),
-            ),
+            value: Expr::add(Expr::load(b, out_idx.clone()), Expr::var("warp_sum")),
         }],
     ));
 
     let body = vec![
         Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        Node::let_bind("out_idx", Expr::WorkgroupId { axis: 0 }),
-        Node::if_then(Expr::lt(out_idx.clone(), Expr::u32(out_dim)), per_output),
+        Node::let_bind(
+            "warp",
+            Expr::div(local.clone(), Expr::u32(AFFINE_GROUPED_LANES_PER_OUTPUT)),
+        ),
+        Node::let_bind(
+            "lane",
+            Expr::rem(local.clone(), Expr::u32(AFFINE_GROUPED_LANES_PER_OUTPUT)),
+        ),
+        Node::loop_for(
+            "warp_output",
+            Expr::u32(0),
+            Expr::u32(AFFINE_GROUPED_OUTPUTS_PER_WARP),
+            vec![
+                Node::let_bind(
+                    "out_idx",
+                    Expr::add(
+                        Expr::add(
+                            Expr::mul(
+                                Expr::WorkgroupId { axis: 0 },
+                                Expr::u32(AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP),
+                            ),
+                            Expr::mul(
+                                Expr::var("warp_output"),
+                                Expr::u32(AFFINE_GROUPED_WARPS_PER_WORKGROUP),
+                            ),
+                        ),
+                        Expr::var("warp"),
+                    ),
+                ),
+                Node::if_then(Expr::lt(out_idx.clone(), Expr::u32(out_dim)), per_output),
+            ],
+        ),
     ];
-    let padded_output_count = out_dim.checked_mul(tile).ok_or_else(|| {
-        "Fix: linear_4bit_affine_grouped out_dim*workgroup_size overflows u32; reduce dimensions."
-            .to_string()
-    })?;
+    let output_workgroups = out_dim.div_ceil(AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP);
+    let padded_output_count = output_workgroups
+        .checked_mul(AFFINE_GROUPED_WORKGROUP_SIZE[0])
+        .ok_or_else(|| {
+            "Fix: linear_4bit_affine_grouped output workgroups overflow u32; reduce dimensions."
+                .to_string()
+        })?;
     let output_byte_len = (out_dim as usize)
         .checked_mul(core::mem::size_of::<f32>())
         .ok_or_else(|| {
@@ -331,7 +352,6 @@ pub fn linear_4bit_affine_grouped(
             BufferDecl::storage(zero_point, 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(sidecar_count),
             BufferDecl::storage(b, 4, BufferAccess::ReadOnly, DataType::F32).with_count(out_dim),
-            BufferDecl::workgroup(AFFINE_GROUPED_SCRATCH, tile, DataType::F32),
             BufferDecl::output(out, 5, DataType::F32)
                 .with_count(padded_output_count)
                 .with_output_byte_range(0..output_byte_len),

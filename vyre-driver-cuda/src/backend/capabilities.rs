@@ -170,8 +170,12 @@ impl CudaBackend {
             fix: "Fix: CUDA device probe reported no hardware warp size on a GPU-required host; fix the CUDA capability probe before lowering."
                 .to_string(),
         })?;
+        let lowered_program = vyre_foundation::lower::lower_subgroup_reductions(
+            program.clone(),
+            &self.caps.to_adapter_caps(),
+        );
         let key = self.ptx_source_cache.key_for_program(
-            program,
+            &lowered_program,
             config,
             self.ptx_target_sm(),
             subgroup_size,
@@ -179,7 +183,7 @@ impl CudaBackend {
         )?;
         let ptx = self.ptx_source_cache.get_or_lower(key, || {
             crate::codegen::program_to_ptx_for_sm_and_subgroup(
-                program,
+                &lowered_program,
                 config,
                 self.ptx_target_sm(),
                 subgroup_size,

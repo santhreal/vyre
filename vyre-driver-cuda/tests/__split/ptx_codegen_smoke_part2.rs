@@ -305,6 +305,46 @@ fn ptx_emits_integer_subgroup_ops() {
     }
 }
 
+#[test]
+fn ptx_lowers_workgroup_sum_region_to_subgroup_reduction() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::workgroup("scratch", 256, DataType::F32),
+            BufferDecl::output("out", 0, DataType::F32).with_count(256),
+        ],
+        [256, 1, 1],
+        vec![
+            Node::let_bind("local", Expr::LocalId { axis: 0 }),
+            Node::store("scratch", Expr::var("local"), Expr::f32(1.0)),
+            Node::Region {
+                generator: "vyre-primitives::reduce::workgroup_sum_f32_child".into(),
+                source_region: None,
+                body: std::sync::Arc::new(vec![
+                    Node::store(
+                        "scratch",
+                        Expr::var("local"),
+                        Expr::load("scratch", Expr::var("local")),
+                    ),
+                    Node::barrier(),
+                ]),
+            },
+            Node::store(
+                "out",
+                Expr::var("local"),
+                Expr::load("scratch", Expr::var("local")),
+            ),
+        ],
+    );
+
+    let secondary_text = program_to_ptx_for_sm_and_subgroup(&program, &default_config(), 120, 32)
+        .expect("Fix: CUDA codegen must lower canonical workgroup sum regions to PTX.");
+    assert!(
+        secondary_text.contains("shfl.sync.down.b32")
+            && !secondary_text.contains("redux.sync.add.f32"),
+        "Fix: CUDA codegen must invoke f32-safe subgroup lowering before PTX emission for workgroup-tree reductions, got:\n{secondary_text}"
+    );
+}
+
 // ── FMA ──────────────────────────────────────────────────────────────
 
 #[test]
@@ -411,4 +451,3 @@ fn ptx_emits_trap_as_lane_exit() {
         "Fix: CUDA PTX must not expose vyre-lower's internal trap sidecar in the kernel ABI until CUDA implements trap-sidecar readback."
     );
 }
-

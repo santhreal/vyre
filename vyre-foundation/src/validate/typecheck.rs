@@ -417,11 +417,10 @@ pub(crate) fn expr_type(
                 &Expr::SubgroupBallot { .. } => {
                     values.push(Some(crate::ir_inner::model::types::DataType::U32));
                 }
-                // Both operations produce the same type as their value
-                // operand. U32 is the conservative default while the IR
-                // restricts subgroup ops to integer types.
-                &Expr::SubgroupShuffle { .. } | &Expr::SubgroupAdd { .. } => {
-                    values.push(Some(DataType::U32));
+                // Both operations produce the same type as their value operand.
+                Expr::SubgroupShuffle { value, .. } | Expr::SubgroupAdd { value } => {
+                    frames.push(Frame::Un);
+                    frames.push(Frame::Enter(value));
                 }
 
                 Expr::Opaque(extension) => values.push(extension.result_type()),

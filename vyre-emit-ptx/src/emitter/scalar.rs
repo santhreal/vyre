@@ -635,6 +635,9 @@ impl BodyCtx<'_> {
     }
 
     pub(super) fn emit_subgroup_add(&mut self, value: Reg) -> Reg {
+        if value.0 == PtxType::F32 {
+            return self.emit_f32_subgroup_add(value);
+        }
         let result = self.alloc(value.0);
         let mask = self.alloc(PtxType::U32);
         let _ = writeln!(self.text, "    activemask.b32    {mask};");
@@ -644,5 +647,29 @@ impl BodyCtx<'_> {
             "    redux.sync.add.{ptx_type}    {result}, {value}, {mask};"
         );
         result
+    }
+
+    fn emit_f32_subgroup_add(&mut self, value: Reg) -> Reg {
+        let acc = self.alloc(PtxType::F32);
+        let mask = self.alloc(PtxType::U32);
+        let lane_mask = self.subgroup_lane_mask();
+        let _ = writeln!(self.text, "    mov.f32    {acc}, {value};");
+        let _ = writeln!(self.text, "    activemask.b32    {mask};");
+
+        let mut offset = self.options.subgroup_size / 2;
+        while offset > 0 {
+            let bits = self.alloc(PtxType::U32);
+            let shuffled_bits = self.alloc(PtxType::U32);
+            let shuffled = self.alloc(PtxType::F32);
+            let _ = writeln!(self.text, "    mov.b32    {bits}, {acc};");
+            let _ = writeln!(
+                self.text,
+                "    shfl.sync.down.b32    {shuffled_bits}, {bits}, {offset}, 0x{lane_mask:x}, {mask};"
+            );
+            let _ = writeln!(self.text, "    mov.b32    {shuffled}, {shuffled_bits};");
+            let _ = writeln!(self.text, "    add.f32    {acc}, {acc}, {shuffled};");
+            offset /= 2;
+        }
+        acc
     }
 }

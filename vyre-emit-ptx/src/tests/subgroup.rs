@@ -62,7 +62,7 @@ fn subgroup_shuffle_emits_shfl_sync_idx() {
 }
 
 #[test]
-fn subgroup_add_emits_redux_sync() {
+fn f32_subgroup_add_emits_shuffle_tree() {
     let kernel = KernelDescriptor {
         id: "add".into(),
         bindings: BindingLayout { slots: vec![] },
@@ -85,7 +85,36 @@ fn subgroup_add_emits_redux_sync() {
         },
     };
     let s = emit(&kernel).unwrap();
-    assert!(s.contains("redux.sync.add.f32"));
+    assert!(s.contains("activemask.b32"));
+    assert!(s.contains("shfl.sync.down.b32"));
+    assert!(!s.contains("redux.sync.add.f32"));
+}
+
+#[test]
+fn u32_subgroup_add_emits_redux_sync() {
+    let kernel = KernelDescriptor {
+        id: "add_u32".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(64, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::SubgroupAdd,
+                    operands: vec![0],
+                    result: Some(1),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(5)],
+        },
+    };
+    let s = emit(&kernel).unwrap();
+    assert!(s.contains("redux.sync.add.u32"));
 }
 
 #[test]

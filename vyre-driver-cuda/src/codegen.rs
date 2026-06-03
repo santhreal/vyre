@@ -3,6 +3,7 @@
 mod descriptor_gate;
 use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::Program;
+use vyre_foundation::optimizer::AdapterCaps;
 
 /// Generate PTX source from a vyre Program.
 pub fn program_to_ptx(program: &Program, config: &DispatchConfig) -> Result<String, String> {
@@ -42,7 +43,16 @@ pub fn program_to_ptx_for_sm_and_subgroup(
     if trace {
         tracing::debug!("[cuda-codegen] start target_sm={target_sm} subgroup={subgroup_size}");
     }
-    let descriptor = descriptor_gate::validate_and_analyze(program, target_sm)?;
+    let subgroup_lowered = vyre_foundation::lower::lower_subgroup_reductions(
+        program.clone(),
+        &AdapterCaps {
+            backend: "cuda",
+            supports_subgroup_ops: true,
+            subgroup_size,
+            ..AdapterCaps::conservative()
+        },
+    );
+    let descriptor = descriptor_gate::validate_and_analyze(&subgroup_lowered, target_sm)?;
     if trace {
         tracing::debug!(
             "[cuda-codegen] +{}ms descriptor ops={} bindings={}",
