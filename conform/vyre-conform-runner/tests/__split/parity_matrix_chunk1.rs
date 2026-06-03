@@ -22,13 +22,13 @@ use vyre_primitives::harness::OpEntry as PrimitivesOpEntry;
 use vyre_reference::value::Value;
 use vyre_spec::expr_variants;
 
-use vyre_intrinsics as _;
-use vyre_libs as _;
-use vyre_primitives as _;
 #[cfg(feature = "gpu")]
 use vyre_driver_cuda as _;
 #[cfg(feature = "gpu")]
 use vyre_driver_wgpu as _;
+use vyre_intrinsics as _;
+use vyre_libs as _;
+use vyre_primitives as _;
 
 type FixtureCases = Vec<Vec<Vec<u8>>>;
 type FixtureFn = fn() -> FixtureCases;
@@ -160,7 +160,7 @@ impl BackendRunner {
                         && !backend.supports_grid_sync()
                     {
                         vyre_driver::grid_sync::dispatch_with_grid_sync_split(
-                            &**backend, program, inputs, config
+                            &**backend, program, inputs, config,
                         )
                     } else {
                         backend.dispatch_borrowed(program, inputs, config)
@@ -174,7 +174,11 @@ impl BackendRunner {
                 } else {
                     let plan_storage = backend_dispatch_plan(program, inputs.len())?;
                     let mut local_inputs = Vec::new();
-                    backend_dispatch_inputs_with_plan_into(inputs, &plan_storage, &mut local_inputs)?;
+                    backend_dispatch_inputs_with_plan_into(
+                        inputs,
+                        &plan_storage,
+                        &mut local_inputs,
+                    )?;
                     run_dispatch(&local_inputs)
                 }
             }
@@ -194,7 +198,10 @@ struct BackendDispatchPlan {
     buffer_len: usize,
 }
 
-fn backend_dispatch_plan(program: &Program, fixture_buffer_count: usize) -> Result<BackendDispatchPlan, String> {
+fn backend_dispatch_plan(
+    program: &Program,
+    fixture_buffer_count: usize,
+) -> Result<BackendDispatchPlan, String> {
     let mut sources = Vec::with_capacity(program.buffers().len());
     let mut zeroed_inputs = Vec::with_capacity(program.buffers().len());
     for (buffer_index, buffer) in program.buffers().iter().enumerate() {
@@ -205,13 +212,20 @@ fn backend_dispatch_plan(program: &Program, fixture_buffer_count: usize) -> Resu
         {
             continue;
         }
-        if matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite) && buffer_index >= fixture_buffer_count {
-            let byte_len = usize::try_from(buffer.count())
-                .ok()
-                .and_then(|count| count.checked_mul(buffer.element().min_bytes()))
+        if matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite)
+            && buffer_index >= fixture_buffer_count
+        {
+            let byte_len = buffer
+                .static_byte_len()
+                .map_err(|error| {
+                    format!(
+                        "buffer `{}` has no fixture and its static byte length could not be computed: {error}. Fix: add fixture bytes for this read-write buffer.",
+                        buffer.name(),
+                    )
+                })?
                 .ok_or_else(|| {
                     format!(
-                        "buffer `{}` has no fixture and its static byte length overflows. Fix: add fixture bytes for this read-write buffer.",
+                        "buffer `{}` has no fixture and is runtime-sized. Fix: add fixture bytes for this read-write buffer.",
                         buffer.name()
                     )
                 })?;
@@ -348,9 +362,10 @@ fn parity_matrix_across_all_registered_ops() {
         );
 
         summary.ops_covered += 1;
-        let input_plan = backend_dispatch_plan(&program, input_cases[0].len()).unwrap_or_else(|error| {
-            panic!("Fix: {} backend input plan failed: {error}", entry.id);
-        });
+        let input_plan =
+            backend_dispatch_plan(&program, input_cases[0].len()).unwrap_or_else(|error| {
+                panic!("Fix: {} backend input plan failed: {error}", entry.id);
+            });
         let grid_config = dispatch_grid::config_for_program(&program).unwrap_or_else(|error| {
             panic!("Fix: {} config_for_program failed: {error}", entry.id);
         });
@@ -485,9 +500,9 @@ fn parity_matrix_across_all_registered_ops() {
     );
 }
 
-
 fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
-    let mut registrations: Vec<&BackendRegistration> = registered_backends().iter().copied().collect();
+    let mut registrations: Vec<&BackendRegistration> =
+        registered_backends().iter().copied().collect();
     registrations.sort_by(|left, right| left.id.cmp(right.id));
     summary.backends_linked = registrations.len() + 1;
 
@@ -556,4 +571,3 @@ fn unified_entries() -> Vec<UnifiedEntry> {
     entries.sort_by(|left, right| left.id.cmp(right.id));
     entries
 }
-

@@ -1112,19 +1112,12 @@ fn backend_dispatch_plan(program: &vyre::Program) -> Result<BackendDispatchPlan,
 }
 
 fn static_buffer_byte_len(buffer: &vyre::ir::BufferDecl, role: &str) -> Result<usize, String> {
-    let element_size = buffer.element().size_bytes().ok_or_else(|| {
-        format!(
-            "{role} `{}` has unsized element type `{:?}`. Fix: provide explicit witness bytes for dynamically sized element buffers.",
-            buffer.name(),
-            buffer.element()
-        )
-    })?;
-    usize::try_from(buffer.count())
-        .ok()
-        .and_then(|count| count.checked_mul(element_size))
+    buffer
+        .static_byte_len()
+        .map_err(|error| format!("{role} `{}`: {error}", buffer.name()))?
         .ok_or_else(|| {
             format!(
-                "{role} `{}` static byte length overflows. Fix: add explicit fixture bytes for this buffer.",
+                "{role} `{}` is runtime-sized. Fix: provide explicit witness bytes for dynamically sized buffers.",
                 buffer.name()
             )
         })

@@ -423,24 +423,18 @@ fn preferred_alignment(buffer: &BufferDecl, element_size: usize) -> Result<usize
 }
 
 fn static_byte_len(buffer: &BufferDecl) -> Result<Option<usize>, BackendError> {
-    if buffer.count() == 0 {
-        return Ok(None);
-    }
-    let count = usize::try_from(buffer.count()).map_err(|_| BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: binding `{}` element count does not fit usize; split the buffer or reduce element count.",
-            buffer.name()
-        ),
-    })?;
-    buffer
-        .element()
-        .packed_size_bytes(count)
+    let bytes = buffer
+        .static_byte_len()
         .map_err(|error| BackendError::InvalidProgram {
             fix: format!(
                 "Fix: binding `{}` static byte length could not be computed: {error}",
                 buffer.name(),
             ),
-        })?
+        })?;
+    if buffer.count() == 0 {
+        return Ok(None);
+    }
+    bytes
         .map(Some)
         .ok_or_else(|| BackendError::InvalidProgram {
             fix: format!(

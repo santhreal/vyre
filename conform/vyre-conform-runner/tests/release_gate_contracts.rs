@@ -582,6 +582,25 @@ fn dispatch_conformance_isolates_backend_instance_per_pair() {
 }
 
 #[test]
+fn release_conformance_static_sizing_uses_packed_buffer_lengths() {
+    for path in [
+        "conform/vyre-conform-runner/src/main.rs",
+        "conform/vyre-conform-runner/tests/__split/parity_matrix_chunk1.rs",
+        "vyre-libs/src/primitive_catalog.rs",
+    ] {
+        let source = repo_file(path);
+        assert!(
+            source.contains(".static_byte_len()"),
+            "Fix: `{path}` must use BufferDecl::static_byte_len() so sub-byte static buffers use packed lengths."
+        );
+        assert!(
+            !source.contains("buffer.element().min_bytes()"),
+            "Fix: `{path}` must not size static dispatch buffers with min_bytes(); I4/FP4/NF4 buffers require packed byte lengths."
+        );
+    }
+}
+
+#[test]
 fn conformance_tests_do_not_compile_out_gpu_gates() {
     let tests_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
     let mut findings = Vec::new();
