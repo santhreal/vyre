@@ -82,16 +82,21 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
         .and_then(|summary| summary.get("failed"))
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(0);
-    if failed != 0 {
-        let failed_cases =
-            crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&value);
+    let failed_cases = crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&value);
+    let case_failed = failed_cases.len() as u64;
+    if failed != 0 || case_failed != 0 {
         let detail = if failed_cases.is_empty() {
             String::new()
         } else {
             format!(": {}", failed_cases.join("; "))
         };
+        let count_detail = if failed == case_failed {
+            String::new()
+        } else {
+            format!("; case evidence reports {case_failed} failed case(s)")
+        };
         blockers.push(format!(
-            "{evidence}: benchmark summary reports {failed} failed case(s){detail}"
+            "{evidence}: benchmark summary reports {failed} failed case(s){count_detail}{detail}"
         ));
     }
     if let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) {
@@ -436,5 +441,57 @@ fn required_marker_ids_for_evidence(evidence: &str) -> &'static [&'static str] {
         ]
     } else {
         &[]
+    }
+}
+
+#[cfg(test)]
+mod part1_tests {
+    use super::*;
+
+    use std::fs;
+
+    use tempfile::TempDir;
+
+    #[test]
+    fn completion_audit_rejects_hidden_failed_case_summary_zero() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for hidden benchmark audit test.");
+        let path = dir.path().join("wgpu-hidden-invalid.json");
+        fs::write(
+            &path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "correctness": {
+                            "Invalid": {
+                                "reason": "CUDA/WGPU output mismatch at row 17"
+                            }
+                        },
+                        "performance": {"contract_passed": true}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize hidden failed benchmark JSON."),
+        )
+        .expect("Fix: write hidden failed benchmark JSON.");
+
+        let mut blockers = Vec::new();
+        inspect_json_evidence(
+            "release/evidence/benchmarks/wgpu-hidden-invalid.json",
+            &path,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "benchmark summary reports 0 failed case(s); case evidence reports 1 failed case(s): `release.condition_eval.1m`: CUDA/WGPU output mismatch at row 17"
+            )),
+            "Fix: completion audit must reject benchmark case failures hidden behind summary.failed=0; blockers={blockers:?}"
+        );
     }
 }
