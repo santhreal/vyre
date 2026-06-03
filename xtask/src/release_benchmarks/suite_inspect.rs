@@ -619,7 +619,9 @@ pub(super) fn inspect_backend_suite_artifact(
             .get("id")
             .and_then(Value::as_str)
             .unwrap_or("<unknown>");
-        if let Some(reason) = suite_case_failure_reason(case) {
+        if let Some(reason) =
+            crate::benchmark_evidence_semantics::benchmark_case_failure_reason(case)
+        {
             blockers.push(format!("case `{case_id}` failed: {reason}"));
         }
         if case_id == artifact.requested_case_id {
@@ -806,35 +808,6 @@ pub(super) fn inspect_backend_suite_artifact(
         cpu_sota_100x_passing_cases,
         blockers,
     }
-}
-
-fn suite_case_failure_reason(case: &Value) -> Option<String> {
-    if case.get("status").and_then(Value::as_str) == Some("pass") {
-        return None;
-    }
-    case.get("correctness")
-        .and_then(|correctness| correctness.get("Invalid"))
-        .and_then(|invalid| invalid.get("reason"))
-        .and_then(Value::as_str)
-        .filter(|reason| !reason.is_empty())
-        .map(str::to_string)
-        .or_else(|| {
-            let violations = case
-                .get("performance")
-                .and_then(|performance| performance.get("violations"))
-                .and_then(Value::as_array)?
-                .iter()
-                .filter_map(Value::as_str)
-                .filter(|violation| !violation.is_empty())
-                .collect::<Vec<_>>();
-            (!violations.is_empty()).then(|| violations.join("; "))
-        })
-        .or_else(|| {
-            case.get("status")
-                .and_then(Value::as_str)
-                .filter(|status| !status.is_empty())
-                .map(|status| format!("status `{status}`"))
-        })
 }
 
 pub(super) fn suite_metric_samples(value: Option<&Value>) -> Option<u64> {

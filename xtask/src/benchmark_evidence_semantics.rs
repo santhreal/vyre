@@ -8,6 +8,35 @@ static CURRENT_SOURCE_FINGERPRINTS: OnceLock<Mutex<BTreeMap<PathBuf, String>>> =
 static CURRENT_SOURCE_TREE_FINGERPRINTS: OnceLock<Mutex<BTreeMap<PathBuf, String>>> =
     OnceLock::new();
 
+pub(crate) fn benchmark_case_failure_reason(case: &Value) -> Option<String> {
+    if case.get("status").and_then(Value::as_str) == Some("pass") {
+        return None;
+    }
+    case.get("correctness")
+        .and_then(|correctness| correctness.get("Invalid"))
+        .and_then(|invalid| invalid.get("reason"))
+        .and_then(Value::as_str)
+        .filter(|reason| !reason.is_empty())
+        .map(str::to_string)
+        .or_else(|| {
+            let violations = case
+                .get("performance")
+                .and_then(|performance| performance.get("violations"))
+                .and_then(Value::as_array)?
+                .iter()
+                .filter_map(Value::as_str)
+                .filter(|violation| !violation.is_empty())
+                .collect::<Vec<_>>();
+            (!violations.is_empty()).then(|| violations.join("; "))
+        })
+        .or_else(|| {
+            case.get("status")
+                .and_then(Value::as_str)
+                .filter(|status| !status.is_empty())
+                .map(|status| format!("status `{status}`"))
+        })
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum LaunchPlanLabelIssue {
     MissingSingle,

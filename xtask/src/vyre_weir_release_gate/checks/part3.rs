@@ -231,8 +231,11 @@ pub(crate) fn check_single_benchmark_report(
             .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
         if !contract_passed {
+            let reason = crate::benchmark_evidence_semantics::benchmark_case_failure_reason(case)
+                .map(|reason| format!(": {reason}"))
+                .unwrap_or_default();
             failures.push(format!(
-                "requirement `{}` benchmark `{}` case `{id}` did not pass its performance contract",
+                "requirement `{}` benchmark `{}` case `{id}` did not pass its performance contract{reason}",
                 requirement.id,
                 path.display()
             ));
@@ -403,6 +406,64 @@ mod part3_tests {
             failures.iter().any(|failure| failure
                 .contains("must carry an applicable CPU-SOTA performance contract")),
             "Fix: release gate must expose wrong-backend CPU-SOTA contracts; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn single_benchmark_report_preserves_failed_case_reason() {
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let report = serde_json::json!({
+            "selected_backend": "wgpu",
+            "summary": {"failed": 1},
+            "cases": [
+                {
+                    "id": "sparse.compaction.count.1m",
+                    "backend_id": "wgpu",
+                    "status": "failed",
+                    "correctness": {
+                        "Invalid": {
+                            "reason": "Performance contract failed: sparse output compaction count requires 100.00x over optimized CPU fired-rule collection over predicate masks, observed 86.90x"
+                        }
+                    },
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda", "wgpu"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "metrics": {
+                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                        "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002}
+                    },
+                    "performance": null
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_single_benchmark_report(
+            &requirement,
+            Path::new("wgpu-workload-12-sparse-output-compaction.json"),
+            &report,
+            false,
+            None,
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "case `sparse.compaction.count.1m` did not pass its performance contract: Performance contract failed"
+            ) && failure.contains("observed 86.90x")),
+            "Fix: direct benchmark gate failures must carry the failed benchmark case reason; failures={failures:?}"
         );
     }
 }
