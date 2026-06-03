@@ -29,6 +29,7 @@ vyre-libs = { workspace = true, features = ["full", "logical", "nn-moe", "securi
 vyre-intrinsics.workspace = true
 vyre-primitives = { workspace = true, features = ["text", "matching", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "inventory-registry"] }
 vyre-reference.workspace = true
+vyre-bench.workspace = true
 vyre-driver-wgpu.workspace = true
 vyre-driver-cuda.workspace = true
 vyre-driver-reference.workspace = true

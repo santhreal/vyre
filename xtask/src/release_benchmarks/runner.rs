@@ -83,6 +83,18 @@ pub(super) fn benchmark_artifact_is_reusable(
     let Ok(report) = serde_json::from_str::<Value>(&text) else {
         return false;
     };
+    let Some(report_source_fingerprint) = report
+        .get("source_fingerprint")
+        .and_then(Value::as_str)
+        .filter(|fingerprint| !fingerprint.trim().is_empty())
+    else {
+        return false;
+    };
+    let current_git = vyre_bench::probes::capture_git_info_at(workspace_root);
+    let current_source_fingerprint = vyre_bench::probes::source_fingerprint(&current_git);
+    if report_source_fingerprint != current_source_fingerprint {
+        return false;
+    }
     if report.get("selected_backend").and_then(Value::as_str) != Some(backend) {
         return false;
     }
@@ -199,6 +211,7 @@ mod tests {
             "release/evidence/benchmarks/wgpu-condition.json",
             serde_json::json!({
                 "selected_backend": "wgpu",
+                "source_fingerprint": current_test_source_fingerprint(dir.path()),
                 "summary": {"failed": 0},
                 "cases": [
                     {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
@@ -227,6 +240,7 @@ mod tests {
             "release/evidence/benchmarks/wgpu-with-cuda-backend.json",
             serde_json::json!({
                 "selected_backend": "cuda",
+                "source_fingerprint": current_test_source_fingerprint(dir.path()),
                 "summary": {"failed": 0},
                 "cases": [
                     {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"}
@@ -238,6 +252,7 @@ mod tests {
             "release/evidence/benchmarks/wgpu-wrong-case.json",
             serde_json::json!({
                 "selected_backend": "wgpu",
+                "source_fingerprint": current_test_source_fingerprint(dir.path()),
                 "summary": {"failed": 0},
                 "cases": [
                     {"id": "release.other.1m", "backend_id": "wgpu", "status": "pass"}
@@ -267,6 +282,40 @@ mod tests {
             ),
             "Fix: WGPU reuse must reject artifacts that do not contain the requested release case."
         );
+    }
+
+    #[test]
+    fn reuse_rejects_stale_source_fingerprint() {
+        let dir = TempDir::new().expect("Fix: create temp workspace for stale source test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-stale-source.json",
+            serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": "git:stale:dirty=false",
+                "summary": {"failed": 0},
+                "cases": [
+                    {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
+                ]
+            }),
+        );
+
+        assert!(
+            !benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-stale-source.json",
+                false,
+            ),
+            "Fix: --reuse-existing must rerun benchmark artifacts captured from a different source fingerprint."
+        );
+    }
+
+    fn current_test_source_fingerprint(workspace_root: &Path) -> String {
+        let git = vyre_bench::probes::capture_git_info_at(workspace_root);
+        vyre_bench::probes::source_fingerprint(&git)
     }
 
     fn write_benchmark_artifact(workspace_root: &Path, relative: &str, value: Value) {
