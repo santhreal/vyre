@@ -7,6 +7,7 @@ mod abstraction_gate;
 mod backend_matrix;
 mod bench_crossback;
 mod bench_release;
+mod benchmark_evidence_semantics;
 mod c_parser_bench;
 mod c_parser_corpus;
 mod catalog;

@@ -1,3 +1,5 @@
+use crate::benchmark_evidence_semantics::{launch_plan_label_issues, LaunchPlanLabelIssue};
+
 pub(crate) fn check_benchmark_report_has_cases(
     requirement: &Requirement,
     base_dir: &Path,
@@ -286,6 +288,7 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
                 requirement.id
             ));
         }
+        check_launch_plan_label_matches_count(requirement, label, id, case, metrics, failures);
         if !case
             .get("optimization_passes")
             .and_then(serde_json::Value::as_array)
@@ -338,6 +341,35 @@ pub(crate) fn metrics_has_positive_any(
             })
         })
     })
+}
+fn check_launch_plan_label_matches_count(
+    requirement: &Requirement,
+    label: &str,
+    case_id: &str,
+    case: &serde_json::Value,
+    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
+    failures: &mut Vec<String>,
+) {
+    for issue in launch_plan_label_issues(case, metrics) {
+        match issue {
+            LaunchPlanLabelIssue::MissingSingle => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{case_id}` reports one kernel launch but is missing `single-dispatch-launch-plan`",
+                requirement.id
+            )),
+            LaunchPlanLabelIssue::SingleHasMulti => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{case_id}` reports one kernel launch but lists `multi-dispatch-launch-plan`",
+                requirement.id
+            )),
+            LaunchPlanLabelIssue::MissingMulti { launch_count } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{case_id}` reports {launch_count:.0} kernel launches but is missing `multi-dispatch-launch-plan`",
+                requirement.id
+            )),
+            LaunchPlanLabelIssue::MultiHasSingle { launch_count } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{case_id}` reports {launch_count:.0} kernel launches but lists `single-dispatch-launch-plan`",
+                requirement.id
+            )),
+        }
+    }
 }
 pub(crate) fn require_case_metric_at_least(
     requirement: &Requirement,

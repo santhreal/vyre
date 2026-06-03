@@ -1,3 +1,5 @@
+use crate::benchmark_evidence_semantics::{launch_plan_label_issues, LaunchPlanLabelIssue};
+
 fn inspect_workload_benchmark_semantics(
     evidence: &str,
     value: &serde_json::Value,
@@ -201,6 +203,7 @@ fn inspect_workload_benchmark_provenance(
                 "{evidence}: case `{id}` must include positive kernel launch count metric"
             ));
         }
+        check_launch_plan_label_matches_count(evidence, id, case, metrics, blockers);
         if !case
             .get("optimization_passes")
             .and_then(serde_json::Value::as_array)
@@ -255,6 +258,31 @@ fn metrics_has_positive_any(
             })
         })
     })
+}
+
+fn check_launch_plan_label_matches_count(
+    evidence: &str,
+    case_id: &str,
+    case: &serde_json::Value,
+    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
+    blockers: &mut Vec<String>,
+) {
+    for issue in launch_plan_label_issues(case, metrics) {
+        match issue {
+            LaunchPlanLabelIssue::MissingSingle => blockers.push(format!(
+                "{evidence}: case `{case_id}` reports one kernel launch but is missing `single-dispatch-launch-plan`"
+            )),
+            LaunchPlanLabelIssue::SingleHasMulti => blockers.push(format!(
+                "{evidence}: case `{case_id}` reports one kernel launch but lists `multi-dispatch-launch-plan`"
+            )),
+            LaunchPlanLabelIssue::MissingMulti { launch_count } => blockers.push(format!(
+                "{evidence}: case `{case_id}` reports {launch_count:.0} kernel launches but is missing `multi-dispatch-launch-plan`"
+            )),
+            LaunchPlanLabelIssue::MultiHasSingle { launch_count } => blockers.push(format!(
+                "{evidence}: case `{case_id}` reports {launch_count:.0} kernel launches but lists `single-dispatch-launch-plan`"
+            )),
+        }
+    }
 }
 
 fn inspect_weir_readme_contract_semantics(
