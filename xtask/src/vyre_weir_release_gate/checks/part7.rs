@@ -62,14 +62,20 @@ pub(crate) fn check_backend_suite_report(
             requirement.id
         ));
     }
-    if let Some(blockers) = report.get("blockers").and_then(serde_json::Value::as_array) {
-        for blocker in blockers {
-            failures.push(format!(
-                "requirement `{}` backend suite `{suffix}` reports blocker: {}",
-                requirement.id,
-                blocker.as_str().unwrap_or("<non-string blocker>")
-            ));
+    match report.get("blockers").and_then(serde_json::Value::as_array) {
+        Some(blockers) => {
+            for blocker in blockers {
+                failures.push(format!(
+                    "requirement `{}` backend suite `{suffix}` reports blocker: {}",
+                    requirement.id,
+                    blocker.as_str().unwrap_or("<non-string blocker>")
+                ));
+            }
         }
+        None => failures.push(format!(
+            "requirement `{}` backend suite `{suffix}` is missing blockers array",
+            requirement.id
+        )),
     }
     for issue in backend_suite_inventory_issues(&report) {
         match issue {
@@ -369,15 +375,20 @@ pub(crate) fn check_backend_suite_report(
                     ));
                 }
             }
-            if status
-                .get("blockers")
-                .and_then(serde_json::Value::as_array)
-                .is_some_and(|blockers| !blockers.is_empty())
-            {
-                failures.push(format!(
-                    "requirement `{}` backend suite `{suffix}` artifact `{path}` has semantic blockers",
+            match status.get("blockers").and_then(serde_json::Value::as_array) {
+                Some(blockers) => {
+                    for blocker in blockers {
+                        failures.push(format!(
+                            "requirement `{}` backend suite `{suffix}` artifact `{path}` blocker: {}",
+                            requirement.id,
+                            blocker.as_str().unwrap_or("<non-string blocker>")
+                        ));
+                    }
+                }
+                None => failures.push(format!(
+                    "requirement `{}` backend suite `{suffix}` artifact `{path}` is missing blockers array",
                     requirement.id
-                ));
+                )),
             }
             if status
                 .get("cpu_sota_100x_required")
@@ -767,6 +778,162 @@ mod part7_tests {
                 "artifact `release/evidence/benchmarks/workload-01-condition-eval.json` contains requested_case_id `release.condition_eval.1m` 2 times"
             )),
             "Fix: release gate must reject suite artifacts where requested_case_id resolves to multiple benchmark rows; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn backend_suite_report_rejects_missing_blockers_array() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for suite blocker array test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create benchmark evidence directory for suite blocker array test.");
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "family_count": 0,
+                "artifacts": [],
+                "artifact_statuses": []
+            }))
+            .expect("Fix: serialize CUDA suite without blockers array."),
+        )
+        .expect("Fix: write CUDA suite without blockers array.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_report(
+            &requirement,
+            &release_dir,
+            "cuda-release-suite.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "requirement `cuda-first-path` backend suite `cuda-release-suite.json` is missing blockers array"
+            )),
+            "Fix: backend suite release gate must fail closed when generated suite evidence omits blockers; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn backend_suite_report_rejects_status_missing_blockers_array() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for suite status blocker array test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir).expect(
+            "Fix: create benchmark evidence directory for suite status blocker array test.",
+        );
+        std::fs::write(
+            benchmark_dir.join("cuda-workload-01-condition-eval.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567:dirty=false",
+                "source_tree_fingerprint": "source-tree-v1:test",
+                "environment": {"host_cpu_model": "test CPU"},
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "kernel_launches": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 0},
+                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 1}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 120.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize CUDA benchmark artifact for status blocker array test."),
+        )
+        .expect("Fix: write CUDA benchmark artifact for status blocker array test.");
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "family_count": 1,
+                "artifacts": ["release/evidence/benchmarks/cuda-workload-01-condition-eval.json"],
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/cuda-workload-01-condition-eval.json",
+                        "exists": true,
+                        "bytes": 1,
+                        "read_error": null,
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m",
+                        "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567:dirty=false",
+                        "source_tree_fingerprint": "source-tree-v1:test",
+                        "host_cpu_model": "test CPU",
+                        "selected_backend": "cuda",
+                        "case_count": 1,
+                        "failed_count": 0,
+                        "nonmatching_case_backend_count": 0,
+                        "min_wall_samples": 30,
+                        "min_baseline_wall_samples": 30,
+                        "min_wall_p50": 10,
+                        "min_wall_p95": 11,
+                        "min_wall_p99": 12,
+                        "min_baseline_wall_p50": 1000,
+                        "min_baseline_wall_p95": 1001,
+                        "min_baseline_wall_p99": 1002,
+                        "min_kernel_launches": 1,
+                        "gpu_model": "RTX 5090",
+                        "nvidia_driver_version": "580.0",
+                        "nvidia_cuda_version": "13.0",
+                        "gpu_memory_total_mib": 24576,
+                        "gpu_compute_capability_major": 8,
+                        "gpu_compute_capability_minor": 9,
+                        "min_cuda_ptx_source_cache_entries": 1,
+                        "min_cuda_ptx_source_cache_hits": 0,
+                        "min_cuda_ptx_source_cache_misses": 1,
+                        "cpu_sota_100x_required": false,
+                        "cpu_sota_100x_contract_cases": 0,
+                        "cpu_sota_100x_passing_cases": 0
+                    }
+                ],
+                "blockers": []
+            }))
+            .expect("Fix: serialize CUDA suite with status missing blockers array."),
+        )
+        .expect("Fix: write CUDA suite with status missing blockers array.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_report(
+            &requirement,
+            &release_dir,
+            "cuda-release-suite.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "backend suite `cuda-release-suite.json` artifact `release/evidence/benchmarks/cuda-workload-01-condition-eval.json` is missing blockers array"
+            )),
+            "Fix: backend suite release gate must fail closed when suite status rows omit blockers; failures={failures:?}"
         );
     }
 
