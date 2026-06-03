@@ -410,8 +410,37 @@ fn generated_benchmark_evidence_blockers(workspace_root: &Path, paths: &[String]
             let blocker = blocker.as_str().unwrap_or("<non-string blocker>");
             blockers.push(format!("`{path}` blocker[{index}]: {blocker}"));
         }
+        collect_generated_suite_status_blockers(path, &value, &mut blockers);
     }
     blockers
+}
+
+fn collect_generated_suite_status_blockers(path: &str, value: &Value, blockers: &mut Vec<String>) {
+    let Some(statuses) = value.get("artifact_statuses") else {
+        return;
+    };
+    let Some(statuses) = statuses.as_array() else {
+        blockers.push(format!("`{path}` artifact_statuses must be an array"));
+        return;
+    };
+    for (status_index, status) in statuses.iter().enumerate() {
+        let status_path = status
+            .get("path")
+            .and_then(Value::as_str)
+            .unwrap_or("<unknown>");
+        let Some(status_blockers) = status.get("blockers").and_then(Value::as_array) else {
+            blockers.push(format!(
+                "`{path}` artifact_statuses[{status_index}] `{status_path}` is missing blockers array"
+            ));
+            continue;
+        };
+        for (blocker_index, blocker) in status_blockers.iter().enumerate() {
+            let blocker = blocker.as_str().unwrap_or("<non-string blocker>");
+            blockers.push(format!(
+                "`{path}` artifact_statuses[{status_index}] `{status_path}` blocker[{blocker_index}]: {blocker}"
+            ));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -492,6 +521,83 @@ mod tests {
                     .to_string()
             ],
             "Fix: release-benchmarks must fail closed when generated suite evidence carries blockers."
+        );
+    }
+
+    #[test]
+    fn generated_evidence_blockers_surface_suite_status_blockers() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for generated suite status blocker test.");
+        let artifact = "release/evidence/benchmarks/cuda-release-suite.json".to_string();
+        let artifact_path = dir.path().join(&artifact);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: temporary artifact has a parent directory."),
+        )
+        .expect("Fix: create temporary generated evidence directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "blockers": [],
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+                        "blockers": ["case `release.condition_eval.1m` failed: wrong answer"]
+                    }
+                ]
+            }))
+            .expect("Fix: serialize suite evidence with nested status blocker."),
+        )
+        .expect("Fix: write suite evidence with nested status blocker.");
+
+        let blockers = generated_benchmark_evidence_blockers(dir.path(), &[artifact]);
+
+        assert_eq!(
+            blockers,
+            vec![
+                "`release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[0] `release/evidence/benchmarks/workload-01-condition-eval.json` blocker[0]: case `release.condition_eval.1m` failed: wrong answer"
+                    .to_string()
+            ],
+            "Fix: release-benchmarks must fail closed when generated suite status rows carry blockers."
+        );
+    }
+
+    #[test]
+    fn generated_evidence_blockers_reject_suite_status_missing_blockers_array() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for generated suite status blocker test.");
+        let artifact = "release/evidence/benchmarks/cuda-release-suite.json".to_string();
+        let artifact_path = dir.path().join(&artifact);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: temporary artifact has a parent directory."),
+        )
+        .expect("Fix: create temporary generated evidence directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "blockers": [],
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/workload-01-condition-eval.json"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize suite evidence with nested status blocker."),
+        )
+        .expect("Fix: write suite evidence with nested status blocker.");
+
+        let blockers = generated_benchmark_evidence_blockers(dir.path(), &[artifact]);
+
+        assert_eq!(
+            blockers,
+            vec![
+                "`release/evidence/benchmarks/cuda-release-suite.json` artifact_statuses[0] `release/evidence/benchmarks/workload-01-condition-eval.json` is missing blockers array"
+                    .to_string()
+            ],
+            "Fix: release-benchmarks must fail closed when generated suite status rows omit blockers."
         );
     }
 
