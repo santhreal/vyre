@@ -23,6 +23,37 @@ use crate::backend::resident_dispatch_support::{
 };
 use crate::backend::staging_reserve::{reserve_smallvec, reserved_vec};
 
+pub(super) fn resident_output_clear_for_readback(
+    base_ptr: u64,
+    readback: CudaOutputReadback,
+    binding_name: &str,
+) -> Result<Option<(u64, usize)>, BackendError> {
+    if readback.byte_len == 0 {
+        return Ok(None);
+    }
+    let clear_ptr = vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+        base_ptr,
+        readback.device_offset,
+        || {
+            BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA resident output clear offset {} for binding `{binding_name}` does not fit CUdeviceptr arithmetic.",
+                readback.device_offset
+            ),
+        }
+        },
+        || {
+            BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA resident output clear pointer for binding `{binding_name}` overflowed at offset {}.",
+                readback.device_offset
+            ),
+        }
+        },
+    )?;
+    Ok(Some((clear_ptr, readback.byte_len)))
+}
+
 impl CudaBackend {
     /// Dispatch a Program asynchronously using caller-provided CUDA-resident buffers.
     pub fn dispatch_resident_async(
@@ -174,8 +205,12 @@ impl CudaBackend {
                     "resident async output readback",
                 )?;
                 output_handles_by_index.push((output_index, handle, readback, launch_ptr));
-                if binding.input_index.is_none() && full_byte_len != 0 {
-                    output_clears.push((launch_ptr, full_byte_len));
+                if binding.input_index.is_none() {
+                    output_clears.extend(resident_output_clear_for_readback(
+                        launch_ptr,
+                        readback,
+                        &binding.name,
+                    )?);
                 }
             }
         }

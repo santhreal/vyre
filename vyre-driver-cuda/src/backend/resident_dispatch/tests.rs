@@ -23,12 +23,14 @@ fn resident_dispatch_production_source() -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::async_dispatch::resident_output_clear_for_readback;
     use super::super::borrowed::order_resident_fallback_inputs_by_logical_index;
     use super::{
         borrow_resident_sequence_output_slots, prepare_resident_sequence_fills,
         stage_resident_fill_payload, validate_dense_resident_input_indices,
         validate_dense_resident_output_indices,
     };
+    use crate::backend::output_range::CudaOutputReadback;
     use crate::backend::resident::CudaResidentBuffer;
 
     #[test]
@@ -114,6 +116,65 @@ mod tests {
                 && production.contains("param_host_ptr,\n                        param_bytes")
                 && production.contains("stream.raw(),"),
             "Fix: resident sequence uploads and per-step parameter uploads must use the shared stream-preserving enqueue helpers."
+        );
+    }
+
+    #[test]
+    fn resident_output_clear_uses_observable_readback_range() {
+        let clear = resident_output_clear_for_readback(
+            0x1000,
+            CudaOutputReadback {
+                device_offset: 128,
+                byte_len: 4096,
+            },
+            "out",
+        )
+        .expect("Fix: ranged resident output clear planning must accept valid offsets.");
+
+        assert_eq!(
+            clear,
+            Some((0x1080, 4096)),
+            "Fix: resident dispatch must clear the declared output byte range, not the padded allocation."
+        );
+
+        let full = resident_output_clear_for_readback(
+            0x2000,
+            CudaOutputReadback {
+                device_offset: 0,
+                byte_len: 8192,
+            },
+            "full",
+        )
+        .expect("Fix: full resident output clear planning must preserve full-buffer clears.");
+        assert_eq!(full, Some((0x2000, 8192)));
+    }
+
+    #[test]
+    fn resident_output_clear_skips_zero_byte_ranges_and_rejects_pointer_overflow() {
+        let skipped = resident_output_clear_for_readback(
+            0x1000,
+            CudaOutputReadback {
+                device_offset: 256,
+                byte_len: 0,
+            },
+            "empty",
+        )
+        .expect("Fix: zero-byte resident output ranges should not enqueue memsets.");
+        assert_eq!(skipped, None);
+
+        let error = resident_output_clear_for_readback(
+            u64::MAX,
+            CudaOutputReadback {
+                device_offset: 1,
+                byte_len: 4,
+            },
+            "overflow",
+        )
+        .expect_err("Fix: resident output clear planning must reject device-pointer overflow.");
+
+        assert!(
+            error.to_string().contains("overflowed"),
+            "overflow error must explain the CUDA resident clear pointer failure: {error}"
         );
     }
 

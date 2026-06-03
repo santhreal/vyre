@@ -257,9 +257,9 @@ pub fn linear_4bit_affine_grouped(
     let weight_f32 = Expr::mul(
         Expr::sub(
             Expr::cast(DataType::F32, nibble),
-            Expr::cast(DataType::F32, Expr::load(zero_point, sidecar_idx.clone())),
+            Expr::cast(DataType::F32, Expr::var("group_zero_point")),
         ),
-        Expr::load(scale, sidecar_idx),
+        Expr::var("group_scale"),
     );
 
     let mut per_output = vec![
@@ -299,6 +299,27 @@ pub fn linear_4bit_affine_grouped(
                 Node::let_bind(
                     "packed_word",
                     Expr::subgroup_shuffle(Expr::var("packed_word_lane"), word_leader_lane),
+                ),
+                Node::let_bind("sidecar_idx", sidecar_idx),
+                Node::let_bind("scale_lane", Expr::f32(0.0)),
+                Node::let_bind("zero_point_lane", Expr::u32(0)),
+                Node::if_then(
+                    Expr::eq(lane.clone(), Expr::u32(0)),
+                    vec![
+                        Node::assign("scale_lane", Expr::load(scale, Expr::var("sidecar_idx"))),
+                        Node::assign(
+                            "zero_point_lane",
+                            Expr::load(zero_point, Expr::var("sidecar_idx")),
+                        ),
+                    ],
+                ),
+                Node::let_bind(
+                    "group_scale",
+                    Expr::subgroup_shuffle(Expr::var("scale_lane"), Expr::u32(0)),
+                ),
+                Node::let_bind(
+                    "group_zero_point",
+                    Expr::subgroup_shuffle(Expr::var("zero_point_lane"), Expr::u32(0)),
                 ),
                 Node::if_then(
                     Expr::lt(k.clone(), Expr::u32(in_dim)),

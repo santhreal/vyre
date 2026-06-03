@@ -64,6 +64,10 @@ fn grouped_int4_affine_ptx_broadcasts_packed_weight_words() {
         ptx.contains("shfl.sync.idx.b32"),
         "Fix: grouped INT4 PTX must broadcast each packed weight word from its 8-lane leader.\n{ptx}"
     );
+    assert!(
+        ptx.matches("shfl.sync.idx.b32").count() >= 3,
+        "Fix: grouped INT4 PTX must broadcast packed weight, scale, and zero-point values instead of reloading sidecars per lane.\n{ptx}"
+    );
 }
 
 #[test]
