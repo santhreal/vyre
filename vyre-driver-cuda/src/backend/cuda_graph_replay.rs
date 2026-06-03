@@ -879,8 +879,10 @@ mod source_contract_tests {
                 && compiled_dispatch.contains("materialized_input_key(inputs)?")
                 && compiled_dispatch.contains("cache.snapshot_with_key(inputs, &input_key)")
                 && compiled_dispatch.contains("prepare_cuda_graph_replay_input_state_with_key")
+                && compiled_dispatch.contains("take_cached_graph_with_key(")
+                && compiled_dispatch.contains("&first_miss.input_key")
                 && compiled_dispatch.contains("miss.input_key"),
-            "Fix: compiled batched CUDA graph replay must reuse materialized-cache exact-input keys for graph miss replay instead of hashing each miss again."
+            "Fix: compiled batched CUDA graph replay must reuse materialized-cache exact-input keys for graph-cache selection and graph miss replay instead of hashing each miss again."
         );
         let partition_section = compiled_dispatch
             .split("fn materialized_output_batch_cache_partition_into")

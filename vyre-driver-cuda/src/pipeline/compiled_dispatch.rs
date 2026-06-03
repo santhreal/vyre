@@ -652,6 +652,14 @@ impl CudaCompiledPipeline {
         }
         let lane_count =
             cuda_graph_lane_count_for_batch(&self.backend.caps, &self.prepared, &miss_batches)?;
+        let first_miss =
+            miss_entries
+                .first()
+                .copied()
+                .ok_or_else(|| BackendError::InvalidProgram {
+                    fix: "Fix: compiled CUDA graph replay produced zero miss entry after a non-empty miss partition. Rebuild the materialized batch partition before lane replay."
+                        .to_string(),
+                })?;
         let first_miss_batch =
             miss_batches
                 .first()
@@ -663,14 +671,16 @@ impl CudaCompiledPipeline {
         let mut lanes = SmallVec::<[CachedCudaGraph; MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE]>::new();
         reserve_smallvec(&mut lanes, lane_count, "cuda graph lane")?;
         for _ in 0..lane_count {
-            lanes.push(match self.take_cached_graph(first_miss_batch)? {
-                Some(cached) => cached,
-                None => self.backend.record_cuda_graph_borrowed(
-                    &self.program,
-                    first_miss_batch,
-                    config,
-                )?,
-            });
+            lanes.push(
+                match self.take_cached_graph_with_key(first_miss_batch, &first_miss.input_key)? {
+                    Some(cached) => cached,
+                    None => self.backend.record_cuda_graph_borrowed(
+                        &self.program,
+                        first_miss_batch,
+                        config,
+                    )?,
+                },
+            );
         }
 
         for (chunk_index, chunk) in miss_entries.chunks(lane_count).enumerate() {
@@ -1093,11 +1103,6 @@ impl CudaCompiledPipeline {
     ) -> Result<(), BackendError> {
         self.return_cached_graph_lanes(lanes)?;
         Err(error)
-    }
-
-    fn take_cached_graph(&self, inputs: &[&[u8]]) -> Result<Option<CachedCudaGraph>, BackendError> {
-        let input_key = materialized_input_key(inputs)?;
-        self.take_cached_graph_with_key(inputs, &input_key)
     }
 
     fn take_cached_graph_with_key(

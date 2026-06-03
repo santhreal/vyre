@@ -288,8 +288,25 @@ fn compiled_cuda_graph_batched_replay_uses_checked_batch_lane_and_output_slots()
             && source.contains("graph: graphs.swap_remove(index)")
             && source.contains("materialized_output_cache_matches_with_input_state(inputs, &input_state)")
             && source.contains("fn remember_materialized_output_cache_with_key")
+            && !source.contains("fn take_cached_graph(")
             && !source.contains("fn remember_materialized_output_cache("),
         "Fix: compiled CUDA graph single replay helpers must consume precomputed input keys and carry validated replay input state out of graph-cache selection instead of recomputing it."
+    );
+    let batched_replay = source
+        .split("fn dispatch_borrowed_batched_via_cuda_graph_lanes")
+        .nth(1)
+        .expect("Fix: batched compiled-pipeline graph replay must remain present.")
+        .split("fn materialized_output_batch_cache_partition_into")
+        .next()
+        .expect("Fix: batched compiled-pipeline graph replay must precede materialized cache partition.");
+    assert!(
+        batched_replay.contains("let first_miss")
+            && batched_replay.contains("miss_entries")
+            && batched_replay.contains("take_cached_graph_with_key(")
+            && batched_replay.contains("first_miss_batch")
+            && batched_replay.contains("&first_miss.input_key")
+            && !batched_replay.contains("take_cached_graph(first_miss_batch)"),
+        "Fix: batched CUDA graph lane seeding must reuse the partitioned miss input key for graph-cache selection instead of hashing the first miss again."
     );
     let finish_helper = source
         .split("fn finish_cuda_graph_indexed_lane_replays")
