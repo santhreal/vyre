@@ -222,6 +222,7 @@ pub(crate) fn check_before_after_benchmark_report(
             requirement.id, selected_backend
         ));
     }
+    check_case_backend_matches_selected_backend(requirement, suffix, &report, failures);
     let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) else {
         failures.push(format!(
             "requirement `{}` benchmark `{suffix}` has no cases array",
@@ -558,6 +559,63 @@ mod part4_tests {
                 "requirement `optimization-integration` benchmark `alias-aware-before-after.json` reports 1 blocker(s)"
             )),
             "Fix: before/after benchmark release gate must reject explicit benchmark blockers; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn before_after_benchmark_report_rejects_duplicate_case_identity() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for duplicate before/after case gate test.");
+        std::fs::write(
+            dir.path().join("alias-aware-before-after.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "summary": {"total_cases": 2, "passed": 2, "failed": 0},
+                "cases": [
+                    {
+                        "id": "lower.alias_aware_optimizations",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 1, "p95": 2, "p99": 3},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2, "p95": 3, "p99": 4}
+                        }
+                    },
+                    {
+                        "id": "lower.alias_aware_optimizations",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 1, "p95": 2, "p99": 3},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2, "p95": 3, "p99": 4}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize duplicate before/after case evidence."),
+        )
+        .expect("Fix: write duplicate before/after case evidence.");
+        let requirement = Requirement {
+            id: "optimization-integration".to_string(),
+            title: "optimization integration".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["alias-aware-before-after.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_before_after_benchmark_report(
+            &requirement,
+            dir.path(),
+            "alias-aware-before-after.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "requirement `optimization-integration` benchmark `alias-aware-before-after.json` has 2 cases with id `lower.alias_aware_optimizations`"
+            )),
+            "Fix: before/after benchmark gate must reject duplicate case ids before duplicate rows can prove optimization coverage; failures={failures:?}"
         );
     }
 }
