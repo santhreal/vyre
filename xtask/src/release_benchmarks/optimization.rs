@@ -203,6 +203,77 @@ mod tests {
             "Fix: valid CUDA suite artifacts should generate clean release-axis evidence; axes={axes:?}"
         );
     }
+
+    #[test]
+    fn release_axes_records_stale_source_provenance_blockers() {
+        let dir = TempDir::new()
+            .expect("Fix: create temp workspace for release axes provenance blocker test.");
+        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let mut suite_artifacts = Vec::new();
+        for index in 1..=12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            fs::write(
+                dir.path().join(&artifact),
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "source_fingerprint": "git:abc123:dirty=true",
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "environment": {
+                        "gpu_devices": [{"memory_total_mib": 24576}]
+                    },
+                    "cases": [
+                        {
+                            "id": format!("release.axis.provenance.{index}"),
+                            "backend_id": "cuda",
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"p50": 10 + index},
+                                "cold_compile_ns": {"p50": 1000 + index},
+                                "wall_gb_s_x1000": {"p50": 2000 + index}
+                            }
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize stale provenance release axis fixture."),
+            )
+            .expect("Fix: write stale provenance release axis fixture.");
+            suite_artifacts.push(artifact);
+        }
+        fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "artifacts": suite_artifacts
+            }))
+            .expect("Fix: serialize stale provenance CUDA release suite fixture."),
+        )
+        .expect("Fix: write stale provenance CUDA release suite fixture.");
+
+        write_release_axes(dir.path());
+
+        let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
+            .expect("Fix: read generated release axes evidence.");
+        let axes = serde_json::from_str::<Value>(&axes_text)
+            .expect("Fix: generated release axes evidence must be JSON.");
+        let blockers = axes
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated release axes evidence must include blockers.");
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.as_str().is_some_and(
+                |blocker| blocker.contains(
+                    "source_artifact `release/evidence/benchmarks/workload-01.json` source_fingerprint `git:abc123:dirty=true` is dirty but has no worktree digest"
+                )
+            )),
+            "Fix: write_release_axes must record source provenance blockers in bench-release-axes instead of leaving them only to the CLI/gate; blockers={blockers:?}"
+        );
+    }
 }
 
 pub(super) fn inspect_optimization_benchmark_artifact(
