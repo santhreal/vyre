@@ -604,33 +604,42 @@ fn release_matrix_commands_match_bench_target_case_ids() {
     let registry = vyre_bench::registry::collect_all();
     let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);
 
-    for (target_id, family_id) in [
-        ("release.workload.ifds_witness", "ifds-witness"),
-        ("release.workload.c_ast_traversal", "c-ast-traversal"),
-        (
-            "release.workload.megakernel_stream",
-            "megakernel-queued-batches",
-        ),
-    ] {
-        let Some(target) = target_rows
-            .iter()
-            .find(|target| target.get("id").and_then(toml::Value::as_str) == Some(target_id))
-        else {
-            panic!("Fix: BENCH_TARGETS.toml is missing target `{target_id}`.");
-        };
-        let Some(bench_case_id) = target.get("bench_case_id").and_then(toml::Value::as_str) else {
-            continue;
-        };
-        let family = matrix
-            .families
-            .iter()
-            .find(|family| family.id == family_id)
-            .unwrap_or_else(|| panic!("Fix: release matrix missing family `{family_id}`."));
+    for family in matrix
+        .families
+        .iter()
+        .filter(|family| family.benchmark_command.is_some())
+    {
         let command = family.benchmark_command.as_deref().unwrap_or("");
-        assert!(
-            command.contains(&format!("--case {bench_case_id} ")),
-            "Fix: BENCH_TARGETS target `{target_id}` bench_case_id `{bench_case_id}` must match release matrix command `{command}`."
-        );
+        for target_id in &family.bench_target_ids {
+            let Some(target) = target_rows
+                .iter()
+                .find(|target| target.get("id").and_then(toml::Value::as_str) == Some(*target_id))
+            else {
+                panic!(
+                    "Fix: BENCH_TARGETS.toml is missing target `{target_id}` for release matrix family `{}`.",
+                    family.id
+                );
+            };
+            assert_eq!(
+                target.get("suite").and_then(toml::Value::as_str),
+                Some("release-workload"),
+                "Fix: BENCH_TARGETS target `{target_id}` for family `{}` must be suite=release-workload.",
+                family.id
+            );
+            let bench_case_id = target
+                .get("bench_case_id")
+                .and_then(toml::Value::as_str)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Fix: BENCH_TARGETS target `{target_id}` for family `{}` must declare bench_case_id.",
+                        family.id
+                    )
+                });
+            assert!(
+                command.contains(&format!("--case {bench_case_id} ")),
+                "Fix: BENCH_TARGETS target `{target_id}` bench_case_id `{bench_case_id}` must match release matrix command `{command}`."
+            );
+        }
     }
 }
 

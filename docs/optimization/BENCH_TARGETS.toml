@@ -45,6 +45,7 @@ notes = "Primary target is launch amortization and queue throughput, not CPU com
 
 [[target]]
 id = "release.workload.condition_eval"
+bench_case_id = "release.condition_eval.1m"
 primitive = "bytecode-compatible conditional evaluation"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -56,6 +57,7 @@ notes = "Core Vyre proof: conventional CPU rule condition evaluation must be bea
 
 [[target]]
 id = "release.workload.string_bitmap_scatter"
+bench_case_id = "release.string_bitmap_scatter.1m"
 primitive = "pattern-match bitmap scatter"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -89,6 +91,7 @@ notes = "Tracks resident count-only irregular literal scan with byte, suffix2, a
 
 [[target]]
 id = "release.workload.offset_count_aggregation"
+bench_case_id = "release.offset_count_aggregation.1m"
 primitive = "count/offset/length aggregation"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -100,6 +103,7 @@ notes = "Must prove string metadata operators do not force CPU-side post-process
 
 [[target]]
 id = "release.workload.pe_metadata"
+bench_case_id = "metadata.condition.filesize_header.1m"
 primitive = "PE metadata condition evaluation"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -111,6 +115,7 @@ notes = "Metadata predicates must remain GPU-resident after the parse/extract st
 
 [[target]]
 id = "release.workload.entropy_window"
+bench_case_id = "release.entropy_window.1m"
 primitive = "rolling entropy/window predicates"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -122,6 +127,7 @@ notes = "Conventional CPU-heavy byte statistics workload."
 
 [[target]]
 id = "release.workload.for_any_all_n"
+bench_case_id = "release.quantified_condition_loops.1m"
 primitive = "bounded quantified condition loops"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -133,6 +139,7 @@ notes = "Captures divergence and predication quality for FOR-ANY, FOR-ALL, and F
 
 [[target]]
 id = "release.workload.quantized_linear"
+bench_case_id = "nn.linear_4bit_affine_grouped.1m"
 primitive = "fused grouped INT4 linear inference"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -144,6 +151,7 @@ notes = "Measures packed 4-bit weights with per-group scale/zero-point applied i
 
 [[target]]
 id = "release.workload.alias_reaching_def"
+bench_case_id = "release.alias_reaching_def.1m"
 primitive = "alias-aware reaching-definition optimization"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -167,6 +175,7 @@ notes = "Consumer release workload for IFDS proof extraction."
 
 [[target]]
 id = "release.workload.callgraph_reachability"
+bench_case_id = "callgraph.reachability.step.262k"
 primitive = "callgraph reachability CSR traversal"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -202,6 +211,7 @@ notes = "Tracks resident ping-pong queue waves for sparse reachability over skew
 
 [[target]]
 id = "release.workload.c_ast_traversal"
+bench_case_id = "release.c_ast_traversal.1m"
 primitive = "C AST traversal and motif predicates"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -213,6 +223,7 @@ notes = "Parser may remain incomplete, but parsed AST buffers must feed a measur
 
 [[target]]
 id = "release.workload.megakernel_stream"
+bench_case_id = "release.megakernel_queue.1m"
 primitive = "persistent megakernel queued condition batches"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -224,6 +235,7 @@ notes = "Primary release-speed differentiator: amortized dispatch under repeated
 
 [[target]]
 id = "release.workload.egraph_saturation"
+bench_case_id = "release.egraph_saturation.1m"
 primitive = "optimization rewrite saturation"
 suite = "release-workload"
 backend_focus = "all"
@@ -235,6 +247,7 @@ notes = "Tracks whether optimization infrastructure scales beyond hand-written r
 
 [[target]]
 id = "release.workload.conformance_sparse_readback"
+bench_case_id = "sparse.compaction.count.1m"
 primitive = "sparse fired-rule readback"
 suite = "release-workload"
 backend_focus = "cuda"
@@ -243,6 +256,30 @@ min_speedup_over_cpu_sota = 100.0
 cpu_baseline = "optimized CPU fired-rule collection over predicate masks"
 gpu_competitor = "wgpu_vyre_sparse_readback"
 notes = "Readback must stay sparse; dense host transfers are release blockers."
+
+[[target]]
+id = "release.workload.compound_fused_filter"
+bench_case_id = "compound.pipeline.fused_filter.1m"
+primitive = "compound resident literal/dataflow/score filtering"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "items_per_second_p50"
+min_speedup_over_cpu_sota = 10.0
+cpu_baseline = "Rayon-parallel staged CPU filter with equivalent predicates"
+gpu_competitor = "none_recorded"
+notes = "Compound resident filtering must keep literal, dataflow, score, and taint predicates fused in one GPU pass."
+
+[[target]]
+id = "release.workload.adaptive_routing"
+bench_case_id = "runtime.adaptive_routing.gpu_resident.1m"
+primitive = "GPU-resident adaptive workload routing"
+suite = "release-workload"
+backend_focus = "cuda"
+metric = "items_per_second_p50"
+min_speedup_over_cpu_sota = 10.0
+cpu_baseline = "Rayon-parallel CPU scheduler over equivalent routing predicates"
+gpu_competitor = "none_recorded"
+notes = "Adaptive routing must classify resident work items without CPU orchestration."
 
 [[target]]
 id = "release.optimization.lower_rewrite_impact"
