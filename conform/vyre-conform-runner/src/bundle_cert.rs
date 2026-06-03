@@ -835,6 +835,22 @@ mod tests {
     }
 
     #[test]
+    fn bundle_backend_verifier_accepts_logical_witness_order_after_output_buffer() {
+        let program = output_first_copy_program();
+        let corpus = vec![CorpusWitness {
+            name: "backend-logical-input-only".into(),
+            inputs: vec![bytes_u32(&[0xFEED_FACE])],
+        }];
+        let cert = issue_bundle_cert(&program, &corpus, "t", "s", "p")
+            .expect("Fix: bundle issue must certify planned logical witness inputs.");
+        let backend = vyre_driver_reference::CpuRefBackend;
+
+        verify_bundle_with_backend(&cert, &program, &backend, &corpus).expect(
+            "Fix: bundle backend verification must dispatch the planned logical witness stream.",
+        );
+    }
+
+    #[test]
     fn bundle_cert_rejects_omitted_runtime_sized_read_write_witness() {
         let program = Program::wrapped(
             vec![BufferDecl::storage(
