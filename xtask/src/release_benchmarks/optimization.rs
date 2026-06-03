@@ -84,6 +84,8 @@ mod tests {
         let benchmark_dir = dir.path().join("release/evidence/benchmarks");
         fs::create_dir_all(&benchmark_dir)
             .expect("Fix: create temporary benchmark evidence directory.");
+        let git = vyre_bench::probes::capture_git_info_at(dir.path());
+        let source_fingerprint = vyre_bench::probes::source_fingerprint(&git);
         let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
         let mut suite_artifacts = Vec::new();
         for index in 1..=12 {
@@ -93,6 +95,7 @@ mod tests {
                 &artifact_path,
                 serde_json::to_string_pretty(&serde_json::json!({
                     "selected_backend": "cuda",
+                    "source_fingerprint": &source_fingerprint,
                     "source_tree_fingerprint": &source_tree_fingerprint,
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                     "environment": {
@@ -284,6 +287,8 @@ mod tests {
         let benchmark_dir = dir.path().join("release/evidence/benchmarks");
         fs::create_dir_all(&benchmark_dir)
             .expect("Fix: create temporary benchmark evidence directory.");
+        let git = vyre_bench::probes::capture_git_info_at(dir.path());
+        let source_fingerprint = vyre_bench::probes::source_fingerprint(&git);
         let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
         let mut suite_artifacts = Vec::new();
         for index in 1..=12 {
@@ -292,6 +297,7 @@ mod tests {
                 dir.path().join(&artifact),
                 serde_json::to_string_pretty(&serde_json::json!({
                     "selected_backend": "cuda",
+                    "source_fingerprint": &source_fingerprint,
                     "source_tree_fingerprint": &source_tree_fingerprint,
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                     "environment": {

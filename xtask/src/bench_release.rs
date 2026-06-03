@@ -215,6 +215,8 @@ mod tests {
             .expect("Fix: write temporary workspace manifest.");
         fs::create_dir_all(benchmark_dir)
             .expect("Fix: create temporary benchmark evidence directory.");
+        let git = vyre_bench::probes::capture_git_info_at(workspace_root);
+        let source_fingerprint = vyre_bench::probes::source_fingerprint(&git);
         let source_tree_fingerprint =
             vyre_bench::probes::source_tree_fingerprint_at(workspace_root);
         let mut artifacts = Vec::new();
@@ -229,6 +231,7 @@ mod tests {
                 workspace_root.join(&artifact),
                 serde_json::to_string_pretty(&serde_json::json!({
                     "selected_backend": selected_backend,
+                    "source_fingerprint": &source_fingerprint,
                     "source_tree_fingerprint": &source_tree_fingerprint,
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                     "cases": [

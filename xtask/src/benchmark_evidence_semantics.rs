@@ -556,41 +556,65 @@ fn inspect_release_axis_source_artifact_provenance(
     report: &Value,
     issues: &mut Vec<String>,
 ) {
-    let Some((field, source_fingerprint)) = report_freshness_fingerprint(report) else {
+    let source_fingerprint = report.get("source_fingerprint").and_then(non_empty_str);
+    let source_tree_fingerprint = report
+        .get("source_tree_fingerprint")
+        .and_then(non_empty_str);
+    let Some(source_fingerprint) = source_fingerprint else {
         issues.push(format!(
-            "source_artifact `{artifact}` has no source_fingerprint or source_tree_fingerprint"
+            "source_artifact `{artifact}` has no source_fingerprint"
         ));
-        return;
+        return inspect_release_axis_source_artifact_freshness(
+            artifact,
+            artifact_path,
+            report,
+            issues,
+        );
     };
-    if field == "source_fingerprint" {
-        for issue in source_fingerprint_issues(source_fingerprint) {
-            match issue {
-                SourceFingerprintIssue::DirtyUnknownState { source_fingerprint } => {
-                    issues.push(format!(
-                        "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` has unknown dirty state"
-                    ));
-                }
-                SourceFingerprintIssue::DirtyMissingWorktree { source_fingerprint } => {
-                    issues.push(format!(
-                        "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` is dirty but has no worktree digest"
-                    ));
-                }
-                SourceFingerprintIssue::DirtyUnknownWorktree { source_fingerprint } => {
-                    issues.push(format!(
-                        "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` is dirty but has unknown worktree digest"
-                    ));
-                }
-                SourceFingerprintIssue::DirtyInvalidWorktree {
-                    source_fingerprint,
-                    worktree,
-                } => {
-                    issues.push(format!(
-                        "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`"
-                    ));
-                }
+    for issue in source_fingerprint_issues(source_fingerprint) {
+        match issue {
+            SourceFingerprintIssue::DirtyUnknownState { source_fingerprint } => {
+                issues.push(format!(
+                    "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` has unknown dirty state"
+                ));
+            }
+            SourceFingerprintIssue::DirtyMissingWorktree { source_fingerprint } => {
+                issues.push(format!(
+                    "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` is dirty but has no worktree digest"
+                ));
+            }
+            SourceFingerprintIssue::DirtyUnknownWorktree { source_fingerprint } => {
+                issues.push(format!(
+                    "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` is dirty but has unknown worktree digest"
+                ));
+            }
+            SourceFingerprintIssue::DirtyInvalidWorktree {
+                source_fingerprint,
+                worktree,
+            } => {
+                issues.push(format!(
+                    "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`"
+                ));
             }
         }
     }
+    if source_tree_fingerprint.is_none() {
+        issues.push(format!(
+            "source_artifact `{artifact}` has no source_tree_fingerprint"
+        ));
+    }
+    inspect_release_axis_source_artifact_freshness(artifact, artifact_path, report, issues);
+}
+
+fn inspect_release_axis_source_artifact_freshness(
+    artifact: &str,
+    artifact_path: &Path,
+    report: &Value,
+    issues: &mut Vec<String>,
+) {
+    let Some((field, source_fingerprint)) = report_freshness_fingerprint(report) else {
+        return;
+    };
     let Some(current_source_fingerprint) =
         current_freshness_fingerprint_for_report(artifact_path, report)
     else {
@@ -2232,6 +2256,12 @@ fn is_blake3_hex_digest(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
+
+    fn current_test_source_fingerprint(workspace_root: &Path) -> String {
+        let git = vyre_bench::probes::capture_git_info_at(workspace_root);
+        vyre_bench::probes::source_fingerprint(&git)
+    }
 
     #[test]
     fn failed_case_summary_rejects_pass_status_with_invalid_correctness() {
@@ -2520,9 +2550,21 @@ mod tests {
         );
         assert!(
             issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/workload-stale.json` has no source_fingerprint"
+            )),
+            "Fix: release-axis source artifacts must preserve explicit source_fingerprint provenance; issues={issues:?}"
+        );
+        assert!(
+            issues.iter().any(|issue| issue.contains(
                 "source_artifact `release/evidence/benchmarks/workload-weak.json` source_fingerprint `git:abc123:dirty=true` is dirty but has no worktree digest"
             )),
             "Fix: release-axis source artifacts must reject legacy dirty source fingerprints; issues={issues:?}"
+        );
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/workload-weak.json` has no source_tree_fingerprint"
+            )),
+            "Fix: release-axis source artifacts must preserve source_tree_fingerprint provenance; issues={issues:?}"
         );
     }
 
@@ -2535,12 +2577,14 @@ mod tests {
         let benchmark_dir = dir.path().join("release/evidence/benchmarks");
         std::fs::create_dir_all(&benchmark_dir)
             .expect("Fix: create temp benchmark evidence directory.");
+        let source_fingerprint = current_test_source_fingerprint(dir.path());
         let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
         let artifact = "release/evidence/benchmarks/workload-backend-drift.json";
         std::fs::write(
             dir.path().join(artifact),
             serde_json::to_string_pretty(&serde_json::json!({
                 "selected_backend": "cuda",
+                "source_fingerprint": source_fingerprint,
                 "source_tree_fingerprint": source_tree_fingerprint,
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
@@ -2581,12 +2625,14 @@ mod tests {
         let benchmark_dir = dir.path().join("release/evidence/benchmarks");
         std::fs::create_dir_all(&benchmark_dir)
             .expect("Fix: create temp benchmark evidence directory.");
+        let source_fingerprint = current_test_source_fingerprint(dir.path());
         let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
         let artifact = "release/evidence/benchmarks/workload-missing-axis-metrics.json";
         std::fs::write(
             dir.path().join(artifact),
             serde_json::to_string_pretty(&serde_json::json!({
                 "selected_backend": "cuda",
+                "source_fingerprint": source_fingerprint,
                 "source_tree_fingerprint": source_tree_fingerprint,
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
@@ -2642,6 +2688,7 @@ mod tests {
         let benchmark_dir = dir.path().join("release/evidence/benchmarks");
         std::fs::create_dir_all(&benchmark_dir)
             .expect("Fix: create temp benchmark evidence directory.");
+        let source_fingerprint = current_test_source_fingerprint(dir.path());
         let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
         let mut artifacts = Vec::new();
         for index in 1..=12 {
@@ -2650,6 +2697,7 @@ mod tests {
                 dir.path().join(&artifact),
                 serde_json::to_string_pretty(&serde_json::json!({
                     "selected_backend": "cuda",
+                    "source_fingerprint": &source_fingerprint,
                     "source_tree_fingerprint": &source_tree_fingerprint,
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                     "environment": {
