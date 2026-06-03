@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::benchmark_evidence_semantics::benchmark_source_artifact_count;
+use crate::benchmark_evidence_semantics::benchmark_source_artifact_paths;
 
 use super::super::checks::*;
 use super::super::types::Requirement;
@@ -48,16 +48,37 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     if let Some(axes) =
         first_json_evidence(requirement, base_dir, "bench-release-axes.json", failures)
     {
-        check_release_axes_source_artifacts(&axes, failures);
+        check_release_axes_source_artifacts(base_dir, &axes, failures);
     }
 }
 
-fn check_release_axes_source_artifacts(axes: &serde_json::Value, failures: &mut Vec<String>) {
-    let source_artifacts = benchmark_source_artifact_count(axes);
+fn check_release_axes_source_artifacts(
+    base_dir: &Path,
+    axes: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    let source_artifact_paths = benchmark_source_artifact_paths(axes);
+    let source_artifacts = source_artifact_paths.len();
     if source_artifacts < 12 {
         failures.push(format!(
             "requirement `cuda-first-path` bench-release-axes has {source_artifacts} source artifact(s), needs at least 12"
         ));
+    }
+    for artifact in source_artifact_paths {
+        let path = {
+            let candidate = std::path::PathBuf::from(&artifact);
+            if candidate.is_absolute() {
+                candidate
+            } else {
+                base_dir.join(&candidate)
+            }
+        };
+        if !path.is_file() {
+            failures.push(format!(
+                "requirement `cuda-first-path` bench-release-axes source artifact `{artifact}` is not a readable file at {}",
+                path.display()
+            ));
+        }
     }
 }
 
@@ -77,13 +98,43 @@ mod tests {
         });
         let mut failures = Vec::new();
 
-        check_release_axes_source_artifacts(&axes, &mut failures);
+        check_release_axes_source_artifacts(Path::new("."), &axes, &mut failures);
 
         assert!(
             failures.iter().any(|failure| failure.contains(
                 "bench-release-axes has 1 source artifact(s), needs at least 12"
             )),
             "Fix: CUDA-first release axes must not count blank/non-string source_artifacts as evidence; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn cuda_first_axes_rejects_missing_source_artifact_files() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for source artifact existence test.");
+        std::fs::create_dir_all(dir.path().join("release/evidence/benchmarks"))
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let mut source_artifacts = Vec::new();
+        for index in 0..12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            if index != 11 {
+                std::fs::write(dir.path().join(&artifact), "{}")
+                    .expect("Fix: write temporary source artifact.");
+            }
+            source_artifacts.push(artifact);
+        }
+        let axes = serde_json::json!({
+            "source_artifacts": source_artifacts
+        });
+        let mut failures = Vec::new();
+
+        check_release_axes_source_artifacts(dir.path(), &axes, &mut failures);
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "bench-release-axes source artifact `release/evidence/benchmarks/workload-11.json` is not a readable file"
+            )),
+            "Fix: CUDA-first release axes must reject source_artifacts that do not resolve to files; failures={failures:?}"
         );
     }
 }

@@ -415,15 +415,42 @@ fn inspect_docs_matrix_semantics(
 
 fn inspect_release_axes_semantics(
     evidence: &str,
+    path: &Path,
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    let source_artifacts =
-        crate::benchmark_evidence_semantics::benchmark_source_artifact_count(value);
+    let source_artifact_paths =
+        crate::benchmark_evidence_semantics::benchmark_source_artifact_paths(value);
+    let source_artifacts = source_artifact_paths.len();
     if source_artifacts < 12 {
         blockers.push(format!(
             "{evidence}: source_artifacts has {source_artifacts} entrie(s), needs at least 12"
         ));
+    }
+    match release_evidence_workspace_root(path) {
+        Some(workspace_root) => {
+            for artifact in source_artifact_paths {
+                let artifact_path = {
+                    let candidate = PathBuf::from(&artifact);
+                    if candidate.is_absolute() {
+                        candidate
+                    } else {
+                        workspace_root.join(candidate)
+                    }
+                };
+                if !artifact_path.is_file() {
+                    blockers.push(format!(
+                        "{evidence}: source_artifact `{artifact}` is not a readable file at {}",
+                        artifact_path.display()
+                    ));
+                }
+            }
+        }
+        None if source_artifacts != 0 => blockers.push(format!(
+            "{evidence}: could not resolve workspace root for source_artifacts from {}",
+            path.display()
+        )),
+        None => {}
     }
     for field in [
         "warm_us_per_file",
@@ -438,12 +465,33 @@ fn inspect_release_axes_semantics(
     }
 }
 
+fn release_evidence_workspace_root(path: &Path) -> Option<&Path> {
+    path.ancestors().find(|candidate| {
+        candidate.join("Cargo.toml").is_file() && candidate.join("release").is_dir()
+    })
+}
+
 #[cfg(test)]
 mod part8_tests {
     use super::*;
 
     #[test]
     fn completion_audit_release_axes_counts_only_usable_source_artifacts() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for release axes audit test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        std::fs::create_dir_all(dir.path().join("release/evidence/benchmarks"))
+            .expect("Fix: create temporary release evidence directory.");
+        std::fs::write(
+            dir.path()
+                .join("release/evidence/benchmarks/workload-01-condition-eval.json"),
+            "{}",
+        )
+        .expect("Fix: write temporary release source artifact.");
+        let path = dir
+            .path()
+            .join("release/evidence/benchmarks/bench-release-axes.json");
         let axes = serde_json::json!({
             "source_artifacts": [
                 "",
@@ -461,6 +509,7 @@ mod part8_tests {
 
         inspect_release_axes_semantics(
             "release/evidence/benchmarks/bench-release-axes.json",
+            &path,
             &axes,
             &mut blockers,
         );
@@ -470,6 +519,51 @@ mod part8_tests {
                 "bench-release-axes.json: source_artifacts has 1 entrie(s), needs at least 12"
             )),
             "Fix: completion audit must not count blank/non-string source_artifacts as release axes proof; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_release_axes_rejects_missing_source_artifact_files() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for release axes artifact test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        std::fs::create_dir_all(dir.path().join("release/evidence/benchmarks"))
+            .expect("Fix: create temporary release evidence directory.");
+        let mut source_artifacts = Vec::new();
+        for index in 0..12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            if index != 11 {
+                std::fs::write(dir.path().join(&artifact), "{}")
+                    .expect("Fix: write temporary release source artifact.");
+            }
+            source_artifacts.push(artifact);
+        }
+        let path = dir
+            .path()
+            .join("release/evidence/benchmarks/bench-release-axes.json");
+        let axes = serde_json::json!({
+            "source_artifacts": source_artifacts,
+            "warm_us_per_file": 1,
+            "cold_pipeline_build_ms": 1,
+            "gbs_scan_throughput": 1,
+            "ulp_drift_max": 0,
+            "max_vram_mib": 1
+        });
+        let mut blockers = Vec::new();
+
+        inspect_release_axes_semantics(
+            "release/evidence/benchmarks/bench-release-axes.json",
+            &path,
+            &axes,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "bench-release-axes.json: source_artifact `release/evidence/benchmarks/workload-11.json` is not a readable file"
+            )),
+            "Fix: completion audit must reject release axes source_artifacts that do not resolve to files; blockers={blockers:?}"
         );
     }
 }

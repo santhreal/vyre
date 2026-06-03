@@ -198,7 +198,7 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
         inspect_docs_matrix_semantics(evidence, &value, blockers);
     }
     if evidence.ends_with("bench-release-axes.json") {
-        inspect_release_axes_semantics(evidence, &value, blockers);
+        inspect_release_axes_semantics(evidence, path, &value, blockers);
     }
     if evidence.ends_with("cuda-release-suite.json")
         || evidence.ends_with("wgpu-fallback-suite.json")

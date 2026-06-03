@@ -72,15 +72,19 @@ pub(crate) fn benchmark_report_has_source_provenance(report: &Value) -> bool {
 }
 
 pub(crate) fn benchmark_source_artifact_count(report: &Value) -> usize {
+    benchmark_source_artifact_paths(report).len()
+}
+
+pub(crate) fn benchmark_source_artifact_paths(report: &Value) -> BTreeSet<String> {
     report
         .get("source_artifacts")
         .and_then(Value::as_array)
-        .map_or(0, |items| {
+        .map_or_else(BTreeSet::new, |items| {
             items
                 .iter()
                 .filter_map(non_empty_str)
+                .map(str::to_string)
                 .collect::<BTreeSet<_>>()
-                .len()
         })
 }
 
@@ -1727,6 +1731,14 @@ mod tests {
             benchmark_source_artifact_count(&report),
             2,
             "Fix: source_artifact counts must count only unique usable non-empty string entries."
+        );
+        assert_eq!(
+            benchmark_source_artifact_paths(&report),
+            BTreeSet::from([
+                "release/evidence/benchmarks/cuda-a.json".to_string(),
+                "release/evidence/benchmarks/cuda-b.json".to_string(),
+            ]),
+            "Fix: source_artifact path extraction must expose the same unique usable paths used by release gates."
         );
     }
 
