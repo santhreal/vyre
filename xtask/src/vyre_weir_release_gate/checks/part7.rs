@@ -153,6 +153,13 @@ pub(crate) fn check_backend_suite_report(
                     ));
                 }
             }
+            check_backend_suite_status_source_fingerprint_shape(
+                requirement,
+                suffix,
+                path,
+                status,
+                failures,
+            );
             if let (Some((field, source_fingerprint)), Some(current_source_fingerprint)) = (
                 report_freshness_fingerprint(status),
                 current_freshness_fingerprint_for_report(base_dir, status),
@@ -489,6 +496,28 @@ pub(crate) fn check_backend_suite_report(
     }
 }
 
+fn check_backend_suite_status_source_fingerprint_shape(
+    requirement: &Requirement,
+    suffix: &str,
+    path: &str,
+    status: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    let Some(source_fingerprint) = status
+        .get("source_fingerprint")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+    else {
+        return;
+    };
+    check_source_fingerprint_shape(
+        requirement,
+        &format!("backend suite {suffix} status for {path}"),
+        source_fingerprint,
+        failures,
+    );
+}
+
 fn report_status_for_path<'a>(
     suite_report: &'a serde_json::Value,
     artifact: &str,
@@ -576,6 +605,42 @@ fn check_backend_suite_artifact_status(
                 requirement.id
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod part7_tests {
+    use super::*;
+
+    #[test]
+    fn backend_suite_status_rejects_dirty_fingerprint_without_worktree_digest() {
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "WGPU fallback".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+            "source_fingerprint": "git:abc123:dirty=true"
+        });
+        let mut failures = Vec::new();
+
+        check_backend_suite_status_source_fingerprint_shape(
+            &requirement,
+            "wgpu-fallback-suite.json",
+            "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+            &status,
+            &mut failures,
+        );
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("is dirty but has no worktree digest")),
+            "Fix: backend suite status rows must carry precise dirty-worktree provenance; failures={failures:?}"
+        );
     }
 }
 

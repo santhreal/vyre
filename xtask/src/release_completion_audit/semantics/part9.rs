@@ -134,6 +134,7 @@ fn inspect_backend_suite_semantics(
                 ));
             }
         }
+        inspect_backend_suite_status_source_fingerprint(evidence, path, status, blockers);
         if status
             .get("case_count")
             .and_then(serde_json::Value::as_u64)
@@ -304,6 +305,46 @@ fn inspect_backend_suite_semantics(
     inspect_backend_suite_status_artifact_consistency(evidence, path, value, blockers);
     if evidence.ends_with("wgpu-fallback-suite.json") {
         inspect_wgpu_cuda_suite_parity(evidence, path, value, blockers);
+    }
+}
+
+fn inspect_backend_suite_status_source_fingerprint(
+    evidence: &str,
+    path: &str,
+    status: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let Some(source_fingerprint) = status
+        .get("source_fingerprint")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+    else {
+        return;
+    };
+    for issue in source_fingerprint_issues(source_fingerprint) {
+        match issue {
+            SourceFingerprintIssue::DirtyUnknownState { source_fingerprint } => blockers.push(
+                format!(
+                    "{evidence}: suite artifact `{path}` status source_fingerprint `{source_fingerprint}` has dirty=unknown; rerun with git status provenance available"
+                ),
+            ),
+            SourceFingerprintIssue::DirtyMissingWorktree { source_fingerprint } => blockers.push(
+                format!(
+                    "{evidence}: suite artifact `{path}` status source_fingerprint `{source_fingerprint}` is dirty but has no worktree digest"
+                ),
+            ),
+            SourceFingerprintIssue::DirtyUnknownWorktree { source_fingerprint } => blockers.push(
+                format!(
+                    "{evidence}: suite artifact `{path}` status source_fingerprint `{source_fingerprint}` has an unknown worktree digest"
+                ),
+            ),
+            SourceFingerprintIssue::DirtyInvalidWorktree {
+                source_fingerprint,
+                worktree,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` status source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`; expected 64 hex chars"
+            )),
+        }
     }
 }
 
@@ -554,6 +595,33 @@ fn inspect_suite_artifact_source_fingerprint_freshness(
                 "{evidence}: suite artifact `{artifact}` {field} `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`"
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod part9_tests {
+    use super::*;
+
+    #[test]
+    fn completion_audit_rejects_suite_status_dirty_fingerprint_without_worktree_digest() {
+        let status = serde_json::json!({
+            "source_fingerprint": "git:abc123:dirty=true"
+        });
+        let mut blockers = Vec::new();
+
+        inspect_backend_suite_status_source_fingerprint(
+            "evidence/benchmarks/wgpu-fallback-suite.json",
+            "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+            &status,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers
+                .iter()
+                .any(|blocker| blocker.contains("is dirty but has no worktree digest")),
+            "Fix: completion audit must reject weak dirty provenance in backend suite status rows; blockers={blockers:?}"
+        );
     }
 }
 
