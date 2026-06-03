@@ -222,7 +222,7 @@ pub(crate) fn check_before_after_benchmark_report(
             requirement.id, selected_backend
         ));
     }
-    check_case_backend_matches_selected_backend(requirement, suffix, &report, failures);
+    check_benchmark_reproducibility_provenance(requirement, suffix, base_dir, &report, failures);
     let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) else {
         failures.push(format!(
             "requirement `{}` benchmark `{suffix}` has no cases array",
@@ -616,6 +616,71 @@ mod part4_tests {
                 "requirement `optimization-integration` benchmark `alias-aware-before-after.json` has 2 cases with id `lower.alias_aware_optimizations`"
             )),
             "Fix: before/after benchmark gate must reject duplicate case ids before duplicate rows can prove optimization coverage; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn before_after_benchmark_report_rejects_missing_source_provenance() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for before/after provenance gate test.");
+        std::fs::write(
+            dir.path().join("alias-aware-before-after.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "environment": {"host_cpu_model": "test cpu"},
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0, "cache_hit_rate": null},
+                "cases": [
+                    {
+                        "id": "lower.alias_aware_optimizations",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "dataset_fingerprint": "sha256:alias-aware-corpus",
+                        "correctness": {"oracle": "before-after-equivalence"},
+                        "optimization_passes": ["alias-aware-optimizations"],
+                        "contract": {
+                            "baselines": [
+                                {
+                                    "class": "CpuSota",
+                                    "backend_ids": ["cuda"],
+                                    "min_speedup_x": 1.01
+                                }
+                            ]
+                        },
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 1, "p95": 2, "p99": 3},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2, "p95": 3, "p99": 4},
+                            "host_to_device_bytes": 128,
+                            "device_to_host_bytes": 128,
+                            "kernel_launches": 1
+                        },
+                        "performance": {"contract_passed": true}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize missing before/after provenance evidence."),
+        )
+        .expect("Fix: write missing before/after provenance evidence.");
+        let requirement = Requirement {
+            id: "optimization-integration".to_string(),
+            title: "optimization integration".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["alias-aware-before-after.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_before_after_benchmark_report(
+            &requirement,
+            dir.path(),
+            "alias-aware-before-after.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "requirement `optimization-integration` benchmark `alias-aware-before-after.json` must include source fingerprint or source artifact provenance"
+            )),
+            "Fix: before/after benchmark gate must reject timing evidence without source provenance; failures={failures:?}"
         );
     }
 }
