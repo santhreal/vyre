@@ -140,6 +140,9 @@ fn benchmark_artifact_report_shape_is_reusable(
     {
         return false;
     }
+    if !crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(report).is_empty() {
+        return false;
+    }
     let Some(case) = report
         .get("cases")
         .and_then(Value::as_array)
@@ -346,6 +349,45 @@ mod tests {
                 false,
             ),
             "Fix: WGPU reuse must reject artifacts that do not contain the requested release case."
+        );
+    }
+
+    #[test]
+    fn reuse_rejects_case_failure_hidden_by_summary_zero() {
+        let dir =
+            TempDir::new().expect("Fix: create temp workspace for hidden failure reuse test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-hidden-failure.json",
+            serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": current_test_source_fingerprint(dir.path()),
+                "summary": {"failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "correctness": {
+                            "Invalid": {
+                                "reason": "CUDA/WGPU output mismatch at row 17"
+                            }
+                        }
+                    }
+                ]
+            }),
+        );
+
+        assert!(
+            !benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-hidden-failure.json",
+                false,
+            ),
+            "Fix: --reuse-existing must rerun artifacts whose case evidence contradicts summary.failed and pass status."
         );
     }
 
