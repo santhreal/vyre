@@ -597,7 +597,16 @@ mod tests {
                     );
                     if in_dim % 8 == 0 {
                         let program = result.expect("Fix: generated valid typed spec must build");
-                        assert_eq!(program.buffers()[5].count(), out_dim);
+                        let output = &program.buffers()[5];
+                        assert!(
+                            output.count() >= out_dim,
+                            "Fix: grouped INT4 output storage must cover the logical outputs after launch padding."
+                        );
+                        assert_eq!(
+                            output.output_byte_range(),
+                            Some(0..(out_dim as usize * core::mem::size_of::<f32>())),
+                            "Fix: grouped INT4 output byte range must trim padded launch storage to the logical tensor."
+                        );
                         accepted += 1;
                     } else {
                         let error = result.expect_err(
