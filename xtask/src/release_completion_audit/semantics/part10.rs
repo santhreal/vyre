@@ -292,6 +292,7 @@ fn inspect_release_workload_matrix_semantics(
             "{evidence}: required_cpu_sota_100x_families lists {required_hundred_x} family/families; needs at least 10 release 100x families"
         ));
     }
+    inspect_duplicate_array_values(evidence, value, "required_cpu_sota_100x_families", blockers);
     let missing_required_hundred_x = value
         .get("missing_required_cpu_sota_100x_families")
         .and_then(serde_json::Value::as_array)
@@ -310,7 +311,7 @@ fn inspect_release_workload_matrix_semantics(
             "{evidence}: cpu_sota_100x_contract_cases lists {case_count} active case id(s); needs at least 10"
         ));
     }
-    inspect_duplicate_case_array_values(evidence, value, "cpu_sota_100x_contract_cases", blockers);
+    inspect_duplicate_array_values(evidence, value, "cpu_sota_100x_contract_cases", blockers);
     let Some(families) = value.get("families").and_then(serde_json::Value::as_array) else {
         blockers.push(format!("{evidence}: missing workload families array"));
         return;
@@ -487,7 +488,7 @@ fn inspect_release_workload_matrix_semantics(
     }
 }
 
-fn inspect_duplicate_case_array_values(
+fn inspect_duplicate_array_values(
     evidence: &str,
     value: &serde_json::Value,
     field: &str,
@@ -515,7 +516,7 @@ mod part10_tests {
         });
         let mut blockers = Vec::new();
 
-        inspect_duplicate_case_array_values(
+        inspect_duplicate_array_values(
             "release-workload-matrix.json",
             &matrix,
             "cpu_sota_100x_contract_cases",
@@ -527,6 +528,31 @@ mod part10_tests {
                 "duplicate cpu_sota_100x_contract_cases: release.condition_eval.1m"
             )),
             "Fix: completion audit must reject duplicate CPU-SOTA matrix contract case ids; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_duplicate_matrix_cpu_100x_family_ids() {
+        let matrix = serde_json::json!({
+            "required_cpu_sota_100x_families": [
+                "release.condition-eval",
+                "release.condition-eval"
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_duplicate_array_values(
+            "release-workload-matrix.json",
+            &matrix,
+            "required_cpu_sota_100x_families",
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "duplicate required_cpu_sota_100x_families: release.condition-eval"
+            )),
+            "Fix: completion audit must reject duplicate CPU-SOTA matrix required family ids; blockers={blockers:?}"
         );
     }
 }

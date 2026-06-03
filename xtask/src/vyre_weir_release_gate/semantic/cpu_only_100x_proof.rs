@@ -44,6 +44,12 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             "requirement `cpu-only-100x-proof` matrix lists only {required_hundred_x} required 100x family/families; needs at least 10 release 100x families"
         ));
     }
+    check_duplicate_string_array_values(
+        "workload matrix",
+        &matrix,
+        "required_cpu_sota_100x_families",
+        failures,
+    );
     let missing_required_hundred_x = matrix
         .get("missing_required_cpu_sota_100x_families")
         .and_then(serde_json::Value::as_array)
@@ -69,7 +75,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 .to_string(),
         );
     }
-    check_duplicate_case_array_values(
+    check_duplicate_string_array_values(
         "workload matrix",
         &matrix,
         "cpu_sota_100x_contract_cases",
@@ -122,7 +128,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 "requirement `cpu-only-100x-proof` aggregate proof reports {missing_proof_cases} missing required 100x case(s)"
             ));
         }
-        check_duplicate_case_array_values(
+        check_duplicate_string_array_values(
             "aggregate proof",
             &proof,
             "required_cpu_sota_100x_cases",
@@ -232,7 +238,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     );
 }
 
-fn check_duplicate_case_array_values(
+fn check_duplicate_string_array_values(
     label: &str,
     value: &serde_json::Value,
     field: &str,
@@ -309,6 +315,10 @@ mod tests {
     #[test]
     fn cpu_100x_gate_rejects_duplicate_case_array_entries() {
         let matrix = serde_json::json!({
+            "required_cpu_sota_100x_families": [
+                "release.condition-eval",
+                "release.condition-eval"
+            ],
             "cpu_sota_100x_contract_cases": [
                 "release.condition_eval.1m",
                 "release.condition_eval.1m"
@@ -322,19 +332,31 @@ mod tests {
         });
         let mut failures = Vec::new();
 
-        check_duplicate_case_array_values(
+        check_duplicate_string_array_values(
+            "workload matrix",
+            &matrix,
+            "required_cpu_sota_100x_families",
+            &mut failures,
+        );
+        check_duplicate_string_array_values(
             "workload matrix",
             &matrix,
             "cpu_sota_100x_contract_cases",
             &mut failures,
         );
-        check_duplicate_case_array_values(
+        check_duplicate_string_array_values(
             "aggregate proof",
             &proof,
             "required_cpu_sota_100x_cases",
             &mut failures,
         );
 
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "workload matrix has duplicate required_cpu_sota_100x_families: release.condition-eval"
+            )),
+            "Fix: CPU-SOTA gate must reject duplicate matrix required 100x families; failures={failures:?}"
+        );
         assert!(
             failures.iter().any(|failure| failure.contains(
                 "workload matrix has duplicate cpu_sota_100x_contract_cases: release.condition_eval.1m"

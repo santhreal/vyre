@@ -189,7 +189,7 @@ fn inspect_cpu_100x_benchmark_semantics(
         blockers.push(format!("{evidence}: selected_backend must be cuda"));
     }
     inspect_cpu_100x_source_artifact_counts(evidence, value, blockers);
-    inspect_duplicate_case_array_values(evidence, value, "required_cpu_sota_100x_cases", blockers);
+    inspect_duplicate_array_values(evidence, value, "required_cpu_sota_100x_cases", blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
         blockers.push(format!("{evidence}: missing cases array"));
         return;
@@ -459,7 +459,7 @@ mod part13_tests {
         });
         let mut blockers = Vec::new();
 
-        inspect_duplicate_case_array_values(
+        inspect_duplicate_array_values(
             "cpu-only-100x-proof.json",
             &proof,
             "required_cpu_sota_100x_cases",
