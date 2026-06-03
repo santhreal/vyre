@@ -321,6 +321,34 @@ mod tests {
     }
 
     #[test]
+    fn bench_release_rejects_case_backend_drift_under_cuda_axes() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for bench-release case backend drift test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        let artifacts = write_canonical_axes_fixture(&benchmark_dir, dir.path(), None);
+        let drift_path = dir.path().join(&artifacts[6]);
+        let mut artifact = serde_json::from_str::<Value>(
+            &fs::read_to_string(&drift_path).expect("Fix: read temporary CUDA axis artifact."),
+        )
+        .expect("Fix: temporary CUDA axis artifact must be JSON.");
+        artifact["cases"][0]["backend_id"] = Value::String("wgpu".to_string());
+        fs::write(
+            &drift_path,
+            serde_json::to_string_pretty(&artifact)
+                .expect("Fix: serialize drifted temporary CUDA axis artifact."),
+        )
+        .expect("Fix: write drifted temporary CUDA axis artifact.");
+
+        let error = load_release_axes(&benchmark_dir)
+            .expect_err("Fix: WGPU cases must not satisfy CUDA bench-release axes.");
+
+        assert!(
+            error.contains("backend_id `wgpu` does not match selected_backend `cuda`"),
+            "Fix: bench-release must reject case-level backend drift inside CUDA source_artifacts; error={error}"
+        );
+    }
+
+    #[test]
     fn bench_release_rejects_mislabeled_cuda_suite_backend() {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for bench-release suite backend test.");

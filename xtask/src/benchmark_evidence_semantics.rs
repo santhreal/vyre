@@ -199,6 +199,23 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
                 "source_artifact `{artifact}` selected_backend must be cuda"
             ));
         }
+        for issue in backend_consistency_issues(&report) {
+            match issue {
+                BackendConsistencyIssue::MissingCaseBackend {
+                    case_id,
+                    expected_backend,
+                } => issues.push(format!(
+                    "source_artifact `{artifact}` case `{case_id}` must include backend_id `{expected_backend}` matching selected_backend"
+                )),
+                BackendConsistencyIssue::CaseBackendMismatch {
+                    case_id,
+                    expected_backend,
+                    actual_backend,
+                } => issues.push(format!(
+                    "source_artifact `{artifact}` case `{case_id}` backend_id `{actual_backend}` does not match selected_backend `{expected_backend}`"
+                )),
+            }
+        }
         if report
             .get("cases")
             .and_then(Value::as_array)
@@ -1970,6 +1987,52 @@ mod tests {
                 "source_artifact `release/evidence/benchmarks/workload-weak.json` source_fingerprint `git:abc123:dirty=true` is dirty but has no worktree digest"
             )),
             "Fix: release-axis source artifacts must reject legacy dirty source fingerprints; issues={issues:?}"
+        );
+    }
+
+    #[test]
+    fn cuda_release_axes_reject_case_backend_drift_inside_cuda_source_artifact() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for release axes backend drift test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temp benchmark evidence directory.");
+        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let artifact = "release/evidence/benchmarks/workload-backend-drift.json";
+        std::fs::write(
+            dir.path().join(artifact),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "source_tree_fingerprint": source_tree_fingerprint,
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.backend-drift",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize backend drift source artifact."),
+        )
+        .expect("Fix: write backend drift source artifact.");
+        let axes = serde_json::json!({
+            "source_artifacts": [artifact]
+        });
+        let cuda_suite = serde_json::json!({
+            "backend": "cuda",
+            "artifacts": [artifact]
+        });
+
+        let issues = cuda_release_axes_source_artifact_issues(dir.path(), &axes, &cuda_suite);
+
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/workload-backend-drift.json` case `release.backend-drift` backend_id `wgpu` does not match selected_backend `cuda`"
+            )),
+            "Fix: release-axis CUDA source artifact validation must reject case-level backend drift, not only artifact-level selected_backend; issues={issues:?}"
         );
     }
 
