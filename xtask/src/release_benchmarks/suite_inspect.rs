@@ -787,8 +787,6 @@ pub(super) fn inspect_backend_suite_artifact(
     let mut min_cuda_ptx_source_cache_hits = None::<u64>;
     let mut min_cuda_ptx_source_cache_misses = None::<u64>;
     let mut min_kernel_launches = None::<u64>;
-    let mut cpu_sota_100x_contract_cases = 0usize;
-    let mut cpu_sota_100x_passing_cases = 0usize;
     let mut requested_case_count = 0usize;
     for case in &cases {
         let case_id = case
@@ -913,32 +911,11 @@ pub(super) fn inspect_backend_suite_artifact(
                 case_id,
             );
         }
-        let has_100x_contract =
-            crate::benchmark_evidence_semantics::benchmark_case_has_cpu_sota_contract(
-                case,
-                Some(backend),
-                100.0,
-            );
-        if has_100x_contract {
-            cpu_sota_100x_contract_cases += 1;
-            let contract_passed = case
-                .get("performance")
-                .and_then(|performance| performance.get("contract_passed"))
-                .and_then(Value::as_bool)
-                == Some(true);
-            let speedup_passed = case
-                .get("performance")
-                .and_then(|performance| performance.get("speedup_x"))
-                .and_then(Value::as_f64)
-                .is_some_and(|speedup| speedup >= 100.0);
-            if crate::benchmark_evidence_semantics::benchmark_case_passes_summary_evidence(case)
-                && contract_passed
-                && speedup_passed
-            {
-                cpu_sota_100x_passing_cases += 1;
-            }
-        }
     }
+    let (cpu_sota_100x_contract_cases, cpu_sota_100x_passing_cases) =
+        crate::benchmark_evidence_semantics::cpu_sota_100x_case_counts(&report);
+    let cpu_sota_100x_contract_cases = cpu_sota_100x_contract_cases as usize;
+    let cpu_sota_100x_passing_cases = cpu_sota_100x_passing_cases as usize;
     if !cases.is_empty() && summary_failed_count != Some(case_failed_count) {
         blockers.push(format!(
             "summary.failed is `{:?}` but case evidence reports {case_failed_count} failed case(s)",
@@ -1691,6 +1668,111 @@ mod tests {
             "Fix: generated CUDA suite evidence must reject artifacts where the requested_case_id resolves to multiple benchmark rows; blockers={:?}",
             status.blockers
         );
+    }
+
+    #[test]
+    fn suite_artifact_status_rejects_backend_mismatched_cpu_sota_counts() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for backend-mismatch CPU-SOTA test.");
+        let artifact_rel = "release/evidence/benchmarks/cuda-backend-mismatch-cpu-sota.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: suite artifact must have parent directory."),
+        )
+        .expect("Fix: create backend-mismatch CPU-SOTA suite artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "source_fingerprint": "git:abc:dirty=false",
+                "source_tree_fingerprint": "source-tree-v1:abc",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "environment": {
+                    "host_cpu_model": "test CPU",
+                    "gpu_devices": [
+                        {
+                            "name": "RTX 5090",
+                            "memory_total_mib": 24576,
+                            "compute_capability_major": 8,
+                            "compute_capability_minor": 9
+                        }
+                    ],
+                    "nvidia_driver_version": "580.0",
+                    "nvidia_cuda_version": "13.0"
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "kernel_launches": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0}
+                        },
+                        "contract": {
+                            "primitive": "release condition eval",
+                            "baselines": [
+                                {
+                                    "name": "CPU-SOTA",
+                                    "crate_name": "vyre-runtime",
+                                    "class": "CpuSota",
+                                    "min_speedup_x": 100.0,
+                                    "backend_ids": ["cuda"]
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 200.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize backend-mismatch CPU-SOTA benchmark artifact JSON."),
+        )
+        .expect("Fix: write backend-mismatch CPU-SOTA benchmark artifact JSON.");
+
+        let status = inspect_backend_suite_artifact(
+            dir.path(),
+            "cuda",
+            &BackendSuiteArtifactInput {
+                path: artifact_rel.to_string(),
+                family_id: "condition-eval".to_string(),
+                requested_case_id: "release.condition_eval.1m".to_string(),
+                cpu_sota_100x_required: true,
+            },
+        );
+
+        assert_eq!(
+            status.nonmatching_case_backend_count, 1,
+            "Fix: backend-mismatched suite artifacts must remain visible in generated status rows."
+        );
+        assert_eq!(
+            status.cpu_sota_100x_contract_cases, 0,
+            "Fix: generated CUDA suite status must not count WGPU case rows as CUDA CPU-SOTA proof."
+        );
+        assert_eq!(
+            status.cpu_sota_100x_passing_cases, 0,
+            "Fix: generated CUDA suite status must not count backend-mismatched rows as passing CPU-SOTA proof."
+        );
+        for expected in [
+            "1 case(s) do not match requested backend `cuda`",
+            "CPU-SOTA 100x workload artifact has no 100x contract case",
+            "CPU-SOTA 100x workload artifact has no passing 100x case",
+        ] {
+            assert!(
+                status
+                    .blockers
+                    .iter()
+                    .any(|blocker| blocker.contains(expected)),
+                "Fix: generated CUDA suite evidence must expose backend-mismatched CPU-SOTA proof drift `{expected}`; blockers={:?}",
+                status.blockers
+            );
+        }
     }
 
     #[test]
