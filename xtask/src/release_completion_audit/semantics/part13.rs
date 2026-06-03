@@ -729,6 +729,10 @@ mod part13_tests {
                             }
                         ]
                     },
+                    "metrics": {
+                        "wall_ns": {"p50": 10},
+                        "baseline_wall_ns": {"p50": 2000}
+                    },
                     "performance": {"contract_passed": true, "speedup_x": 200.0}
                 }
             ]

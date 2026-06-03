@@ -482,6 +482,10 @@ mod tests {
                             }
                         ]
                     },
+                    "metrics": {
+                        "wall_ns": {"p50": 10},
+                        "baseline_wall_ns": {"p50": 2000}
+                    },
                     "performance": {"contract_passed": true, "speedup_x": 200.0}
                 }
             ]
@@ -501,6 +505,46 @@ mod tests {
                 "cpu_sota_100x_passing_case_count=10, but cases prove 1"
             )),
             "Fix: CPU-SOTA release gate must reject inflated aggregate passing case counts; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_gate_rejects_claimed_speedup_without_measured_100x() {
+        let proof = serde_json::json!({
+            "selected_backend": "cuda",
+            "cpu_sota_100x_contract_case_count": 1,
+            "cpu_sota_100x_passing_case_count": 1,
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "status": "pass",
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "metrics": {
+                        "wall_ns": {"p50": 100},
+                        "baseline_wall_ns": {"p50": 1000}
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 200.0}
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_cpu_100x_aggregate_case_counts(&proof, &mut failures);
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "cpu_sota_100x_passing_case_count=1, but cases prove 0"
+            )),
+            "Fix: CPU-SOTA release gate must reject aggregate passing counts backed only by claimed speedup_x instead of measured baseline_wall_ns / wall_ns; failures={failures:?}"
         );
     }
 

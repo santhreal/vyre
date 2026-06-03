@@ -1927,16 +1927,41 @@ pub(crate) fn cpu_sota_100x_case_counts(artifact_report: &Value) -> (u64, u64) {
                 .and_then(|performance| performance.get("speedup_x"))
                 .and_then(Value::as_f64)
                 .is_some_and(|speedup| speedup >= 100.0);
+            let measured_speedup_passed = cpu_sota_100x_measured_speedup(case)
+                .is_some_and(|measured_speedup| measured_speedup >= 100.0);
             (
                 contract_count + 1,
                 passing_count
                     + u64::from(
                         benchmark_case_passes_summary_evidence(case)
                             && contract_passed
-                            && speedup_passed,
+                            && speedup_passed
+                            && measured_speedup_passed,
                     ),
             )
         })
+}
+
+fn cpu_sota_100x_measured_speedup(case: &Value) -> Option<f64> {
+    let metrics = case.get("metrics").and_then(Value::as_object)?;
+    let wall = metric_p50_f64(metrics.get("wall_ns"))?;
+    let baseline = metric_p50_f64(metrics.get("baseline_wall_ns"))?;
+    (wall > 0.0).then_some(baseline / wall)
+}
+
+fn metric_p50_f64(metric: Option<&Value>) -> Option<f64> {
+    let metric = metric?;
+    metric
+        .get("p50")
+        .and_then(Value::as_f64)
+        .or_else(|| {
+            metric
+                .get("p50")
+                .and_then(Value::as_u64)
+                .map(|value| value as f64)
+        })
+        .or_else(|| metric.as_f64())
+        .or_else(|| metric.as_u64().map(|value| value as f64))
 }
 
 pub(crate) fn benchmark_case_has_cpu_sota_contract(
@@ -3807,6 +3832,10 @@ mod tests {
                             }
                         ]
                     },
+                    "metrics": {
+                        "wall_ns": {"p50": 10},
+                        "baseline_wall_ns": {"p50": 2000}
+                    },
                     "performance": {"contract_passed": true, "speedup_x": 200.0}
                 },
                 {
@@ -3821,6 +3850,10 @@ mod tests {
                                 "min_speedup_x": 100.0
                             }
                         ]
+                    },
+                    "metrics": {
+                        "wall_ns": {"p50": 10},
+                        "baseline_wall_ns": {"p50": 2000}
                     },
                     "performance": {"contract_passed": true, "speedup_x": 200.0}
                 },
@@ -3846,6 +3879,40 @@ mod tests {
             cpu_sota_100x_case_counts(&report),
             (2, 1),
             "Fix: derived CPU-SOTA 100x counts must share one backend-aware, pass-evidence-aware primitive."
+        );
+    }
+
+    #[test]
+    fn cpu_sota_100x_case_counts_require_measured_speedup_evidence() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "cases": [
+                {
+                    "id": "release.claimed-speedup.1m",
+                    "backend_id": "cuda",
+                    "status": "pass",
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "metrics": {
+                        "wall_ns": {"p50": 100},
+                        "baseline_wall_ns": {"p50": 1000}
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 200.0}
+                }
+            ]
+        });
+
+        assert_eq!(
+            cpu_sota_100x_case_counts(&report),
+            (1, 0),
+            "Fix: CPU-SOTA passing counts must be backed by measured baseline_wall_ns / wall_ns speedup, not only performance.speedup_x claims."
         );
     }
 
