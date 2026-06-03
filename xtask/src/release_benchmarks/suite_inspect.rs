@@ -69,8 +69,7 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         }
         let report_source_fingerprint = report
             .get("source_fingerprint")
-            .and_then(Value::as_str)
-            .filter(|value| !value.is_empty())
+            .and_then(nonblank_str)
             .map(str::to_string);
         if let Some(fingerprint) = &report_source_fingerprint {
             if !crate::benchmark_evidence_semantics::source_fingerprint_issues(fingerprint)
@@ -94,8 +93,7 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         }
         let report_source_tree_fingerprint = report
             .get("source_tree_fingerprint")
-            .and_then(Value::as_str)
-            .filter(|value| !value.is_empty())
+            .and_then(nonblank_str)
             .map(str::to_string);
         match (&source_tree_fingerprint, &report_source_tree_fingerprint) {
             (None, Some(fingerprint)) => source_tree_fingerprint = Some(fingerprint.clone()),
@@ -1838,6 +1836,95 @@ mod tests {
                 )
             }),
             "Fix: aggregate CPU-SOTA proof must reject weak dirty source_fingerprint provenance; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_proof_rejects_whitespace_only_source_provenance() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for blank CPU-SOTA provenance test.");
+        let artifact_rel = "release/evidence/benchmarks/cuda-blank-source-provenance.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: blank provenance artifact path must have a parent directory."),
+        )
+        .expect("Fix: create blank provenance proof artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "source_fingerprint": "   ",
+                "source_tree_fingerprint": "\t",
+                "summary": {
+                    "total_cases": 1,
+                    "passed": 1,
+                    "failed": 0,
+                    "total_time_ns": 0,
+                    "cache_hit_rate": null
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002}
+                        },
+                        "contract": {
+                            "primitive": "release condition eval",
+                            "baselines": [
+                                {
+                                    "name": "CPU-SOTA",
+                                    "crate_name": "vyre-runtime",
+                                    "class": "CpuSota",
+                                    "min_speedup_x": 100.0,
+                                    "backend_ids": ["cuda"]
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 200.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize blank provenance CUDA benchmark artifact JSON."),
+        )
+        .expect("Fix: write blank provenance CUDA benchmark artifact JSON.");
+
+        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()]);
+
+        let proof_path = dir
+            .path()
+            .join("release/evidence/benchmarks/cpu-only-100x-proof.json");
+        let proof_text = fs::read_to_string(&proof_path)
+            .expect("Fix: read generated CPU-SOTA 100x proof artifact.");
+        let proof = serde_json::from_str::<Value>(&proof_text)
+            .expect("Fix: generated CPU-SOTA 100x proof must be valid JSON.");
+        let blockers = proof
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated CPU-SOTA proof must include blockers array.");
+
+        assert!(
+            blockers.iter().filter_map(Value::as_str).any(|blocker| {
+                blocker.contains(
+                    "100x source artifact `release/evidence/benchmarks/cuda-blank-source-provenance.json` has no source_fingerprint",
+                )
+            }),
+            "Fix: aggregate CPU-SOTA proof must reject blank source_fingerprint provenance; blockers={blockers:?}"
+        );
+        assert_eq!(
+            proof.get("source_fingerprint"),
+            Some(&Value::Null),
+            "Fix: blank source_fingerprint must not be serialized as aggregate CPU-SOTA provenance."
+        );
+        assert_eq!(
+            proof.get("source_tree_fingerprint"),
+            Some(&Value::Null),
+            "Fix: blank source_tree_fingerprint must not be serialized as aggregate CPU-SOTA provenance."
         );
     }
 
