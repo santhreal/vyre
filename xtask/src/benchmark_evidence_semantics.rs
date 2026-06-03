@@ -1425,7 +1425,7 @@ pub(crate) fn backend_suite_artifact_status_issues(
     }
 
     let (artifact_contract_cases, artifact_passing_cases) =
-        artifact_cpu_sota_100x_contract_counts(artifact_report);
+        cpu_sota_100x_case_counts(artifact_report);
     match status
         .get("cpu_sota_100x_contract_cases")
         .and_then(Value::as_u64)
@@ -1738,7 +1738,7 @@ fn nonnegative_json_number_as_u64(value: &Value) -> Option<u64> {
     })
 }
 
-fn artifact_cpu_sota_100x_contract_counts(artifact_report: &Value) -> (u64, u64) {
+pub(crate) fn cpu_sota_100x_case_counts(artifact_report: &Value) -> (u64, u64) {
     let report_backend = artifact_report
         .get("selected_backend")
         .and_then(Value::as_str);
@@ -1752,7 +1752,7 @@ fn artifact_cpu_sota_100x_contract_counts(artifact_report: &Value) -> (u64, u64)
                 .get("backend_id")
                 .and_then(Value::as_str)
                 .or(report_backend);
-            if !case_has_cpu_sota_contract(case, case_backend, 100.0) {
+            if !benchmark_case_has_cpu_sota_contract(case, case_backend, 100.0) {
                 return (contract_count, passing_count);
             }
             let contract_passed = case
@@ -1777,7 +1777,7 @@ fn artifact_cpu_sota_100x_contract_counts(artifact_report: &Value) -> (u64, u64)
         })
 }
 
-fn case_has_cpu_sota_contract(
+pub(crate) fn benchmark_case_has_cpu_sota_contract(
     case: &Value,
     backend_id: Option<&str>,
     required_speedup: f64,
@@ -3248,6 +3248,90 @@ mod tests {
         assert!(
             contract_backend_issues(&report).is_empty(),
             "Fix: backend-agnostic contracts must remain valid for fallback backends."
+        );
+    }
+
+    #[test]
+    fn cpu_sota_contract_requires_matching_backend_id() {
+        let case = serde_json::json!({
+            "contract": {
+                "baselines": [
+                    {
+                        "class": "CpuSota",
+                        "backend_ids": ["cuda"],
+                        "min_speedup_x": 100.0
+                    }
+                ]
+            }
+        });
+
+        assert!(
+            benchmark_case_has_cpu_sota_contract(&case, Some("cuda"), 100.0),
+            "Fix: CUDA should count CUDA-scoped CpuSota contracts."
+        );
+        assert!(
+            !benchmark_case_has_cpu_sota_contract(&case, Some("wgpu"), 100.0),
+            "Fix: WGPU must not inherit CUDA-scoped CpuSota contract counters."
+        );
+    }
+
+    #[test]
+    fn cpu_sota_100x_case_counts_require_pass_summary_evidence() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "status": "pass",
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 200.0}
+                },
+                {
+                    "id": "release.entropy_window.1m",
+                    "backend_id": "cuda",
+                    "status": "fail",
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 200.0}
+                },
+                {
+                    "id": "release.wgpu-drift.1m",
+                    "backend_id": "wgpu",
+                    "status": "pass",
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 200.0}
+                }
+            ]
+        });
+
+        assert_eq!(
+            cpu_sota_100x_case_counts(&report),
+            (2, 1),
+            "Fix: derived CPU-SOTA 100x counts must share one backend-aware, pass-evidence-aware primitive."
         );
     }
 

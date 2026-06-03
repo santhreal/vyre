@@ -275,7 +275,11 @@ pub(crate) fn check_single_benchmark_report(
                 .get("backend_id")
                 .and_then(serde_json::Value::as_str)
                 .or(selected_backend);
-            if !case_has_cpu_sota_contract(case, case_backend, required_speedup) {
+            if !crate::benchmark_evidence_semantics::benchmark_case_has_cpu_sota_contract(
+                case,
+                case_backend,
+                required_speedup,
+            ) {
                 failures.push(format!(
                     "requirement `{}` benchmark `{}` case `{id}` must carry an applicable CPU-SOTA performance contract with min_speedup_x >= {required_speedup:.2}",
                     requirement.id,
@@ -336,28 +340,6 @@ pub(crate) fn check_single_benchmark_report(
         }
     }
 }
-pub(crate) fn case_has_cpu_sota_contract(
-    case: &serde_json::Value,
-    backend_id: Option<&str>,
-    required_speedup: f64,
-) -> bool {
-    case.get("contract")
-        .and_then(|contract| contract.get("baselines"))
-        .and_then(serde_json::Value::as_array)
-        .is_some_and(|baselines| {
-            baselines.iter().any(|baseline| {
-                baseline.get("class").and_then(serde_json::Value::as_str) == Some("CpuSota")
-                    && baseline
-                        .get("min_speedup_x")
-                        .and_then(serde_json::Value::as_f64)
-                        .unwrap_or(0.0)
-                        >= required_speedup
-                    && crate::benchmark_evidence_semantics::baseline_applies_to_backend(
-                        baseline, backend_id,
-                    )
-            })
-        })
-}
 
 #[cfg(test)]
 mod part3_tests {
@@ -404,30 +386,6 @@ mod part3_tests {
                 "requirement `cuda-first-path` benchmark `cuda-workload.json` reports 1 blocker(s)"
             )),
             "Fix: direct benchmark release gate must reject explicit benchmark blockers; failures={failures:?}"
-        );
-    }
-
-    #[test]
-    fn cpu_sota_contract_requires_applicable_backend() {
-        let case = serde_json::json!({
-            "contract": {
-                "baselines": [
-                    {
-                        "class": "CpuSota",
-                        "backend_ids": ["cuda"],
-                        "min_speedup_x": 100.0
-                    }
-                ]
-            }
-        });
-
-        assert!(
-            case_has_cpu_sota_contract(&case, Some("cuda"), 100.0),
-            "Fix: CUDA benchmarks should accept CUDA-scoped CPU-SOTA contracts."
-        );
-        assert!(
-            !case_has_cpu_sota_contract(&case, Some("wgpu"), 100.0),
-            "Fix: single-benchmark release checks must not count CUDA-only contracts as WGPU proof."
         );
     }
 

@@ -4,7 +4,6 @@ use std::process::Command;
 
 use serde_json::Value;
 
-use super::optimization::suite_case_has_cpu_sota_contract;
 use super::suite_inspect::{read_text_bounded, suite_metric_percentile, suite_metric_samples};
 use super::types::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 
@@ -171,7 +170,13 @@ fn benchmark_artifact_report_shape_is_reusable(
     if !case_has_reusable_timing_metrics(case) {
         return false;
     }
-    if cpu_sota_100x_required && !suite_case_has_cpu_sota_contract(case, backend, 100.0) {
+    if cpu_sota_100x_required
+        && !crate::benchmark_evidence_semantics::benchmark_case_has_cpu_sota_contract(
+            case,
+            Some(backend),
+            100.0,
+        )
+    {
         return false;
     }
     if cpu_sota_100x_required {

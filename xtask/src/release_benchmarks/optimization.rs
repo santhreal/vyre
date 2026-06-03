@@ -3,9 +3,7 @@ use std::path::Path;
 
 use serde_json::{json, Value};
 
-use crate::benchmark_evidence_semantics::{
-    baseline_applies_to_backend, cuda_release_axes_source_artifact_issues,
-};
+use crate::benchmark_evidence_semantics::cuda_release_axes_source_artifact_issues;
 
 use super::metrics::{
     max_metric_p50, max_observed_ulp, max_vram_mib, min_first_available_metric_p50, min_metric_p50,
@@ -25,56 +23,11 @@ pub(super) fn metric_p50(metric: &Value) -> Option<u64> {
     metric.get("p50").and_then(Value::as_u64)
 }
 
-pub(super) fn suite_case_has_cpu_sota_contract(
-    case: &Value,
-    backend_id: &str,
-    required_speedup: f64,
-) -> bool {
-    case.get("contract")
-        .and_then(|contract| contract.get("baselines"))
-        .and_then(Value::as_array)
-        .is_some_and(|baselines| {
-            baselines.iter().any(|baseline| {
-                baseline.get("class").and_then(Value::as_str) == Some("CpuSota")
-                    && baseline
-                        .get("min_speedup_x")
-                        .and_then(Value::as_f64)
-                        .unwrap_or(0.0)
-                        >= required_speedup
-                    && baseline_applies_to_backend(baseline, Some(backend_id))
-            })
-        })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use tempfile::TempDir;
-
-    #[test]
-    fn cpu_sota_contract_requires_matching_backend_id() {
-        let case = serde_json::json!({
-            "contract": {
-                "baselines": [
-                    {
-                        "class": "CpuSota",
-                        "backend_ids": ["cuda"],
-                        "min_speedup_x": 100.0
-                    }
-                ]
-            }
-        });
-
-        assert!(
-            suite_case_has_cpu_sota_contract(&case, "cuda", 100.0),
-            "Fix: CUDA should count CUDA-scoped CpuSota contracts."
-        );
-        assert!(
-            !suite_case_has_cpu_sota_contract(&case, "wgpu", 100.0),
-            "Fix: WGPU must not inherit CUDA-scoped CpuSota contract counters."
-        );
-    }
 
     #[test]
     fn release_axes_uses_cuda_suite_artifacts_only() {

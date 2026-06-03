@@ -266,7 +266,11 @@ fn inspect_cpu_100x_benchmark_semantics(
             .get("backend_id")
             .and_then(serde_json::Value::as_str)
             .or(selected_backend);
-        if !case_has_cpu_sota_contract(case, case_backend, 100.0) {
+        if !crate::benchmark_evidence_semantics::benchmark_case_has_cpu_sota_contract(
+            case,
+            case_backend,
+            100.0,
+        ) {
             blockers.push(format!(
                 "{evidence}: case `{id}` must carry an applicable CPU-SOTA performance contract with min_speedup_x >= 100.00"
             ));
@@ -415,11 +419,12 @@ fn inspect_cpu_100x_aggregate_case_counts(
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
+    let (derived_contract_cases, derived_passing_cases) =
+        crate::benchmark_evidence_semantics::cpu_sota_100x_case_counts(value);
     let declared_contract_cases = value
         .get("cpu_sota_100x_contract_case_count")
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(0);
-    let derived_contract_cases = cpu_100x_contract_case_count(value) as u64;
     if declared_contract_cases != derived_contract_cases {
         blockers.push(format!(
             "{evidence}: cpu_sota_100x_contract_case_count={declared_contract_cases}, but cases prove {derived_contract_cases}"
@@ -429,88 +434,11 @@ fn inspect_cpu_100x_aggregate_case_counts(
         .get("cpu_sota_100x_passing_case_count")
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(0);
-    let derived_passing_cases = cpu_100x_passing_case_count(value) as u64;
     if declared_passing_cases != derived_passing_cases {
         blockers.push(format!(
             "{evidence}: cpu_sota_100x_passing_case_count={declared_passing_cases}, but cases prove {derived_passing_cases}"
         ));
     }
-}
-
-fn cpu_100x_contract_case_count(value: &serde_json::Value) -> usize {
-    let selected_backend = value
-        .get("selected_backend")
-        .and_then(serde_json::Value::as_str);
-    value
-        .get("cases")
-        .and_then(serde_json::Value::as_array)
-        .map_or(0, |cases| {
-            cases
-                .iter()
-                .filter(|case| {
-                    let backend_id = case
-                        .get("backend_id")
-                        .and_then(serde_json::Value::as_str)
-                        .or(selected_backend);
-                    case_has_cpu_sota_contract(case, backend_id, 100.0)
-                })
-                .count()
-        })
-}
-
-fn cpu_100x_passing_case_count(value: &serde_json::Value) -> usize {
-    let selected_backend = value
-        .get("selected_backend")
-        .and_then(serde_json::Value::as_str);
-    value
-        .get("cases")
-        .and_then(serde_json::Value::as_array)
-        .map_or(0, |cases| {
-            cases
-                .iter()
-                .filter(|case| {
-                    let backend_id = case
-                        .get("backend_id")
-                        .and_then(serde_json::Value::as_str)
-                        .or(selected_backend);
-                    case_has_cpu_sota_contract(case, backend_id, 100.0)
-                        && crate::benchmark_evidence_semantics::benchmark_case_passes_summary_evidence(case)
-                        && case
-                            .get("performance")
-                            .and_then(|performance| performance.get("contract_passed"))
-                            .and_then(serde_json::Value::as_bool)
-                            == Some(true)
-                        && case
-                            .get("performance")
-                            .and_then(|performance| performance.get("speedup_x"))
-                            .and_then(serde_json::Value::as_f64)
-                            .is_some_and(|speedup| speedup >= 100.0)
-                })
-                .count()
-        })
-}
-
-fn case_has_cpu_sota_contract(
-    case: &serde_json::Value,
-    backend_id: Option<&str>,
-    required_speedup: f64,
-) -> bool {
-    case.get("contract")
-        .and_then(|contract| contract.get("baselines"))
-        .and_then(serde_json::Value::as_array)
-        .is_some_and(|baselines| {
-            baselines.iter().any(|baseline| {
-                baseline.get("class").and_then(serde_json::Value::as_str) == Some("CpuSota")
-                    && baseline
-                        .get("min_speedup_x")
-                        .and_then(serde_json::Value::as_f64)
-                        .unwrap_or(0.0)
-                        >= required_speedup
-                    && crate::benchmark_evidence_semantics::baseline_applies_to_backend(
-                        baseline, backend_id,
-                    )
-            })
-        })
 }
 
 #[cfg(test)]

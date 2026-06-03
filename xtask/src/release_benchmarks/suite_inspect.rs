@@ -5,7 +5,6 @@ use std::path::Path;
 use serde_json::{json, Value};
 
 use super::metrics::write_json;
-use super::optimization::suite_case_has_cpu_sota_contract;
 use super::runner::run_command_status;
 use super::types::{
     BackendSuiteArtifact, BackendSuiteArtifactInput, BackendSuiteEvidence,
@@ -236,9 +235,11 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
                 .get("backend_id")
                 .and_then(Value::as_str)
                 .or(report_backend);
-            if case_backend
-                .is_some_and(|backend| suite_case_has_cpu_sota_contract(case, backend, 100.0))
-            {
+            if crate::benchmark_evidence_semantics::benchmark_case_has_cpu_sota_contract(
+                case,
+                case_backend,
+                100.0,
+            ) {
                 contract_case_count += 1;
                 let contract_passed = case
                     .get("performance")
@@ -912,7 +913,12 @@ pub(super) fn inspect_backend_suite_artifact(
                 case_id,
             );
         }
-        let has_100x_contract = suite_case_has_cpu_sota_contract(case, backend, 100.0);
+        let has_100x_contract =
+            crate::benchmark_evidence_semantics::benchmark_case_has_cpu_sota_contract(
+                case,
+                Some(backend),
+                100.0,
+            );
         if has_100x_contract {
             cpu_sota_100x_contract_cases += 1;
             let contract_passed = case
