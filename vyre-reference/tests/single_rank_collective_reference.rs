@@ -65,6 +65,38 @@ fn collective_shape(kind: u32, group: CommGroup, root: u32) -> Node {
     }
 }
 
+#[test]
+fn subgroup_shuffle_observes_branch_assigned_source_lane_after_empty_peer_branch() {
+    let lane = Expr::LocalId { axis: 0 };
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(1),
+            BufferDecl::output("out", 1, DataType::U32).with_count(32),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::let_bind("leader_word", Expr::u32(0)),
+            Node::if_then(
+                Expr::eq(lane.clone(), Expr::u32(0)),
+                vec![Node::assign(
+                    "leader_word",
+                    Expr::load("input", Expr::u32(0)),
+                )],
+            ),
+            Node::store(
+                "out",
+                lane,
+                Expr::subgroup_shuffle(Expr::var("leader_word"), Expr::u32(0)),
+            ),
+        ],
+    );
+
+    let outputs = reference_eval(&program, &[Value::from(u32_bytes(&[0xfeed_cafe]))])
+        .expect("Fix: reference oracle must execute branch-fed subgroup shuffle.");
+
+    assert_eq!(bytes_to_u32(&outputs[0]), vec![0xfeed_cafe; 32]);
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(4096))]
 

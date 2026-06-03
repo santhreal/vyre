@@ -52,6 +52,21 @@ fn grouped_int4_affine_ptx_masks_power_of_two_modulo() {
 }
 
 #[test]
+fn grouped_int4_affine_ptx_broadcasts_packed_weight_words() {
+    let spec = vyre_libs::nn::QuantizedLinear4BitSpec::affine_grouped(256, 4096, 64);
+    let program =
+        vyre_libs::nn::linear_4bit_affine_grouped_typed(&spec, "x", "w", "scale", "zp", "b", "out")
+            .expect("Fix: grouped INT4 affine release program must build.");
+    let ptx = program_to_ptx_for_sm(&program, &default_config(), 90)
+        .expect("Fix: grouped INT4 affine release program must lower to PTX.");
+
+    assert!(
+        ptx.contains("shfl.sync.idx.b32"),
+        "Fix: grouped INT4 PTX must broadcast each packed weight word from its 8-lane leader.\n{ptx}"
+    );
+}
+
+#[test]
 fn ptx_emits_integer_comparisons() {
     let ops = [
         (

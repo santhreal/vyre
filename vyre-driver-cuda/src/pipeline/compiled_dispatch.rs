@@ -377,6 +377,69 @@ impl CompiledPipeline for CudaCompiledPipeline {
         Ok(outputs)
     }
 
+    fn dispatch_persistent_handles_timed(
+        &self,
+        inputs: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+        let _profiler_range =
+            crate::profiler::cuda_profiler_range(crate::profiler::CUDA_PIPELINE_DISPATCH_RANGE);
+        if !dispatch_configs_share_launch_shape(&self.compiled_config, config)
+            || crate::instrumentation::cuda_resident_borrowed_fallback_enabled()
+        {
+            let started = std::time::Instant::now();
+            let outputs = self.dispatch_persistent_handles(inputs, config)?;
+            let wall_ns = crate::numeric::CUDA_NUMERIC
+                .elapsed_nanos_u64(started, "compiled persistent fallback wall latency")?;
+            self.backend
+                .telemetry
+                .record_timed_dispatch(wall_ns, None, None, None);
+            return Ok(vyre_driver::TimedDispatchResult {
+                outputs,
+                wall_ns,
+                device_ns: None,
+                enqueue_ns: None,
+                wait_ns: None,
+            });
+        }
+
+        let started = std::time::Instant::now();
+        let enqueue_started = std::time::Instant::now();
+        let handles = self.backend.resident_handles_from_resources(inputs)?;
+        let dispatch = self.backend.dispatch_resident_async_concrete_with_ptx_key(
+            &self.program,
+            &handles,
+            config,
+            &self.ptx_src,
+            self.module_key,
+            true,
+            (self.static_params.ptr != 0).then_some(self.static_params.ptr),
+            true,
+            &self.prepared,
+        )?;
+        let enqueue_ns = crate::numeric::CUDA_NUMERIC
+            .elapsed_nanos_u64(enqueue_started, "compiled persistent enqueue latency")?;
+        let wait_started = std::time::Instant::now();
+        let (outputs, device_ns) = dispatch.pending.await_timed_result()?;
+        let wait_ns = crate::numeric::CUDA_NUMERIC
+            .elapsed_nanos_u64(wait_started, "compiled persistent wait latency")?;
+        let wall_ns = crate::numeric::CUDA_NUMERIC
+            .elapsed_nanos_u64(started, "compiled persistent wall latency")?;
+        self.backend.telemetry.record_timed_dispatch(
+            wall_ns,
+            device_ns,
+            Some(enqueue_ns),
+            Some(wait_ns),
+        );
+        Ok(vyre_driver::TimedDispatchResult {
+            outputs,
+            wall_ns,
+            device_ns,
+            enqueue_ns: Some(enqueue_ns),
+            wait_ns: Some(wait_ns),
+        })
+    }
+
     fn dispatch_persistent_handles_into(
         &self,
         inputs: &[Resource],

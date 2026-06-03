@@ -27,7 +27,7 @@ pub(crate) fn step_nodes_frame<'a>(
         if scoped {
             invocation.locals.pop_scope();
         }
-        return Ok(false);
+        return Ok(scoped);
     }
     invocation.frames.push(Frame::Nodes {
         nodes,
@@ -551,4 +551,3 @@ fn resolve_call(
     invocation.op_cache.insert(call_expr, resolved);
     Ok(resolved)
 }
-

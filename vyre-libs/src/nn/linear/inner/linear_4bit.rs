@@ -240,15 +240,18 @@ pub fn linear_4bit_affine_grouped(
     let local = Expr::var("local");
     let lane = Expr::var("lane");
     let k = Expr::var("k");
+    let lane_in_word = Expr::var("lane_in_word");
+    let word_leader_lane = Expr::var("word_leader_lane");
+    let word_leader_k = Expr::var("word_leader_k");
     let packed_idx = Expr::add(
-        Expr::mul(Expr::div(k.clone(), Expr::u32(8)), Expr::u32(out_dim)),
+        Expr::mul(
+            Expr::div(word_leader_k.clone(), Expr::u32(8)),
+            Expr::u32(out_dim),
+        ),
         out_idx.clone(),
     );
-    let shift = Expr::mul(Expr::rem(k.clone(), Expr::u32(8)), Expr::u32(4));
-    let nibble = Expr::bitand(
-        Expr::shr(Expr::load(w_packed, packed_idx), shift),
-        Expr::u32(0xF),
-    );
+    let shift = Expr::mul(lane_in_word.clone(), Expr::u32(4));
+    let nibble = Expr::bitand(Expr::shr(Expr::var("packed_word"), shift), Expr::u32(0xF));
     let group = Expr::div(k.clone(), Expr::u32(group_size));
     let sidecar_idx = Expr::add(Expr::mul(group, Expr::u32(out_dim)), out_idx.clone());
     let weight_f32 = Expr::mul(
@@ -269,6 +272,33 @@ pub fn linear_4bit_affine_grouped(
                 Node::let_bind(
                     "k",
                     Expr::add(Expr::mul(Expr::var("chunk"), Expr::u32(tile)), lane.clone()),
+                ),
+                Node::let_bind("lane_in_word", Expr::bitand(lane.clone(), Expr::u32(7))),
+                Node::let_bind(
+                    "word_leader_lane",
+                    Expr::bitand(lane.clone(), Expr::u32(0xffff_fff8)),
+                ),
+                Node::let_bind(
+                    "word_leader_k",
+                    Expr::add(
+                        Expr::mul(Expr::var("chunk"), Expr::u32(tile)),
+                        word_leader_lane.clone(),
+                    ),
+                ),
+                Node::let_bind("packed_word_lane", Expr::u32(0)),
+                Node::if_then(
+                    Expr::and(
+                        Expr::eq(lane_in_word.clone(), Expr::u32(0)),
+                        Expr::lt(word_leader_k.clone(), Expr::u32(in_dim)),
+                    ),
+                    vec![Node::assign(
+                        "packed_word_lane",
+                        Expr::load(w_packed, packed_idx),
+                    )],
+                ),
+                Node::let_bind(
+                    "packed_word",
+                    Expr::subgroup_shuffle(Expr::var("packed_word_lane"), word_leader_lane),
                 ),
                 Node::if_then(
                     Expr::lt(k.clone(), Expr::u32(in_dim)),
@@ -396,6 +426,107 @@ mod tests {
     use crate::test_support::byte_pack::u32_bytes;
     use vyre_reference::value::Value;
 
+    fn expr_contains_subgroup_shuffle(expr: &Expr) -> bool {
+        match expr {
+            Expr::Load { index, .. }
+            | Expr::Cast { value: index, .. }
+            | Expr::SubgroupAdd { value: index }
+            | Expr::SubgroupBallot { cond: index }
+            | Expr::UnOp { operand: index, .. } => expr_contains_subgroup_shuffle(index),
+            Expr::BinOp { left, right, .. }
+            | Expr::SubgroupShuffle {
+                value: left,
+                lane: right,
+            } => {
+                matches!(expr, Expr::SubgroupShuffle { .. })
+                    || expr_contains_subgroup_shuffle(left)
+                    || expr_contains_subgroup_shuffle(right)
+            }
+            Expr::Select {
+                cond,
+                true_val,
+                false_val,
+            } => {
+                expr_contains_subgroup_shuffle(cond)
+                    || expr_contains_subgroup_shuffle(true_val)
+                    || expr_contains_subgroup_shuffle(false_val)
+            }
+            Expr::Fma { a, b, c } => {
+                expr_contains_subgroup_shuffle(a)
+                    || expr_contains_subgroup_shuffle(b)
+                    || expr_contains_subgroup_shuffle(c)
+            }
+            Expr::Atomic {
+                index,
+                expected,
+                value,
+                ..
+            } => {
+                expr_contains_subgroup_shuffle(index)
+                    || expected
+                        .as_deref()
+                        .is_some_and(expr_contains_subgroup_shuffle)
+                    || expr_contains_subgroup_shuffle(value)
+            }
+            Expr::Call { args, .. } => args.iter().any(expr_contains_subgroup_shuffle),
+            Expr::LitU32(_)
+            | Expr::LitI32(_)
+            | Expr::LitF32(_)
+            | Expr::LitBool(_)
+            | Expr::Var(_)
+            | Expr::BufLen { .. }
+            | Expr::InvocationId { .. }
+            | Expr::WorkgroupId { .. }
+            | Expr::LocalId { .. }
+            | Expr::SubgroupLocalId
+            | Expr::SubgroupSize
+            | Expr::Opaque(_) => false,
+            _ => false,
+        }
+    }
+
+    fn nodes_contain_subgroup_shuffle(nodes: &[Node]) -> bool {
+        nodes.iter().any(|node| match node {
+            Node::Let { value, .. } | Node::Assign { value, .. } => {
+                expr_contains_subgroup_shuffle(value)
+            }
+            Node::Store { index, value, .. } => {
+                expr_contains_subgroup_shuffle(index) || expr_contains_subgroup_shuffle(value)
+            }
+            Node::If {
+                cond,
+                then,
+                otherwise,
+            } => {
+                expr_contains_subgroup_shuffle(cond)
+                    || nodes_contain_subgroup_shuffle(then)
+                    || nodes_contain_subgroup_shuffle(otherwise)
+            }
+            Node::Loop { from, to, body, .. } => {
+                expr_contains_subgroup_shuffle(from)
+                    || expr_contains_subgroup_shuffle(to)
+                    || nodes_contain_subgroup_shuffle(body)
+            }
+            Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
+                expr_contains_subgroup_shuffle(offset) || expr_contains_subgroup_shuffle(size)
+            }
+            Node::Trap { address, .. } => expr_contains_subgroup_shuffle(address),
+            Node::Block(body) => nodes_contain_subgroup_shuffle(body),
+            Node::Region { body, .. } => nodes_contain_subgroup_shuffle(body),
+            Node::IndirectDispatch { .. }
+            | Node::AsyncWait { .. }
+            | Node::AllReduce { .. }
+            | Node::AllGather { .. }
+            | Node::ReduceScatter { .. }
+            | Node::Broadcast { .. }
+            | Node::Return
+            | Node::Barrier { .. }
+            | Node::Resume { .. }
+            | Node::Opaque(_) => false,
+            _ => false,
+        })
+    }
+
     fn affine_cpu_reference(
         x: &[f32],
         packed: &[u32],
@@ -515,6 +646,18 @@ mod tests {
             (out_vals[1] - 3.0).abs() < 1e-4,
             "expected bias-only second output 3.0, got {}",
             out_vals[1]
+        );
+    }
+
+    #[test]
+    fn linear_4bit_affine_grouped_broadcasts_packed_weight_words() {
+        let program =
+            linear_4bit_affine_grouped("x", "w", "scale", "zp", "b", "out", 256, 4096, 64)
+                .expect("Fix: grouped INT4 affine release fixture must build");
+
+        assert!(
+            nodes_contain_subgroup_shuffle(program.entry()),
+            "Fix: grouped INT4 release kernel must broadcast each packed u32 weight word across its 8 nibble lanes instead of reloading it per MAC."
         );
     }
 

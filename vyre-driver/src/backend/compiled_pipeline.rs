@@ -183,6 +183,34 @@ pub trait CompiledPipeline: private::Sealed + Send + Sync {
         })
     }
 
+    /// Dispatch the precompiled pipeline with resident handles and backend-owned timing.
+    ///
+    /// Default timing is host wall time around the resident-handle dispatch.
+    /// Native backends should override this when they can expose device event
+    /// timing for resident compiled launches.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] when the backend cannot complete dispatch.
+    fn dispatch_persistent_handles_timed(
+        &self,
+        inputs: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<TimedDispatchResult, BackendError> {
+        let started = std::time::Instant::now();
+        let outputs = self.dispatch_persistent_handles(inputs, config)?;
+        Ok(TimedDispatchResult {
+            outputs,
+            wall_ns: crate::backend::checked_elapsed_wall_ns(
+                started,
+                "compiled persistent handle dispatch",
+            )?,
+            device_ns: None,
+            enqueue_ns: None,
+            wait_ns: None,
+        })
+    }
+
     /// Dispatch the precompiled pipeline with mixed host/resident handles and
     /// write readback bytes into caller-owned output storage.
     ///

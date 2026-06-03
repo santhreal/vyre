@@ -13,10 +13,12 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
-    dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
+    dispatch_compiled_timed, input_bytes_total, transfer_accounting, ResidentInputPool,
 };
 use crate::api::suite::SuiteKind;
 use rayon::prelude::*;
+use std::sync::Arc;
+use vyre_driver::CompiledPipeline;
 use vyre_foundation::ir::Program;
 
 const IN_DIM: u32 = 256;
@@ -27,6 +29,7 @@ const GROUP_COUNT: u32 = (IN_DIM + GROUP_SIZE - 1) / GROUP_SIZE;
 const SIDECAR_WORDS: u32 = GROUP_COUNT * OUT_DIM;
 const MAC_COUNT: u64 = (IN_DIM as u64) * (OUT_DIM as u64);
 const CPU_BASELINE_SAMPLES: usize = 9;
+const RESIDENT_SAMPLE_SETS: usize = 8;
 
 const SUITES: &[SuiteKind] = &[
     SuiteKind::Release,
@@ -43,7 +46,8 @@ struct QuantizedLinearPrepared {
     input_bytes_total: u64,
     baseline_output: Vec<u8>,
     baseline_wall_ns: u64,
-    resident: Option<ResidentInputSet>,
+    compiled: Option<Arc<dyn CompiledPipeline>>,
+    resident: Option<ResidentInputPool>,
 }
 
 impl BenchCase for QuantizedLinear4BitAffineGrouped {
@@ -125,10 +129,11 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
             measured_cpu_oracle_checked(&x, &packed, &scale, &zero_point, &bias)?;
         let baseline_output = f32_bytes(&baseline);
         let resident_output_len = resident_output_byte_len(&program)?;
-        let resident = ResidentInputSet::upload_with_zeroed_outputs_optional(
+        let resident = ResidentInputPool::upload_with_zeroed_outputs_optional(
             ctx,
             &inputs,
             &[resident_output_len],
+            RESIDENT_SAMPLE_SETS,
             "quantized linear",
         )?;
 
@@ -138,6 +143,7 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
             input_bytes_total,
             baseline_output,
             baseline_wall_ns,
+            compiled: None,
             resident,
         }))
     }
@@ -154,16 +160,32 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
         let prepared = prepared
-            .downcast_ref::<QuantizedLinearPrepared>()
+            .downcast_mut::<QuantizedLinearPrepared>()
             .ok_or_else(|| {
                 BenchError::ExecutionFailed(
                     "quantized linear prepared payload type mismatch".to_string(),
                 )
             })?;
-        let dispatch = dispatch_program_timed(
-            ctx,
-            &prepared.program,
-            prepared.resident.as_ref(),
+
+        if prepared.compiled.is_none() {
+            let compiled = vyre_driver::pipeline::compile_with_telemetry(
+                Arc::clone(&ctx.preferred_backend),
+                &prepared.program,
+                &ctx.dispatch_config,
+            )
+            .map_err(|error| BenchError::BackendFailed(error.to_string()))?
+            .pipeline;
+            prepared.compiled = Some(compiled);
+        }
+        let compiled = prepared.compiled.as_ref().ok_or_else(|| {
+            BenchError::ExecutionFailed(
+                "quantized linear compiled pipeline missing after compile".to_string(),
+            )
+        })?;
+
+        let dispatch = dispatch_compiled_timed(
+            compiled.as_ref(),
+            prepared.resident.as_mut(),
             &prepared.inputs,
             &ctx.dispatch_config,
         )?;
@@ -392,15 +414,31 @@ fn measured_cpu_oracle_checked(
 }
 
 fn resident_output_byte_len(program: &Program) -> Result<usize, BenchError> {
-    let workgroup_x = program.workgroup_size()[0] as usize;
-    OUT_DIM
-        .try_into()
-        .ok()
-        .and_then(|out_dim: usize| out_dim.checked_mul(workgroup_x))
-        .and_then(|element_count| element_count.checked_mul(core::mem::size_of::<f32>()))
+    let output_indices = program.output_buffer_indices();
+    if output_indices.len() != 1 {
+        return Err(BenchError::ExecutionFailed(format!(
+            "quantized linear expected exactly one output buffer, got {}",
+            output_indices.len()
+        )));
+    }
+    let index = usize::try_from(output_indices[0]).map_err(|error| {
+        BenchError::ExecutionFailed(format!(
+            "quantized linear output buffer index {} does not fit usize: {error}",
+            output_indices[0]
+        ))
+    })?;
+    let decl = program.buffers().get(index).ok_or_else(|| {
+        BenchError::ExecutionFailed(format!(
+            "quantized linear output buffer index {index} is outside {} declared buffers",
+            program.buffers().len()
+        ))
+    })?;
+    decl.static_byte_len()
+        .map_err(BenchError::ExecutionFailed)?
         .ok_or_else(|| {
             BenchError::ExecutionFailed(
-                "quantized linear resident output allocation length overflowed usize".to_string(),
+                "quantized linear output buffer must have a static byte length for resident allocation"
+                    .to_string(),
             )
         })
 }

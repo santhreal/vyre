@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::time::Instant;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre::{DispatchConfig, VyreBackend};
@@ -27,6 +26,7 @@ pub struct ResidentInputSet {
 pub struct ResidentInputPool {
     backend: Arc<dyn VyreBackend>,
     sets: Vec<Vec<Resource>>,
+    input_count: usize,
     next_set: usize,
     cleanup_label: &'static str,
 }
@@ -88,18 +88,11 @@ pub fn dispatch_compiled_timed(
 ) -> Result<ResidentDispatch, BenchError> {
     if let Some(resident) = resident {
         let resources = resident.next_set(inputs)?;
-        let started = Instant::now();
-        let outputs = compiled
-            .dispatch_persistent_handles(resources, config)
+        let timed = compiled
+            .dispatch_persistent_handles_timed(resources, config)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
         return Ok(ResidentDispatch {
-            timed: TimedDispatchResult {
-                outputs,
-                wall_ns: u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX),
-                device_ns: None,
-                enqueue_ns: None,
-                wait_ns: None,
-            },
+            timed,
             resident_used: true,
         });
     }
@@ -302,6 +295,26 @@ impl ResidentInputPool {
         }
     }
 
+    /// Upload `set_count` copies of input resources plus zero-filled output resources.
+    pub fn upload_with_zeroed_outputs_optional(
+        ctx: &BenchContext,
+        inputs: &[Vec<u8>],
+        output_sizes: &[usize],
+        set_count: usize,
+        cleanup_label: &'static str,
+    ) -> Result<Option<Self>, BenchError> {
+        match Self::upload_with_zeroed_outputs(ctx, inputs, output_sizes, set_count, cleanup_label)
+        {
+            Ok(pool) => Ok(Some(pool)),
+            Err(BackendError::UnsupportedFeature { name, .. })
+                if name == "resident buffer allocation" =>
+            {
+                Ok(None)
+            }
+            Err(error) => Err(BenchError::BackendFailed(error.to_string())),
+        }
+    }
+
     /// Return the next resident input set, re-uploading when the pool wraps.
     pub fn next_set<'a>(&'a mut self, inputs: &[Vec<u8>]) -> Result<&'a [Resource], BenchError> {
         if self.sets.is_empty() {
@@ -311,17 +324,21 @@ impl ResidentInputPool {
             )));
         }
         let index = self.next_set % self.sets.len();
-        if self.sets[index].len() != inputs.len() {
+        if self.input_count != inputs.len() {
             return Err(BenchError::ExecutionFailed(format!(
                 "{} resident pool input count changed: pool has {}, caller passed {}",
                 self.cleanup_label,
-                self.sets[index].len(),
+                self.input_count,
                 inputs.len()
             )));
         }
         if self.next_set >= self.sets.len() {
-            upload_resident_inputs(self.backend.as_ref(), &self.sets[index], inputs)
-                .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+            upload_resident_inputs(
+                self.backend.as_ref(),
+                &self.sets[index][..self.input_count],
+                inputs,
+            )
+            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
         }
         self.next_set = self.next_set.saturating_add(1);
         Ok(&self.sets[index])
@@ -333,10 +350,21 @@ impl ResidentInputPool {
         set_count: usize,
         cleanup_label: &'static str,
     ) -> Result<Self, BackendError> {
+        Self::upload_with_zeroed_outputs(ctx, inputs, &[], set_count, cleanup_label)
+    }
+
+    fn upload_with_zeroed_outputs(
+        ctx: &BenchContext,
+        inputs: &[Vec<u8>],
+        output_sizes: &[usize],
+        set_count: usize,
+        cleanup_label: &'static str,
+    ) -> Result<Self, BackendError> {
         if set_count == 0 {
             return Ok(Self {
                 backend: Arc::clone(&ctx.preferred_backend),
                 sets: Vec::new(),
+                input_count: inputs.len(),
                 next_set: 0,
                 cleanup_label,
             });
@@ -347,13 +375,16 @@ impl ResidentInputPool {
         let mut zero_scratch = Vec::new();
         let result = (|| {
             for _ in 0..set_count {
-                sets.push(Vec::with_capacity(resident_set_resource_count(inputs, &[])));
+                sets.push(Vec::with_capacity(resident_set_resource_count(
+                    inputs,
+                    output_sizes,
+                )));
                 let resource_index = sets.len() - 1;
                 allocate_and_upload_resident_set(
                     backend.as_ref(),
                     &mut sets[resource_index],
                     inputs,
-                    &[],
+                    output_sizes,
                     &mut zero_scratch,
                 )?;
             }
@@ -376,6 +407,7 @@ impl ResidentInputPool {
         Ok(Self {
             backend,
             sets,
+            input_count: inputs.len(),
             next_set: 0,
             cleanup_label,
         })
