@@ -762,6 +762,86 @@ mod part7_tests {
     }
 
     #[test]
+    fn backend_suite_parity_reports_duplicate_family_case_rows() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for backend suite duplicate parity test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir).expect(
+            "Fix: create benchmark evidence directory for backend suite duplicate parity test.",
+        );
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/cuda-condition-a.json",
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m"
+                    },
+                    {
+                        "path": "release/evidence/benchmarks/cuda-condition-b.json",
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m"
+                    }
+                ],
+                "artifacts": [
+                    "release/evidence/benchmarks/cuda-condition-a.json",
+                    "release/evidence/benchmarks/cuda-condition-b.json"
+                ]
+            }))
+            .expect("Fix: serialize CUDA suite for backend suite duplicate parity test."),
+        )
+        .expect("Fix: write CUDA suite for backend suite duplicate parity test.");
+        std::fs::write(
+            benchmark_dir.join("wgpu-fallback-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/wgpu-condition-a.json",
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m"
+                    },
+                    {
+                        "path": "release/evidence/benchmarks/wgpu-condition-b.json",
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m"
+                    }
+                ],
+                "artifacts": [
+                    "release/evidence/benchmarks/wgpu-condition-a.json",
+                    "release/evidence/benchmarks/wgpu-condition-b.json"
+                ]
+            }))
+            .expect("Fix: serialize WGPU suite for backend suite duplicate parity test."),
+        )
+        .expect("Fix: write WGPU suite for backend suite duplicate parity test.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "WGPU fallback".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_parity(&requirement, &release_dir, &mut failures);
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "has 2 CUDA rows for family `condition-eval` case `release.condition_eval.1m`"
+            )),
+            "Fix: WGPU parity gate must report duplicate CUDA family/case rows; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "has 2 WGPU rows for family `condition-eval` case `release.condition_eval.1m`"
+            )),
+            "Fix: WGPU parity gate must report duplicate WGPU family/case rows; failures={failures:?}"
+        );
+    }
+
+    #[test]
     fn backend_suite_report_rejects_filename_backend_identity_drift() {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for backend suite identity test.");
@@ -906,6 +986,22 @@ pub(crate) fn check_backend_suite_parity(
             )),
             BackendSuiteParityIssue::SharedArtifactPath { path } => failures.push(format!(
                 "requirement `{}` WGPU/CUDA suite parity reuses artifact path `{path}` across CUDA and WGPU suites",
+                requirement.id
+            )),
+            BackendSuiteParityIssue::DuplicateCudaPair {
+                family_id,
+                requested_case_id,
+                count,
+            } => failures.push(format!(
+                "requirement `{}` WGPU/CUDA suite parity has {count} CUDA rows for family `{family_id}` case `{requested_case_id}`",
+                requirement.id
+            )),
+            BackendSuiteParityIssue::DuplicateWgpuPair {
+                family_id,
+                requested_case_id,
+                count,
+            } => failures.push(format!(
+                "requirement `{}` WGPU/CUDA suite parity has {count} WGPU rows for family `{family_id}` case `{requested_case_id}`",
                 requirement.id
             )),
             BackendSuiteParityIssue::StatusFieldMismatch {

@@ -742,6 +742,16 @@ pub(crate) enum BackendSuiteParityIssue {
     SharedArtifactPath {
         path: String,
     },
+    DuplicateCudaPair {
+        family_id: String,
+        requested_case_id: String,
+        count: usize,
+    },
+    DuplicateWgpuPair {
+        family_id: String,
+        requested_case_id: String,
+        count: usize,
+    },
     StatusFieldMismatch {
         family_id: String,
         requested_case_id: String,
@@ -1649,6 +1659,24 @@ pub(crate) fn backend_suite_parity_issues(
             wgpu_count,
         });
     }
+    for ((family_id, requested_case_id), count) in suite_family_case_pair_counts(cuda_suite) {
+        if count > 1 {
+            issues.push(BackendSuiteParityIssue::DuplicateCudaPair {
+                family_id,
+                requested_case_id,
+                count,
+            });
+        }
+    }
+    for ((family_id, requested_case_id), count) in suite_family_case_pair_counts(wgpu_suite) {
+        if count > 1 {
+            issues.push(BackendSuiteParityIssue::DuplicateWgpuPair {
+                family_id,
+                requested_case_id,
+                count,
+            });
+        }
+    }
     let cuda_paths = suite_all_artifact_paths(cuda_suite);
     let wgpu_paths = suite_all_artifact_paths(wgpu_suite);
     for path in cuda_paths.intersection(&wgpu_paths) {
@@ -1955,6 +1983,11 @@ fn case_id(case: &Value) -> String {
 }
 
 fn suite_family_case_pairs(suite: &Value) -> BTreeSet<(String, String)> {
+    suite_family_case_pair_counts(suite).into_keys().collect()
+}
+
+fn suite_family_case_pair_counts(suite: &Value) -> BTreeMap<(String, String), usize> {
+    let mut counts = BTreeMap::new();
     suite
         .get("artifact_statuses")
         .and_then(Value::as_array)
@@ -1971,7 +2004,10 @@ fn suite_family_case_pairs(suite: &Value) -> BTreeSet<(String, String)> {
                 .filter(|value| !value.trim().is_empty())?;
             Some((family_id.to_string(), requested_case_id.to_string()))
         })
-        .collect()
+        .for_each(|pair| {
+            *counts.entry(pair).or_insert(0) += 1;
+        });
+    counts
 }
 
 fn suite_statuses_by_family_case_pair(suite: &Value) -> BTreeMap<(String, String), &Value> {
@@ -2948,6 +2984,55 @@ mod tests {
     }
 
     #[test]
+    fn backend_suite_parity_rejects_duplicate_family_case_pairs_with_equal_counts() {
+        let cuda = serde_json::json!({
+            "artifact_statuses": [
+                {
+                    "path": "release/evidence/benchmarks/cuda-condition-a.json",
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m"
+                },
+                {
+                    "path": "release/evidence/benchmarks/cuda-condition-b.json",
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m"
+                }
+            ]
+        });
+        let wgpu = serde_json::json!({
+            "artifact_statuses": [
+                {
+                    "path": "release/evidence/benchmarks/wgpu-condition-a.json",
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m"
+                },
+                {
+                    "path": "release/evidence/benchmarks/wgpu-condition-b.json",
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m"
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_parity_issues(&cuda, &wgpu),
+            vec![
+                BackendSuiteParityIssue::DuplicateCudaPair {
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                    count: 2,
+                },
+                BackendSuiteParityIssue::DuplicateWgpuPair {
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                    count: 2,
+                },
+            ],
+            "Fix: WGPU parity must reject duplicate family/case rows even when CUDA and WGPU counts match."
+        );
+    }
+
+    #[test]
     fn backend_suite_inventory_rejects_missing_cross_entries() {
         let suite = serde_json::json!({
             "artifacts": [
@@ -3826,10 +3911,17 @@ mod tests {
 
         assert_eq!(
             backend_suite_parity_issues(&cuda, &wgpu),
-            vec![BackendSuiteParityIssue::CountMismatch {
-                cuda_count: 1,
-                wgpu_count: 2,
-            }],
+            vec![
+                BackendSuiteParityIssue::CountMismatch {
+                    cuda_count: 1,
+                    wgpu_count: 2,
+                },
+                BackendSuiteParityIssue::DuplicateWgpuPair {
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                    count: 2,
+                },
+            ],
             "Fix: duplicate suite metadata should not silently prove artifact-count parity."
         );
     }
