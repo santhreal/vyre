@@ -160,6 +160,7 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
         ));
     }
 
+    let mut source_reports = Vec::new();
     for artifact in source_artifacts {
         let artifact_path = resolve_benchmark_artifact_path(workspace_root, &artifact);
         if !artifact_path.is_file() {
@@ -241,8 +242,188 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
                 "source_artifact `{artifact}` summary.failed must be 0"
             ));
         }
+        source_reports.push(report);
+    }
+    if release_axes_has_scalar_fields(axes) {
+        inspect_release_axes_scalar_values(axes, &source_reports, &mut issues);
     }
     issues
+}
+
+fn release_axes_has_scalar_fields(axes: &Value) -> bool {
+    [
+        "warm_us_per_file",
+        "cold_pipeline_build_ms",
+        "gbs_scan_throughput",
+        "ulp_drift_max",
+        "max_vram_mib",
+    ]
+    .iter()
+    .any(|axis| axes.get(*axis).is_some())
+}
+
+fn inspect_release_axes_scalar_values(
+    axes: &Value,
+    source_reports: &[Value],
+    issues: &mut Vec<String>,
+) {
+    if source_reports.is_empty() {
+        return;
+    }
+    if let Some(expected) = min_positive_metric_percentile(source_reports, "wall_ns", "p50") {
+        inspect_release_axis_f64(axes, "warm_us_per_file", expected as f64 / 1_000.0, issues);
+    }
+    if let Some(expected) = first_min_positive_metric_percentile(
+        source_reports,
+        &[
+            "cold_compile_ns",
+            "cold_wall_ns",
+            "compile_ns",
+            "lower_ns",
+            "optimize_ns",
+        ],
+        "p50",
+    ) {
+        inspect_release_axis_f64(
+            axes,
+            "cold_pipeline_build_ms",
+            expected as f64 / 1_000_000.0,
+            issues,
+        );
+    }
+    if let Some(expected) = first_max_positive_metric_percentile(
+        source_reports,
+        &["wall_gb_s_x1000", "device_gb_s_x1000"],
+        "p50",
+    ) {
+        inspect_release_axis_f64(
+            axes,
+            "gbs_scan_throughput",
+            expected as f64 / 1_000.0,
+            issues,
+        );
+    }
+    inspect_release_axis_u64(
+        axes,
+        "ulp_drift_max",
+        max_observed_ulp(source_reports),
+        issues,
+    );
+    if let Some(expected) = max_release_axis_vram_mib(source_reports) {
+        inspect_release_axis_u64(axes, "max_vram_mib", expected, issues);
+    }
+}
+
+fn inspect_release_axis_f64(axes: &Value, axis: &str, expected: f64, issues: &mut Vec<String>) {
+    let Some(actual) = axes_number_f64(axes, axis) else {
+        issues.push(format!(
+            "bench-release-axes {axis} is missing or not numeric; expected {expected}"
+        ));
+        return;
+    };
+    if (actual - expected).abs() > 0.000_001 {
+        issues.push(format!(
+            "bench-release-axes {axis}={actual} does not match source artifacts {expected}"
+        ));
+    }
+}
+
+fn inspect_release_axis_u64(axes: &Value, axis: &str, expected: u64, issues: &mut Vec<String>) {
+    let Some(actual) = axes_number_u64(axes, axis) else {
+        issues.push(format!(
+            "bench-release-axes {axis} is missing or not numeric; expected {expected}"
+        ));
+        return;
+    };
+    if actual != expected {
+        issues.push(format!(
+            "bench-release-axes {axis}={actual} does not match source artifacts {expected}"
+        ));
+    }
+}
+
+fn axes_number_f64(axes: &Value, axis: &str) -> Option<f64> {
+    axes.get(axis).and_then(|value| {
+        value
+            .as_f64()
+            .or_else(|| value.as_str()?.parse::<f64>().ok())
+    })
+}
+
+fn axes_number_u64(axes: &Value, axis: &str) -> Option<u64> {
+    axes.get(axis).and_then(|value| {
+        value
+            .as_u64()
+            .or_else(|| value.as_str()?.parse::<u64>().ok())
+    })
+}
+
+fn min_positive_metric_percentile(
+    reports: &[Value],
+    metric_name: &str,
+    percentile: &str,
+) -> Option<u64> {
+    reports
+        .iter()
+        .filter_map(|report| artifact_positive_metric_percentile(report, metric_name, percentile))
+        .min()
+}
+
+fn max_positive_metric_percentile(
+    reports: &[Value],
+    metric_name: &str,
+    percentile: &str,
+) -> Option<u64> {
+    reports
+        .iter()
+        .filter_map(|report| artifact_positive_metric_percentile(report, metric_name, percentile))
+        .max()
+}
+
+fn first_min_positive_metric_percentile(
+    reports: &[Value],
+    metric_names: &[&str],
+    percentile: &str,
+) -> Option<u64> {
+    metric_names
+        .iter()
+        .find_map(|metric_name| min_positive_metric_percentile(reports, metric_name, percentile))
+}
+
+fn first_max_positive_metric_percentile(
+    reports: &[Value],
+    metric_names: &[&str],
+    percentile: &str,
+) -> Option<u64> {
+    metric_names
+        .iter()
+        .find_map(|metric_name| max_positive_metric_percentile(reports, metric_name, percentile))
+}
+
+fn max_observed_ulp(reports: &[Value]) -> u64 {
+    reports
+        .iter()
+        .filter_map(|report| report.get("cases").and_then(Value::as_array))
+        .flat_map(|cases| cases.iter())
+        .filter_map(|case| {
+            case.get("correctness")
+                .and_then(|correctness| correctness.get("Toleranced"))
+                .and_then(|toleranced| toleranced.get("max_observed_ulp"))
+                .and_then(Value::as_u64)
+        })
+        .max()
+        .unwrap_or(0)
+}
+
+fn max_release_axis_vram_mib(reports: &[Value]) -> Option<u64> {
+    let environment_values = reports
+        .iter()
+        .filter_map(|report| artifact_environment_first_gpu_u64(report, "memory_total_mib"))
+        .filter(|value| *value > 0);
+    let metric_values = reports.iter().filter_map(|report| {
+        artifact_positive_metric_percentile(report, "memory_total_mib", "p50")
+    });
+    environment_values.chain(metric_values).max()
 }
 
 fn inspect_release_axis_source_artifact_metrics(
@@ -2162,6 +2343,72 @@ mod tests {
                 "source_artifact `release/evidence/benchmarks/workload-missing-axis-metrics.json` has no GPU memory_total_mib evidence for max_vram_mib"
             )),
             "Fix: release-axis source artifacts must individually prove GPU memory evidence, not rely on another artifact; issues={issues:?}"
+        );
+    }
+
+    #[test]
+    fn cuda_release_axes_reject_axis_values_that_drift_from_source_artifacts() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for release axes scalar drift test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temp benchmark evidence directory.");
+        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let mut artifacts = Vec::new();
+        for index in 1..=12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            std::fs::write(
+                dir.path().join(&artifact),
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "source_tree_fingerprint": &source_tree_fingerprint,
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "environment": {
+                        "gpu_devices": [{"memory_total_mib": 24576}]
+                    },
+                    "cases": [
+                        {
+                            "id": format!("release.scalar-drift.{index}"),
+                            "backend_id": "cuda",
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"p50": 17_000},
+                                "cold_compile_ns": {"p50": 2_000_000},
+                                "wall_gb_s_x1000": {"p50": 4_000}
+                            },
+                            "correctness": {
+                                "Toleranced": {"max_observed_ulp": 0}
+                            }
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize scalar drift source artifact."),
+            )
+            .expect("Fix: write scalar drift source artifact.");
+            artifacts.push(artifact);
+        }
+        let axes = serde_json::json!({
+            "warm_us_per_file": 17.0,
+            "cold_pipeline_build_ms": 2.0,
+            "gbs_scan_throughput": 999.0,
+            "ulp_drift_max": 0,
+            "max_vram_mib": 24576,
+            "source_artifacts": artifacts
+        });
+        let cuda_suite = serde_json::json!({
+            "backend": "cuda",
+            "artifacts": artifacts
+        });
+
+        let issues = cuda_release_axes_source_artifact_issues(dir.path(), &axes, &cuda_suite);
+
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "bench-release-axes gbs_scan_throughput=999 does not match source artifacts 4"
+            )),
+            "Fix: release-axis scalar values must be recomputed from source artifacts instead of trusting stale axes JSON; issues={issues:?}"
         );
     }
 

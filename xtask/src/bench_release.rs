@@ -381,6 +381,37 @@ mod tests {
     }
 
     #[test]
+    fn bench_release_rejects_axes_scalar_drift_from_source_artifacts() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for bench-release axes drift test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        let artifacts = write_canonical_axes_fixture(&benchmark_dir, dir.path(), None);
+        fs::write(
+            benchmark_dir.join("bench-release-axes.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "warm_us_per_file": 17.0,
+                "cold_pipeline_build_ms": 2.0,
+                "gbs_scan_throughput": 999.0,
+                "ulp_drift_max": 0,
+                "max_vram_mib": 24576,
+                "source_artifacts": artifacts,
+                "blockers": []
+            }))
+            .expect("Fix: serialize drifted temporary release axes."),
+        )
+        .expect("Fix: write drifted temporary release axes.");
+
+        let error = load_release_axes(&benchmark_dir)
+            .expect_err("Fix: drifted release axes must not load.");
+
+        assert!(
+            error.contains("gbs_scan_throughput=999 does not match source artifacts 4"),
+            "Fix: bench-release must reject stale or inflated release axes values; error={error}"
+        );
+    }
+
+    #[test]
     fn bench_release_rejects_mislabeled_cuda_suite_backend() {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for bench-release suite backend test.");
