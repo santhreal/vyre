@@ -84,6 +84,17 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
         .unwrap_or(0);
     let failed_cases = crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&value);
     let case_failed = failed_cases.len() as u64;
+    if value.get("summary").is_some() || value.get("cases").is_some() {
+        if let Some(mismatch) =
+            crate::benchmark_evidence_semantics::benchmark_report_summary_case_evidence_mismatch(
+                &value,
+            )
+        {
+            blockers.push(format!(
+                "{evidence}: benchmark summary is invalid: {mismatch}"
+            ));
+        }
+    }
     if failed != 0 || case_failed != 0 {
         let detail = if failed_cases.is_empty() {
             String::new()
@@ -492,6 +503,43 @@ mod part1_tests {
                 "benchmark summary reports 0 failed case(s); case evidence reports 1 failed case(s): `release.condition_eval.1m`: CUDA/WGPU output mismatch at row 17"
             )),
             "Fix: completion audit must reject benchmark case failures hidden behind summary.failed=0; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_stale_summary_passed_count() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for stale benchmark summary audit test.");
+        let path = dir.path().join("wgpu-stale-passed.json");
+        fs::write(
+            &path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 0, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize stale benchmark summary JSON."),
+        )
+        .expect("Fix: write stale benchmark summary JSON.");
+
+        let mut blockers = Vec::new();
+        inspect_json_evidence(
+            "release/evidence/benchmarks/wgpu-stale-passed.json",
+            &path,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "benchmark summary is invalid: summary total/pass/fail (Some(1)/Some(0)/Some(0)) contradicts case evidence (1/1/0)"
+            )),
+            "Fix: completion audit must reject stale summary.passed even when summary.failed is zero; blockers={blockers:?}"
         );
     }
 }

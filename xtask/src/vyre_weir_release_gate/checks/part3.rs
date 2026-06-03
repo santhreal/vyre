@@ -127,6 +127,15 @@ pub(crate) fn check_single_benchmark_report(
         .unwrap_or(u64::MAX);
     let failed_cases = crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(report);
     let case_failed = failed_cases.len() as u64;
+    if let Some(mismatch) =
+        crate::benchmark_evidence_semantics::benchmark_report_summary_case_evidence_mismatch(report)
+    {
+        failures.push(format!(
+            "requirement `{}` benchmark `{}` has invalid summary: {mismatch}",
+            requirement.id,
+            path.display()
+        ));
+    }
     if failed != 0 || case_failed != 0 {
         let detail = if failed_cases.is_empty() {
             String::new()
@@ -540,6 +549,59 @@ mod part3_tests {
                 "reports 0 failed case(s); case evidence reports 1 failed case(s): `release.condition_eval.1m`: CUDA/WGPU output mismatch at row 17"
             )),
             "Fix: direct benchmark gate must reject hidden case failures even when summary.failed is zero; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn single_benchmark_report_rejects_stale_summary_passed_count() {
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let report = serde_json::json!({
+            "selected_backend": "wgpu",
+            "summary": {"total_cases": 1, "passed": 0, "failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "wgpu",
+                    "status": "pass",
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["wgpu"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "metrics": {
+                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                        "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002}
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 200.0}
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_single_benchmark_report(
+            &requirement,
+            Path::new("wgpu-stale-passed.json"),
+            &report,
+            false,
+            None,
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "has invalid summary: summary total/pass/fail (Some(1)/Some(0)/Some(0)) contradicts case evidence (1/1/0)"
+            )),
+            "Fix: direct benchmark gate must reject stale summary.passed even when summary.failed is zero; failures={failures:?}"
         );
     }
 }

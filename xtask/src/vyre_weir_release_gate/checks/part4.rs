@@ -181,6 +181,16 @@ pub(crate) fn check_before_after_benchmark_report(
     let failed_cases =
         crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&report);
     let case_failed = failed_cases.len() as u64;
+    if let Some(mismatch) =
+        crate::benchmark_evidence_semantics::benchmark_report_summary_case_evidence_mismatch(
+            &report,
+        )
+    {
+        failures.push(format!(
+            "requirement `{}` benchmark `{suffix}` has invalid summary: {mismatch}",
+            requirement.id
+        ));
+    }
     if failed != 0 || case_failed != 0 {
         let detail = if failed_cases.is_empty() {
             String::new()

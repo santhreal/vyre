@@ -51,20 +51,34 @@ pub(crate) fn benchmark_case_passes_summary_evidence(case: &Value) -> bool {
 }
 
 pub(crate) fn benchmark_report_summary_matches_case_evidence(report: &Value) -> bool {
+    benchmark_report_summary_case_evidence_mismatch(report).is_none()
+}
+
+pub(crate) fn benchmark_report_summary_case_evidence_mismatch(report: &Value) -> Option<String> {
     let Some(cases) = report.get("cases").and_then(Value::as_array) else {
-        return false;
+        return Some("missing cases array".to_string());
     };
     let Some(summary) = report.get("summary") else {
-        return false;
+        return Some("missing summary".to_string());
     };
     let passed = cases
         .iter()
         .filter(|case| benchmark_case_passes_summary_evidence(case))
         .count() as u64;
     let failed = cases.len() as u64 - passed;
-    summary.get("total_cases").and_then(Value::as_u64) == Some(cases.len() as u64)
-        && summary.get("passed").and_then(Value::as_u64) == Some(passed)
-        && summary.get("failed").and_then(Value::as_u64) == Some(failed)
+    let summary_total_cases = summary.get("total_cases").and_then(Value::as_u64);
+    let summary_passed = summary.get("passed").and_then(Value::as_u64);
+    let summary_failed = summary.get("failed").and_then(Value::as_u64);
+    if summary_total_cases == Some(cases.len() as u64)
+        && summary_passed == Some(passed)
+        && summary_failed == Some(failed)
+    {
+        return None;
+    }
+    Some(format!(
+        "summary total/pass/fail ({summary_total_cases:?}/{summary_passed:?}/{summary_failed:?}) contradicts case evidence ({}/{passed}/{failed})",
+        cases.len()
+    ))
 }
 
 pub(crate) fn benchmark_failed_case_summaries(report: &Value) -> Vec<String> {
@@ -1373,6 +1387,34 @@ mod tests {
             benchmark_case_failure_reason(&case),
             Some("performance contract failed".to_string()),
             "Fix: contradictory pass status must not hide contract_passed=false evidence."
+        );
+    }
+
+    #[test]
+    fn benchmark_report_summary_mismatch_reports_total_pass_fail_drift() {
+        let report = serde_json::json!({
+            "summary": {"total_cases": 2, "passed": 0, "failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "status": "pass",
+                    "correctness": {"Valid": {}},
+                    "performance": {"contract_passed": true}
+                }
+            ]
+        });
+
+        assert_eq!(
+            benchmark_report_summary_case_evidence_mismatch(&report),
+            Some(
+                "summary total/pass/fail (Some(2)/Some(0)/Some(0)) contradicts case evidence (1/1/0)"
+                    .to_string()
+            ),
+            "Fix: benchmark summary validation must expose stale total_cases and passed counts, not only summary.failed."
+        );
+        assert!(
+            !benchmark_report_summary_matches_case_evidence(&report),
+            "Fix: stale benchmark summaries must not be accepted by boolean reuse/gate predicates."
         );
     }
 

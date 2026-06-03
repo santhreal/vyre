@@ -23,6 +23,16 @@ pub(crate) fn check_benchmark_report_has_cases(
     let failed_cases =
         crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&report);
     let case_failed = failed_cases.len() as u64;
+    if let Some(mismatch) =
+        crate::benchmark_evidence_semantics::benchmark_report_summary_case_evidence_mismatch(
+            &report,
+        )
+    {
+        failures.push(format!(
+            "requirement `{}` benchmark `{suffix}` has invalid summary: {mismatch}",
+            requirement.id
+        ));
+    }
     if failed != 0 || case_failed != 0 {
         let detail = if failed_cases.is_empty() {
             String::new()
@@ -701,6 +711,51 @@ mod tests {
                 "benchmark `wgpu-hidden-invalid.json` reports 0 failed case(s); case evidence reports 1 failed case(s): `release.condition_eval.1m`: CUDA/WGPU output mismatch at row 17"
             )),
             "Fix: generic benchmark gate must reject hidden case failures even when summary.failed is zero; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn benchmark_report_has_cases_rejects_stale_summary_total_cases() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for stale benchmark summary test.");
+        let artifact = dir.path().join("wgpu-stale-total-cases.json");
+        fs::write(
+            &artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 2, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize stale benchmark summary evidence."),
+        )
+        .expect("Fix: write stale benchmark summary evidence.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["wgpu-stale-total-cases.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_benchmark_report_has_cases(
+            &requirement,
+            dir.path(),
+            "wgpu-stale-total-cases.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "benchmark `wgpu-stale-total-cases.json` has invalid summary: summary total/pass/fail (Some(2)/Some(1)/Some(0)) contradicts case evidence (1/1/0)"
+            )),
+            "Fix: generic benchmark gate must reject stale summary.total_cases even when the cases array is non-empty; failures={failures:?}"
         );
     }
 
