@@ -483,6 +483,9 @@ fn inspect_backend_suite_artifact_status(
 ) {
     for issue in backend_suite_artifact_status_issues(status, artifact_report) {
         match issue {
+            BackendSuiteArtifactStatusIssue::MissingField { path, field } => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` status is missing artifact-backed `{field}`"
+            )),
             BackendSuiteArtifactStatusIssue::SourceFingerprintMismatch {
                 path,
                 status_source_fingerprint,

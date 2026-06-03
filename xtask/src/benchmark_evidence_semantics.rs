@@ -164,6 +164,10 @@ pub(crate) enum BackendSuiteInventoryIssue {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum BackendSuiteArtifactStatusIssue {
+    MissingField {
+        path: String,
+        field: &'static str,
+    },
     SourceFingerprintMismatch {
         path: String,
         status_source_fingerprint: String,
@@ -363,25 +367,35 @@ pub(crate) fn backend_suite_artifact_status_issues(
     let artifact_source = artifact_report
         .get("source_fingerprint")
         .and_then(non_empty_str);
-    if let (Some(status_source), Some(artifact_source)) = (status_source, artifact_source) {
-        if status_source != artifact_source {
+    match (status_source, artifact_source) {
+        (None, Some(_)) => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+            path: path.clone(),
+            field: "source_fingerprint",
+        }),
+        (Some(status_source), Some(artifact_source)) if status_source != artifact_source => {
             issues.push(BackendSuiteArtifactStatusIssue::SourceFingerprintMismatch {
                 path: path.clone(),
                 status_source_fingerprint: status_source.to_string(),
                 artifact_source_fingerprint: artifact_source.to_string(),
             });
         }
+        _ => {}
     }
+
     let status_source_tree = status
         .get("source_tree_fingerprint")
         .and_then(non_empty_str);
     let artifact_source_tree = artifact_report
         .get("source_tree_fingerprint")
         .and_then(non_empty_str);
-    if let (Some(status_source_tree), Some(artifact_source_tree)) =
-        (status_source_tree, artifact_source_tree)
-    {
-        if status_source_tree != artifact_source_tree {
+    match (status_source_tree, artifact_source_tree) {
+        (None, Some(_)) => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+            path: path.clone(),
+            field: "source_tree_fingerprint",
+        }),
+        (Some(status_source_tree), Some(artifact_source_tree))
+            if status_source_tree != artifact_source_tree =>
+        {
             issues.push(
                 BackendSuiteArtifactStatusIssue::SourceTreeFingerprintMismatch {
                     path: path.clone(),
@@ -390,20 +404,26 @@ pub(crate) fn backend_suite_artifact_status_issues(
                 },
             );
         }
+        _ => {}
     }
 
     let status_backend = status.get("selected_backend").and_then(non_empty_str);
     let artifact_backend = artifact_report
         .get("selected_backend")
         .and_then(non_empty_str);
-    if let (Some(status_backend), Some(artifact_backend)) = (status_backend, artifact_backend) {
-        if status_backend != artifact_backend {
+    match (status_backend, artifact_backend) {
+        (None, Some(_)) => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+            path: path.clone(),
+            field: "selected_backend",
+        }),
+        (Some(status_backend), Some(artifact_backend)) if status_backend != artifact_backend => {
             issues.push(BackendSuiteArtifactStatusIssue::SelectedBackendMismatch {
                 path: path.clone(),
                 status_selected_backend: status_backend.to_string(),
                 artifact_selected_backend: artifact_backend.to_string(),
             });
         }
+        _ => {}
     }
 
     let status_case_count = status.get("case_count").and_then(Value::as_u64);
@@ -411,16 +431,21 @@ pub(crate) fn backend_suite_artifact_status_issues(
         .get("cases")
         .and_then(Value::as_array)
         .map(|cases| cases.len() as u64);
-    if let (Some(status_case_count), Some(artifact_case_count)) =
-        (status_case_count, artifact_case_count)
-    {
-        if status_case_count != artifact_case_count {
+    match (status_case_count, artifact_case_count) {
+        (None, Some(_)) => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+            path: path.clone(),
+            field: "case_count",
+        }),
+        (Some(status_case_count), Some(artifact_case_count))
+            if status_case_count != artifact_case_count =>
+        {
             issues.push(BackendSuiteArtifactStatusIssue::CaseCountMismatch {
                 path: path.clone(),
                 status_case_count,
                 artifact_case_count,
             });
         }
+        _ => {}
     }
 
     let status_failed_count = status.get("failed_count").and_then(Value::as_u64);
@@ -428,21 +453,30 @@ pub(crate) fn backend_suite_artifact_status_issues(
         .get("summary")
         .and_then(|summary| summary.get("failed"))
         .and_then(Value::as_u64);
-    if let (Some(status_failed_count), Some(artifact_failed_count)) =
-        (status_failed_count, artifact_failed_count)
-    {
-        if status_failed_count != artifact_failed_count {
+    match (status_failed_count, artifact_failed_count) {
+        (None, Some(_)) => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+            path: path.clone(),
+            field: "failed_count",
+        }),
+        (Some(status_failed_count), Some(artifact_failed_count))
+            if status_failed_count != artifact_failed_count =>
+        {
             issues.push(BackendSuiteArtifactStatusIssue::FailedCountMismatch {
                 path: path.clone(),
                 status_failed_count,
                 artifact_failed_count,
             });
         }
+        _ => {}
     }
 
     for (field, artifact_value) in backend_suite_numeric_artifact_fields(artifact_report) {
-        if let Some(status_value) = status.get(field).and_then(Value::as_u64) {
-            if status_value != artifact_value {
+        match status.get(field).and_then(Value::as_u64) {
+            None => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+                path: path.clone(),
+                field,
+            }),
+            Some(status_value) if status_value != artifact_value => {
                 issues.push(BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
                     path: path.clone(),
                     field,
@@ -450,11 +484,16 @@ pub(crate) fn backend_suite_artifact_status_issues(
                     artifact_value,
                 });
             }
+            _ => {}
         }
     }
     for (field, artifact_value) in backend_suite_string_artifact_fields(artifact_report) {
-        if let Some(status_value) = status.get(field).and_then(non_empty_str) {
-            if status_value != artifact_value {
+        match status.get(field).and_then(non_empty_str) {
+            None => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+                path: path.clone(),
+                field,
+            }),
+            Some(status_value) if status_value != artifact_value => {
                 issues.push(BackendSuiteArtifactStatusIssue::StringFieldMismatch {
                     path: path.clone(),
                     field,
@@ -462,16 +501,23 @@ pub(crate) fn backend_suite_artifact_status_issues(
                     artifact_value,
                 });
             }
+            _ => {}
         }
     }
 
     let (artifact_contract_cases, artifact_passing_cases) =
         artifact_cpu_sota_100x_contract_counts(artifact_report);
-    if let Some(status_contract_cases) = status
+    match status
         .get("cpu_sota_100x_contract_cases")
         .and_then(Value::as_u64)
     {
-        if status_contract_cases != artifact_contract_cases {
+        None if artifact_contract_cases > 0 => {
+            issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+                path: path.clone(),
+                field: "cpu_sota_100x_contract_cases",
+            });
+        }
+        Some(status_contract_cases) if status_contract_cases != artifact_contract_cases => {
             issues.push(
                 BackendSuiteArtifactStatusIssue::CpuSota100xContractCaseCountMismatch {
                     path: path.clone(),
@@ -480,12 +526,19 @@ pub(crate) fn backend_suite_artifact_status_issues(
                 },
             );
         }
+        _ => {}
     }
-    if let Some(status_passing_cases) = status
+    match status
         .get("cpu_sota_100x_passing_cases")
         .and_then(Value::as_u64)
     {
-        if status_passing_cases != artifact_passing_cases {
+        None if artifact_passing_cases > 0 => {
+            issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+                path: path.clone(),
+                field: "cpu_sota_100x_passing_cases",
+            });
+        }
+        Some(status_passing_cases) if status_passing_cases != artifact_passing_cases => {
             issues.push(
                 BackendSuiteArtifactStatusIssue::CpuSota100xPassingCaseCountMismatch {
                     path: path.clone(),
@@ -494,6 +547,7 @@ pub(crate) fn backend_suite_artifact_status_issues(
                 },
             );
         }
+        _ => {}
     }
 
     if let Some(requested_case_id) = status.get("requested_case_id").and_then(non_empty_str) {
@@ -659,19 +713,24 @@ fn artifact_min_metric_samples(artifact_report: &Value, metric_name: &str) -> Op
     if cases.is_empty() {
         return None;
     }
-    Some(
-        cases
-            .iter()
-            .map(|case| {
-                case.get("metrics")
-                    .and_then(|metrics| metrics.get(metric_name))
-                    .and_then(|metric| metric.get("samples"))
-                    .and_then(Value::as_u64)
-                    .unwrap_or(0)
-            })
-            .min()
-            .unwrap_or(0),
-    )
+    let mut seen_metric = false;
+    let min = cases
+        .iter()
+        .map(|case| {
+            let metric = case
+                .get("metrics")
+                .and_then(|metrics| metrics.get(metric_name));
+            if metric.is_some() {
+                seen_metric = true;
+            }
+            metric
+                .and_then(|metric| metric.get("samples"))
+                .and_then(Value::as_u64)
+                .unwrap_or(0)
+        })
+        .min()
+        .unwrap_or(0);
+    seen_metric.then_some(min)
 }
 
 fn artifact_min_metric_percentile(
@@ -683,19 +742,24 @@ fn artifact_min_metric_percentile(
     if cases.is_empty() {
         return None;
     }
-    Some(
-        cases
-            .iter()
-            .map(|case| {
-                case.get("metrics")
-                    .and_then(|metrics| metrics.get(metric_name))
-                    .and_then(|metric| metric.get(percentile))
-                    .and_then(Value::as_u64)
-                    .unwrap_or(0)
-            })
-            .min()
-            .unwrap_or(0),
-    )
+    let mut seen_metric = false;
+    let min = cases
+        .iter()
+        .map(|case| {
+            let metric = case
+                .get("metrics")
+                .and_then(|metrics| metrics.get(metric_name));
+            if metric.is_some() {
+                seen_metric = true;
+            }
+            metric
+                .and_then(|metric| metric.get(percentile))
+                .and_then(Value::as_u64)
+                .unwrap_or(0)
+        })
+        .min()
+        .unwrap_or(0);
+    seen_metric.then_some(min)
 }
 
 fn artifact_cpu_sota_100x_contract_counts(artifact_report: &Value) -> (u64, u64) {
@@ -1624,6 +1688,92 @@ mod tests {
     }
 
     #[test]
+    fn backend_suite_artifact_status_rejects_omitted_artifact_backed_fields() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "requested_case_id": "release.condition_eval.1m"
+        });
+        let artifact = serde_json::json!({
+            "source_fingerprint": "git:abc:dirty=false",
+            "source_tree_fingerprint": "source-tree-v1:abc",
+            "selected_backend": "cuda",
+            "summary": {"failed": 0},
+            "environment": {
+                "cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
+                "gpu_devices": [
+                    {
+                        "name": "NVIDIA GeForce RTX 5090",
+                        "memory_total_mib": 32607,
+                        "compute_capability_major": 12,
+                        "compute_capability_minor": 0
+                    }
+                ],
+                "nvidia_driver_version": "570.211.01",
+                "nvidia_cuda_version": "12.8"
+            },
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "metrics": {
+                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                        "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                        "kernel_launches": {"samples": 30, "p50": 1}
+                    },
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 120.0}
+                }
+            ]
+        });
+
+        let missing_fields = backend_suite_artifact_status_issues(&status, &artifact)
+            .into_iter()
+            .filter_map(|issue| match issue {
+                BackendSuiteArtifactStatusIssue::MissingField { field, .. } => Some(field),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            missing_fields,
+            vec![
+                "source_fingerprint",
+                "source_tree_fingerprint",
+                "selected_backend",
+                "case_count",
+                "failed_count",
+                "min_wall_samples",
+                "min_baseline_wall_samples",
+                "min_wall_p50",
+                "min_wall_p95",
+                "min_wall_p99",
+                "min_baseline_wall_p50",
+                "min_baseline_wall_p95",
+                "min_baseline_wall_p99",
+                "min_kernel_launches",
+                "gpu_memory_total_mib",
+                "gpu_compute_capability_major",
+                "gpu_compute_capability_minor",
+                "host_cpu_model",
+                "gpu_model",
+                "nvidia_driver_version",
+                "nvidia_cuda_version",
+                "cpu_sota_100x_contract_cases",
+                "cpu_sota_100x_passing_cases",
+            ],
+            "Fix: backend suite status rows must not omit artifact-backed proof fields."
+        );
+    }
+
+    #[test]
     fn backend_suite_artifact_status_rejects_inflated_metric_minima() {
         let status = serde_json::json!({
             "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
@@ -1666,6 +1816,16 @@ mod tests {
                     field: "min_wall_p50",
                     status_value: 100,
                     artifact_value: 150,
+                },
+                BackendSuiteArtifactStatusIssue::MissingField {
+                    path: "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"
+                        .to_string(),
+                    field: "min_wall_p95",
+                },
+                BackendSuiteArtifactStatusIssue::MissingField {
+                    path: "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"
+                        .to_string(),
+                    field: "min_wall_p99",
                 },
                 BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
                     path: "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"

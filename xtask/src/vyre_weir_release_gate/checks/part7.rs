@@ -541,6 +541,12 @@ fn check_backend_suite_artifact_status(
 ) {
     for issue in backend_suite_artifact_status_issues(status, artifact_report) {
         match issue {
+            BackendSuiteArtifactStatusIssue::MissingField { path, field } => failures.push(
+                format!(
+                    "requirement `{}` backend suite `{suffix}` artifact `{path}` status is missing artifact-backed `{field}`",
+                    requirement.id
+                ),
+            ),
             BackendSuiteArtifactStatusIssue::SourceFingerprintMismatch {
                 path,
                 status_source_fingerprint,
