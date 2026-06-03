@@ -182,11 +182,10 @@ fn inspect_cpu_100x_benchmark_semantics(
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    if value
+    let selected_backend = value
         .get("selected_backend")
-        .and_then(serde_json::Value::as_str)
-        != Some("cuda")
-    {
+        .and_then(serde_json::Value::as_str);
+    if selected_backend != Some("cuda") {
         blockers.push(format!("{evidence}: selected_backend must be cuda"));
     }
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
@@ -222,6 +221,15 @@ fn inspect_cpu_100x_benchmark_semantics(
             .unwrap_or("<unknown>");
         if case.get("backend_id").and_then(serde_json::Value::as_str) != Some("cuda") {
             blockers.push(format!("{evidence}: case `{id}` backend_id must be cuda"));
+        }
+        let case_backend = case
+            .get("backend_id")
+            .and_then(serde_json::Value::as_str)
+            .or(selected_backend);
+        if !case_has_cpu_sota_contract(case, case_backend, 100.0) {
+            blockers.push(format!(
+                "{evidence}: case `{id}` must carry an applicable CPU-SOTA performance contract with min_speedup_x >= 100.00"
+            ));
         }
         if !case
             .get("performance")
@@ -267,7 +275,11 @@ fn inspect_cpu_100x_benchmark_semantics(
     }
 }
 
-fn case_has_cpu_sota_contract(case: &serde_json::Value, required_speedup: f64) -> bool {
+fn case_has_cpu_sota_contract(
+    case: &serde_json::Value,
+    backend_id: Option<&str>,
+    required_speedup: f64,
+) -> bool {
     case.get("contract")
         .and_then(|contract| contract.get("baselines"))
         .and_then(serde_json::Value::as_array)
@@ -279,8 +291,53 @@ fn case_has_cpu_sota_contract(case: &serde_json::Value, required_speedup: f64) -
                         .and_then(serde_json::Value::as_f64)
                         .unwrap_or(0.0)
                         >= required_speedup
+                    && crate::benchmark_evidence_semantics::baseline_applies_to_backend(
+                        baseline, backend_id,
+                    )
             })
         })
+}
+
+#[cfg(test)]
+mod part13_tests {
+    use super::*;
+
+    #[test]
+    fn completion_audit_rejects_wrong_backend_cpu_sota_contract() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["wgpu"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": {"contract_passed": true},
+                    "metrics": {
+                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                        "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2100, "p99": 2200}
+                    }
+                }
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_cpu_100x_benchmark_semantics("cpu-100x.json", &report, &mut blockers);
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "must carry an applicable CPU-SOTA performance contract"
+            )),
+            "Fix: completion audit must expose CPU-SOTA contracts scoped to the wrong backend; blockers={blockers:?}"
+        );
+    }
 }
 
 fn metric_p50(value: Option<&serde_json::Value>) -> Option<f64> {
@@ -490,4 +547,3 @@ fn inspect_markdown_evidence(evidence: &str, path: &Path, blockers: &mut Vec<Str
         ));
     }
 }
-

@@ -238,9 +238,13 @@ pub(crate) fn check_single_benchmark_report(
             ));
         }
         if let Some(required_speedup) = min_speedup_x {
-            if !case_has_cpu_sota_contract(case, required_speedup) {
+            let case_backend = case
+                .get("backend_id")
+                .and_then(serde_json::Value::as_str)
+                .or(selected_backend);
+            if !case_has_cpu_sota_contract(case, case_backend, required_speedup) {
                 failures.push(format!(
-                    "requirement `{}` benchmark `{}` case `{id}` must carry a CPU-SOTA performance contract with min_speedup_x >= {required_speedup:.2}",
+                    "requirement `{}` benchmark `{}` case `{id}` must carry an applicable CPU-SOTA performance contract with min_speedup_x >= {required_speedup:.2}",
                     requirement.id,
                     path.display()
                 ));
@@ -299,7 +303,11 @@ pub(crate) fn check_single_benchmark_report(
         }
     }
 }
-pub(crate) fn case_has_cpu_sota_contract(case: &serde_json::Value, required_speedup: f64) -> bool {
+pub(crate) fn case_has_cpu_sota_contract(
+    case: &serde_json::Value,
+    backend_id: Option<&str>,
+    required_speedup: f64,
+) -> bool {
     case.get("contract")
         .and_then(|contract| contract.get("baselines"))
         .and_then(serde_json::Value::as_array)
@@ -311,8 +319,92 @@ pub(crate) fn case_has_cpu_sota_contract(case: &serde_json::Value, required_spee
                         .and_then(serde_json::Value::as_f64)
                         .unwrap_or(0.0)
                         >= required_speedup
+                    && crate::benchmark_evidence_semantics::baseline_applies_to_backend(
+                        baseline, backend_id,
+                    )
             })
         })
+}
+
+#[cfg(test)]
+mod part3_tests {
+    use super::*;
+
+    #[test]
+    fn cpu_sota_contract_requires_applicable_backend() {
+        let case = serde_json::json!({
+            "contract": {
+                "baselines": [
+                    {
+                        "class": "CpuSota",
+                        "backend_ids": ["cuda"],
+                        "min_speedup_x": 100.0
+                    }
+                ]
+            }
+        });
+
+        assert!(
+            case_has_cpu_sota_contract(&case, Some("cuda"), 100.0),
+            "Fix: CUDA benchmarks should accept CUDA-scoped CPU-SOTA contracts."
+        );
+        assert!(
+            !case_has_cpu_sota_contract(&case, Some("wgpu"), 100.0),
+            "Fix: single-benchmark release checks must not count CUDA-only contracts as WGPU proof."
+        );
+    }
+
+    #[test]
+    fn single_benchmark_report_rejects_wrong_backend_cpu_sota_contract() {
+        let requirement = Requirement {
+            id: "proof-workloads-12".to_string(),
+            title: "proof workloads".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let report = serde_json::json!({
+            "selected_backend": "wgpu",
+            "summary": {"failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "wgpu",
+                    "status": "pass",
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "metrics": {
+                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                        "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2100, "p99": 2200}
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 200.0}
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_single_benchmark_report(
+            &requirement,
+            Path::new("wgpu-workload.json"),
+            &report,
+            false,
+            Some(100.0),
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure
+                .contains("must carry an applicable CPU-SOTA performance contract")),
+            "Fix: release gate must expose wrong-backend CPU-SOTA contracts; failures={failures:?}"
+        );
+    }
 }
 pub(crate) fn require_no_hidden_backend_fallback_findings(
     requirement_id: &str,
