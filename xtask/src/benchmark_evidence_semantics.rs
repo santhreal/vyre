@@ -742,6 +742,13 @@ pub(crate) enum BackendSuiteParityIssue {
     SharedArtifactPath {
         path: String,
     },
+    StatusFieldMismatch {
+        family_id: String,
+        requested_case_id: String,
+        field: &'static str,
+        cuda_value: Option<u64>,
+        wgpu_value: Option<u64>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1652,6 +1659,33 @@ pub(crate) fn backend_suite_parity_issues(
             requested_case_id: requested_case_id.clone(),
         });
     }
+    let cuda_statuses = suite_statuses_by_family_case_pair(cuda_suite);
+    let wgpu_statuses = suite_statuses_by_family_case_pair(wgpu_suite);
+    for pair in cuda_pairs.intersection(&wgpu_pairs) {
+        let Some(cuda_status) = cuda_statuses.get(pair) else {
+            continue;
+        };
+        let Some(wgpu_status) = wgpu_statuses.get(pair) else {
+            continue;
+        };
+        for field in [
+            "case_count",
+            "failed_count",
+            "nonmatching_case_backend_count",
+        ] {
+            let cuda_value = cuda_status.get(field).and_then(Value::as_u64);
+            let wgpu_value = wgpu_status.get(field).and_then(Value::as_u64);
+            if cuda_value != wgpu_value {
+                issues.push(BackendSuiteParityIssue::StatusFieldMismatch {
+                    family_id: pair.0.clone(),
+                    requested_case_id: pair.1.clone(),
+                    field,
+                    cuda_value,
+                    wgpu_value,
+                });
+            }
+        }
+    }
     issues
 }
 
@@ -1910,6 +1944,29 @@ fn suite_family_case_pairs(suite: &Value) -> BTreeSet<(String, String)> {
                 .and_then(Value::as_str)
                 .filter(|value| !value.trim().is_empty())?;
             Some((family_id.to_string(), requested_case_id.to_string()))
+        })
+        .collect()
+}
+
+fn suite_statuses_by_family_case_pair(suite: &Value) -> BTreeMap<(String, String), &Value> {
+    suite
+        .get("artifact_statuses")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|status| {
+            let family_id = status
+                .get("family_id")
+                .and_then(Value::as_str)
+                .filter(|value| !value.trim().is_empty())?;
+            let requested_case_id = status
+                .get("requested_case_id")
+                .and_then(Value::as_str)
+                .filter(|value| !value.trim().is_empty())?;
+            Some((
+                (family_id.to_string(), requested_case_id.to_string()),
+                status,
+            ))
         })
         .collect()
 }
@@ -2754,6 +2811,53 @@ mod tests {
                 },
             ],
             "Fix: CUDA and WGPU release suites must cover the same family/case contract."
+        );
+    }
+
+    #[test]
+    fn backend_suite_parity_rejects_status_field_drift_for_matching_pairs() {
+        let cuda = serde_json::json!({
+            "artifact_statuses": [
+                {
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "case_count": 1,
+                    "failed_count": 0,
+                    "nonmatching_case_backend_count": 0
+                }
+            ]
+        });
+        let wgpu = serde_json::json!({
+            "artifact_statuses": [
+                {
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "case_count": 0,
+                    "failed_count": 1,
+                    "nonmatching_case_backend_count": 0
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_parity_issues(&cuda, &wgpu),
+            vec![
+                BackendSuiteParityIssue::StatusFieldMismatch {
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                    field: "case_count",
+                    cuda_value: Some(1),
+                    wgpu_value: Some(0),
+                },
+                BackendSuiteParityIssue::StatusFieldMismatch {
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                    field: "failed_count",
+                    cuda_value: Some(0),
+                    wgpu_value: Some(1),
+                },
+            ],
+            "Fix: WGPU parity must compare the proof strength of matching suite rows, not only family/case labels."
         );
     }
 

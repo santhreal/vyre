@@ -845,6 +845,15 @@ fn inspect_wgpu_cuda_suite_parity(
             BackendSuiteParityIssue::SharedArtifactPath { path } => blockers.push(format!(
                 "{evidence}: WGPU/CUDA suite parity reuses artifact path `{path}` across CUDA and WGPU suites"
             )),
+            BackendSuiteParityIssue::StatusFieldMismatch {
+                family_id,
+                requested_case_id,
+                field,
+                cuda_value,
+                wgpu_value,
+            } => blockers.push(format!(
+                "{evidence}: WGPU/CUDA suite parity field `{field}` mismatch for family `{family_id}` case `{requested_case_id}`: cuda={cuda_value:?}, wgpu={wgpu_value:?}"
+            )),
         }
     }
 }
