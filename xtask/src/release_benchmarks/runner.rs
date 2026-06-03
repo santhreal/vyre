@@ -5,7 +5,7 @@ use std::process::Command;
 use serde_json::Value;
 
 use super::optimization::suite_case_has_cpu_sota_contract;
-use super::suite_inspect::read_text_bounded;
+use super::suite_inspect::{read_text_bounded, suite_metric_percentile, suite_metric_samples};
 use super::types::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 
 pub(super) fn run_named_benchmark(
@@ -164,6 +164,9 @@ fn benchmark_artifact_report_shape_is_reusable(
     if case.get("status").and_then(Value::as_str) != Some("pass") {
         return false;
     }
+    if !case_has_reusable_timing_metrics(case) {
+        return false;
+    }
     if cpu_sota_100x_required && !suite_case_has_cpu_sota_contract(case, backend, 100.0) {
         return false;
     }
@@ -183,6 +186,31 @@ fn benchmark_artifact_report_shape_is_reusable(
         }
     }
     let _ = family_id;
+    true
+}
+
+fn case_has_reusable_timing_metrics(case: &Value) -> bool {
+    let Some(metrics) = case.get("metrics").and_then(Value::as_object) else {
+        return false;
+    };
+    for metric_name in ["wall_ns", "baseline_wall_ns"] {
+        if !metrics
+            .get(metric_name)
+            .and_then(|metric| suite_metric_samples(Some(metric)))
+            .is_some_and(|samples| samples >= 30)
+        {
+            return false;
+        }
+        for percentile in ["p50", "p95", "p99"] {
+            if !metrics
+                .get(metric_name)
+                .and_then(|metric| suite_metric_percentile(Some(metric), percentile))
+                .is_some_and(|value| value > 0)
+            {
+                return false;
+            }
+        }
+    }
     true
 }
 
@@ -256,7 +284,12 @@ mod tests {
                 "source_fingerprint": current_test_source_fingerprint(dir.path()),
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
-                    {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": reusable_timing_metrics()
+                    }
                 ]
             }),
         );
@@ -286,7 +319,12 @@ mod tests {
                 "source_tree_fingerprint": current_test_source_tree_fingerprint(dir.path()),
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
-                    {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": reusable_timing_metrics()
+                    }
                 ]
             }),
         );
@@ -353,6 +391,36 @@ mod tests {
                 false,
             ),
             "Fix: WGPU reuse must reject artifacts that do not contain the requested release case."
+        );
+    }
+
+    #[test]
+    fn reuse_rejects_passed_artifact_without_timing_metrics() {
+        let dir =
+            TempDir::new().expect("Fix: create temp workspace for missing metrics reuse test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-missing-metrics.json",
+            serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": current_test_source_fingerprint(dir.path()),
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
+                ]
+            }),
+        );
+
+        assert!(
+            !benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-missing-metrics.json",
+                false,
+            ),
+            "Fix: --reuse-existing must rerun pass-only artifacts that lack release timing metrics."
         );
     }
 
@@ -521,6 +589,13 @@ mod tests {
 
     fn current_test_source_tree_fingerprint(workspace_root: &Path) -> String {
         vyre_bench::probes::source_tree_fingerprint_at(workspace_root)
+    }
+
+    fn reusable_timing_metrics() -> Value {
+        serde_json::json!({
+            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002}
+        })
     }
 
     fn write_benchmark_artifact(workspace_root: &Path, relative: &str, value: Value) {
