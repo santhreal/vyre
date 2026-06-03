@@ -1231,6 +1231,22 @@ fn inspect_wgpu_cuda_suite_parity(
     };
     for issue in backend_suite_parity_issues(&cuda_suite, wgpu_suite) {
         match issue {
+            BackendSuiteParityIssue::CudaBackendIdentity { issue } => {
+                push_wgpu_cuda_suite_parity_backend_identity_blocker(
+                    evidence,
+                    "CUDA",
+                    issue,
+                    blockers,
+                );
+            }
+            BackendSuiteParityIssue::WgpuBackendIdentity { issue } => {
+                push_wgpu_cuda_suite_parity_backend_identity_blocker(
+                    evidence,
+                    "WGPU",
+                    issue,
+                    blockers,
+                );
+            }
             BackendSuiteParityIssue::MissingCudaPair {
                 family_id,
                 requested_case_id,
@@ -1285,6 +1301,25 @@ fn inspect_wgpu_cuda_suite_parity(
                 "{evidence}: WGPU/CUDA suite parity field `{field}` mismatch for family `{family_id}` case `{requested_case_id}`: cuda={cuda_value:?}, wgpu={wgpu_value:?}"
             )),
         }
+    }
+}
+
+fn push_wgpu_cuda_suite_parity_backend_identity_blocker(
+    evidence: &str,
+    suite_label: &str,
+    issue: BackendSuiteBackendIssue,
+    blockers: &mut Vec<String>,
+) {
+    match issue {
+        BackendSuiteBackendIssue::Missing { expected_backend } => blockers.push(format!(
+            "{evidence}: WGPU/CUDA suite parity {suite_label} suite is missing backend identity `{expected_backend}`"
+        )),
+        BackendSuiteBackendIssue::Mismatch {
+            expected_backend,
+            actual_backend,
+        } => blockers.push(format!(
+            "{evidence}: WGPU/CUDA suite parity {suite_label} suite backend `{actual_backend}` does not match required `{expected_backend}`"
+        )),
     }
 }
 

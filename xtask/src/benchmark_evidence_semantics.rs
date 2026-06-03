@@ -815,6 +815,12 @@ pub(crate) enum SourceFingerprintFreshnessIssue {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum BackendSuiteParityIssue {
+    CudaBackendIdentity {
+        issue: BackendSuiteBackendIssue,
+    },
+    WgpuBackendIdentity {
+        issue: BackendSuiteBackendIssue,
+    },
     MissingCudaPair {
         family_id: String,
         requested_case_id: String,
@@ -1796,6 +1802,12 @@ pub(crate) fn backend_suite_parity_issues(
     let cuda_pairs = suite_family_case_pairs(cuda_suite);
     let wgpu_pairs = suite_family_case_pairs(wgpu_suite);
     let mut issues = Vec::new();
+    if let Some(issue) = backend_suite_backend_issue(cuda_suite, "cuda") {
+        issues.push(BackendSuiteParityIssue::CudaBackendIdentity { issue });
+    }
+    if let Some(issue) = backend_suite_backend_issue(wgpu_suite, "wgpu") {
+        issues.push(BackendSuiteParityIssue::WgpuBackendIdentity { issue });
+    }
     if cuda_count != wgpu_count || cuda_pairs.len() != wgpu_pairs.len() {
         issues.push(BackendSuiteParityIssue::CountMismatch {
             cuda_count,
@@ -3148,12 +3160,14 @@ mod tests {
     #[test]
     fn backend_suite_parity_rejects_missing_family_case_pairs() {
         let cuda = serde_json::json!({
+            "backend": "cuda",
             "artifact_statuses": [
                 {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"},
                 {"family_id": "entropy-window", "requested_case_id": "release.entropy_window.1m"}
             ]
         });
         let wgpu = serde_json::json!({
+            "backend": "wgpu",
             "artifact_statuses": [
                 {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"},
                 {"family_id": "ifds-witness", "requested_case_id": "release.ifds_witness.1m"}
@@ -3179,6 +3193,7 @@ mod tests {
     #[test]
     fn backend_suite_parity_rejects_status_field_drift_for_matching_pairs() {
         let cuda = serde_json::json!({
+            "backend": "cuda",
             "artifact_statuses": [
                 {
                     "family_id": "condition-eval",
@@ -3192,6 +3207,7 @@ mod tests {
             ]
         });
         let wgpu = serde_json::json!({
+            "backend": "wgpu",
             "artifact_statuses": [
                 {
                     "family_id": "condition-eval",
@@ -3284,8 +3300,42 @@ mod tests {
     }
 
     #[test]
+    fn backend_suite_parity_rejects_mislabeled_suite_backends() {
+        let cuda = serde_json::json!({
+            "backend": "wgpu",
+            "artifact_statuses": [
+                {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"}
+            ]
+        });
+        let wgpu = serde_json::json!({
+            "artifact_statuses": [
+                {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"}
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_parity_issues(&cuda, &wgpu),
+            vec![
+                BackendSuiteParityIssue::CudaBackendIdentity {
+                    issue: BackendSuiteBackendIssue::Mismatch {
+                        expected_backend: "cuda".to_string(),
+                        actual_backend: "wgpu".to_string(),
+                    },
+                },
+                BackendSuiteParityIssue::WgpuBackendIdentity {
+                    issue: BackendSuiteBackendIssue::Missing {
+                        expected_backend: "wgpu".to_string(),
+                    },
+                },
+            ],
+            "Fix: WGPU/CUDA parity must reject mislabeled peer suite identities, not only row-level family/case coverage."
+        );
+    }
+
+    #[test]
     fn backend_suite_parity_rejects_duplicate_family_case_pairs_with_equal_counts() {
         let cuda = serde_json::json!({
+            "backend": "cuda",
             "artifact_statuses": [
                 {
                     "path": "release/evidence/benchmarks/cuda-condition-a.json",
@@ -3300,6 +3350,7 @@ mod tests {
             ]
         });
         let wgpu = serde_json::json!({
+            "backend": "wgpu",
             "artifact_statuses": [
                 {
                     "path": "release/evidence/benchmarks/wgpu-condition-a.json",
@@ -4353,11 +4404,13 @@ mod tests {
     #[test]
     fn backend_suite_parity_rejects_count_drift_even_with_duplicate_metadata() {
         let cuda = serde_json::json!({
+            "backend": "cuda",
             "artifact_statuses": [
                 {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"}
             ]
         });
         let wgpu = serde_json::json!({
+            "backend": "wgpu",
             "artifact_statuses": [
                 {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"},
                 {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"}
@@ -4384,6 +4437,7 @@ mod tests {
     #[test]
     fn backend_suite_parity_rejects_shared_artifact_paths() {
         let cuda = serde_json::json!({
+            "backend": "cuda",
             "artifacts": ["release/evidence/benchmarks/workload-01-condition-eval.json"],
             "artifact_statuses": [
                 {
@@ -4394,6 +4448,7 @@ mod tests {
             ]
         });
         let wgpu = serde_json::json!({
+            "backend": "wgpu",
             "artifacts": ["release/evidence/benchmarks/workload-01-condition-eval.json"],
             "artifact_statuses": [
                 {
