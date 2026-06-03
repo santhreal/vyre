@@ -185,6 +185,101 @@ pub(super) fn cargo_runner(workspace_root: &Path) -> PathBuf {
     PathBuf::from("cargo_full")
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use tempfile::TempDir;
+
+    #[test]
+    fn wgpu_reuse_accepts_matching_passed_artifact() {
+        let dir = TempDir::new().expect("Fix: create temp workspace for WGPU reuse test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-condition.json",
+            serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"failed": 0},
+                "cases": [
+                    {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
+                ]
+            }),
+        );
+
+        assert!(
+            benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-condition.json",
+                false,
+            ),
+            "Fix: --reuse-existing should skip valid WGPU fallback artifacts instead of rerunning parity benchmarks."
+        );
+    }
+
+    #[test]
+    fn wgpu_reuse_rejects_backend_or_case_drift() {
+        let dir = TempDir::new().expect("Fix: create temp workspace for WGPU reuse drift test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-with-cuda-backend.json",
+            serde_json::json!({
+                "selected_backend": "cuda",
+                "summary": {"failed": 0},
+                "cases": [
+                    {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"}
+                ]
+            }),
+        );
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-wrong-case.json",
+            serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"failed": 0},
+                "cases": [
+                    {"id": "release.other.1m", "backend_id": "wgpu", "status": "pass"}
+                ]
+            }),
+        );
+
+        assert!(
+            !benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-with-cuda-backend.json",
+                false,
+            ),
+            "Fix: WGPU reuse must reject artifacts whose selected backend drifted to CUDA."
+        );
+        assert!(
+            !benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-wrong-case.json",
+                false,
+            ),
+            "Fix: WGPU reuse must reject artifacts that do not contain the requested release case."
+        );
+    }
+
+    fn write_benchmark_artifact(workspace_root: &Path, relative: &str, value: Value) {
+        let path = workspace_root.join(relative);
+        fs::create_dir_all(
+            path.parent()
+                .expect("Fix: benchmark artifact test path must have a parent directory."),
+        )
+        .expect("Fix: create benchmark artifact test directory.");
+        fs::write(&path, format!("{value}\n")).expect("Fix: write benchmark artifact test JSON.");
+    }
+}
+
 pub(super) struct Config {
     backend: String,
     only: Option<String>,

@@ -1,7 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-
 use super::args::parse_args;
 use super::optimization::{write_optimization_benchmark_manifest, write_release_axes};
 use super::runner::{
@@ -160,14 +159,25 @@ pub(crate) fn run(args: &[String]) {
                 std::process::exit(1);
             };
             let output = prefixed_benchmark_artifact(&family.evidence_artifact, "wgpu");
-            run_workload_benchmark(
-                &workspace_root,
-                case_id,
-                "wgpu",
-                &output,
-                config.measured_samples,
-                config.sample_timeout_secs,
-            );
+            if !config.reuse_existing
+                || !benchmark_artifact_is_reusable(
+                    &workspace_root,
+                    "wgpu",
+                    &family.id,
+                    case_id,
+                    &output,
+                    false,
+                )
+            {
+                run_workload_benchmark(
+                    &workspace_root,
+                    case_id,
+                    "wgpu",
+                    &output,
+                    config.measured_samples,
+                    config.sample_timeout_secs,
+                );
+            }
             wgpu_artifacts.push(BackendSuiteArtifactInput {
                 path: output,
                 family_id: family.id.clone(),
