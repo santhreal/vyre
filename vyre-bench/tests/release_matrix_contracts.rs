@@ -1,7 +1,7 @@
-//! Release matrix coverage contracts. Asserts that every required
+//! Release matrix coverage contracts. Asserts that every release
 //! workload family declared in `vyre-bench::release_matrix` ships with
-//! a registered runner, so a release sweep cannot silently skip a
-//! family.
+//! a registered runner and committed evidence, so a release sweep cannot
+//! silently skip a family.
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -550,7 +550,7 @@ fn release_matrix_links_workloads_to_artifact_commands() {
     for family in matrix
         .families
         .iter()
-        .filter(|family| family.required && !family.matched_cases.is_empty())
+        .filter(|family| !family.matched_cases.is_empty())
     {
         assert!(
             family
@@ -570,6 +570,13 @@ fn release_matrix_links_workloads_to_artifact_commands() {
                 && command.contains(&family.evidence_artifact),
             "Fix: workload `{}` must publish a reproducible CUDA release benchmark command, got `{command}`.",
             family.id
+        );
+        let artifact_path = workspace_root().join(&family.evidence_artifact);
+        assert!(
+            artifact_path.exists(),
+            "Fix: workload `{}` references missing release evidence artifact `{}`.",
+            family.id,
+            family.evidence_artifact
         );
     }
 }

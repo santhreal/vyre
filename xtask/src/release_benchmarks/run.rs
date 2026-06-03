@@ -74,10 +74,7 @@ pub(crate) fn run(args: &[String]) {
     let mut primary_suite_failures = Vec::new();
     let mut ran = 0usize;
     for family in benchmark_suite_families(&matrix, config.only.as_deref()) {
-        let cpu_100x_family = config.backend == "cuda"
-            && family
-                .max_cpu_sota_min_speedup_x
-                .is_some_and(|speedup| speedup >= 100.0);
+        let cpu_100x_family = requires_release_cpu_sota_100x_proof(&config.backend, family);
         let prefer_cpu_sota_case = cpu_100x_family || config.backend == "wgpu";
         let Some(case_id) = select_release_benchmark_case(family, prefer_cpu_sota_case) else {
             eprintln!(
@@ -351,16 +348,29 @@ fn select_release_benchmark_case<'a>(
     prefer_cpu_sota_100x: bool,
 ) -> Option<&'a String> {
     if prefer_cpu_sota_100x && !family.cpu_sota_100x_cases.is_empty() {
-        return family
+        let required_case = family
             .cpu_sota_100x_cases
             .iter()
             .find(|case_id| REQUIRED_CPU_SOTA_100X_CASES.contains(&case_id.as_str()));
+        return if family.required {
+            required_case
+        } else {
+            required_case.or_else(|| family.cpu_sota_100x_cases.first())
+        };
     }
     family
         .matched_cases
         .iter()
         .find(|case_id| REQUIRED_CPU_SOTA_100X_CASES.contains(&case_id.as_str()))
         .or_else(|| family.matched_cases.first())
+}
+
+fn requires_release_cpu_sota_100x_proof(backend: &str, family: &ReleaseWorkloadFamily) -> bool {
+    backend == "cuda"
+        && family.required
+        && family
+            .max_cpu_sota_min_speedup_x
+            .is_some_and(|speedup| speedup >= 100.0)
 }
 
 fn backend_workload_artifact(backend: &str, matrix_artifact: &str) -> String {
@@ -467,6 +477,60 @@ mod tests {
             select_release_benchmark_case(&family, true),
             None,
             "Fix: release-benchmarks must fail before dispatch when the CPU-SOTA case list cannot prove a required release-defining 100x case."
+        );
+    }
+
+    #[test]
+    fn optional_cpu_sota_family_selects_its_proof_case() {
+        let family = ReleaseWorkloadFamily {
+            id: "quantized-linear".to_string(),
+            required: false,
+            matched_cases: vec!["nn.linear_4bit_affine_grouped.1m".to_string()],
+            evidence_artifact: "release/evidence/benchmarks/workload-16-quantized-linear.json"
+                .to_string(),
+            max_cpu_sota_min_speedup_x: Some(100.0),
+            cpu_sota_100x_cases: vec!["nn.linear_4bit_affine_grouped.1m".to_string()],
+        };
+
+        assert_eq!(
+            select_release_benchmark_case(&family, true).map(String::as_str),
+            Some("nn.linear_4bit_affine_grouped.1m"),
+            "Fix: optional CPU-SOTA 100x families must still generate suite evidence for their proof case."
+        );
+    }
+
+    #[test]
+    fn required_cpu_sota_proof_scope_excludes_optional_workloads() {
+        let required_family = ReleaseWorkloadFamily {
+            id: "condition-eval".to_string(),
+            required: true,
+            matched_cases: vec!["release.condition_eval.1m".to_string()],
+            evidence_artifact: "release/evidence/benchmarks/workload-01-condition-eval.json"
+                .to_string(),
+            max_cpu_sota_min_speedup_x: Some(100.0),
+            cpu_sota_100x_cases: vec!["release.condition_eval.1m".to_string()],
+        };
+        let optional_family = ReleaseWorkloadFamily {
+            id: "quantized-linear".to_string(),
+            required: false,
+            matched_cases: vec!["nn.linear_4bit_affine_grouped.1m".to_string()],
+            evidence_artifact: "release/evidence/benchmarks/workload-16-quantized-linear.json"
+                .to_string(),
+            max_cpu_sota_min_speedup_x: Some(100.0),
+            cpu_sota_100x_cases: vec!["nn.linear_4bit_affine_grouped.1m".to_string()],
+        };
+
+        assert!(
+            requires_release_cpu_sota_100x_proof("cuda", &required_family),
+            "Fix: required CUDA 100x families must remain in the release-defining proof aggregate."
+        );
+        assert!(
+            !requires_release_cpu_sota_100x_proof("cuda", &optional_family),
+            "Fix: optional CUDA 100x families must not be counted as required release-defining proof cases."
+        );
+        assert!(
+            !requires_release_cpu_sota_100x_proof("wgpu", &required_family),
+            "Fix: WGPU comparison evidence must not rewrite the CUDA-only 100x proof aggregate."
         );
     }
 
