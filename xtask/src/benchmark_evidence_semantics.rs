@@ -21,10 +21,13 @@ pub(crate) fn benchmark_case_failure_reason(case: &Value) -> Option<String> {
     let invalid_reason = case
         .get("correctness")
         .and_then(|correctness| correctness.get("Invalid"))
-        .and_then(|invalid| invalid.get("reason"))
-        .and_then(Value::as_str)
-        .filter(|reason| !reason.is_empty())
-        .map(str::to_string);
+        .map(|invalid| {
+            invalid
+                .get("reason")
+                .and_then(non_empty_str)
+                .map(str::to_string)
+                .unwrap_or_else(|| "invalid correctness".to_string())
+        });
     let violation_reason = case
         .get("performance")
         .and_then(|performance| performance.get("violations"))
@@ -32,8 +35,7 @@ pub(crate) fn benchmark_case_failure_reason(case: &Value) -> Option<String> {
         .map(|violations| {
             violations
                 .iter()
-                .filter_map(Value::as_str)
-                .filter(|violation| !violation.is_empty())
+                .filter_map(non_empty_str)
                 .collect::<Vec<_>>()
         })
         .and_then(|violations| (!violations.is_empty()).then(|| violations.join("; ")));
@@ -2130,6 +2132,30 @@ mod tests {
             benchmark_case_failure_reason(&case),
             Some("dispatch output mismatch at row 17".to_string()),
             "Fix: explicit invalid correctness evidence must not be hidden by a contradictory pass status."
+        );
+    }
+
+    #[test]
+    fn failed_case_summary_rejects_invalid_correctness_with_blank_reason() {
+        let case = serde_json::json!({
+            "id": "release.condition_eval.1m",
+            "status": "pass",
+            "correctness": {
+                "Invalid": {
+                    "reason": "   "
+                }
+            },
+            "performance": {"contract_passed": true}
+        });
+
+        assert_eq!(
+            benchmark_case_failure_reason(&case),
+            Some("invalid correctness".to_string()),
+            "Fix: blank invalid-correctness reasons must not let contradictory pass status prove release correctness."
+        );
+        assert!(
+            !benchmark_case_passes_summary_evidence(&case),
+            "Fix: invalid correctness must disqualify case summary evidence even when the reason is blank."
         );
     }
 
