@@ -388,6 +388,7 @@ fn inspect_optimization_analysis_fixture_semantics(
         blockers.push(format!("{evidence}: missing families array"));
         return;
     };
+    inspect_duplicate_analysis_fixture_family_rows(evidence, value, blockers);
     for required in [
         "A13-coalesce-fixture",
         "A14-shared-mem-promote-fixture",
@@ -477,3 +478,67 @@ fn inspect_optimization_analysis_fixture_semantics(
     }
 }
 
+fn inspect_duplicate_analysis_fixture_family_rows(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let duplicates =
+        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
+            value, "families", "family",
+        );
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        blockers.push(format!(
+            "{evidence}: duplicate analysis fixture family rows: {duplicates}"
+        ));
+    }
+}
+
+#[cfg(test)]
+mod part5_tests {
+    use super::*;
+
+    #[test]
+    fn completion_audit_rejects_duplicate_analysis_fixture_family_rows() {
+        let manifest = serde_json::json!({
+            "missing_required_families": [],
+            "total_fixture_cases": 512,
+            "total_triggered_cases": 512,
+            "families": [
+                {
+                    "family": "A13-coalesce-fixture",
+                    "cases": 128,
+                    "triggered_cases": 128,
+                    "analysis_sites": 128,
+                    "coalesced_unit_stride_sites": 1,
+                    "strided_sites": 1,
+                    "broadcast_sites": 1
+                },
+                {
+                    "family": "A13-coalesce-fixture",
+                    "cases": 128,
+                    "triggered_cases": 128,
+                    "analysis_sites": 128,
+                    "coalesced_unit_stride_sites": 1,
+                    "strided_sites": 1,
+                    "broadcast_sites": 1
+                }
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_optimization_analysis_fixture_semantics(
+            "optimization-analysis-fixtures.json",
+            &manifest,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| {
+                blocker.contains("duplicate analysis fixture family rows: A13-coalesce-fixture")
+            }),
+            "Fix: completion audit must reject duplicate analysis fixture family rows before totals can prove A13-A16 coverage; blockers={blockers:?}"
+        );
+    }
+}

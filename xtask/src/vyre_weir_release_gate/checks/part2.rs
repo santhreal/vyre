@@ -29,6 +29,7 @@ pub(crate) fn check_optimization_analysis_fixture_manifest(
         .and_then(serde_json::Value::as_array)
         .cloned()
         .unwrap_or_default();
+    check_duplicate_analysis_fixture_family_rows(value, failures);
     for required in [
         "A13-coalesce-fixture",
         "A14-shared-mem-promote-fixture",
@@ -125,6 +126,23 @@ pub(crate) fn check_optimization_analysis_fixture_manifest(
         }
     }
 }
+
+fn check_duplicate_analysis_fixture_family_rows(
+    value: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    let duplicates =
+        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
+            value, "families", "family",
+        );
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        failures.push(format!(
+            "requirement `optimization-corpus-4096` analysis fixture manifest has duplicate family rows: {duplicates}"
+        ));
+    }
+}
+
 pub(crate) fn first_json_evidence(
     requirement: &Requirement,
     base_dir: &Path,
@@ -513,6 +531,45 @@ mod part2_tests {
                 .iter()
                 .any(|failure| failure.contains("duplicate family ids: condition-eval")),
             "Fix: release gate must reject duplicate workload matrix family ids before row counts can prove coverage; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn optimization_analysis_fixture_rejects_duplicate_family_rows() {
+        let manifest = serde_json::json!({
+            "missing_required_families": [],
+            "total_fixture_cases": 512,
+            "total_triggered_cases": 512,
+            "families": [
+                {
+                    "family": "A13-coalesce-fixture",
+                    "cases": 128,
+                    "triggered_cases": 128,
+                    "analysis_sites": 128,
+                    "coalesced_unit_stride_sites": 1,
+                    "strided_sites": 1,
+                    "broadcast_sites": 1
+                },
+                {
+                    "family": "A13-coalesce-fixture",
+                    "cases": 128,
+                    "triggered_cases": 128,
+                    "analysis_sites": 128,
+                    "coalesced_unit_stride_sites": 1,
+                    "strided_sites": 1,
+                    "broadcast_sites": 1
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_optimization_analysis_fixture_manifest(&manifest, &mut failures);
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("duplicate family rows: A13-coalesce-fixture")),
+            "Fix: release gate must reject duplicate analysis fixture family rows before totals can prove A13-A16 coverage; failures={failures:?}"
         );
     }
 }
