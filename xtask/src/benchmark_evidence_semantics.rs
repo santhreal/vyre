@@ -175,6 +175,12 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
                 continue;
             }
         };
+        inspect_release_axis_source_artifact_provenance(
+            &artifact,
+            &artifact_path,
+            &report,
+            &mut issues,
+        );
         if report.get("selected_backend").and_then(Value::as_str) != Some("cuda") {
             issues.push(format!(
                 "source_artifact `{artifact}` selected_backend must be cuda"
@@ -206,6 +212,69 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
         }
     }
     issues
+}
+
+fn inspect_release_axis_source_artifact_provenance(
+    artifact: &str,
+    artifact_path: &Path,
+    report: &Value,
+    issues: &mut Vec<String>,
+) {
+    let Some((field, source_fingerprint)) = report_freshness_fingerprint(report) else {
+        issues.push(format!(
+            "source_artifact `{artifact}` has no source_fingerprint or source_tree_fingerprint"
+        ));
+        return;
+    };
+    if field == "source_fingerprint" {
+        for issue in source_fingerprint_issues(source_fingerprint) {
+            match issue {
+                SourceFingerprintIssue::DirtyUnknownState { source_fingerprint } => {
+                    issues.push(format!(
+                        "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` has unknown dirty state"
+                    ));
+                }
+                SourceFingerprintIssue::DirtyMissingWorktree { source_fingerprint } => {
+                    issues.push(format!(
+                        "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` is dirty but has no worktree digest"
+                    ));
+                }
+                SourceFingerprintIssue::DirtyUnknownWorktree { source_fingerprint } => {
+                    issues.push(format!(
+                        "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` is dirty but has unknown worktree digest"
+                    ));
+                }
+                SourceFingerprintIssue::DirtyInvalidWorktree {
+                    source_fingerprint,
+                    worktree,
+                } => {
+                    issues.push(format!(
+                        "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`"
+                    ));
+                }
+            }
+        }
+    }
+    let Some(current_source_fingerprint) =
+        current_freshness_fingerprint_for_report(artifact_path, report)
+    else {
+        issues.push(format!(
+            "source_artifact `{artifact}` current workspace source fingerprint could not be resolved"
+        ));
+        return;
+    };
+    for issue in
+        source_fingerprint_freshness_issues(source_fingerprint, &current_source_fingerprint)
+    {
+        match issue {
+            SourceFingerprintFreshnessIssue::Mismatch {
+                source_fingerprint,
+                current_source_fingerprint,
+            } => issues.push(format!(
+                "source_artifact `{artifact}` {field} `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`"
+            )),
+        }
+    }
 }
 
 fn release_axes_source_artifacts(axes: &Value, issues: &mut Vec<String>) -> BTreeSet<String> {
@@ -1832,6 +1901,62 @@ mod tests {
         assert!(
             source_fingerprint_freshness_issues(fingerprint, fingerprint).is_empty(),
             "Fix: current source evidence should not be rejected by the freshness gate."
+        );
+    }
+
+    #[test]
+    fn cuda_release_axes_reject_stale_and_weak_source_artifact_provenance() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for release axes provenance test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temp workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temp benchmark evidence directory.");
+        let stale_artifact = "release/evidence/benchmarks/workload-stale.json";
+        std::fs::write(
+            dir.path().join(stale_artifact),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "source_tree_fingerprint": "source-tree-v1:stale",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [{"id": "release.stale", "status": "pass"}]
+            }))
+            .expect("Fix: serialize stale source artifact."),
+        )
+        .expect("Fix: write stale source artifact.");
+        let weak_artifact = "release/evidence/benchmarks/workload-weak.json";
+        std::fs::write(
+            dir.path().join(weak_artifact),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "source_fingerprint": "git:abc123:dirty=true",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [{"id": "release.weak", "status": "pass"}]
+            }))
+            .expect("Fix: serialize weak source artifact."),
+        )
+        .expect("Fix: write weak source artifact.");
+        let axes = serde_json::json!({
+            "source_artifacts": [stale_artifact, weak_artifact]
+        });
+        let cuda_suite = serde_json::json!({
+            "artifacts": [stale_artifact, weak_artifact]
+        });
+
+        let issues = cuda_release_axes_source_artifact_issues(dir.path(), &axes, &cuda_suite);
+
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/workload-stale.json` source_tree_fingerprint `source-tree-v1:stale` does not match current workspace source"
+            )),
+            "Fix: release-axis source artifacts must be fresh against the current workspace; issues={issues:?}"
+        );
+        assert!(
+            issues.iter().any(|issue| issue.contains(
+                "source_artifact `release/evidence/benchmarks/workload-weak.json` source_fingerprint `git:abc123:dirty=true` is dirty but has no worktree digest"
+            )),
+            "Fix: release-axis source artifacts must reject legacy dirty source fingerprints; issues={issues:?}"
         );
     }
 

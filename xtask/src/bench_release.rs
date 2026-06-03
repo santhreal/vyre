@@ -211,8 +211,12 @@ mod tests {
         workspace_root: &Path,
         poisoned_index: Option<usize>,
     ) -> Vec<String> {
+        fs::write(workspace_root.join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
         fs::create_dir_all(benchmark_dir)
             .expect("Fix: create temporary benchmark evidence directory.");
+        let source_tree_fingerprint =
+            vyre_bench::probes::source_tree_fingerprint_at(workspace_root);
         let mut artifacts = Vec::new();
         for index in 1..=12 {
             let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
@@ -225,6 +229,7 @@ mod tests {
                 workspace_root.join(&artifact),
                 serde_json::to_string_pretty(&serde_json::json!({
                     "selected_backend": selected_backend,
+                    "source_tree_fingerprint": &source_tree_fingerprint,
                     "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                     "cases": [
                         {
