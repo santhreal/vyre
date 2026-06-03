@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::benchmark_evidence_semantics::{
     benchmark_duplicate_source_artifact_paths, benchmark_source_artifact_count,
-    benchmark_source_artifact_entry_count,
+    benchmark_source_artifact_entry_count, duplicate_nonblank_string_array_values,
 };
 
 use super::super::checks::*;
@@ -69,6 +69,12 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 .to_string(),
         );
     }
+    check_duplicate_case_array_values(
+        "workload matrix",
+        &matrix,
+        "cpu_sota_100x_contract_cases",
+        failures,
+    );
     if let Some(proof) =
         first_json_evidence(requirement, base_dir, "cpu-only-100x-proof.json", failures)
     {
@@ -116,6 +122,12 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 "requirement `cpu-only-100x-proof` aggregate proof reports {missing_proof_cases} missing required 100x case(s)"
             ));
         }
+        check_duplicate_case_array_values(
+            "aggregate proof",
+            &proof,
+            "required_cpu_sota_100x_cases",
+            failures,
+        );
         let proof_contract_case_count = proof
             .get("cases")
             .and_then(serde_json::Value::as_array)
@@ -220,6 +232,21 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     );
 }
 
+fn check_duplicate_case_array_values(
+    label: &str,
+    value: &serde_json::Value,
+    field: &str,
+    failures: &mut Vec<String>,
+) {
+    let duplicates = duplicate_nonblank_string_array_values(value, field);
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        failures.push(format!(
+            "requirement `cpu-only-100x-proof` {label} has duplicate {field}: {duplicates}"
+        ));
+    }
+}
+
 fn check_cpu_100x_source_artifact_counts(proof: &serde_json::Value, failures: &mut Vec<String>) {
     let unique_source_artifacts = benchmark_source_artifact_count(proof) as u64;
     let raw_source_artifacts = benchmark_source_artifact_entry_count(proof) as u64;
@@ -276,6 +303,49 @@ mod tests {
                 "duplicate source_artifacts: release/evidence/benchmarks/workload-01-condition-eval.json"
             )),
             "Fix: CPU-SOTA release gate must reject duplicate aggregate source_artifacts; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_gate_rejects_duplicate_case_array_entries() {
+        let matrix = serde_json::json!({
+            "cpu_sota_100x_contract_cases": [
+                "release.condition_eval.1m",
+                "release.condition_eval.1m"
+            ]
+        });
+        let proof = serde_json::json!({
+            "required_cpu_sota_100x_cases": [
+                "release.entropy_window.1m",
+                "release.entropy_window.1m"
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_duplicate_case_array_values(
+            "workload matrix",
+            &matrix,
+            "cpu_sota_100x_contract_cases",
+            &mut failures,
+        );
+        check_duplicate_case_array_values(
+            "aggregate proof",
+            &proof,
+            "required_cpu_sota_100x_cases",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "workload matrix has duplicate cpu_sota_100x_contract_cases: release.condition_eval.1m"
+            )),
+            "Fix: CPU-SOTA gate must reject duplicate matrix contract case ids; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "aggregate proof has duplicate required_cpu_sota_100x_cases: release.entropy_window.1m"
+            )),
+            "Fix: CPU-SOTA gate must reject duplicate aggregate required case ids; failures={failures:?}"
         );
     }
 }

@@ -189,6 +189,7 @@ fn inspect_cpu_100x_benchmark_semantics(
         blockers.push(format!("{evidence}: selected_backend must be cuda"));
     }
     inspect_cpu_100x_source_artifact_counts(evidence, value, blockers);
+    inspect_duplicate_case_array_values(evidence, value, "required_cpu_sota_100x_cases", blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
         blockers.push(format!("{evidence}: missing cases array"));
         return;
@@ -445,6 +446,31 @@ mod part13_tests {
                 "duplicate source_artifacts: release/evidence/benchmarks/workload-01-condition-eval.json"
             )),
             "Fix: completion audit must reject duplicate CPU-SOTA source_artifacts; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_cpu_100x_rejects_duplicate_required_case_ids() {
+        let proof = serde_json::json!({
+            "required_cpu_sota_100x_cases": [
+                "release.entropy_window.1m",
+                "release.entropy_window.1m"
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_duplicate_case_array_values(
+            "cpu-only-100x-proof.json",
+            &proof,
+            "required_cpu_sota_100x_cases",
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "duplicate required_cpu_sota_100x_cases: release.entropy_window.1m"
+            )),
+            "Fix: completion audit must reject duplicate aggregate CPU-SOTA required case ids; blockers={blockers:?}"
         );
     }
 }

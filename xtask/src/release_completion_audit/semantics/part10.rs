@@ -310,6 +310,7 @@ fn inspect_release_workload_matrix_semantics(
             "{evidence}: cpu_sota_100x_contract_cases lists {case_count} active case id(s); needs at least 10"
         ));
     }
+    inspect_duplicate_case_array_values(evidence, value, "cpu_sota_100x_contract_cases", blockers);
     let Some(families) = value.get("families").and_then(serde_json::Value::as_array) else {
         blockers.push(format!("{evidence}: missing workload families array"));
         return;
@@ -486,3 +487,46 @@ fn inspect_release_workload_matrix_semantics(
     }
 }
 
+fn inspect_duplicate_case_array_values(
+    evidence: &str,
+    value: &serde_json::Value,
+    field: &str,
+    blockers: &mut Vec<String>,
+) {
+    let duplicates =
+        crate::benchmark_evidence_semantics::duplicate_nonblank_string_array_values(value, field);
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        blockers.push(format!("{evidence}: duplicate {field}: {duplicates}"));
+    }
+}
+
+#[cfg(test)]
+mod part10_tests {
+    use super::*;
+
+    #[test]
+    fn completion_audit_rejects_duplicate_matrix_cpu_100x_case_ids() {
+        let matrix = serde_json::json!({
+            "cpu_sota_100x_contract_cases": [
+                "release.condition_eval.1m",
+                "release.condition_eval.1m"
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_duplicate_case_array_values(
+            "release-workload-matrix.json",
+            &matrix,
+            "cpu_sota_100x_contract_cases",
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "duplicate cpu_sota_100x_contract_cases: release.condition_eval.1m"
+            )),
+            "Fix: completion audit must reject duplicate CPU-SOTA matrix contract case ids; blockers={blockers:?}"
+        );
+    }
+}
