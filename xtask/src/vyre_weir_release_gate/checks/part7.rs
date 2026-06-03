@@ -1086,6 +1086,68 @@ mod part7_tests {
     }
 
     #[test]
+    fn backend_suite_parity_reports_status_blocker_drift_for_matching_rows() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for backend suite blocker parity test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir).expect(
+            "Fix: create benchmark evidence directory for backend suite blocker parity test.",
+        );
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "backend": "cuda",
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/cuda-workload-01-condition-eval.json",
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m",
+                        "blockers": []
+                    }
+                ],
+                "artifacts": ["release/evidence/benchmarks/cuda-workload-01-condition-eval.json"]
+            }))
+            .expect("Fix: serialize CUDA suite for backend suite blocker parity test."),
+        )
+        .expect("Fix: write CUDA suite for backend suite blocker parity test.");
+        std::fs::write(
+            benchmark_dir.join("wgpu-fallback-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "backend": "wgpu",
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m",
+                        "blockers": ["case `release.condition_eval.1m` failed: WGPU output drift"]
+                    }
+                ],
+                "artifacts": ["release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"]
+            }))
+            .expect("Fix: serialize WGPU suite for backend suite blocker parity test."),
+        )
+        .expect("Fix: write WGPU suite for backend suite blocker parity test.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "WGPU fallback".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_parity(&requirement, &release_dir, &mut failures);
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "WGPU/CUDA suite parity blockers mismatch for family `condition-eval` case `release.condition_eval.1m`"
+            ) && failure.contains("WGPU output drift")),
+            "Fix: WGPU parity gate must report blocker-state drift on matching suite rows; failures={failures:?}"
+        );
+    }
+
+    #[test]
     fn backend_suite_parity_reports_duplicate_family_case_rows() {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for backend suite duplicate parity test.");
@@ -1609,6 +1671,15 @@ pub(crate) fn check_backend_suite_parity(
                 wgpu_value,
             } => failures.push(format!(
                 "requirement `{}` WGPU/CUDA suite parity field `{field}` mismatch for family `{family_id}` case `{requested_case_id}`: cuda={cuda_value:?}, wgpu={wgpu_value:?}",
+                requirement.id
+            )),
+            BackendSuiteParityIssue::StatusBlockersMismatch {
+                family_id,
+                requested_case_id,
+                cuda_blockers,
+                wgpu_blockers,
+            } => failures.push(format!(
+                "requirement `{}` WGPU/CUDA suite parity blockers mismatch for family `{family_id}` case `{requested_case_id}`: cuda={cuda_blockers:?}, wgpu={wgpu_blockers:?}",
                 requirement.id
             )),
         }

@@ -1100,6 +1100,12 @@ pub(crate) enum BackendSuiteParityIssue {
         cuda_value: Option<String>,
         wgpu_value: Option<String>,
     },
+    StatusBlockersMismatch {
+        family_id: String,
+        requested_case_id: String,
+        cuda_blockers: Option<Vec<String>>,
+        wgpu_blockers: Option<Vec<String>>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -2161,8 +2167,35 @@ pub(crate) fn backend_suite_parity_issues(
                 });
             }
         }
+        let cuda_blockers = suite_status_blockers(cuda_status);
+        let wgpu_blockers = suite_status_blockers(wgpu_status);
+        if cuda_blockers != wgpu_blockers {
+            issues.push(BackendSuiteParityIssue::StatusBlockersMismatch {
+                family_id: pair.0.clone(),
+                requested_case_id: pair.1.clone(),
+                cuda_blockers,
+                wgpu_blockers,
+            });
+        }
     }
     issues
+}
+
+fn suite_status_blockers(status: &Value) -> Option<Vec<String>> {
+    status
+        .get("blockers")
+        .and_then(Value::as_array)
+        .map(|blockers| {
+            blockers
+                .iter()
+                .map(|blocker| {
+                    blocker
+                        .as_str()
+                        .unwrap_or("<non-string blocker>")
+                        .to_string()
+                })
+                .collect()
+        })
 }
 
 pub(crate) fn expected_backend_for_suite_evidence(evidence: &str) -> Option<&'static str> {
@@ -4147,6 +4180,43 @@ mod tests {
                 },
             ],
             "Fix: WGPU parity must compare proof strength and source provenance of matching suite rows, not only family/case labels."
+        );
+    }
+
+    #[test]
+    fn backend_suite_parity_rejects_status_blocker_drift_for_matching_pairs() {
+        let cuda = serde_json::json!({
+            "backend": "cuda",
+            "artifact_statuses": [
+                {
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "blockers": []
+                }
+            ]
+        });
+        let wgpu = serde_json::json!({
+            "backend": "wgpu",
+            "artifact_statuses": [
+                {
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "blockers": ["case `release.condition_eval.1m` failed: WGPU output drift"]
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_parity_issues(&cuda, &wgpu),
+            vec![BackendSuiteParityIssue::StatusBlockersMismatch {
+                family_id: "condition-eval".to_string(),
+                requested_case_id: "release.condition_eval.1m".to_string(),
+                cuda_blockers: Some(Vec::new()),
+                wgpu_blockers: Some(vec![
+                    "case `release.condition_eval.1m` failed: WGPU output drift".to_string()
+                ]),
+            }],
+            "Fix: WGPU parity must reject matching suite rows with different blocker state."
         );
     }
 
