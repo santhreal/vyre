@@ -204,6 +204,9 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
         }
         for issue in backend_consistency_issues(&report) {
             match issue {
+                BackendConsistencyIssue::MissingCaseId { case_index } => issues.push(format!(
+                    "source_artifact `{artifact}` case index {case_index} must include a nonblank id"
+                )),
                 BackendConsistencyIssue::MissingCaseBackend {
                     case_id,
                     expected_backend,
@@ -673,6 +676,9 @@ pub(crate) enum LaunchPlanLabelIssue {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum BackendConsistencyIssue {
+    MissingCaseId {
+        case_index: usize,
+    },
     MissingCaseBackend {
         case_id: String,
         expected_backend: String,
@@ -1796,28 +1802,31 @@ pub(crate) fn backend_consistency_issues(report: &Value) -> Vec<BackendConsisten
         return Vec::new();
     };
 
-    cases
-        .iter()
-        .filter_map(|case| {
-            let case_id = case_id(case);
-            match case
-                .get("backend_id")
-                .and_then(Value::as_str)
-                .filter(|backend| !backend.trim().is_empty())
-            {
-                Some(actual_backend) if actual_backend == expected_backend => None,
-                Some(actual_backend) => Some(BackendConsistencyIssue::CaseBackendMismatch {
-                    case_id,
-                    expected_backend: expected_backend.to_string(),
-                    actual_backend: actual_backend.to_string(),
-                }),
-                None => Some(BackendConsistencyIssue::MissingCaseBackend {
-                    case_id,
-                    expected_backend: expected_backend.to_string(),
-                }),
-            }
-        })
-        .collect()
+    let mut issues = Vec::new();
+    for (case_index, case) in cases.iter().enumerate() {
+        let case_id = case.get("id").and_then(non_empty_str).map(str::to_string);
+        if case_id.is_none() {
+            issues.push(BackendConsistencyIssue::MissingCaseId { case_index });
+        }
+        let case_id = case_id.unwrap_or_else(|| "<unknown>".to_string());
+        match case
+            .get("backend_id")
+            .and_then(Value::as_str)
+            .filter(|backend| !backend.trim().is_empty())
+        {
+            Some(actual_backend) if actual_backend == expected_backend => {}
+            Some(actual_backend) => issues.push(BackendConsistencyIssue::CaseBackendMismatch {
+                case_id,
+                expected_backend: expected_backend.to_string(),
+                actual_backend: actual_backend.to_string(),
+            }),
+            None => issues.push(BackendConsistencyIssue::MissingCaseBackend {
+                case_id,
+                expected_backend: expected_backend.to_string(),
+            }),
+        }
+    }
+    issues
 }
 
 pub(crate) fn contract_backend_issues(report: &Value) -> Vec<ContractBackendIssue> {
@@ -2736,6 +2745,26 @@ mod tests {
                 },
             ],
             "Fix: report-level backend selection must be proven by every benchmark case."
+        );
+    }
+
+    #[test]
+    fn backend_consistency_rejects_blank_case_identity() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "cases": [
+                {"id": "   ", "backend_id": "cuda"},
+                {"backend_id": "cuda"}
+            ]
+        });
+
+        assert_eq!(
+            backend_consistency_issues(&report),
+            vec![
+                BackendConsistencyIssue::MissingCaseId { case_index: 0 },
+                BackendConsistencyIssue::MissingCaseId { case_index: 1 },
+            ],
+            "Fix: backend consistency must require nonblank case ids before benchmark rows can prove release backend identity."
         );
     }
 

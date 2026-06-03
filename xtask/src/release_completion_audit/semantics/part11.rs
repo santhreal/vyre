@@ -385,6 +385,9 @@ fn check_case_backend_matches_selected_backend(
 ) {
     for issue in backend_consistency_issues(value) {
         match issue {
+            BackendConsistencyIssue::MissingCaseId { case_index } => blockers.push(format!(
+                "{evidence}: case index {case_index} must include a nonblank id"
+            )),
             BackendConsistencyIssue::MissingCaseBackend {
                 case_id,
                 expected_backend,
@@ -642,6 +645,37 @@ mod tests {
                 "source_artifact `release/evidence/benchmarks/missing-source.json` is not a readable file"
             )),
             "Fix: completion audit must reject benchmark source_artifacts that do not resolve to files; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_blank_benchmark_case_identity() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567;dirty=false",
+            "environment": {"host_cpu_model": "test cpu"},
+            "summary": {"cache_hit_rate": null},
+            "cases": [
+                {
+                    "id": " \t ",
+                    "backend_id": "cuda",
+                    "status": "pass"
+                }
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_workload_benchmark_provenance(
+            "cuda-blank-case-id.json",
+            Path::new("cuda-blank-case-id.json"),
+            &report,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker
+                == "cuda-blank-case-id.json: case index 0 must include a nonblank id"),
+            "Fix: completion audit must reject benchmark cases without stable nonblank identity; blockers={blockers:?}"
         );
     }
 }

@@ -542,6 +542,10 @@ fn check_case_backend_matches_selected_backend(
 ) {
     for issue in backend_consistency_issues(report) {
         match issue {
+            BackendConsistencyIssue::MissingCaseId { case_index } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case index {case_index} must include a nonblank id",
+                requirement.id
+            )),
             BackendConsistencyIssue::MissingCaseBackend {
                 case_id,
                 expected_backend,
@@ -987,6 +991,51 @@ mod tests {
                 "benchmark `wgpu-backend-drift.json` case `release.condition_eval.1m` backend_id `cuda` does not match selected_backend `wgpu`"
             )),
             "Fix: generic benchmark gate must reject cases executed on a backend other than selected_backend; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn benchmark_report_has_cases_rejects_blank_case_identity() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for blank case id benchmark gate test.");
+        let artifact = dir.path().join("wgpu-blank-case-id.json");
+        fs::write(
+            &artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": " \t ",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize blank case id benchmark evidence."),
+        )
+        .expect("Fix: write blank case id benchmark evidence.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["wgpu-blank-case-id.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_benchmark_report_has_cases(
+            &requirement,
+            dir.path(),
+            "wgpu-blank-case-id.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "benchmark `wgpu-blank-case-id.json` case index 0 must include a nonblank id"
+            )),
+            "Fix: generic benchmark gate must reject blank case ids before backend identity can be considered proven; failures={failures:?}"
         );
     }
 
