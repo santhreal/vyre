@@ -600,6 +600,7 @@ mod part1_tests {
             &path,
             serde_json::to_string_pretty(&serde_json::json!({
                 "selected_backend": "wgpu",
+                "git": {"commit": "0123456789abcdef0123456789abcdef01234567"},
                 "source_artifacts": ["", null],
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0, "cache_hit_rate": null},
                 "environment": {"cpu_model": "test CPU"},
@@ -624,7 +625,7 @@ mod part1_tests {
 
         assert!(
             blockers.iter().any(|blocker| blocker.contains(
-                "release/evidence/benchmarks/wgpu-missing-source.json: benchmark report must include source fingerprint or source artifact provenance"
+                "release/evidence/benchmarks/wgpu-missing-source.json: benchmark report must include source_fingerprint provenance"
             )),
             "Fix: completion audit must reject generic benchmark reports with no source provenance; blockers={blockers:?}"
         );

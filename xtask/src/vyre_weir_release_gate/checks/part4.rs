@@ -678,7 +678,7 @@ mod part4_tests {
 
         assert!(
             failures.iter().any(|failure| failure.contains(
-                "requirement `optimization-integration` benchmark `alias-aware-before-after.json` must include source fingerprint or source artifact provenance"
+                "requirement `optimization-integration` benchmark `alias-aware-before-after.json` must include source_fingerprint provenance"
             )),
             "Fix: before/after benchmark gate must reject timing evidence without source provenance; failures={failures:?}"
         );

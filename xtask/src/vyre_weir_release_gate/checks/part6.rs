@@ -330,7 +330,7 @@ fn check_benchmark_report_provenance(
 ) {
     if !benchmark_report_has_source_provenance(report) {
         failures.push(format!(
-            "requirement `{}` benchmark `{label}` must include source fingerprint or source artifact provenance",
+            "requirement `{}` benchmark `{label}` must include source_fingerprint provenance",
             requirement.id
         ));
     }
@@ -912,6 +912,7 @@ mod tests {
             &artifact,
             serde_json::to_string_pretty(&serde_json::json!({
                 "selected_backend": "wgpu",
+                "git": {"commit": "0123456789abcdef0123456789abcdef01234567"},
                 "source_artifacts": ["", null],
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0, "cache_hit_rate": null},
                 "environment": {"cpu_model": "test CPU"},
@@ -944,7 +945,7 @@ mod tests {
 
         assert!(
             failures.iter().any(|failure| failure.contains(
-                "benchmark `wgpu-missing-source.json` must include source fingerprint or source artifact provenance"
+                "benchmark `wgpu-missing-source.json` must include source_fingerprint provenance"
             )),
             "Fix: generic benchmark gate must reject reports with no source provenance; failures={failures:?}"
         );

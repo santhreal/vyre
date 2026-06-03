@@ -204,7 +204,7 @@ fn inspect_benchmark_report_provenance(
 ) {
     if !benchmark_report_has_source_provenance(value) {
         blockers.push(format!(
-            "{evidence}: benchmark report must include source fingerprint or source artifact provenance"
+            "{evidence}: benchmark report must include source_fingerprint provenance"
         ));
     }
     if let Some(source_fingerprint) = value

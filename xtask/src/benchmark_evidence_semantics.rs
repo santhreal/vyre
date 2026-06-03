@@ -59,21 +59,10 @@ pub(crate) fn benchmark_report_summary_matches_case_evidence(report: &Value) -> 
 }
 
 pub(crate) fn benchmark_report_has_source_provenance(report: &Value) -> bool {
-    [
-        "source_fingerprint",
-        "source_revision",
-        "source_artifact_fingerprint",
-        "commit_fingerprint",
-    ]
-    .iter()
-    .any(|field| report.get(*field).and_then(non_empty_str).is_some())
-        || report
-            .get("source_artifacts")
-            .and_then(Value::as_array)
-            .is_some_and(|items| items.iter().any(|item| non_empty_str(item).is_some()))
-        || report
-            .get("git")
-            .is_some_and(|git| git.get("commit").and_then(non_empty_str).is_some())
+    report
+        .get("source_fingerprint")
+        .and_then(non_empty_str)
+        .is_some()
 }
 
 pub(crate) fn benchmark_source_artifact_count(report: &Value) -> usize {
@@ -2805,30 +2794,36 @@ mod tests {
     }
 
     #[test]
-    fn benchmark_source_provenance_rejects_blank_source_artifacts() {
+    fn benchmark_source_provenance_rejects_artifact_paths_without_source_fingerprint() {
         let report = serde_json::json!({
-            "source_artifacts": ["", "   ", null]
+            "source_artifacts": ["release/evidence/benchmarks/cuda.json"]
         });
 
         assert!(
             !benchmark_report_has_source_provenance(&report),
-            "Fix: blank or non-string source_artifacts entries must not satisfy benchmark source provenance."
+            "Fix: source_artifact paths identify evidence inputs; they must not satisfy benchmark source provenance without source_fingerprint."
         );
     }
 
     #[test]
-    fn benchmark_source_provenance_accepts_valid_artifact_or_commit() {
+    fn benchmark_source_provenance_rejects_git_commit_without_source_fingerprint() {
         assert!(
-            benchmark_report_has_source_provenance(&serde_json::json!({
-                "source_artifacts": ["release/evidence/benchmarks/cuda.json"]
-            })),
-            "Fix: a non-empty source artifact path must satisfy benchmark source provenance."
-        );
-        assert!(
-            benchmark_report_has_source_provenance(&serde_json::json!({
+            !benchmark_report_has_source_provenance(&serde_json::json!({
                 "git": {"commit": "abcdef"}
             })),
-            "Fix: git commit provenance must satisfy benchmark source provenance."
+            "Fix: git.commit metadata is not a freshness-checked source_fingerprint and must not satisfy benchmark source provenance."
+        );
+    }
+
+    #[test]
+    fn benchmark_source_provenance_accepts_explicit_source_fingerprint() {
+        assert!(
+            benchmark_report_has_source_provenance(&serde_json::json!({
+                "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567:dirty=false",
+                "source_artifacts": ["release/evidence/benchmarks/cuda.json"],
+                "git": {"commit": "abcdef"}
+            })),
+            "Fix: explicit source_fingerprint must satisfy benchmark source provenance."
         );
     }
 
