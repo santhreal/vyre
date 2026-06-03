@@ -21,7 +21,7 @@
     {
       "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
       "family_id": "condition-eval",
-      "requested_case_id": "conditions.yara_like.batch.16x64k",
+      "requested_case_id": "release.condition_eval.1m",
       "exists": true,
       "bytes": 16194,
       "read_error": null,
@@ -53,9 +53,7 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
-      "blockers": [
-        "requested case `conditions.yara_like.batch.16x64k` is absent from artifact cases"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json",
@@ -97,7 +95,7 @@
     {
       "path": "release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json",
       "family_id": "offset-count-aggregation",
-      "requested_case_id": "conditions.yara_like.eval.1m",
+      "requested_case_id": "release.offset_count_aggregation.1m",
       "exists": true,
       "bytes": 16211,
       "read_error": null,
@@ -129,9 +127,7 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
-      "blockers": [
-        "requested case `conditions.yara_like.eval.1m` is absent from artifact cases"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-04-metadata-conditions.json",
@@ -173,7 +169,7 @@
     {
       "path": "release/evidence/benchmarks/wgpu-workload-05-entropy-window.json",
       "family_id": "entropy-window",
-      "requested_case_id": "conditions.yara_like.eval.1m",
+      "requested_case_id": "release.entropy_window.1m",
       "exists": true,
       "bytes": 16124,
       "read_error": null,
@@ -205,9 +201,7 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
-      "blockers": [
-        "requested case `conditions.yara_like.eval.1m` is absent from artifact cases"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json",
@@ -249,7 +243,7 @@
     {
       "path": "release/evidence/benchmarks/wgpu-workload-07-alias-reaching-def.json",
       "family_id": "alias-reaching-def",
-      "requested_case_id": "lower.alias_aware_optimizations",
+      "requested_case_id": "release.alias_reaching_def.1m",
       "exists": true,
       "bytes": 16909,
       "read_error": null,
@@ -281,14 +275,12 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
-      "blockers": [
-        "requested case `lower.alias_aware_optimizations` is absent from artifact cases"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-08-ifds-witness.json",
       "family_id": "ifds-witness",
-      "requested_case_id": "dataflow.ifds.skewed.closure.1m",
+      "requested_case_id": "release.ifds_witness.1m",
       "exists": true,
       "bytes": 16153,
       "read_error": null,
@@ -320,14 +312,12 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
-      "blockers": [
-        "requested case `dataflow.ifds.skewed.closure.1m` is absent from artifact cases"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-09-c-ast-traversal.json",
       "family_id": "c-ast-traversal",
-      "requested_case_id": "frontend.c.parser.linux_driver_pipeline",
+      "requested_case_id": "release.c_ast_traversal.1m",
       "exists": true,
       "bytes": 16148,
       "read_error": null,
@@ -359,9 +349,7 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
-      "blockers": [
-        "requested case `frontend.c.parser.linux_driver_pipeline` is absent from artifact cases"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-10-megakernel-queued-batches.json",
@@ -403,7 +391,7 @@
     {
       "path": "release/evidence/benchmarks/wgpu-workload-11-egraph-saturation.json",
       "family_id": "egraph-saturation",
-      "requested_case_id": "foundation.optimizer.impact",
+      "requested_case_id": "release.egraph_saturation.1m",
       "exists": true,
       "bytes": 16249,
       "read_error": null,
@@ -435,14 +423,12 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
-      "blockers": [
-        "requested case `foundation.optimizer.impact` is absent from artifact cases"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-12-sparse-output-compaction.json",
       "family_id": "sparse-output-compaction",
-      "requested_case_id": "conditions.yara_like.batch.16x64k",
+      "requested_case_id": "sparse.compaction.count.1m",
       "exists": true,
       "bytes": 16451,
       "read_error": null,
@@ -474,9 +460,7 @@
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
-      "blockers": [
-        "requested case `conditions.yara_like.batch.16x64k` is absent from artifact cases"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-13-callgraph-reachability.json",
@@ -516,14 +500,5 @@
       "blockers": []
     }
   ],
-  "blockers": [
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-01-condition-eval.json`: requested case `conditions.yara_like.batch.16x64k` is absent from artifact cases",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json`: requested case `conditions.yara_like.eval.1m` is absent from artifact cases",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-05-entropy-window.json`: requested case `conditions.yara_like.eval.1m` is absent from artifact cases",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-07-alias-reaching-def.json`: requested case `lower.alias_aware_optimizations` is absent from artifact cases",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-08-ifds-witness.json`: requested case `dataflow.ifds.skewed.closure.1m` is absent from artifact cases",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-09-c-ast-traversal.json`: requested case `frontend.c.parser.linux_driver_pipeline` is absent from artifact cases",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-11-egraph-saturation.json`: requested case `foundation.optimizer.impact` is absent from artifact cases",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-12-sparse-output-compaction.json`: requested case `conditions.yara_like.batch.16x64k` is absent from artifact cases"
-  ]
+  "blockers": []
 }

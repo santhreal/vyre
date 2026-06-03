@@ -71,7 +71,7 @@
         "runtime.megakernel.condition.64k"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-01-condition-eval.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case conditions.yara_like.batch.16x64k --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-01-condition-eval.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.condition_eval.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-01-condition-eval.json",
       "bench_target_ids": [
         "release.workload.condition_eval"
       ],
@@ -162,7 +162,7 @@
         "release.offset_count_aggregation.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case conditions.yara_like.eval.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.offset_count_aggregation.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
       "bench_target_ids": [
         "release.workload.offset_count_aggregation"
       ],
@@ -241,7 +241,7 @@
         "release.entropy_window.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-05-entropy-window.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case conditions.yara_like.eval.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-05-entropy-window.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.entropy_window.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-05-entropy-window.json",
       "bench_target_ids": [
         "release.workload.entropy_window"
       ],
@@ -316,7 +316,7 @@
         "release.alias_reaching_def.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-07-alias-reaching-def.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case lower.alias_aware_optimizations --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-07-alias-reaching-def.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.alias_reaching_def.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-07-alias-reaching-def.json",
       "bench_target_ids": [
         "release.workload.alias_reaching_def"
       ],
@@ -355,7 +355,7 @@
         "release.ifds_witness.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-08-ifds-witness.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case dataflow.ifds.skewed.closure.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-08-ifds-witness.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.ifds_witness.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-08-ifds-witness.json",
       "bench_target_ids": [
         "release.workload.ifds_witness"
       ],
@@ -397,7 +397,7 @@
         "release.c_ast_traversal.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-09-c-ast-traversal.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case frontend.c.parser.linux_driver_pipeline --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-09-c-ast-traversal.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.c_ast_traversal.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-09-c-ast-traversal.json",
       "bench_target_ids": [
         "release.workload.c_ast_traversal"
       ],
@@ -484,7 +484,7 @@
         "release.egraph_saturation.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-11-egraph-saturation.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case foundation.optimizer.impact --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-11-egraph-saturation.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.egraph_saturation.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-11-egraph-saturation.json",
       "bench_target_ids": [
         "release.workload.egraph_saturation"
       ],
@@ -522,7 +522,7 @@
         "sparse.compaction.count.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case conditions.yara_like.batch.16x64k --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case sparse.compaction.count.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
       "bench_target_ids": [
         "release.workload.conformance_sparse_readback"
       ],

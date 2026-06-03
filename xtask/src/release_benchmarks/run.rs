@@ -11,8 +11,8 @@ use super::suite_inspect::{
     write_cpu_100x_proof,
 };
 use super::types::{
-    BackendSuiteArtifactInput, ReleaseWorkloadMatrix, MAX_RELEASE_BENCHMARK_TEXT_BYTES,
-    REQUIRED_CPU_SOTA_100X_CASES,
+    BackendSuiteArtifactInput, ReleaseWorkloadFamily, ReleaseWorkloadMatrix,
+    MAX_RELEASE_BENCHMARK_TEXT_BYTES, REQUIRED_CPU_SOTA_100X_CASES,
 };
 
 pub(crate) fn run(args: &[String]) {
@@ -74,15 +74,7 @@ pub(crate) fn run(args: &[String]) {
             && family
                 .max_cpu_sota_min_speedup_x
                 .is_some_and(|speedup| speedup >= 100.0);
-        let selected_cases = if cpu_100x_family && !family.cpu_sota_100x_cases.is_empty() {
-            &family.cpu_sota_100x_cases
-        } else {
-            &family.matched_cases
-        };
-        let preferred_release_case = selected_cases
-            .iter()
-            .find(|case_id| REQUIRED_CPU_SOTA_100X_CASES.contains(&case_id.as_str()));
-        let Some(case_id) = preferred_release_case.or_else(|| selected_cases.first()) else {
+        let Some(case_id) = select_release_benchmark_case(family, cpu_100x_family) else {
             eprintln!(
                 "Fix: required release workload `{}` has no matched benchmark case.",
                 family.id
@@ -161,7 +153,7 @@ pub(crate) fn run(args: &[String]) {
     if config.only.is_none() && config.backend == "cuda" && config.include_wgpu_comparison {
         let mut wgpu_artifacts = Vec::new();
         for family in matrix.families.iter().filter(|family| family.required) {
-            let Some(case_id) = family.matched_cases.first() else {
+            let Some(case_id) = select_release_benchmark_case(family, true) else {
                 eprintln!(
                     "Fix: required release workload `{}` has no matched benchmark case.",
                     family.id
@@ -282,5 +274,50 @@ pub(crate) fn run(args: &[String]) {
         println!("release-benchmarks: refreshed suite evidence for {ran} benchmark artifact(s)");
     } else {
         println!("release-benchmarks: wrote {ran} benchmark artifact(s)");
+    }
+}
+
+fn select_release_benchmark_case<'a>(
+    family: &'a ReleaseWorkloadFamily,
+    prefer_cpu_sota_100x: bool,
+) -> Option<&'a String> {
+    let selected_cases = if prefer_cpu_sota_100x && !family.cpu_sota_100x_cases.is_empty() {
+        &family.cpu_sota_100x_cases
+    } else {
+        &family.matched_cases
+    };
+    selected_cases
+        .iter()
+        .find(|case_id| REQUIRED_CPU_SOTA_100X_CASES.contains(&case_id.as_str()))
+        .or_else(|| selected_cases.first())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wgpu_comparison_prefers_release_defining_cpu_sota_case() {
+        let family = ReleaseWorkloadFamily {
+            id: "condition-eval".to_string(),
+            required: true,
+            matched_cases: vec![
+                "conditions.yara_like.batch.16x64k".to_string(),
+                "release.condition_eval.1m".to_string(),
+            ],
+            evidence_artifact: "release/evidence/benchmarks/workload-01-condition-eval.json"
+                .to_string(),
+            max_cpu_sota_min_speedup_x: Some(100.0),
+            cpu_sota_100x_cases: vec![
+                "conditions.yara_like.eval.1m".to_string(),
+                "release.condition_eval.1m".to_string(),
+            ],
+        };
+
+        assert_eq!(
+            select_release_benchmark_case(&family, true).map(String::as_str),
+            Some("release.condition_eval.1m"),
+            "Fix: WGPU comparison suite generation must not drift to a broad matched case when a release-defining CPU-SOTA case exists."
+        );
     }
 }
