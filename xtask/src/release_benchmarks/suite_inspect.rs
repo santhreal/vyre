@@ -562,21 +562,18 @@ pub(super) fn inspect_backend_suite_artifact(
         .map(str::to_string);
     let source_fingerprint = report
         .get("source_fingerprint")
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
+        .and_then(nonblank_str)
         .map(str::to_string)
         .or_else(|| {
             report
                 .get("git")
                 .and_then(|git| git.get("commit"))
-                .and_then(Value::as_str)
-                .filter(|value| !value.is_empty())
+                .and_then(nonblank_str)
                 .map(|commit| format!("git:{commit}"))
         });
     let source_tree_fingerprint = report
         .get("source_tree_fingerprint")
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
+        .and_then(nonblank_str)
         .map(str::to_string);
     if selected_backend.as_deref() != Some(backend) {
         blockers.push(format!(
@@ -591,7 +588,7 @@ pub(super) fn inspect_backend_suite_artifact(
         .and_then(|devices| devices.first());
     let gpu_model = first_gpu
         .and_then(|device| device.get("name"))
-        .and_then(Value::as_str)
+        .and_then(nonblank_str)
         .map(str::to_string);
     let gpu_memory_total_mib = first_gpu
         .and_then(|device| device.get("memory_total_mib"))
@@ -609,27 +606,26 @@ pub(super) fn inspect_backend_suite_artifact(
                 .or_else(|| environment.get("cpu_model"))
                 .or_else(|| environment.get("host_cpu"))
         })
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
+        .and_then(nonblank_str)
         .map(str::to_string);
     let nvidia_driver_version = environment
         .and_then(|environment| environment.get("nvidia_driver_version"))
-        .and_then(Value::as_str)
+        .and_then(nonblank_str)
         .map(str::to_string);
     let nvidia_cuda_version = environment
         .and_then(|environment| environment.get("nvidia_cuda_version"))
-        .and_then(Value::as_str)
+        .and_then(nonblank_str)
         .map(str::to_string);
     if backend == "cuda" {
-        if gpu_model.as_deref().is_none_or(str::is_empty) {
+        if gpu_model.is_none() {
             blockers.push("CUDA artifact has no nvidia-smi GPU model provenance".to_string());
         }
-        if nvidia_driver_version.as_deref().is_none_or(str::is_empty) {
+        if nvidia_driver_version.is_none() {
             blockers.push(
                 "CUDA artifact has no nvidia-smi NVIDIA driver version provenance".to_string(),
             );
         }
-        if nvidia_cuda_version.as_deref().is_none_or(str::is_empty) {
+        if nvidia_cuda_version.is_none() {
             blockers.push(
                 "CUDA artifact has no nvidia-smi CUDA runtime version provenance".to_string(),
             );
@@ -926,6 +922,10 @@ pub(super) fn suite_metric_percentile(value: Option<&Value>, percentile: &str) -
         })
 }
 
+fn nonblank_str(value: &Value) -> Option<&str> {
+    value.as_str().filter(|value| !value.trim().is_empty())
+}
+
 pub(super) fn record_required_metric_percentile(
     current_min: &mut Option<u64>,
     metrics: Option<&serde_json::Map<String, Value>>,
@@ -1106,6 +1106,96 @@ mod tests {
             }),
             "Fix: generated backend suite evidence must preserve duplicate family input blockers; blockers={blockers:?}"
         );
+    }
+
+    #[test]
+    fn suite_artifact_status_rejects_whitespace_only_provenance() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for suite blank provenance test.");
+        let artifact_rel = "release/evidence/benchmarks/cuda-blank-provenance.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: suite artifact must have parent directory."),
+        )
+        .expect("Fix: create blank provenance suite artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "source_fingerprint": "   ",
+                "source_tree_fingerprint": "\t",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "environment": {
+                    "host_cpu_model": " ",
+                    "gpu_devices": [
+                        {
+                            "name": " ",
+                            "memory_total_mib": 24576,
+                            "compute_capability_major": 8,
+                            "compute_capability_minor": 9
+                        }
+                    ],
+                    "nvidia_driver_version": "\t",
+                    "nvidia_cuda_version": "\n"
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "kernel_launches": {"samples": 1, "p50": 1}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 120.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize blank provenance benchmark artifact JSON."),
+        )
+        .expect("Fix: write blank provenance benchmark artifact JSON.");
+
+        let status = inspect_backend_suite_artifact(
+            dir.path(),
+            "cuda",
+            &BackendSuiteArtifactInput {
+                path: artifact_rel.to_string(),
+                family_id: "condition-eval".to_string(),
+                requested_case_id: "release.condition_eval.1m".to_string(),
+                cpu_sota_100x_required: false,
+            },
+        );
+
+        assert_eq!(
+            status.source_fingerprint, None,
+            "Fix: whitespace-only source_fingerprint must not be serialized as suite provenance."
+        );
+        assert_eq!(
+            status.source_tree_fingerprint, None,
+            "Fix: whitespace-only source_tree_fingerprint must not be serialized as suite provenance."
+        );
+        assert_eq!(
+            status.host_cpu_model, None,
+            "Fix: whitespace-only host_cpu_model must not be serialized as suite provenance."
+        );
+        for expected in [
+            "CUDA artifact has no nvidia-smi GPU model provenance",
+            "CUDA artifact has no nvidia-smi NVIDIA driver version provenance",
+            "CUDA artifact has no nvidia-smi CUDA runtime version provenance",
+        ] {
+            assert!(
+                status
+                    .blockers
+                    .iter()
+                    .any(|blocker| blocker.contains(expected)),
+                "Fix: suite artifact inspection must reject whitespace-only CUDA provenance `{expected}`; blockers={:?}",
+                status.blockers
+            );
+        }
     }
 
     #[test]
