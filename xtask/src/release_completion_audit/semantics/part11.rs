@@ -1,7 +1,8 @@
 use crate::benchmark_evidence_semantics::{
     backend_consistency_issues, benchmark_report_has_source_provenance,
-    benchmark_source_artifact_paths, cuda_telemetry_label_issues, launch_plan_label_issues,
-    BackendConsistencyIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
+    benchmark_source_artifact_paths, cuda_forbidden_telemetry_issues,
+    cuda_telemetry_label_issues, launch_plan_label_issues, BackendConsistencyIssue,
+    CudaForbiddenTelemetryIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
 };
 
 fn inspect_workload_benchmark_semantics(
@@ -103,6 +104,7 @@ fn inspect_workload_benchmark_provenance(
     check_case_backend_matches_selected_backend(evidence, value, blockers);
     inspect_contract_baselines_apply_to_backend(evidence, value, blockers);
     check_cuda_telemetry_labels_match_counters(evidence, value, blockers);
+    check_cuda_forbidden_telemetry_is_zero(evidence, value, blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
         return;
     };
@@ -430,6 +432,23 @@ fn check_cuda_telemetry_labels_match_counters(
     }
 }
 
+fn check_cuda_forbidden_telemetry_is_zero(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    for issue in cuda_forbidden_telemetry_issues(value) {
+        match issue {
+            CudaForbiddenTelemetryIssue::ResidentBorrowedEscapeHatch {
+                case_id,
+                observed_p50,
+            } => blockers.push(format!(
+                "{evidence}: case `{case_id}` has cuda_resident_borrowed_fallback_dispatches p50={observed_p50}; release CUDA benchmark evidence must use native resident dispatch"
+            )),
+        }
+    }
+}
+
 fn inspect_weir_readme_contract_semantics(
     evidence: &str,
     value: &serde_json::Value,
@@ -567,6 +586,61 @@ mod tests {
                 "case `release.condition_eval.1m` must pass its performance contract: Performance contract failed"
             ) && blocker.contains("observed 42.00x")),
             "Fix: completion audit workload blockers must preserve failed benchmark case reasons; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_cuda_borrowed_escape_hatch_telemetry() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567:dirty=false",
+            "environment": {"host_cpu_model": "test cpu"},
+            "summary": {"cache_hit_rate": 0.0, "failed": 0},
+            "cases": [
+                {
+                    "id": "release.callgraph_reachability.1m",
+                    "backend_id": "cuda",
+                    "status": "pass",
+                    "correctness": {"Valid": true},
+                    "contract": {
+                        "dataset_fingerprint": "sha256:callgraph",
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 200.0},
+                    "metrics": {
+                        "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                        "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2100, "p99": 2200},
+                        "kernel_launches": {"samples": 30, "p50": 1},
+                        "cuda_resident_borrowed_fallback_dispatches": {"samples": 30, "p50": 3}
+                    },
+                    "optimization_passes_applied": [
+                        "cuda-explicit-backend-selection",
+                        "single-dispatch-launch-plan",
+                        "cuda-resident-borrowed-escape-hatch"
+                    ]
+                }
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_workload_benchmark_semantics(
+            "release/evidence/benchmarks/workload-13-callgraph-reachability.json",
+            Path::new("release/evidence/benchmarks/workload-13-callgraph-reachability.json"),
+            &report,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "case `release.callgraph_reachability.1m` has cuda_resident_borrowed_fallback_dispatches p50=3"
+            ) && blocker.contains("must use native resident dispatch")),
+            "Fix: completion audit must reject CUDA benchmark evidence collected through the resident borrowed escape hatch; blockers={blockers:?}"
         );
     }
 

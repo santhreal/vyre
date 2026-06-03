@@ -969,6 +969,11 @@ pub(crate) enum CudaTelemetryLabelIssue {
     },
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum CudaForbiddenTelemetryIssue {
+    ResidentBorrowedEscapeHatch { case_id: String, observed_p50: f64 },
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum SourceFingerprintIssue {
     DirtyUnknownState {
@@ -2231,6 +2236,10 @@ pub(crate) fn cuda_telemetry_label_issues(report: &Value) -> Vec<CudaTelemetryLa
                 "cuda_device_readback_operations",
             ],
         ),
+        (
+            "cuda-resident-borrowed-escape-hatch",
+            &["cuda_resident_borrowed_fallback_dispatches"],
+        ),
     ];
 
     cases
@@ -2254,6 +2263,30 @@ pub(crate) fn cuda_telemetry_label_issues(report: &Value) -> Vec<CudaTelemetryLa
                     _ => None,
                 }
             })
+        })
+        .collect()
+}
+
+pub(crate) fn cuda_forbidden_telemetry_issues(report: &Value) -> Vec<CudaForbiddenTelemetryIssue> {
+    if report.get("selected_backend").and_then(Value::as_str) != Some("cuda") {
+        return Vec::new();
+    }
+    let Some(cases) = report.get("cases").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+
+    cases
+        .iter()
+        .filter_map(|case| {
+            let metrics = case.get("metrics").and_then(Value::as_object);
+            let observed_p50 =
+                metric_value_any(metrics, &["cuda_resident_borrowed_fallback_dispatches"])?;
+            (observed_p50 > 0.0).then(
+                || CudaForbiddenTelemetryIssue::ResidentBorrowedEscapeHatch {
+                    case_id: case_id(case),
+                    observed_p50,
+                },
+            )
         })
         .collect()
 }
@@ -3645,6 +3678,16 @@ mod tests {
                         "cuda_device_readback_operations": {"p50": 0}
                     },
                     "optimization_passes_applied": ["cuda-transfer-operation-telemetry"]
+                },
+                {
+                    "id": "resident-escape-unlabeled",
+                    "metrics": {"cuda_resident_borrowed_fallback_dispatches": {"p50": 1}},
+                    "optimization_passes_applied": ["cuda-explicit-backend-selection"]
+                },
+                {
+                    "id": "resident-escape-false-label",
+                    "metrics": {"cuda_resident_borrowed_fallback_dispatches": {"p50": 0}},
+                    "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"]
                 }
             ]
         });
@@ -3668,8 +3711,42 @@ mod tests {
                     case_id: "transfer-false-label".to_string(),
                     label: "cuda-transfer-operation-telemetry",
                 },
+                CudaTelemetryLabelIssue::MissingLabel {
+                    case_id: "resident-escape-unlabeled".to_string(),
+                    label: "cuda-resident-borrowed-escape-hatch",
+                },
+                CudaTelemetryLabelIssue::LabelWithoutCounters {
+                    case_id: "resident-escape-false-label".to_string(),
+                    label: "cuda-resident-borrowed-escape-hatch",
+                },
             ],
             "Fix: CUDA release telemetry labels must match measured backend counters."
+        );
+    }
+
+    #[test]
+    fn cuda_forbidden_telemetry_rejects_resident_borrowed_escape_hatch() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "cases": [
+                {
+                    "id": "native-resident",
+                    "metrics": {"cuda_resident_borrowed_fallback_dispatches": {"p50": 0}}
+                },
+                {
+                    "id": "borrowed-escape",
+                    "metrics": {"cuda_resident_borrowed_fallback_dispatches": {"p50": 2}}
+                }
+            ]
+        });
+
+        assert_eq!(
+            cuda_forbidden_telemetry_issues(&report),
+            vec![CudaForbiddenTelemetryIssue::ResidentBorrowedEscapeHatch {
+                case_id: "borrowed-escape".to_string(),
+                observed_p50: 2.0,
+            }],
+            "Fix: CUDA benchmark evidence must not pass when resident dispatch used the host-buffer escape hatch."
         );
     }
 
