@@ -221,6 +221,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 entries.len()
             ));
         }
+        check_duplicate_optimization_case_entry_ids(&case_manifest, failures);
         for field in [
             "cases_with_child_bodies",
             "cases_with_bindings",
@@ -263,6 +264,19 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     }
 }
 
+fn check_duplicate_optimization_case_entry_ids(
+    case_manifest: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    let duplicates = duplicate_nonblank_object_array_field_values(case_manifest, "entries", "id");
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        failures.push(format!(
+            "requirement `optimization-corpus-4096` case manifest has duplicate entry ids: {duplicates}"
+        ));
+    }
+}
+
 fn check_duplicate_optimization_family_rows(
     family_manifest: &serde_json::Value,
     failures: &mut Vec<String>,
@@ -283,8 +297,67 @@ mod tests {
 
     #[test]
     fn optimization_corpus_gate_rejects_duplicate_family_rows() {
+        let family_manifest = serde_json::json!({
+            "required_family_count": 14,
+            "missing_required_families": [],
+            "families": [
+                {"family": "algebraic", "cases": 128},
+                {"family": "algebraic", "cases": 128}
+            ],
+            "blockers": []
+        });
+        let case_manifest = serde_json::json!({"blockers": []});
+        let failures = run_optimization_corpus_gate_with_manifests(family_manifest, case_manifest);
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("duplicate family rows: algebraic")),
+            "Fix: optimization corpus gate must reject duplicate family manifest rows; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn optimization_corpus_gate_rejects_duplicate_case_entry_ids() {
+        let family_manifest = serde_json::json!({"blockers": []});
+        let case_manifest = serde_json::json!({
+            "pass_instance_count": 4096,
+            "generated_cases": 4096,
+            "unique_case_ids": 4096,
+            "duplicate_case_ids": [],
+            "entries": [
+                {
+                    "id": "optimization.algebraic.0001",
+                    "family": "algebraic",
+                    "total_ops": 3
+                },
+                {
+                    "id": "optimization.algebraic.0001",
+                    "family": "predicate",
+                    "total_ops": 5
+                }
+            ],
+            "cases_with_child_bodies": 1,
+            "cases_with_bindings": 1,
+            "cases_with_literals": 1,
+            "blockers": []
+        });
+        let failures = run_optimization_corpus_gate_with_manifests(family_manifest, case_manifest);
+
+        assert!(
+            failures.iter().any(|failure| {
+                failure.contains("duplicate entry ids: optimization.algebraic.0001")
+            }),
+            "Fix: optimization corpus gate must reject duplicate case manifest entry ids even when unique_case_ids and duplicate_case_ids claim clean evidence; failures={failures:?}"
+        );
+    }
+
+    fn run_optimization_corpus_gate_with_manifests(
+        family_manifest: serde_json::Value,
+        case_manifest: serde_json::Value,
+    ) -> Vec<String> {
         let dir = tempfile::TempDir::new()
-            .expect("Fix: create temp workspace for duplicate optimization family gate test.");
+            .expect("Fix: create temp workspace for optimization corpus gate test.");
         let base_dir = dir.path();
         std::fs::write(
             base_dir.join("optimization-corpus.json"),
@@ -301,24 +374,19 @@ mod tests {
             .to_string(),
         )
         .expect("Fix: write optimization corpus gate fixture.");
-        let family_manifest = serde_json::json!({
-            "required_family_count": 14,
-            "missing_required_families": [],
-            "families": [
-                {"family": "algebraic", "cases": 128},
-                {"family": "algebraic", "cases": 128}
-            ],
-            "blockers": []
-        });
         std::fs::write(
             base_dir.join("optimization-family-manifest.json"),
             family_manifest.to_string(),
         )
-        .expect("Fix: write duplicate optimization family manifest fixture.");
+        .expect("Fix: write optimization family manifest fixture.");
+        std::fs::write(
+            base_dir.join("optimization-case-manifest.json"),
+            case_manifest.to_string(),
+        )
+        .expect("Fix: write optimization case manifest fixture.");
         for suffix in [
             "optimization-corpus-contracts.json",
             "optimization-analysis-fixtures.json",
-            "optimization-case-manifest.json",
         ] {
             std::fs::write(
                 base_dir.join(suffix),
@@ -346,11 +414,6 @@ mod tests {
 
         check(&requirement, base_dir, &mut failures);
 
-        assert!(
-            failures
-                .iter()
-                .any(|failure| failure.contains("duplicate family rows: algebraic")),
-            "Fix: optimization corpus gate must reject duplicate family manifest rows; failures={failures:?}"
-        );
+        failures
     }
 }

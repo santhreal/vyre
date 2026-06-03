@@ -160,6 +160,7 @@ fn inspect_optimization_case_manifest_semantics(
             entries.len()
         ));
     }
+    inspect_duplicate_optimization_case_entry_ids(evidence, value, blockers);
     for field in [
         "cases_with_child_bodies",
         "cases_with_bindings",
@@ -205,6 +206,23 @@ fn inspect_optimization_case_manifest_semantics(
     }
 }
 
+fn inspect_duplicate_optimization_case_entry_ids(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let duplicates =
+        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
+            value, "entries", "id",
+        );
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        blockers.push(format!(
+            "{evidence}: duplicate optimization case entry ids: {duplicates}"
+        ));
+    }
+}
+
 fn is_test_suite_evidence(evidence: &str) -> bool {
     [
         "unit-suite.json",
@@ -245,6 +263,47 @@ mod part6_tests {
                 .iter()
                 .any(|blocker| blocker.contains("duplicate optimization family rows: algebraic")),
             "Fix: completion audit must reject duplicate optimization family manifest rows; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_duplicate_optimization_case_entry_ids() {
+        let case_manifest = serde_json::json!({
+            "pass_instance_count": 4096,
+            "generated_cases": 4096,
+            "unique_case_ids": 4096,
+            "duplicate_case_ids": [],
+            "family_count": 14,
+            "required_family_count": 14,
+            "entries": [
+                {
+                    "id": "optimization.algebraic.0001",
+                    "family": "algebraic",
+                    "total_ops": 3
+                },
+                {
+                    "id": "optimization.algebraic.0001",
+                    "family": "predicate",
+                    "total_ops": 5
+                }
+            ],
+            "cases_with_child_bodies": 1,
+            "cases_with_bindings": 1,
+            "cases_with_literals": 1
+        });
+        let mut blockers = Vec::new();
+
+        inspect_optimization_case_manifest_semantics(
+            "optimization-case-manifest.json",
+            &case_manifest,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| {
+                blocker.contains("duplicate optimization case entry ids: optimization.algebraic.0001")
+            }),
+            "Fix: completion audit must reject duplicate optimization case manifest entry ids even when unique_case_ids and duplicate_case_ids claim clean evidence; blockers={blockers:?}"
         );
     }
 }
