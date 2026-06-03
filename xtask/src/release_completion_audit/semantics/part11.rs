@@ -1,6 +1,6 @@
 use crate::benchmark_evidence_semantics::{
-    backend_consistency_issues, launch_plan_label_issues, BackendConsistencyIssue,
-    LaunchPlanLabelIssue,
+    backend_consistency_issues, cuda_source_cache_label_issues, launch_plan_label_issues,
+    BackendConsistencyIssue, CudaSourceCacheLabelIssue, LaunchPlanLabelIssue,
 };
 
 fn inspect_workload_benchmark_semantics(
@@ -131,6 +131,7 @@ fn inspect_workload_benchmark_provenance(
         ));
     }
     check_case_backend_matches_selected_backend(evidence, value, blockers);
+    check_cuda_source_cache_label_matches_counters(evidence, value, blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
         return;
     };
@@ -308,6 +309,23 @@ fn check_case_backend_matches_selected_backend(
                 actual_backend,
             } => blockers.push(format!(
                 "{evidence}: case `{case_id}` backend_id `{actual_backend}` does not match selected_backend `{expected_backend}`"
+            )),
+        }
+    }
+}
+
+fn check_cuda_source_cache_label_matches_counters(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    for issue in cuda_source_cache_label_issues(value) {
+        match issue {
+            CudaSourceCacheLabelIssue::MissingLabel { case_id } => blockers.push(format!(
+                "{evidence}: case `{case_id}` has positive CUDA PTX source-cache counters but is missing `cuda-ptx-source-cache`"
+            )),
+            CudaSourceCacheLabelIssue::LabelWithoutCounters { case_id } => blockers.push(format!(
+                "{evidence}: case `{case_id}` lists `cuda-ptx-source-cache` but all CUDA PTX source-cache counters are zero or missing"
             )),
         }
     }

@@ -1,6 +1,6 @@
 use crate::benchmark_evidence_semantics::{
-    backend_consistency_issues, launch_plan_label_issues, BackendConsistencyIssue,
-    LaunchPlanLabelIssue,
+    backend_consistency_issues, cuda_source_cache_label_issues, launch_plan_label_issues,
+    BackendConsistencyIssue, CudaSourceCacheLabelIssue, LaunchPlanLabelIssue,
 };
 
 pub(crate) fn check_benchmark_report_has_cases(
@@ -212,6 +212,7 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
         ));
     }
     check_case_backend_matches_selected_backend(requirement, label, report, failures);
+    check_cuda_source_cache_label_matches_counters(requirement, label, report, failures);
     let Some(cases) = report.get("cases").and_then(serde_json::Value::as_array) else {
         return;
     };
@@ -396,6 +397,25 @@ fn check_case_backend_matches_selected_backend(
                 actual_backend,
             } => failures.push(format!(
                 "requirement `{}` benchmark `{label}` case `{case_id}` backend_id `{actual_backend}` does not match selected_backend `{expected_backend}`",
+                requirement.id
+            )),
+        }
+    }
+}
+fn check_cuda_source_cache_label_matches_counters(
+    requirement: &Requirement,
+    label: &str,
+    report: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    for issue in cuda_source_cache_label_issues(report) {
+        match issue {
+            CudaSourceCacheLabelIssue::MissingLabel { case_id } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{case_id}` has positive CUDA PTX source-cache counters but is missing `cuda-ptx-source-cache`",
+                requirement.id
+            )),
+            CudaSourceCacheLabelIssue::LabelWithoutCounters { case_id } => failures.push(format!(
+                "requirement `{}` benchmark `{label}` case `{case_id}` lists `cuda-ptx-source-cache` but all CUDA PTX source-cache counters are zero or missing",
                 requirement.id
             )),
         }

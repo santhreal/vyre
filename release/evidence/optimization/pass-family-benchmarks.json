@@ -785,7 +785,6 @@
       },
       "optimization_passes_applied": [
         "cuda-explicit-backend-selection",
-        "cuda-ptx-source-cache",
         "measured-lower-optimization-family",
         "optimizer-pipeline",
         "single-dispatch-launch-plan"

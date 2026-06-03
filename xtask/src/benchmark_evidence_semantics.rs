@@ -21,6 +21,12 @@ pub(crate) enum BackendConsistencyIssue {
     },
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum CudaSourceCacheLabelIssue {
+    MissingLabel { case_id: String },
+    LabelWithoutCounters { case_id: String },
+}
+
 pub(crate) fn backend_consistency_issues(report: &Value) -> Vec<BackendConsistencyIssue> {
     let Some(expected_backend) = report
         .get("selected_backend")
@@ -52,6 +58,38 @@ pub(crate) fn backend_consistency_issues(report: &Value) -> Vec<BackendConsisten
                     case_id,
                     expected_backend: expected_backend.to_string(),
                 }),
+            }
+        })
+        .collect()
+}
+
+pub(crate) fn cuda_source_cache_label_issues(report: &Value) -> Vec<CudaSourceCacheLabelIssue> {
+    if report.get("selected_backend").and_then(Value::as_str) != Some("cuda") {
+        return Vec::new();
+    }
+    let Some(cases) = report.get("cases").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+
+    cases
+        .iter()
+        .filter_map(|case| {
+            let metrics = case.get("metrics").and_then(Value::as_object);
+            let counters_active = metric_value_any(
+                metrics,
+                &[
+                    "cuda_ptx_source_cache_entries",
+                    "cuda_ptx_source_cache_hits",
+                    "cuda_ptx_source_cache_misses",
+                ],
+            )
+            .is_some_and(|value| value > 0.0);
+            let label_present = optimization_passes_contain(case, "cuda-ptx-source-cache");
+            let case_id = case_id(case);
+            match (counters_active, label_present) {
+                (true, false) => Some(CudaSourceCacheLabelIssue::MissingLabel { case_id }),
+                (false, true) => Some(CudaSourceCacheLabelIssue::LabelWithoutCounters { case_id }),
+                _ => None,
             }
         })
         .collect()
@@ -216,6 +254,47 @@ mod tests {
         assert!(
             backend_consistency_issues(&manifest).is_empty(),
             "Fix: backend consistency applies to benchmark reports that declare selected_backend."
+        );
+    }
+
+    #[test]
+    fn cuda_source_cache_labels_track_active_counters() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "cases": [
+                {
+                    "id": "active-unlabeled",
+                    "metrics": {"cuda_ptx_source_cache_misses": {"p50": 1}},
+                    "optimization_passes_applied": ["cuda-explicit-backend-selection"]
+                },
+                {
+                    "id": "inactive-labeled",
+                    "metrics": {
+                        "cuda_ptx_source_cache_entries": {"p50": 0},
+                        "cuda_ptx_source_cache_hits": {"p50": 0},
+                        "cuda_ptx_source_cache_misses": {"p50": 0}
+                    },
+                    "optimization_passes_applied": ["cuda-ptx-source-cache"]
+                },
+                {
+                    "id": "active-labeled",
+                    "metrics": {"cuda_ptx_source_cache_hits": {"p50": 2}},
+                    "optimization_passes_applied": ["cuda-ptx-source-cache"]
+                }
+            ]
+        });
+
+        assert_eq!(
+            cuda_source_cache_label_issues(&report),
+            vec![
+                CudaSourceCacheLabelIssue::MissingLabel {
+                    case_id: "active-unlabeled".to_string()
+                },
+                CudaSourceCacheLabelIssue::LabelWithoutCounters {
+                    case_id: "inactive-labeled".to_string()
+                },
+            ],
+            "Fix: CUDA source-cache labels must match measured source-cache counters."
         );
     }
 }

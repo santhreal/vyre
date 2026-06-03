@@ -384,7 +384,10 @@ fn infer_optimization_passes_applied(
     if metrics.contains_key("cache_hit") || metrics.contains_key("cold_cache_lookup_ns") {
         passes.push("pipeline-cache-lookup".to_string());
     }
-    if metric_positive("cuda_ptx_source_cache_hits") {
+    if metric_positive("cuda_ptx_source_cache_entries")
+        || metric_positive("cuda_ptx_source_cache_hits")
+        || metric_positive("cuda_ptx_source_cache_misses")
+    {
         passes.push("cuda-ptx-source-cache".to_string());
     }
     if metric_positive("cuda_graph_launches") {
@@ -491,7 +494,7 @@ mod tests {
     #[test]
     fn cuda_graph_backend_metrics_are_reported_as_release_path_passes() {
         let mut metrics = BTreeMap::new();
-        metrics.insert("cuda_ptx_source_cache_hits".to_string(), stats(1));
+        metrics.insert("cuda_ptx_source_cache_misses".to_string(), stats(1));
         metrics.insert("cuda_graph_launches".to_string(), stats(3));
         metrics.insert("cuda_graph_materialized_cache_hits".to_string(), stats(2));
         metrics.insert("cuda_host_upload_operations".to_string(), stats(4));
