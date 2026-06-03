@@ -1,6 +1,6 @@
 use crate::benchmark_evidence_semantics::{
-    backend_consistency_issues, cuda_source_cache_label_issues, launch_plan_label_issues,
-    BackendConsistencyIssue, CudaSourceCacheLabelIssue, LaunchPlanLabelIssue,
+    backend_consistency_issues, cuda_telemetry_label_issues, launch_plan_label_issues,
+    BackendConsistencyIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
 };
 
 fn inspect_workload_benchmark_semantics(
@@ -131,7 +131,7 @@ fn inspect_workload_benchmark_provenance(
         ));
     }
     check_case_backend_matches_selected_backend(evidence, value, blockers);
-    check_cuda_source_cache_label_matches_counters(evidence, value, blockers);
+    check_cuda_telemetry_labels_match_counters(evidence, value, blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
         return;
     };
@@ -314,18 +314,24 @@ fn check_case_backend_matches_selected_backend(
     }
 }
 
-fn check_cuda_source_cache_label_matches_counters(
+fn check_cuda_telemetry_labels_match_counters(
     evidence: &str,
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    for issue in cuda_source_cache_label_issues(value) {
+    for issue in cuda_telemetry_label_issues(value) {
         match issue {
-            CudaSourceCacheLabelIssue::MissingLabel { case_id } => blockers.push(format!(
-                "{evidence}: case `{case_id}` has positive CUDA PTX source-cache counters but is missing `cuda-ptx-source-cache`"
+            CudaTelemetryLabelIssue::MissingLabel {
+                case_id,
+                label: telemetry_label,
+            } => blockers.push(format!(
+                "{evidence}: case `{case_id}` has positive CUDA telemetry counters but is missing `{telemetry_label}`"
             )),
-            CudaSourceCacheLabelIssue::LabelWithoutCounters { case_id } => blockers.push(format!(
-                "{evidence}: case `{case_id}` lists `cuda-ptx-source-cache` but all CUDA PTX source-cache counters are zero or missing"
+            CudaTelemetryLabelIssue::LabelWithoutCounters {
+                case_id,
+                label: telemetry_label,
+            } => blockers.push(format!(
+                "{evidence}: case `{case_id}` lists `{telemetry_label}` but all matching CUDA telemetry counters are zero or missing"
             )),
         }
     }

@@ -22,9 +22,15 @@ pub(crate) enum BackendConsistencyIssue {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum CudaSourceCacheLabelIssue {
-    MissingLabel { case_id: String },
-    LabelWithoutCounters { case_id: String },
+pub(crate) enum CudaTelemetryLabelIssue {
+    MissingLabel {
+        case_id: String,
+        label: &'static str,
+    },
+    LabelWithoutCounters {
+        case_id: String,
+        label: &'static str,
+    },
 }
 
 pub(crate) fn backend_consistency_issues(report: &Value) -> Vec<BackendConsistencyIssue> {
@@ -63,7 +69,7 @@ pub(crate) fn backend_consistency_issues(report: &Value) -> Vec<BackendConsisten
         .collect()
 }
 
-pub(crate) fn cuda_source_cache_label_issues(report: &Value) -> Vec<CudaSourceCacheLabelIssue> {
+pub(crate) fn cuda_telemetry_label_issues(report: &Value) -> Vec<CudaTelemetryLabelIssue> {
     if report.get("selected_backend").and_then(Value::as_str) != Some("cuda") {
         return Vec::new();
     }
@@ -71,26 +77,50 @@ pub(crate) fn cuda_source_cache_label_issues(report: &Value) -> Vec<CudaSourceCa
         return Vec::new();
     };
 
+    const CHECKS: &[(&str, &[&str])] = &[
+        (
+            "cuda-ptx-source-cache",
+            &[
+                "cuda_ptx_source_cache_entries",
+                "cuda_ptx_source_cache_hits",
+                "cuda_ptx_source_cache_misses",
+            ],
+        ),
+        ("cuda-graph-replay", &["cuda_graph_launches"]),
+        (
+            "cuda-graph-materialized-output-cache",
+            &["cuda_graph_materialized_cache_hits"],
+        ),
+        (
+            "cuda-transfer-operation-telemetry",
+            &[
+                "cuda_host_upload_operations",
+                "cuda_device_readback_operations",
+            ],
+        ),
+    ];
+
     cases
         .iter()
-        .filter_map(|case| {
+        .flat_map(|case| {
             let metrics = case.get("metrics").and_then(Value::as_object);
-            let counters_active = metric_value_any(
-                metrics,
-                &[
-                    "cuda_ptx_source_cache_entries",
-                    "cuda_ptx_source_cache_hits",
-                    "cuda_ptx_source_cache_misses",
-                ],
-            )
-            .is_some_and(|value| value > 0.0);
-            let label_present = optimization_passes_contain(case, "cuda-ptx-source-cache");
             let case_id = case_id(case);
-            match (counters_active, label_present) {
-                (true, false) => Some(CudaSourceCacheLabelIssue::MissingLabel { case_id }),
-                (false, true) => Some(CudaSourceCacheLabelIssue::LabelWithoutCounters { case_id }),
-                _ => None,
-            }
+            CHECKS.iter().filter_map(move |(label, counters)| {
+                let counters_active =
+                    metric_value_any(metrics, counters).is_some_and(|value| value > 0.0);
+                let label_present = optimization_passes_contain(case, label);
+                match (counters_active, label_present) {
+                    (true, false) => Some(CudaTelemetryLabelIssue::MissingLabel {
+                        case_id: case_id.clone(),
+                        label,
+                    }),
+                    (false, true) => Some(CudaTelemetryLabelIssue::LabelWithoutCounters {
+                        case_id: case_id.clone(),
+                        label,
+                    }),
+                    _ => None,
+                }
+            })
         })
         .collect()
 }
@@ -258,7 +288,7 @@ mod tests {
     }
 
     #[test]
-    fn cuda_source_cache_labels_track_active_counters() {
+    fn cuda_telemetry_labels_track_active_counters() {
         let report = serde_json::json!({
             "selected_backend": "cuda",
             "cases": [
@@ -280,21 +310,44 @@ mod tests {
                     "id": "active-labeled",
                     "metrics": {"cuda_ptx_source_cache_hits": {"p50": 2}},
                     "optimization_passes_applied": ["cuda-ptx-source-cache"]
+                },
+                {
+                    "id": "graph-unlabeled",
+                    "metrics": {"cuda_graph_launches": {"p50": 3}},
+                    "optimization_passes_applied": ["cuda-explicit-backend-selection"]
+                },
+                {
+                    "id": "transfer-false-label",
+                    "metrics": {
+                        "cuda_host_upload_operations": {"p50": 0},
+                        "cuda_device_readback_operations": {"p50": 0}
+                    },
+                    "optimization_passes_applied": ["cuda-transfer-operation-telemetry"]
                 }
             ]
         });
 
         assert_eq!(
-            cuda_source_cache_label_issues(&report),
+            cuda_telemetry_label_issues(&report),
             vec![
-                CudaSourceCacheLabelIssue::MissingLabel {
-                    case_id: "active-unlabeled".to_string()
+                CudaTelemetryLabelIssue::MissingLabel {
+                    case_id: "active-unlabeled".to_string(),
+                    label: "cuda-ptx-source-cache",
                 },
-                CudaSourceCacheLabelIssue::LabelWithoutCounters {
-                    case_id: "inactive-labeled".to_string()
+                CudaTelemetryLabelIssue::LabelWithoutCounters {
+                    case_id: "inactive-labeled".to_string(),
+                    label: "cuda-ptx-source-cache",
+                },
+                CudaTelemetryLabelIssue::MissingLabel {
+                    case_id: "graph-unlabeled".to_string(),
+                    label: "cuda-graph-replay",
+                },
+                CudaTelemetryLabelIssue::LabelWithoutCounters {
+                    case_id: "transfer-false-label".to_string(),
+                    label: "cuda-transfer-operation-telemetry",
                 },
             ],
-            "Fix: CUDA source-cache labels must match measured source-cache counters."
+            "Fix: CUDA release telemetry labels must match measured backend counters."
         );
     }
 }
