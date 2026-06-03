@@ -94,6 +94,9 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
                 "{evidence}: benchmark summary is invalid: {mismatch}"
             ));
         }
+        check_case_backend_matches_selected_backend(evidence, &value, blockers);
+        inspect_contract_baselines_apply_to_backend(evidence, &value, blockers);
+        check_cuda_telemetry_labels_match_counters(evidence, &value, blockers);
     }
     if failed != 0 || case_failed != 0 {
         let detail = if failed_cases.is_empty() {
@@ -540,6 +543,43 @@ mod part1_tests {
                 "benchmark summary is invalid: summary total/pass/fail (Some(1)/Some(0)/Some(0)) contradicts case evidence (1/1/0)"
             )),
             "Fix: completion audit must reject stale summary.passed even when summary.failed is zero; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_generic_benchmark_backend_drift() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for backend drift benchmark audit test.");
+        let path = dir.path().join("wgpu-backend-drift.json");
+        fs::write(
+            &path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize backend drift benchmark JSON."),
+        )
+        .expect("Fix: write backend drift benchmark JSON.");
+
+        let mut blockers = Vec::new();
+        inspect_json_evidence(
+            "release/evidence/benchmarks/wgpu-backend-drift.json",
+            &path,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "release/evidence/benchmarks/wgpu-backend-drift.json: case `release.condition_eval.1m` backend_id `cuda` does not match selected_backend `wgpu`"
+            )),
+            "Fix: completion audit must reject generic benchmark cases executed on a backend other than selected_backend; blockers={blockers:?}"
         );
     }
 }
