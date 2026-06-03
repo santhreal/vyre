@@ -587,14 +587,14 @@ pub(super) fn inspect_backend_suite_artifact(
             ),
         }
     }
-    let failed_count = report
+    let summary_failed_count = report
         .get("summary")
         .and_then(|summary| summary.get("failed"))
         .and_then(Value::as_u64);
-    if failed_count != Some(0) {
+    if summary_failed_count != Some(0) {
         blockers.push(format!(
             "summary.failed is `{:?}`, expected 0",
-            failed_count
+            summary_failed_count
         ));
     }
     let cases = report
@@ -605,6 +605,7 @@ pub(super) fn inspect_backend_suite_artifact(
     if cases.is_empty() {
         blockers.push("cases array is empty or missing".to_string());
     }
+    let mut case_failed_count = 0u64;
     let mut nonmatching_case_backend_count = 0usize;
     let mut min_wall_samples = None::<u64>;
     let mut min_baseline_wall_samples = None::<u64>;
@@ -626,9 +627,10 @@ pub(super) fn inspect_backend_suite_artifact(
             .get("id")
             .and_then(Value::as_str)
             .unwrap_or("<unknown>");
-        if let Some(reason) =
-            crate::benchmark_evidence_semantics::benchmark_case_failure_reason(case)
-        {
+        let case_failure_reason =
+            crate::benchmark_evidence_semantics::benchmark_case_failure_reason(case);
+        if let Some(reason) = &case_failure_reason {
+            case_failed_count += 1;
             blockers.push(format!("case `{case_id}` failed: {reason}"));
         }
         if case_id == artifact.requested_case_id {
@@ -756,11 +758,20 @@ pub(super) fn inspect_backend_suite_artifact(
                 .and_then(|performance| performance.get("speedup_x"))
                 .and_then(Value::as_f64)
                 .is_some_and(|speedup| speedup >= 100.0);
-            if contract_passed && speedup_passed {
+            if case_failure_reason.is_none() && contract_passed && speedup_passed {
                 cpu_sota_100x_passing_cases += 1;
             }
         }
     }
+    if !cases.is_empty() && summary_failed_count != Some(case_failed_count) {
+        blockers.push(format!(
+            "summary.failed is `{:?}` but case evidence reports {case_failed_count} failed case(s)",
+            summary_failed_count
+        ));
+    }
+    let failed_count = (!cases.is_empty())
+        .then_some(case_failed_count)
+        .or(summary_failed_count);
     if nonmatching_case_backend_count > 0 {
         blockers.push(format!(
             "{nonmatching_case_backend_count} case(s) do not match requested backend `{backend}`"
@@ -1005,6 +1016,105 @@ mod tests {
                 "case `sparse.compaction.count.1m` failed: Performance contract failed"
             ) && blocker.contains("observed 91.75x")),
             "Fix: WGPU suite blockers must preserve the benchmark case failure reason instead of exposing only missing metric fallout: {:?}",
+            status.blockers
+        );
+    }
+
+    #[test]
+    fn suite_artifact_status_recomputes_hidden_case_failures() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for hidden suite failure test.");
+        let artifact_rel = "release/evidence/benchmarks/wgpu-hidden-invalid.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: suite artifact must have parent directory."),
+        )
+        .expect("Fix: create hidden suite artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "wgpu",
+                "summary": {
+                    "total_cases": 1,
+                    "passed": 1,
+                    "failed": 0,
+                    "total_time_ns": 0,
+                    "cache_hit_rate": null
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "correctness": {
+                            "Invalid": {
+                                "reason": "CUDA/WGPU output mismatch at row 17"
+                            }
+                        },
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002},
+                            "kernel_launches": {"samples": 1, "p50": 1}
+                        },
+                        "contract": {
+                            "primitive": "release condition eval",
+                            "baselines": [
+                                {
+                                    "name": "CPU-SOTA",
+                                    "crate_name": "vyre-runtime",
+                                    "class": "CpuSota",
+                                    "min_speedup_x": 100.0,
+                                    "backend_ids": ["wgpu"]
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 200.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize hidden-invalid WGPU benchmark artifact JSON."),
+        )
+        .expect("Fix: write hidden-invalid WGPU benchmark artifact JSON.");
+
+        let status = inspect_backend_suite_artifact(
+            dir.path(),
+            "wgpu",
+            &BackendSuiteArtifactInput {
+                path: artifact_rel.to_string(),
+                family_id: "condition-eval".to_string(),
+                requested_case_id: "release.condition_eval.1m".to_string(),
+                cpu_sota_100x_required: true,
+            },
+        );
+
+        assert_eq!(
+            status.failed_count,
+            Some(1),
+            "Fix: backend suite status rows must derive failed_count from case evidence, not stale summary.failed."
+        );
+        assert_eq!(
+            status.cpu_sota_100x_contract_cases, 1,
+            "Fix: hidden invalid correctness must not erase the applicable CPU-SOTA contract count."
+        );
+        assert_eq!(
+            status.cpu_sota_100x_passing_cases, 0,
+            "Fix: hidden invalid correctness must disqualify a case from passing CPU-SOTA status proof."
+        );
+        assert!(
+            status.blockers.iter().any(|blocker| blocker.contains(
+                "case `release.condition_eval.1m` failed: CUDA/WGPU output mismatch at row 17"
+            )),
+            "Fix: backend suite blockers must preserve hidden case failure reasons; blockers={:?}",
+            status.blockers
+        );
+        assert!(
+            status.blockers.iter().any(|blocker| blocker.contains(
+                "summary.failed is `Some(0)` but case evidence reports 1 failed case(s)"
+            )),
+            "Fix: backend suite blockers must expose stale summary.failed drift; blockers={:?}",
             status.blockers
         );
     }
