@@ -3,6 +3,7 @@
 //! a registered runner, so a release sweep cannot silently skip a
 //! family.
 
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use serde_json::Value;
@@ -682,6 +683,32 @@ fn release_matrix_bench_targets_reference_active_release_cases() {
         assert!(
             case.active_in_suite(SuiteKind::Release),
             "Fix: release-workload BENCH_TARGETS target `{target_id}` bench_case_id `{bench_case_id}` must be active in the release suite."
+        );
+    }
+}
+
+#[test]
+fn release_matrix_covers_all_release_workload_bench_targets() {
+    let targets = bench_targets_manifest();
+    let target_rows = bench_target_rows(&targets);
+    let registry = vyre_bench::registry::collect_all();
+    let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);
+    let matrix_targets = matrix
+        .families
+        .iter()
+        .flat_map(|family| family.bench_target_ids.iter().copied())
+        .collect::<BTreeSet<_>>();
+
+    for target in target_rows.iter().filter(|target| {
+        target.get("suite").and_then(toml::Value::as_str) == Some("release-workload")
+    }) {
+        let target_id = target
+            .get("id")
+            .and_then(toml::Value::as_str)
+            .expect("Fix: every release-workload BENCH_TARGETS target needs an id.");
+        assert!(
+            matrix_targets.contains(target_id),
+            "Fix: release-workload BENCH_TARGETS target `{target_id}` must be linked from a release matrix family."
         );
     }
 }
