@@ -598,6 +598,9 @@ pub(super) fn inspect_backend_suite_artifact(
         .get("source_tree_fingerprint")
         .and_then(nonblank_str)
         .map(str::to_string);
+    if source_tree_fingerprint.is_none() {
+        blockers.push("artifact has no source_tree_fingerprint provenance".to_string());
+    }
     match &source_fingerprint {
         Some(fingerprint)
             if !crate::benchmark_evidence_semantics::source_fingerprint_issues(fingerprint)
@@ -1362,6 +1365,8 @@ mod tests {
             "Fix: whitespace-only host_cpu_model must not be serialized as suite provenance."
         );
         for expected in [
+            "artifact has no source_fingerprint provenance",
+            "artifact has no source_tree_fingerprint provenance",
             "CUDA artifact has no nvidia-smi GPU model provenance",
             "CUDA artifact has no nvidia-smi NVIDIA driver version provenance",
             "CUDA artifact has no nvidia-smi CUDA runtime version provenance",
