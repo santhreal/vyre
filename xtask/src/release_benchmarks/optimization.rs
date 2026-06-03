@@ -4,8 +4,7 @@ use std::path::Path;
 use serde_json::{json, Value};
 
 use crate::benchmark_evidence_semantics::{
-    backend_suite_backend_issue, baseline_applies_to_backend,
-    cuda_release_axes_source_artifact_issues, BackendSuiteBackendIssue,
+    baseline_applies_to_backend, cuda_release_axes_source_artifact_issues,
 };
 
 use super::metrics::{
@@ -341,7 +340,7 @@ mod tests {
         assert!(
             blockers.iter().any(|blocker| blocker.as_str().is_some_and(
                 |blocker| blocker.contains(
-                    "CUDA release suite backend `wgpu` does not match required `cuda`"
+                    "cuda-release-suite backend `wgpu` does not match required `cuda`"
                 )
             )),
             "Fix: write_release_axes must record suite backend identity drift in bench-release-axes; blockers={blockers:?}"
@@ -661,7 +660,6 @@ pub(super) fn write_release_axes(workspace_root: &Path) {
             }
         }
     };
-    record_cuda_release_suite_backend_issue(&suite, &mut blockers);
     let suite_artifacts = suite
         .get("artifacts")
         .and_then(Value::as_array)
@@ -755,22 +753,6 @@ pub(super) fn write_release_axes(workspace_root: &Path) {
         &workspace_root.join("release/evidence/benchmarks/bench-release-axes.json"),
         &evidence,
     );
-}
-
-fn record_cuda_release_suite_backend_issue(suite: &Value, blockers: &mut Vec<String>) {
-    if let Some(issue) = backend_suite_backend_issue(suite, "cuda") {
-        match issue {
-            BackendSuiteBackendIssue::Missing { expected_backend } => blockers.push(format!(
-                "CUDA release suite is missing backend identity `{expected_backend}`"
-            )),
-            BackendSuiteBackendIssue::Mismatch {
-                expected_backend,
-                actual_backend,
-            } => blockers.push(format!(
-                "CUDA release suite backend `{actual_backend}` does not match required `{expected_backend}`"
-            )),
-        }
-    }
 }
 
 pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backend: &str) {

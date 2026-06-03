@@ -124,6 +124,19 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
     cuda_suite: &Value,
 ) -> Vec<String> {
     let mut issues = Vec::new();
+    if let Some(issue) = backend_suite_backend_issue(cuda_suite, "cuda") {
+        match issue {
+            BackendSuiteBackendIssue::Missing { expected_backend } => issues.push(format!(
+                "cuda-release-suite is missing backend identity `{expected_backend}`"
+            )),
+            BackendSuiteBackendIssue::Mismatch {
+                expected_backend,
+                actual_backend,
+            } => issues.push(format!(
+                "cuda-release-suite backend `{actual_backend}` does not match required `{expected_backend}`"
+            )),
+        }
+    }
     let source_artifacts = release_axes_source_artifacts(axes, &mut issues);
     if source_artifacts.len() < 12 {
         issues.push(format!(

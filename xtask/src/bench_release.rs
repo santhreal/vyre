@@ -319,6 +319,33 @@ mod tests {
             "Fix: bench-release must reject backend drift inside source_artifacts; error={error}"
         );
     }
+
+    #[test]
+    fn bench_release_rejects_mislabeled_cuda_suite_backend() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for bench-release suite backend test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        let artifacts = write_canonical_axes_fixture(&benchmark_dir, dir.path(), None);
+        fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "wgpu",
+                "artifacts": artifacts,
+                "blockers": []
+            }))
+            .expect("Fix: serialize mislabeled temporary CUDA release suite."),
+        )
+        .expect("Fix: write mislabeled temporary CUDA release suite.");
+
+        let error = load_release_axes(&benchmark_dir)
+            .expect_err("Fix: mislabeled CUDA release suites must not satisfy bench-release axes.");
+
+        assert!(
+            error.contains("cuda-release-suite backend `wgpu` does not match required `cuda`"),
+            "Fix: bench-release must reject suite backend identity drift even when old axes have no blockers; error={error}"
+        );
+    }
 }
 
 fn reject_report_blockers(path: &Path, value: &Value) -> Result<(), String> {
