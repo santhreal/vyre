@@ -143,7 +143,7 @@ pub(crate) fn check_backend_suite_report(
             if status
                 .get("family_id")
                 .and_then(serde_json::Value::as_str)
-                .is_none_or(str::is_empty)
+                .is_none_or(|value| value.trim().is_empty())
             {
                 failures.push(format!(
                     "requirement `{}` backend suite `{suffix}` artifact `{path}` has no family_id",
@@ -153,7 +153,7 @@ pub(crate) fn check_backend_suite_report(
             if status
                 .get("requested_case_id")
                 .and_then(serde_json::Value::as_str)
-                .is_none_or(str::is_empty)
+                .is_none_or(|value| value.trim().is_empty())
             {
                 failures.push(format!(
                     "requirement `{}` backend suite `{suffix}` artifact `{path}` has no requested_case_id",
@@ -164,7 +164,7 @@ pub(crate) fn check_backend_suite_report(
                 if status
                     .get(field)
                     .and_then(serde_json::Value::as_str)
-                    .is_none_or(str::is_empty)
+                    .is_none_or(|value| value.trim().is_empty())
                 {
                     failures.push(format!(
                         "requirement `{}` backend suite `{suffix}` artifact `{path}` has no `{field}` provenance",
@@ -242,7 +242,7 @@ pub(crate) fn check_backend_suite_report(
                     if status
                         .get(field)
                         .and_then(serde_json::Value::as_str)
-                        .is_none_or(str::is_empty)
+                        .is_none_or(|value| value.trim().is_empty())
                     {
                         failures.push(format!(
                             "requirement `{}` backend suite `{suffix}` CUDA artifact `{path}` has no `{field}` provenance",
@@ -839,6 +839,81 @@ mod part7_tests {
             )),
             "Fix: WGPU parity gate must report duplicate WGPU family/case rows; failures={failures:?}"
         );
+    }
+
+    #[test]
+    fn backend_suite_report_rejects_whitespace_only_status_identity_and_provenance() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for backend suite blank field test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create benchmark evidence directory for backend suite blank field test.");
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "family_count": 1,
+                "artifacts": ["release/evidence/benchmarks/cuda-workload-blank.json"],
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/cuda-workload-blank.json",
+                        "exists": true,
+                        "bytes": 1,
+                        "read_error": null,
+                        "family_id": "   ",
+                        "requested_case_id": "\t",
+                        "source_fingerprint": "  ",
+                        "host_cpu_model": "\n",
+                        "selected_backend": "cuda",
+                        "case_count": 1,
+                        "failed_count": 0,
+                        "nonmatching_case_backend_count": 0,
+                        "min_kernel_launches": 1,
+                        "gpu_model": " ",
+                        "nvidia_driver_version": "\t",
+                        "nvidia_cuda_version": "\n",
+                        "gpu_memory_total_mib": 24576,
+                        "gpu_compute_capability_major": 8,
+                        "gpu_compute_capability_minor": 9
+                    }
+                ],
+                "blockers": []
+            }))
+            .expect("Fix: serialize CUDA suite with blank status fields."),
+        )
+        .expect("Fix: write CUDA suite with blank status fields.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
+            minimum_evidence: 1,
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_report(
+            &requirement,
+            &release_dir,
+            "cuda-release-suite.json",
+            &mut failures,
+        );
+
+        for expected in [
+            "has no family_id",
+            "has no requested_case_id",
+            "has no `source_fingerprint` provenance",
+            "has no `host_cpu_model` provenance",
+            "has no `gpu_model` provenance",
+            "has no `nvidia_driver_version` provenance",
+            "has no `nvidia_cuda_version` provenance",
+        ] {
+            assert!(
+                failures.iter().any(|failure| failure.contains(expected)),
+                "Fix: backend suite gate must reject whitespace-only status field `{expected}`; failures={failures:?}"
+            );
+        }
     }
 
     #[test]

@@ -125,7 +125,7 @@ fn inspect_backend_suite_semantics(
         if status
             .get("family_id")
             .and_then(serde_json::Value::as_str)
-            .is_none_or(str::is_empty)
+            .is_none_or(|value| value.trim().is_empty())
         {
             blockers.push(format!(
                 "{evidence}: suite artifact `{path}` has no family_id"
@@ -134,7 +134,7 @@ fn inspect_backend_suite_semantics(
         if status
             .get("requested_case_id")
             .and_then(serde_json::Value::as_str)
-            .is_none_or(str::is_empty)
+            .is_none_or(|value| value.trim().is_empty())
         {
             blockers.push(format!(
                 "{evidence}: suite artifact `{path}` has no requested_case_id"
@@ -144,7 +144,7 @@ fn inspect_backend_suite_semantics(
             if status
                 .get(field)
                 .and_then(serde_json::Value::as_str)
-                .is_none_or(str::is_empty)
+                .is_none_or(|value| value.trim().is_empty())
             {
                 blockers.push(format!(
                     "{evidence}: suite artifact `{path}` has no `{field}` provenance"
@@ -196,7 +196,7 @@ fn inspect_backend_suite_semantics(
                 if status
                     .get(field)
                     .and_then(serde_json::Value::as_str)
-                    .is_none_or(str::is_empty)
+                    .is_none_or(|value| value.trim().is_empty())
                 {
                     blockers.push(format!(
                         "{evidence}: CUDA suite artifact `{path}` has no `{field}` provenance"
@@ -832,6 +832,69 @@ mod part9_tests {
             )),
             "Fix: completion audit must report duplicate WGPU family/case rows in WGPU parity; blockers={blockers:?}"
         );
+    }
+
+    #[test]
+    fn completion_audit_rejects_whitespace_only_suite_status_identity_and_provenance() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for completion blank field test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create benchmark evidence directory for completion blank field test.");
+        let suite_path = benchmark_dir.join("cuda-release-suite.json");
+        let suite = serde_json::json!({
+            "schema_version": 2,
+            "backend": "cuda",
+            "family_count": 1,
+            "artifacts": ["release/evidence/benchmarks/cuda-workload-blank.json"],
+            "artifact_statuses": [
+                {
+                    "path": "release/evidence/benchmarks/cuda-workload-blank.json",
+                    "exists": true,
+                    "bytes": 1,
+                    "read_error": null,
+                    "family_id": "   ",
+                    "requested_case_id": "\t",
+                    "source_fingerprint": "  ",
+                    "host_cpu_model": "\n",
+                    "selected_backend": "cuda",
+                    "case_count": 1,
+                    "failed_count": 0,
+                    "nonmatching_case_backend_count": 0,
+                    "min_kernel_launches": 1,
+                    "gpu_model": " ",
+                    "nvidia_driver_version": "\t",
+                    "nvidia_cuda_version": "\n",
+                    "gpu_memory_total_mib": 24576,
+                    "gpu_compute_capability_major": 8,
+                    "gpu_compute_capability_minor": 9
+                }
+            ],
+            "blockers": []
+        });
+        let mut blockers = Vec::new();
+
+        inspect_backend_suite_semantics(
+            "release/evidence/benchmarks/cuda-release-suite.json",
+            &suite_path,
+            &suite,
+            &mut blockers,
+        );
+
+        for expected in [
+            "has no family_id",
+            "has no requested_case_id",
+            "has no `source_fingerprint` provenance",
+            "has no `host_cpu_model` provenance",
+            "has no `gpu_model` provenance",
+            "has no `nvidia_driver_version` provenance",
+            "has no `nvidia_cuda_version` provenance",
+        ] {
+            assert!(
+                blockers.iter().any(|blocker| blocker.contains(expected)),
+                "Fix: completion audit must reject whitespace-only suite status field `{expected}`; blockers={blockers:?}"
+            );
+        }
     }
 
     #[test]
