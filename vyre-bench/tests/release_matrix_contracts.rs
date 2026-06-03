@@ -588,6 +588,53 @@ fn release_matrix_commands_prefer_canonical_release_workload_cases() {
 }
 
 #[test]
+fn release_matrix_commands_match_bench_target_case_ids() {
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("Fix: vyre-bench must live under the workspace root.");
+    let targets_text =
+        std::fs::read_to_string(workspace.join("docs/optimization/BENCH_TARGETS.toml"))
+            .expect("Fix: BENCH_TARGETS.toml must be readable.");
+    let targets: toml::Value =
+        toml::from_str(&targets_text).expect("Fix: BENCH_TARGETS.toml must parse as TOML.");
+    let target_rows = targets
+        .get("target")
+        .and_then(toml::Value::as_array)
+        .expect("Fix: BENCH_TARGETS.toml must contain target rows.");
+    let registry = vyre_bench::registry::collect_all();
+    let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);
+
+    for (target_id, family_id) in [
+        ("release.workload.ifds_witness", "ifds-witness"),
+        ("release.workload.c_ast_traversal", "c-ast-traversal"),
+        (
+            "release.workload.megakernel_stream",
+            "megakernel-queued-batches",
+        ),
+    ] {
+        let Some(target) = target_rows
+            .iter()
+            .find(|target| target.get("id").and_then(toml::Value::as_str) == Some(target_id))
+        else {
+            panic!("Fix: BENCH_TARGETS.toml is missing target `{target_id}`.");
+        };
+        let Some(bench_case_id) = target.get("bench_case_id").and_then(toml::Value::as_str) else {
+            continue;
+        };
+        let family = matrix
+            .families
+            .iter()
+            .find(|family| family.id == family_id)
+            .unwrap_or_else(|| panic!("Fix: release matrix missing family `{family_id}`."));
+        let command = family.benchmark_command.as_deref().unwrap_or("");
+        assert!(
+            command.contains(&format!("--case {bench_case_id} ")),
+            "Fix: BENCH_TARGETS target `{target_id}` bench_case_id `{bench_case_id}` must match release matrix command `{command}`."
+        );
+    }
+}
+
+#[test]
 fn release_matrix_does_not_attach_condition_eval_to_specialized_workloads() {
     let registry = vyre_bench::registry::collect_all();
     let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);
