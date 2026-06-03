@@ -25,7 +25,9 @@ use std::time::Instant;
 
 use serde_json::Value;
 
-use crate::benchmark_evidence_semantics::cuda_release_axes_source_artifact_issues;
+use crate::benchmark_evidence_semantics::{
+    benchmark_evidence_blocker_issues, cuda_release_axes_source_artifact_issues,
+};
 
 /// Axis identifier emitted in the final report. Stable string so
 /// downstream graphs / regression gates can key on it.
@@ -253,12 +255,23 @@ mod tests {
             .expect("Fix: write temporary benchmark artifact.");
             artifacts.push(artifact);
         }
+        let artifact_statuses = artifacts
+            .iter()
+            .map(|artifact| {
+                serde_json::json!({
+                    "path": artifact,
+                    "blockers": []
+                })
+            })
+            .collect::<Vec<_>>();
         fs::write(
             benchmark_dir.join("cuda-release-suite.json"),
             serde_json::to_string_pretty(&serde_json::json!({
                 "schema_version": 2,
                 "backend": "cuda",
-                "artifacts": artifacts
+                "artifacts": artifacts.clone(),
+                "artifact_statuses": artifact_statuses,
+                "blockers": []
             }))
             .expect("Fix: serialize temporary CUDA release suite."),
         )
@@ -447,6 +460,97 @@ mod tests {
     }
 
     #[test]
+    fn bench_release_rejects_axes_missing_blockers_array() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for bench-release blocker schema test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        let artifacts = write_canonical_axes_fixture(&benchmark_dir, dir.path(), None);
+        fs::write(
+            benchmark_dir.join("bench-release-axes.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "warm_us_per_file": 17.0,
+                "cold_pipeline_build_ms": 2.0,
+                "gbs_scan_throughput": 4.0,
+                "ulp_drift_max": 0,
+                "max_vram_mib": 24576,
+                "source_artifacts": artifacts
+            }))
+            .expect("Fix: serialize blockerless temporary release axes."),
+        )
+        .expect("Fix: write blockerless temporary release axes.");
+
+        let error = load_release_axes(&benchmark_dir)
+            .expect_err("Fix: release axes without blockers array must not load.");
+
+        assert!(
+            error.contains("bench-release-axes.json` is missing blockers array"),
+            "Fix: bench-release must fail closed when canonical axes omit blockers; error={error}"
+        );
+    }
+
+    #[test]
+    fn bench_release_rejects_suite_missing_artifact_statuses() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for bench-release suite inventory test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        let artifacts = write_canonical_axes_fixture(&benchmark_dir, dir.path(), None);
+        fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "artifacts": artifacts,
+                "blockers": []
+            }))
+            .expect("Fix: serialize temporary CUDA release suite without inventory."),
+        )
+        .expect("Fix: write temporary CUDA release suite without inventory.");
+
+        let error = load_release_axes(&benchmark_dir)
+            .expect_err("Fix: suite evidence without artifact_statuses must not load.");
+
+        assert!(
+            error.contains("cuda-release-suite.json` is missing artifact_statuses array"),
+            "Fix: bench-release must fail closed when CUDA suite evidence omits artifact_statuses; error={error}"
+        );
+    }
+
+    #[test]
+    fn bench_release_rejects_suite_status_blockers() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for bench-release suite blocker test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        let artifacts = write_canonical_axes_fixture(&benchmark_dir, dir.path(), None);
+        fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "artifacts": artifacts,
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/workload-01.json",
+                        "blockers": ["case `release.condition_eval.1m` failed: wrong answer"]
+                    }
+                ],
+                "blockers": []
+            }))
+            .expect("Fix: serialize temporary CUDA release suite with nested blocker."),
+        )
+        .expect("Fix: write temporary CUDA release suite with nested blocker.");
+
+        let error = load_release_axes(&benchmark_dir)
+            .expect_err("Fix: suite evidence with nested blockers must not load.");
+
+        assert!(
+            error.contains("artifact_statuses[0]")
+                && error.contains("case `release.condition_eval.1m` failed: wrong answer"),
+            "Fix: bench-release must reject CUDA suite status rows that carry blockers; error={error}"
+        );
+    }
+
+    #[test]
     fn bench_release_rejects_mislabeled_cuda_suite_backend() {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for bench-release suite backend test.");
@@ -458,6 +562,12 @@ mod tests {
                 "schema_version": 2,
                 "backend": "wgpu",
                 "artifacts": artifacts,
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/workload-01.json",
+                        "blockers": []
+                    }
+                ],
                 "blockers": []
             }))
             .expect("Fix: serialize mislabeled temporary CUDA release suite."),
@@ -475,22 +585,16 @@ mod tests {
 }
 
 fn reject_report_blockers(path: &Path, value: &Value) -> Result<(), String> {
-    let blockers = value
-        .get("blockers")
-        .and_then(Value::as_array)
-        .map_or(&[][..], Vec::as_slice);
-    if blockers.is_empty() {
-        return Ok(());
+    let evidence = path.to_string_lossy();
+    let blockers = benchmark_evidence_blocker_issues(&evidence, value);
+    match blockers.first() {
+        Some(first) => Err(format!(
+            "Fix: benchmark evidence `{}` reports {} blocker contract issue(s); first issue: {first}",
+            path.display(),
+            blockers.len()
+        )),
+        None => Ok(()),
     }
-    let first = blockers
-        .first()
-        .and_then(Value::as_str)
-        .unwrap_or("<non-string blocker>");
-    Err(format!(
-        "Fix: benchmark evidence `{}` reports {} blocker(s); first blocker: {first}",
-        path.display(),
-        blockers.len()
-    ))
 }
 
 fn json_axis_text(value: &Value, axis: &str) -> Option<String> {

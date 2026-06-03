@@ -402,49 +402,11 @@ fn generated_benchmark_evidence_blockers(workspace_root: &Path, paths: &[String]
                 continue;
             }
         };
-        let Some(artifact_blockers) = value.get("blockers").and_then(Value::as_array) else {
-            blockers.push(format!("`{path}` is missing blockers array"));
-            continue;
-        };
-        for (index, blocker) in artifact_blockers.iter().enumerate() {
-            let blocker = blocker.as_str().unwrap_or("<non-string blocker>");
-            blockers.push(format!("`{path}` blocker[{index}]: {blocker}"));
-        }
-        collect_generated_suite_status_blockers(path, &value, &mut blockers);
+        blockers.extend(
+            crate::benchmark_evidence_semantics::benchmark_evidence_blocker_issues(path, &value),
+        );
     }
     blockers
-}
-
-fn collect_generated_suite_status_blockers(path: &str, value: &Value, blockers: &mut Vec<String>) {
-    let Some(statuses) = value.get("artifact_statuses") else {
-        if crate::benchmark_evidence_semantics::expected_backend_for_suite_evidence(path).is_some()
-        {
-            blockers.push(format!("`{path}` is missing artifact_statuses array"));
-        }
-        return;
-    };
-    let Some(statuses) = statuses.as_array() else {
-        blockers.push(format!("`{path}` artifact_statuses must be an array"));
-        return;
-    };
-    for (status_index, status) in statuses.iter().enumerate() {
-        let status_path = status
-            .get("path")
-            .and_then(Value::as_str)
-            .unwrap_or("<unknown>");
-        let Some(status_blockers) = status.get("blockers").and_then(Value::as_array) else {
-            blockers.push(format!(
-                "`{path}` artifact_statuses[{status_index}] `{status_path}` is missing blockers array"
-            ));
-            continue;
-        };
-        for (blocker_index, blocker) in status_blockers.iter().enumerate() {
-            let blocker = blocker.as_str().unwrap_or("<non-string blocker>");
-            blockers.push(format!(
-                "`{path}` artifact_statuses[{status_index}] `{status_path}` blocker[{blocker_index}]: {blocker}"
-            ));
-        }
-    }
 }
 
 #[cfg(test)]
