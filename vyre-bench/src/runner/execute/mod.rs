@@ -220,7 +220,11 @@ pub fn execute_suite(
 
         match run_case(case, &mut ctx, &mut prepared, suite, config) {
             Ok(case_report) => {
-                passed += 1;
+                if case_report_passes_summary(&case_report) {
+                    passed += 1;
+                } else {
+                    failed += 1;
+                }
                 cases_report.push(case_report);
             }
             Err(error) => {
@@ -288,6 +292,15 @@ pub fn execute_suite(
     }
 
     report
+}
+
+fn case_report_passes_summary(case: &CaseReport) -> bool {
+    case.status == "pass"
+        && !matches!(case.correctness, Correctness::Invalid { .. })
+        && !case
+            .performance
+            .as_ref()
+            .is_some_and(|performance| !performance.contract_passed)
 }
 
 fn write_snapshot(report: &ReportSchema) -> Result<(), String> {
@@ -451,4 +464,84 @@ pub fn evaluate_candidate_headless(
         .map_err(|error| format!("Prepare error: {}", error))?;
 
     run_case(case, &mut ctx, &mut prepared, SuiteKind::Evolve, config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn case_report(
+        status: &str,
+        correctness: Correctness,
+        performance: Option<crate::api::case::PerformanceEvaluation>,
+    ) -> CaseReport {
+        CaseReport {
+            id: "release.condition_eval.1m".to_string(),
+            workload_fingerprint: "bench-case:release.condition_eval.1m".to_string(),
+            name: "release condition eval".to_string(),
+            owner_crate: "vyre-bench".to_string(),
+            workload_class: "Release".to_string(),
+            tags: Vec::new(),
+            backend_id: Some("cuda".to_string()),
+            needs_gpu: true,
+            min_vram_bytes: None,
+            min_input_bytes: None,
+            required_features: Vec::new(),
+            status: status.to_string(),
+            wall_ns: Some(1.0),
+            correctness,
+            contract: None,
+            performance,
+            metrics: BTreeMap::new(),
+            optimization_passes_applied: Vec::new(),
+            artifacts: Vec::new(),
+        }
+    }
+
+    fn performance(contract_passed: bool) -> crate::api::case::PerformanceEvaluation {
+        crate::api::case::PerformanceEvaluation {
+            speedup_x: Some(100.0),
+            contract_passed,
+            violations: if contract_passed {
+                Vec::new()
+            } else {
+                vec!["speedup below release floor".to_string()]
+            },
+        }
+    }
+
+    #[test]
+    fn summary_pass_requires_pass_status_valid_correctness_and_contract() {
+        assert!(
+            case_report_passes_summary(&case_report(
+                "pass",
+                Correctness::Exact,
+                Some(performance(true))
+            )),
+            "Fix: valid pass evidence should still count as a passed benchmark case."
+        );
+
+        for rejected in [
+            case_report("failed", Correctness::Exact, Some(performance(true))),
+            case_report(
+                "pass",
+                Correctness::Invalid {
+                    reason: "CUDA/WGPU output mismatch at row 17".to_string(),
+                },
+                Some(performance(true)),
+            ),
+            case_report("pass", Correctness::Exact, Some(performance(false))),
+            case_report("unstable", Correctness::Exact, Some(performance(true))),
+            case_report(
+                "thermal_unstable",
+                Correctness::Exact,
+                Some(performance(true)),
+            ),
+        ] {
+            assert!(
+                !case_report_passes_summary(&rejected),
+                "Fix: summary.passed must not count failed, invalid, contract-failed, or unstable case evidence: {rejected:?}"
+            );
+        }
+    }
 }
