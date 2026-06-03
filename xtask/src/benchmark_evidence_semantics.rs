@@ -110,7 +110,7 @@ pub(crate) fn benchmark_duplicate_source_artifact_paths(report: &Value) -> BTree
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum BenchmarkSourceArtifactPathIssue {
+pub(crate) enum BenchmarkArtifactPathIssue {
     AbsolutePath,
     NonReleasePath,
     ParentTraversal,
@@ -123,27 +123,27 @@ pub(crate) enum BenchmarkSourceArtifactPathIssue {
     },
 }
 
-impl BenchmarkSourceArtifactPathIssue {
-    pub(crate) fn describe(&self, artifact: &str) -> String {
+impl BenchmarkArtifactPathIssue {
+    pub(crate) fn describe(&self, label: &str, artifact: &str) -> String {
         match self {
             Self::AbsolutePath => {
-                format!("source_artifact `{artifact}` must be a relative release path")
+                format!("{label} `{artifact}` must be a relative release path")
             }
             Self::NonReleasePath => {
-                format!("source_artifact `{artifact}` must start with `release/`")
+                format!("{label} `{artifact}` must start with `release/`")
             }
             Self::ParentTraversal => {
-                format!("source_artifact `{artifact}` must not contain parent directory traversal")
+                format!("{label} `{artifact}` must not contain parent directory traversal")
             }
             Self::Missing { artifact_path } => format!(
-                "source_artifact `{artifact}` is not a readable file at {}",
+                "{label} `{artifact}` is not a readable file at {}",
                 artifact_path.display()
             ),
             Self::OutsideWorkspace {
                 artifact_path,
                 workspace_root,
             } => format!(
-                "source_artifact `{artifact}` resolves outside workspace: {} is outside {}",
+                "{label} `{artifact}` resolves outside workspace: {} is outside {}",
                 artifact_path.display(),
                 workspace_root.display()
             ),
@@ -154,32 +154,46 @@ impl BenchmarkSourceArtifactPathIssue {
 pub(crate) fn benchmark_source_artifact_path_issue(
     workspace_root: &Path,
     artifact: &str,
-) -> Option<BenchmarkSourceArtifactPathIssue> {
+) -> Option<BenchmarkArtifactPathIssue> {
+    benchmark_release_artifact_path_issue(workspace_root, artifact)
+}
+
+pub(crate) fn benchmark_suite_artifact_path_issue(
+    workspace_root: &Path,
+    artifact: &str,
+) -> Option<BenchmarkArtifactPathIssue> {
+    benchmark_release_artifact_path_issue(workspace_root, artifact)
+}
+
+fn benchmark_release_artifact_path_issue(
+    workspace_root: &Path,
+    artifact: &str,
+) -> Option<BenchmarkArtifactPathIssue> {
     let candidate = PathBuf::from(artifact);
     if candidate.is_absolute() {
-        return Some(BenchmarkSourceArtifactPathIssue::AbsolutePath);
+        return Some(BenchmarkArtifactPathIssue::AbsolutePath);
     }
     if !artifact.starts_with("release/") {
-        return Some(BenchmarkSourceArtifactPathIssue::NonReleasePath);
+        return Some(BenchmarkArtifactPathIssue::NonReleasePath);
     }
     if candidate
         .components()
         .any(|component| matches!(component, Component::ParentDir))
     {
-        return Some(BenchmarkSourceArtifactPathIssue::ParentTraversal);
+        return Some(BenchmarkArtifactPathIssue::ParentTraversal);
     }
     let artifact_path = workspace_root.join(&candidate);
     if !artifact_path.is_file() {
-        return Some(BenchmarkSourceArtifactPathIssue::Missing { artifact_path });
+        return Some(BenchmarkArtifactPathIssue::Missing { artifact_path });
     }
     let Ok(canonical_root) = workspace_root.canonicalize() else {
-        return Some(BenchmarkSourceArtifactPathIssue::Missing { artifact_path });
+        return Some(BenchmarkArtifactPathIssue::Missing { artifact_path });
     };
     let Ok(canonical_artifact) = artifact_path.canonicalize() else {
-        return Some(BenchmarkSourceArtifactPathIssue::Missing { artifact_path });
+        return Some(BenchmarkArtifactPathIssue::Missing { artifact_path });
     };
     if !canonical_artifact.starts_with(&canonical_root) {
-        return Some(BenchmarkSourceArtifactPathIssue::OutsideWorkspace {
+        return Some(BenchmarkArtifactPathIssue::OutsideWorkspace {
             artifact_path: canonical_artifact,
             workspace_root: canonical_root,
         });
@@ -279,7 +293,7 @@ pub(crate) fn cuda_release_axes_source_artifact_issues(
     let mut source_reports = Vec::new();
     for artifact in source_artifacts {
         if let Some(issue) = benchmark_source_artifact_path_issue(workspace_root, &artifact) {
-            issues.push(issue.describe(&artifact));
+            issues.push(issue.describe("source_artifact", &artifact));
             continue;
         }
         let artifact_path = resolve_benchmark_artifact_path(workspace_root, &artifact);
@@ -2945,7 +2959,7 @@ mod tests {
 
         assert_eq!(
             benchmark_source_artifact_path_issue(dir.path(), &artifact.display().to_string()),
-            Some(BenchmarkSourceArtifactPathIssue::AbsolutePath),
+            Some(BenchmarkArtifactPathIssue::AbsolutePath),
             "Fix: existing absolute source_artifact paths must not pass release evidence validation."
         );
     }
@@ -2960,7 +2974,7 @@ mod tests {
                 dir.path(),
                 "release/evidence/benchmarks/../../Cargo.toml"
             ),
-            Some(BenchmarkSourceArtifactPathIssue::ParentTraversal),
+            Some(BenchmarkArtifactPathIssue::ParentTraversal),
             "Fix: source_artifact validation must reject parent traversal before resolving files."
         );
     }
@@ -2972,7 +2986,7 @@ mod tests {
 
         assert_eq!(
             benchmark_source_artifact_path_issue(dir.path(), "evidence/benchmarks/source.json"),
-            Some(BenchmarkSourceArtifactPathIssue::NonReleasePath),
+            Some(BenchmarkArtifactPathIssue::NonReleasePath),
             "Fix: source_artifact validation must keep benchmark evidence references under release/."
         );
     }
@@ -3020,7 +3034,7 @@ mod tests {
         std::os::unix::fs::symlink(&outside_artifact, &link)
             .expect("Fix: create source artifact symlink.");
 
-        let Some(BenchmarkSourceArtifactPathIssue::OutsideWorkspace { .. }) =
+        let Some(BenchmarkArtifactPathIssue::OutsideWorkspace { .. }) =
             benchmark_source_artifact_path_issue(
                 workspace.path(),
                 "release/evidence/benchmarks/source.json",

@@ -407,6 +407,12 @@ pub(crate) fn check_backend_suite_report(
     {
         let expected_backend = expected_suite_backend
             .or_else(|| report.get("backend").and_then(serde_json::Value::as_str));
+        let workspace_root = base_dir
+            .file_name()
+            .is_some_and(|name| name == "release")
+            .then(|| base_dir.parent())
+            .flatten()
+            .unwrap_or(base_dir);
         for artifact in artifacts {
             let Some(artifact) = artifact.as_str() else {
                 failures.push(format!(
@@ -415,6 +421,19 @@ pub(crate) fn check_backend_suite_report(
                 ));
                 continue;
             };
+            if let Some(issue) =
+                crate::benchmark_evidence_semantics::benchmark_suite_artifact_path_issue(
+                    workspace_root,
+                    artifact,
+                )
+            {
+                failures.push(format!(
+                    "requirement `{}` backend suite `{suffix}` {}",
+                    requirement.id,
+                    issue.describe("suite artifact", artifact)
+                ));
+                continue;
+            }
             let path = resolve_artifact_path(base_dir, artifact);
             let text = match read_text_bounded(&path) {
                 Ok(text) => text,
@@ -748,6 +767,65 @@ mod part7_tests {
                 "artifact `release/evidence/benchmarks/workload-01-condition-eval.json` contains requested_case_id `release.condition_eval.1m` 2 times"
             )),
             "Fix: release gate must reject suite artifacts where requested_case_id resolves to multiple benchmark rows; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn backend_suite_report_rejects_absolute_artifact_path() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for absolute suite artifact path test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create benchmark evidence directory for absolute suite artifact test.");
+        let external_artifact = dir.path().join("external-suite-artifact.json");
+        std::fs::write(
+            &external_artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567:dirty=false",
+                "environment": {"host_cpu_model": "test cpu"},
+                "summary": {"failed": 0, "cache_hit_rate": null},
+                "cases": []
+            }))
+            .expect("Fix: serialize external suite artifact fixture."),
+        )
+        .expect("Fix: write external suite artifact fixture.");
+        let suite_path = benchmark_dir.join("cuda-release-suite.json");
+        std::fs::write(
+            &suite_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "family_count": 1,
+                "artifacts": [external_artifact.display().to_string()],
+                "artifact_statuses": [],
+                "blockers": []
+            }))
+            .expect("Fix: serialize absolute suite artifact fixture."),
+        )
+        .expect("Fix: write absolute suite artifact fixture.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_report(
+            &requirement,
+            &release_dir,
+            "cuda-release-suite.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "backend suite `cuda-release-suite.json` suite artifact `"
+            ) && failure.contains("must be a relative release path")),
+            "Fix: release gate must reject existing absolute backend suite artifact paths before reading them; failures={failures:?}"
         );
     }
 

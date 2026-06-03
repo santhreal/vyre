@@ -224,7 +224,10 @@ fn inspect_benchmark_report_provenance(
                         &artifact,
                     )
                 {
-                    blockers.push(format!("{evidence}: {}", issue.describe(&artifact)));
+                    blockers.push(format!(
+                        "{evidence}: {}",
+                        issue.describe("source_artifact", &artifact)
+                    ));
                 }
             }
         }

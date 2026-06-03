@@ -412,6 +412,18 @@ fn inspect_backend_suite_status_artifact_consistency(
         let Some(status) = report_status_for_path(suite, artifact) else {
             continue;
         };
+        if let Some(issue) =
+            crate::benchmark_evidence_semantics::benchmark_suite_artifact_path_issue(
+                workspace_root,
+                artifact,
+            )
+        {
+            blockers.push(format!(
+                "{evidence}: {}",
+                issue.describe("suite artifact", artifact)
+            ));
+            continue;
+        }
         let artifact_path = resolve_suite_artifact_path(workspace_root, artifact);
         let text = match read_text_bounded(&artifact_path) {
             Ok(text) => text,
@@ -952,6 +964,62 @@ mod part9_tests {
                 "Fix: completion audit must reject whitespace-only suite status field `{expected}`; blockers={blockers:?}"
             );
         }
+    }
+
+    #[test]
+    fn completion_audit_rejects_absolute_suite_artifact_path() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for absolute suite artifact audit test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create benchmark evidence directory for absolute suite artifact audit.");
+        let external_artifact = dir.path().join("external-suite-artifact.json");
+        std::fs::write(
+            &external_artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567:dirty=false",
+                "environment": {"host_cpu_model": "test cpu"},
+                "summary": {"failed": 0, "cache_hit_rate": null},
+                "cases": []
+            }))
+            .expect("Fix: serialize external suite artifact audit fixture."),
+        )
+        .expect("Fix: write external suite artifact audit fixture.");
+        let external_artifact = external_artifact.display().to_string();
+        let suite_path = benchmark_dir.join("cuda-release-suite.json");
+        let suite = serde_json::json!({
+            "schema_version": 2,
+            "backend": "cuda",
+            "family_count": 1,
+            "artifacts": [external_artifact.clone()],
+            "artifact_statuses": [
+                {
+                    "path": external_artifact,
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "source_fingerprint": "git:0123456789abcdef0123456789abcdef01234567:dirty=false",
+                    "source_tree_fingerprint": "source-tree-v1:abc",
+                    "host_cpu_model": "test cpu"
+                }
+            ],
+            "blockers": []
+        });
+        let mut blockers = Vec::new();
+
+        inspect_backend_suite_semantics(
+            "release/evidence/benchmarks/cuda-release-suite.json",
+            &suite_path,
+            &suite,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "release/evidence/benchmarks/cuda-release-suite.json: suite artifact `"
+            ) && blocker.contains("must be a relative release path")),
+            "Fix: completion audit must reject existing absolute backend suite artifact paths before reading them; blockers={blockers:?}"
+        );
     }
 
     #[test]

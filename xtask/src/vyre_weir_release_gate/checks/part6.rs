@@ -387,7 +387,7 @@ fn check_benchmark_source_artifact_files(
             failures.push(format!(
                 "requirement `{}` benchmark `{label}` {}",
                 requirement.id,
-                issue.describe(&artifact)
+                issue.describe("source_artifact", &artifact)
             ));
         }
     }
