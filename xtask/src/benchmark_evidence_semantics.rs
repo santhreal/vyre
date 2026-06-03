@@ -1929,29 +1929,28 @@ pub(crate) fn cpu_sota_100x_case_counts(artifact_report: &Value) -> (u64, u64) {
             if !benchmark_case_has_cpu_sota_contract(case, case_backend, 100.0) {
                 return (contract_count, passing_count);
             }
-            let contract_passed = case
-                .get("performance")
-                .and_then(|performance| performance.get("contract_passed"))
-                .and_then(Value::as_bool)
-                == Some(true);
-            let speedup_passed = case
-                .get("performance")
-                .and_then(|performance| performance.get("speedup_x"))
-                .and_then(Value::as_f64)
-                .is_some_and(|speedup| speedup >= 100.0);
-            let measured_speedup_passed = cpu_sota_100x_measured_speedup(case)
-                .is_some_and(|measured_speedup| measured_speedup >= 100.0);
             (
                 contract_count + 1,
-                passing_count
-                    + u64::from(
-                        benchmark_case_passes_summary_evidence(case)
-                            && contract_passed
-                            && speedup_passed
-                            && measured_speedup_passed,
-                    ),
+                passing_count + u64::from(benchmark_case_proves_cpu_sota_100x(case, case_backend)),
             )
         })
+}
+
+pub(crate) fn benchmark_case_proves_cpu_sota_100x(case: &Value, backend_id: Option<&str>) -> bool {
+    benchmark_case_has_cpu_sota_contract(case, backend_id, 100.0)
+        && benchmark_case_passes_summary_evidence(case)
+        && case
+            .get("performance")
+            .and_then(|performance| performance.get("contract_passed"))
+            .and_then(Value::as_bool)
+            == Some(true)
+        && case
+            .get("performance")
+            .and_then(|performance| performance.get("speedup_x"))
+            .and_then(Value::as_f64)
+            .is_some_and(|speedup| speedup >= 100.0)
+        && cpu_sota_100x_measured_speedup(case)
+            .is_some_and(|measured_speedup| measured_speedup >= 100.0)
 }
 
 fn cpu_sota_100x_measured_speedup(case: &Value) -> Option<f64> {

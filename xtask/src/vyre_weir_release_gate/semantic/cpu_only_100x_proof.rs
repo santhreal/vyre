@@ -136,33 +136,15 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             .get("cases")
             .and_then(serde_json::Value::as_array)
             .map(|cases| {
-                for required_case in [
-                    "release.condition_eval.1m",
-                    "release.string_bitmap_scatter.1m",
-                    "release.offset_count_aggregation.1m",
-                    "release.entropy_window.1m",
-                    "release.quantified_condition_loops.1m",
-                    "release.alias_reaching_def.1m",
-                    "release.ifds_witness.1m",
-                    "release.c_ast_traversal.1m",
-                    "release.megakernel_queue.1m",
-                    "release.egraph_saturation.1m",
-                    "sparse.compaction.count.1m",
-                ] {
-                    if !cases.iter().any(|case| {
-                        case.get("id").and_then(serde_json::Value::as_str)
-                            == Some(required_case)
-                    }) {
-                        failures.push(format!(
-                            "requirement `cpu-only-100x-proof` aggregate proof is missing required case `{required_case}`"
-                        ));
-                    }
-                }
-                cases.iter().filter(|case| {
-                    case.get("id")
-                        .and_then(serde_json::Value::as_str)
-                        .is_some_and(|id| contract_cases.contains(&id))
-                }).count()
+                check_required_cpu_100x_cases(&proof, cases, failures);
+                cases
+                    .iter()
+                    .filter(|case| {
+                        case.get("id")
+                            .and_then(serde_json::Value::as_str)
+                            .is_some_and(|id| contract_cases.contains(&id))
+                    })
+                    .count()
             })
             .unwrap_or(0);
         if proof_contract_case_count < 10 {
@@ -249,6 +231,46 @@ fn check_duplicate_string_array_values(
         failures.push(format!(
             "requirement `cpu-only-100x-proof` {label} has duplicate {field}: {duplicates}"
         ));
+    }
+}
+
+fn check_required_cpu_100x_cases(
+    proof: &serde_json::Value,
+    cases: &[serde_json::Value],
+    failures: &mut Vec<String>,
+) {
+    for required_case in [
+        "release.condition_eval.1m",
+        "release.string_bitmap_scatter.1m",
+        "release.offset_count_aggregation.1m",
+        "release.entropy_window.1m",
+        "release.quantified_condition_loops.1m",
+        "release.alias_reaching_def.1m",
+        "release.ifds_witness.1m",
+        "release.c_ast_traversal.1m",
+        "release.megakernel_queue.1m",
+        "release.egraph_saturation.1m",
+        "sparse.compaction.count.1m",
+    ] {
+        if !cases.iter().any(|case| {
+            let case_backend = case
+                .get("backend_id")
+                .and_then(serde_json::Value::as_str)
+                .or_else(|| {
+                    proof
+                        .get("selected_backend")
+                        .and_then(serde_json::Value::as_str)
+                });
+            case.get("id").and_then(serde_json::Value::as_str) == Some(required_case)
+                && crate::benchmark_evidence_semantics::benchmark_case_proves_cpu_sota_100x(
+                    case,
+                    case_backend,
+                )
+        }) {
+            failures.push(format!(
+                "requirement `cpu-only-100x-proof` aggregate proof required case `{required_case}` does not prove a passing 100x CUDA win"
+            ));
+        }
     }
 }
 
@@ -545,6 +567,40 @@ mod tests {
                 "cpu_sota_100x_passing_case_count=1, but cases prove 0"
             )),
             "Fix: CPU-SOTA release gate must reject aggregate passing counts backed only by claimed speedup_x instead of measured baseline_wall_ns / wall_ns; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_gate_requires_required_cases_to_prove_passing_100x() {
+        let proof = serde_json::json!({"selected_backend": "cuda"});
+        let cases = vec![serde_json::json!({
+            "id": "release.condition_eval.1m",
+            "backend_id": "cuda",
+            "status": "fail",
+            "contract": {
+                "baselines": [
+                    {
+                        "class": "CpuSota",
+                        "backend_ids": ["cuda"],
+                        "min_speedup_x": 100.0
+                    }
+                ]
+            },
+            "metrics": {
+                "wall_ns": {"p50": 10},
+                "baseline_wall_ns": {"p50": 2000}
+            },
+            "performance": {"contract_passed": true, "speedup_x": 200.0}
+        })];
+        let mut failures = Vec::new();
+
+        check_required_cpu_100x_cases(&proof, &cases, &mut failures);
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "required case `release.condition_eval.1m` does not prove a passing 100x CUDA win"
+            )),
+            "Fix: CPU-SOTA release gate must reject required case IDs that are present but failed or unproven; failures={failures:?}"
         );
     }
 

@@ -232,6 +232,21 @@ fn inspect_cpu_100x_benchmark_semantics(
         return;
     };
     inspect_cpu_100x_aggregate_case_counts(evidence, value, blockers);
+    inspect_required_cpu_100x_cases(evidence, value, cases, blockers);
+    for case in cases {
+        inspect_cpu_100x_case(evidence, value, case, blockers);
+    }
+}
+
+fn inspect_required_cpu_100x_cases(
+    evidence: &str,
+    value: &serde_json::Value,
+    cases: &[serde_json::Value],
+    blockers: &mut Vec<String>,
+) {
+    let selected_backend = value
+        .get("selected_backend")
+        .and_then(serde_json::Value::as_str);
     for required_case in [
         "release.condition_eval.1m",
         "release.string_bitmap_scatter.1m",
@@ -245,80 +260,96 @@ fn inspect_cpu_100x_benchmark_semantics(
         "release.egraph_saturation.1m",
         "sparse.compaction.count.1m",
     ] {
-        if !cases
-            .iter()
-            .any(|case| case.get("id").and_then(serde_json::Value::as_str) == Some(required_case))
-        {
+        if !cases.iter().any(|case| {
+            let case_backend = case
+                .get("backend_id")
+                .and_then(serde_json::Value::as_str)
+                .or(selected_backend);
+            case.get("id").and_then(serde_json::Value::as_str) == Some(required_case)
+                && crate::benchmark_evidence_semantics::benchmark_case_proves_cpu_sota_100x(
+                    case,
+                    case_backend,
+                )
+        }) {
             blockers.push(format!(
-                "{evidence}: missing required CPU-SOTA 100x proof case `{required_case}`"
+                "{evidence}: required CPU-SOTA 100x proof case `{required_case}` does not prove a passing 100x CUDA win"
             ));
         }
     }
-    for case in cases {
-        let id = case
-            .get("id")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("<unknown>");
-        if case.get("backend_id").and_then(serde_json::Value::as_str) != Some("cuda") {
-            blockers.push(format!("{evidence}: case `{id}` backend_id must be cuda"));
-        }
-        let case_backend = case
-            .get("backend_id")
-            .and_then(serde_json::Value::as_str)
-            .or(selected_backend);
-        if !crate::benchmark_evidence_semantics::benchmark_case_has_cpu_sota_contract(
-            case,
-            case_backend,
-            100.0,
-        ) {
-            blockers.push(format!(
-                "{evidence}: case `{id}` must carry an applicable CPU-SOTA performance contract with min_speedup_x >= 100.00"
-            ));
-        }
-        if !case
-            .get("performance")
-            .and_then(|performance| performance.get("contract_passed"))
-            .and_then(serde_json::Value::as_bool)
-            .unwrap_or(false)
-        {
-            let reason = crate::benchmark_evidence_semantics::benchmark_case_failure_reason(case)
-                .map(|reason| format!(": {reason}"))
-                .unwrap_or_default();
-            blockers.push(format!(
-                "{evidence}: case `{id}` must pass its performance contract{reason}"
-            ));
-        }
-        let metrics = case.get("metrics").and_then(serde_json::Value::as_object);
-        let wall = metrics.and_then(active_gpu_metric_p50);
-        let baseline = metrics.and_then(|metrics| metric_p50(metrics.get("baseline_wall_ns")));
-        let wall_samples = metrics
-            .and_then(|metrics| metric_samples(metrics.get("wall_ns")))
-            .unwrap_or(0);
-        if wall_samples < 30 {
-            blockers.push(format!(
-                "{evidence}: case `{id}` has {wall_samples} wall_ns sample(s), needs at least 30"
-            ));
-        }
-        let baseline_wall_samples = metrics
-            .and_then(|metrics| metric_samples(metrics.get("baseline_wall_ns")))
-            .unwrap_or(0);
-        if baseline_wall_samples < 30 {
-            blockers.push(format!(
-                "{evidence}: case `{id}` has {baseline_wall_samples} baseline_wall_ns sample(s), needs at least 30"
-            ));
-        }
-        require_benchmark_metric_percentiles(evidence, id, metrics, "wall_ns", blockers);
-        require_benchmark_metric_percentiles(evidence, id, metrics, "baseline_wall_ns", blockers);
-        match (wall, baseline) {
-            (Some(wall), Some(baseline)) if wall > 0.0 && baseline / wall >= 100.0 => {}
-            (Some(wall), Some(baseline)) if wall > 0.0 => blockers.push(format!(
-                "{evidence}: case `{id}` end-to-end p50 speedup is {:.2}x, needs 100.00x",
-                baseline / wall
-            )),
-            _ => blockers.push(format!(
-                "{evidence}: case `{id}` must include p50 wall_ns and baseline_wall_ns"
-            )),
-        }
+}
+
+fn inspect_cpu_100x_case(
+    evidence: &str,
+    value: &serde_json::Value,
+    case: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let selected_backend = value
+        .get("selected_backend")
+        .and_then(serde_json::Value::as_str);
+    let id = case
+        .get("id")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("<unknown>");
+    if case.get("backend_id").and_then(serde_json::Value::as_str) != Some("cuda") {
+        blockers.push(format!("{evidence}: case `{id}` backend_id must be cuda"));
+    }
+    let case_backend = case
+        .get("backend_id")
+        .and_then(serde_json::Value::as_str)
+        .or(selected_backend);
+    if !crate::benchmark_evidence_semantics::benchmark_case_has_cpu_sota_contract(
+        case,
+        case_backend,
+        100.0,
+    ) {
+        blockers.push(format!(
+            "{evidence}: case `{id}` must carry an applicable CPU-SOTA performance contract with min_speedup_x >= 100.00"
+        ));
+    }
+    if !case
+        .get("performance")
+        .and_then(|performance| performance.get("contract_passed"))
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+    {
+        let reason = crate::benchmark_evidence_semantics::benchmark_case_failure_reason(case)
+            .map(|reason| format!(": {reason}"))
+            .unwrap_or_default();
+        blockers.push(format!(
+            "{evidence}: case `{id}` must pass its performance contract{reason}"
+        ));
+    }
+    let metrics = case.get("metrics").and_then(serde_json::Value::as_object);
+    let wall = metrics.and_then(active_gpu_metric_p50);
+    let baseline = metrics.and_then(|metrics| metric_p50(metrics.get("baseline_wall_ns")));
+    let wall_samples = metrics
+        .and_then(|metrics| metric_samples(metrics.get("wall_ns")))
+        .unwrap_or(0);
+    if wall_samples < 30 {
+        blockers.push(format!(
+            "{evidence}: case `{id}` has {wall_samples} wall_ns sample(s), needs at least 30"
+        ));
+    }
+    let baseline_wall_samples = metrics
+        .and_then(|metrics| metric_samples(metrics.get("baseline_wall_ns")))
+        .unwrap_or(0);
+    if baseline_wall_samples < 30 {
+        blockers.push(format!(
+            "{evidence}: case `{id}` has {baseline_wall_samples} baseline_wall_ns sample(s), needs at least 30"
+        ));
+    }
+    require_benchmark_metric_percentiles(evidence, id, metrics, "wall_ns", blockers);
+    require_benchmark_metric_percentiles(evidence, id, metrics, "baseline_wall_ns", blockers);
+    match (wall, baseline) {
+        (Some(wall), Some(baseline)) if wall > 0.0 && baseline / wall >= 100.0 => {}
+        (Some(wall), Some(baseline)) if wall > 0.0 => blockers.push(format!(
+            "{evidence}: case `{id}` end-to-end p50 speedup is {:.2}x, needs 100.00x",
+            baseline / wall
+        )),
+        _ => blockers.push(format!(
+            "{evidence}: case `{id}` must include p50 wall_ns and baseline_wall_ns"
+        )),
     }
 }
 
@@ -752,6 +783,45 @@ mod part13_tests {
                 "cpu_sota_100x_passing_case_count=10, but cases prove 1"
             )),
             "Fix: completion audit must reject inflated aggregate CPU-SOTA passing case counts; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_cpu_100x_requires_required_cases_to_prove_passing_100x() {
+        let proof = serde_json::json!({"selected_backend": "cuda"});
+        let cases = vec![serde_json::json!({
+            "id": "release.condition_eval.1m",
+            "backend_id": "cuda",
+            "status": "fail",
+            "contract": {
+                "baselines": [
+                    {
+                        "class": "CpuSota",
+                        "backend_ids": ["cuda"],
+                        "min_speedup_x": 100.0
+                    }
+                ]
+            },
+            "metrics": {
+                "wall_ns": {"p50": 10},
+                "baseline_wall_ns": {"p50": 2000}
+            },
+            "performance": {"contract_passed": true, "speedup_x": 200.0}
+        })];
+        let mut blockers = Vec::new();
+
+        inspect_required_cpu_100x_cases(
+            "cpu-only-100x-proof.json",
+            &proof,
+            &cases,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "required CPU-SOTA 100x proof case `release.condition_eval.1m` does not prove a passing 100x CUDA win"
+            )),
+            "Fix: completion audit must reject required CPU-SOTA proof case IDs that are present but failed or unproven; blockers={blockers:?}"
         );
     }
 
