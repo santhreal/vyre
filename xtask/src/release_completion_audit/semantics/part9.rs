@@ -82,6 +82,9 @@ fn inspect_backend_suite_semantics(
             BackendSuiteInventoryIssue::DuplicateStatus { path } => blockers.push(format!(
                 "{evidence}: suite has duplicate artifact_statuses path `{path}`"
             )),
+            BackendSuiteInventoryIssue::DuplicateFamily { family_id, count } => blockers.push(
+                format!("{evidence}: suite has {count} artifact_statuses rows for family `{family_id}`"),
+            ),
         }
     }
     let Some(statuses) = value
@@ -895,6 +898,86 @@ mod part9_tests {
                 "Fix: completion audit must reject whitespace-only suite status field `{expected}`; blockers={blockers:?}"
             );
         }
+    }
+
+    #[test]
+    fn completion_audit_rejects_duplicate_family_coverage() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for completion duplicate family test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir).expect(
+            "Fix: create benchmark evidence directory for completion duplicate family test.",
+        );
+        let suite_path = benchmark_dir.join("cuda-release-suite.json");
+        let suite = serde_json::json!({
+            "schema_version": 2,
+            "backend": "cuda",
+            "family_count": 2,
+            "artifacts": [
+                "release/evidence/benchmarks/cuda-condition-fast.json",
+                "release/evidence/benchmarks/cuda-condition-slow.json"
+            ],
+            "artifact_statuses": [
+                {
+                    "path": "release/evidence/benchmarks/cuda-condition-fast.json",
+                    "exists": true,
+                    "bytes": 1,
+                    "read_error": null,
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "source_fingerprint": "git:abc:dirty=false",
+                    "host_cpu_model": "test CPU",
+                    "selected_backend": "cuda",
+                    "case_count": 1,
+                    "failed_count": 0,
+                    "nonmatching_case_backend_count": 0,
+                    "min_kernel_launches": 1,
+                    "gpu_model": "RTX 5090",
+                    "nvidia_driver_version": "580.0",
+                    "nvidia_cuda_version": "13.0",
+                    "gpu_memory_total_mib": 24576,
+                    "gpu_compute_capability_major": 8,
+                    "gpu_compute_capability_minor": 9
+                },
+                {
+                    "path": "release/evidence/benchmarks/cuda-condition-slow.json",
+                    "exists": true,
+                    "bytes": 1,
+                    "read_error": null,
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.10m",
+                    "source_fingerprint": "git:abc:dirty=false",
+                    "host_cpu_model": "test CPU",
+                    "selected_backend": "cuda",
+                    "case_count": 1,
+                    "failed_count": 0,
+                    "nonmatching_case_backend_count": 0,
+                    "min_kernel_launches": 1,
+                    "gpu_model": "RTX 5090",
+                    "nvidia_driver_version": "580.0",
+                    "nvidia_cuda_version": "13.0",
+                    "gpu_memory_total_mib": 24576,
+                    "gpu_compute_capability_major": 8,
+                    "gpu_compute_capability_minor": 9
+                }
+            ],
+            "blockers": []
+        });
+        let mut blockers = Vec::new();
+
+        inspect_backend_suite_semantics(
+            "release/evidence/benchmarks/cuda-release-suite.json",
+            &suite_path,
+            &suite,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "has 2 artifact_statuses rows for family `condition-eval`"
+            )),
+            "Fix: completion audit must reject repeated workload family coverage; blockers={blockers:?}"
+        );
     }
 
     #[test]

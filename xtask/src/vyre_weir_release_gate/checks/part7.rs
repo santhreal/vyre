@@ -102,6 +102,12 @@ pub(crate) fn check_backend_suite_report(
                 "requirement `{}` backend suite `{suffix}` has duplicate artifact_statuses path `{path}`",
                 requirement.id
             )),
+            BackendSuiteInventoryIssue::DuplicateFamily { family_id, count } => {
+                failures.push(format!(
+                    "requirement `{}` backend suite `{suffix}` has {count} artifact_statuses rows for family `{family_id}`",
+                    requirement.id
+                ))
+            }
         }
     }
     if let Some(statuses) = report
@@ -914,6 +920,98 @@ mod part7_tests {
                 "Fix: backend suite gate must reject whitespace-only status field `{expected}`; failures={failures:?}"
             );
         }
+    }
+
+    #[test]
+    fn backend_suite_report_rejects_duplicate_family_coverage() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for backend suite duplicate family test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir).expect(
+            "Fix: create benchmark evidence directory for backend suite duplicate family test.",
+        );
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "family_count": 2,
+                "artifacts": [
+                    "release/evidence/benchmarks/cuda-condition-fast.json",
+                    "release/evidence/benchmarks/cuda-condition-slow.json"
+                ],
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/cuda-condition-fast.json",
+                        "exists": true,
+                        "bytes": 1,
+                        "read_error": null,
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m",
+                        "source_fingerprint": "git:abc:dirty=false",
+                        "host_cpu_model": "test CPU",
+                        "selected_backend": "cuda",
+                        "case_count": 1,
+                        "failed_count": 0,
+                        "nonmatching_case_backend_count": 0,
+                        "min_kernel_launches": 1,
+                        "gpu_model": "RTX 5090",
+                        "nvidia_driver_version": "580.0",
+                        "nvidia_cuda_version": "13.0",
+                        "gpu_memory_total_mib": 24576,
+                        "gpu_compute_capability_major": 8,
+                        "gpu_compute_capability_minor": 9
+                    },
+                    {
+                        "path": "release/evidence/benchmarks/cuda-condition-slow.json",
+                        "exists": true,
+                        "bytes": 1,
+                        "read_error": null,
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.10m",
+                        "source_fingerprint": "git:abc:dirty=false",
+                        "host_cpu_model": "test CPU",
+                        "selected_backend": "cuda",
+                        "case_count": 1,
+                        "failed_count": 0,
+                        "nonmatching_case_backend_count": 0,
+                        "min_kernel_launches": 1,
+                        "gpu_model": "RTX 5090",
+                        "nvidia_driver_version": "580.0",
+                        "nvidia_cuda_version": "13.0",
+                        "gpu_memory_total_mib": 24576,
+                        "gpu_compute_capability_major": 8,
+                        "gpu_compute_capability_minor": 9
+                    }
+                ],
+                "blockers": []
+            }))
+            .expect("Fix: serialize CUDA suite with duplicate family coverage."),
+        )
+        .expect("Fix: write CUDA suite with duplicate family coverage.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
+            minimum_evidence: 1,
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_report(
+            &requirement,
+            &release_dir,
+            "cuda-release-suite.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "has 2 artifact_statuses rows for family `condition-eval`"
+            )),
+            "Fix: backend suite gate must reject repeated workload family coverage; failures={failures:?}"
+        );
     }
 
     #[test]

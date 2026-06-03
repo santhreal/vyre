@@ -786,6 +786,10 @@ pub(crate) enum BackendSuiteInventoryIssue {
     DuplicateStatus {
         path: String,
     },
+    DuplicateFamily {
+        family_id: String,
+        count: usize,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1635,6 +1639,11 @@ pub(crate) fn backend_suite_inventory_issues(suite: &Value) -> Vec<BackendSuiteI
             issues.push(BackendSuiteInventoryIssue::DuplicateStatus { path });
         }
     }
+    for (family_id, count) in suite_status_family_counts(suite) {
+        if count > 1 {
+            issues.push(BackendSuiteInventoryIssue::DuplicateFamily { family_id, count });
+        }
+    }
     for path in artifact_paths.difference(&status_paths) {
         issues.push(BackendSuiteInventoryIssue::MissingStatus { path: path.clone() });
     }
@@ -2066,6 +2075,19 @@ fn suite_status_path_counts(suite: &Value) -> BTreeMap<String, usize> {
         .filter_map(|status| status.get("path").and_then(non_empty_str))
         .fold(BTreeMap::new(), |mut counts, path| {
             *counts.entry(path.to_string()).or_default() += 1;
+            counts
+        })
+}
+
+fn suite_status_family_counts(suite: &Value) -> BTreeMap<String, usize> {
+    suite
+        .get("artifact_statuses")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|status| status.get("family_id").and_then(non_empty_str))
+        .fold(BTreeMap::new(), |mut counts, family_id| {
+            *counts.entry(family_id.to_string()).or_default() += 1;
             counts
         })
 }
@@ -3083,6 +3105,37 @@ mod tests {
                 },
             ],
             "Fix: duplicate suite inventory entries must not prove artifact coverage."
+        );
+    }
+
+    #[test]
+    fn backend_suite_inventory_rejects_duplicate_family_coverage() {
+        let suite = serde_json::json!({
+            "artifacts": [
+                "release/evidence/benchmarks/cuda/condition-fast.json",
+                "release/evidence/benchmarks/cuda/condition-slow.json"
+            ],
+            "artifact_statuses": [
+                {
+                    "path": "release/evidence/benchmarks/cuda/condition-fast.json",
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m"
+                },
+                {
+                    "path": "release/evidence/benchmarks/cuda/condition-slow.json",
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.10m"
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_inventory_issues(&suite),
+            vec![BackendSuiteInventoryIssue::DuplicateFamily {
+                family_id: "condition-eval".to_string(),
+                count: 2,
+            }],
+            "Fix: backend suite family_count must represent unique workload families, not repeated family rows."
         );
     }
 
