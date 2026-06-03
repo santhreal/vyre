@@ -173,6 +173,12 @@ pub(crate) fn check_before_after_benchmark_report(
     let Some(report) = first_json_evidence(requirement, base_dir, suffix, failures) else {
         return;
     };
+    check_json_value_has_no_blockers(
+        requirement,
+        &format!("benchmark `{suffix}`"),
+        &report,
+        failures,
+    );
     let failed = report
         .get("summary")
         .and_then(|summary| summary.get("failed"))
@@ -422,6 +428,23 @@ pub(crate) fn check_named_cuda_benchmark_report(
         }
     }
 }
+pub(crate) fn check_json_value_has_no_blockers(
+    requirement: &Requirement,
+    label: &str,
+    report: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    let blockers = report
+        .get("blockers")
+        .and_then(serde_json::Value::as_array)
+        .map_or(0, Vec::len);
+    if blockers != 0 {
+        failures.push(format!(
+            "requirement `{}` {label} reports {blockers} blocker(s)",
+            requirement.id
+        ));
+    }
+}
 pub(crate) fn check_json_evidence_has_no_blockers(
     requirement: &Requirement,
     base_dir: &Path,
@@ -431,16 +454,12 @@ pub(crate) fn check_json_evidence_has_no_blockers(
     let Some(report) = first_json_evidence(requirement, base_dir, suffix, failures) else {
         return;
     };
-    let blockers = report
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
-    if blockers != 0 {
-        failures.push(format!(
-            "requirement `{}` evidence `{suffix}` reports {blockers} blocker(s)",
-            requirement.id
-        ));
-    }
+    check_json_value_has_no_blockers(
+        requirement,
+        &format!("evidence `{suffix}`"),
+        &report,
+        failures,
+    );
 }
 pub(crate) fn check_marker_evidence_has_markers(
     requirement: &Requirement,
@@ -486,5 +505,59 @@ pub(crate) fn check_marker_evidence_has_markers(
             "requirement `{}` marker evidence `{suffix}` does not reference optimization-integration-matrix.json",
             requirement.id
         ));
+    }
+}
+
+#[cfg(test)]
+mod part4_tests {
+    use super::*;
+
+    #[test]
+    fn before_after_benchmark_report_rejects_explicit_blockers() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for before/after blocker gate test.");
+        std::fs::write(
+            dir.path().join("alias-aware-before-after.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "blockers": ["before/after benchmark reused stale CUDA baseline"],
+                "selected_backend": "cuda",
+                "summary": {"failed": 0},
+                "cases": [
+                    {
+                        "id": "lower.alias_aware_optimizations",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 1, "p95": 2, "p99": 3},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2, "p95": 3, "p99": 4}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize before/after blocker evidence."),
+        )
+        .expect("Fix: write before/after blocker evidence.");
+        let requirement = Requirement {
+            id: "optimization-integration".to_string(),
+            title: "optimization integration".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["alias-aware-before-after.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_before_after_benchmark_report(
+            &requirement,
+            dir.path(),
+            "alias-aware-before-after.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "requirement `optimization-integration` benchmark `alias-aware-before-after.json` reports 1 blocker(s)"
+            )),
+            "Fix: before/after benchmark release gate must reject explicit benchmark blockers; failures={failures:?}"
+        );
     }
 }

@@ -122,6 +122,12 @@ pub(crate) fn check_single_benchmark_report(
     min_speedup_x: Option<f64>,
     failures: &mut Vec<String>,
 ) {
+    check_json_value_has_no_blockers(
+        requirement,
+        &format!("benchmark `{}`", path.display()),
+        report,
+        failures,
+    );
     let failed = report
         .get("summary")
         .and_then(|summary| summary.get("failed"))
@@ -356,6 +362,50 @@ pub(crate) fn case_has_cpu_sota_contract(
 #[cfg(test)]
 mod part3_tests {
     use super::*;
+
+    #[test]
+    fn single_benchmark_report_rejects_explicit_blockers() {
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "cuda first".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let report = serde_json::json!({
+            "blockers": ["benchmark runner reused stale CUDA evidence"],
+            "selected_backend": "cuda",
+            "summary": {"failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "status": "pass",
+                    "contract": {"baselines": []},
+                    "metrics": {"wall_ns": {"samples": 30, "p50": 1, "p95": 2, "p99": 3}},
+                    "performance": {"contract_passed": true}
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_single_benchmark_report(
+            &requirement,
+            Path::new("."),
+            Path::new("cuda-workload.json"),
+            &report,
+            true,
+            None,
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "requirement `cuda-first-path` benchmark `cuda-workload.json` reports 1 blocker(s)"
+            )),
+            "Fix: direct benchmark release gate must reject explicit benchmark blockers; failures={failures:?}"
+        );
+    }
 
     #[test]
     fn cpu_sota_contract_requires_applicable_backend() {

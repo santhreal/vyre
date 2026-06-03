@@ -18,6 +18,12 @@ pub(crate) fn check_benchmark_report_has_cases(
     else {
         return;
     };
+    check_json_value_has_no_blockers(
+        requirement,
+        &format!("benchmark `{suffix}`"),
+        &report,
+        failures,
+    );
     let failed = report
         .get("summary")
         .and_then(|summary| summary.get("failed"))
@@ -707,6 +713,53 @@ mod tests {
     use std::fs;
 
     use tempfile::TempDir;
+
+    #[test]
+    fn benchmark_report_has_cases_rejects_explicit_blockers() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for benchmark blocker gate test.");
+        let artifact = dir.path().join("cuda-blocked-benchmark.json");
+        fs::write(
+            &artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "blockers": ["CUDA benchmark evidence has stale source fingerprint"],
+                "selected_backend": "cuda",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0, "cache_hit_rate": null},
+                "environment": {"host_cpu_model": "test CPU"},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize blocked benchmark evidence."),
+        )
+        .expect("Fix: write blocked benchmark evidence.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "cuda first".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["cuda-blocked-benchmark.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_benchmark_report_has_cases(
+            &requirement,
+            dir.path(),
+            "cuda-blocked-benchmark.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "requirement `cuda-first-path` benchmark `cuda-blocked-benchmark.json` reports 1 blocker(s)"
+            )),
+            "Fix: generic benchmark release gate must reject explicit benchmark blockers; failures={failures:?}"
+        );
+    }
 
     #[test]
     fn benchmark_report_has_cases_rejects_hidden_failed_case_summary_zero() {
