@@ -586,3 +586,34 @@ fn release_matrix_commands_prefer_canonical_release_workload_cases() {
         );
     }
 }
+
+#[test]
+fn release_matrix_does_not_attach_condition_eval_to_specialized_workloads() {
+    let registry = vyre_bench::registry::collect_all();
+    let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);
+    for family_id in [
+        "metadata-conditions",
+        "offset-count-aggregation",
+        "entropy-window",
+    ] {
+        let family = matrix
+            .families
+            .iter()
+            .find(|family| family.id == family_id)
+            .unwrap_or_else(|| panic!("Fix: release matrix missing family `{family_id}`."));
+        assert!(
+            !family
+                .matched_cases
+                .iter()
+                .any(|case| case == "conditions.yara_like.eval.1m"),
+            "Fix: workload `{family_id}` must not inherit the generic condition-eval release case."
+        );
+        assert!(
+            !family
+                .cpu_sota_100x_cases
+                .iter()
+                .any(|case| case == "conditions.yara_like.eval.1m"),
+            "Fix: workload `{family_id}` must not count generic condition-eval as its CPU-SOTA 100x proof case."
+        );
+    }
+}

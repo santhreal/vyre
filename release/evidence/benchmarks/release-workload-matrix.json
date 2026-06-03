@@ -157,7 +157,6 @@
       "dispatch_policy": "megakernel",
       "non_megakernel_justification": null,
       "matched_cases": [
-        "conditions.yara_like.eval.1m",
         "release.offset_count_aggregation.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
@@ -166,26 +165,22 @@
         "release.workload.offset_count_aggregation"
       ],
       "cpu_sota_contracts": [
-        "conditions.yara_like.eval.1m => Rayon-parallel scalar short-circuit rule loop 100x",
         "release.offset_count_aggregation.1m => SIMD CPU aggregation over sorted match streams 100x"
       ],
       "cpu_sota_100x_cases": [
-        "conditions.yara_like.eval.1m",
         "release.offset_count_aggregation.1m"
       ],
       "cpu_sota_baseline_names": [
-        "Rayon-parallel scalar short-circuit rule loop",
         "SIMD CPU aggregation over sorted match streams"
       ],
       "cpu_sota_baseline_crates": [
-        "rayon",
         "vyre-libs"
       ],
       "cpu_sota_backend_ids": [
         "cuda",
         "wgpu"
       ],
-      "fair_cpu_sota_baseline_count": 2,
+      "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
       "max_cpu_sota_min_speedup_x": 100.0
     },
@@ -230,7 +225,6 @@
       "dispatch_policy": "megakernel",
       "non_megakernel_justification": null,
       "matched_cases": [
-        "conditions.yara_like.eval.1m",
         "release.entropy_window.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-05-entropy-window.json",
@@ -239,26 +233,22 @@
         "release.workload.entropy_window"
       ],
       "cpu_sota_contracts": [
-        "conditions.yara_like.eval.1m => Rayon-parallel scalar short-circuit rule loop 100x",
         "release.entropy_window.1m => SIMD CPU rolling histogram entropy implementation 100x"
       ],
       "cpu_sota_100x_cases": [
-        "conditions.yara_like.eval.1m",
         "release.entropy_window.1m"
       ],
       "cpu_sota_baseline_names": [
-        "Rayon-parallel scalar short-circuit rule loop",
         "SIMD CPU rolling histogram entropy implementation"
       ],
       "cpu_sota_baseline_crates": [
-        "rayon",
         "vyre-libs"
       ],
       "cpu_sota_backend_ids": [
         "cuda",
         "wgpu"
       ],
-      "fair_cpu_sota_baseline_count": 2,
+      "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
       "max_cpu_sota_min_speedup_x": 100.0
     },
