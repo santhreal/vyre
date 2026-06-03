@@ -144,7 +144,10 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
             ));
             continue;
         };
-        let report_backend = report.get("selected_backend").and_then(Value::as_str);
+        let (report_contract_case_count, report_passing_contract_case_count) =
+            crate::benchmark_evidence_semantics::cpu_sota_100x_case_counts(&report);
+        contract_case_count += report_contract_case_count as usize;
+        passing_contract_case_count += report_passing_contract_case_count as usize;
         for case in report_cases {
             let case_id = case
                 .get("id")
@@ -231,33 +234,6 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
                 &mut blockers,
                 case_id,
             );
-            let case_backend = case
-                .get("backend_id")
-                .and_then(Value::as_str)
-                .or(report_backend);
-            if crate::benchmark_evidence_semantics::benchmark_case_has_cpu_sota_contract(
-                case,
-                case_backend,
-                100.0,
-            ) {
-                contract_case_count += 1;
-                let contract_passed = case
-                    .get("performance")
-                    .and_then(|performance| performance.get("contract_passed"))
-                    .and_then(Value::as_bool)
-                    == Some(true);
-                let speedup_passed = case
-                    .get("performance")
-                    .and_then(|performance| performance.get("speedup_x"))
-                    .and_then(Value::as_f64)
-                    .is_some_and(|speedup| speedup >= 100.0);
-                if crate::benchmark_evidence_semantics::benchmark_case_passes_summary_evidence(case)
-                    && contract_passed
-                    && speedup_passed
-                {
-                    passing_contract_case_count += 1;
-                }
-            }
         }
         cases.extend(report_cases.iter().cloned());
     }
@@ -2308,6 +2284,93 @@ mod tests {
                     "100x source artifact `release/evidence/benchmarks/cuda-missing-status.json` case `release.condition_eval.1m` failed: missing pass status"
                 )),
             "Fix: aggregate CPU-SOTA proof blockers must expose missing pass status; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_proof_rejects_claimed_speedup_without_measured_100x() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for CPU-SOTA measured speedup test.");
+        let artifact_rel = "release/evidence/benchmarks/cuda-claimed-speedup.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: CPU-SOTA proof artifact path must have a parent directory."),
+        )
+        .expect("Fix: create measured-speedup CPU-SOTA proof artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "summary": {
+                    "total_cases": 1,
+                    "passed": 1,
+                    "failed": 0,
+                    "total_time_ns": 0,
+                    "cache_hit_rate": null
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 100, "p95": 101, "p99": 102},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002}
+                        },
+                        "contract": {
+                            "primitive": "release condition eval",
+                            "baselines": [
+                                {
+                                    "name": "CPU-SOTA",
+                                    "crate_name": "vyre-runtime",
+                                    "class": "CpuSota",
+                                    "min_speedup_x": 100.0,
+                                    "backend_ids": ["cuda"]
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 200.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize claimed-speedup CUDA benchmark artifact JSON."),
+        )
+        .expect("Fix: write claimed-speedup CUDA benchmark artifact JSON.");
+
+        write_cpu_100x_proof(dir.path(), &[artifact_rel.to_string()]);
+
+        let proof_path = dir
+            .path()
+            .join("release/evidence/benchmarks/cpu-only-100x-proof.json");
+        let proof_text = fs::read_to_string(&proof_path)
+            .expect("Fix: read generated CPU-SOTA measured-speedup proof artifact.");
+        let proof = serde_json::from_str::<Value>(&proof_text)
+            .expect("Fix: generated CPU-SOTA measured-speedup proof must be valid JSON.");
+
+        assert_eq!(
+            proof
+                .get("cpu_sota_100x_contract_case_count")
+                .and_then(Value::as_u64),
+            Some(1),
+            "Fix: measured-speedup failure must not erase applicable CPU-SOTA contracts from aggregate proof."
+        );
+        assert_eq!(
+            proof
+                .get("cpu_sota_100x_passing_case_count")
+                .and_then(Value::as_u64),
+            Some(0),
+            "Fix: aggregate CPU-SOTA proof must not count claimed speedup_x without measured baseline_wall_ns / wall_ns >= 100x."
+        );
+        assert_eq!(
+            proof
+                .get("summary")
+                .and_then(|summary| summary.get("failed"))
+                .and_then(Value::as_u64),
+            Some(1),
+            "Fix: aggregate CPU-SOTA proof summary must count claimed-only speedup cases as failed."
         );
     }
 
