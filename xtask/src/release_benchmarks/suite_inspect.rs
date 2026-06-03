@@ -321,11 +321,7 @@ pub(super) fn write_backend_suite(
     backend: &str,
     artifact_inputs: Vec<BackendSuiteArtifactInput>,
 ) {
-    let output = match backend {
-        "cuda" => "release/evidence/benchmarks/cuda-release-suite.json".to_string(),
-        "wgpu" => "release/evidence/benchmarks/wgpu-comparison-suite.json".to_string(),
-        other => format!("release/evidence/benchmarks/{other}-release-suite.json"),
-    };
+    let output = backend_suite_output_path(backend);
     let mut blockers = Vec::new();
     if artifact_inputs.is_empty() {
         blockers.push(format!(
@@ -373,6 +369,14 @@ pub(super) fn write_backend_suite(
     if let Err(error) = fs::write(&path, format!("{json}\n")) {
         eprintln!("Fix: failed to write `{}`: {error}", path.display());
         std::process::exit(1);
+    }
+}
+
+fn backend_suite_output_path(backend: &str) -> String {
+    match backend {
+        "cuda" => "release/evidence/benchmarks/cuda-release-suite.json".to_string(),
+        "wgpu" => "release/evidence/benchmarks/wgpu-fallback-suite.json".to_string(),
+        other => format!("release/evidence/benchmarks/{other}-release-suite.json"),
     }
 }
 
@@ -832,5 +836,61 @@ pub(super) fn record_observed_metric_percentile(
         None => blockers.push(format!(
             "case `{case_id}` must include {percentile} {metric_name}"
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use tempfile::TempDir;
+
+    #[test]
+    fn wgpu_suite_output_matches_release_gate_contract() {
+        assert_eq!(
+            backend_suite_output_path("wgpu"),
+            "release/evidence/benchmarks/wgpu-fallback-suite.json",
+            "Fix: release-benchmarks must regenerate the WGPU suite artifact consumed by the release gate and completion audit."
+        );
+    }
+
+    #[test]
+    fn cuda_suite_output_matches_release_gate_contract() {
+        assert_eq!(
+            backend_suite_output_path("cuda"),
+            "release/evidence/benchmarks/cuda-release-suite.json",
+            "Fix: release-benchmarks must regenerate the CUDA suite artifact consumed by the release gate and completion audit."
+        );
+    }
+
+    #[test]
+    fn write_wgpu_suite_regenerates_gated_fallback_artifact() {
+        let dir = TempDir::new().expect("Fix: create a temporary workspace for suite output test.");
+
+        write_backend_suite(dir.path(), "wgpu", Vec::new());
+
+        let fallback = dir
+            .path()
+            .join("release/evidence/benchmarks/wgpu-fallback-suite.json");
+        let comparison = dir
+            .path()
+            .join("release/evidence/benchmarks/wgpu-comparison-suite.json");
+        assert!(
+            fallback.exists(),
+            "Fix: WGPU release benchmark generation must write the suite artifact consumed by the release gate."
+        );
+        assert!(
+            !comparison.exists(),
+            "Fix: WGPU release benchmark generation must not write the stale comparison suite path instead of the gated fallback suite."
+        );
+        let text = fs::read_to_string(&fallback)
+            .expect("Fix: read generated WGPU fallback suite JSON for contract assertions.");
+        let suite = serde_json::from_str::<Value>(&text)
+            .expect("Fix: generated WGPU fallback suite JSON must be parseable.");
+        assert_eq!(
+            suite.get("backend").and_then(Value::as_str),
+            Some("wgpu"),
+            "Fix: generated WGPU fallback suite must retain backend provenance."
+        );
     }
 }
