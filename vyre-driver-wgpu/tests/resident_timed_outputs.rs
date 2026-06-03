@@ -43,6 +43,10 @@ fn resident_timed_dispatch_returns_public_readwrite_outputs() {
             "resident timed dispatch must return public ReadWrite outputs"
         );
         assert_eq!(timed.outputs[0], 42u32.to_le_bytes());
+        assert!(
+            timed.device_ns.unwrap_or_default() > 0,
+            "Fix: WGPU resident timed dispatch must report GPU timestamp device_ns so release benchmarks do not fall back to readback wall time."
+        );
         Ok::<(), vyre_driver::BackendError>(())
     })();
     let free_out = backend.free_resident(out);

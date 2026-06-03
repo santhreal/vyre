@@ -198,12 +198,22 @@ impl WgpuPipeline {
         encoder: &mut wgpu::CommandEncoder,
         item: &BorrowedDispatchItem<'_>,
     ) -> Result<(), BackendError> {
+        self.record_borrowed_persistent_item_with_timestamps(device, encoder, item, None)
+    }
+
+    pub(crate) fn record_borrowed_persistent_item_with_timestamps(
+        &self,
+        device: &wgpu::Device,
+        encoder: &mut wgpu::CommandEncoder,
+        item: &BorrowedDispatchItem<'_>,
+        timestamp_writes: Option<wgpu::ComputePassTimestampWrites<'_>>,
+    ) -> Result<(), BackendError> {
         let bound = self.bound_borrowed_handles(item)?;
         let bind_groups = self.cached_bind_groups(device, &bound)?;
         self.clear_outputs(encoder, &bound)?;
         let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some("vyre persistent compute"),
-            timestamp_writes: None,
+            timestamp_writes,
         });
         pass.set_pipeline(&self.pipeline);
         for (i, bg) in bind_groups.iter().enumerate() {

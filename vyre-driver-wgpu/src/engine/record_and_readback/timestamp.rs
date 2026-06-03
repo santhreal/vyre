@@ -14,15 +14,15 @@ type MapResult = Result<(), wgpu::BufferAsyncError>;
 const TIMESTAMP_QUERY_COUNT: u32 = 4;
 const TIMESTAMP_READBACK_BYTES: u64 = 32;
 
-pub(super) struct TimestampRecorder {
-    pub(super) query_set: wgpu::QuerySet,
+pub(crate) struct TimestampRecorder {
+    pub(crate) query_set: wgpu::QuerySet,
     resolve_buffer: GpuBufferHandle,
     readback_buffer: GpuBufferHandle,
     host_upload_us: u64,
     timestamp_period_ns: f32,
 }
 
-pub(super) struct PendingTimestampProfile {
+pub(crate) struct PendingTimestampProfile {
     readback_buffer: GpuBufferHandle,
     pub(super) receiver: Receiver<MapResult>,
     pub(super) ready: Arc<AtomicBool>,
@@ -31,14 +31,14 @@ pub(super) struct PendingTimestampProfile {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) struct TimestampProfile {
-    pub(super) dispatch_ns: u64,
+pub(crate) struct TimestampProfile {
+    pub(crate) dispatch_ns: u64,
     pub(super) copy_ns: u64,
     pub(super) gpu_total_ns: u64,
 }
 
 impl TimestampRecorder {
-    pub(super) fn new(
+    pub(crate) fn new(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         pool: &BufferPool,
@@ -85,7 +85,7 @@ impl TimestampRecorder {
         }))
     }
 
-    pub(super) fn resolve(&self, encoder: &mut wgpu::CommandEncoder) -> Result<(), BackendError> {
+    pub(crate) fn resolve(&self, encoder: &mut wgpu::CommandEncoder) -> Result<(), BackendError> {
         encoder.resolve_query_set(
             &self.query_set,
             0..TIMESTAMP_QUERY_COUNT,
@@ -102,7 +102,7 @@ impl TimestampRecorder {
         Ok(())
     }
 
-    pub(super) fn map_async(self) -> Result<PendingTimestampProfile, BackendError> {
+    pub(crate) fn map_async(self) -> Result<PendingTimestampProfile, BackendError> {
         let buf = self.readback_buffer.buffer();
         let slice = buf.slice(0..TIMESTAMP_READBACK_BYTES);
         let (sender, receiver) = crossbeam_channel::bounded(1);
@@ -127,7 +127,7 @@ impl TimestampRecorder {
     }
 }
 
-pub(super) fn collect_timestamp_profile(
+pub(crate) fn collect_timestamp_profile(
     profile: Option<PendingTimestampProfile>,
     deadline: Instant,
 ) -> Result<Option<TimestampProfile>, BackendError> {

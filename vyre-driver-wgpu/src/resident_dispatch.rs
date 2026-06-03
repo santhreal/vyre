@@ -14,13 +14,13 @@ pub(crate) fn dispatch_resident_timed(
 ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
     let started = Instant::now();
     let pipeline = backend.compile_resident_pipeline_cached(program, config)?;
-    let outputs = pipeline.dispatch_persistent_handles(resources, config)?;
+    let timed = pipeline.dispatch_persistent_handles_timed(resources, config)?;
     Ok(vyre_driver::TimedDispatchResult {
-        outputs,
+        outputs: timed.outputs,
         wall_ns: elapsed_nanos_u64(started, "resident timed dispatch")?,
-        device_ns: None,
-        enqueue_ns: None,
-        wait_ns: None,
+        device_ns: timed.device_ns,
+        enqueue_ns: timed.enqueue_ns,
+        wait_ns: timed.wait_ns,
     })
 }
 

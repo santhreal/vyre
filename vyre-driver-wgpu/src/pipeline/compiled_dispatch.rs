@@ -4,15 +4,16 @@
 //! module owns the trait entrypoints that turn caller inputs into persistent
 //! GPU handles, execute the compiled compute pipeline, and read back outputs.
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use smallvec::SmallVec;
 use vyre_driver::program_walks::enforce_actual_output_budget;
 use vyre_driver::{
     resolve_fixpoint_iterations_usize, BackendError, CompiledPipeline, DispatchConfig,
-    OutputBuffers,
+    OutputBuffers, TimedDispatchResult,
 };
 
+use crate::engine::record_and_readback::timestamp::{collect_timestamp_profile, TimestampRecorder};
 use crate::pipeline::output_slots::resize_vec_with;
 use crate::pipeline::WgpuPipeline;
 use crate::staging_reserve::{reserve_pipeline_vec, reserve_smallvec, reserve_vec};
@@ -59,6 +60,76 @@ impl CompiledPipeline for WgpuPipeline {
         self.raise_if_trapped(&resolved.inputs, device, queue, deadline)?;
         self.readback_persistent_outputs(&resolved.outputs, deadline, outputs)?;
         enforce_actual_output_budget(config, outputs.as_slice())
+    }
+
+    fn dispatch_persistent_handles_timed(
+        &self,
+        inputs: &[vyre_driver::Resource],
+        config: &DispatchConfig,
+    ) -> Result<TimedDispatchResult, BackendError> {
+        self.enforce_static_output_budget(config)?;
+        let started = Instant::now();
+        let enqueue_started = Instant::now();
+        let (device, queue) = &*self.device_queue;
+        let deadline = config
+            .timeout
+            .and_then(|timeout| started.checked_add(timeout));
+        let timestamp_deadline =
+            deadline.unwrap_or_else(|| Instant::now() + Duration::from_secs(30));
+        let resolved = self.resolve_persistent_resources(inputs, queue)?;
+        let item = crate::pipeline::persistent::BorrowedDispatchItem {
+            inputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.inputs),
+            outputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.outputs),
+            params: None,
+            workgroups: self.workgroups_for_dispatch(config)?,
+        };
+
+        let timestamp_recorder =
+            TimestampRecorder::new(device, queue, &self.persistent_pool, true, 0)?;
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("vyre timed persistent dispatch"),
+        });
+        let timestamp_writes =
+            timestamp_recorder
+                .as_ref()
+                .map(|recorder| wgpu::ComputePassTimestampWrites {
+                    query_set: &recorder.query_set,
+                    beginning_of_pass_write_index: Some(0),
+                    end_of_pass_write_index: Some(1),
+                });
+        self.record_borrowed_persistent_item_with_timestamps(
+            device,
+            &mut encoder,
+            &item,
+            timestamp_writes,
+        )?;
+        if let Some(recorder) = &timestamp_recorder {
+            encoder.write_timestamp(&recorder.query_set, 2);
+            encoder.write_timestamp(&recorder.query_set, 3);
+            recorder.resolve(&mut encoder)?;
+        }
+        queue.submit(std::iter::once(encoder.finish()));
+        let timestamp_profile = timestamp_recorder
+            .map(TimestampRecorder::map_async)
+            .transpose()?;
+        let enqueue_ns = checked_elapsed_ns(enqueue_started, "WGPU persistent enqueue")?;
+
+        let wait_started = Instant::now();
+        self.raise_if_trapped(&resolved.inputs, device, queue, deadline)?;
+        let mut outputs = Vec::new();
+        self.readback_persistent_outputs(&resolved.outputs, deadline, &mut outputs)?;
+        enforce_actual_output_budget(config, outputs.as_slice())?;
+        let device_ns = collect_timestamp_profile(timestamp_profile, timestamp_deadline)?
+            .map(|profile| profile.dispatch_ns);
+        let wait_ns = checked_elapsed_ns(wait_started, "WGPU persistent wait")?;
+
+        Ok(TimedDispatchResult {
+            outputs,
+            wall_ns: checked_elapsed_ns(started, "WGPU persistent timed dispatch")?,
+            device_ns,
+            enqueue_ns: Some(enqueue_ns),
+            wait_ns: Some(wait_ns),
+        })
     }
 
     fn dispatch_persistent_resource_outputs(
@@ -325,6 +396,14 @@ impl CompiledPipeline for WgpuPipeline {
         enforce_actual_output_budget(config, outputs.as_slice())?;
         Ok(())
     }
+}
+
+fn checked_elapsed_ns(started: Instant, label: &'static str) -> Result<u64, BackendError> {
+    u64::try_from(started.elapsed().as_nanos()).map_err(|source| {
+        BackendError::new(format!(
+            "{label} elapsed time cannot fit u64 nanoseconds: {source}. Fix: split or timeout the dispatch before telemetry overflows."
+        ))
+    })
 }
 
 #[cfg(test)]

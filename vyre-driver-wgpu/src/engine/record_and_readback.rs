@@ -18,7 +18,7 @@ mod clears;
 mod readback;
 mod staging;
 mod submit;
-mod timestamp;
+pub(crate) mod timestamp;
 mod trap;
 mod upload;
 
