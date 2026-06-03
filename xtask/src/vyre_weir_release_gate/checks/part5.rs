@@ -220,6 +220,14 @@ pub(crate) fn check_parser_contract_evidence(
             requirement.id
         ));
     }
+    check_duplicate_parser_contract_object_rows(
+        requirement,
+        suffix,
+        &report,
+        "required_evidence_trees",
+        "tree",
+        failures,
+    );
     if let Some(trees) = required_evidence_trees {
         for tree in trees {
             let tree_name = tree
@@ -280,6 +288,14 @@ pub(crate) fn check_parser_contract_evidence(
             requirement.id
         ));
     }
+    check_duplicate_parser_contract_object_rows(
+        requirement,
+        suffix,
+        &report,
+        "required_files",
+        "path",
+        failures,
+    );
     for file in required_files {
         let path = file
             .get("path")
@@ -312,6 +328,29 @@ pub(crate) fn check_parser_contract_evidence(
                     .unwrap_or_else(|| "<missing>".to_string())
             ));
         }
+    }
+}
+
+fn check_duplicate_parser_contract_object_rows(
+    requirement: &Requirement,
+    suffix: &str,
+    report: &serde_json::Value,
+    array_field: &str,
+    object_field: &str,
+    failures: &mut Vec<String>,
+) {
+    let duplicates =
+        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
+            report,
+            array_field,
+            object_field,
+        );
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        failures.push(format!(
+            "requirement `{}` parser contract `{suffix}` has duplicate {array_field}.{object_field} rows: {duplicates}",
+            requirement.id
+        ));
     }
 }
 pub(crate) fn check_backend_conformance_report(
@@ -497,6 +536,66 @@ fn check_duplicate_backend_conformance_pair_op_ids(
 #[cfg(test)]
 mod part5_tests {
     use super::*;
+
+    #[test]
+    fn parser_contract_rejects_duplicate_required_object_rows() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for parser contract duplicate row test.");
+        let report = serde_json::json!({
+            "component_id": "vyrec",
+            "role": "cli parser contract",
+            "root": "crates/vyrec",
+            "required_terms": ["parse"],
+            "missing_terms": [],
+            "required_contract_topics": ["ownership"],
+            "missing_contract_topics": [],
+            "required_test_categories": ["unit"],
+            "missing_test_categories": [],
+            "required_evidence_trees": [
+                {"tree": "tests", "exists": true, "source_bytes": 128, "unreadable_file_count": 0},
+                {"tree": "tests", "exists": true, "source_bytes": 128, "unreadable_file_count": 0},
+                {"tree": "benches", "exists": true, "source_bytes": 128, "unreadable_file_count": 0}
+            ],
+            "unresolved_ownership_markers": [],
+            "required_files": [
+                {"path": "crates/vyrec/src/lib.rs", "exists": true, "source_bytes": 128, "read_error": null},
+                {"path": "crates/vyrec/src/lib.rs", "exists": true, "source_bytes": 128, "read_error": null}
+            ]
+        });
+        std::fs::write(
+            dir.path().join("vyrec-cli-contracts.json"),
+            report.to_string(),
+        )
+        .expect("Fix: write parser contract duplicate row fixture.");
+        let requirement = Requirement {
+            id: "parser-contract".to_string(),
+            title: "parser contract".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["vyrec-cli-contracts.json".to_string()],
+            minimum_evidence: 1,
+        };
+        let mut failures = Vec::new();
+
+        check_parser_contract_evidence(
+            &requirement,
+            dir.path(),
+            "vyrec-cli-contracts.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("duplicate required_evidence_trees.tree rows: tests")),
+            "Fix: parser contract gate must reject duplicate required evidence tree rows; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "duplicate required_files.path rows: crates/vyrec/src/lib.rs"
+            )),
+            "Fix: parser contract gate must reject duplicate required file rows; failures={failures:?}"
+        );
+    }
 
     #[test]
     fn backend_conformance_rejects_duplicate_pair_op_ids() {

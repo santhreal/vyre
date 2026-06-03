@@ -95,6 +95,13 @@ fn inspect_parser_contract_semantics(
             "{evidence}: parser contract must list tests, benches, and fuzz evidence trees"
         ));
     }
+    inspect_duplicate_parser_contract_object_rows(
+        evidence,
+        value,
+        "required_evidence_trees",
+        "tree",
+        blockers,
+    );
     if let Some(trees) = required_evidence_trees {
         for tree in trees {
             let tree_name = tree
@@ -149,6 +156,13 @@ fn inspect_parser_contract_semantics(
             "{evidence}: parser contract required_files is empty"
         ));
     }
+    inspect_duplicate_parser_contract_object_rows(
+        evidence,
+        value,
+        "required_files",
+        "path",
+        blockers,
+    );
     for file in files {
         let path = file
             .get("path")
@@ -174,6 +188,27 @@ fn inspect_parser_contract_semantics(
                     .unwrap_or_else(|| "<missing>".to_string())
             ));
         }
+    }
+}
+
+fn inspect_duplicate_parser_contract_object_rows(
+    evidence: &str,
+    value: &serde_json::Value,
+    array_field: &str,
+    object_field: &str,
+    blockers: &mut Vec<String>,
+) {
+    let duplicates =
+        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
+            value,
+            array_field,
+            object_field,
+        );
+    if !duplicates.is_empty() {
+        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
+        blockers.push(format!(
+            "{evidence}: duplicate parser contract {array_field}.{object_field} rows: {duplicates}"
+        ));
     }
 }
 
@@ -341,6 +376,47 @@ fn case_has_cpu_sota_contract(
 #[cfg(test)]
 mod part13_tests {
     use super::*;
+
+    #[test]
+    fn completion_audit_rejects_duplicate_parser_contract_object_rows() {
+        let report = serde_json::json!({
+            "component_id": "vyrec",
+            "role": "cli parser contract",
+            "root": "crates/vyrec",
+            "required_terms": ["parse"],
+            "missing_terms": [],
+            "required_contract_topics": ["ownership"],
+            "missing_contract_topics": [],
+            "required_test_categories": ["unit"],
+            "missing_test_categories": [],
+            "required_evidence_trees": [
+                {"tree": "tests", "exists": true, "source_bytes": 128, "unreadable_file_count": 0},
+                {"tree": "tests", "exists": true, "source_bytes": 128, "unreadable_file_count": 0},
+                {"tree": "benches", "exists": true, "source_bytes": 128, "unreadable_file_count": 0}
+            ],
+            "unresolved_ownership_markers": [],
+            "required_files": [
+                {"path": "crates/vyrec/src/lib.rs", "exists": true, "source_bytes": 128, "read_error": null},
+                {"path": "crates/vyrec/src/lib.rs", "exists": true, "source_bytes": 128, "read_error": null}
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_parser_contract_semantics("vyrec-cli-contracts.json", &report, &mut blockers);
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "duplicate parser contract required_evidence_trees.tree rows: tests"
+            )),
+            "Fix: completion audit must reject duplicate parser contract evidence tree rows; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "duplicate parser contract required_files.path rows: crates/vyrec/src/lib.rs"
+            )),
+            "Fix: completion audit must reject duplicate parser contract required file rows; blockers={blockers:?}"
+        );
+    }
 
     #[test]
     fn completion_audit_rejects_wrong_backend_cpu_sota_contract() {
