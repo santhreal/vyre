@@ -131,6 +131,15 @@ pub(crate) fn first_json_evidence(
     suffix: &str,
     failures: &mut Vec<String>,
 ) -> Option<serde_json::Value> {
+    first_json_evidence_with_path(requirement, base_dir, suffix, failures).map(|(_, value)| value)
+}
+
+pub(crate) fn first_json_evidence_with_path(
+    requirement: &Requirement,
+    base_dir: &Path,
+    suffix: &str,
+    failures: &mut Vec<String>,
+) -> Option<(PathBuf, serde_json::Value)> {
     let evidence = requirement
         .evidence
         .iter()
@@ -155,7 +164,7 @@ pub(crate) fn first_json_evidence(
         }
     };
     match serde_json::from_str(&text) {
-        Ok(value) => Some(value),
+        Ok(value) => Some((path, value)),
         Err(error) => {
             failures.push(format!(
                 "requirement `{}` evidence `{}` is invalid JSON: {error}",
