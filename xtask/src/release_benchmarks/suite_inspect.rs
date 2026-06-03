@@ -85,6 +85,7 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
             ));
             continue;
         };
+        let report_backend = report.get("selected_backend").and_then(Value::as_str);
         for case in report_cases {
             let case_id = case
                 .get("id")
@@ -164,7 +165,13 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
                 &mut blockers,
                 case_id,
             );
-            if suite_case_has_cpu_sota_contract(case, 100.0) {
+            let case_backend = case
+                .get("backend_id")
+                .and_then(Value::as_str)
+                .or(report_backend);
+            if case_backend
+                .is_some_and(|backend| suite_case_has_cpu_sota_contract(case, backend, 100.0))
+            {
                 contract_case_count += 1;
                 let contract_passed = case
                     .get("performance")
@@ -724,7 +731,7 @@ pub(super) fn inspect_backend_suite_artifact(
                 case_id,
             );
         }
-        let has_100x_contract = suite_case_has_cpu_sota_contract(case, 100.0);
+        let has_100x_contract = suite_case_has_cpu_sota_contract(case, backend, 100.0);
         if has_100x_contract {
             cpu_sota_100x_contract_cases += 1;
             let contract_passed = case

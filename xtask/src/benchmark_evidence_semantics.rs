@@ -135,6 +135,16 @@ pub(crate) enum BackendSuiteArtifactStatusIssue {
         status_failed_count: u64,
         artifact_failed_count: u64,
     },
+    CpuSota100xContractCaseCountMismatch {
+        path: String,
+        status_contract_cases: u64,
+        artifact_contract_cases: u64,
+    },
+    CpuSota100xPassingCaseCountMismatch {
+        path: String,
+        status_passing_cases: u64,
+        artifact_passing_cases: u64,
+    },
     MissingRequestedCase {
         path: String,
         requested_case_id: String,
@@ -364,6 +374,37 @@ pub(crate) fn backend_suite_artifact_status_issues(
         }
     }
 
+    let (artifact_contract_cases, artifact_passing_cases) =
+        artifact_cpu_sota_100x_contract_counts(artifact_report);
+    if let Some(status_contract_cases) = status
+        .get("cpu_sota_100x_contract_cases")
+        .and_then(Value::as_u64)
+    {
+        if status_contract_cases != artifact_contract_cases {
+            issues.push(
+                BackendSuiteArtifactStatusIssue::CpuSota100xContractCaseCountMismatch {
+                    path: path.clone(),
+                    status_contract_cases,
+                    artifact_contract_cases,
+                },
+            );
+        }
+    }
+    if let Some(status_passing_cases) = status
+        .get("cpu_sota_100x_passing_cases")
+        .and_then(Value::as_u64)
+    {
+        if status_passing_cases != artifact_passing_cases {
+            issues.push(
+                BackendSuiteArtifactStatusIssue::CpuSota100xPassingCaseCountMismatch {
+                    path: path.clone(),
+                    status_passing_cases,
+                    artifact_passing_cases,
+                },
+            );
+        }
+    }
+
     if let Some(requested_case_id) = status.get("requested_case_id").and_then(non_empty_str) {
         let contains_requested_case = artifact_report
             .get("cases")
@@ -382,6 +423,76 @@ pub(crate) fn backend_suite_artifact_status_issues(
     }
 
     issues
+}
+
+fn artifact_cpu_sota_100x_contract_counts(artifact_report: &Value) -> (u64, u64) {
+    let report_backend = artifact_report
+        .get("selected_backend")
+        .and_then(Value::as_str);
+    let Some(cases) = artifact_report.get("cases").and_then(Value::as_array) else {
+        return (0, 0);
+    };
+    cases
+        .iter()
+        .fold((0, 0), |(contract_count, passing_count), case| {
+            let case_backend = case
+                .get("backend_id")
+                .and_then(Value::as_str)
+                .or(report_backend);
+            if !case_has_cpu_sota_contract(case, case_backend, 100.0) {
+                return (contract_count, passing_count);
+            }
+            let contract_passed = case
+                .get("performance")
+                .and_then(|performance| performance.get("contract_passed"))
+                .and_then(Value::as_bool)
+                == Some(true);
+            let speedup_passed = case
+                .get("performance")
+                .and_then(|performance| performance.get("speedup_x"))
+                .and_then(Value::as_f64)
+                .is_some_and(|speedup| speedup >= 100.0);
+            (
+                contract_count + 1,
+                passing_count + u64::from(contract_passed && speedup_passed),
+            )
+        })
+}
+
+fn case_has_cpu_sota_contract(
+    case: &Value,
+    backend_id: Option<&str>,
+    required_speedup: f64,
+) -> bool {
+    case.get("contract")
+        .and_then(|contract| contract.get("baselines"))
+        .and_then(Value::as_array)
+        .is_some_and(|baselines| {
+            baselines.iter().any(|baseline| {
+                baseline.get("class").and_then(Value::as_str) == Some("CpuSota")
+                    && baseline
+                        .get("min_speedup_x")
+                        .and_then(Value::as_f64)
+                        .unwrap_or(0.0)
+                        >= required_speedup
+                    && baseline_applies_to_backend(baseline, backend_id)
+            })
+        })
+}
+
+pub(crate) fn baseline_applies_to_backend(baseline: &Value, backend_id: Option<&str>) -> bool {
+    let Some(backend_ids) = baseline.get("backend_ids").and_then(Value::as_array) else {
+        return true;
+    };
+    if backend_ids.is_empty() {
+        return true;
+    }
+    let Some(backend_id) = backend_id else {
+        return false;
+    };
+    backend_ids
+        .iter()
+        .any(|candidate| candidate.as_str() == Some(backend_id))
 }
 
 pub(crate) fn backend_suite_inventory_issues(suite: &Value) -> Vec<BackendSuiteInventoryIssue> {
@@ -516,17 +627,9 @@ pub(crate) fn contract_backend_issues(report: &Value) -> Vec<ContractBackendIssu
             });
             continue;
         }
-        let applies = baselines.iter().any(|baseline| {
-            baseline
-                .get("backend_ids")
-                .and_then(Value::as_array)
-                .is_none_or(|backend_ids| {
-                    backend_ids.is_empty()
-                        || backend_ids
-                            .iter()
-                            .any(|candidate| candidate.as_str() == Some(backend_id))
-                })
-        });
+        let applies = baselines
+            .iter()
+            .any(|baseline| baseline_applies_to_backend(baseline, Some(backend_id)));
         if !applies {
             issues.push(ContractBackendIssue::NoApplicableBaseline {
                 case_id,
@@ -1244,6 +1347,140 @@ mod tests {
         assert!(
             backend_suite_artifact_status_issues(&status, &artifact).is_empty(),
             "Fix: matching suite status and artifact JSON should pass."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_unproven_contract_counts() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json",
+            "selected_backend": "wgpu",
+            "case_count": 1,
+            "failed_count": 0,
+            "requested_case_id": "release.quantified_condition_loops.1m",
+            "cpu_sota_100x_contract_cases": 1,
+            "cpu_sota_100x_passing_cases": 1
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "wgpu",
+            "summary": {"failed": 0},
+            "cases": [
+                {
+                    "id": "release.quantified_condition_loops.1m",
+                    "backend_id": "wgpu",
+                    "contract": null,
+                    "performance": {"contract_passed": true, "speedup_x": 1000.0}
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![
+                BackendSuiteArtifactStatusIssue::CpuSota100xContractCaseCountMismatch {
+                    path: "release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json".to_string(),
+                    status_contract_cases: 1,
+                    artifact_contract_cases: 0,
+                },
+                BackendSuiteArtifactStatusIssue::CpuSota100xPassingCaseCountMismatch {
+                    path: "release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json".to_string(),
+                    status_passing_cases: 1,
+                    artifact_passing_cases: 0,
+                },
+            ],
+            "Fix: backend suite status must not claim CPU-SOTA 100x contract proof absent from the artifact JSON."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_wrong_backend_contract_counts() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+            "selected_backend": "wgpu",
+            "case_count": 1,
+            "failed_count": 0,
+            "requested_case_id": "release.condition_eval.1m",
+            "cpu_sota_100x_contract_cases": 1,
+            "cpu_sota_100x_passing_cases": 1
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "wgpu",
+            "summary": {"failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "wgpu",
+                    "contract": {
+                        "primitive": "condition eval",
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 120.0}
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![
+                BackendSuiteArtifactStatusIssue::CpuSota100xContractCaseCountMismatch {
+                    path: "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"
+                        .to_string(),
+                    status_contract_cases: 1,
+                    artifact_contract_cases: 0,
+                },
+                BackendSuiteArtifactStatusIssue::CpuSota100xPassingCaseCountMismatch {
+                    path: "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"
+                        .to_string(),
+                    status_passing_cases: 1,
+                    artifact_passing_cases: 0,
+                },
+            ],
+            "Fix: WGPU suite status must not count a CUDA-only CpuSota baseline as WGPU proof."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_accepts_proven_contract_counts() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+            "selected_backend": "wgpu",
+            "case_count": 1,
+            "failed_count": 0,
+            "requested_case_id": "release.condition_eval.1m",
+            "cpu_sota_100x_contract_cases": 1,
+            "cpu_sota_100x_passing_cases": 1
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "wgpu",
+            "summary": {"failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "wgpu",
+                    "contract": {
+                        "primitive": "condition eval",
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda", "wgpu"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 120.0}
+                }
+            ]
+        });
+
+        assert!(
+            backend_suite_artifact_status_issues(&status, &artifact).is_empty(),
+            "Fix: suite status rows with contract counters should pass only when artifact cases prove the same counters."
         );
     }
 

@@ -157,7 +157,7 @@ fn benchmark_artifact_report_shape_is_reusable(
     if case.get("status").and_then(Value::as_str) != Some("pass") {
         return false;
     }
-    if cpu_sota_100x_required && !suite_case_has_cpu_sota_contract(case, 100.0) {
+    if cpu_sota_100x_required && !suite_case_has_cpu_sota_contract(case, backend, 100.0) {
         return false;
     }
     if cpu_sota_100x_required {

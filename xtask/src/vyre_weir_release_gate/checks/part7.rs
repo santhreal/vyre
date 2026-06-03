@@ -552,6 +552,22 @@ fn check_backend_suite_artifact_status(
                 "requirement `{}` backend suite `{suffix}` artifact `{path}` failed_count mismatch: status {status_failed_count}, artifact {artifact_failed_count}",
                 requirement.id
             )),
+            BackendSuiteArtifactStatusIssue::CpuSota100xContractCaseCountMismatch {
+                path,
+                status_contract_cases,
+                artifact_contract_cases,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` artifact `{path}` cpu_sota_100x_contract_cases mismatch: status {status_contract_cases}, artifact {artifact_contract_cases}",
+                requirement.id
+            )),
+            BackendSuiteArtifactStatusIssue::CpuSota100xPassingCaseCountMismatch {
+                path,
+                status_passing_cases,
+                artifact_passing_cases,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` artifact `{path}` cpu_sota_100x_passing_cases mismatch: status {status_passing_cases}, artifact {artifact_passing_cases}",
+                requirement.id
+            )),
             BackendSuiteArtifactStatusIssue::MissingRequestedCase {
                 path,
                 requested_case_id,

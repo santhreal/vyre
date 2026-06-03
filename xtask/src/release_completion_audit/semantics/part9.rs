@@ -477,6 +477,20 @@ fn inspect_backend_suite_artifact_status(
             } => blockers.push(format!(
                 "{evidence}: suite artifact `{path}` failed_count mismatch: status {status_failed_count}, artifact {artifact_failed_count}"
             )),
+            BackendSuiteArtifactStatusIssue::CpuSota100xContractCaseCountMismatch {
+                path,
+                status_contract_cases,
+                artifact_contract_cases,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` cpu_sota_100x_contract_cases mismatch: status {status_contract_cases}, artifact {artifact_contract_cases}"
+            )),
+            BackendSuiteArtifactStatusIssue::CpuSota100xPassingCaseCountMismatch {
+                path,
+                status_passing_cases,
+                artifact_passing_cases,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` cpu_sota_100x_passing_cases mismatch: status {status_passing_cases}, artifact {artifact_passing_cases}"
+            )),
             BackendSuiteArtifactStatusIssue::MissingRequestedCase {
                 path,
                 requested_case_id,
