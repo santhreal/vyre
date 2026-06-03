@@ -319,6 +319,8 @@ fn inspect_release_workload_matrix_semantics(
     inspect_duplicate_workload_family_ids(evidence, value, blockers);
     let mut required_family_count = 0usize;
     let mut covered_family_count = 0usize;
+    let mut matched_release_cases = BTreeSet::new();
+    let mut hundred_x_family_count = 0usize;
     let mut artifacts = BTreeSet::new();
     let mut workload_numbers = BTreeSet::new();
     for family in families {
@@ -354,6 +356,12 @@ fn inspect_release_workload_matrix_semantics(
             ));
         } else {
             covered_family_count += 1;
+            if let Some(cases) = family
+                .get("matched_cases")
+                .and_then(serde_json::Value::as_array)
+            {
+                matched_release_cases.extend(cases.iter().filter_map(serde_json::Value::as_str));
+            }
         }
         let dispatch_policy = family
             .get("dispatch_policy")
@@ -421,6 +429,8 @@ fn inspect_release_workload_matrix_semantics(
                 blockers.push(format!(
                     "{evidence}: required workload family `{id}` declares a 100x contract but lists no cpu_sota_100x_cases"
                 ));
+            } else {
+                hundred_x_family_count += 1;
             }
         }
         let duplicate_hundred_x_cases =
@@ -513,6 +523,51 @@ fn inspect_release_workload_matrix_semantics(
     if covered_family_count < 12 {
         blockers.push(format!(
             "{evidence}: covers {covered_family_count} required workload families; needs at least 12"
+        ));
+    }
+    inspect_declared_workload_matrix_count(
+        evidence,
+        value,
+        "required_closed_families",
+        required_family_count,
+        blockers,
+    );
+    inspect_declared_workload_matrix_count(
+        evidence,
+        value,
+        "matched_required_families",
+        covered_family_count,
+        blockers,
+    );
+    inspect_declared_workload_matrix_count(
+        evidence,
+        value,
+        "release_suite_case_count",
+        matched_release_cases.len(),
+        blockers,
+    );
+    inspect_declared_workload_matrix_count(
+        evidence,
+        value,
+        "cpu_sota_100x_family_count",
+        hundred_x_family_count,
+        blockers,
+    );
+}
+
+fn inspect_declared_workload_matrix_count(
+    evidence: &str,
+    value: &serde_json::Value,
+    field: &str,
+    derived: usize,
+    blockers: &mut Vec<String>,
+) {
+    let Some(declared) = value.get(field).and_then(serde_json::Value::as_u64) else {
+        return;
+    };
+    if declared != derived as u64 {
+        blockers.push(format!(
+            "{evidence}: {field}={declared}, but derived row evidence has {derived}"
         ));
     }
 }
@@ -731,6 +786,85 @@ mod part10_tests {
                 "required workload family `condition-eval` has duplicate cpu_sota_100x_cases: release.condition_eval.1m"
             )),
             "Fix: completion audit must reject duplicate family cpu_sota_100x_cases before 100x coverage can be inflated; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_inflated_workload_matrix_counts() {
+        let matrix = serde_json::json!({
+            "required_closed_families": 12,
+            "matched_required_families": 12,
+            "release_suite_case_count": 12,
+            "cpu_sota_100x_family_count": 10,
+            "required_cpu_sota_100x_families": [
+                "release.condition-eval",
+                "release.string-bitmap-scatter",
+                "release.offset-count-aggregation",
+                "release.entropy-window",
+                "release.quantified-condition-loops",
+                "release.alias-reaching-def",
+                "release.ifds-witness",
+                "release.c-ast-traversal",
+                "release.megakernel-queue",
+                "release.egraph-saturation"
+            ],
+            "missing_required_cpu_sota_100x_families": [],
+            "cpu_sota_100x_contract_cases": [
+                "release.condition_eval.1m",
+                "release.string_bitmap_scatter.1m",
+                "release.offset_count_aggregation.1m",
+                "release.entropy_window.1m",
+                "release.quantified_condition_loops.1m",
+                "release.alias_reaching_def.1m",
+                "release.ifds_witness.1m",
+                "release.c_ast_traversal.1m",
+                "release.megakernel_queue.1m",
+                "release.egraph_saturation.1m"
+            ],
+            "families": [
+                {
+                    "id": "condition-eval",
+                    "required": true,
+                    "matched_cases": ["release.condition_eval.1m"],
+                    "dispatch_policy": "megakernel",
+                    "bench_target_ids": ["release.workload.condition_eval"],
+                    "cpu_sota_contracts": [{"class": "CpuSota"}],
+                    "max_cpu_sota_min_speedup_x": 100.0,
+                    "cpu_sota_100x_cases": ["release.condition_eval.1m"],
+                    "release_plan_workload": 1,
+                    "evidence_artifact": "release/evidence/benchmarks/workload-01-condition-eval.json",
+                    "benchmark_command": "cargo_full run --release -- release/evidence/benchmarks/workload-01-condition-eval.json",
+                    "fair_cpu_sota_baseline_count": 1,
+                    "cpu_sota_baseline_names": ["CPU baseline"],
+                    "reproducible_cuda_command": true
+                }
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_release_workload_matrix_semantics(
+            "release-workload-matrix.json",
+            &matrix,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "release-workload-matrix.json: required_closed_families=12, but derived row evidence has 1"
+            )),
+            "Fix: completion audit must reject inflated required workload family counts; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "release-workload-matrix.json: release_suite_case_count=12, but derived row evidence has 1"
+            )),
+            "Fix: completion audit must reject inflated release suite case counts; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "release-workload-matrix.json: cpu_sota_100x_family_count=10, but derived row evidence has 1"
+            )),
+            "Fix: completion audit must reject inflated 100x family counts; blockers={blockers:?}"
         );
     }
 }

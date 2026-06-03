@@ -245,6 +245,8 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
 
     let mut required_family_count = 0usize;
     let mut covered_family_count = 0usize;
+    let mut matched_release_cases = BTreeSet::new();
+    let mut hundred_x_family_count = 0usize;
     let mut artifact_paths = BTreeSet::new();
     let mut workload_numbers = BTreeSet::new();
     for family in families {
@@ -292,6 +294,7 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
             ));
             continue;
         }
+        matched_release_cases.extend(matched_cases.iter().copied());
         let dispatch_policy = family
             .get("dispatch_policy")
             .and_then(serde_json::Value::as_str)
@@ -355,6 +358,8 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
                     "requirement `{}` workload family `{id}` declares a 100x contract but lists no cpu_sota_100x_cases",
                     requirement.id
                 ));
+            } else {
+                hundred_x_family_count += 1;
             }
         }
         let duplicate_hundred_x_cases =
@@ -508,6 +513,52 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
             requirement.id
         ));
     }
+    check_declared_workload_matrix_count(
+        requirement,
+        matrix,
+        "required_closed_families",
+        required_family_count,
+        failures,
+    );
+    check_declared_workload_matrix_count(
+        requirement,
+        matrix,
+        "matched_required_families",
+        covered_family_count,
+        failures,
+    );
+    check_declared_workload_matrix_count(
+        requirement,
+        matrix,
+        "release_suite_case_count",
+        matched_release_cases.len(),
+        failures,
+    );
+    check_declared_workload_matrix_count(
+        requirement,
+        matrix,
+        "cpu_sota_100x_family_count",
+        hundred_x_family_count,
+        failures,
+    );
+}
+
+fn check_declared_workload_matrix_count(
+    requirement: &Requirement,
+    matrix: &serde_json::Value,
+    field: &str,
+    derived: usize,
+    failures: &mut Vec<String>,
+) {
+    let Some(declared) = matrix.get(field).and_then(serde_json::Value::as_u64) else {
+        return;
+    };
+    if declared != derived as u64 {
+        failures.push(format!(
+            "requirement `{}` workload matrix {field}={declared}, but derived row evidence has {derived}",
+            requirement.id
+        ));
+    }
 }
 
 fn check_duplicate_workload_family_ids(
@@ -608,6 +659,57 @@ mod part2_tests {
             failures.iter().any(|failure| failure
                 .contains("workload family `condition-eval` has duplicate cpu_sota_100x_cases: release.condition_eval.1m")),
             "Fix: release gate must reject duplicate family cpu_sota_100x_cases before 100x coverage can be inflated; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn workload_matrix_rejects_inflated_declared_counts() {
+        let requirement = Requirement {
+            id: "proof-workloads-12".to_string(),
+            title: "proof workloads".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let matrix = serde_json::json!({
+            "required_closed_families": 12,
+            "matched_required_families": 12,
+            "release_suite_case_count": 12,
+            "cpu_sota_100x_family_count": 10,
+            "families": [
+                {
+                    "id": "condition-eval",
+                    "required": true,
+                    "matched_cases": ["release.condition_eval.1m"],
+                    "max_cpu_sota_min_speedup_x": 100.0,
+                    "cpu_sota_100x_cases": ["release.condition_eval.1m"]
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_workload_matrix_artifact_coverage(
+            &requirement,
+            Path::new("."),
+            &matrix,
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure
+                .contains("workload matrix required_closed_families=12, but derived row evidence has 1")),
+            "Fix: release gate must reject inflated required workload family counts; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure
+                .contains("workload matrix release_suite_case_count=12, but derived row evidence has 1")),
+            "Fix: release gate must reject inflated release suite case counts; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "workload matrix cpu_sota_100x_family_count=10, but derived row evidence has 1"
+            )),
+            "Fix: release gate must reject inflated 100x family counts; failures={failures:?}"
         );
     }
 
