@@ -71,6 +71,18 @@ pub(crate) fn benchmark_report_has_source_provenance(report: &Value) -> bool {
             .is_some_and(|git| git.get("commit").and_then(non_empty_str).is_some())
 }
 
+pub(crate) fn benchmark_source_artifact_count(report: &Value) -> usize {
+    report
+        .get("source_artifacts")
+        .and_then(Value::as_array)
+        .map_or(0, |items| {
+            items
+                .iter()
+                .filter(|item| non_empty_str(item).is_some())
+                .count()
+        })
+}
+
 pub(crate) fn benchmark_report_summary_case_evidence_mismatch(report: &Value) -> Option<String> {
     let Some(cases) = report.get("cases").and_then(Value::as_array) else {
         return Some("missing cases array".to_string());
@@ -1694,6 +1706,25 @@ mod tests {
                 "git": {"commit": "abcdef"}
             })),
             "Fix: git commit provenance must satisfy benchmark source provenance."
+        );
+    }
+
+    #[test]
+    fn benchmark_source_artifact_count_ignores_blank_entries() {
+        let report = serde_json::json!({
+            "source_artifacts": [
+                "",
+                null,
+                "release/evidence/benchmarks/cuda-a.json",
+                "   ",
+                "release/evidence/benchmarks/cuda-b.json"
+            ]
+        });
+
+        assert_eq!(
+            benchmark_source_artifact_count(&report),
+            2,
+            "Fix: source_artifact counts must count only usable non-empty string entries."
         );
     }
 

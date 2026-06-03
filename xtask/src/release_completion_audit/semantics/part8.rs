@@ -418,10 +418,8 @@ fn inspect_release_axes_semantics(
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    let source_artifacts = value
-        .get("source_artifacts")
-        .and_then(serde_json::Value::as_array)
-        .map_or(0, Vec::len);
+    let source_artifacts =
+        crate::benchmark_evidence_semantics::benchmark_source_artifact_count(value);
     if source_artifacts < 12 {
         blockers.push(format!(
             "{evidence}: source_artifacts has {source_artifacts} entrie(s), needs at least 12"
@@ -440,3 +438,37 @@ fn inspect_release_axes_semantics(
     }
 }
 
+#[cfg(test)]
+mod part8_tests {
+    use super::*;
+
+    #[test]
+    fn completion_audit_release_axes_counts_only_usable_source_artifacts() {
+        let axes = serde_json::json!({
+            "source_artifacts": [
+                "",
+                null,
+                "release/evidence/benchmarks/workload-01-condition-eval.json"
+            ],
+            "warm_us_per_file": 1,
+            "cold_pipeline_build_ms": 1,
+            "gbs_scan_throughput": 1,
+            "ulp_drift_max": 0,
+            "max_vram_mib": 1
+        });
+        let mut blockers = Vec::new();
+
+        inspect_release_axes_semantics(
+            "release/evidence/benchmarks/bench-release-axes.json",
+            &axes,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "bench-release-axes.json: source_artifacts has 1 entrie(s), needs at least 12"
+            )),
+            "Fix: completion audit must not count blank/non-string source_artifacts as release axes proof; blockers={blockers:?}"
+        );
+    }
+}
