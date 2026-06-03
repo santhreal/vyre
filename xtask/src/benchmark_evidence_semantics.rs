@@ -78,8 +78,9 @@ pub(crate) fn benchmark_source_artifact_count(report: &Value) -> usize {
         .map_or(0, |items| {
             items
                 .iter()
-                .filter(|item| non_empty_str(item).is_some())
-                .count()
+                .filter_map(non_empty_str)
+                .collect::<BTreeSet<_>>()
+                .len()
         })
 }
 
@@ -1717,6 +1718,7 @@ mod tests {
                 null,
                 "release/evidence/benchmarks/cuda-a.json",
                 "   ",
+                "release/evidence/benchmarks/cuda-a.json",
                 "release/evidence/benchmarks/cuda-b.json"
             ]
         });
@@ -1724,7 +1726,7 @@ mod tests {
         assert_eq!(
             benchmark_source_artifact_count(&report),
             2,
-            "Fix: source_artifact counts must count only usable non-empty string entries."
+            "Fix: source_artifact counts must count only unique usable non-empty string entries."
         );
     }
 

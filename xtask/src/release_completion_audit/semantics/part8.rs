@@ -448,6 +448,7 @@ mod part8_tests {
             "source_artifacts": [
                 "",
                 null,
+                "release/evidence/benchmarks/workload-01-condition-eval.json",
                 "release/evidence/benchmarks/workload-01-condition-eval.json"
             ],
             "warm_us_per_file": 1,
