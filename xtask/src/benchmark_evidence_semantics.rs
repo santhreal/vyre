@@ -754,12 +754,21 @@ fn artifact_min_metric_percentile(
             }
             metric
                 .and_then(|metric| metric.get(percentile))
-                .and_then(Value::as_u64)
+                .and_then(nonnegative_json_number_as_u64)
                 .unwrap_or(0)
         })
         .min()
         .unwrap_or(0);
     seen_metric.then_some(min)
+}
+
+fn nonnegative_json_number_as_u64(value: &Value) -> Option<u64> {
+    value.as_u64().or_else(|| {
+        value
+            .as_f64()
+            .filter(|value| *value >= 0.0)
+            .map(|value| value as u64)
+    })
 }
 
 fn artifact_cpu_sota_100x_contract_counts(artifact_report: &Value) -> (u64, u64) {
@@ -1684,6 +1693,39 @@ mod tests {
         assert!(
             backend_suite_artifact_status_issues(&status, &artifact).is_empty(),
             "Fix: matching suite status and artifact JSON should pass."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_accepts_float_metric_percentiles() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "selected_backend": "cuda",
+            "case_count": 1,
+            "failed_count": 0,
+            "requested_case_id": "release.condition_eval.1m",
+            "min_wall_samples": 30,
+            "min_wall_p50": 12,
+            "min_wall_p95": 20,
+            "min_wall_p99": 30
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "cuda",
+            "summary": {"failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "metrics": {
+                        "wall_ns": {"samples": 30, "p50": 12.75, "p95": 20.25, "p99": 30.875}
+                    }
+                }
+            ]
+        });
+
+        assert!(
+            backend_suite_artifact_status_issues(&status, &artifact).is_empty(),
+            "Fix: backend suite status verification must parse benchmark float percentiles the same way suite generation does."
         );
     }
 
