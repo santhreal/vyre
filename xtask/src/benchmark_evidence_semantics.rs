@@ -448,6 +448,30 @@ pub(crate) fn backend_suite_artifact_status_issues(
         _ => {}
     }
 
+    let status_nonmatching_backend_count = status
+        .get("nonmatching_case_backend_count")
+        .and_then(Value::as_u64);
+    let artifact_nonmatching_backend_count =
+        artifact_nonmatching_case_backend_count(status, artifact_report);
+    match (
+        status_nonmatching_backend_count,
+        artifact_nonmatching_backend_count,
+    ) {
+        (None, Some(_)) => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+            path: path.clone(),
+            field: "nonmatching_case_backend_count",
+        }),
+        (Some(status_value), Some(artifact_value)) if status_value != artifact_value => {
+            issues.push(BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                path: path.clone(),
+                field: "nonmatching_case_backend_count",
+                status_value,
+                artifact_value,
+            });
+        }
+        _ => {}
+    }
+
     let status_failed_count = status.get("failed_count").and_then(Value::as_u64);
     let artifact_failed_count = artifact_report
         .get("summary")
@@ -706,6 +730,24 @@ fn artifact_environment_first_gpu_u64(artifact_report: &Value, field: &str) -> O
     artifact_environment_first_gpu(artifact_report)?
         .get(field)
         .and_then(Value::as_u64)
+}
+
+fn artifact_nonmatching_case_backend_count(status: &Value, artifact_report: &Value) -> Option<u64> {
+    let expected_backend = status
+        .get("selected_backend")
+        .and_then(non_empty_str)
+        .or_else(|| {
+            artifact_report
+                .get("selected_backend")
+                .and_then(non_empty_str)
+        })?;
+    let cases = artifact_report.get("cases").and_then(Value::as_array)?;
+    Some(
+        cases
+            .iter()
+            .filter(|case| case.get("backend_id").and_then(Value::as_str) != Some(expected_backend))
+            .count() as u64,
+    )
 }
 
 fn artifact_min_metric_samples(artifact_report: &Value, metric_name: &str) -> Option<u64> {
@@ -1620,6 +1662,7 @@ mod tests {
             "selected_backend": "cuda",
             "case_count": 2,
             "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
             "requested_case_id": "release.condition_eval.1m"
         });
         let artifact = serde_json::json!({
@@ -1655,6 +1698,12 @@ mod tests {
                     status_case_count: 2,
                     artifact_case_count: 1,
                 },
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    field: "nonmatching_case_backend_count",
+                    status_value: 0,
+                    artifact_value: 1,
+                },
                 BackendSuiteArtifactStatusIssue::FailedCountMismatch {
                     path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
                     status_failed_count: 0,
@@ -1678,6 +1727,7 @@ mod tests {
             "selected_backend": "cuda",
             "case_count": 1,
             "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
             "requested_case_id": "release.condition_eval.1m"
         });
         let artifact = serde_json::json!({
@@ -1686,7 +1736,7 @@ mod tests {
             "selected_backend": "cuda",
             "summary": {"failed": 0},
             "cases": [
-                {"id": "release.condition_eval.1m"}
+                {"id": "release.condition_eval.1m", "backend_id": "cuda"}
             ]
         });
 
@@ -1703,6 +1753,7 @@ mod tests {
             "selected_backend": "cuda",
             "case_count": 1,
             "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
             "requested_case_id": "release.condition_eval.1m",
             "min_wall_samples": 30,
             "min_wall_p50": 12,
@@ -1726,6 +1777,36 @@ mod tests {
         assert!(
             backend_suite_artifact_status_issues(&status, &artifact).is_empty(),
             "Fix: backend suite status verification must parse benchmark float percentiles the same way suite generation does."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_backend_mismatch_counter_drift() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "selected_backend": "cuda",
+            "case_count": 1,
+            "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
+            "requested_case_id": "release.condition_eval.1m"
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "cuda",
+            "summary": {"failed": 0},
+            "cases": [
+                {"id": "release.condition_eval.1m", "backend_id": "wgpu"}
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                field: "nonmatching_case_backend_count",
+                status_value: 0,
+                artifact_value: 1,
+            }],
+            "Fix: backend suite status rows must not hide case-level backend drift."
         );
     }
 
@@ -1791,6 +1872,7 @@ mod tests {
                 "source_tree_fingerprint",
                 "selected_backend",
                 "case_count",
+                "nonmatching_case_backend_count",
                 "failed_count",
                 "min_wall_samples",
                 "min_baseline_wall_samples",
@@ -1822,6 +1904,7 @@ mod tests {
             "selected_backend": "wgpu",
             "case_count": 1,
             "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
             "requested_case_id": "release.condition_eval.1m",
             "min_wall_samples": 35,
             "min_wall_p50": 100,
@@ -1888,6 +1971,7 @@ mod tests {
             "selected_backend": "cuda",
             "case_count": 1,
             "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
             "requested_case_id": "release.condition_eval.1m",
             "host_cpu_model": "different CPU",
             "gpu_model": "different GPU",
@@ -1975,6 +2059,7 @@ mod tests {
             "selected_backend": "wgpu",
             "case_count": 1,
             "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
             "requested_case_id": "release.quantified_condition_loops.1m",
             "cpu_sota_100x_contract_cases": 1,
             "cpu_sota_100x_passing_cases": 1
@@ -2017,6 +2102,7 @@ mod tests {
             "selected_backend": "wgpu",
             "case_count": 1,
             "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
             "requested_case_id": "release.condition_eval.1m",
             "cpu_sota_100x_contract_cases": 1,
             "cpu_sota_100x_passing_cases": 1
@@ -2070,6 +2156,7 @@ mod tests {
             "selected_backend": "wgpu",
             "case_count": 1,
             "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
             "requested_case_id": "release.condition_eval.1m",
             "cpu_sota_100x_contract_cases": 1,
             "cpu_sota_100x_passing_cases": 1
