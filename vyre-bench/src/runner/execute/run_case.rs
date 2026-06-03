@@ -324,6 +324,14 @@ fn normalize_release_evidence_metrics(
     metrics: &mut BTreeMap<String, MetricStats>,
     backend_id: &str,
 ) {
+    if backend_id == "cuda" {
+        if let Some(input) = metrics.get("cuda_host_to_device_bytes").cloned() {
+            metrics.insert("host_to_device_bytes".to_string(), input);
+        }
+        if let Some(output) = metrics.get("cuda_device_to_host_bytes").cloned() {
+            metrics.insert("device_to_host_bytes".to_string(), output);
+        }
+    }
     if let Some(input) = metrics
         .get("input_bytes")
         .or_else(|| metrics.get("bytes_read"))
@@ -555,6 +563,56 @@ mod tests {
         assert_eq!(
             launch_stats.p50, 1,
             "Fix: launch fallback must remain for backends that do not expose a backend-specific launch counter."
+        );
+    }
+
+    #[test]
+    fn release_metrics_use_cuda_transfer_counters_before_logical_byte_fallbacks() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("bytes_read".to_string(), stats(12));
+        metrics.insert("bytes_written".to_string(), stats(4));
+        metrics.insert("cuda_host_to_device_bytes".to_string(), stats(48));
+        metrics.insert("cuda_device_to_host_bytes".to_string(), stats(16));
+
+        normalize_release_evidence_metrics(&mut metrics, "cuda");
+
+        let host_to_device = metrics
+            .get("host_to_device_bytes")
+            .expect("Fix: CUDA release reports must expose canonical host_to_device_bytes.");
+        assert_eq!(
+            host_to_device.p50, 48,
+            "Fix: canonical host_to_device_bytes must preserve CUDA transfer telemetry instead of logical input bytes."
+        );
+        let device_to_host = metrics
+            .get("device_to_host_bytes")
+            .expect("Fix: CUDA release reports must expose canonical device_to_host_bytes.");
+        assert_eq!(
+            device_to_host.p50, 16,
+            "Fix: canonical device_to_host_bytes must preserve CUDA transfer telemetry instead of logical output bytes."
+        );
+    }
+
+    #[test]
+    fn release_metrics_keep_logical_transfer_fallback_when_backend_has_no_transfer_counter() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("bytes_read".to_string(), stats(12));
+        metrics.insert("bytes_written".to_string(), stats(4));
+
+        normalize_release_evidence_metrics(&mut metrics, "wgpu");
+
+        let host_to_device = metrics
+            .get("host_to_device_bytes")
+            .expect("Fix: non-CPU release reports still need host_to_device_bytes.");
+        assert_eq!(
+            host_to_device.p50, 12,
+            "Fix: logical input-byte fallback must remain for backends without transfer telemetry."
+        );
+        let device_to_host = metrics
+            .get("device_to_host_bytes")
+            .expect("Fix: non-CPU release reports still need device_to_host_bytes.");
+        assert_eq!(
+            device_to_host.p50, 4,
+            "Fix: logical output-byte fallback must remain for backends without transfer telemetry."
         );
     }
 }
