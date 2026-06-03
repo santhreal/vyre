@@ -598,6 +598,28 @@ fn release_conformance_static_sizing_uses_packed_buffer_lengths() {
             "Fix: `{path}` must not size static dispatch buffers with min_bytes(); I4/FP4/NF4 buffers require packed byte lengths."
         );
     }
+
+    for path in [
+        "vyre-reference/src/execution/hashmap/mod.rs",
+        "vyre-reference/src/execution/hashmap/memory.rs",
+    ] {
+        let source = repo_file(path);
+        assert!(
+            source.contains(".static_byte_len()"),
+            "Fix: `{path}` must use BufferDecl::static_byte_len() so reference allocation mirrors packed backend buffer lengths."
+        );
+    }
+
+    for path in [
+        "vyre-reference/src/execution/hashmap/sync.rs",
+        "vyre-reference/src/oob.rs",
+    ] {
+        let source = repo_file(path);
+        assert!(
+            source.contains(".bit_width()"),
+            "Fix: `{path}` must compute logical element counts from DataType::bit_width() so sub-byte buffers report packed logical lengths."
+        );
+    }
 }
 
 #[test]

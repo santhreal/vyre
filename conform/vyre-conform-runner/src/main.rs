@@ -1054,13 +1054,13 @@ enum BackendInputSource {
     Fixture {
         fixture_index: usize,
         buffer_index: usize,
-        byte_len: usize,
+        byte_len: Option<usize>,
     },
     ReadWriteOrZero {
         fixture_index: usize,
         buffer_index: usize,
-        zero_index: usize,
-        byte_len: usize,
+        zero_index: Option<usize>,
+        byte_len: Option<usize>,
     },
 }
 
@@ -1083,9 +1083,14 @@ fn backend_dispatch_plan(program: &vyre::Program) -> Result<BackendDispatchPlan,
             continue;
         }
         if matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite) {
-            let byte_len = static_buffer_byte_len(buffer, "read-write witness buffer")?;
-            let zero_index = zeroed_inputs.len();
-            zeroed_inputs.push(vec![0u8; byte_len]);
+            let byte_len = fixture_backed_byte_len(buffer, "read-write witness buffer")?;
+            let zero_index = if let Some(byte_len) = byte_len {
+                let zero_index = zeroed_inputs.len();
+                zeroed_inputs.push(vec![0u8; byte_len]);
+                Some(zero_index)
+            } else {
+                None
+            };
             sources.push(BackendInputSource::ReadWriteOrZero {
                 fixture_index,
                 buffer_index,
@@ -1095,7 +1100,7 @@ fn backend_dispatch_plan(program: &vyre::Program) -> Result<BackendDispatchPlan,
             fixture_index += 1;
             continue;
         }
-        let byte_len = static_buffer_byte_len(buffer, "input witness buffer")?;
+        let byte_len = fixture_backed_byte_len(buffer, "input witness buffer")?;
         sources.push(BackendInputSource::Fixture {
             fixture_index,
             buffer_index,
@@ -1109,6 +1114,15 @@ fn backend_dispatch_plan(program: &vyre::Program) -> Result<BackendDispatchPlan,
         zeroed_inputs,
         buffer_len: program.buffers().len(),
     })
+}
+
+fn fixture_backed_byte_len(
+    buffer: &vyre::ir::BufferDecl,
+    role: &str,
+) -> Result<Option<usize>, String> {
+    buffer
+        .static_byte_len()
+        .map_err(|error| format!("{role} `{}`: {error}", buffer.name()))
 }
 
 fn static_buffer_byte_len(buffer: &vyre::ir::BufferDecl, role: &str) -> Result<usize, String> {
@@ -1169,11 +1183,18 @@ fn backend_dispatch_inputs_with_plan_into<'a>(
                     backend_inputs.push(bytes.as_slice());
                     continue;
                 }
-                if let Some(bytes) = plan.zeroed_inputs.get(*zero_index) {
-                    backend_inputs.push(bytes.as_slice());
-                    continue;
+                if let Some(zero_index) = zero_index {
+                    if let Some(bytes) = plan.zeroed_inputs.get(*zero_index) {
+                        backend_inputs.push(bytes.as_slice());
+                        continue;
+                    }
+                    return Err(
+                        "internal plan mismatch: zeroed input index is invalid.".to_string()
+                    );
                 }
-                return Err("internal plan mismatch: zeroed input index is invalid.".to_string());
+                return Err(format!(
+                    "witness omitted runtime-sized read-write buffer at fixture index `{fixture_index}` / program index `{buffer_index}`. Fix: provide concrete fixture bytes because dynamic read-write buffers cannot be zero-initialized without a byte length."
+                ));
             }
         }
     }
@@ -1184,18 +1205,79 @@ fn matching_fixture_bytes<'a>(
     fixture_inputs: &'a [Vec<u8>],
     buffer_index: usize,
     fixture_index: usize,
-    byte_len: usize,
+    byte_len: Option<usize>,
 ) -> Option<&'a Vec<u8>> {
+    if let Some(byte_len) = byte_len {
+        return fixture_inputs
+            .get(buffer_index)
+            .filter(|bytes| bytes.len() == byte_len)
+            .or_else(|| {
+                fixture_inputs
+                    .get(fixture_index)
+                    .filter(|bytes| bytes.len() == byte_len)
+            })
+            .or_else(|| fixture_inputs.get(fixture_index))
+            .or_else(|| fixture_inputs.get(buffer_index));
+    }
     fixture_inputs
-        .get(buffer_index)
-        .filter(|bytes| bytes.len() == byte_len)
-        .or_else(|| {
-            fixture_inputs
-                .get(fixture_index)
-                .filter(|bytes| bytes.len() == byte_len)
-        })
-        .or_else(|| fixture_inputs.get(fixture_index))
+        .get(fixture_index)
         .or_else(|| fixture_inputs.get(buffer_index))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
+
+    #[test]
+    fn backend_dispatch_plan_accepts_fixture_backed_runtime_sized_read_input() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32),
+                BufferDecl::output("out", 1, DataType::U32).with_count(1),
+            ],
+            [1, 1, 1],
+            Vec::<Node>::new(),
+        );
+        let plan = backend_dispatch_plan(&program)
+            .expect("Fix: runtime-sized read-only buffers must be fixture-backed, not rejected.");
+        let case = vec![vec![0xA5; 12]];
+        let mut backend_inputs = Vec::new();
+
+        backend_dispatch_inputs_with_plan_into(&case, &plan, &mut backend_inputs)
+            .expect("Fix: concrete fixture bytes must satisfy a runtime-sized input buffer.");
+
+        assert_eq!(
+            backend_inputs,
+            vec![case[0].as_slice()],
+            "Fix: dynamic fixture-backed inputs must be passed through byte-exactly."
+        );
+    }
+
+    #[test]
+    fn backend_dispatch_plan_rejects_omitted_runtime_sized_read_write_input() {
+        let program = Program::wrapped(
+            vec![BufferDecl::storage(
+                "scratch",
+                0,
+                BufferAccess::ReadWrite,
+                DataType::U32,
+            )],
+            [1, 1, 1],
+            Vec::<Node>::new(),
+        );
+        let plan = backend_dispatch_plan(&program)
+            .expect("Fix: dynamic read-write buffers may be fixture-backed per case.");
+        let mut backend_inputs = Vec::new();
+
+        let error = backend_dispatch_inputs_with_plan_into(&[], &plan, &mut backend_inputs)
+            .expect_err("Fix: omitted dynamic read-write input must not be silently zeroed.");
+
+        assert!(
+            error.contains("runtime-sized read-write buffer"),
+            "Fix: error must explain that dynamic read-write buffers need concrete fixture bytes, got: {error}"
+        );
+    }
 }
 
 fn synthesize_witness_cases(program: &vyre::Program) -> Result<FixtureCases, String> {
