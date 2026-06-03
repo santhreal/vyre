@@ -362,14 +362,26 @@ fn infer_optimization_passes_applied(
     backend_id: &str,
 ) -> Vec<String> {
     let mut passes = Vec::new();
+    let metric_positive = |name: &str| metrics.get(name).is_some_and(|stats| stats.max > 0);
     if backend_id == "cuda" {
         passes.push("cuda-explicit-backend-selection".to_string());
     }
     if metrics.contains_key("cache_hit") || metrics.contains_key("cold_cache_lookup_ns") {
         passes.push("pipeline-cache-lookup".to_string());
     }
-    if metrics.contains_key("cuda_ptx_source_cache_hits") {
+    if metric_positive("cuda_ptx_source_cache_hits") {
         passes.push("cuda-ptx-source-cache".to_string());
+    }
+    if metric_positive("cuda_graph_launches") {
+        passes.push("cuda-graph-replay".to_string());
+    }
+    if metric_positive("cuda_graph_materialized_cache_hits") {
+        passes.push("cuda-graph-materialized-output-cache".to_string());
+    }
+    if metric_positive("cuda_host_upload_operations")
+        || metric_positive("cuda_device_readback_operations")
+    {
+        passes.push("cuda-transfer-operation-telemetry".to_string());
     }
     if metrics.contains_key("optimize_ns") || metrics.contains_key("cold_optimize_ns") {
         passes.push("optimizer-pipeline".to_string());
@@ -442,5 +454,69 @@ pub(super) fn evaluate_contract(
         speedup_x,
         contract_passed: violations.is_empty(),
         violations,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn stats(value: u64) -> MetricStats {
+        single_sample_stats(value)
+    }
+
+    #[test]
+    fn cuda_graph_backend_metrics_are_reported_as_release_path_passes() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("cuda_ptx_source_cache_hits".to_string(), stats(1));
+        metrics.insert("cuda_graph_launches".to_string(), stats(3));
+        metrics.insert("cuda_graph_materialized_cache_hits".to_string(), stats(2));
+        metrics.insert("cuda_host_upload_operations".to_string(), stats(4));
+        metrics.insert("cuda_device_readback_operations".to_string(), stats(1));
+
+        let passes = infer_optimization_passes_applied(&metrics, "cuda");
+
+        for expected in [
+            "cuda-explicit-backend-selection",
+            "cuda-graph-replay",
+            "cuda-graph-materialized-output-cache",
+            "cuda-ptx-source-cache",
+            "cuda-transfer-operation-telemetry",
+        ] {
+            assert!(
+                passes.iter().any(|pass| pass == expected),
+                "Fix: CUDA benchmark reports must label `{expected}` when backend telemetry exposes the release-path metric."
+            );
+        }
+    }
+
+    #[test]
+    fn cuda_graph_backend_passes_require_positive_release_path_counters() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("cuda_ptx_source_cache_hits".to_string(), stats(0));
+        metrics.insert("cuda_graph_launches".to_string(), stats(0));
+        metrics.insert("cuda_graph_materialized_cache_hits".to_string(), stats(0));
+        metrics.insert("cuda_host_upload_operations".to_string(), stats(0));
+        metrics.insert("cuda_device_readback_operations".to_string(), stats(0));
+
+        let passes = infer_optimization_passes_applied(&metrics, "cuda");
+
+        for absent in [
+            "cuda-graph-replay",
+            "cuda-graph-materialized-output-cache",
+            "cuda-ptx-source-cache",
+            "cuda-transfer-operation-telemetry",
+        ] {
+            assert!(
+                !passes.iter().any(|pass| pass == absent),
+                "Fix: CUDA benchmark reports must not label `{absent}` when telemetry exposes only zero observations."
+            );
+        }
+        assert!(
+            passes
+                .iter()
+                .any(|pass| pass == "cuda-explicit-backend-selection"),
+            "Fix: explicit CUDA backend selection is independent of per-counter activity."
+        );
     }
 }

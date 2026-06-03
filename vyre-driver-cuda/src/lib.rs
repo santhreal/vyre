@@ -502,7 +502,6 @@ impl CudaBackendRegistration {
     }
 }
 
-
 impl vyre_driver::backend::private::Sealed for CudaBackendRegistration {}
 
 impl VyreBackend for CudaBackendRegistration {
@@ -938,6 +937,51 @@ impl VyreBackend for CudaBackendRegistration {
         metrics.push(("cuda_ptx_source_cache_hits", source_cache.hits));
         metrics.push(("cuda_ptx_source_cache_misses", source_cache.misses));
         let telemetry = self.inner.telemetry_snapshot();
+        metrics.push(("cuda_graph_launches", telemetry.cuda_graph_launches));
+        metrics.push((
+            "cuda_graph_materialized_cache_hits",
+            telemetry.cuda_graph_materialized_cache_hits,
+        ));
+        metrics.push((
+            "cuda_graph_batched_replay_chunks",
+            telemetry.cuda_graph_batched_replay_chunks,
+        ));
+        metrics.push((
+            "cuda_graph_batched_replay_lanes",
+            telemetry.cuda_graph_batched_replay_lanes,
+        ));
+        metrics.push(("cuda_host_to_device_bytes", telemetry.host_to_device_bytes));
+        metrics.push(("cuda_device_to_host_bytes", telemetry.device_to_host_bytes));
+        metrics.push(("cuda_readback_bytes", telemetry.readback_bytes));
+        metrics.push(("cuda_param_upload_bytes", telemetry.param_upload_bytes));
+        metrics.push(("cuda_kernel_launches", telemetry.kernel_launches));
+        metrics.push(("cuda_sync_points", telemetry.sync_points));
+        metrics.push((
+            "cuda_host_upload_operations",
+            telemetry.host_upload_operations,
+        ));
+        metrics.push((
+            "cuda_device_readback_operations",
+            telemetry.device_readback_operations,
+        ));
+        metrics.push((
+            "cuda_resident_borrowed_fallback_dispatches",
+            telemetry.resident_borrowed_fallback_dispatches,
+        ));
+        metrics.push(("cuda_launched_elements", telemetry.launched_elements));
+        metrics.push(("cuda_wasted_thread_slots", telemetry.wasted_thread_slots));
+        metrics.push((
+            "cuda_logical_thread_utilization_bps",
+            u64::from(telemetry.logical_thread_utilization_bps),
+        ));
+        metrics.push((
+            "cuda_logical_thread_waste_bps",
+            u64::from(telemetry.logical_thread_waste_bps),
+        ));
+        metrics.push((
+            "cuda_logical_elements_per_thread_slot_bps",
+            telemetry.logical_elements_per_thread_slot_bps,
+        ));
         metrics.push(("cuda_timed_dispatches", telemetry.timed_dispatches));
         metrics.push((
             "cuda_timed_device_measurements",
@@ -1261,6 +1305,52 @@ mod tests {
                 && repeated_sequence.contains("validate_resident_steps_for_dispatch(repeated_steps)?"),
             "Fix: CUDA repeated resident sequence dispatch must validate both prefix and repeated step Programs before launch."
         );
+    }
+
+    #[test]
+    fn backend_metric_snapshot_exposes_cuda_release_path_counters() {
+        let source = include_str!("lib.rs");
+        let snapshot = method_region(
+            source,
+            "    fn backend_metric_snapshot(&self) -> Vec<(&'static str, u64)> {\n",
+            "    fn supports_subgroup_ops(",
+        );
+        for metric in [
+            "cuda_ptx_source_cache_entries",
+            "cuda_ptx_source_cache_hits",
+            "cuda_ptx_source_cache_misses",
+            "cuda_graph_launches",
+            "cuda_graph_materialized_cache_hits",
+            "cuda_graph_batched_replay_chunks",
+            "cuda_graph_batched_replay_lanes",
+            "cuda_host_to_device_bytes",
+            "cuda_device_to_host_bytes",
+            "cuda_readback_bytes",
+            "cuda_param_upload_bytes",
+            "cuda_kernel_launches",
+            "cuda_sync_points",
+            "cuda_host_upload_operations",
+            "cuda_device_readback_operations",
+            "cuda_resident_borrowed_fallback_dispatches",
+            "cuda_launched_elements",
+            "cuda_wasted_thread_slots",
+            "cuda_logical_thread_utilization_bps",
+            "cuda_logical_thread_waste_bps",
+            "cuda_logical_elements_per_thread_slot_bps",
+            "cuda_timed_dispatches",
+            "cuda_timed_device_measurements",
+            "cuda_timed_dispatches_missing_device_time",
+            "cuda_timed_wall_ns_total",
+            "cuda_timed_device_ns_total",
+            "cuda_timed_device_ns_max",
+            "cuda_timed_enqueue_ns_total",
+            "cuda_timed_wait_ns_total",
+        ] {
+            assert!(
+                snapshot.contains(metric),
+                "Fix: CUDA backend_metric_snapshot must expose `{metric}` so release benchmark JSON can gate CUDA graph, transfer, readback, timing, and utilization behavior."
+            );
+        }
     }
 
     fn method_region<'a>(source: &'a str, start: &str, end: &str) -> &'a str {
