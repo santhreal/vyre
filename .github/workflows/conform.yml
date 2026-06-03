@@ -83,7 +83,7 @@ jobs:
 
       - name: conformance matrix evidence
         shell: bash
-        run: cargo run --bin xtask -- conformance-matrix --output release/evidence/conformance/conformance-matrix.json
+        run: cargo_full run --bin xtask -- conformance-matrix --output release/evidence/conformance/conformance-matrix.json
 
   conform-release-gate:
     name: Conform release gate
@@ -102,7 +102,7 @@ jobs:
 
       - name: conformance matrix release blocker
         shell: bash
-        run: cargo run --bin xtask -- conformance-matrix --output release/evidence/conformance/conformance-matrix.json
+        run: cargo_full run --bin xtask -- conformance-matrix --output release/evidence/conformance/conformance-matrix.json
 
       - name: conform gate passed
         shell: bash

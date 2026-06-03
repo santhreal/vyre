@@ -98,7 +98,13 @@ pub(crate) fn run_hashmap_reference(
         if decl.binding() == 0 && decl.name() == "pg_nodes" {
             program_graph_node_count = Some(decl.count());
         }
-        let stride = decl.element().min_bytes();
+        let stride = decl.element().size_bytes().ok_or_else(|| {
+            Error::interp(format!(
+                "buffer `{}` has unsized element type {}. Fix: provide a fixed-width buffer element type before invoking the reference interpreter.",
+                decl.name(),
+                decl.element()
+            ))
+        })?;
         let min_bytes = (decl.count() as usize).checked_mul(stride).ok_or_else(|| {
             Error::interp(format!(
                 "buffer `{}` declared byte size overflows usize ({} elements of {}). Fix: reduce the buffer count or use a narrower element type.",

@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
-  "op_count": 606,
-  "distinct_op_count": 606,
+  "op_count": 607,
+  "distinct_op_count": 607,
   "catalog_required_op_count": 604,
   "catalog_covered_op_count": 604,
   "missing_catalog_ops": [],
@@ -1834,8 +1834,8 @@
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
   "duplicate_op_ids": [],
-  "fixture_input_count": 606,
-  "expected_output_count": 606,
+  "fixture_input_count": 607,
+  "expected_output_count": 607,
   "dispatch_backends": [
     "cuda",
     "spirv",
@@ -5028,6 +5028,12 @@
     },
     {
       "id": "vyre-primitives::graph::csr_frontier_degree_sum",
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-primitives::graph::csr_queue_strided_forward_traverse",
       "has_test_inputs": true,
       "has_expected_output": true,
       "tolerance_ulp": 0

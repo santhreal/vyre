@@ -246,24 +246,6 @@ fn dispatch_pairs(backend_id: &str, ops: &str) -> Result<Vec<PairResult>, String
         ));
     }
 
-    let backend = match acquire_backend(&backend_id) {
-        Ok(backend) => backend,
-        Err(error) => {
-            pairs.reserve(selected_entries.len());
-            for entry in &selected_entries {
-                pairs.push(PairResult {
-                    op_id: entry.id.into(),
-                    backend_id: backend_id.clone(),
-                    passed: false,
-                    message: format!(
-                        "backend acquisition failed before dispatch: {error}. Fix: isolate or reset the backend after the preceding failing op, then repair the op that poisoned device state."
-                    ),
-                });
-            }
-            return Ok(pairs);
-        }
-    };
-
     pairs.reserve(selected_entries.len());
     for entry in selected_entries {
         let prepared = match prepare_entry(entry) {
@@ -274,6 +256,20 @@ fn dispatch_pairs(backend_id: &str, ops: &str) -> Result<Vec<PairResult>, String
                     backend_id: backend_id.clone(),
                     passed: false,
                     message: error,
+                });
+                continue;
+            }
+        };
+        let backend = match acquire_backend(&backend_id) {
+            Ok(backend) => backend,
+            Err(error) => {
+                pairs.push(PairResult {
+                    op_id: entry.id.into(),
+                    backend_id: backend_id.clone(),
+                    passed: false,
+                    message: format!(
+                        "backend acquisition failed before dispatch: {error}. Fix: isolate or reset the backend after the preceding failing op, then repair the op that poisoned device state."
+                    ),
                 });
                 continue;
             }
@@ -454,7 +450,6 @@ fn select_entries(
     }
     Ok(selected)
 }
-
 
 fn is_reference_backend(backend_id: &str) -> bool {
     backend_id == "cpu-ref" || backend_id == "reference"
@@ -840,21 +835,15 @@ fn prove_one_backend(
                         .map(|(index, entry)| {
                             emit_pair_proof_start(backend.id, entry.id);
                             let pair_started = std::time::Instant::now();
-                            let pair = compare_backend_against_reference(
-                                instance,
-                                &backend.id,
-                                entry,
-                            );
+                            let pair =
+                                compare_backend_against_reference(instance, &backend.id, entry);
                             emit_pair_proof_timing(
                                 backend.id,
                                 entry.id,
                                 pair.passed,
                                 pair_started.elapsed(),
                             );
-                            (
-                                index,
-                                pair,
-                            )
+                            (index, pair)
                         })
                         .collect::<Vec<_>>()
                 }),
@@ -943,7 +932,6 @@ fn prepare_reference_cases(
     }
     Ok(reference_cases)
 }
-
 
 fn compare_backend_against_reference(
     backend: &dyn VyreBackend,
@@ -1095,15 +1083,7 @@ fn backend_dispatch_plan(program: &vyre::Program) -> Result<BackendDispatchPlan,
             continue;
         }
         if matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite) {
-            let byte_len = usize::try_from(buffer.count())
-                .ok()
-                .and_then(|count| count.checked_mul(buffer.element().min_bytes()))
-                .ok_or_else(|| {
-                    format!(
-                        "witness omitted read-write buffer `{}` and its static byte length overflows. Fix: add fixture bytes for this buffer.",
-                        buffer.name()
-                    )
-                })?;
+            let byte_len = static_buffer_byte_len(buffer, "read-write witness buffer")?;
             let zero_index = zeroed_inputs.len();
             zeroed_inputs.push(vec![0u8; byte_len]);
             sources.push(BackendInputSource::ReadWriteOrZero {
@@ -1115,15 +1095,7 @@ fn backend_dispatch_plan(program: &vyre::Program) -> Result<BackendDispatchPlan,
             fixture_index += 1;
             continue;
         }
-        let byte_len = usize::try_from(buffer.count())
-            .ok()
-            .and_then(|count| count.checked_mul(buffer.element().min_bytes()))
-            .ok_or_else(|| {
-                format!(
-                    "input buffer `{}` static byte length overflows. Fix: add explicit fixture bytes for this buffer.",
-                    buffer.name()
-                )
-            })?;
+        let byte_len = static_buffer_byte_len(buffer, "input witness buffer")?;
         sources.push(BackendInputSource::Fixture {
             fixture_index,
             buffer_index,
@@ -1137,6 +1109,25 @@ fn backend_dispatch_plan(program: &vyre::Program) -> Result<BackendDispatchPlan,
         zeroed_inputs,
         buffer_len: program.buffers().len(),
     })
+}
+
+fn static_buffer_byte_len(buffer: &vyre::ir::BufferDecl, role: &str) -> Result<usize, String> {
+    let element_size = buffer.element().size_bytes().ok_or_else(|| {
+        format!(
+            "{role} `{}` has unsized element type `{:?}`. Fix: provide explicit witness bytes for dynamically sized element buffers.",
+            buffer.name(),
+            buffer.element()
+        )
+    })?;
+    usize::try_from(buffer.count())
+        .ok()
+        .and_then(|count| count.checked_mul(element_size))
+        .ok_or_else(|| {
+            format!(
+                "{role} `{}` static byte length overflows. Fix: add explicit fixture bytes for this buffer.",
+                buffer.name()
+            )
+        })
 }
 
 fn backend_dispatch_inputs_with_plan_into<'a>(
@@ -1224,15 +1215,7 @@ fn synthesize_witness_cases(program: &vyre::Program) -> Result<FixtureCases, Str
         {
             continue;
         }
-        let byte_len = usize::try_from(buffer.count())
-            .ok()
-            .and_then(|count| count.checked_mul(buffer.element().min_bytes()))
-            .ok_or_else(|| {
-                format!(
-                    "synthetic witness overflowed buffer `{}`. Fix: provide explicit test_inputs for this op.",
-                    buffer.name()
-                )
-            })?;
+        let byte_len = static_buffer_byte_len(buffer, "synthetic witness buffer")?;
         if byte_len == 0 {
             return Err(format!(
                 "missing test_inputs for dynamically sized buffer `{}`. Fix: provide explicit witness bytes because synthetic conformance cannot infer runtime length.",
@@ -1560,7 +1543,6 @@ fn merge_certificates(args: impl IntoIterator<Item = String>) -> Result<(), Stri
     })?;
     write_json_artifact(&out, json, "merged prove artifact")
 }
-
 
 fn read_and_verify_shard(path: &str) -> Result<VerifiedShard, String> {
     let json = std::fs::read_to_string(path).map_err(|error| {
@@ -1952,4 +1934,3 @@ fn hash_optional_usize(hasher: &mut blake3::Hasher, value: Option<usize>) {
         }
     }
 }
-

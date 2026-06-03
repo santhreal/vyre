@@ -51,7 +51,13 @@ pub(crate) fn verify_uniform_control_flow(
 }
 
 pub(crate) fn element_count(decl: &BufferDecl, byte_len: usize) -> Result<u32, Error> {
-    let stride = decl.element().min_bytes();
+    let Some(stride) = decl.element().size_bytes() else {
+        return Err(Error::interp(format!(
+            "buffer `{}` has unsized element type {}. Fix: provide a fixed-width buffer element type before invoking the reference interpreter.",
+            decl.name(),
+            decl.element()
+        )));
+    };
     if stride == 0 {
         return u32 :: try_from (byte_len) . map_err (| _ | { Error :: interp (format ! ("buffer `{}` has {} bytes and cannot be indexed within u32 address space. Fix: shrink or split the invocation." , decl . name () , byte_len ,)) }) ;
     }

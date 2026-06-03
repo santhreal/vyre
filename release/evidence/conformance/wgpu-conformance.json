@@ -1,10 +1,10 @@
 {
   "schema_version": 2,
   "backend_id": "wgpu",
-  "command": "cargo run -p vyre-conform-runner --release --features gpu --bin vyre-conform-runner -- dispatch --backend wgpu --ops all",
+  "command": "/tmp/cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform-runner -- dispatch --backend wgpu --ops all",
   "stdout_diagnostics": [],
-  "total_pairs": 599,
-  "distinct_op_count": 599,
+  "total_pairs": 607,
+  "distinct_op_count": 607,
   "catalog_required_op_count": 604,
   "catalog_covered_op_count": 604,
   "missing_catalog_ops": [],
@@ -1836,7 +1836,7 @@
   "op_matrix_blocked_release_count": 0,
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
-  "passed_pairs": 599,
+  "passed_pairs": 607,
   "failed_pairs": 0,
   "duplicate_op_ids": [],
   "pairs": [
@@ -4835,6 +4835,12 @@
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
     },
     {
+      "op_id": "vyre-primitives::graph::csr_queue_strided_forward_traverse",
+      "backend_id": "wgpu",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
       "op_id": "vyre-primitives::graph::dominator_frontier",
       "backend_id": "wgpu",
       "passed": true,
@@ -5076,6 +5082,48 @@
     },
     {
       "op_id": "vyre-primitives::math::qsvt_block_encode",
+      "backend_id": "wgpu",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::quantized::i4x8_batched_matmul_f32_scaled",
+      "backend_id": "wgpu",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled",
+      "backend_id": "wgpu",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::quantized::i4x8_batched_matvec_f32_scaled",
+      "backend_id": "wgpu",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::quantized::i4x8_dot_f32_scaled",
+      "backend_id": "wgpu",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::quantized::i4x8_dot_i32",
+      "backend_id": "wgpu",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled",
+      "backend_id": "wgpu",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
+    },
+    {
+      "op_id": "vyre-primitives::math::quantized::unpack_i4x8",
       "backend_id": "wgpu",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"

@@ -166,7 +166,8 @@ fn release_conformance_artifacts_prove_three_backend_catalog_completeness() {
                 .is_some_and(Vec::is_empty),
             "Fix: `{artifact}` must not carry ignored stdout diagnostics."
         );
-        assert_runtime_dialect_pairs(&json, backend_id, artifact);
+        assert_conformance_artifact_has_no_failures(&json, artifact);
+        assert_runtime_dialect_rows(&json, backend_id, artifact);
         let rows = release_backend_rows(&json, &artifact_path);
         assert_eq!(
             rows, expected_rows,
@@ -175,32 +176,58 @@ fn release_conformance_artifacts_prove_three_backend_catalog_completeness() {
     }
 }
 
-fn assert_runtime_dialect_pairs(json: &Value, backend_id: &str, label: &str) {
+fn assert_conformance_artifact_has_no_failures(json: &Value, label: &str) {
+    let total_pairs = json_usize(json, "total_pairs", label)
+        .unwrap_or_else(|| panic!("Fix: `{label}` must define total_pairs."));
+    let passed_pairs = json_usize(json, "passed_pairs", label)
+        .unwrap_or_else(|| panic!("Fix: `{label}` must define passed_pairs."));
+    let failed_pairs = json_usize(json, "failed_pairs", label)
+        .unwrap_or_else(|| panic!("Fix: `{label}` must define failed_pairs."));
+    assert_eq!(
+        failed_pairs, 0,
+        "Fix: `{label}` must not ship a release conformance artifact with failing pairs."
+    );
+    assert_eq!(
+        passed_pairs, total_pairs,
+        "Fix: `{label}` passed_pairs must equal total_pairs."
+    );
+    assert!(
+        json["blockers"].as_array().is_some_and(Vec::is_empty),
+        "Fix: `{label}` must not ship release conformance blockers."
+    );
     let pairs = json["pairs"]
         .as_array()
         .unwrap_or_else(|| panic!("Fix: `{label}` must include conformance pairs."));
-    for op in RUNTIME_DIALECT_CONTRACT_OPS {
-        let pair = pairs
-            .iter()
-            .find(|pair| pair["op_id"].as_str() == Some(*op))
-            .unwrap_or_else(|| {
-                panic!("Fix: `{label}` must include runtime dialect contract pair `{op}`.")
-            });
-        assert_eq!(
-            pair["backend_id"], backend_id,
-            "Fix: runtime dialect contract pair `{op}` in `{label}` must target `{backend_id}`."
-        );
+    assert_eq!(
+        pairs.len(),
+        total_pairs,
+        "Fix: `{label}` total_pairs must match the pairs array length."
+    );
+    for pair in pairs {
         assert_eq!(
             pair["passed"], true,
-            "Fix: runtime dialect contract pair `{op}` in `{label}` must pass."
+            "Fix: `{label}` pair ({:?}, {:?}) must pass before release evidence is accepted.",
+            pair["backend_id"], pair["op_id"]
         );
-        let message = pair["message"].as_str().unwrap_or_else(|| {
-            panic!("Fix: runtime dialect contract pair `{op}` needs a message.")
-        });
+    }
+}
+
+fn assert_runtime_dialect_rows(json: &Value, backend_id: &str, label: &str) {
+    let rows = release_backend_rows(json, label);
+    let matrix_backend_id = match backend_id {
+        "cpu-ref" => "reference",
+        other => other,
+    };
+    let expected_status = match matrix_backend_id {
+        "reference" => "not_applicable",
+        "cuda" | "wgpu" => "experimental",
+        other => panic!("Fix: unknown release backend `{other}` in `{label}`."),
+    };
+    for op in RUNTIME_DIALECT_CONTRACT_OPS {
+        let row = format!("{op}:{matrix_backend_id}:{expected_status}");
         assert!(
-            message.contains("runtime dialect contract verified")
-                && message.contains("no CPU fallback dispatch was invoked"),
-            "Fix: runtime dialect contract pair `{op}` in `{label}` must prove no hidden CPU fallback, got `{message}`."
+            rows.contains(&row),
+            "Fix: `{label}` must include runtime dialect release row `{row}`."
         );
     }
 }
@@ -378,10 +405,9 @@ fn cuda_parity_gate_documents_int4_gpu_parity_coverage() {
         "Fix: CUDA parity gate must auto-discover INT4 gpu_parity integration tests."
     );
 
-    let evidence: serde_json::Value = serde_json::from_str(&repo_file(
-        "release/evidence/tests/cuda-release-gate.json",
-    ))
-    .expect("Fix: CUDA release gate evidence must be valid JSON.");
+    let evidence: serde_json::Value =
+        serde_json::from_str(&repo_file("release/evidence/tests/cuda-release-gate.json"))
+            .expect("Fix: CUDA release gate evidence must be valid JSON.");
     let int4_ops = evidence["int4_conformance_ops"]
         .as_array()
         .expect("Fix: cuda-release-gate.json must list int4_conformance_ops.");
@@ -522,6 +548,36 @@ fn conformance_tests_use_wrapped_backend_acquisition() {
         findings.is_empty(),
         "Fix: conformance runner code must call BackendRegistration::acquire() so grid-sync split and backend wrappers are applied:\n{}",
         findings.join("\n")
+    );
+}
+
+#[test]
+fn dispatch_conformance_isolates_backend_instance_per_pair() {
+    let source = repo_file("conform/vyre-conform-runner/src/main.rs");
+    let dispatch_start = source
+        .find("fn dispatch_pairs(")
+        .expect("Fix: conformance runner must expose dispatch_pairs.");
+    let dispatch_end = source[dispatch_start..]
+        .find("fn acquire_backend(")
+        .map(|offset| dispatch_start + offset)
+        .expect("Fix: dispatch_pairs must remain before acquire_backend.");
+    let dispatch = &source[dispatch_start..dispatch_end];
+    let prepare_pos = dispatch
+        .find("let prepared = match prepare_entry(entry)")
+        .expect("Fix: dispatch_pairs must prepare each entry before backend comparison.");
+    let acquire_pos = dispatch
+        .find("let backend = match acquire_backend(&backend_id)")
+        .expect("Fix: dispatch_pairs must acquire the selected backend.");
+    let compare_pos = dispatch
+        .find("compare_backend_against_reference(")
+        .expect("Fix: dispatch_pairs must compare backend output against reference.");
+    assert!(
+        prepare_pos < acquire_pos && acquire_pos < compare_pos,
+        "Fix: dispatch conformance must acquire a fresh backend per prepared pair so a poisoned CUDA instance cannot taint later release evidence."
+    );
+    assert!(
+        !dispatch[..prepare_pos].contains("acquire_backend(&backend_id)"),
+        "Fix: dispatch conformance must not share one backend instance across all selected pairs."
     );
 }
 
@@ -677,4 +733,3 @@ fn concrete_driver_crates() -> Vec<String> {
         })
         .collect()
 }
-
