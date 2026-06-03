@@ -1,5 +1,29 @@
 {
-  "blockers": [],
+  "blockers": [
+    "100x source artifact `release/evidence/benchmarks/workload-01-condition-eval.json` source_fingerprint `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` source_fingerprint `git:353daa21fd8cc5a75d7e119e517bb03f5560103f:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` source_fingerprint `git:353daa21fd8cc5a75d7e119e517bb03f5560103f:dirty=true` does not match aggregate source `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true`",
+    "100x source artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match aggregate source `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true`",
+    "100x source artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match aggregate source `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true`",
+    "100x source artifact `release/evidence/benchmarks/workload-05-entropy-window.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-05-entropy-window.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match aggregate source `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true`",
+    "100x source artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match aggregate source `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true`",
+    "100x source artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match aggregate source `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true`",
+    "100x source artifact `release/evidence/benchmarks/workload-08-ifds-witness.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-08-ifds-witness.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match aggregate source `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true`",
+    "100x source artifact `release/evidence/benchmarks/workload-09-c-ast-traversal.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-09-c-ast-traversal.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match aggregate source `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true`",
+    "100x source artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match aggregate source `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true`",
+    "100x source artifact `release/evidence/benchmarks/workload-11-egraph-saturation.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-11-egraph-saturation.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match aggregate source `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true`",
+    "100x source artifact `release/evidence/benchmarks/workload-12-sparse-output-compaction.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is not release-grade provenance",
+    "100x source artifact `release/evidence/benchmarks/workload-12-sparse-output-compaction.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match aggregate source `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true`"
+  ],
   "cases": [
     {
       "artifacts": [],

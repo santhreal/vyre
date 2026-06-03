@@ -1,4 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
@@ -7,6 +9,7 @@ use serde_json::{Map, Value};
 static CURRENT_SOURCE_FINGERPRINTS: OnceLock<Mutex<BTreeMap<PathBuf, String>>> = OnceLock::new();
 static CURRENT_SOURCE_TREE_FINGERPRINTS: OnceLock<Mutex<BTreeMap<PathBuf, String>>> =
     OnceLock::new();
+const MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES: u64 = 16_777_216;
 
 pub(crate) fn benchmark_case_failure_reason(case: &Value) -> Option<String> {
     let status = case.get("status").and_then(Value::as_str);
@@ -113,6 +116,155 @@ pub(crate) fn benchmark_duplicate_source_artifact_paths(report: &Value) -> BTree
                 })
                 .collect::<BTreeSet<_>>()
         })
+}
+
+pub(crate) fn cuda_release_axes_source_artifact_issues(
+    workspace_root: &Path,
+    axes: &Value,
+    cuda_suite: &Value,
+) -> Vec<String> {
+    let mut issues = Vec::new();
+    let source_artifacts = release_axes_source_artifacts(axes, &mut issues);
+    if source_artifacts.len() < 12 {
+        issues.push(format!(
+            "source_artifacts has {} CUDA workload artifact(s), needs at least 12",
+            source_artifacts.len()
+        ));
+    }
+
+    let suite_artifacts = cuda_suite_artifact_paths(cuda_suite, &mut issues);
+    if suite_artifacts.is_empty() {
+        issues.push("cuda-release-suite artifacts are empty or missing".to_string());
+    }
+    for artifact in source_artifacts.difference(&suite_artifacts) {
+        issues.push(format!(
+            "source_artifact `{artifact}` is not listed in cuda-release-suite artifacts"
+        ));
+    }
+    for artifact in suite_artifacts.difference(&source_artifacts) {
+        issues.push(format!(
+            "cuda-release-suite artifact `{artifact}` is absent from bench-release-axes source_artifacts"
+        ));
+    }
+
+    for artifact in source_artifacts {
+        let artifact_path = resolve_benchmark_artifact_path(workspace_root, &artifact);
+        if !artifact_path.is_file() {
+            issues.push(format!(
+                "source_artifact `{artifact}` is not a readable file at {}",
+                artifact_path.display()
+            ));
+            continue;
+        }
+        let text =
+            match read_text_bounded(&artifact_path, MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES) {
+                Ok(text) => text,
+                Err(error) => {
+                    issues.push(format!(
+                        "source_artifact `{artifact}` is unreadable: {error}"
+                    ));
+                    continue;
+                }
+            };
+        let report = match serde_json::from_str::<Value>(&text) {
+            Ok(report) => report,
+            Err(error) => {
+                issues.push(format!(
+                    "source_artifact `{artifact}` is invalid JSON: {error}"
+                ));
+                continue;
+            }
+        };
+        if report.get("selected_backend").and_then(Value::as_str) != Some("cuda") {
+            issues.push(format!(
+                "source_artifact `{artifact}` selected_backend must be cuda"
+            ));
+        }
+        if report
+            .get("cases")
+            .and_then(Value::as_array)
+            .is_none_or(Vec::is_empty)
+        {
+            issues.push(format!(
+                "source_artifact `{artifact}` has no benchmark cases"
+            ));
+        }
+        if let Some(mismatch) = benchmark_report_summary_case_evidence_mismatch(&report) {
+            issues.push(format!(
+                "source_artifact `{artifact}` summary does not match case evidence: {mismatch}"
+            ));
+        }
+        if report
+            .get("summary")
+            .and_then(|summary| summary.get("failed"))
+            .and_then(Value::as_u64)
+            != Some(0)
+        {
+            issues.push(format!(
+                "source_artifact `{artifact}` summary.failed must be 0"
+            ));
+        }
+    }
+    issues
+}
+
+fn release_axes_source_artifacts(axes: &Value, issues: &mut Vec<String>) -> BTreeSet<String> {
+    let Some(items) = axes.get("source_artifacts").and_then(Value::as_array) else {
+        issues.push("source_artifacts array is missing".to_string());
+        return BTreeSet::new();
+    };
+    collect_nonblank_string_set("source_artifacts", items, issues)
+}
+
+fn cuda_suite_artifact_paths(cuda_suite: &Value, issues: &mut Vec<String>) -> BTreeSet<String> {
+    let Some(items) = cuda_suite.get("artifacts").and_then(Value::as_array) else {
+        issues.push("cuda-release-suite artifacts array is missing".to_string());
+        return BTreeSet::new();
+    };
+    collect_nonblank_string_set("cuda-release-suite artifacts", items, issues)
+}
+
+fn collect_nonblank_string_set(
+    field: &str,
+    items: &[Value],
+    issues: &mut Vec<String>,
+) -> BTreeSet<String> {
+    let mut paths = BTreeSet::new();
+    for (index, item) in items.iter().enumerate() {
+        let Some(path) = item.as_str().filter(|path| !path.trim().is_empty()) else {
+            issues.push(format!("{field}[{index}] is not a nonblank string"));
+            continue;
+        };
+        if !paths.insert(path.to_string()) {
+            issues.push(format!("{field} contains duplicate artifact `{path}`"));
+        }
+    }
+    paths
+}
+
+fn resolve_benchmark_artifact_path(workspace_root: &Path, artifact: &str) -> PathBuf {
+    let candidate = PathBuf::from(artifact);
+    if candidate.is_absolute() {
+        candidate
+    } else {
+        workspace_root.join(candidate)
+    }
+}
+
+fn read_text_bounded(path: &Path, max_bytes: u64) -> io::Result<String> {
+    let mut reader = fs::File::open(path)?.take(max_bytes.saturating_add(1));
+    let mut text = String::new();
+    reader.read_to_string(&mut text)?;
+    if text.len() as u64 > max_bytes {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "{} exceeds {max_bytes} byte evidence read cap",
+                path.display()
+            ),
+        ));
+    }
+    Ok(text)
 }
 
 pub(crate) fn benchmark_report_summary_case_evidence_mismatch(report: &Value) -> Option<String> {

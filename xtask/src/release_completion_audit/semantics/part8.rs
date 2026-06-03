@@ -419,34 +419,30 @@ fn inspect_release_axes_semantics(
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    let source_artifact_paths =
-        crate::benchmark_evidence_semantics::benchmark_source_artifact_paths(value);
-    let source_artifacts = source_artifact_paths.len();
-    if source_artifacts < 12 {
-        blockers.push(format!(
-            "{evidence}: source_artifacts has {source_artifacts} entrie(s), needs at least 12"
-        ));
-    }
     match release_evidence_workspace_root(path) {
         Some(workspace_root) => {
-            for artifact in source_artifact_paths {
-                let artifact_path = {
-                    let candidate = PathBuf::from(&artifact);
-                    if candidate.is_absolute() {
-                        candidate
-                    } else {
-                        workspace_root.join(candidate)
+            let suite_path =
+                workspace_root.join("release/evidence/benchmarks/cuda-release-suite.json");
+            match read_text_bounded(&suite_path)
+                .ok()
+                .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+            {
+                Some(cuda_suite) => {
+                    for issue in crate::benchmark_evidence_semantics::cuda_release_axes_source_artifact_issues(
+                        workspace_root,
+                        value,
+                        &cuda_suite,
+                    ) {
+                        blockers.push(format!("{evidence}: {issue}"));
                     }
-                };
-                if !artifact_path.is_file() {
-                    blockers.push(format!(
-                        "{evidence}: source_artifact `{artifact}` is not a readable file at {}",
-                        artifact_path.display()
-                    ));
                 }
+                None => blockers.push(format!(
+                    "{evidence}: could not read CUDA release suite at {}",
+                    suite_path.display()
+                )),
             }
         }
-        None if source_artifacts != 0 => blockers.push(format!(
+        None if value.get("source_artifacts").is_some() => blockers.push(format!(
             "{evidence}: could not resolve workspace root for source_artifacts from {}",
             path.display()
         )),
@@ -505,6 +501,15 @@ mod part8_tests {
             "ulp_drift_max": 0,
             "max_vram_mib": 1
         });
+        std::fs::write(
+            dir.path()
+                .join("release/evidence/benchmarks/cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "artifacts": ["release/evidence/benchmarks/workload-01-condition-eval.json"]
+            }))
+            .expect("Fix: serialize temporary CUDA release suite."),
+        )
+        .expect("Fix: write temporary CUDA release suite.");
         let mut blockers = Vec::new();
 
         inspect_release_axes_semantics(
@@ -516,7 +521,7 @@ mod part8_tests {
 
         assert!(
             blockers.iter().any(|blocker| blocker.contains(
-                "bench-release-axes.json: source_artifacts has 1 entrie(s), needs at least 12"
+                "bench-release-axes.json: source_artifacts has 1 CUDA workload artifact(s), needs at least 12"
             )),
             "Fix: completion audit must not count blank/non-string source_artifacts as release axes proof; blockers={blockers:?}"
         );
@@ -550,6 +555,15 @@ mod part8_tests {
             "ulp_drift_max": 0,
             "max_vram_mib": 1
         });
+        std::fs::write(
+            dir.path()
+                .join("release/evidence/benchmarks/cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "artifacts": source_artifacts
+            }))
+            .expect("Fix: serialize temporary CUDA release suite."),
+        )
+        .expect("Fix: write temporary CUDA release suite.");
         let mut blockers = Vec::new();
 
         inspect_release_axes_semantics(
@@ -564,6 +578,79 @@ mod part8_tests {
                 "bench-release-axes.json: source_artifact `release/evidence/benchmarks/workload-11.json` is not a readable file"
             )),
             "Fix: completion audit must reject release axes source_artifacts that do not resolve to files; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_release_axes_rejects_wgpu_artifact_contamination() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for release axes backend test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        std::fs::create_dir_all(dir.path().join("release/evidence/benchmarks"))
+            .expect("Fix: create temporary release evidence directory.");
+        let mut source_artifacts = Vec::new();
+        for index in 0..12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            std::fs::write(
+                dir.path().join(&artifact),
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "cases": [{"id": format!("cuda-{index}"), "status": "pass"}]
+                }))
+                .expect("Fix: serialize temporary CUDA source artifact."),
+            )
+            .expect("Fix: write temporary CUDA source artifact.");
+            source_artifacts.push(artifact);
+        }
+        let wgpu_artifact = "release/evidence/benchmarks/wgpu-workload-00.json";
+        std::fs::write(
+            dir.path().join(wgpu_artifact),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [{"id": "wgpu", "status": "pass"}]
+            }))
+            .expect("Fix: serialize temporary WGPU source artifact."),
+        )
+        .expect("Fix: write temporary WGPU source artifact.");
+        let mut axes_artifacts = source_artifacts.clone();
+        axes_artifacts.push(wgpu_artifact.to_string());
+        std::fs::write(
+            dir.path()
+                .join("release/evidence/benchmarks/cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "artifacts": source_artifacts
+            }))
+            .expect("Fix: serialize temporary CUDA release suite."),
+        )
+        .expect("Fix: write temporary CUDA release suite.");
+        let path = dir
+            .path()
+            .join("release/evidence/benchmarks/bench-release-axes.json");
+        let axes = serde_json::json!({
+            "source_artifacts": axes_artifacts,
+            "warm_us_per_file": 1,
+            "cold_pipeline_build_ms": 1,
+            "gbs_scan_throughput": 1,
+            "ulp_drift_max": 0,
+            "max_vram_mib": 1
+        });
+        let mut blockers = Vec::new();
+
+        inspect_release_axes_semantics(
+            "release/evidence/benchmarks/bench-release-axes.json",
+            &path,
+            &axes,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "source_artifact `release/evidence/benchmarks/wgpu-workload-00.json` is not listed in cuda-release-suite artifacts"
+            )),
+            "Fix: completion audit must reject WGPU source artifacts in CUDA release axes; blockers={blockers:?}"
         );
     }
 }

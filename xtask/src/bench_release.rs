@@ -25,6 +25,8 @@ use std::time::Instant;
 
 use serde_json::Value;
 
+use crate::benchmark_evidence_semantics::cuda_release_axes_source_artifact_issues;
+
 /// Axis identifier emitted in the final report. Stable string so
 /// downstream graphs / regression gates can key on it.
 const AXIS_WARM_US_PER_FILE: &str = "warm_us_per_file";
@@ -42,17 +44,18 @@ pub(crate) fn run(args: &[String]) {
 
     let evidence_dir = parse_evidence_dir(args).unwrap_or_else(|message| fatal(&message));
     eprintln!("==> reading evidence from {}", evidence_dir.display());
+    let axes = load_release_axes(&evidence_dir).unwrap_or_else(|message| fatal(&message));
 
     let report = ReleaseReport {
-        warm_us_per_file: require_f64_axis(&evidence_dir, AXIS_WARM_US_PER_FILE)
+        warm_us_per_file: require_f64_axis(&axes, AXIS_WARM_US_PER_FILE)
             .unwrap_or_else(|message| fatal(&message)),
-        cold_pipeline_build_ms: require_f64_axis(&evidence_dir, AXIS_COLD_PIPELINE_BUILD_MS)
+        cold_pipeline_build_ms: require_f64_axis(&axes, AXIS_COLD_PIPELINE_BUILD_MS)
             .unwrap_or_else(|message| fatal(&message)),
-        gbs_scan_throughput: require_f64_axis(&evidence_dir, AXIS_GBS_SCAN_THROUGHPUT)
+        gbs_scan_throughput: require_f64_axis(&axes, AXIS_GBS_SCAN_THROUGHPUT)
             .unwrap_or_else(|message| fatal(&message)),
-        ulp_drift_max: require_u32_axis(&evidence_dir, AXIS_ULP_DRIFT_MAX)
+        ulp_drift_max: require_u32_axis(&axes, AXIS_ULP_DRIFT_MAX)
             .unwrap_or_else(|message| fatal(&message)),
-        max_vram_mib: require_u64_axis(&evidence_dir, AXIS_MAX_VRAM_MIB)
+        max_vram_mib: require_u64_axis(&axes, AXIS_MAX_VRAM_MIB)
             .unwrap_or_else(|message| fatal(&message)),
     };
 
@@ -125,64 +128,192 @@ fn parse_evidence_dir(args: &[String]) -> Result<PathBuf, String> {
     Ok(evidence_dir)
 }
 
-fn require_f64_axis(evidence_dir: &Path, axis: &str) -> Result<f64, String> {
-    let raw = require_axis_text(evidence_dir, axis)?;
+fn require_f64_axis(axes: &Value, axis: &str) -> Result<f64, String> {
+    let raw = require_axis_text(axes, axis)?;
     raw.parse::<f64>().map_err(|_| {
         format!("Fix: axis `{axis}` value `{raw}` is not a floating-point benchmark number.")
     })
 }
 
-fn require_u32_axis(evidence_dir: &Path, axis: &str) -> Result<u32, String> {
-    let raw = require_axis_text(evidence_dir, axis)?;
+fn require_u32_axis(axes: &Value, axis: &str) -> Result<u32, String> {
+    let raw = require_axis_text(axes, axis)?;
     raw.parse::<u32>()
         .map_err(|_| format!("Fix: axis `{axis}` value `{raw}` is not an unsigned integer."))
 }
 
-fn require_u64_axis(evidence_dir: &Path, axis: &str) -> Result<u64, String> {
-    let raw = require_axis_text(evidence_dir, axis)?;
+fn require_u64_axis(axes: &Value, axis: &str) -> Result<u64, String> {
+    let raw = require_axis_text(axes, axis)?;
     raw.parse::<u64>()
         .map_err(|_| format!("Fix: axis `{axis}` value `{raw}` is not an unsigned integer."))
 }
 
-fn require_axis_text(evidence_dir: &Path, axis: &str) -> Result<String, String> {
-    let entries = fs::read_dir(evidence_dir).map_err(|error| {
+fn require_axis_text(axes: &Value, axis: &str) -> Result<String, String> {
+    json_axis_text(axes, axis).ok_or_else(|| {
         format!(
-            "Fix: cannot read benchmark evidence directory `{}`: {error}. Run `cargo_full run --bin xtask -- release-benchmarks --backend cuda` first.",
-            evidence_dir.display()
-        )
-    })?;
-    let mut reports = Vec::new();
-    for entry in entries {
-        let entry = entry.map_err(|error| {
-            format!(
-                "Fix: cannot read an entry in `{}`: {error}.",
-                evidence_dir.display()
-            )
-        })?;
-        let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-            continue;
-        }
-        let contents = read_text_bounded(&path)
-            .map_err(|error| format!("Fix: cannot read `{}`: {error}.", path.display()))?;
-        let value = serde_json::from_str::<Value>(&contents).map_err(|error| {
-            format!("Fix: invalid benchmark JSON `{}`: {error}.", path.display())
-        })?;
-        reject_report_blockers(&path, &value)?;
-        if let Some(value) = json_axis_text(&value, axis) {
-            return Ok(value);
-        }
-        if value.get("cases").and_then(Value::as_array).is_some() {
-            reports.push((path, value));
-            continue;
-        }
-    }
-    derive_axis_from_reports(axis, &reports).ok_or_else(|| {
-        format!(
-            "Fix: missing benchmark axis `{axis}` under `{}` and no derivation path had enough data. Run `cargo_full run --bin xtask -- release-benchmarks --backend cuda` with current vyre-bench JSON metrics.",
-            evidence_dir.display()
+            "Fix: canonical bench-release axes are missing `{axis}`. Run `cargo_full run --bin xtask -- release-benchmarks --backend cuda` with current CUDA evidence."
         )
     })
+}
+
+fn load_release_axes(evidence_dir: &Path) -> Result<Value, String> {
+    let axes_path = evidence_dir.join("bench-release-axes.json");
+    let axes = read_json_report(&axes_path, "canonical bench-release axes")?;
+    reject_report_blockers(&axes_path, &axes)?;
+    let suite_path = evidence_dir.join("cuda-release-suite.json");
+    let cuda_suite = read_json_report(&suite_path, "CUDA release suite")?;
+    reject_report_blockers(&suite_path, &cuda_suite)?;
+    let workspace_root = workspace_root_for_evidence_dir(evidence_dir);
+    let issues = cuda_release_axes_source_artifact_issues(&workspace_root, &axes, &cuda_suite);
+    if let Some(first) = issues.first() {
+        return Err(format!(
+            "Fix: canonical bench-release axes `{}` failed CUDA source artifact validation with {} issue(s); first issue: {first}",
+            axes_path.display(),
+            issues.len()
+        ));
+    }
+    Ok(axes)
+}
+
+fn read_json_report(path: &Path, label: &str) -> Result<Value, String> {
+    let contents =
+        read_text_bounded(path).map_err(|error| format!("Fix: cannot read {label} `{}`: {error}. Run `cargo_full run --bin xtask -- release-benchmarks --backend cuda` first.", path.display()))?;
+    serde_json::from_str::<Value>(&contents)
+        .map_err(|error| format!("Fix: invalid {label} JSON `{}`: {error}.", path.display()))
+}
+
+fn workspace_root_for_evidence_dir(evidence_dir: &Path) -> PathBuf {
+    let benchmarks = evidence_dir;
+    let evidence = benchmarks.parent();
+    let release = evidence.and_then(Path::parent);
+    if benchmarks.file_name().and_then(|name| name.to_str()) == Some("benchmarks")
+        && evidence
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
+            == Some("evidence")
+        && release
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
+            == Some("release")
+    {
+        return release
+            .and_then(Path::parent)
+            .map_or_else(PathBuf::new, Path::to_path_buf);
+    }
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn write_canonical_axes_fixture(
+        benchmark_dir: &Path,
+        workspace_root: &Path,
+        poisoned_index: Option<usize>,
+    ) -> Vec<String> {
+        fs::create_dir_all(benchmark_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let mut artifacts = Vec::new();
+        for index in 1..=12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            let selected_backend = if poisoned_index == Some(index) {
+                "wgpu"
+            } else {
+                "cuda"
+            };
+            fs::write(
+                workspace_root.join(&artifact),
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": selected_backend,
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "cases": [
+                        {
+                            "id": format!("release.axis.{index:02}"),
+                            "backend_id": selected_backend,
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"p50": 17_000},
+                                "cold_compile_ns": {"p50": 2_000_000},
+                                "wall_gb_s_x1000": {"p50": 4_000},
+                                "memory_total_mib": {"p50": 24_576}
+                            }
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize temporary benchmark artifact."),
+            )
+            .expect("Fix: write temporary benchmark artifact.");
+            artifacts.push(artifact);
+        }
+        fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "artifacts": artifacts
+            }))
+            .expect("Fix: serialize temporary CUDA release suite."),
+        )
+        .expect("Fix: write temporary CUDA release suite.");
+        fs::write(
+            benchmark_dir.join("bench-release-axes.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "warm_us_per_file": 17.0,
+                "cold_pipeline_build_ms": 2.0,
+                "gbs_scan_throughput": 4.0,
+                "ulp_drift_max": 0,
+                "max_vram_mib": 24576,
+                "source_artifacts": artifacts,
+                "blockers": []
+            }))
+            .expect("Fix: serialize temporary canonical release axes."),
+        )
+        .expect("Fix: write temporary canonical release axes.");
+        artifacts
+    }
+
+    #[test]
+    fn bench_release_reads_canonical_axes_instead_of_directory_decoys() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for bench-release test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        write_canonical_axes_fixture(&benchmark_dir, dir.path(), None);
+        fs::write(
+            benchmark_dir.join("aaa-decoy-axis.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "warm_us_per_file": 0.001,
+                "blockers": []
+            }))
+            .expect("Fix: serialize temporary decoy axis."),
+        )
+        .expect("Fix: write temporary decoy axis.");
+
+        let axes = load_release_axes(&benchmark_dir)
+            .expect("Fix: canonical CUDA release axes fixture should load.");
+
+        assert_eq!(
+            require_f64_axis(&axes, AXIS_WARM_US_PER_FILE),
+            Ok(17.0),
+            "Fix: bench-release must print the canonical bench-release-axes value, not whichever JSON directory entry exposes a top-level axis."
+        );
+    }
+
+    #[test]
+    fn bench_release_rejects_wgpu_source_artifacts_under_cuda_axes() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for bench-release poison test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        write_canonical_axes_fixture(&benchmark_dir, dir.path(), Some(7));
+
+        let error = load_release_axes(&benchmark_dir)
+            .expect_err("Fix: WGPU artifacts must not satisfy CUDA bench-release axes.");
+
+        assert!(
+            error.contains("selected_backend must be cuda"),
+            "Fix: bench-release must reject backend drift inside source_artifacts; error={error}"
+        );
+    }
 }
 
 fn reject_report_blockers(path: &Path, value: &Value) -> Result<(), String> {
@@ -215,126 +346,6 @@ fn json_axis_text(value: &Value, axis: &str) -> Option<String> {
 fn fatal(message: &str) -> ! {
     eprintln!("error: {message}");
     std::process::exit(1);
-}
-
-fn derive_axis_from_reports(axis: &str, reports: &[(PathBuf, Value)]) -> Option<String> {
-    match axis {
-        AXIS_WARM_US_PER_FILE => {
-            min_metric_p50(reports, "wall_ns").map(|ns| format_float(ns as f64 / 1_000.0))
-        }
-        AXIS_COLD_PIPELINE_BUILD_MS => min_first_available_metric_p50(
-            reports,
-            &[
-                "cold_compile_ns",
-                "cold_wall_ns",
-                "compile_ns",
-                "lower_ns",
-                "optimize_ns",
-            ],
-        )
-        .map(|ns| format_float(ns as f64 / 1_000_000.0)),
-        AXIS_GBS_SCAN_THROUGHPUT => max_metric_p50(reports, "wall_gb_s_x1000")
-            .or_else(|| max_metric_p50(reports, "device_gb_s_x1000"))
-            .map(|gb_s_x1000| format_float(gb_s_x1000 as f64 / 1_000.0)),
-        AXIS_ULP_DRIFT_MAX => max_observed_ulp(reports).map(|ulp| ulp.to_string()),
-        AXIS_MAX_VRAM_MIB => max_vram_mib(reports).map(|mib| mib.to_string()),
-        _ => None,
-    }
-}
-
-fn min_first_available_metric_p50(reports: &[(PathBuf, Value)], keys: &[&str]) -> Option<u64> {
-    keys.iter().find_map(|key| min_metric_p50(reports, key))
-}
-
-fn min_metric_p50(reports: &[(PathBuf, Value)], key: &str) -> Option<u64> {
-    metric_p50_values(reports, key).into_iter().min()
-}
-
-fn max_metric_p50(reports: &[(PathBuf, Value)], key: &str) -> Option<u64> {
-    metric_p50_values(reports, key).into_iter().max()
-}
-
-fn metric_p50_values(reports: &[(PathBuf, Value)], key: &str) -> Vec<u64> {
-    let mut values = Vec::new();
-    for (_, report) in reports {
-        let Some(cases) = report.get("cases").and_then(Value::as_array) else {
-            continue;
-        };
-        for case in cases {
-            let Some(metrics) = case.get("metrics").and_then(Value::as_object) else {
-                continue;
-            };
-            let Some(value) = metrics
-                .get(key)
-                .and_then(|metric| metric.get("p50"))
-                .and_then(Value::as_u64)
-            else {
-                continue;
-            };
-            values.push(value);
-        }
-    }
-    values
-}
-
-fn max_observed_ulp(reports: &[(PathBuf, Value)]) -> Option<u32> {
-    let mut max_ulp = None::<u32>;
-    for (_, report) in reports {
-        let Some(cases) = report.get("cases").and_then(Value::as_array) else {
-            continue;
-        };
-        for case in cases {
-            if let Some(ulp) = case
-                .get("correctness")
-                .and_then(|correctness| correctness.get("Toleranced"))
-                .and_then(|toleranced| toleranced.get("max_observed_ulp"))
-                .and_then(Value::as_u64)
-            {
-                let ulp = ulp.min(u64::from(u32::MAX)) as u32;
-                max_ulp = Some(max_ulp.map_or(ulp, |current| current.max(ulp)));
-            }
-        }
-    }
-    max_ulp
-}
-
-fn max_vram_mib(reports: &[(PathBuf, Value)]) -> Option<u64> {
-    let mut max_mib = None::<u64>;
-    for (_, report) in reports {
-        if let Some(devices) = report
-            .get("environment")
-            .and_then(|environment| environment.get("gpu_devices"))
-            .and_then(Value::as_array)
-        {
-            for device in devices {
-                if let Some(mib) = device.get("memory_total_mib").and_then(Value::as_u64) {
-                    max_mib = Some(max_mib.map_or(mib, |current| current.max(mib)));
-                }
-            }
-        }
-        let Some(cases) = report.get("cases").and_then(Value::as_array) else {
-            continue;
-        };
-        for case in cases {
-            if let Some(mib) = case
-                .get("metrics")
-                .and_then(|metrics| metrics.get("memory_total_mib"))
-                .and_then(|metric| metric.get("p50"))
-                .and_then(Value::as_u64)
-            {
-                max_mib = Some(max_mib.map_or(mib, |current| current.max(mib)));
-            }
-        }
-    }
-    max_mib
-}
-
-fn format_float(value: f64) -> String {
-    let rendered = format!("{value:.6}");
-    rendered
-        .trim_end_matches('0')
-        .trim_end_matches('.')
-        .to_string()
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
