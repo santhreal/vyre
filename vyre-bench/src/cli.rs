@@ -397,7 +397,11 @@ fn erf(x: f64) -> f64 {
 
 fn load_report(path: &str) -> anyhow::Result<ReportSchema> {
     let bytes = read_report_bounded(std::path::Path::new(path))?;
-    Ok(serde_json::from_slice(&bytes)?)
+    let report: ReportSchema = serde_json::from_slice(&bytes)?;
+    report
+        .validate_summary_evidence()
+        .map_err(|error| anyhow::anyhow!("invalid benchmark report `{}`: {error}", path))?;
+    Ok(report)
 }
 
 fn read_report_bounded(path: &std::path::Path) -> std::io::Result<Vec<u8>> {
@@ -497,7 +501,11 @@ fn generate_scorecard_md(report: &ReportSchema) -> String {
     md.push_str(&format!(
         "Suite: **{}** | Cases: {}/{} passed\n\n",
         report.suite,
-        report.cases.iter().filter(|c| c.status == "passed").count(),
+        report
+            .cases
+            .iter()
+            .filter(|case| case.passes_summary_evidence())
+            .count(),
         report.cases.len(),
     ));
     md.push_str("| Case | Status | p50 (ns) | p99 (ns) | Speedup | CV |\n");
@@ -521,11 +529,14 @@ fn generate_scorecard_md(report: &ReportSchema) -> String {
             .and_then(|p| p.speedup_x)
             .map(|s| format!("{:.1}×", s))
             .unwrap_or_else(|| " - ".into());
-        let status_emoji = match case.status.as_str() {
-            "passed" => "✅",
-            "failed" => "❌",
-            "unstable" => "⚠️",
-            _ => "❓",
+        let status_emoji = if case.passes_summary_evidence() {
+            "✅"
+        } else {
+            match case.status.as_str() {
+                "failed" => "❌",
+                "unstable" | "thermal_unstable" => "⚠️",
+                _ => "❓",
+            }
         };
         md.push_str(&format!(
             "| {} | {} {} | {:>10} | {:>10} | {:>7} | {} |\n",
@@ -606,7 +617,11 @@ fn generate_cross_backend_svg(report: &ReportSchema) -> String {
 
 fn generate_index_html(report: &ReportSchema, _scorecard_md: &str) -> String {
     let cases_count = report.cases.len();
-    let passed = report.cases.iter().filter(|c| c.status == "passed").count();
+    let passed = report
+        .cases
+        .iter()
+        .filter(|case| case.passes_summary_evidence())
+        .count();
 
     let mut rows = String::new();
     for case in &report.cases {
@@ -628,10 +643,13 @@ fn generate_index_html(report: &ReportSchema, _scorecard_md: &str) -> String {
             .and_then(|p| p.speedup_x)
             .map(|s| format!("{:.1}×", s))
             .unwrap_or_else(|| " - ".into());
-        let status_class = match case.status.as_str() {
-            "passed" => "status-pass",
-            "failed" => "status-fail",
-            _ => "status-warn",
+        let status_class = if case.passes_summary_evidence() {
+            "status-pass"
+        } else {
+            match case.status.as_str() {
+                "failed" => "status-fail",
+                _ => "status-warn",
+            }
         };
         let svg_file = case.id.replace('.', "_") + ".svg";
 
@@ -808,4 +826,132 @@ fn generate_index_html(report: &ReportSchema, _scorecard_md: &str) -> String {
         },
         rows = rows,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::case::{Correctness, PerformanceEvaluation};
+    use crate::probes::environment::EnvironmentData;
+    use crate::report::json::{CaseReport, ReportSummary};
+
+    fn report(cases: Vec<CaseReport>, passed: usize, failed: usize) -> ReportSchema {
+        ReportSchema {
+            schema: "vyre-bench.result.v1".to_string(),
+            run_id: "vyre-bench.release".to_string(),
+            suite: "release".to_string(),
+            selected_backend: Some("cuda".to_string()),
+            git: BTreeMap::new(),
+            source_fingerprint: "source:unit".to_string(),
+            source_tree_fingerprint: "tree:unit".to_string(),
+            environment: EnvironmentData {
+                os: "linux".to_string(),
+                architecture: "x86_64".to_string(),
+                cpu_model: Some("unit".to_string()),
+                cpu_cores: 1,
+                has_gpu: true,
+                gpu_devices: Vec::new(),
+                nvidia_driver_version: Some("unit".to_string()),
+                nvidia_cuda_version: Some("unit".to_string()),
+                features: vec!["backend.usable.cuda".to_string()],
+            },
+            features: vec!["backend:cuda".to_string()],
+            summary: ReportSummary {
+                total_cases: cases.len(),
+                passed,
+                failed,
+                total_time_ns: 1,
+                cache_hit_rate: None,
+            },
+            cases,
+        }
+    }
+
+    fn case_report(id: &str, status: &str, contract_passed: bool) -> CaseReport {
+        CaseReport {
+            id: id.to_string(),
+            workload_fingerprint: format!("bench-case:{id}"),
+            name: id.to_string(),
+            owner_crate: "vyre-bench".to_string(),
+            workload_class: "Release".to_string(),
+            tags: Vec::new(),
+            backend_id: Some("cuda".to_string()),
+            needs_gpu: true,
+            min_vram_bytes: None,
+            min_input_bytes: None,
+            required_features: Vec::new(),
+            status: status.to_string(),
+            wall_ns: Some(1.0),
+            correctness: Correctness::Exact,
+            contract: None,
+            performance: Some(PerformanceEvaluation {
+                speedup_x: Some(100.0),
+                contract_passed,
+                violations: if contract_passed {
+                    Vec::new()
+                } else {
+                    vec!["speedup below release floor".to_string()]
+                },
+            }),
+            metrics: BTreeMap::new(),
+            optimization_passes_applied: Vec::new(),
+            artifacts: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn load_report_rejects_summary_that_hides_contract_failed_case() {
+        let forged = report(
+            vec![case_report("release.condition_eval.1m", "pass", false)],
+            1,
+            0,
+        );
+        let path = std::env::temp_dir().join(format!(
+            "vyre-bench-forged-summary-{}-{}.json",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system clock must be after UNIX_EPOCH")
+                .as_nanos()
+        ));
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&forged).expect("test report should serialize"),
+        )
+        .expect("test report should be writable");
+
+        let error = load_report(&path.to_string_lossy())
+            .expect_err("Fix: loaded benchmark evidence must reject hidden contract failures");
+        let _ = std::fs::remove_file(&path);
+        let error = error.to_string();
+        assert!(
+            error.contains("invalid benchmark report") && error.contains("contradicts case evidence"),
+            "Fix: report loader should explain that summary counts disagree with case evidence: {error}"
+        );
+    }
+
+    #[test]
+    fn dashboard_counts_pass_status_evidence_not_legacy_passed_string() {
+        let report = report(
+            vec![
+                case_report("release.condition_eval.1m", "pass", true),
+                case_report("release.scan_ac_irregular.1m", "failed", true),
+            ],
+            1,
+            1,
+        );
+
+        let scorecard = generate_scorecard_md(&report);
+        assert!(
+            scorecard.contains("Cases: 1/2 passed"),
+            "Fix: dashboard scorecard must count generated `pass` status as pass evidence: {scorecard}"
+        );
+
+        let html = generate_index_html(&report, &scorecard);
+        assert!(
+            html.contains("<div class=\"stat-value\">1</div>")
+                && html.contains("<td class=\"status-pass\">pass</td>"),
+            "Fix: dashboard HTML must render generated `pass` status with pass styling: {html}"
+        );
+    }
 }

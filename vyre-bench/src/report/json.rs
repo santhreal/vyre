@@ -66,6 +66,123 @@ pub struct ReportSummary {
     pub cache_hit_rate: Option<f64>,
 }
 
+impl CaseReport {
+    pub fn passes_summary_evidence(&self) -> bool {
+        self.status == "pass"
+            && !matches!(self.correctness, Correctness::Invalid { .. })
+            && !self
+                .performance
+                .as_ref()
+                .is_some_and(|performance| !performance.contract_passed)
+    }
+}
+
+impl ReportSchema {
+    pub fn evidence_summary_counts(&self) -> (usize, usize) {
+        let passed = self
+            .cases
+            .iter()
+            .filter(|case| case.passes_summary_evidence())
+            .count();
+        (passed, self.cases.len().saturating_sub(passed))
+    }
+
+    pub fn validate_summary_evidence(&self) -> Result<(), String> {
+        if self.summary.total_cases != self.cases.len() {
+            return Err(format!(
+                "summary.total_cases={} does not match {} case report(s). Fix: regenerate the benchmark report from case evidence.",
+                self.summary.total_cases,
+                self.cases.len()
+            ));
+        }
+        let (passed, failed) = self.evidence_summary_counts();
+        if self.summary.passed != passed || self.summary.failed != failed {
+            return Err(format!(
+                "summary pass/fail ({}/{}) contradicts case evidence ({}/{}). Fix: regenerate the benchmark report from case status, correctness, and performance contracts.",
+                self.summary.passed, self.summary.failed, passed, failed
+            ));
+        }
+        Ok(())
+    }
+}
+
 pub fn generate_json_report(report: &ReportSchema) -> Result<String, serde_json::Error> {
     serde_json::to_string_pretty(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn case_report(
+        status: &str,
+        correctness: Correctness,
+        performance: Option<PerformanceEvaluation>,
+    ) -> CaseReport {
+        CaseReport {
+            id: "release.condition_eval.1m".to_string(),
+            workload_fingerprint: "bench-case:release.condition_eval.1m".to_string(),
+            name: "release condition eval".to_string(),
+            owner_crate: "vyre-bench".to_string(),
+            workload_class: "Release".to_string(),
+            tags: Vec::new(),
+            backend_id: Some("cuda".to_string()),
+            needs_gpu: true,
+            min_vram_bytes: None,
+            min_input_bytes: None,
+            required_features: Vec::new(),
+            status: status.to_string(),
+            wall_ns: Some(1.0),
+            correctness,
+            contract: None,
+            performance,
+            metrics: BTreeMap::new(),
+            optimization_passes_applied: Vec::new(),
+            artifacts: Vec::new(),
+        }
+    }
+
+    fn performance(contract_passed: bool) -> PerformanceEvaluation {
+        PerformanceEvaluation {
+            speedup_x: Some(100.0),
+            contract_passed,
+            violations: if contract_passed {
+                Vec::new()
+            } else {
+                vec!["speedup below release floor".to_string()]
+            },
+        }
+    }
+
+    #[test]
+    fn summary_pass_requires_pass_status_valid_correctness_and_contract() {
+        assert!(
+            case_report("pass", Correctness::Exact, Some(performance(true)))
+                .passes_summary_evidence(),
+            "Fix: valid pass evidence should still count as a passed benchmark case."
+        );
+
+        for rejected in [
+            case_report("failed", Correctness::Exact, Some(performance(true))),
+            case_report(
+                "pass",
+                Correctness::Invalid {
+                    reason: "CUDA/WGPU output mismatch at row 17".to_string(),
+                },
+                Some(performance(true)),
+            ),
+            case_report("pass", Correctness::Exact, Some(performance(false))),
+            case_report("unstable", Correctness::Exact, Some(performance(true))),
+            case_report(
+                "thermal_unstable",
+                Correctness::Exact,
+                Some(performance(true)),
+            ),
+        ] {
+            assert!(
+                !rejected.passes_summary_evidence(),
+                "Fix: summary.passed must not count failed, invalid, contract-failed, or unstable case evidence: {rejected:?}"
+            );
+        }
+    }
 }
