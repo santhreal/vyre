@@ -605,6 +605,18 @@ pub(super) fn inspect_backend_suite_artifact(
         .get("source_tree_fingerprint")
         .and_then(nonblank_str)
         .map(str::to_string);
+    match &source_fingerprint {
+        Some(fingerprint)
+            if !crate::benchmark_evidence_semantics::source_fingerprint_issues(fingerprint)
+                .is_empty() =>
+        {
+            blockers.push(format!(
+                "source_fingerprint `{fingerprint}` is not release-grade provenance"
+            ));
+        }
+        None => blockers.push("artifact has no source_fingerprint provenance".to_string()),
+        Some(_) => {}
+    }
     if selected_backend.as_deref() != Some(backend) {
         blockers.push(format!(
             "selected_backend `{:?}` does not match requested backend `{backend}`",
@@ -1347,6 +1359,98 @@ mod tests {
                     .iter()
                     .any(|blocker| blocker.contains(expected)),
                 "Fix: suite artifact inspection must reject whitespace-only CUDA provenance `{expected}`; blockers={:?}",
+                status.blockers
+            );
+        }
+    }
+
+    #[test]
+    fn suite_artifact_status_rejects_missing_and_weak_source_fingerprint() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for suite source provenance test.");
+        let artifacts = [
+            (
+                "release/evidence/benchmarks/cuda-missing-source-fingerprint.json",
+                None,
+                "artifact has no source_fingerprint provenance",
+            ),
+            (
+                "release/evidence/benchmarks/cuda-legacy-dirty-source-fingerprint.json",
+                Some("git:abc123:dirty=true"),
+                "source_fingerprint `git:abc123:dirty=true` is not release-grade provenance",
+            ),
+        ];
+
+        for (artifact_rel, source_fingerprint, expected_blocker) in artifacts {
+            let artifact_path = dir.path().join(artifact_rel);
+            fs::create_dir_all(
+                artifact_path
+                    .parent()
+                    .expect("Fix: suite artifact must have parent directory."),
+            )
+            .expect("Fix: create source provenance suite artifact parent directory.");
+            let mut artifact = json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "source_tree_fingerprint": "source-tree-v1:abc",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "environment": {
+                    "host_cpu_model": "test CPU",
+                    "gpu_devices": [
+                        {
+                            "name": "RTX 5090",
+                            "memory_total_mib": 24576,
+                            "compute_capability_major": 8,
+                            "compute_capability_minor": 9
+                        }
+                    ],
+                    "nvidia_driver_version": "580.0",
+                    "nvidia_cuda_version": "13.0"
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "kernel_launches": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_entries": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_hits": {"samples": 30, "p50": 1},
+                            "cuda_ptx_source_cache_misses": {"samples": 30, "p50": 0}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 120.0}
+                    }
+                ]
+            });
+            if let Some(source_fingerprint) = source_fingerprint {
+                artifact["source_fingerprint"] = Value::String(source_fingerprint.to_string());
+            }
+            fs::write(
+                &artifact_path,
+                serde_json::to_string_pretty(&artifact)
+                    .expect("Fix: serialize source provenance benchmark artifact JSON."),
+            )
+            .expect("Fix: write source provenance benchmark artifact JSON.");
+
+            let status = inspect_backend_suite_artifact(
+                dir.path(),
+                "cuda",
+                &BackendSuiteArtifactInput {
+                    path: artifact_rel.to_string(),
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                    cpu_sota_100x_required: false,
+                },
+            );
+
+            assert!(
+                status
+                    .blockers
+                    .iter()
+                    .any(|blocker| blocker.contains(expected_blocker)),
+                "Fix: generated CUDA suite evidence must reject weak source fingerprint provenance `{expected_blocker}`; blockers={:?}",
                 status.blockers
             );
         }
