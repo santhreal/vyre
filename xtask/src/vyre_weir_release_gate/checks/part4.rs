@@ -435,15 +435,17 @@ pub(crate) fn check_json_value_has_no_blockers(
     report: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
-    let blockers = report
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(0, Vec::len);
-    if blockers != 0 {
-        failures.push(format!(
-            "requirement `{}` {label} reports {blockers} blocker(s)",
+    match report.get("blockers").and_then(serde_json::Value::as_array) {
+        Some(blockers) if !blockers.is_empty() => failures.push(format!(
+            "requirement `{}` {label} reports {} blocker(s)",
+            requirement.id,
+            blockers.len()
+        )),
+        Some(_) => {}
+        None => failures.push(format!(
+            "requirement `{}` {label} is missing blockers array",
             requirement.id
-        ));
+        )),
     }
 }
 pub(crate) fn check_json_evidence_has_no_blockers(
@@ -559,6 +561,38 @@ mod part4_tests {
                 "requirement `optimization-integration` benchmark `alias-aware-before-after.json` reports 1 blocker(s)"
             )),
             "Fix: before/after benchmark release gate must reject explicit benchmark blockers; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn json_evidence_gate_rejects_missing_blockers_array() {
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["bench-release-axes.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let report = serde_json::json!({
+            "schema_version": 1,
+            "source_artifacts": []
+        });
+        let mut failures = Vec::new();
+
+        check_json_value_has_no_blockers(
+            &requirement,
+            "evidence `bench-release-axes.json`",
+            &report,
+            &mut failures,
+        );
+
+        assert_eq!(
+            failures,
+            vec![
+                "requirement `cuda-first-path` evidence `bench-release-axes.json` is missing blockers array"
+                    .to_string()
+            ],
+            "Fix: release gate must fail closed when JSON evidence omits its blockers array."
         );
     }
 

@@ -402,10 +402,10 @@ fn generated_benchmark_evidence_blockers(workspace_root: &Path, paths: &[String]
                 continue;
             }
         };
-        let artifact_blockers = value
-            .get("blockers")
-            .and_then(Value::as_array)
-            .map_or(&[][..], Vec::as_slice);
+        let Some(artifact_blockers) = value.get("blockers").and_then(Value::as_array) else {
+            blockers.push(format!("`{path}` is missing blockers array"));
+            continue;
+        };
         for (index, blocker) in artifact_blockers.iter().enumerate() {
             let blocker = blocker.as_str().unwrap_or("<non-string blocker>");
             blockers.push(format!("`{path}` blocker[{index}]: {blocker}"));
@@ -492,6 +492,40 @@ mod tests {
                     .to_string()
             ],
             "Fix: release-benchmarks must fail closed when generated suite evidence carries blockers."
+        );
+    }
+
+    #[test]
+    fn generated_evidence_blockers_reject_missing_blockers_array() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for missing blockers test.");
+        let artifact = "release/evidence/benchmarks/bench-release-axes.json".to_string();
+        let artifact_path = dir.path().join(&artifact);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: temporary artifact has a parent directory."),
+        )
+        .expect("Fix: create temporary generated evidence directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "source_artifacts": []
+            }))
+            .expect("Fix: serialize generated evidence without blockers."),
+        )
+        .expect("Fix: write generated evidence without blockers.");
+
+        let blockers = generated_benchmark_evidence_blockers(dir.path(), &[artifact]);
+
+        assert_eq!(
+            blockers,
+            vec![
+                "`release/evidence/benchmarks/bench-release-axes.json` is missing blockers array"
+                    .to_string()
+            ],
+            "Fix: release-benchmarks must fail closed when generated evidence omits blockers."
         );
     }
 
