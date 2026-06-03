@@ -6,6 +6,7 @@ use std::fs;
 #[test]
 fn cuda_release_surface_exposes_megakernel_speedup_csv_verifier() {
     let source = include_str!("../examples/cuda_release_surface.rs");
+    let speedup_gate = include_str!("../src/megakernel_speedup_gate.rs");
     assert!(
         source.contains("--verify-megakernel-speedup-csv")
             && source.contains("--format-resident-graph-speedup-csv")
@@ -16,6 +17,12 @@ fn cuda_release_surface_exposes_megakernel_speedup_csv_verifier() {
             && source.contains("CudaDeviceHandle::acquire_ordinal")
             && source.contains("MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER"),
         "Fix: CUDA release surface must expose command-level megakernel speedup CSV verifier/producer/header/device-provenance commands, not only library helpers."
+    );
+    assert!(
+        speedup_gate.contains("resident_borrowed_fallback_dispatches")
+            && speedup_gate.contains("borrowed_fallback_dispatches")
+            && source.contains("--verify-megakernel-speedup-csv"),
+        "Fix: CUDA release speedup evidence must expose resident borrowed-fallback telemetry so host-buffer escape paths cannot pass as native megakernel speedup."
     );
     assert!(
         source.contains("std::process::exit(1)"),

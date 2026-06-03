@@ -39,6 +39,8 @@ pub struct CudaMegakernelSpeedupSample {
     pub timed_host_allocations: u64,
     /// Host synchronization points observed inside the timed region.
     pub timed_host_syncs: u64,
+    /// Resident borrowed escape-hatch dispatches observed inside the timed region.
+    pub resident_borrowed_fallback_dispatches: u64,
 }
 
 /// Validated megakernel speedup proof.
@@ -113,6 +115,8 @@ pub enum CudaMegakernelSpeedupGateError {
         host_allocations: u64,
         /// Host synchronization points in timed region.
         host_syncs: u64,
+        /// Resident borrowed escape-hatch dispatches in timed region.
+        borrowed_fallback_dispatches: u64,
     },
     /// Timings must be positive finite values.
     InvalidTiming {
@@ -209,9 +213,10 @@ impl std::fmt::Display for CudaMegakernelSpeedupGateError {
                 graph_uploads,
                 host_allocations,
                 host_syncs,
+                borrowed_fallback_dispatches,
             } => write!(
                 f,
-                "CUDA megakernel speedup sample {index} is polluted: graph_uploads={graph_uploads}, host_allocations={host_allocations}, host_syncs={host_syncs}. Fix: measure steady-state execution only."
+                "CUDA megakernel speedup sample {index} is polluted: graph_uploads={graph_uploads}, host_allocations={host_allocations}, host_syncs={host_syncs}, resident_borrowed_fallback_dispatches={borrowed_fallback_dispatches}. Fix: measure native steady-state CUDA execution only."
             ),
             Self::InvalidTiming { index } => write!(
                 f,
@@ -256,7 +261,7 @@ impl std::fmt::Display for CudaMegakernelSpeedupGateError {
 impl std::error::Error for CudaMegakernelSpeedupGateError {}
 
 /// CSV header required for CUDA megakernel release speedup evidence.
-pub const MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER: &str = "backend_id,device_ordinal,device_memory_bytes,compute_capability_major,compute_capability_minor,graph_nodes,graph_edges,repetitions,host_orchestrated_ns,resident_megakernel_ns,setup_ns,timed_graph_uploads,timed_host_allocations,timed_host_syncs";
+pub const MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER: &str = "backend_id,device_ordinal,device_memory_bytes,compute_capability_major,compute_capability_minor,graph_nodes,graph_edges,repetitions,host_orchestrated_ns,resident_megakernel_ns,setup_ns,timed_graph_uploads,timed_host_allocations,timed_host_syncs,resident_borrowed_fallback_dispatches";
 
 /// Validate measured samples and emit the exact CSV artifact accepted by the
 /// CUDA megakernel release verifier.
@@ -279,7 +284,7 @@ pub fn format_validated_cuda_megakernel_speedup_evidence_csv(
         use std::fmt::Write as _;
         writeln!(
             csv,
-            "{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             sample.backend_id,
             sample.device_ordinal,
             sample.device_memory_bytes,
@@ -293,7 +298,8 @@ pub fn format_validated_cuda_megakernel_speedup_evidence_csv(
             sample.setup_ns,
             sample.timed_graph_uploads,
             sample.timed_host_allocations,
-            sample.timed_host_syncs
+            sample.timed_host_syncs,
+            sample.resident_borrowed_fallback_dispatches
         )
         .map_err(|_| CudaMegakernelSpeedupGateError::InvalidEvidenceValue {
             line: 0,
@@ -388,7 +394,7 @@ pub fn validate_cuda_megakernel_speedup_evidence_csv(
     let mut sample_count = 0_usize;
     for (line_index, line) in lines.enumerate() {
         let line_number = line_index + 2;
-        let mut fields = [""; 14];
+        let mut fields = [""; 15];
         let mut field_count = 0_usize;
         for (field_index, field) in line.split(',').map(str::trim).enumerate() {
             if field_index >= fields.len() {
@@ -434,6 +440,11 @@ pub fn validate_cuda_megakernel_speedup_evidence_csv(
                 "timed_host_allocations",
             )?,
             timed_host_syncs: parse_u64_field(fields[13], line_number, "timed_host_syncs")?,
+            resident_borrowed_fallback_dispatches: parse_u64_field(
+                fields[14],
+                line_number,
+                "resident_borrowed_fallback_dispatches",
+            )?,
         };
         accumulate_cuda_megakernel_speedup_sample(
             sample,
@@ -503,12 +514,14 @@ fn accumulate_cuda_megakernel_speedup_sample(
     if sample.timed_graph_uploads != 0
         || sample.timed_host_allocations != 0
         || sample.timed_host_syncs != 0
+        || sample.resident_borrowed_fallback_dispatches != 0
     {
         return Err(CudaMegakernelSpeedupGateError::PollutedTimedRegion {
             index,
             graph_uploads: sample.timed_graph_uploads,
             host_allocations: sample.timed_host_allocations,
             host_syncs: sample.timed_host_syncs,
+            borrowed_fallback_dispatches: sample.resident_borrowed_fallback_dispatches,
         });
     }
     if !sample.host_orchestrated_ns.is_finite()
@@ -618,8 +631,8 @@ mod tests {
     fn speedup_gate_validates_release_evidence_csv_artifact() {
         let csv = format!(
             "{MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER}\n\
-             cuda,0,34359738368,12,0,10000,80000,64,1000000,10000,250000,0,0,0\n\
-             cuda,0,34359738368,12,0,20000,160000,128,2500000,20000,350000,0,0,0\n"
+             cuda,0,34359738368,12,0,10000,80000,64,1000000,10000,250000,0,0,0,0\n\
+             cuda,0,34359738368,12,0,20000,160000,128,2500000,20000,350000,0,0,0,0\n"
         );
 
         let proof = validate_cuda_megakernel_speedup_evidence_csv(&csv, 100.0)
@@ -675,7 +688,7 @@ mod tests {
 
         let missing_field = format!(
             "{MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER}\n\
-             cuda,0,34359738368,12,0,10000,80000,64,1000000,10000,250000,0,0\n"
+             cuda,0,34359738368,12,0,10000,80000,64,1000000,10000,250000,0,0,0\n"
         );
         assert_eq!(
             validate_cuda_megakernel_speedup_evidence_csv(&missing_field, 100.0)
@@ -685,7 +698,7 @@ mod tests {
 
         let bad_number = format!(
             "{MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER}\n\
-             cuda,0,34359738368,12,0,10000,80000,many,1000000,10000,250000,0,0,0\n"
+             cuda,0,34359738368,12,0,10000,80000,many,1000000,10000,250000,0,0,0,0\n"
         );
         assert_eq!(
             validate_cuda_megakernel_speedup_evidence_csv(&bad_number, 100.0)
@@ -699,7 +712,7 @@ mod tests {
 
         let wrong_backend = format!(
             "{MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER}\n\
-             wgpu,0,34359738368,12,0,10000,80000,64,1000000,10000,250000,0,0,0\n"
+             wgpu,0,34359738368,12,0,10000,80000,64,1000000,10000,250000,0,0,0,0\n"
         );
         assert_eq!(
             validate_cuda_megakernel_speedup_evidence_csv(&wrong_backend, 100.0)
@@ -754,6 +767,21 @@ mod tests {
                 graph_uploads: 1,
                 host_allocations: 0,
                 host_syncs: 0,
+                borrowed_fallback_dispatches: 0,
+            }
+        );
+
+        let mut borrowed_fallback = sample(1_000_000.0, 1_000.0, 64);
+        borrowed_fallback.resident_borrowed_fallback_dispatches = 1;
+        assert_eq!(
+            validate_cuda_megakernel_speedup_gate(&[borrowed_fallback], 100.0)
+                .expect_err("borrowed resident escape-hatch dispatches must fail release evidence"),
+            CudaMegakernelSpeedupGateError::PollutedTimedRegion {
+                index: 0,
+                graph_uploads: 0,
+                host_allocations: 0,
+                host_syncs: 0,
+                borrowed_fallback_dispatches: 1,
             }
         );
     }
@@ -867,6 +895,7 @@ mod tests {
             timed_graph_uploads: 0,
             timed_host_allocations: 0,
             timed_host_syncs: 0,
+            resident_borrowed_fallback_dispatches: 0,
         }
     }
 }

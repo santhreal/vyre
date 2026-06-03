@@ -364,6 +364,7 @@ pub fn resident_graph_session_speedup_sample(
         timed_graph_uploads: 0,
         timed_host_allocations: 0,
         timed_host_syncs: 0,
+        resident_borrowed_fallback_dispatches: 0,
     })
 }
 
@@ -472,6 +473,7 @@ mod tests {
         assert_eq!(sample.timed_graph_uploads, 0);
         assert_eq!(sample.timed_host_allocations, 0);
         assert_eq!(sample.timed_host_syncs, 0);
+        assert_eq!(sample.resident_borrowed_fallback_dispatches, 0);
     }
 
     #[test]
