@@ -55,6 +55,43 @@ pub(crate) fn next_resident_handle(
     Ok(handle)
 }
 
+fn validate_dense_resident_indices<I>(
+    indices: I,
+    expected_len: usize,
+    context: &'static str,
+    index_kind: &'static str,
+    rebuild_action: &'static str,
+) -> Result<(), BackendError>
+where
+    I: IntoIterator<Item = usize>,
+{
+    let mut resolved_len = 0usize;
+    for (expected_index, index) in indices.into_iter().enumerate() {
+        resolved_len = expected_index.checked_add(1).ok_or_else(|| {
+            BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA {context} {index_kind} index validation overflowed while checking dense slot {expected_index}. Rebuild the binding plan before {rebuild_action}.",
+                ),
+            }
+        })?;
+        if index != expected_index {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA {context} resolved {index_kind} index {index} at sorted {index_kind} slot {expected_index}; expected dense {index_kind} indexes 0..{expected_len}. Rebuild the binding plan before {rebuild_action}.",
+                ),
+            });
+        }
+    }
+    if resolved_len != expected_len {
+        return Err(BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA {context} resolved {resolved_len} {index_kind} index(es); expected {expected_len}. Rebuild the binding plan before {rebuild_action}.",
+            ),
+        });
+    }
+    Ok(())
+}
+
 pub(crate) fn validate_dense_resident_output_indices<I>(
     output_indices: I,
     expected_len: usize,
@@ -63,16 +100,30 @@ pub(crate) fn validate_dense_resident_output_indices<I>(
 where
     I: IntoIterator<Item = usize>,
 {
-    for (expected_index, output_index) in output_indices.into_iter().enumerate() {
-        if output_index != expected_index {
-            return Err(BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: CUDA {context} resolved output index {output_index} at sorted output slot {expected_index}; expected dense output indexes 0..{expected_len}. Rebuild the binding plan before resident readback.",
-                ),
-            });
-        }
-    }
-    Ok(())
+    validate_dense_resident_indices(
+        output_indices,
+        expected_len,
+        context,
+        "output",
+        "resident readback",
+    )
+}
+
+pub(crate) fn validate_dense_resident_input_indices<I>(
+    input_indices: I,
+    expected_len: usize,
+    context: &'static str,
+) -> Result<(), BackendError>
+where
+    I: IntoIterator<Item = usize>,
+{
+    validate_dense_resident_indices(
+        input_indices,
+        expected_len,
+        context,
+        "input",
+        "borrowed fallback launch",
+    )
 }
 
 pub(crate) fn stage_resident_fill_payload(

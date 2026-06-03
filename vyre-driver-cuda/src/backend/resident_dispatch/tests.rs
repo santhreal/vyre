@@ -1,6 +1,7 @@
 use super::helpers::{
     borrow_resident_sequence_output_slots, prepare_resident_sequence_fills,
-    stage_resident_fill_payload, validate_dense_resident_output_indices,
+    stage_resident_fill_payload, validate_dense_resident_input_indices,
+    validate_dense_resident_output_indices,
 };
 
 fn resident_dispatch_production_source() -> String {
@@ -22,9 +23,11 @@ fn resident_dispatch_production_source() -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::borrowed::order_resident_fallback_inputs_by_logical_index;
     use super::{
         borrow_resident_sequence_output_slots, prepare_resident_sequence_fills,
-        stage_resident_fill_payload, validate_dense_resident_output_indices,
+        stage_resident_fill_payload, validate_dense_resident_input_indices,
+        validate_dense_resident_output_indices,
     };
     use crate::backend::resident::CudaResidentBuffer;
 
@@ -125,6 +128,52 @@ mod tests {
         assert!(
             validate_dense_resident_output_indices([0, 2, 3], 3, "test output").is_err(),
             "Fix: sparse resident output indexes must fail before readback ordering can skip an output slot."
+        );
+        assert!(
+            validate_dense_resident_output_indices([0, 1], 3, "test output").is_err(),
+            "Fix: truncated resident output indexes must fail before readback ordering can drop an output slot."
+        );
+    }
+
+    #[test]
+    fn resident_input_index_validation_rejects_sparse_duplicate_or_truncated_indexes() {
+        validate_dense_resident_input_indices([0, 1, 2], 3, "test input")
+            .expect("Fix: dense resident input indexes must validate.");
+        assert!(
+            validate_dense_resident_input_indices([0, 0, 2], 3, "test input").is_err(),
+            "Fix: duplicate resident input indexes must fail before borrowed fallback can alias a logical input slot."
+        );
+        assert!(
+            validate_dense_resident_input_indices([0, 2, 3], 3, "test input").is_err(),
+            "Fix: sparse resident input indexes must fail before borrowed fallback can skip a logical input slot."
+        );
+        assert!(
+            validate_dense_resident_input_indices([0, 1], 3, "test input").is_err(),
+            "Fix: truncated resident input indexes must fail before borrowed fallback can drop a logical input slot."
+        );
+    }
+
+    #[test]
+    fn resident_borrowed_fallback_orders_downloaded_inputs_by_logical_slot() {
+        let mut inputs = vec![(2, vec![0xCC]), (0, vec![0xAA]), (1, vec![0xBB])];
+
+        order_resident_fallback_inputs_by_logical_index(&mut inputs, 3)
+            .expect("Fix: reordered resident fallback inputs should sort by logical input slot.");
+
+        assert_eq!(
+            inputs,
+            vec![
+                (0, vec![0xAA]),
+                (1, vec![0xBB]),
+                (2, vec![0xCC]),
+            ],
+            "Fix: CUDA resident borrowed fallback must pass dispatch_borrowed inputs in Program::buffers logical order, not descriptor binding order."
+        );
+
+        let mut duplicate = vec![(0, vec![1]), (0, vec![2])];
+        assert!(
+            order_resident_fallback_inputs_by_logical_index(&mut duplicate, 2).is_err(),
+            "Fix: resident fallback input ordering must reject duplicate logical input slots before launch."
         );
     }
 
