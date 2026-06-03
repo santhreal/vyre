@@ -126,8 +126,15 @@ pub(crate) fn check_single_benchmark_report(
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(u64::MAX);
     if failed != 0 {
+        let failed_cases =
+            crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(report);
+        let detail = if failed_cases.is_empty() {
+            String::new()
+        } else {
+            format!(": {}", failed_cases.join("; "))
+        };
         failures.push(format!(
-            "requirement `{}` benchmark `{}` reports {failed} failed case(s)",
+            "requirement `{}` benchmark `{}` reports {failed} failed case(s){detail}",
             requirement.id,
             path.display()
         ));
@@ -464,6 +471,12 @@ mod part3_tests {
                 "case `sparse.compaction.count.1m` did not pass its performance contract: Performance contract failed"
             ) && failure.contains("observed 86.90x")),
             "Fix: direct benchmark gate failures must carry the failed benchmark case reason; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "reports 1 failed case(s): `sparse.compaction.count.1m`: Performance contract failed"
+            ) && failure.contains("observed 86.90x")),
+            "Fix: direct benchmark summary failures must include failed case identity and reason; failures={failures:?}"
         );
     }
 }

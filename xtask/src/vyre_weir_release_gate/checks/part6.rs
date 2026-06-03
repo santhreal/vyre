@@ -21,8 +21,15 @@ pub(crate) fn check_benchmark_report_has_cases(
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(u64::MAX);
     if failed != 0 {
+        let failed_cases =
+            crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&report);
+        let detail = if failed_cases.is_empty() {
+            String::new()
+        } else {
+            format!(": {}", failed_cases.join("; "))
+        };
         failures.push(format!(
-            "requirement `{}` benchmark `{suffix}` reports {failed} failed case(s)",
+            "requirement `{}` benchmark `{suffix}` reports {failed} failed case(s){detail}",
             requirement.id
         ));
     }

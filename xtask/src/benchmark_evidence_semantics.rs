@@ -9,7 +9,13 @@ static CURRENT_SOURCE_TREE_FINGERPRINTS: OnceLock<Mutex<BTreeMap<PathBuf, String
     OnceLock::new();
 
 pub(crate) fn benchmark_case_failure_reason(case: &Value) -> Option<String> {
-    if case.get("status").and_then(Value::as_str) == Some("pass") {
+    let status = case.get("status").and_then(Value::as_str);
+    let contract_failed = case
+        .get("performance")
+        .and_then(|performance| performance.get("contract_passed"))
+        .and_then(Value::as_bool)
+        == Some(false);
+    if status == Some("pass") && !contract_failed {
         return None;
     }
     case.get("correctness")
@@ -30,11 +36,30 @@ pub(crate) fn benchmark_case_failure_reason(case: &Value) -> Option<String> {
             (!violations.is_empty()).then(|| violations.join("; "))
         })
         .or_else(|| {
-            case.get("status")
-                .and_then(Value::as_str)
+            status
                 .filter(|status| !status.is_empty())
                 .map(|status| format!("status `{status}`"))
         })
+        .or_else(|| contract_failed.then(|| "performance contract failed".to_string()))
+}
+
+pub(crate) fn benchmark_failed_case_summaries(report: &Value) -> Vec<String> {
+    report
+        .get("cases")
+        .and_then(Value::as_array)
+        .map(|cases| {
+            cases
+                .iter()
+                .filter_map(|case| {
+                    let id = case
+                        .get("id")
+                        .and_then(Value::as_str)
+                        .unwrap_or("<unknown>");
+                    benchmark_case_failure_reason(case).map(|reason| format!("`{id}`: {reason}"))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

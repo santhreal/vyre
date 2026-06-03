@@ -179,8 +179,15 @@ pub(crate) fn check_before_after_benchmark_report(
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(u64::MAX);
     if failed != 0 {
+        let failed_cases =
+            crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(&report);
+        let detail = if failed_cases.is_empty() {
+            String::new()
+        } else {
+            format!(": {}", failed_cases.join("; "))
+        };
         failures.push(format!(
-            "requirement `{}` benchmark `{suffix}` reports {failed} failed case(s)",
+            "requirement `{}` benchmark `{suffix}` reports {failed} failed case(s){detail}",
             requirement.id
         ));
     }
@@ -285,7 +292,9 @@ pub(crate) fn metric_p50(metric: Option<&serde_json::Value>) -> Option<f64> {
         .or_else(|| metric.as_f64())
         .or_else(|| metric.as_u64().map(|value| value as f64))
 }
-pub(crate) fn active_gpu_metric_p50(metrics: &serde_json::Map<String, serde_json::Value>) -> Option<f64> {
+pub(crate) fn active_gpu_metric_p50(
+    metrics: &serde_json::Map<String, serde_json::Value>,
+) -> Option<f64> {
     metric_p50(metrics.get("dispatch_ns"))
         .or_else(|| metric_p50(metrics.get("kernel_execute_ns")))
         .or_else(|| metric_p50(metrics.get("wall_ns")))
@@ -316,7 +325,10 @@ pub(crate) fn before_after_semantic_win(
         _ => false,
     }
 }
-pub(crate) fn metric_percentile(metric: Option<&serde_json::Value>, percentile: &str) -> Option<f64> {
+pub(crate) fn metric_percentile(
+    metric: Option<&serde_json::Value>,
+    percentile: &str,
+) -> Option<f64> {
     let metric = metric?;
     metric
         .get(percentile)
