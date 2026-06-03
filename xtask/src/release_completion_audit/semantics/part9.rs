@@ -1,7 +1,7 @@
 use crate::benchmark_evidence_semantics::{
     backend_suite_artifact_status_issues, backend_suite_inventory_issues,
-    backend_suite_parity_issues, BackendSuiteArtifactStatusIssue, BackendSuiteInventoryIssue,
-    BackendSuiteParityIssue,
+    backend_suite_parity_issues, source_fingerprint_issues, BackendSuiteArtifactStatusIssue,
+    BackendSuiteInventoryIssue, BackendSuiteParityIssue, SourceFingerprintIssue,
 };
 
 fn inspect_backend_suite_semantics(
@@ -351,6 +351,18 @@ fn inspect_backend_suite_status_artifact_consistency(
             }
         };
         inspect_backend_suite_artifact_status(evidence, status, &artifact_report, blockers);
+        if let Some(source_fingerprint) = artifact_report
+            .get("source_fingerprint")
+            .and_then(serde_json::Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        {
+            inspect_suite_artifact_source_fingerprint(
+                evidence,
+                artifact,
+                source_fingerprint,
+                blockers,
+            );
+        }
     }
 }
 
@@ -422,6 +434,39 @@ fn inspect_backend_suite_artifact_status(
                 requested_case_id,
             } => blockers.push(format!(
                 "{evidence}: suite artifact `{path}` does not contain requested_case_id `{requested_case_id}`"
+            )),
+        }
+    }
+}
+
+fn inspect_suite_artifact_source_fingerprint(
+    evidence: &str,
+    artifact: &str,
+    source_fingerprint: &str,
+    blockers: &mut Vec<String>,
+) {
+    for issue in source_fingerprint_issues(source_fingerprint) {
+        match issue {
+            SourceFingerprintIssue::DirtyUnknownState { source_fingerprint } => blockers.push(
+                format!(
+                    "{evidence}: suite artifact `{artifact}` source_fingerprint `{source_fingerprint}` has dirty=unknown; rerun with git status provenance available"
+                ),
+            ),
+            SourceFingerprintIssue::DirtyMissingWorktree { source_fingerprint } => blockers.push(
+                format!(
+                    "{evidence}: suite artifact `{artifact}` source_fingerprint `{source_fingerprint}` is dirty but has no worktree digest"
+                ),
+            ),
+            SourceFingerprintIssue::DirtyUnknownWorktree { source_fingerprint } => blockers.push(
+                format!(
+                    "{evidence}: suite artifact `{artifact}` source_fingerprint `{source_fingerprint}` has an unknown worktree digest"
+                ),
+            ),
+            SourceFingerprintIssue::DirtyInvalidWorktree {
+                source_fingerprint,
+                worktree,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{artifact}` source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`; expected 64 hex chars"
             )),
         }
     }

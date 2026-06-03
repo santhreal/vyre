@@ -36,6 +36,23 @@ pub(crate) enum CudaTelemetryLabelIssue {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum SourceFingerprintIssue {
+    DirtyUnknownState {
+        source_fingerprint: String,
+    },
+    DirtyMissingWorktree {
+        source_fingerprint: String,
+    },
+    DirtyUnknownWorktree {
+        source_fingerprint: String,
+    },
+    DirtyInvalidWorktree {
+        source_fingerprint: String,
+        worktree: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum BackendSuiteParityIssue {
     MissingCudaPair {
         family_id: String,
@@ -97,6 +114,39 @@ pub(crate) enum BackendSuiteArtifactStatusIssue {
         path: String,
         requested_case_id: String,
     },
+}
+
+pub(crate) fn source_fingerprint_issues(source_fingerprint: &str) -> Vec<SourceFingerprintIssue> {
+    let Some(rest) = source_fingerprint.strip_prefix("git:") else {
+        return Vec::new();
+    };
+    let mut issues = Vec::new();
+    if rest.contains(":dirty=unknown") {
+        issues.push(SourceFingerprintIssue::DirtyUnknownState {
+            source_fingerprint: source_fingerprint.to_string(),
+        });
+    }
+    let Some(dirty_offset) = rest.find(":dirty=true") else {
+        return issues;
+    };
+    let after_dirty = &rest[dirty_offset + ":dirty=true".len()..];
+    let Some(worktree) = after_dirty.strip_prefix(":worktree=") else {
+        issues.push(SourceFingerprintIssue::DirtyMissingWorktree {
+            source_fingerprint: source_fingerprint.to_string(),
+        });
+        return issues;
+    };
+    if worktree == "unknown" {
+        issues.push(SourceFingerprintIssue::DirtyUnknownWorktree {
+            source_fingerprint: source_fingerprint.to_string(),
+        });
+    } else if !is_blake3_hex_digest(worktree) {
+        issues.push(SourceFingerprintIssue::DirtyInvalidWorktree {
+            source_fingerprint: source_fingerprint.to_string(),
+            worktree: worktree.to_string(),
+        });
+    }
+    issues
 }
 
 pub(crate) fn backend_suite_artifact_status_issues(
@@ -483,6 +533,10 @@ fn non_empty_str(value: &Value) -> Option<&str> {
     value.as_str().filter(|value| !value.trim().is_empty())
 }
 
+fn is_blake3_hex_digest(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -527,6 +581,60 @@ mod tests {
                 "Fix: matching launch-plan label/count evidence should pass: {issues:?}"
             );
         }
+    }
+
+    #[test]
+    fn source_fingerprint_rejects_dirty_without_worktree_digest() {
+        assert_eq!(
+            source_fingerprint_issues("git:abc123:dirty=true"),
+            vec![SourceFingerprintIssue::DirtyMissingWorktree {
+                source_fingerprint: "git:abc123:dirty=true".to_string(),
+            }],
+            "Fix: dirty benchmark evidence must not collapse distinct dirty worktrees."
+        );
+    }
+
+    #[test]
+    fn source_fingerprint_rejects_unknown_dirty_state_and_digest() {
+        assert_eq!(
+            source_fingerprint_issues("git:abc123:dirty=unknown"),
+            vec![SourceFingerprintIssue::DirtyUnknownState {
+                source_fingerprint: "git:abc123:dirty=unknown".to_string(),
+            }],
+            "Fix: release evidence must fail closed when git status provenance is unavailable."
+        );
+        assert_eq!(
+            source_fingerprint_issues("git:abc123:dirty=true:worktree=unknown"),
+            vec![SourceFingerprintIssue::DirtyUnknownWorktree {
+                source_fingerprint: "git:abc123:dirty=true:worktree=unknown".to_string(),
+            }],
+            "Fix: dirty source fingerprints must carry the actual worktree digest."
+        );
+    }
+
+    #[test]
+    fn source_fingerprint_accepts_clean_and_precise_dirty_git_fingerprints() {
+        assert!(source_fingerprint_issues("git:abc123:dirty=false").is_empty());
+        assert!(
+            source_fingerprint_issues(&format!(
+                "git:abc123:dirty=true:worktree={}",
+                "a".repeat(64)
+            ))
+            .is_empty(),
+            "Fix: precise dirty source fingerprints must remain valid release evidence."
+        );
+    }
+
+    #[test]
+    fn source_fingerprint_rejects_malformed_dirty_worktree_digest() {
+        assert_eq!(
+            source_fingerprint_issues("git:abc123:dirty=true:worktree=not-a-digest"),
+            vec![SourceFingerprintIssue::DirtyInvalidWorktree {
+                source_fingerprint: "git:abc123:dirty=true:worktree=not-a-digest".to_string(),
+                worktree: "not-a-digest".to_string(),
+            }],
+            "Fix: dirty source fingerprints must carry a stable 64-hex digest."
+        );
     }
 
     #[test]

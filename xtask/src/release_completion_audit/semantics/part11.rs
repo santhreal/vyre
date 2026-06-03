@@ -113,6 +113,13 @@ fn inspect_workload_benchmark_provenance(
             "{evidence}: benchmark report must include source fingerprint or source artifact provenance"
         ));
     }
+    if let Some(source_fingerprint) = value
+        .get("source_fingerprint")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+    {
+        inspect_source_fingerprint_shape(evidence, source_fingerprint, blockers);
+    }
     let environment = value.get("environment");
     if !environment.is_some_and(|environment| {
         has_nonempty_string_any(
@@ -285,6 +292,39 @@ fn check_launch_plan_label_matches_count(
             )),
             LaunchPlanLabelIssue::MultiHasSingle { launch_count } => blockers.push(format!(
                 "{evidence}: case `{case_id}` reports {launch_count:.0} kernel launches but lists `single-dispatch-launch-plan`"
+            )),
+        }
+    }
+}
+
+fn inspect_source_fingerprint_shape(
+    evidence: &str,
+    source_fingerprint: &str,
+    blockers: &mut Vec<String>,
+) {
+    for issue in crate::benchmark_evidence_semantics::source_fingerprint_issues(source_fingerprint)
+    {
+        match issue {
+            crate::benchmark_evidence_semantics::SourceFingerprintIssue::DirtyUnknownState {
+                source_fingerprint,
+            } => blockers.push(format!(
+                "{evidence}: source_fingerprint `{source_fingerprint}` has dirty=unknown; rerun with git status provenance available"
+            )),
+            crate::benchmark_evidence_semantics::SourceFingerprintIssue::DirtyMissingWorktree {
+                source_fingerprint,
+            } => blockers.push(format!(
+                "{evidence}: source_fingerprint `{source_fingerprint}` is dirty but has no worktree digest"
+            )),
+            crate::benchmark_evidence_semantics::SourceFingerprintIssue::DirtyUnknownWorktree {
+                source_fingerprint,
+            } => blockers.push(format!(
+                "{evidence}: source_fingerprint `{source_fingerprint}` has an unknown worktree digest"
+            )),
+            crate::benchmark_evidence_semantics::SourceFingerprintIssue::DirtyInvalidWorktree {
+                source_fingerprint,
+                worktree,
+            } => blockers.push(format!(
+                "{evidence}: source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`; expected 64 hex chars"
             )),
         }
     }

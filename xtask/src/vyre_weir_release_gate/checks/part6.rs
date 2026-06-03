@@ -1,6 +1,7 @@
 use crate::benchmark_evidence_semantics::{
     backend_consistency_issues, cuda_telemetry_label_issues, launch_plan_label_issues,
-    BackendConsistencyIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
+    source_fingerprint_issues, BackendConsistencyIssue, CudaTelemetryLabelIssue,
+    LaunchPlanLabelIssue, SourceFingerprintIssue,
 };
 
 pub(crate) fn check_benchmark_report_has_cases(
@@ -190,6 +191,13 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
             requirement.id
         ));
     }
+    if let Some(source_fingerprint) = report
+        .get("source_fingerprint")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+    {
+        check_source_fingerprint_shape(requirement, label, source_fingerprint, failures);
+    }
     let environment = report.get("environment");
     if !environment.is_some_and(|environment| {
         json_has_nonempty_string_any(
@@ -310,6 +318,46 @@ pub(crate) fn check_benchmark_reproducibility_provenance(
         }
     }
 }
+
+fn check_source_fingerprint_shape(
+    requirement: &Requirement,
+    label: &str,
+    source_fingerprint: &str,
+    failures: &mut Vec<String>,
+) {
+    for issue in source_fingerprint_issues(source_fingerprint) {
+        match issue {
+            SourceFingerprintIssue::DirtyUnknownState { source_fingerprint } => {
+                failures.push(format!(
+                    "requirement `{}` benchmark `{label}` source_fingerprint `{source_fingerprint}` has dirty=unknown; rerun with git status provenance available",
+                    requirement.id
+                ));
+            }
+            SourceFingerprintIssue::DirtyMissingWorktree { source_fingerprint } => {
+                failures.push(format!(
+                    "requirement `{}` benchmark `{label}` source_fingerprint `{source_fingerprint}` is dirty but has no worktree digest",
+                    requirement.id
+                ));
+            }
+            SourceFingerprintIssue::DirtyUnknownWorktree { source_fingerprint } => {
+                failures.push(format!(
+                    "requirement `{}` benchmark `{label}` source_fingerprint `{source_fingerprint}` has an unknown worktree digest",
+                    requirement.id
+                ));
+            }
+            SourceFingerprintIssue::DirtyInvalidWorktree {
+                source_fingerprint,
+                worktree,
+            } => {
+                failures.push(format!(
+                    "requirement `{}` benchmark `{label}` source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`; expected 64 hex chars",
+                    requirement.id
+                ));
+            }
+        }
+    }
+}
+
 pub(crate) fn json_has_nonempty_string_any(value: &serde_json::Value, fields: &[&str]) -> bool {
     fields.iter().any(|field| {
         value
