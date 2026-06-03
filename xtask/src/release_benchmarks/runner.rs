@@ -152,17 +152,16 @@ fn benchmark_artifact_report_shape_is_reusable(
     if !crate::benchmark_evidence_semantics::benchmark_failed_case_summaries(report).is_empty() {
         return false;
     }
-    let Some(case) = report
-        .get("cases")
-        .and_then(Value::as_array)
-        .and_then(|cases| {
-            cases
-                .iter()
-                .find(|case| case.get("id").and_then(Value::as_str) == Some(case_id))
-        })
-    else {
+    let Some(cases) = report.get("cases").and_then(Value::as_array) else {
         return false;
     };
+    if cases.len() != 1 {
+        return false;
+    }
+    let case = &cases[0];
+    if case.get("id").and_then(Value::as_str) != Some(case_id) {
+        return false;
+    }
     if case.get("backend_id").and_then(Value::as_str) != Some(backend) {
         return false;
     }
@@ -497,6 +496,46 @@ mod tests {
                 false,
             ),
             "Fix: --reuse-existing must rerun pass-only artifacts that lack release timing metrics."
+        );
+    }
+
+    #[test]
+    fn reuse_rejects_multi_case_artifact_contamination() {
+        let dir = TempDir::new().expect("Fix: create temp workspace for multi-case reuse test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-multi-case.json",
+            serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": current_test_source_fingerprint(dir.path()),
+                "summary": {"total_cases": 2, "passed": 2, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": reusable_timing_metrics()
+                    },
+                    {
+                        "id": "release.entropy_window.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": reusable_timing_metrics()
+                    }
+                ]
+            }),
+        );
+
+        assert!(
+            !benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-multi-case.json",
+                false,
+            ),
+            "Fix: --reuse-existing must rerun multi-case artifacts instead of contaminating one-workload backend suite rows."
         );
     }
 
