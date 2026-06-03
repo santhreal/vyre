@@ -655,6 +655,14 @@ fn check_backend_suite_artifact_status(
                 "requirement `{}` backend suite `{suffix}` artifact `{path}` does not contain requested_case_id `{requested_case_id}`",
                 requirement.id
             )),
+            BackendSuiteArtifactStatusIssue::DuplicateRequestedCase {
+                path,
+                requested_case_id,
+                count,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` artifact `{path}` contains requested_case_id `{requested_case_id}` {count} times",
+                requirement.id
+            )),
         }
     }
 }
@@ -691,6 +699,43 @@ mod part7_tests {
                 .iter()
                 .any(|failure| failure.contains("is dirty but has no worktree digest")),
             "Fix: backend suite status rows must carry precise dirty-worktree provenance; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_duplicate_requested_case_rows() {
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+            minimum_evidence: 0,
+        };
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "requested_case_id": "release.condition_eval.1m"
+        });
+        let artifact = serde_json::json!({
+            "cases": [
+                {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"},
+                {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"}
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_backend_suite_artifact_status(
+            &requirement,
+            "cuda-release-suite.json",
+            &status,
+            &artifact,
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "artifact `release/evidence/benchmarks/workload-01-condition-eval.json` contains requested_case_id `release.condition_eval.1m` 2 times"
+            )),
+            "Fix: release gate must reject suite artifacts where requested_case_id resolves to multiple benchmark rows; failures={failures:?}"
         );
     }
 

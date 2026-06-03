@@ -612,6 +612,13 @@ fn inspect_backend_suite_artifact_status(
             } => blockers.push(format!(
                 "{evidence}: suite artifact `{path}` does not contain requested_case_id `{requested_case_id}`"
             )),
+            BackendSuiteArtifactStatusIssue::DuplicateRequestedCase {
+                path,
+                requested_case_id,
+                count,
+            } => blockers.push(format!(
+                "{evidence}: suite artifact `{path}` contains requested_case_id `{requested_case_id}` {count} times"
+            )),
         }
     }
 }
@@ -761,6 +768,35 @@ mod part9_tests {
                 "field `source_tree_fingerprint` mismatch for family `condition-eval` case `release.condition_eval.1m`: cuda=Some(\"source-tree-v1:cuda\"), wgpu=Some(\"source-tree-v1:wgpu\")"
             )),
             "Fix: completion audit must report source_tree_fingerprint drift on matching WGPU/CUDA suite rows; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_duplicate_requested_case_rows() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "requested_case_id": "release.condition_eval.1m"
+        });
+        let artifact = serde_json::json!({
+            "cases": [
+                {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"},
+                {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"}
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_backend_suite_artifact_status(
+            "release/evidence/benchmarks/cuda-release-suite.json",
+            &status,
+            &artifact,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "suite artifact `release/evidence/benchmarks/workload-01-condition-eval.json` contains requested_case_id `release.condition_eval.1m` 2 times"
+            )),
+            "Fix: completion audit must reject suite artifacts where requested_case_id resolves to multiple benchmark rows; blockers={blockers:?}"
         );
     }
 

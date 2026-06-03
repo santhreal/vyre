@@ -868,6 +868,11 @@ pub(crate) enum BackendSuiteArtifactStatusIssue {
         path: String,
         requested_case_id: String,
     },
+    DuplicateRequestedCase {
+        path: String,
+        requested_case_id: String,
+        count: usize,
+    },
 }
 
 pub(crate) fn source_fingerprint_issues(source_fingerprint: &str) -> Vec<SourceFingerprintIssue> {
@@ -1293,19 +1298,31 @@ pub(crate) fn backend_suite_artifact_status_issues(
     }
 
     if let Some(requested_case_id) = status.get("requested_case_id").and_then(non_empty_str) {
-        let contains_requested_case = artifact_report
-            .get("cases")
-            .and_then(Value::as_array)
-            .is_some_and(|cases| {
-                cases
-                    .iter()
-                    .any(|case| case.get("id").and_then(Value::as_str) == Some(requested_case_id))
-            });
-        if !contains_requested_case {
-            issues.push(BackendSuiteArtifactStatusIssue::MissingRequestedCase {
-                path,
+        let requested_case_count =
+            artifact_report
+                .get("cases")
+                .and_then(Value::as_array)
+                .map(|cases| {
+                    cases
+                        .iter()
+                        .filter(|case| {
+                            case.get("id").and_then(Value::as_str) == Some(requested_case_id)
+                        })
+                        .count()
+                });
+        match requested_case_count {
+            Some(0) => issues.push(BackendSuiteArtifactStatusIssue::MissingRequestedCase {
+                path: path.clone(),
                 requested_case_id: requested_case_id.to_string(),
-            });
+            }),
+            Some(count) if count > 1 => {
+                issues.push(BackendSuiteArtifactStatusIssue::DuplicateRequestedCase {
+                    path,
+                    requested_case_id: requested_case_id.to_string(),
+                    count,
+                });
+            }
+            _ => {}
         }
     }
 
@@ -3258,6 +3275,34 @@ mod tests {
                 },
             ],
             "Fix: backend suite status rows must be proven against the listed artifact JSON."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_duplicate_requested_case_rows() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "requested_case_id": "release.condition_eval.1m",
+            "case_count": 3,
+            "failed_count": 0
+        });
+        let artifact = serde_json::json!({
+            "summary": {"total_cases": 3, "passed": 3, "failed": 0},
+            "cases": [
+                {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"},
+                {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"},
+                {"id": "release.other.1m", "backend_id": "cuda", "status": "pass"}
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![BackendSuiteArtifactStatusIssue::DuplicateRequestedCase {
+                path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                requested_case_id: "release.condition_eval.1m".to_string(),
+                count: 2,
+            }],
+            "Fix: suite status requested_case_id must identify exactly one benchmark row inside the artifact."
         );
     }
 
