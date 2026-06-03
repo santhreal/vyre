@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
@@ -388,6 +388,23 @@ pub(super) fn write_backend_suite_with_extra_blockers(
             "backend `{backend}` release suite has zero artifacts"
         ));
     }
+    let family_counts = backend_suite_input_family_counts(&artifact_inputs);
+    for artifact in artifact_inputs
+        .iter()
+        .filter(|artifact| artifact.family_id.trim().is_empty())
+    {
+        blockers.push(format!(
+            "backend `{backend}` release suite artifact `{}` has blank family_id",
+            artifact.path
+        ));
+    }
+    for (family_id, count) in &family_counts {
+        if *count > 1 {
+            blockers.push(format!(
+                "backend `{backend}` release suite has {count} artifact input(s) for family `{family_id}`"
+            ));
+        }
+    }
     let artifacts = artifact_inputs
         .iter()
         .map(|artifact| artifact.path.clone())
@@ -407,7 +424,7 @@ pub(super) fn write_backend_suite_with_extra_blockers(
     let evidence = BackendSuiteEvidence {
         schema_version: 2,
         backend: backend.to_string(),
-        family_count: artifact_inputs.len(),
+        family_count: family_counts.len(),
         artifacts,
         artifact_statuses,
         blockers,
@@ -430,6 +447,21 @@ pub(super) fn write_backend_suite_with_extra_blockers(
         eprintln!("Fix: failed to write `{}`: {error}", path.display());
         std::process::exit(1);
     }
+}
+
+fn backend_suite_input_family_counts(
+    artifact_inputs: &[BackendSuiteArtifactInput],
+) -> BTreeMap<String, usize> {
+    artifact_inputs
+        .iter()
+        .filter_map(|artifact| {
+            let family_id = artifact.family_id.trim();
+            (!family_id.is_empty()).then(|| family_id.to_string())
+        })
+        .fold(BTreeMap::new(), |mut counts, family_id| {
+            *counts.entry(family_id).or_default() += 1;
+            counts
+        })
 }
 
 pub(super) fn backend_suite_output_path(backend: &str) -> String {
@@ -1022,6 +1054,57 @@ mod tests {
                 })
             }),
             "Fix: backend suite evidence must record benchmark run failures instead of leaving them only on stderr; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn write_backend_suite_rejects_duplicate_family_input_coverage() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for suite duplicate family test.");
+
+        write_backend_suite(
+            dir.path(),
+            "wgpu",
+            vec![
+                BackendSuiteArtifactInput {
+                    path: "release/evidence/benchmarks/wgpu-condition-fast.json".to_string(),
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                    cpu_sota_100x_required: false,
+                },
+                BackendSuiteArtifactInput {
+                    path: "release/evidence/benchmarks/wgpu-condition-slow.json".to_string(),
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.10m".to_string(),
+                    cpu_sota_100x_required: false,
+                },
+            ],
+        );
+
+        let suite_path = dir
+            .path()
+            .join("release/evidence/benchmarks/wgpu-fallback-suite.json");
+        let text = fs::read_to_string(&suite_path)
+            .expect("Fix: read generated WGPU fallback suite JSON for duplicate family test.");
+        let suite = serde_json::from_str::<Value>(&text)
+            .expect("Fix: generated WGPU fallback suite JSON must be parseable.");
+        let blockers = suite
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated suite must carry blockers array.");
+
+        assert_eq!(
+            suite.get("family_count").and_then(Value::as_u64),
+            Some(1),
+            "Fix: generated backend suite family_count must count unique workload families, not raw artifact inputs."
+        );
+        assert!(
+            blockers.iter().any(|blocker| {
+                blocker.as_str().is_some_and(|blocker| {
+                    blocker.contains("has 2 artifact input(s) for family `condition-eval`")
+                })
+            }),
+            "Fix: generated backend suite evidence must preserve duplicate family input blockers; blockers={blockers:?}"
         );
     }
 
