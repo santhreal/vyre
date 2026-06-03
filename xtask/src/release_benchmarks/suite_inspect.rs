@@ -396,6 +396,15 @@ pub(super) fn write_backend_suite_with_extra_blockers(
             artifact.path
         ));
     }
+    for artifact in artifact_inputs
+        .iter()
+        .filter(|artifact| artifact.requested_case_id.trim().is_empty())
+    {
+        blockers.push(format!(
+            "backend `{backend}` release suite artifact `{}` has blank requested_case_id",
+            artifact.path
+        ));
+    }
     for (family_id, count) in &family_counts {
         if *count > 1 {
             blockers.push(format!(
@@ -1103,6 +1112,76 @@ mod tests {
                 })
             }),
             "Fix: generated backend suite evidence must preserve duplicate family input blockers; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn write_backend_suite_rejects_blank_requested_case_input() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for suite blank requested-case test.");
+        let artifact_rel = "release/evidence/benchmarks/wgpu-blank-requested-case.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: blank requested-case artifact path must have a parent directory."),
+        )
+        .expect("Fix: create blank requested-case artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": "git:abc:dirty=false",
+                "source_tree_fingerprint": "source-tree-v1:abc",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize blank requested-case benchmark artifact JSON."),
+        )
+        .expect("Fix: write blank requested-case benchmark artifact JSON.");
+
+        write_backend_suite(
+            dir.path(),
+            "wgpu",
+            vec![BackendSuiteArtifactInput {
+                path: artifact_rel.to_string(),
+                family_id: "condition-eval".to_string(),
+                requested_case_id: " \t ".to_string(),
+                cpu_sota_100x_required: false,
+            }],
+        );
+
+        let suite_path = dir
+            .path()
+            .join("release/evidence/benchmarks/wgpu-fallback-suite.json");
+        let text = fs::read_to_string(&suite_path)
+            .expect("Fix: read generated WGPU fallback suite JSON for blank requested-case test.");
+        let suite = serde_json::from_str::<Value>(&text)
+            .expect("Fix: generated WGPU fallback suite JSON must be parseable.");
+        let blockers = suite
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated suite must carry blockers array.");
+
+        assert!(
+            blockers.iter().any(|blocker| {
+                blocker.as_str().is_some_and(|blocker| {
+                    blocker.contains(
+                        "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-blank-requested-case.json` has blank requested_case_id",
+                    )
+                })
+            }),
+            "Fix: generated backend suite evidence must reject blank requested_case_id inputs; blockers={blockers:?}"
         );
     }
 
