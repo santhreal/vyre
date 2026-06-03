@@ -751,6 +751,8 @@ mod part9_tests {
                         "case_count": 1,
                         "failed_count": 0,
                         "nonmatching_case_backend_count": 0,
+                        "cpu_sota_100x_contract_cases": 1,
+                        "cpu_sota_100x_passing_cases": 1,
                         "source_fingerprint": "git:cuda:dirty=false",
                         "source_tree_fingerprint": "source-tree-v1:cuda"
                     }
@@ -770,6 +772,8 @@ mod part9_tests {
                     "case_count": 1,
                     "failed_count": 0,
                     "nonmatching_case_backend_count": 0,
+                    "cpu_sota_100x_contract_cases": 0,
+                    "cpu_sota_100x_passing_cases": 0,
                     "source_fingerprint": "git:wgpu:dirty=false",
                     "source_tree_fingerprint": "source-tree-v1:wgpu"
                 }
@@ -796,6 +800,18 @@ mod part9_tests {
                 "field `source_tree_fingerprint` mismatch for family `condition-eval` case `release.condition_eval.1m`: cuda=Some(\"source-tree-v1:cuda\"), wgpu=Some(\"source-tree-v1:wgpu\")"
             )),
             "Fix: completion audit must report source_tree_fingerprint drift on matching WGPU/CUDA suite rows; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "field `cpu_sota_100x_contract_cases` mismatch for family `condition-eval` case `release.condition_eval.1m`: cuda=Some(1), wgpu=Some(0)"
+            )),
+            "Fix: completion audit must report CPU-SOTA contract proof-count drift on matching WGPU/CUDA suite rows; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "field `cpu_sota_100x_passing_cases` mismatch for family `condition-eval` case `release.condition_eval.1m`: cuda=Some(1), wgpu=Some(0)"
+            )),
+            "Fix: completion audit must report CPU-SOTA passing proof-count drift on matching WGPU/CUDA suite rows; blockers={blockers:?}"
         );
     }
 

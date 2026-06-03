@@ -1940,6 +1940,8 @@ pub(crate) fn backend_suite_parity_issues(
             "case_count",
             "failed_count",
             "nonmatching_case_backend_count",
+            "cpu_sota_100x_contract_cases",
+            "cpu_sota_100x_passing_cases",
         ] {
             let cuda_value = cuda_status.get(field).and_then(Value::as_u64);
             let wgpu_value = wgpu_status.get(field).and_then(Value::as_u64);
@@ -3522,6 +3524,53 @@ mod tests {
                 },
             ],
             "Fix: WGPU parity must compare proof strength and source provenance of matching suite rows, not only family/case labels."
+        );
+    }
+
+    #[test]
+    fn backend_suite_parity_rejects_cpu_sota_count_drift() {
+        let cuda = serde_json::json!({
+            "backend": "cuda",
+            "artifact_statuses": [
+                {
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "cpu_sota_100x_contract_cases": 1,
+                    "cpu_sota_100x_passing_cases": 1
+                }
+            ]
+        });
+        let wgpu = serde_json::json!({
+            "backend": "wgpu",
+            "artifact_statuses": [
+                {
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "cpu_sota_100x_contract_cases": 0,
+                    "cpu_sota_100x_passing_cases": 0
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_parity_issues(&cuda, &wgpu),
+            vec![
+                BackendSuiteParityIssue::StatusFieldMismatch {
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                    field: "cpu_sota_100x_contract_cases",
+                    cuda_value: Some(1),
+                    wgpu_value: Some(0),
+                },
+                BackendSuiteParityIssue::StatusFieldMismatch {
+                    family_id: "condition-eval".to_string(),
+                    requested_case_id: "release.condition_eval.1m".to_string(),
+                    field: "cpu_sota_100x_passing_cases",
+                    cuda_value: Some(1),
+                    wgpu_value: Some(0),
+                },
+            ],
+            "Fix: WGPU/CUDA parity must compare CPU-SOTA proof strength for matching suite rows."
         );
     }
 
