@@ -174,7 +174,11 @@ pub(crate) fn check_backend_suite_report(
                     requirement.id
                 ));
             }
-            for field in ["source_fingerprint", "host_cpu_model"] {
+            for field in [
+                "source_fingerprint",
+                "source_tree_fingerprint",
+                "host_cpu_model",
+            ] {
                 if status
                     .get(field)
                     .and_then(serde_json::Value::as_str)
@@ -924,6 +928,7 @@ mod part7_tests {
                         "family_id": "   ",
                         "requested_case_id": "\t",
                         "source_fingerprint": "  ",
+                        "source_tree_fingerprint": " ",
                         "host_cpu_model": "\n",
                         "selected_backend": "cuda",
                         "case_count": 1,
@@ -963,6 +968,7 @@ mod part7_tests {
             "has no family_id",
             "has no requested_case_id",
             "has no `source_fingerprint` provenance",
+            "has no `source_tree_fingerprint` provenance",
             "has no `host_cpu_model` provenance",
             "has no `gpu_model` provenance",
             "has no `nvidia_driver_version` provenance",
