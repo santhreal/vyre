@@ -121,28 +121,7 @@ impl BenchCase for SparseOutputCompactionCount {
     }
 
     fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let program = Program::wrapped(
-            vec![
-                BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-                BufferDecl::storage("flags", 1, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(SPARSE_ITEMS),
-            ],
-            [256, 1, 1],
-            vec![
-                Node::let_bind("idx", Expr::gid_x()),
-                Node::if_then(
-                    Expr::and(
-                        Expr::lt(Expr::var("idx"), Expr::u32(SPARSE_ITEMS)),
-                        Expr::ne(Expr::load("flags", Expr::var("idx")), Expr::u32(0)),
-                    ),
-                    vec![Node::let_bind(
-                        "_slot",
-                        Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
-                    )],
-                ),
-            ],
-        );
-        Ok(Box::new(program))
+        Ok(Box::new(sparse_output_compaction_count_program()))
     }
 
     fn run(
@@ -190,6 +169,30 @@ impl BenchCase for SparseOutputCompactionCount {
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
         run.verify_exact_outputs()
     }
+}
+
+fn sparse_output_compaction_count_program() -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read_write("out_count", 0, DataType::U32).with_count(1),
+            BufferDecl::storage("flags", 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(SPARSE_ITEMS),
+        ],
+        [256, 1, 1],
+        vec![
+            Node::let_bind("idx", Expr::gid_x()),
+            Node::if_then(
+                Expr::and(
+                    Expr::lt(Expr::var("idx"), Expr::u32(SPARSE_ITEMS)),
+                    Expr::ne(Expr::load("flags", Expr::var("idx")), Expr::u32(0)),
+                ),
+                vec![Node::let_bind(
+                    "_slot",
+                    Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
+                )],
+            ),
+        ],
+    )
 }
 
 fn sparse_compaction_flag(index: u32) -> u32 {
@@ -2638,6 +2641,20 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sparse_compaction_dispatch_inputs_match_program_abi() {
+        let program = sparse_output_compaction_count_program();
+        let input_lengths = [4, (SPARSE_ITEMS as usize) * 4];
+
+        let plan = vyre_driver::BindingPlan::from_input_lengths(&program, &input_lengths)
+            .expect("Fix: sparse compaction release workload inputs must match Program ABI.");
+        assert_eq!(
+            plan.input_indices.len(),
+            input_lengths.len(),
+            "Fix: sparse compaction count must treat out_count as initialized input-output state and flags as read-only input."
+        );
+    }
 
     #[test]
     fn string_bitmap_scatter_inputs_match_program_abi_at_word_boundaries() {

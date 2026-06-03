@@ -5,14 +5,14 @@
   "selected_backend": "wgpu",
   "git": {
     "branch": "main",
-    "commit": "f7485c286ce164563befd2575623054c67ba4154",
-    "commit_timestamp": "1780466824",
+    "commit": "076b960d538f2a9835262a537b85c845c05b8853",
+    "commit_timestamp": "1780468084",
     "dirty": "true",
-    "dirty_worktree_fingerprint": "3bb68895b8bf267b722431f91f3bbf5d8e0462931ffca7fbb399138ffab4447a",
-    "parent_commit": "e1d2f54215e7298311cfc94aaed4d21cc130f568"
+    "dirty_worktree_fingerprint": "dace1227cc5edd0cae9044eca093b0e922d378696add89ce872eabb0a81f4202",
+    "parent_commit": "f7485c286ce164563befd2575623054c67ba4154"
   },
-  "source_fingerprint": "git:f7485c286ce164563befd2575623054c67ba4154:dirty=true:worktree=3bb68895b8bf267b722431f91f3bbf5d8e0462931ffca7fbb399138ffab4447a",
-  "source_tree_fingerprint": "source-tree-v1:fd237d479c0569c09cd7c4d83e6dc03fae8f0e33576b44f9562fa1a17b62a722",
+  "source_fingerprint": "git:076b960d538f2a9835262a537b85c845c05b8853:dirty=true:worktree=dace1227cc5edd0cae9044eca093b0e922d378696add89ce872eabb0a81f4202",
+  "source_tree_fingerprint": "source-tree-v1:66c1411b180a0913275a548eba1e59b04ca2cae821df81caff5df826d26985f9",
   "environment": {
     "os": "linux",
     "architecture": "x86_64",
@@ -73,7 +73,7 @@
       "wall_ns": null,
       "correctness": {
         "Invalid": {
-          "reason": "Warmup error on sample 0: Backend failed: Fix: dispatch expected 1 input buffer(s) from Program declarations but received 2."
+          "reason": "Performance contract failed: sparse output compaction count requires 100.00x over optimized CPU fired-rule collection over predicate masks, observed 91.75x"
         }
       },
       "contract": {
@@ -101,7 +101,7 @@
     "total_cases": 1,
     "passed": 0,
     "failed": 1,
-    "total_time_ns": 302016131,
+    "total_time_ns": 8103480338,
     "cache_hit_rate": 0.0
   }
 }

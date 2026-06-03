@@ -5,14 +5,14 @@
   "selected_backend": "wgpu",
   "git": {
     "branch": "main",
-    "commit": "f7485c286ce164563befd2575623054c67ba4154",
-    "commit_timestamp": "1780466824",
+    "commit": "076b960d538f2a9835262a537b85c845c05b8853",
+    "commit_timestamp": "1780468084",
     "dirty": "true",
-    "dirty_worktree_fingerprint": "563e3960a7c0d95b1e1c338b740cc2a388be45d7134c666151d843be07410fcc",
-    "parent_commit": "e1d2f54215e7298311cfc94aaed4d21cc130f568"
+    "dirty_worktree_fingerprint": "16822b30b44bcfd9463076f0948e4e227969bfcad9a516965e5f47bedc078d7d",
+    "parent_commit": "f7485c286ce164563befd2575623054c67ba4154"
   },
-  "source_fingerprint": "git:f7485c286ce164563befd2575623054c67ba4154:dirty=true:worktree=563e3960a7c0d95b1e1c338b740cc2a388be45d7134c666151d843be07410fcc",
-  "source_tree_fingerprint": "source-tree-v1:fd237d479c0569c09cd7c4d83e6dc03fae8f0e33576b44f9562fa1a17b62a722",
+  "source_fingerprint": "git:076b960d538f2a9835262a537b85c845c05b8853:dirty=true:worktree=16822b30b44bcfd9463076f0948e4e227969bfcad9a516965e5f47bedc078d7d",
+  "source_tree_fingerprint": "source-tree-v1:66c1411b180a0913275a548eba1e59b04ca2cae821df81caff5df826d26985f9",
   "environment": {
     "os": "linux",
     "architecture": "x86_64",
@@ -100,7 +100,7 @@
     "total_cases": 1,
     "passed": 0,
     "failed": 1,
-    "total_time_ns": 9750858233,
+    "total_time_ns": 9546937838,
     "cache_hit_rate": 0.0
   }
 }

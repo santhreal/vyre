@@ -439,7 +439,7 @@ Composition-inlineable helpers live inside `vyre`'s own `ops::` tree alongside t
 The benchmark story is moving toward compiler-grade macro workloads on CUDA,
 not primitive element-wise crossover tables. Our primary performance claims
 are backed by empirical runs recorded in [release/evidence/benchmarks/cuda-release-suite.json](release/evidence/benchmarks/cuda-release-suite.json),
-covering 13 macro workload families with a strict CPU-SOTA 100x contract for every family on an RTX 5090 with CUDA 12.8,
+covering 13 macro workload families with explicit CPU-SOTA release contracts on an RTX 5090 with CUDA 12.8,
 using repeated wall-time and CPU-baseline samples per artifact.
 
 
