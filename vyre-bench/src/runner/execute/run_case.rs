@@ -404,8 +404,16 @@ fn infer_optimization_passes_applied(
     if metrics.contains_key("lower_ns") || metrics.contains_key("cold_lower_ns") {
         passes.push("backend-lowering".to_string());
     }
-    if metrics.contains_key("kernel_launches") {
+    if metrics
+        .get("kernel_launches")
+        .is_some_and(|stats| stats.max == 1)
+    {
         passes.push("single-dispatch-launch-plan".to_string());
+    } else if metrics
+        .get("kernel_launches")
+        .is_some_and(|stats| stats.max > 1)
+    {
+        passes.push("multi-dispatch-launch-plan".to_string());
     }
     if metrics.keys().any(|key| {
         key.starts_with("lower_") || key.starts_with("alias_") || key.starts_with("egraph_")
@@ -563,6 +571,43 @@ mod tests {
         assert_eq!(
             launch_stats.p50, 1,
             "Fix: launch fallback must remain for backends that do not expose a backend-specific launch counter."
+        );
+    }
+
+    #[test]
+    fn launch_plan_labels_match_measured_kernel_launch_count() {
+        let mut single = BTreeMap::new();
+        single.insert("kernel_launches".to_string(), stats(1));
+
+        let single_passes = infer_optimization_passes_applied(&single, "wgpu");
+        assert!(
+            single_passes
+                .iter()
+                .any(|pass| pass == "single-dispatch-launch-plan"),
+            "Fix: one measured kernel launch must keep the single-dispatch launch-plan label."
+        );
+        assert!(
+            !single_passes
+                .iter()
+                .any(|pass| pass == "multi-dispatch-launch-plan"),
+            "Fix: one measured kernel launch must not be reported as a multi-dispatch plan."
+        );
+
+        let mut multi = BTreeMap::new();
+        multi.insert("kernel_launches".to_string(), stats(4));
+
+        let multi_passes = infer_optimization_passes_applied(&multi, "cuda");
+        assert!(
+            multi_passes
+                .iter()
+                .any(|pass| pass == "multi-dispatch-launch-plan"),
+            "Fix: more than one measured kernel launch must be labeled as a multi-dispatch launch plan."
+        );
+        assert!(
+            !multi_passes
+                .iter()
+                .any(|pass| pass == "single-dispatch-launch-plan"),
+            "Fix: multi-launch CUDA evidence must not claim the single-dispatch launch-plan label."
         );
     }
 
