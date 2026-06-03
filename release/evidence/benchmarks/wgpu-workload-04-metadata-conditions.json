@@ -5,14 +5,14 @@
   "selected_backend": "wgpu",
   "git": {
     "branch": "main",
-    "commit": "076b960d538f2a9835262a537b85c845c05b8853",
-    "commit_timestamp": "1780468084",
+    "commit": "2b38dbb523b5b947e47beaf2b0c395f6cc42c9ec",
+    "commit_timestamp": "1780469967",
     "dirty": "true",
-    "dirty_worktree_fingerprint": "a08b299fcb911d7f966b7a3ae02a51e0ed7f4a82f838e57a0f6fec2a8daa73e3",
-    "parent_commit": "f7485c286ce164563befd2575623054c67ba4154"
+    "dirty_worktree_fingerprint": "b01c0b024d443246213fa670e758c3ebfa31c9188f945cdef2f90ce16a2ba90c",
+    "parent_commit": "076b960d538f2a9835262a537b85c845c05b8853"
   },
-  "source_fingerprint": "git:076b960d538f2a9835262a537b85c845c05b8853:dirty=true:worktree=a08b299fcb911d7f966b7a3ae02a51e0ed7f4a82f838e57a0f6fec2a8daa73e3",
-  "source_tree_fingerprint": "source-tree-v1:66c1411b180a0913275a548eba1e59b04ca2cae821df81caff5df826d26985f9",
+  "source_fingerprint": "git:2b38dbb523b5b947e47beaf2b0c395f6cc42c9ec:dirty=true:worktree=b01c0b024d443246213fa670e758c3ebfa31c9188f945cdef2f90ce16a2ba90c",
+  "source_tree_fingerprint": "source-tree-v1:43e56c10e4ca5aafdfc8fa95c96801aeddc071591b7ee618f133ad3797706654",
   "environment": {
     "os": "linux",
     "architecture": "x86_64",
@@ -71,7 +71,7 @@
       "wall_ns": null,
       "correctness": {
         "Invalid": {
-          "reason": "Performance contract failed: YARA-like boolean rule-condition evaluation requires 100.00x over Rayon-parallel scalar short-circuit rule loop, observed 9.12x"
+          "reason": "Performance contract failed: YARA-like boolean rule-condition evaluation requires 100.00x over Rayon-parallel scalar short-circuit rule loop, observed 12.31x"
         }
       },
       "contract": {
@@ -99,7 +99,7 @@
     "total_cases": 1,
     "passed": 0,
     "failed": 1,
-    "total_time_ns": 644807357,
+    "total_time_ns": 607698516,
     "cache_hit_rate": 0.0
   }
 }

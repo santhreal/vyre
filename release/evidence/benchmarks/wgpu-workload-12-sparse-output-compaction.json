@@ -5,14 +5,14 @@
   "selected_backend": "wgpu",
   "git": {
     "branch": "main",
-    "commit": "076b960d538f2a9835262a537b85c845c05b8853",
-    "commit_timestamp": "1780468084",
+    "commit": "2b38dbb523b5b947e47beaf2b0c395f6cc42c9ec",
+    "commit_timestamp": "1780469967",
     "dirty": "true",
-    "dirty_worktree_fingerprint": "dace1227cc5edd0cae9044eca093b0e922d378696add89ce872eabb0a81f4202",
-    "parent_commit": "f7485c286ce164563befd2575623054c67ba4154"
+    "dirty_worktree_fingerprint": "907c0700c1290415d2585f2cc9f9eaab70ed2d41440c6a74af5277f916b9cf8a",
+    "parent_commit": "076b960d538f2a9835262a537b85c845c05b8853"
   },
-  "source_fingerprint": "git:076b960d538f2a9835262a537b85c845c05b8853:dirty=true:worktree=dace1227cc5edd0cae9044eca093b0e922d378696add89ce872eabb0a81f4202",
-  "source_tree_fingerprint": "source-tree-v1:66c1411b180a0913275a548eba1e59b04ca2cae821df81caff5df826d26985f9",
+  "source_fingerprint": "git:2b38dbb523b5b947e47beaf2b0c395f6cc42c9ec:dirty=true:worktree=907c0700c1290415d2585f2cc9f9eaab70ed2d41440c6a74af5277f916b9cf8a",
+  "source_tree_fingerprint": "source-tree-v1:43e56c10e4ca5aafdfc8fa95c96801aeddc071591b7ee618f133ad3797706654",
   "environment": {
     "os": "linux",
     "architecture": "x86_64",
@@ -73,7 +73,7 @@
       "wall_ns": null,
       "correctness": {
         "Invalid": {
-          "reason": "Performance contract failed: sparse output compaction count requires 100.00x over optimized CPU fired-rule collection over predicate masks, observed 91.75x"
+          "reason": "Performance contract failed: sparse output compaction count requires 100.00x over optimized CPU fired-rule collection over predicate masks, observed 86.90x"
         }
       },
       "contract": {
@@ -101,7 +101,7 @@
     "total_cases": 1,
     "passed": 0,
     "failed": 1,
-    "total_time_ns": 8103480338,
+    "total_time_ns": 8844633548,
     "cache_hit_rate": 0.0
   }
 }

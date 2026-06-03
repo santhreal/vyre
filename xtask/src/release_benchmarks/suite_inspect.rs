@@ -619,6 +619,9 @@ pub(super) fn inspect_backend_suite_artifact(
             .get("id")
             .and_then(Value::as_str)
             .unwrap_or("<unknown>");
+        if let Some(reason) = suite_case_failure_reason(case) {
+            blockers.push(format!("case `{case_id}` failed: {reason}"));
+        }
         if case_id == artifact.requested_case_id {
             requested_case_present = true;
         }
@@ -805,6 +808,35 @@ pub(super) fn inspect_backend_suite_artifact(
     }
 }
 
+fn suite_case_failure_reason(case: &Value) -> Option<String> {
+    if case.get("status").and_then(Value::as_str) == Some("pass") {
+        return None;
+    }
+    case.get("correctness")
+        .and_then(|correctness| correctness.get("Invalid"))
+        .and_then(|invalid| invalid.get("reason"))
+        .and_then(Value::as_str)
+        .filter(|reason| !reason.is_empty())
+        .map(str::to_string)
+        .or_else(|| {
+            let violations = case
+                .get("performance")
+                .and_then(|performance| performance.get("violations"))
+                .and_then(Value::as_array)?
+                .iter()
+                .filter_map(Value::as_str)
+                .filter(|violation| !violation.is_empty())
+                .collect::<Vec<_>>();
+            (!violations.is_empty()).then(|| violations.join("; "))
+        })
+        .or_else(|| {
+            case.get("status")
+                .and_then(Value::as_str)
+                .filter(|status| !status.is_empty())
+                .map(|status| format!("status `{status}`"))
+        })
+}
+
 pub(super) fn suite_metric_samples(value: Option<&Value>) -> Option<u64> {
     value
         .and_then(|metric| metric.get("samples"))
@@ -914,6 +946,86 @@ mod tests {
             suite.get("backend").and_then(Value::as_str),
             Some("wgpu"),
             "Fix: generated WGPU fallback suite must retain backend provenance."
+        );
+    }
+
+    #[test]
+    fn failed_suite_artifact_blocker_preserves_case_failure_reason() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for failed suite artifact test.");
+        let artifact_rel = "release/evidence/benchmarks/wgpu-workload-failed.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: suite artifact must have parent directory."),
+        )
+        .expect("Fix: create failed suite artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "wgpu",
+                "summary": {
+                    "total_cases": 1,
+                    "passed": 0,
+                    "failed": 1,
+                    "total_time_ns": 0,
+                    "cache_hit_rate": null
+                },
+                "cases": [
+                    {
+                        "id": "sparse.compaction.count.1m",
+                        "backend_id": "wgpu",
+                        "status": "failed",
+                        "correctness": {
+                            "Invalid": {
+                                "reason": "Performance contract failed: sparse output compaction count requires 100.00x over optimized CPU fired-rule collection over predicate masks, observed 91.75x"
+                            }
+                        },
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "kernel_launches": {"samples": 1, "p50": 1}
+                        },
+                        "contract": {
+                            "primitive": "sparse output compaction count",
+                            "baselines": [
+                                {
+                                    "name": "optimized CPU fired-rule collection over predicate masks",
+                                    "crate_name": "vyre-runtime",
+                                    "class": "CpuSota",
+                                    "min_speedup_x": 100.0,
+                                    "backend_ids": ["cuda", "wgpu"]
+                                }
+                            ]
+                        },
+                        "performance": null,
+                        "optimization_passes_applied": ["wgpu-release-path"]
+                    }
+                ]
+            }))
+            .expect("Fix: serialize failed benchmark artifact JSON."),
+        )
+        .expect("Fix: write failed benchmark artifact JSON.");
+
+        let status = inspect_backend_suite_artifact(
+            dir.path(),
+            "wgpu",
+            &BackendSuiteArtifactInput {
+                path: artifact_rel.to_string(),
+                family_id: "sparse-output-compaction".to_string(),
+                requested_case_id: "sparse.compaction.count.1m".to_string(),
+                cpu_sota_100x_required: false,
+            },
+        );
+
+        assert!(
+            status.blockers.iter().any(|blocker| blocker.contains(
+                "case `sparse.compaction.count.1m` failed: Performance contract failed"
+            ) && blocker.contains("observed 91.75x")),
+            "Fix: WGPU suite blockers must preserve the benchmark case failure reason instead of exposing only missing metric fallout: {:?}",
+            status.blockers
         );
     }
 }

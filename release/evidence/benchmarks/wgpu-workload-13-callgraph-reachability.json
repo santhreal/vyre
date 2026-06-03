@@ -5,14 +5,14 @@
   "selected_backend": "wgpu",
   "git": {
     "branch": "main",
-    "commit": "076b960d538f2a9835262a537b85c845c05b8853",
-    "commit_timestamp": "1780468084",
+    "commit": "2b38dbb523b5b947e47beaf2b0c395f6cc42c9ec",
+    "commit_timestamp": "1780469967",
     "dirty": "true",
-    "dirty_worktree_fingerprint": "04efa3ccff0d8a01e6003516c1f59f72d0e1d163726aa1173fca8c42fae795e7",
-    "parent_commit": "f7485c286ce164563befd2575623054c67ba4154"
+    "dirty_worktree_fingerprint": "106e6628fe1e36fc2b0890d7af552fb654c2dc4321bfa22d9e321530f8ac4ca1",
+    "parent_commit": "076b960d538f2a9835262a537b85c845c05b8853"
   },
-  "source_fingerprint": "git:076b960d538f2a9835262a537b85c845c05b8853:dirty=true:worktree=04efa3ccff0d8a01e6003516c1f59f72d0e1d163726aa1173fca8c42fae795e7",
-  "source_tree_fingerprint": "source-tree-v1:66c1411b180a0913275a548eba1e59b04ca2cae821df81caff5df826d26985f9",
+  "source_fingerprint": "git:2b38dbb523b5b947e47beaf2b0c395f6cc42c9ec:dirty=true:worktree=106e6628fe1e36fc2b0890d7af552fb654c2dc4321bfa22d9e321530f8ac4ca1",
+  "source_tree_fingerprint": "source-tree-v1:43e56c10e4ca5aafdfc8fa95c96801aeddc071591b7ee618f133ad3797706654",
   "environment": {
     "os": "linux",
     "architecture": "x86_64",
@@ -72,7 +72,7 @@
       "wall_ns": null,
       "correctness": {
         "Invalid": {
-          "reason": "Performance contract failed: callgraph reachability CSR step requires 25.00x over optimized CPU graph reachability and witness extraction, observed 21.43x"
+          "reason": "Performance contract failed: callgraph reachability CSR step requires 25.00x over optimized CPU graph reachability and witness extraction, observed 22.07x"
         }
       },
       "contract": {
@@ -100,7 +100,7 @@
     "total_cases": 1,
     "passed": 0,
     "failed": 1,
-    "total_time_ns": 1614343524,
+    "total_time_ns": 1612018199,
     "cache_hit_rate": 0.0
   }
 }
