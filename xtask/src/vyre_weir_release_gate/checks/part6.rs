@@ -1,8 +1,8 @@
 use crate::benchmark_evidence_semantics::{
     backend_consistency_issues, contract_backend_issues, cuda_telemetry_label_issues,
-    current_source_fingerprint_for_evidence_path, launch_plan_label_issues,
-    source_fingerprint_freshness_issues, source_fingerprint_issues, BackendConsistencyIssue,
-    ContractBackendIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
+    current_freshness_fingerprint_for_report, launch_plan_label_issues,
+    report_freshness_fingerprint, source_fingerprint_freshness_issues, source_fingerprint_issues,
+    BackendConsistencyIssue, ContractBackendIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
     SourceFingerprintFreshnessIssue, SourceFingerprintIssue,
 };
 
@@ -390,6 +390,7 @@ fn check_source_fingerprint_shape(
 fn check_source_fingerprint_freshness(
     requirement: &Requirement,
     label: &str,
+    field: &str,
     source_fingerprint: &str,
     current_source_fingerprint: &str,
     failures: &mut Vec<String>,
@@ -401,7 +402,7 @@ fn check_source_fingerprint_freshness(
                 source_fingerprint,
                 current_source_fingerprint,
             } => failures.push(format!(
-                "requirement `{}` benchmark `{label}` source_fingerprint `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`",
+                "requirement `{}` benchmark `{label}` {field} `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`",
                 requirement.id
             )),
         }

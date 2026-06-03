@@ -89,7 +89,6 @@ pub(crate) fn check_backend_suite_report(
         .get("artifact_statuses")
         .and_then(serde_json::Value::as_array)
     {
-        let current_source_fingerprint = current_source_fingerprint_for_evidence_path(base_dir);
         for status in statuses {
             let path = status
                 .get("path")
@@ -154,18 +153,16 @@ pub(crate) fn check_backend_suite_report(
                     ));
                 }
             }
-            if let (Some(source_fingerprint), Some(current_source_fingerprint)) = (
-                status
-                    .get("source_fingerprint")
-                    .and_then(serde_json::Value::as_str)
-                    .filter(|value| !value.trim().is_empty()),
-                current_source_fingerprint.as_deref(),
+            if let (Some((field, source_fingerprint)), Some(current_source_fingerprint)) = (
+                report_freshness_fingerprint(status),
+                current_freshness_fingerprint_for_report(base_dir, status),
             ) {
                 check_source_fingerprint_freshness(
                     requirement,
                     &format!("backend suite `{suffix}` artifact `{path}`"),
+                    field,
                     source_fingerprint,
-                    current_source_fingerprint,
+                    &current_source_fingerprint,
                     failures,
                 );
             }
@@ -521,6 +518,14 @@ fn check_backend_suite_artifact_status(
                 artifact_source_fingerprint,
             } => failures.push(format!(
                 "requirement `{}` backend suite `{suffix}` artifact `{path}` source_fingerprint mismatch: status `{status_source_fingerprint}`, artifact `{artifact_source_fingerprint}`",
+                requirement.id
+            )),
+            BackendSuiteArtifactStatusIssue::SourceTreeFingerprintMismatch {
+                path,
+                status_source_tree_fingerprint,
+                artifact_source_tree_fingerprint,
+            } => failures.push(format!(
+                "requirement `{}` backend suite `{suffix}` artifact `{path}` source_tree_fingerprint mismatch: status `{status_source_tree_fingerprint}`, artifact `{artifact_source_tree_fingerprint}`",
                 requirement.id
             )),
             BackendSuiteArtifactStatusIssue::SelectedBackendMismatch {

@@ -62,6 +62,57 @@ pub fn source_fingerprint(git: &BTreeMap<String, String>) -> String {
     )
 }
 
+pub fn source_tree_fingerprint() -> String {
+    source_tree_fingerprint_at(Path::new("."))
+}
+
+pub fn source_tree_fingerprint_at(workspace_root: &Path) -> String {
+    match shell_bytes(
+        workspace_root,
+        &[
+            "ls-files",
+            "-z",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+        ],
+    ) {
+        Ok(paths) => format!(
+            "source-tree-v1:{}",
+            source_tree_fingerprint_from_paths(workspace_root, &paths)
+        ),
+        Err(_) => format!(
+            "crate-source:{}:{}",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION")
+        ),
+    }
+}
+
+fn source_tree_fingerprint_from_paths(workspace_root: &Path, paths: &[u8]) -> String {
+    let mut hasher = blake3::Hasher::new();
+    update_hash_field(&mut hasher, b"format", b"vyre-bench-source-tree-v1");
+    for path in paths
+        .split(|byte| *byte == 0)
+        .filter(|path| !path.is_empty())
+        .filter(|path| !source_tree_path_is_generated_evidence(path))
+    {
+        update_hash_field(&mut hasher, b"path", path);
+        let path = String::from_utf8_lossy(path);
+        match fs::read(workspace_root.join(path.as_ref())) {
+            Ok(bytes) => update_hash_field(&mut hasher, b"content", &bytes),
+            Err(error) => {
+                update_hash_field(&mut hasher, b"read-error", error.to_string().as_bytes())
+            }
+        }
+    }
+    hasher.finalize().to_hex().to_string()
+}
+
+fn source_tree_path_is_generated_evidence(path: &[u8]) -> bool {
+    path.starts_with(b"release/evidence/")
+}
+
 fn dirty_worktree_fingerprint(workspace_root: &Path, status: &[u8]) -> Option<String> {
     let diff = shell_bytes(workspace_root, &["diff", "--binary", "HEAD", "--"]).ok()?;
     let untracked = shell_bytes(
@@ -229,6 +280,53 @@ mod tests {
         assert_ne!(
             untracked_one, untracked_two,
             "Fix: dirty source fingerprints must change when untracked file content changes."
+        );
+    }
+
+    #[test]
+    fn source_tree_fingerprint_ignores_generated_release_evidence() {
+        let workspace = std::env::temp_dir().join(format!(
+            "vyre-bench-source-tree-fingerprint-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("Fix: system clock must support unix epoch duration for temp test id.")
+                .as_nanos()
+        ));
+        fs::create_dir_all(workspace.join("src")).expect("Fix: create source fixture directory.");
+        fs::create_dir_all(workspace.join("release/evidence/benchmarks"))
+            .expect("Fix: create generated evidence fixture directory.");
+        fs::write(workspace.join("src/lib.rs"), b"pub fn source() {}\n")
+            .expect("Fix: write source-tree fingerprint source fixture.");
+        fs::write(
+            workspace.join("release/evidence/benchmarks/workload.json"),
+            b"{\"old\":true}\n",
+        )
+        .expect("Fix: write source-tree fingerprint evidence fixture.");
+        let paths = b"src/lib.rs\0release/evidence/benchmarks/workload.json\0";
+
+        let base = source_tree_fingerprint_from_paths(&workspace, paths);
+        fs::write(
+            workspace.join("release/evidence/benchmarks/workload.json"),
+            b"{\"new\":true}\n",
+        )
+        .expect("Fix: mutate generated evidence fixture.");
+        let evidence_changed = source_tree_fingerprint_from_paths(&workspace, paths);
+        fs::write(
+            workspace.join("src/lib.rs"),
+            b"pub fn source_changed() {}\n",
+        )
+        .expect("Fix: mutate source fixture.");
+        let source_changed = source_tree_fingerprint_from_paths(&workspace, paths);
+        let _ = fs::remove_dir_all(&workspace);
+
+        assert_eq!(
+            base, evidence_changed,
+            "Fix: generated release evidence must not invalidate committed benchmark source provenance."
+        );
+        assert_ne!(
+            base, source_changed,
+            "Fix: source-tree provenance must still change when real source files change."
         );
     }
 }

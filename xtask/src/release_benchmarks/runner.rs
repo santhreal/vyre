@@ -83,18 +83,52 @@ pub(super) fn benchmark_artifact_is_reusable(
     let Ok(report) = serde_json::from_str::<Value>(&text) else {
         return false;
     };
-    let Some(report_source_fingerprint) = report
-        .get("source_fingerprint")
+    let Some(report_source_tree_fingerprint) = report
+        .get("source_tree_fingerprint")
         .and_then(Value::as_str)
         .filter(|fingerprint| !fingerprint.trim().is_empty())
     else {
-        return false;
+        let Some(report_source_fingerprint) = report
+            .get("source_fingerprint")
+            .and_then(Value::as_str)
+            .filter(|fingerprint| !fingerprint.trim().is_empty())
+        else {
+            return false;
+        };
+        let current_git = vyre_bench::probes::capture_git_info_at(workspace_root);
+        let current_source_fingerprint = vyre_bench::probes::source_fingerprint(&current_git);
+        if report_source_fingerprint != current_source_fingerprint {
+            return false;
+        }
+        return benchmark_artifact_report_shape_is_reusable(
+            &report,
+            backend,
+            family_id,
+            case_id,
+            cpu_sota_100x_required,
+        );
     };
-    let current_git = vyre_bench::probes::capture_git_info_at(workspace_root);
-    let current_source_fingerprint = vyre_bench::probes::source_fingerprint(&current_git);
-    if report_source_fingerprint != current_source_fingerprint {
+    let current_source_tree_fingerprint =
+        vyre_bench::probes::source_tree_fingerprint_at(workspace_root);
+    if report_source_tree_fingerprint != current_source_tree_fingerprint {
         return false;
     }
+    benchmark_artifact_report_shape_is_reusable(
+        &report,
+        backend,
+        family_id,
+        case_id,
+        cpu_sota_100x_required,
+    )
+}
+
+fn benchmark_artifact_report_shape_is_reusable(
+    report: &Value,
+    backend: &str,
+    family_id: &str,
+    case_id: &str,
+    cpu_sota_100x_required: bool,
+) -> bool {
     if report.get("selected_backend").and_then(Value::as_str) != Some(backend) {
         return false;
     }
@@ -233,6 +267,36 @@ mod tests {
     }
 
     #[test]
+    fn reuse_prefers_matching_source_tree_fingerprint() {
+        let dir = TempDir::new().expect("Fix: create temp workspace for source-tree reuse test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-source-tree.json",
+            serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": "git:stale:dirty=false",
+                "source_tree_fingerprint": current_test_source_tree_fingerprint(dir.path()),
+                "summary": {"failed": 0},
+                "cases": [
+                    {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
+                ]
+            }),
+        );
+
+        assert!(
+            benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-source-tree.json",
+                false,
+            ),
+            "Fix: reusable benchmark evidence should survive evidence-only commit changes via source_tree_fingerprint."
+        );
+    }
+
+    #[test]
     fn wgpu_reuse_rejects_backend_or_case_drift() {
         let dir = TempDir::new().expect("Fix: create temp workspace for WGPU reuse drift test.");
         write_benchmark_artifact(
@@ -313,9 +377,43 @@ mod tests {
         );
     }
 
+    #[test]
+    fn reuse_rejects_stale_source_tree_fingerprint() {
+        let dir = TempDir::new().expect("Fix: create temp workspace for stale source-tree test.");
+        write_benchmark_artifact(
+            dir.path(),
+            "release/evidence/benchmarks/wgpu-stale-source-tree.json",
+            serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_fingerprint": current_test_source_fingerprint(dir.path()),
+                "source_tree_fingerprint": "source-tree-v1:stale",
+                "summary": {"failed": 0},
+                "cases": [
+                    {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
+                ]
+            }),
+        );
+
+        assert!(
+            !benchmark_artifact_is_reusable(
+                dir.path(),
+                "wgpu",
+                "condition-eval",
+                "release.condition_eval.1m",
+                "release/evidence/benchmarks/wgpu-stale-source-tree.json",
+                false,
+            ),
+            "Fix: source_tree_fingerprint must remain a real freshness gate, not only an optional annotation."
+        );
+    }
+
     fn current_test_source_fingerprint(workspace_root: &Path) -> String {
         let git = vyre_bench::probes::capture_git_info_at(workspace_root);
         vyre_bench::probes::source_fingerprint(&git)
+    }
+
+    fn current_test_source_tree_fingerprint(workspace_root: &Path) -> String {
+        vyre_bench::probes::source_tree_fingerprint_at(workspace_root)
     }
 
     fn write_benchmark_artifact(workspace_root: &Path, relative: &str, value: Value) {

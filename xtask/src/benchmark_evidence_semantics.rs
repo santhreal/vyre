@@ -5,6 +5,8 @@ use std::sync::{Mutex, OnceLock};
 use serde_json::{Map, Value};
 
 static CURRENT_SOURCE_FINGERPRINTS: OnceLock<Mutex<BTreeMap<PathBuf, String>>> = OnceLock::new();
+static CURRENT_SOURCE_TREE_FINGERPRINTS: OnceLock<Mutex<BTreeMap<PathBuf, String>>> =
+    OnceLock::new();
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum LaunchPlanLabelIssue {
@@ -113,6 +115,11 @@ pub(crate) enum BackendSuiteArtifactStatusIssue {
         status_source_fingerprint: String,
         artifact_source_fingerprint: String,
     },
+    SourceTreeFingerprintMismatch {
+        path: String,
+        status_source_tree_fingerprint: String,
+        artifact_source_tree_fingerprint: String,
+    },
     SelectedBackendMismatch {
         path: String,
         status_selected_backend: String,
@@ -181,6 +188,38 @@ pub(crate) fn source_fingerprint_freshness_issues(
     }
 }
 
+pub(crate) fn report_freshness_fingerprint(report: &Value) -> Option<(&'static str, &str)> {
+    for field in ["source_tree_fingerprint", "source_fingerprint"] {
+        if let Some(value) = report
+            .get(field)
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        {
+            return Some((field, value));
+        }
+    }
+    None
+}
+
+pub(crate) fn current_freshness_fingerprint_for_report(
+    path: &Path,
+    report: &Value,
+) -> Option<String> {
+    if report
+        .get("source_tree_fingerprint")
+        .and_then(Value::as_str)
+        .is_some_and(|value| !value.trim().is_empty())
+    {
+        return Some(current_source_tree_fingerprint_for_evidence_path(path)?);
+    }
+    current_source_fingerprint_for_evidence_path(path)
+}
+
+pub(crate) fn current_source_tree_fingerprint_for_evidence_path(path: &Path) -> Option<String> {
+    let workspace_root = workspace_root_for_evidence_path(path)?;
+    Some(current_source_tree_fingerprint_at(&workspace_root))
+}
+
 pub(crate) fn current_source_fingerprint_for_evidence_path(path: &Path) -> Option<String> {
     let workspace_root = workspace_root_for_evidence_path(path)?;
     Some(current_source_fingerprint_at(&workspace_root))
@@ -199,6 +238,24 @@ fn current_source_fingerprint_at(workspace_root: &Path) -> String {
 
     let git = vyre_bench::probes::capture_git_info_at(workspace_root);
     let fingerprint = vyre_bench::probes::source_fingerprint(&git);
+    if let Ok(mut cache) = cache.lock() {
+        cache.insert(key, fingerprint.clone());
+    }
+    fingerprint
+}
+
+fn current_source_tree_fingerprint_at(workspace_root: &Path) -> String {
+    let key = workspace_root
+        .canonicalize()
+        .unwrap_or_else(|_| workspace_root.to_path_buf());
+    let cache = CURRENT_SOURCE_TREE_FINGERPRINTS.get_or_init(|| Mutex::new(BTreeMap::new()));
+    if let Ok(cache) = cache.lock() {
+        if let Some(fingerprint) = cache.get(&key) {
+            return fingerprint.clone();
+        }
+    }
+
+    let fingerprint = vyre_bench::probes::source_tree_fingerprint_at(workspace_root);
     if let Ok(mut cache) = cache.lock() {
         cache.insert(key, fingerprint.clone());
     }
@@ -237,6 +294,25 @@ pub(crate) fn backend_suite_artifact_status_issues(
                 status_source_fingerprint: status_source.to_string(),
                 artifact_source_fingerprint: artifact_source.to_string(),
             });
+        }
+    }
+    let status_source_tree = status
+        .get("source_tree_fingerprint")
+        .and_then(non_empty_str);
+    let artifact_source_tree = artifact_report
+        .get("source_tree_fingerprint")
+        .and_then(non_empty_str);
+    if let (Some(status_source_tree), Some(artifact_source_tree)) =
+        (status_source_tree, artifact_source_tree)
+    {
+        if status_source_tree != artifact_source_tree {
+            issues.push(
+                BackendSuiteArtifactStatusIssue::SourceTreeFingerprintMismatch {
+                    path: path.clone(),
+                    status_source_tree_fingerprint: status_source_tree.to_string(),
+                    artifact_source_tree_fingerprint: artifact_source_tree.to_string(),
+                },
+            );
         }
     }
 
@@ -792,6 +868,20 @@ mod tests {
     }
 
     #[test]
+    fn report_freshness_fingerprint_prefers_source_tree_scope() {
+        let report = serde_json::json!({
+            "source_fingerprint": "git:abc:dirty=false",
+            "source_tree_fingerprint": "source-tree-v1:def",
+        });
+
+        assert_eq!(
+            report_freshness_fingerprint(&report),
+            Some(("source_tree_fingerprint", "source-tree-v1:def")),
+            "Fix: current-source gates must prefer evidence-stable source tree provenance over commit-shaped legacy provenance."
+        );
+    }
+
+    #[test]
     fn source_fingerprint_rejects_malformed_dirty_worktree_digest() {
         assert_eq!(
             source_fingerprint_issues("git:abc123:dirty=true:worktree=not-a-digest"),
@@ -1077,6 +1167,7 @@ mod tests {
         let status = serde_json::json!({
             "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
             "source_fingerprint": "git:old:dirty=false",
+            "source_tree_fingerprint": "source-tree-v1:old",
             "selected_backend": "cuda",
             "case_count": 2,
             "failed_count": 0,
@@ -1084,6 +1175,7 @@ mod tests {
         });
         let artifact = serde_json::json!({
             "source_fingerprint": "git:new:dirty=false",
+            "source_tree_fingerprint": "source-tree-v1:new",
             "selected_backend": "wgpu",
             "summary": {"failed": 1},
             "cases": [
@@ -1098,6 +1190,11 @@ mod tests {
                     path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
                     status_source_fingerprint: "git:old:dirty=false".to_string(),
                     artifact_source_fingerprint: "git:new:dirty=false".to_string(),
+                },
+                BackendSuiteArtifactStatusIssue::SourceTreeFingerprintMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                    status_source_tree_fingerprint: "source-tree-v1:old".to_string(),
+                    artifact_source_tree_fingerprint: "source-tree-v1:new".to_string(),
                 },
                 BackendSuiteArtifactStatusIssue::SelectedBackendMismatch {
                     path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
@@ -1128,6 +1225,7 @@ mod tests {
         let status = serde_json::json!({
             "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
             "source_fingerprint": "git:abc:dirty=false",
+            "source_tree_fingerprint": "source-tree-v1:abc",
             "selected_backend": "cuda",
             "case_count": 1,
             "failed_count": 0,
@@ -1135,6 +1233,7 @@ mod tests {
         });
         let artifact = serde_json::json!({
             "source_fingerprint": "git:abc:dirty=false",
+            "source_tree_fingerprint": "source-tree-v1:abc",
             "selected_backend": "cuda",
             "summary": {"failed": 0},
             "cases": [

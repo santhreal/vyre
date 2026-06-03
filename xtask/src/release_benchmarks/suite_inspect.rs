@@ -30,6 +30,7 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
     let mut environment = None::<Value>;
     let mut git = None::<Value>;
     let mut source_fingerprint = None::<String>;
+    let mut source_tree_fingerprint = None::<String>;
     for artifact in artifacts {
         let path = workspace_root.join(artifact);
         let text = match read_text_bounded(&path, MAX_RELEASE_BENCHMARK_TEXT_BYTES) {
@@ -70,6 +71,13 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
                         .filter(|value| !value.is_empty())
                         .map(|commit| format!("git:{commit}"))
                 });
+        }
+        if source_tree_fingerprint.is_none() {
+            source_tree_fingerprint = report
+                .get("source_tree_fingerprint")
+                .and_then(Value::as_str)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string);
         }
         let Some(report_cases) = report.get("cases").and_then(Value::as_array) else {
             blockers.push(format!(
@@ -216,6 +224,7 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         "environment": environment,
         "git": git,
         "source_fingerprint": source_fingerprint,
+        "source_tree_fingerprint": source_tree_fingerprint,
         "source_artifacts": artifacts,
         "source_artifact_count": artifacts.len(),
         "required_cpu_sota_100x_cases": REQUIRED_CPU_SOTA_100X_CASES,
@@ -413,6 +422,7 @@ pub(super) fn inspect_backend_suite_artifact(
             bytes,
             read_error,
             source_fingerprint: None,
+            source_tree_fingerprint: None,
             selected_backend: None,
             host_cpu_model: None,
             gpu_model: None,
@@ -480,6 +490,11 @@ pub(super) fn inspect_backend_suite_artifact(
                 .filter(|value| !value.is_empty())
                 .map(|commit| format!("git:{commit}"))
         });
+    let source_tree_fingerprint = report
+        .get("source_tree_fingerprint")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string);
     if selected_backend.as_deref() != Some(backend) {
         blockers.push(format!(
             "selected_backend `{:?}` does not match requested backend `{backend}`",
@@ -752,6 +767,7 @@ pub(super) fn inspect_backend_suite_artifact(
         bytes,
         read_error,
         source_fingerprint,
+        source_tree_fingerprint,
         selected_backend,
         host_cpu_model,
         gpu_model,

@@ -295,15 +295,13 @@ fn inspect_current_source_fingerprint_freshness(
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    let Some(source_fingerprint) = value
-        .get("source_fingerprint")
-        .and_then(serde_json::Value::as_str)
-        .filter(|value| !value.trim().is_empty())
+    let Some((field, source_fingerprint)) =
+        crate::benchmark_evidence_semantics::report_freshness_fingerprint(value)
     else {
         return;
     };
     let Some(current_source_fingerprint) =
-        crate::benchmark_evidence_semantics::current_source_fingerprint_for_evidence_path(path)
+        crate::benchmark_evidence_semantics::current_freshness_fingerprint_for_report(path, value)
     else {
         return;
     };
@@ -316,7 +314,7 @@ fn inspect_current_source_fingerprint_freshness(
                 source_fingerprint,
                 current_source_fingerprint,
             } => blockers.push(format!(
-                "{evidence}: source_fingerprint `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`"
+                "{evidence}: {field} `{source_fingerprint}` does not match current workspace source `{current_source_fingerprint}`"
             )),
         }
     }

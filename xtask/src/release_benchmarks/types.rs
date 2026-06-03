@@ -55,6 +55,7 @@ pub(super) struct BackendSuiteArtifact {
     pub(super) bytes: u64,
     pub(super) read_error: Option<String>,
     pub(super) source_fingerprint: Option<String>,
+    pub(super) source_tree_fingerprint: Option<String>,
     pub(super) selected_backend: Option<String>,
     pub(super) host_cpu_model: Option<String>,
     pub(super) gpu_model: Option<String>,
