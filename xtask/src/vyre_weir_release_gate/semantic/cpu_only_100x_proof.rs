@@ -1,13 +1,14 @@
 use std::path::Path;
 
-use super::super::types::Requirement;
-use super::super::checks::*;
+use crate::benchmark_evidence_semantics::{
+    benchmark_duplicate_source_artifact_paths, benchmark_source_artifact_count,
+    benchmark_source_artifact_entry_count,
+};
 
-pub(super) fn check(
-    requirement: &Requirement,
-    base_dir: &Path,
-    failures: &mut Vec<String>,
-) {
+use super::super::checks::*;
+use super::super::types::Requirement;
+
+pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     let Some(matrix) = first_json_evidence(
         requirement,
         base_dir,
@@ -96,6 +97,7 @@ pub(super) fn check(
                     .to_string(),
             );
         }
+        check_cpu_100x_source_artifact_counts(&proof, failures);
         let required_proof_cases = proof
             .get("required_cpu_sota_100x_cases")
             .and_then(serde_json::Value::as_array)
@@ -216,4 +218,64 @@ pub(super) fn check(
         Some(100.0),
         failures,
     );
+}
+
+fn check_cpu_100x_source_artifact_counts(proof: &serde_json::Value, failures: &mut Vec<String>) {
+    let unique_source_artifacts = benchmark_source_artifact_count(proof) as u64;
+    let raw_source_artifacts = benchmark_source_artifact_entry_count(proof) as u64;
+    let declared_source_artifacts = proof
+        .get("source_artifact_count")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    if declared_source_artifacts != unique_source_artifacts {
+        failures.push(format!(
+            "requirement `cpu-only-100x-proof` aggregate proof source_artifact_count={declared_source_artifacts}, but unique source_artifacts={unique_source_artifacts}"
+        ));
+    }
+    if unique_source_artifacts < 10 {
+        failures.push(format!(
+            "requirement `cpu-only-100x-proof` aggregate proof has {unique_source_artifacts} unique source artifact(s); needs at least 10"
+        ));
+    }
+    if raw_source_artifacts != unique_source_artifacts {
+        let duplicates = benchmark_duplicate_source_artifact_paths(proof)
+            .into_iter()
+            .collect::<Vec<_>>()
+            .join(", ");
+        failures.push(format!(
+            "requirement `cpu-only-100x-proof` aggregate proof has duplicate source_artifacts: {duplicates}"
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cpu_100x_gate_rejects_duplicate_source_artifact_count_inflation() {
+        let proof = serde_json::json!({
+            "source_artifact_count": 10,
+            "source_artifacts": [
+                "release/evidence/benchmarks/workload-01-condition-eval.json",
+                "release/evidence/benchmarks/workload-01-condition-eval.json"
+            ]
+        });
+        let mut failures = Vec::new();
+
+        check_cpu_100x_source_artifact_counts(&proof, &mut failures);
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "source_artifact_count=10, but unique source_artifacts=1"
+            )),
+            "Fix: CPU-SOTA release gate must reject declared source_artifact_count inflation; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "duplicate source_artifacts: release/evidence/benchmarks/workload-01-condition-eval.json"
+            )),
+            "Fix: CPU-SOTA release gate must reject duplicate aggregate source_artifacts; failures={failures:?}"
+        );
+    }
 }

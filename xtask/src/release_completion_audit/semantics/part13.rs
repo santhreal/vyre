@@ -188,6 +188,7 @@ fn inspect_cpu_100x_benchmark_semantics(
     if selected_backend != Some("cuda") {
         blockers.push(format!("{evidence}: selected_backend must be cuda"));
     }
+    inspect_cpu_100x_source_artifact_counts(evidence, value, blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
         blockers.push(format!("{evidence}: missing cases array"));
         return;
@@ -275,6 +276,41 @@ fn inspect_cpu_100x_benchmark_semantics(
                 "{evidence}: case `{id}` must include p50 wall_ns and baseline_wall_ns"
             )),
         }
+    }
+}
+
+fn inspect_cpu_100x_source_artifact_counts(
+    evidence: &str,
+    value: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let unique_source_artifacts =
+        crate::benchmark_evidence_semantics::benchmark_source_artifact_count(value) as u64;
+    let raw_source_artifacts =
+        crate::benchmark_evidence_semantics::benchmark_source_artifact_entry_count(value) as u64;
+    let declared_source_artifacts = value
+        .get("source_artifact_count")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    if declared_source_artifacts != unique_source_artifacts {
+        blockers.push(format!(
+            "{evidence}: source_artifact_count={declared_source_artifacts}, but unique source_artifacts={unique_source_artifacts}"
+        ));
+    }
+    if unique_source_artifacts < 10 {
+        blockers.push(format!(
+            "{evidence}: has {unique_source_artifacts} unique source artifact(s); needs at least 10"
+        ));
+    }
+    if raw_source_artifacts != unique_source_artifacts {
+        let duplicates =
+            crate::benchmark_evidence_semantics::benchmark_duplicate_source_artifact_paths(value)
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(", ");
+        blockers.push(format!(
+            "{evidence}: duplicate source_artifacts: {duplicates}"
+        ));
     }
 }
 
@@ -382,6 +418,33 @@ mod part13_tests {
                 "case `release.condition_eval.1m` must pass its performance contract: Performance contract failed"
             ) && blocker.contains("observed 42.00x")),
             "Fix: completion audit CPU-SOTA proof blockers must preserve failed benchmark case reasons; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_cpu_100x_rejects_duplicate_source_artifact_count_inflation() {
+        let proof = serde_json::json!({
+            "source_artifact_count": 10,
+            "source_artifacts": [
+                "release/evidence/benchmarks/workload-01-condition-eval.json",
+                "release/evidence/benchmarks/workload-01-condition-eval.json"
+            ]
+        });
+        let mut blockers = Vec::new();
+
+        inspect_cpu_100x_source_artifact_counts("cpu-only-100x-proof.json", &proof, &mut blockers);
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "source_artifact_count=10, but unique source_artifacts=1"
+            )),
+            "Fix: completion audit must reject inflated CPU-SOTA source_artifact_count; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "duplicate source_artifacts: release/evidence/benchmarks/workload-01-condition-eval.json"
+            )),
+            "Fix: completion audit must reject duplicate CPU-SOTA source_artifacts; blockers={blockers:?}"
         );
     }
 }

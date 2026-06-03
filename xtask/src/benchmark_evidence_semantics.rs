@@ -75,6 +75,13 @@ pub(crate) fn benchmark_source_artifact_count(report: &Value) -> usize {
     benchmark_source_artifact_paths(report).len()
 }
 
+pub(crate) fn benchmark_source_artifact_entry_count(report: &Value) -> usize {
+    report
+        .get("source_artifacts")
+        .and_then(Value::as_array)
+        .map_or(0, |items| items.iter().filter_map(non_empty_str).count())
+}
+
 pub(crate) fn benchmark_source_artifact_paths(report: &Value) -> BTreeSet<String> {
     report
         .get("source_artifacts")
@@ -84,6 +91,26 @@ pub(crate) fn benchmark_source_artifact_paths(report: &Value) -> BTreeSet<String
                 .iter()
                 .filter_map(non_empty_str)
                 .map(str::to_string)
+                .collect::<BTreeSet<_>>()
+        })
+}
+
+pub(crate) fn benchmark_duplicate_source_artifact_paths(report: &Value) -> BTreeSet<String> {
+    let mut seen = BTreeSet::new();
+    report
+        .get("source_artifacts")
+        .and_then(Value::as_array)
+        .map_or_else(BTreeSet::new, |items| {
+            items
+                .iter()
+                .filter_map(non_empty_str)
+                .filter_map(|artifact| {
+                    if seen.insert(artifact.to_string()) {
+                        None
+                    } else {
+                        Some(artifact.to_string())
+                    }
+                })
                 .collect::<BTreeSet<_>>()
         })
 }
@@ -1739,6 +1766,35 @@ mod tests {
                 "release/evidence/benchmarks/cuda-b.json".to_string(),
             ]),
             "Fix: source_artifact path extraction must expose the same unique usable paths used by release gates."
+        );
+    }
+
+    #[test]
+    fn benchmark_duplicate_source_artifact_paths_report_repeated_usable_entries() {
+        let report = serde_json::json!({
+            "source_artifacts": [
+                "",
+                null,
+                "release/evidence/benchmarks/cuda-a.json",
+                "release/evidence/benchmarks/cuda-b.json",
+                "release/evidence/benchmarks/cuda-a.json",
+                "release/evidence/benchmarks/cuda-b.json",
+                "release/evidence/benchmarks/cuda-c.json"
+            ]
+        });
+
+        assert_eq!(
+            benchmark_source_artifact_entry_count(&report),
+            5,
+            "Fix: raw source_artifact entry counts must ignore blank/non-string entries but preserve duplicate evidence attempts."
+        );
+        assert_eq!(
+            benchmark_duplicate_source_artifact_paths(&report),
+            BTreeSet::from([
+                "release/evidence/benchmarks/cuda-a.json".to_string(),
+                "release/evidence/benchmarks/cuda-b.json".to_string(),
+            ]),
+            "Fix: aggregate gates must identify duplicated source_artifact paths instead of letting them inflate proof counts."
         );
     }
 

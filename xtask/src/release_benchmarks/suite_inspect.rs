@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
 
@@ -31,7 +32,16 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
     let mut git = None::<Value>;
     let mut source_fingerprint = None::<String>;
     let mut source_tree_fingerprint = None::<String>;
+    let mut unique_artifacts = BTreeSet::new();
     for artifact in artifacts {
+        if !unique_artifacts.insert(artifact.clone()) {
+            blockers.push(format!(
+                "100x proof source_artifact `{artifact}` is duplicated; aggregate proof counts must use distinct source artifacts"
+            ));
+        }
+    }
+    let artifacts = unique_artifacts.into_iter().collect::<Vec<_>>();
+    for artifact in &artifacts {
         let path = workspace_root.join(artifact);
         let text = match read_text_bounded(&path, MAX_RELEASE_BENCHMARK_TEXT_BYTES) {
             Ok(text) => text,
@@ -252,7 +262,7 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
         "git": git,
         "source_fingerprint": source_fingerprint,
         "source_tree_fingerprint": source_tree_fingerprint,
-        "source_artifacts": artifacts,
+        "source_artifacts": &artifacts,
         "source_artifact_count": artifacts.len(),
         "required_cpu_sota_100x_cases": REQUIRED_CPU_SOTA_100X_CASES,
         "missing_required_cpu_sota_100x_cases": missing_required_cases,
@@ -1601,6 +1611,100 @@ mod tests {
                 )
             }),
             "Fix: aggregate CPU-SOTA proof must reject mixed source_tree_fingerprint inputs; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn cpu_100x_proof_does_not_count_duplicate_source_artifacts() {
+        let dir = TempDir::new()
+            .expect("Fix: create a temporary workspace for duplicate-source CPU-SOTA proof test.");
+        let artifact_rel = "release/evidence/benchmarks/cuda-duplicate-source.json";
+        let artifact_path = dir.path().join(artifact_rel);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: duplicate-source proof artifact path must have a parent directory."),
+        )
+        .expect("Fix: create duplicate-source proof artifact parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "source_fingerprint": "git:source-a:dirty=false",
+                "source_tree_fingerprint": "source-tree-v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "summary": {
+                    "total_cases": 1,
+                    "passed": 1,
+                    "failed": 0,
+                    "total_time_ns": 0,
+                    "cache_hit_rate": null
+                },
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 2000, "p95": 2001, "p99": 2002}
+                        },
+                        "contract": {
+                            "primitive": "release condition eval",
+                            "baselines": [
+                                {
+                                    "name": "CPU-SOTA",
+                                    "crate_name": "vyre-runtime",
+                                    "class": "CpuSota",
+                                    "min_speedup_x": 100.0,
+                                    "backend_ids": ["cuda"]
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 200.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize duplicate-source CUDA benchmark artifact JSON."),
+        )
+        .expect("Fix: write duplicate-source CUDA benchmark artifact JSON.");
+
+        write_cpu_100x_proof(
+            dir.path(),
+            &[artifact_rel.to_string(), artifact_rel.to_string()],
+        );
+
+        let proof_path = dir
+            .path()
+            .join("release/evidence/benchmarks/cpu-only-100x-proof.json");
+        let proof_text = fs::read_to_string(&proof_path)
+            .expect("Fix: read generated CPU-SOTA 100x proof artifact.");
+        let proof = serde_json::from_str::<Value>(&proof_text)
+            .expect("Fix: generated CPU-SOTA 100x proof must be valid JSON.");
+        let blockers = proof
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated CPU-SOTA proof must include blockers array.");
+
+        assert_eq!(
+            proof.get("source_artifact_count").and_then(Value::as_u64),
+            Some(1),
+            "Fix: duplicate source_artifacts must not inflate aggregate source_artifact_count."
+        );
+        assert_eq!(
+            proof
+                .get("cpu_sota_100x_contract_case_count")
+                .and_then(Value::as_u64),
+            Some(1),
+            "Fix: duplicate source_artifacts must not duplicate cases into the aggregate proof."
+        );
+        assert!(
+            blockers.iter().filter_map(Value::as_str).any(|blocker| {
+                blocker.contains(
+                    "100x proof source_artifact `release/evidence/benchmarks/cuda-duplicate-source.json` is duplicated"
+                )
+            }),
+            "Fix: aggregate CPU-SOTA proof must report duplicated source_artifacts; blockers={blockers:?}"
         );
     }
 }
