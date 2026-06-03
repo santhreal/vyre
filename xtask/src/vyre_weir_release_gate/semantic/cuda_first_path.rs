@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::benchmark_evidence_semantics::benchmark_source_artifact_paths;
 
 use super::super::checks::*;
+use super::super::paths::resolve_artifact_path;
 use super::super::types::Requirement;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
@@ -65,14 +66,7 @@ fn check_release_axes_source_artifacts(
         ));
     }
     for artifact in source_artifact_paths {
-        let path = {
-            let candidate = std::path::PathBuf::from(&artifact);
-            if candidate.is_absolute() {
-                candidate
-            } else {
-                base_dir.join(&candidate)
-            }
-        };
+        let path = resolve_artifact_path(base_dir, &artifact);
         if !path.is_file() {
             failures.push(format!(
                 "requirement `cuda-first-path` bench-release-axes source artifact `{artifact}` is not a readable file at {}",
@@ -112,7 +106,8 @@ mod tests {
     fn cuda_first_axes_rejects_missing_source_artifact_files() {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for source artifact existence test.");
-        std::fs::create_dir_all(dir.path().join("release/evidence/benchmarks"))
+        let release_dir = dir.path().join("release");
+        std::fs::create_dir_all(release_dir.join("evidence/benchmarks"))
             .expect("Fix: create temporary benchmark evidence directory.");
         let mut source_artifacts = Vec::new();
         for index in 0..12 {
@@ -128,7 +123,7 @@ mod tests {
         });
         let mut failures = Vec::new();
 
-        check_release_axes_source_artifacts(dir.path(), &axes, &mut failures);
+        check_release_axes_source_artifacts(&release_dir, &axes, &mut failures);
 
         assert!(
             failures.iter().any(|failure| failure.contains(

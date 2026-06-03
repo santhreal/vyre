@@ -1,10 +1,10 @@
 use crate::benchmark_evidence_semantics::{
-    backend_consistency_issues, benchmark_report_has_source_provenance, contract_backend_issues,
-    cuda_telemetry_label_issues, current_freshness_fingerprint_for_report,
-    launch_plan_label_issues, report_freshness_fingerprint, source_fingerprint_freshness_issues,
-    source_fingerprint_issues, BackendConsistencyIssue, ContractBackendIssue,
-    CudaTelemetryLabelIssue, LaunchPlanLabelIssue, SourceFingerprintFreshnessIssue,
-    SourceFingerprintIssue,
+    backend_consistency_issues, benchmark_report_has_source_provenance,
+    benchmark_source_artifact_paths, contract_backend_issues, cuda_telemetry_label_issues,
+    current_freshness_fingerprint_for_report, launch_plan_label_issues,
+    report_freshness_fingerprint, source_fingerprint_freshness_issues, source_fingerprint_issues,
+    BackendConsistencyIssue, ContractBackendIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
+    SourceFingerprintFreshnessIssue, SourceFingerprintIssue,
 };
 
 pub(crate) fn check_benchmark_report_has_cases(
@@ -66,6 +66,7 @@ pub(crate) fn check_benchmark_report_has_cases(
     check_contract_baselines_apply_to_backend(requirement, suffix, &report, failures);
     check_cuda_telemetry_labels_match_counters(requirement, suffix, &report, failures);
     check_benchmark_report_provenance(requirement, suffix, &report, failures);
+    check_benchmark_source_artifact_files(requirement, suffix, base_dir, &report, failures);
     if let (Some((field, source_fingerprint)), Some(current_source_fingerprint)) = (
         report_freshness_fingerprint(&report),
         current_freshness_fingerprint_for_report(&path, &report),
@@ -212,10 +213,12 @@ pub(crate) fn check_benchmark_cuda_environment_provenance(
 pub(crate) fn check_benchmark_reproducibility_provenance(
     requirement: &Requirement,
     label: &str,
+    base_dir: &Path,
     report: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
     check_benchmark_report_provenance(requirement, label, report, failures);
+    check_benchmark_source_artifact_files(requirement, label, base_dir, report, failures);
     check_case_backend_matches_selected_backend(requirement, label, report, failures);
     check_contract_baselines_apply_to_backend(requirement, label, report, failures);
     check_cuda_telemetry_labels_match_counters(requirement, label, report, failures);
@@ -356,6 +359,25 @@ fn check_benchmark_report_provenance(
             "requirement `{}` benchmark `{label}` summary must include cache_hit_rate, even when null",
             requirement.id
         ));
+    }
+}
+
+fn check_benchmark_source_artifact_files(
+    requirement: &Requirement,
+    label: &str,
+    base_dir: &Path,
+    report: &serde_json::Value,
+    failures: &mut Vec<String>,
+) {
+    for artifact in benchmark_source_artifact_paths(report) {
+        let artifact_path = resolve_artifact_path(base_dir, &artifact);
+        if !artifact_path.is_file() {
+            failures.push(format!(
+                "requirement `{}` benchmark `{label}` source_artifact `{artifact}` is not a readable file at {}",
+                requirement.id,
+                artifact_path.display()
+            ));
+        }
     }
 }
 
@@ -725,6 +747,57 @@ mod tests {
                 "benchmark `wgpu-hidden-invalid.json` reports 0 failed case(s); case evidence reports 1 failed case(s): `release.condition_eval.1m`: CUDA/WGPU output mismatch at row 17"
             )),
             "Fix: generic benchmark gate must reject hidden case failures even when summary.failed is zero; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn benchmark_report_has_cases_rejects_missing_source_artifact_file() {
+        let dir = TempDir::new()
+            .expect("Fix: create temporary workspace for source artifact benchmark gate test.");
+        let release_dir = dir.path().join("release");
+        let evidence_dir = release_dir.join("evidence/benchmarks");
+        fs::create_dir_all(&evidence_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let artifact = evidence_dir.join("wgpu-missing-source-artifact.json");
+        fs::write(
+            &artifact,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_artifacts": ["release/evidence/benchmarks/missing-source.json"],
+                "environment": {"host_cpu_model": "test cpu"},
+                "summary": {"failed": 0, "cache_hit_rate": null},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize benchmark source artifact fixture."),
+        )
+        .expect("Fix: write benchmark source artifact fixture.");
+        let requirement = Requirement {
+            id: "wgpu-fallback".to_string(),
+            title: "wgpu fallback".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/wgpu-missing-source-artifact.json".to_string()],
+            minimum_evidence: 0,
+        };
+        let mut failures = Vec::new();
+
+        check_benchmark_report_has_cases(
+            &requirement,
+            &release_dir,
+            "wgpu-missing-source-artifact.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "benchmark `wgpu-missing-source-artifact.json` source_artifact `release/evidence/benchmarks/missing-source.json` is not a readable file"
+            )),
+            "Fix: generic benchmark gate must reject source_artifacts that do not resolve to files; failures={failures:?}"
         );
     }
 

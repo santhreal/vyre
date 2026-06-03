@@ -103,7 +103,7 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
                 .and_then(serde_json::Value::as_str)
                 .is_some()
         {
-            inspect_benchmark_report_provenance(evidence, &value, blockers);
+            inspect_benchmark_report_provenance(evidence, path, &value, blockers);
         }
     }
     if failed != 0 || case_failed != 0 {
@@ -224,7 +224,7 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
         && evidence.ends_with(".json")
         && !evidence.ends_with("release-workload-matrix.json")
     {
-        inspect_workload_benchmark_semantics(evidence, &value, blockers);
+        inspect_workload_benchmark_semantics(evidence, path, &value, blockers);
     }
     if evidence.ends_with("cpu-only-100x-proof.json") {
         inspect_cpu_100x_benchmark_semantics(evidence, &value, blockers);

@@ -98,6 +98,7 @@ pub(crate) fn check_benchmark_evidence_reports(
         };
         check_single_benchmark_report(
             requirement,
+            base_dir,
             &path,
             &report,
             require_cuda,
@@ -114,6 +115,7 @@ pub(crate) fn check_benchmark_evidence_reports(
 }
 pub(crate) fn check_single_benchmark_report(
     requirement: &Requirement,
+    base_dir: &Path,
     path: &Path,
     report: &serde_json::Value,
     require_cuda: bool,
@@ -175,6 +177,7 @@ pub(crate) fn check_single_benchmark_report(
     check_benchmark_reproducibility_provenance(
         requirement,
         &path.display().to_string(),
+        base_dir,
         report,
         failures,
     );
@@ -416,6 +419,7 @@ mod part3_tests {
 
         check_single_benchmark_report(
             &requirement,
+            Path::new("."),
             Path::new("wgpu-workload.json"),
             &report,
             false,
@@ -473,6 +477,7 @@ mod part3_tests {
 
         check_single_benchmark_report(
             &requirement,
+            Path::new("."),
             Path::new("wgpu-workload-12-sparse-output-compaction.json"),
             &report,
             false,
@@ -537,6 +542,7 @@ mod part3_tests {
 
         check_single_benchmark_report(
             &requirement,
+            Path::new("."),
             Path::new("wgpu-hidden-invalid.json"),
             &report,
             false,
@@ -590,6 +596,7 @@ mod part3_tests {
 
         check_single_benchmark_report(
             &requirement,
+            Path::new("."),
             Path::new("wgpu-stale-passed.json"),
             &report,
             false,

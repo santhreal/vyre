@@ -1,11 +1,12 @@
 use crate::benchmark_evidence_semantics::{
     backend_consistency_issues, benchmark_report_has_source_provenance,
-    cuda_telemetry_label_issues, launch_plan_label_issues, BackendConsistencyIssue,
-    CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
+    benchmark_source_artifact_paths, cuda_telemetry_label_issues, launch_plan_label_issues,
+    BackendConsistencyIssue, CudaTelemetryLabelIssue, LaunchPlanLabelIssue,
 };
 
 fn inspect_workload_benchmark_semantics(
     evidence: &str,
+    path: &Path,
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
@@ -16,7 +17,7 @@ fn inspect_workload_benchmark_semantics(
     {
         blockers.push(format!("{evidence}: selected_backend must be cuda"));
     }
-    inspect_workload_benchmark_provenance(evidence, value, blockers);
+    inspect_workload_benchmark_provenance(evidence, path, value, blockers);
     let Some(cases) = value.get("cases").and_then(serde_json::Value::as_array) else {
         blockers.push(format!("{evidence}: missing cases array"));
         return;
@@ -94,10 +95,11 @@ fn inspect_workload_benchmark_semantics(
 
 fn inspect_workload_benchmark_provenance(
     evidence: &str,
+    path: &Path,
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
-    inspect_benchmark_report_provenance(evidence, value, blockers);
+    inspect_benchmark_report_provenance(evidence, path, value, blockers);
     check_case_backend_matches_selected_backend(evidence, value, blockers);
     inspect_contract_baselines_apply_to_backend(evidence, value, blockers);
     check_cuda_telemetry_labels_match_counters(evidence, value, blockers);
@@ -196,6 +198,7 @@ fn inspect_workload_benchmark_provenance(
 
 fn inspect_benchmark_report_provenance(
     evidence: &str,
+    path: &Path,
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
@@ -210,6 +213,30 @@ fn inspect_benchmark_report_provenance(
         .filter(|value| !value.trim().is_empty())
     {
         inspect_source_fingerprint_shape(evidence, source_fingerprint, blockers);
+    }
+    let source_artifacts = benchmark_source_artifact_paths(value);
+    match release_evidence_workspace_root(path) {
+        Some(workspace_root) => {
+            for artifact in source_artifacts {
+                let candidate = PathBuf::from(&artifact);
+                let artifact_path = if candidate.is_absolute() {
+                    candidate
+                } else {
+                    workspace_root.join(candidate)
+                };
+                if !artifact_path.is_file() {
+                    blockers.push(format!(
+                        "{evidence}: source_artifact `{artifact}` is not a readable file at {}",
+                        artifact_path.display()
+                    ));
+                }
+            }
+        }
+        None if !source_artifacts.is_empty() => blockers.push(format!(
+            "{evidence}: could not resolve workspace root for source_artifacts from {}",
+            path.display()
+        )),
+        None => {}
     }
     let environment = value.get("environment");
     if !environment.is_some_and(|environment| {
@@ -523,7 +550,12 @@ mod tests {
         });
         let mut blockers = Vec::new();
 
-        inspect_workload_benchmark_semantics("workload-failed.json", &report, &mut blockers);
+        inspect_workload_benchmark_semantics(
+            "workload-failed.json",
+            Path::new("workload-failed.json"),
+            &report,
+            &mut blockers,
+        );
 
         assert!(
             blockers.iter().any(|blocker| blocker.contains(
@@ -566,6 +598,50 @@ mod tests {
                 "benchmark summary reports 1 failed case(s): `sparse.compaction.count.1m`: Performance contract failed"
             ) && blocker.contains("observed 86.90x")),
             "Fix: completion audit JSON summary blockers must preserve failed benchmark case reasons; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_generic_benchmark_missing_source_artifact_file() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for benchmark source artifact audit test.");
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        let evidence_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&evidence_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let path = evidence_dir.join("wgpu-missing-source-artifact.json");
+        std::fs::write(
+            &path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "source_artifacts": ["release/evidence/benchmarks/missing-source.json"],
+                "environment": {"host_cpu_model": "test cpu"},
+                "summary": {"failed": 0, "cache_hit_rate": null},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass"
+                    }
+                ]
+            }))
+            .expect("Fix: serialize benchmark source artifact audit fixture."),
+        )
+        .expect("Fix: write benchmark source artifact audit fixture.");
+        let mut blockers = Vec::new();
+
+        inspect_json_evidence(
+            "release/evidence/benchmarks/wgpu-missing-source-artifact.json",
+            &path,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "source_artifact `release/evidence/benchmarks/missing-source.json` is not a readable file"
+            )),
+            "Fix: completion audit must reject benchmark source_artifacts that do not resolve to files; blockers={blockers:?}"
         );
     }
 }

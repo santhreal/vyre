@@ -431,6 +431,7 @@ pub(crate) fn check_backend_suite_report(
             }
             check_single_benchmark_report(
                 requirement,
+                base_dir,
                 &path,
                 &artifact_report,
                 false,

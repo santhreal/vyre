@@ -392,7 +392,7 @@ pub(crate) fn check_named_cuda_benchmark_report(
         .find(|evidence| evidence.ends_with(suffix))
         .map(|evidence| resolve_manifest_path(base_dir, evidence))
         .unwrap_or_else(|| base_dir.join(suffix));
-    check_single_benchmark_report(requirement, &path, &report, true, None, failures);
+    check_single_benchmark_report(requirement, base_dir, &path, &report, true, None, failures);
     if suffix == "dataflow-analysis-release.json" {
         require_case_metric_positive(requirement, suffix, &report, "weir_nodes", failures);
         require_case_metric_positive(requirement, suffix, &report, "weir_bitset_words", failures);
