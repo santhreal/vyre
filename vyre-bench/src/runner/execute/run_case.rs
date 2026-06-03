@@ -208,12 +208,12 @@ pub(super) fn run_case(
             }
         }
     }
-    normalize_release_evidence_metrics(&mut metrics, ctx.preferred_backend.id());
     for (name, value) in ctx.preferred_backend.backend_metric_snapshot() {
         metrics
             .entry(name.to_string())
             .or_insert_with(|| single_sample_stats(value));
     }
+    normalize_release_evidence_metrics(&mut metrics, ctx.preferred_backend.id());
 
     let contract = case.performance_contract();
     let performance = contract
@@ -350,6 +350,13 @@ fn normalize_release_evidence_metrics(
     metrics
         .entry("device_to_host_bytes".to_string())
         .or_insert_with(|| single_sample_stats(0));
+    if backend_id == "cuda" {
+        if let Some(launches) = metrics.get("cuda_kernel_launches").cloned() {
+            metrics
+                .entry("kernel_launches".to_string())
+                .or_insert(launches);
+        }
+    }
     if backend_id != "cpu-ref" {
         metrics
             .entry("kernel_launches".to_string())
@@ -517,6 +524,37 @@ mod tests {
                 .iter()
                 .any(|pass| pass == "cuda-explicit-backend-selection"),
             "Fix: explicit CUDA backend selection is independent of per-counter activity."
+        );
+    }
+
+    #[test]
+    fn release_metrics_use_cuda_launch_counter_before_single_launch_fallback() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("cuda_kernel_launches".to_string(), stats(4));
+
+        normalize_release_evidence_metrics(&mut metrics, "cuda");
+
+        let launch_stats = metrics
+            .get("kernel_launches")
+            .expect("Fix: CUDA release reports must expose canonical kernel_launches.");
+        assert_eq!(
+            launch_stats.p50, 4,
+            "Fix: canonical kernel_launches must preserve CUDA telemetry instead of reporting the synthetic single-launch fallback."
+        );
+    }
+
+    #[test]
+    fn release_metrics_keep_single_launch_fallback_when_backend_has_no_counter() {
+        let mut metrics = BTreeMap::new();
+
+        normalize_release_evidence_metrics(&mut metrics, "wgpu");
+
+        let launch_stats = metrics.get("kernel_launches").expect(
+            "Fix: non-CPU release reports without backend counters still need launch evidence.",
+        );
+        assert_eq!(
+            launch_stats.p50, 1,
+            "Fix: launch fallback must remain for backends that do not expose a backend-specific launch counter."
         );
     }
 }
