@@ -1,3 +1,5 @@
+use crate::benchmark_evidence_semantics::{backend_suite_parity_issues, BackendSuiteParityIssue};
+
 pub(crate) fn check_backend_suite_report(
     requirement: &Requirement,
     base_dir: &Path,
@@ -420,6 +422,83 @@ pub(crate) fn check_backend_suite_report(
                     }
                 }
             }
+        }
+    }
+}
+pub(crate) fn check_backend_suite_parity(
+    requirement: &Requirement,
+    base_dir: &Path,
+    failures: &mut Vec<String>,
+) {
+    let cuda = read_release_suite_json(
+        requirement,
+        base_dir,
+        "evidence/benchmarks/cuda-release-suite.json",
+        failures,
+    );
+    let wgpu = read_release_suite_json(
+        requirement,
+        base_dir,
+        "evidence/benchmarks/wgpu-fallback-suite.json",
+        failures,
+    );
+    let (Some(cuda), Some(wgpu)) = (cuda, wgpu) else {
+        return;
+    };
+    for issue in backend_suite_parity_issues(&cuda, &wgpu) {
+        match issue {
+            BackendSuiteParityIssue::MissingCudaPair {
+                family_id,
+                requested_case_id,
+            } => failures.push(format!(
+                "requirement `{}` WGPU/CUDA suite parity has WGPU family `{family_id}` case `{requested_case_id}` with no CUDA counterpart",
+                requirement.id
+            )),
+            BackendSuiteParityIssue::MissingWgpuPair {
+                family_id,
+                requested_case_id,
+            } => failures.push(format!(
+                "requirement `{}` WGPU/CUDA suite parity has CUDA family `{family_id}` case `{requested_case_id}` with no WGPU counterpart",
+                requirement.id
+            )),
+            BackendSuiteParityIssue::CountMismatch {
+                cuda_count,
+                wgpu_count,
+            } => failures.push(format!(
+                "requirement `{}` WGPU/CUDA suite parity count mismatch: cuda={cuda_count}, wgpu={wgpu_count}",
+                requirement.id
+            )),
+        }
+    }
+}
+
+fn read_release_suite_json(
+    requirement: &Requirement,
+    base_dir: &Path,
+    evidence: &str,
+    failures: &mut Vec<String>,
+) -> Option<serde_json::Value> {
+    let path = resolve_manifest_path(base_dir, evidence);
+    let text = match read_text_bounded(&path) {
+        Ok(text) => text,
+        Err(error) => {
+            failures.push(format!(
+                "requirement `{}` failed to read backend suite parity artifact `{}`: {error}",
+                requirement.id,
+                path.display()
+            ));
+            return None;
+        }
+    };
+    match serde_json::from_str::<serde_json::Value>(&text) {
+        Ok(value) => Some(value),
+        Err(error) => {
+            failures.push(format!(
+                "requirement `{}` backend suite parity artifact `{}` is invalid JSON: {error}",
+                requirement.id,
+                path.display()
+            ));
+            None
         }
     }
 }

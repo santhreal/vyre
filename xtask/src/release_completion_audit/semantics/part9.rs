@@ -1,5 +1,8 @@
+use crate::benchmark_evidence_semantics::{backend_suite_parity_issues, BackendSuiteParityIssue};
+
 fn inspect_backend_suite_semantics(
     evidence: &str,
+    path: &Path,
     value: &serde_json::Value,
     blockers: &mut Vec<String>,
 ) {
@@ -270,6 +273,66 @@ fn inspect_backend_suite_semantics(
                     blocker.as_str().unwrap_or("<non-string blocker>")
                 ));
             }
+        }
+    }
+    if evidence.ends_with("wgpu-fallback-suite.json") {
+        inspect_wgpu_cuda_suite_parity(evidence, path, value, blockers);
+    }
+}
+
+fn inspect_wgpu_cuda_suite_parity(
+    evidence: &str,
+    path: &Path,
+    wgpu_suite: &serde_json::Value,
+    blockers: &mut Vec<String>,
+) {
+    let Some(parent) = path.parent() else {
+        blockers.push(format!(
+            "{evidence}: cannot resolve CUDA suite sibling path"
+        ));
+        return;
+    };
+    let cuda_path = parent.join("cuda-release-suite.json");
+    let text = match read_text_bounded(&cuda_path) {
+        Ok(text) => text,
+        Err(error) => {
+            blockers.push(format!(
+                "{evidence}: failed to read CUDA suite sibling `{}`: {error}",
+                cuda_path.display()
+            ));
+            return;
+        }
+    };
+    let cuda_suite = match serde_json::from_str::<serde_json::Value>(&text) {
+        Ok(value) => value,
+        Err(error) => {
+            blockers.push(format!(
+                "{evidence}: CUDA suite sibling `{}` is invalid JSON: {error}",
+                cuda_path.display()
+            ));
+            return;
+        }
+    };
+    for issue in backend_suite_parity_issues(&cuda_suite, wgpu_suite) {
+        match issue {
+            BackendSuiteParityIssue::MissingCudaPair {
+                family_id,
+                requested_case_id,
+            } => blockers.push(format!(
+                "{evidence}: WGPU/CUDA suite parity has WGPU family `{family_id}` case `{requested_case_id}` with no CUDA counterpart"
+            )),
+            BackendSuiteParityIssue::MissingWgpuPair {
+                family_id,
+                requested_case_id,
+            } => blockers.push(format!(
+                "{evidence}: WGPU/CUDA suite parity has CUDA family `{family_id}` case `{requested_case_id}` with no WGPU counterpart"
+            )),
+            BackendSuiteParityIssue::CountMismatch {
+                cuda_count,
+                wgpu_count,
+            } => blockers.push(format!(
+                "{evidence}: WGPU/CUDA suite parity count mismatch: cuda={cuda_count}, wgpu={wgpu_count}"
+            )),
         }
     }
 }

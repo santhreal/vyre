@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use serde_json::{Map, Value};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -31,6 +33,52 @@ pub(crate) enum CudaTelemetryLabelIssue {
         case_id: String,
         label: &'static str,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum BackendSuiteParityIssue {
+    MissingCudaPair {
+        family_id: String,
+        requested_case_id: String,
+    },
+    MissingWgpuPair {
+        family_id: String,
+        requested_case_id: String,
+    },
+    CountMismatch {
+        cuda_count: usize,
+        wgpu_count: usize,
+    },
+}
+
+pub(crate) fn backend_suite_parity_issues(
+    cuda_suite: &Value,
+    wgpu_suite: &Value,
+) -> Vec<BackendSuiteParityIssue> {
+    let cuda_count = suite_artifact_status_count(cuda_suite);
+    let wgpu_count = suite_artifact_status_count(wgpu_suite);
+    let cuda_pairs = suite_family_case_pairs(cuda_suite);
+    let wgpu_pairs = suite_family_case_pairs(wgpu_suite);
+    let mut issues = Vec::new();
+    if cuda_count != wgpu_count || cuda_pairs.len() != wgpu_pairs.len() {
+        issues.push(BackendSuiteParityIssue::CountMismatch {
+            cuda_count,
+            wgpu_count,
+        });
+    }
+    for (family_id, requested_case_id) in cuda_pairs.difference(&wgpu_pairs) {
+        issues.push(BackendSuiteParityIssue::MissingWgpuPair {
+            family_id: family_id.clone(),
+            requested_case_id: requested_case_id.clone(),
+        });
+    }
+    for (family_id, requested_case_id) in wgpu_pairs.difference(&cuda_pairs) {
+        issues.push(BackendSuiteParityIssue::MissingCudaPair {
+            family_id: family_id.clone(),
+            requested_case_id: requested_case_id.clone(),
+        });
+    }
+    issues
 }
 
 pub(crate) fn backend_consistency_issues(report: &Value) -> Vec<BackendConsistencyIssue> {
@@ -199,6 +247,33 @@ fn case_id(case: &Value) -> String {
         .to_string()
 }
 
+fn suite_family_case_pairs(suite: &Value) -> BTreeSet<(String, String)> {
+    suite
+        .get("artifact_statuses")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|status| {
+            let family_id = status
+                .get("family_id")
+                .and_then(Value::as_str)
+                .filter(|value| !value.trim().is_empty())?;
+            let requested_case_id = status
+                .get("requested_case_id")
+                .and_then(Value::as_str)
+                .filter(|value| !value.trim().is_empty())?;
+            Some((family_id.to_string(), requested_case_id.to_string()))
+        })
+        .collect()
+}
+
+fn suite_artifact_status_count(suite: &Value) -> usize {
+    suite
+        .get("artifact_statuses")
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -348,6 +423,61 @@ mod tests {
                 },
             ],
             "Fix: CUDA release telemetry labels must match measured backend counters."
+        );
+    }
+
+    #[test]
+    fn backend_suite_parity_rejects_missing_family_case_pairs() {
+        let cuda = serde_json::json!({
+            "artifact_statuses": [
+                {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"},
+                {"family_id": "entropy-window", "requested_case_id": "release.entropy_window.1m"}
+            ]
+        });
+        let wgpu = serde_json::json!({
+            "artifact_statuses": [
+                {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"},
+                {"family_id": "ifds-witness", "requested_case_id": "release.ifds_witness.1m"}
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_parity_issues(&cuda, &wgpu),
+            vec![
+                BackendSuiteParityIssue::MissingWgpuPair {
+                    family_id: "entropy-window".to_string(),
+                    requested_case_id: "release.entropy_window.1m".to_string(),
+                },
+                BackendSuiteParityIssue::MissingCudaPair {
+                    family_id: "ifds-witness".to_string(),
+                    requested_case_id: "release.ifds_witness.1m".to_string(),
+                },
+            ],
+            "Fix: CUDA and WGPU release suites must cover the same family/case contract."
+        );
+    }
+
+    #[test]
+    fn backend_suite_parity_rejects_count_drift_even_with_duplicate_metadata() {
+        let cuda = serde_json::json!({
+            "artifact_statuses": [
+                {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"}
+            ]
+        });
+        let wgpu = serde_json::json!({
+            "artifact_statuses": [
+                {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"},
+                {"family_id": "condition-eval", "requested_case_id": "release.condition_eval.1m"}
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_parity_issues(&cuda, &wgpu),
+            vec![BackendSuiteParityIssue::CountMismatch {
+                cuda_count: 1,
+                wgpu_count: 2,
+            }],
+            "Fix: duplicate suite metadata should not silently prove artifact-count parity."
         );
     }
 }

@@ -168,7 +168,7 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
     if evidence.ends_with("cuda-release-suite.json")
         || evidence.ends_with("wgpu-fallback-suite.json")
     {
-        inspect_backend_suite_semantics(evidence, &value, blockers);
+        inspect_backend_suite_semantics(evidence, path, &value, blockers);
     }
     if evidence.ends_with("cuda-ptx-patterns.json") {
         inspect_cuda_ptx_pattern_semantics(evidence, &value, blockers);
@@ -399,4 +399,3 @@ fn required_marker_ids_for_evidence(evidence: &str) -> &'static [&'static str] {
         &[]
     }
 }
-
