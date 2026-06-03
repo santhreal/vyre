@@ -218,6 +218,7 @@ impl BindingPlan {
                 ),
             }
         })?;
+        let buffer_count = program.buffers().len();
         ordered.extend(program.buffers().iter().enumerate());
         ordered.sort_by_key(|(_, buffer)| buffer.binding());
 
@@ -232,6 +233,22 @@ impl BindingPlan {
         )?;
         let (input_slot_count, output_slot_count, shared_slot_count) =
             binding_role_counts(&ordered)?;
+        let mut logical_input_slots = Vec::new();
+        crate::allocation::try_reserve_vec_to_capacity(&mut logical_input_slots, buffer_count)
+            .map_err(|error| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: binding-plan construction could not reserve {buffer_count} logical input slot(s): {error}. Split the program buffers or construct a smaller pipeline.",
+                ),
+            })?;
+        logical_input_slots.resize(buffer_count, None);
+        let mut logical_output_slots = Vec::new();
+        crate::allocation::try_reserve_vec_to_capacity(&mut logical_output_slots, buffer_count)
+            .map_err(|error| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: binding-plan construction could not reserve {buffer_count} logical output slot(s): {error}. Split the program buffers or construct a smaller pipeline.",
+                ),
+            })?;
+        logical_output_slots.resize(buffer_count, None);
         let mut input_indices = SmallVec::<[usize; 8]>::new();
         let mut output_indices = SmallVec::<[usize; 8]>::new();
         let mut shared_indices = SmallVec::<[usize; 4]>::new();
@@ -269,6 +286,28 @@ impl BindingPlan {
             }
         })?;
 
+        for (buffer_index, buffer) in program.buffers().iter().enumerate() {
+            let role = role_for_buffer(buffer)?;
+            if matches!(
+                role,
+                BindingRole::Input | BindingRole::InputOutput | BindingRole::Uniform
+            ) {
+                let index = input_indices.len();
+                input_indices.push(buffer_index);
+                logical_input_slots[buffer_index] = Some(index);
+            }
+            if matches!(role, BindingRole::Output | BindingRole::InputOutput)
+                || buffer.pipeline_live_out
+            {
+                let index = output_indices.len();
+                output_indices.push(buffer_index);
+                logical_output_slots[buffer_index] = Some(index);
+            }
+            if role == BindingRole::Shared {
+                shared_indices.push(buffer_index);
+            }
+        }
+
         for (buffer_index, buffer) in ordered {
             let role = role_for_buffer(buffer)?;
             let consumes_input = matches!(
@@ -290,22 +329,33 @@ impl BindingPlan {
             let preferred_alignment = preferred_alignment(buffer, element_size)?;
 
             let input_index = if consumes_input {
-                let index = input_indices.len();
-                input_indices.push(buffer_index);
-                Some(index)
+                Some(logical_input_slots
+                    .get(buffer_index)
+                    .copied()
+                    .flatten()
+                    .ok_or_else(|| BackendError::InvalidProgram {
+                        fix: format!(
+                            "Fix: binding `{}` consumes input but no logical input slot was assigned. Rebuild BindingPlan from Program::buffers order before launch.",
+                            buffer.name()
+                        ),
+                    })?)
             } else {
                 None
             };
             let output_index = if produces_output || buffer.pipeline_live_out {
-                let index = output_indices.len();
-                output_indices.push(buffer_index);
-                Some(index)
+                Some(logical_output_slots
+                    .get(buffer_index)
+                    .copied()
+                    .flatten()
+                    .ok_or_else(|| BackendError::InvalidProgram {
+                        fix: format!(
+                            "Fix: binding `{}` produces output but no logical output slot was assigned. Rebuild BindingPlan from Program::buffers order before readback.",
+                            buffer.name()
+                        ),
+                    })?)
             } else {
                 None
             };
-            if role == BindingRole::Shared {
-                shared_indices.push(buffer_index);
-            }
             let element_count = if buffer.count() == 0 {
                 input_index
                     .and_then(|index| input_lens.get(index))
@@ -789,6 +839,75 @@ mod tests {
         );
         let plan = BindingPlan::build(&program).expect("Fix: alignment hint should build");
         assert_eq!(plan.bindings[0].preferred_alignment, 64);
+    }
+
+    #[test]
+    fn binding_plan_keeps_logical_slots_when_binding_numbers_are_reordered() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::read("declared_first_high_binding", 9, DataType::U32),
+                BufferDecl::output("declared_output_first_high_binding", 8, DataType::U32)
+                    .with_count(1),
+                BufferDecl::read("declared_second_low_binding", 0, DataType::U32),
+                BufferDecl::output("declared_output_second_low_binding", 1, DataType::U32)
+                    .with_count(1),
+            ],
+            [1, 1, 1],
+            vec![],
+        );
+        let inputs = [vec![0u8; 12], vec![0u8; 8]];
+
+        let plan = BindingPlan::from_program(&program, &inputs)
+            .expect("Fix: binding plan must accept logical input order before descriptor sorting");
+
+        assert_eq!(
+            plan.bindings
+                .iter()
+                .map(|binding| binding.binding)
+                .collect::<Vec<_>>(),
+            [0, 1, 8, 9],
+            "descriptor ABI must remain sorted by VYRE binding number"
+        );
+        assert_eq!(
+            plan.input_indices,
+            [0, 2],
+            "caller input slots must follow Program::buffers declaration order"
+        );
+        assert_eq!(
+            plan.output_indices,
+            [1, 3],
+            "backend output slots must follow Program::buffers declaration order"
+        );
+
+        let high_input = plan
+            .bindings
+            .iter()
+            .find(|binding| binding.binding == 9)
+            .expect("high binding input descriptor must exist");
+        assert_eq!(high_input.input_index, Some(0));
+        assert_eq!(high_input.element_count, 3);
+
+        let low_input = plan
+            .bindings
+            .iter()
+            .find(|binding| binding.binding == 0)
+            .expect("low binding input descriptor must exist");
+        assert_eq!(low_input.input_index, Some(1));
+        assert_eq!(low_input.element_count, 2);
+
+        let high_output = plan
+            .bindings
+            .iter()
+            .find(|binding| binding.binding == 8)
+            .expect("high binding output descriptor must exist");
+        assert_eq!(high_output.output_index, Some(0));
+
+        let low_output = plan
+            .bindings
+            .iter()
+            .find(|binding| binding.binding == 1)
+            .expect("low binding output descriptor must exist");
+        assert_eq!(low_output.output_index, Some(1));
     }
 
     #[test]
