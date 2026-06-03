@@ -172,6 +172,8 @@ pub(crate) fn download_resident_ranges_into(
             byte_len,
         });
     }
+    handles.sort_unstable_by_key(|(handle_id, _)| *handle_id);
+    handles.dedup_by_key(|(handle_id, _)| *handle_id);
     let fused = fuse_resident_transfer_intervals(&copies)?;
     reserve_fused_resident_view_outputs(&fused.copies, &fused.views, outputs)?;
     let mut fused_outputs = SmallVec::<[Vec<u8>; 8]>::new();
@@ -187,16 +189,15 @@ pub(crate) fn download_resident_ranges_into(
     })?;
     let device_queue = backend.current_device_queue();
     for copy in fused.copies.iter().copied() {
-        let handle = handles
-            .iter()
-            .find(|(handle_id, _)| *handle_id == copy.handle_id)
-            .map(|(_, handle)| handle)
-            .ok_or_else(|| {
+        let handle_index = handles
+            .binary_search_by_key(&copy.handle_id, |(handle_id, _)| *handle_id)
+            .map_err(|_| {
                 vyre_driver::BackendError::new(format!(
                     "WGPU resident ranged batch download fused copy references unknown handle {}. Fix: rebuild the fused readback plan after validation.",
                     copy.handle_id
                 ))
             })?;
+        let handle = &handles[handle_index].1;
         let byte_len = usize_to_u64(copy.byte_len, "resident fused ranged batch download length")?;
         let mut fused_output = Vec::new();
         handle.readback_range_until(

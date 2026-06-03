@@ -235,7 +235,10 @@ fn wgpu_resident_batch_download_uses_shared_interval_fusion() {
         source.contains("vyre_driver::resident_transfer_fusion")
             && batch_body.contains("fuse_resident_transfer_intervals(&copies)?")
             && batch_body.contains("reserve_fused_resident_view_outputs(&fused.copies, &fused.views, outputs)?")
+            && batch_body.contains("handles.sort_unstable_by_key")
+            && batch_body.contains("handles.dedup_by_key")
             && batch_body.contains("for copy in fused.copies.iter().copied()")
+            && batch_body.contains("handles\n            .binary_search_by_key")
             && batch_body.contains("for (view, output) in fused.views.iter().copied().zip(outputs.iter_mut())")
             && !batch_body.contains("for ((handle, byte_offset, byte_len), output)"),
         "Fix: WGPU resident ranged batch download must share CUDA's backend-neutral interval fusion instead of issuing one readback per requested range."
