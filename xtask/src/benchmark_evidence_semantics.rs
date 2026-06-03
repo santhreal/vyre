@@ -1218,12 +1218,16 @@ pub(crate) fn backend_suite_artifact_status_issues(
         }
     }
     for (field, artifact_value) in backend_suite_string_artifact_fields(artifact_report) {
-        match status.get(field).and_then(non_empty_str) {
-            None => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+        match (status.get(field).and_then(non_empty_str), artifact_value) {
+            (_, None) => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
                 path: path.clone(),
                 field,
             }),
-            Some(status_value) if status_value != artifact_value => {
+            (None, Some(_)) => issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+                path: path.clone(),
+                field,
+            }),
+            (Some(status_value), Some(artifact_value)) if status_value != artifact_value => {
                 issues.push(BackendSuiteArtifactStatusIssue::StringFieldMismatch {
                     path: path.clone(),
                     field,
@@ -1369,7 +1373,9 @@ fn backend_suite_numeric_artifact_fields(artifact_report: &Value) -> Vec<(&'stat
         .collect()
 }
 
-fn backend_suite_string_artifact_fields(artifact_report: &Value) -> Vec<(&'static str, String)> {
+fn backend_suite_string_artifact_fields(
+    artifact_report: &Value,
+) -> Vec<(&'static str, Option<String>)> {
     let fields = [
         (
             "host_cpu_model",
@@ -1390,7 +1396,8 @@ fn backend_suite_string_artifact_fields(artifact_report: &Value) -> Vec<(&'stati
     ];
     fields
         .into_iter()
-        .filter_map(|(field, value)| value.map(|value| (field, value)))
+        .filter(|(_, value)| value.is_some())
+        .map(|(field, value)| (field, value.flatten()))
         .collect()
 }
 
@@ -1398,23 +1405,18 @@ fn artifact_environment<'a>(artifact_report: &'a Value) -> Option<&'a Value> {
     artifact_report.get("environment")
 }
 
-fn artifact_environment_str(artifact_report: &Value, field: &str) -> Option<String> {
-    artifact_environment(artifact_report)?
-        .get(field)
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
+fn artifact_environment_str(artifact_report: &Value, field: &str) -> Option<Option<String>> {
+    let value = artifact_environment(artifact_report)?.get(field)?;
+    Some(non_empty_str(value).map(str::to_string))
 }
 
-fn artifact_environment_host_cpu_model(artifact_report: &Value) -> Option<String> {
+fn artifact_environment_host_cpu_model(artifact_report: &Value) -> Option<Option<String>> {
     let environment = artifact_environment(artifact_report)?;
-    environment
+    let value = environment
         .get("host_cpu_model")
         .or_else(|| environment.get("cpu_model"))
-        .or_else(|| environment.get("host_cpu"))
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
+        .or_else(|| environment.get("host_cpu"))?;
+    Some(non_empty_str(value).map(str::to_string))
 }
 
 fn artifact_environment_first_gpu<'a>(artifact_report: &'a Value) -> Option<&'a Value> {
@@ -1424,12 +1426,12 @@ fn artifact_environment_first_gpu<'a>(artifact_report: &'a Value) -> Option<&'a 
         .and_then(|devices| devices.first())
 }
 
-fn artifact_environment_first_gpu_str(artifact_report: &Value, field: &str) -> Option<String> {
-    artifact_environment_first_gpu(artifact_report)?
-        .get(field)
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
+fn artifact_environment_first_gpu_str(
+    artifact_report: &Value,
+    field: &str,
+) -> Option<Option<String>> {
+    let value = artifact_environment_first_gpu(artifact_report)?.get(field)?;
+    Some(non_empty_str(value).map(str::to_string))
 }
 
 fn artifact_environment_first_gpu_u64(artifact_report: &Value, field: &str) -> Option<u64> {
@@ -3759,6 +3761,64 @@ mod tests {
                 },
             ],
             "Fix: backend suite status provenance must be proven by the artifact environment."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_blank_environment_provenance() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "selected_backend": "cuda",
+            "case_count": 1,
+            "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
+            "requested_case_id": "release.condition_eval.1m",
+            "host_cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
+            "gpu_model": "NVIDIA GeForce RTX 5090",
+            "gpu_memory_total_mib": 32607,
+            "gpu_compute_capability_major": 12,
+            "gpu_compute_capability_minor": 0,
+            "nvidia_driver_version": "570.211.01",
+            "nvidia_cuda_version": "12.8"
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "cuda",
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+            "environment": {
+                "cpu_model": "   ",
+                "gpu_devices": [
+                    {
+                        "name": "\t",
+                        "memory_total_mib": 32607,
+                        "compute_capability_major": 12,
+                        "compute_capability_minor": 0
+                    }
+                ],
+                "nvidia_driver_version": " ",
+                "nvidia_cuda_version": "\n"
+            },
+            "cases": [
+                {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"}
+            ]
+        });
+
+        let missing_fields = backend_suite_artifact_status_issues(&status, &artifact)
+            .into_iter()
+            .filter_map(|issue| match issue {
+                BackendSuiteArtifactStatusIssue::MissingField { field, .. } => Some(field),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            missing_fields,
+            vec![
+                "host_cpu_model",
+                "gpu_model",
+                "nvidia_driver_version",
+                "nvidia_cuda_version"
+            ],
+            "Fix: whitespace-only benchmark artifact environment provenance must be treated as missing evidence."
         );
     }
 
