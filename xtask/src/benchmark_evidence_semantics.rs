@@ -473,6 +473,12 @@ pub(crate) fn backend_suite_artifact_status_issues(
         .get("summary")
         .and_then(|summary| summary.get("total_cases"))
         .and_then(Value::as_u64);
+    if artifact_case_count.is_some() && artifact_summary_total_cases.is_none() {
+        issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+            path: path.clone(),
+            field: "summary.total_cases",
+        });
+    }
     if let (Some(summary_total_cases), Some(case_count)) =
         (artifact_summary_total_cases, artifact_case_count)
     {
@@ -532,6 +538,12 @@ pub(crate) fn backend_suite_artifact_status_issues(
         .and_then(|summary| summary.get("passed"))
         .and_then(Value::as_u64);
     let artifact_case_passed_count = artifact_case_passed_count(artifact_report);
+    if artifact_case_passed_count.is_some() && artifact_summary_passed_count.is_none() {
+        issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+            path: path.clone(),
+            field: "summary.passed",
+        });
+    }
     if let (Some(summary_passed_count), Some(case_passed_count)) =
         (artifact_summary_passed_count, artifact_case_passed_count)
     {
@@ -549,6 +561,12 @@ pub(crate) fn backend_suite_artifact_status_issues(
         .and_then(|summary| summary.get("failed"))
         .and_then(Value::as_u64);
     let artifact_case_failed_count = artifact_case_failed_count(artifact_report);
+    if artifact_case_failed_count.is_some() && artifact_summary_failed_count.is_none() {
+        issues.push(BackendSuiteArtifactStatusIssue::MissingField {
+            path: path.clone(),
+            field: "summary.failed",
+        });
+    }
     if let (Some(summary_failed_count), Some(case_failed_count)) =
         (artifact_summary_failed_count, artifact_case_failed_count)
     {
@@ -840,7 +858,7 @@ fn artifact_case_failed_count(artifact_report: &Value) -> Option<u64> {
     Some(
         cases
             .iter()
-            .filter(|case| benchmark_case_failure_reason(case).is_some())
+            .filter(|case| !benchmark_case_passes_summary_evidence(case))
             .count() as u64,
     )
 }
@@ -1860,7 +1878,7 @@ mod tests {
             "source_fingerprint": "git:new:dirty=false",
             "source_tree_fingerprint": "source-tree-v1:new",
             "selected_backend": "wgpu",
-            "summary": {"failed": 1},
+            "summary": {"total_cases": 1, "passed": 0, "failed": 1},
             "cases": [
                 {"id": "release.other.1m"}
             ]
@@ -1895,11 +1913,10 @@ mod tests {
                     status_value: 0,
                     artifact_value: 1,
                 },
-                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                BackendSuiteArtifactStatusIssue::FailedCountMismatch {
                     path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
-                    field: "summary.failed",
-                    status_value: 1,
-                    artifact_value: 0,
+                    status_failed_count: 0,
+                    artifact_failed_count: 1,
                 },
                 BackendSuiteArtifactStatusIssue::MissingRequestedCase {
                     path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
@@ -1926,9 +1943,9 @@ mod tests {
             "source_fingerprint": "git:abc:dirty=false",
             "source_tree_fingerprint": "source-tree-v1:abc",
             "selected_backend": "cuda",
-            "summary": {"failed": 0},
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
             "cases": [
-                {"id": "release.condition_eval.1m", "backend_id": "cuda"}
+                {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"}
             ]
         });
 
@@ -1954,11 +1971,12 @@ mod tests {
         });
         let artifact = serde_json::json!({
             "selected_backend": "cuda",
-            "summary": {"failed": 0},
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
             "cases": [
                 {
                     "id": "release.condition_eval.1m",
                     "backend_id": "cuda",
+                    "status": "pass",
                     "metrics": {
                         "wall_ns": {"samples": 30, "p50": 12.75, "p95": 20.25, "p99": 30.875}
                     }
@@ -1984,9 +2002,9 @@ mod tests {
         });
         let artifact = serde_json::json!({
             "selected_backend": "cuda",
-            "summary": {"failed": 0},
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
             "cases": [
-                {"id": "release.condition_eval.1m", "backend_id": "wgpu"}
+                {"id": "release.condition_eval.1m", "backend_id": "wgpu", "status": "pass"}
             ]
         });
 
@@ -2014,7 +2032,7 @@ mod tests {
         });
         let artifact = serde_json::json!({
             "selected_backend": "cuda",
-            "summary": {"failed": 0},
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
             "cases": [
                 {
                     "id": "release.condition_eval.1m",
@@ -2032,6 +2050,13 @@ mod tests {
         assert_eq!(
             backend_suite_artifact_status_issues(&status, &artifact),
             vec![
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json"
+                        .to_string(),
+                    field: "summary.passed",
+                    status_value: 1,
+                    artifact_value: 0,
+                },
                 BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
                     path: "release/evidence/benchmarks/workload-01-condition-eval.json"
                         .to_string(),
@@ -2136,6 +2161,87 @@ mod tests {
     }
 
     #[test]
+    fn backend_suite_artifact_status_rejects_missing_artifact_summary_passed_count() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "selected_backend": "cuda",
+            "case_count": 1,
+            "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
+            "requested_case_id": "release.condition_eval.1m"
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "cuda",
+            "summary": {"total_cases": 1, "failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda",
+                    "status": "pass"
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![BackendSuiteArtifactStatusIssue::MissingField {
+                path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+                field: "summary.passed",
+            }],
+            "Fix: suite artifact validation must require the full summary total/pass/fail triplet, not accept partial failed-only summaries."
+        );
+    }
+
+    #[test]
+    fn backend_suite_artifact_status_rejects_unproven_case_pass_status() {
+        let status = serde_json::json!({
+            "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+            "selected_backend": "cuda",
+            "case_count": 1,
+            "failed_count": 0,
+            "nonmatching_case_backend_count": 0,
+            "requested_case_id": "release.condition_eval.1m"
+        });
+        let artifact = serde_json::json!({
+            "selected_backend": "cuda",
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "cuda"
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_artifact_status_issues(&status, &artifact),
+            vec![
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json"
+                        .to_string(),
+                    field: "summary.passed",
+                    status_value: 1,
+                    artifact_value: 0,
+                },
+                BackendSuiteArtifactStatusIssue::NumericFieldMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json"
+                        .to_string(),
+                    field: "summary.failed",
+                    status_value: 0,
+                    artifact_value: 1,
+                },
+                BackendSuiteArtifactStatusIssue::FailedCountMismatch {
+                    path: "release/evidence/benchmarks/workload-01-condition-eval.json"
+                        .to_string(),
+                    status_failed_count: 0,
+                    artifact_failed_count: 1,
+                },
+            ],
+            "Fix: suite artifact validation must count only explicitly passing cases as release evidence."
+        );
+    }
+
+    #[test]
     fn backend_suite_artifact_status_rejects_omitted_artifact_backed_fields() {
         let status = serde_json::json!({
             "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
@@ -2145,7 +2251,7 @@ mod tests {
             "source_fingerprint": "git:abc:dirty=false",
             "source_tree_fingerprint": "source-tree-v1:abc",
             "selected_backend": "cuda",
-            "summary": {"failed": 0},
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
             "environment": {
                 "cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
                 "gpu_devices": [
@@ -2163,6 +2269,7 @@ mod tests {
                 {
                     "id": "release.condition_eval.1m",
                     "backend_id": "cuda",
+                    "status": "pass",
                     "metrics": {
                         "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
                         "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
@@ -2237,11 +2344,12 @@ mod tests {
         });
         let artifact = serde_json::json!({
             "selected_backend": "wgpu",
-            "summary": {"failed": 0},
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
             "cases": [
                 {
                     "id": "release.condition_eval.1m",
                     "backend_id": "wgpu",
+                    "status": "pass",
                     "metrics": {
                         "wall_ns": {"samples": 20, "p50": 150},
                         "kernel_launches": {"p50": 0}
@@ -2308,7 +2416,7 @@ mod tests {
         });
         let artifact = serde_json::json!({
             "selected_backend": "cuda",
-            "summary": {"failed": 0},
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
             "environment": {
                 "cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
                 "gpu_devices": [
@@ -2323,7 +2431,7 @@ mod tests {
                 "nvidia_cuda_version": "12.8"
             },
             "cases": [
-                {"id": "release.condition_eval.1m", "backend_id": "cuda"}
+                {"id": "release.condition_eval.1m", "backend_id": "cuda", "status": "pass"}
             ]
         });
 
@@ -2391,11 +2499,12 @@ mod tests {
         });
         let artifact = serde_json::json!({
             "selected_backend": "wgpu",
-            "summary": {"failed": 0},
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
             "cases": [
                 {
                     "id": "release.quantified_condition_loops.1m",
                     "backend_id": "wgpu",
+                    "status": "pass",
                     "contract": null,
                     "performance": {"contract_passed": true, "speedup_x": 1000.0}
                 }
@@ -2434,11 +2543,12 @@ mod tests {
         });
         let artifact = serde_json::json!({
             "selected_backend": "wgpu",
-            "summary": {"failed": 0},
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
             "cases": [
                 {
                     "id": "release.condition_eval.1m",
                     "backend_id": "wgpu",
+                    "status": "pass",
                     "contract": {
                         "primitive": "condition eval",
                         "baselines": [
@@ -2488,11 +2598,12 @@ mod tests {
         });
         let artifact = serde_json::json!({
             "selected_backend": "wgpu",
-            "summary": {"failed": 0},
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
             "cases": [
                 {
                     "id": "release.condition_eval.1m",
                     "backend_id": "wgpu",
+                    "status": "pass",
                     "contract": {
                         "primitive": "condition eval",
                         "baselines": [
