@@ -201,6 +201,17 @@ pub(crate) enum BackendSuiteInventoryIssue {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum BackendSuiteBackendIssue {
+    Missing {
+        expected_backend: String,
+    },
+    Mismatch {
+        expected_backend: String,
+        actual_backend: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum BackendSuiteArtifactStatusIssue {
     MissingField {
         path: String,
@@ -1070,6 +1081,34 @@ pub(crate) fn backend_suite_parity_issues(
     issues
 }
 
+pub(crate) fn expected_backend_for_suite_evidence(evidence: &str) -> Option<&'static str> {
+    if evidence.ends_with("cuda-release-suite.json") {
+        Some("cuda")
+    } else if evidence.ends_with("wgpu-fallback-suite.json") {
+        Some("wgpu")
+    } else {
+        None
+    }
+}
+
+pub(crate) fn backend_suite_backend_issue(
+    suite: &Value,
+    expected_backend: &str,
+) -> Option<BackendSuiteBackendIssue> {
+    match suite.get("backend").and_then(non_empty_str) {
+        None => Some(BackendSuiteBackendIssue::Missing {
+            expected_backend: expected_backend.to_string(),
+        }),
+        Some(actual_backend) if actual_backend != expected_backend => {
+            Some(BackendSuiteBackendIssue::Mismatch {
+                expected_backend: expected_backend.to_string(),
+                actual_backend: actual_backend.to_string(),
+            })
+        }
+        Some(_) => None,
+    }
+}
+
 pub(crate) fn backend_consistency_issues(report: &Value) -> Vec<BackendConsistencyIssue> {
     let Some(expected_backend) = report
         .get("selected_backend")
@@ -1805,6 +1844,48 @@ mod tests {
                 },
             ],
             "Fix: CUDA and WGPU release suites must cover the same family/case contract."
+        );
+    }
+
+    #[test]
+    fn backend_suite_backend_identity_comes_from_release_suite_name() {
+        assert_eq!(
+            expected_backend_for_suite_evidence(
+                "release/evidence/benchmarks/cuda-release-suite.json"
+            ),
+            Some("cuda"),
+            "Fix: CUDA suite filenames define the required backend identity."
+        );
+        assert_eq!(
+            expected_backend_for_suite_evidence(
+                "release/evidence/benchmarks/wgpu-fallback-suite.json"
+            ),
+            Some("wgpu"),
+            "Fix: WGPU fallback suite filenames define the required backend identity."
+        );
+    }
+
+    #[test]
+    fn backend_suite_backend_identity_rejects_missing_or_mismatched_field() {
+        assert_eq!(
+            backend_suite_backend_issue(&serde_json::json!({}), "cuda"),
+            Some(BackendSuiteBackendIssue::Missing {
+                expected_backend: "cuda".to_string(),
+            }),
+            "Fix: suite backend identity must be explicit, not inferred from artifact rows."
+        );
+        assert_eq!(
+            backend_suite_backend_issue(&serde_json::json!({"backend": "wgpu"}), "cuda"),
+            Some(BackendSuiteBackendIssue::Mismatch {
+                expected_backend: "cuda".to_string(),
+                actual_backend: "wgpu".to_string(),
+            }),
+            "Fix: a CUDA release suite must not self-report a WGPU backend."
+        );
+        assert_eq!(
+            backend_suite_backend_issue(&serde_json::json!({"backend": "cuda"}), "cuda"),
+            None,
+            "Fix: matching suite backend identity should pass."
         );
     }
 

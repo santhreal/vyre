@@ -1,7 +1,8 @@
 use crate::benchmark_evidence_semantics::{
-    backend_suite_artifact_status_issues, backend_suite_inventory_issues,
-    backend_suite_parity_issues, BackendSuiteArtifactStatusIssue, BackendSuiteInventoryIssue,
-    BackendSuiteParityIssue,
+    backend_suite_artifact_status_issues, backend_suite_backend_issue,
+    backend_suite_inventory_issues, backend_suite_parity_issues,
+    expected_backend_for_suite_evidence, BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue,
+    BackendSuiteInventoryIssue, BackendSuiteParityIssue,
 };
 
 pub(crate) fn check_backend_suite_report(
@@ -22,6 +23,24 @@ pub(crate) fn check_backend_suite_report(
             "requirement `{}` backend suite `{suffix}` schema_version={schema_version}; expected schema>=2",
             requirement.id
         ));
+    }
+    let expected_suite_backend = expected_backend_for_suite_evidence(suffix);
+    if let Some(expected_backend) = expected_suite_backend {
+        if let Some(issue) = backend_suite_backend_issue(&report, expected_backend) {
+            match issue {
+                BackendSuiteBackendIssue::Missing { expected_backend } => failures.push(format!(
+                    "requirement `{}` backend suite `{suffix}` is missing backend identity `{expected_backend}`",
+                    requirement.id
+                )),
+                BackendSuiteBackendIssue::Mismatch {
+                    expected_backend,
+                    actual_backend,
+                } => failures.push(format!(
+                    "requirement `{}` backend suite `{suffix}` backend `{actual_backend}` does not match required `{expected_backend}`",
+                    requirement.id
+                )),
+            }
+        }
     }
     let family_count = report
         .get("family_count")
@@ -368,7 +387,8 @@ pub(crate) fn check_backend_suite_report(
         .get("artifacts")
         .and_then(serde_json::Value::as_array)
     {
-        let expected_backend = report.get("backend").and_then(serde_json::Value::as_str);
+        let expected_backend = expected_suite_backend
+            .or_else(|| report.get("backend").and_then(serde_json::Value::as_str));
         for artifact in artifacts {
             let Some(artifact) = artifact.as_str() else {
                 failures.push(format!(
@@ -664,6 +684,105 @@ mod part7_tests {
                 .iter()
                 .any(|failure| failure.contains("is dirty but has no worktree digest")),
             "Fix: backend suite status rows must carry precise dirty-worktree provenance; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn backend_suite_report_rejects_filename_backend_identity_drift() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for backend suite identity test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create benchmark evidence directory for backend suite identity test.");
+        let artifact_path = benchmark_dir.join("workload-01-condition-eval.json");
+        std::fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "kernel_launches": {"samples": 30, "p50": 1}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 120.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize WGPU benchmark artifact for backend suite identity test."),
+        )
+        .expect("Fix: write WGPU benchmark artifact for backend suite identity test.");
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "wgpu",
+                "family_count": 1,
+                "artifacts": ["release/evidence/benchmarks/workload-01-condition-eval.json"],
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m",
+                        "exists": true,
+                        "bytes": 1,
+                        "read_error": null,
+                        "source_fingerprint": "git:abc:dirty=false",
+                        "selected_backend": "wgpu",
+                        "case_count": 1,
+                        "failed_count": 0,
+                        "nonmatching_case_backend_count": 0,
+                        "min_wall_samples": 30,
+                        "min_baseline_wall_samples": 30,
+                        "min_wall_p50": 10,
+                        "min_wall_p95": 11,
+                        "min_wall_p99": 12,
+                        "min_baseline_wall_p50": 1000,
+                        "min_baseline_wall_p95": 1001,
+                        "min_baseline_wall_p99": 1002,
+                        "min_kernel_launches": 1,
+                        "blockers": []
+                    }
+                ],
+                "blockers": []
+            }))
+            .expect("Fix: serialize CUDA suite with mismatched backend identity."),
+        )
+        .expect("Fix: write CUDA suite with mismatched backend identity.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
+            minimum_evidence: 1,
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_report(
+            &requirement,
+            &release_dir,
+            "cuda-release-suite.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "backend `wgpu` does not match required `cuda`"
+            )),
+            "Fix: CUDA suite identity must be validated against the evidence filename; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "selected backend `Some(\"wgpu\")`, expected `cuda`"
+            )),
+            "Fix: CUDA suite artifacts must be validated against filename-implied backend, not a bad suite backend field; failures={failures:?}"
         );
     }
 }

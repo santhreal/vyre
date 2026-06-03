@@ -1,7 +1,9 @@
 use crate::benchmark_evidence_semantics::{
-    backend_suite_artifact_status_issues, backend_suite_inventory_issues,
-    backend_suite_parity_issues, source_fingerprint_issues, BackendSuiteArtifactStatusIssue,
-    BackendSuiteInventoryIssue, BackendSuiteParityIssue, SourceFingerprintIssue,
+    backend_suite_artifact_status_issues, backend_suite_backend_issue,
+    backend_suite_inventory_issues, backend_suite_parity_issues,
+    expected_backend_for_suite_evidence, source_fingerprint_issues,
+    BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue, BackendSuiteInventoryIssue,
+    BackendSuiteParityIssue, SourceFingerprintIssue,
 };
 
 fn inspect_backend_suite_semantics(
@@ -18,6 +20,21 @@ fn inspect_backend_suite_semantics(
         blockers.push(format!(
             "{evidence}: schema_version={schema_version}; backend suite evidence must be schema>=2"
         ));
+    }
+    if let Some(expected_backend) = expected_backend_for_suite_evidence(evidence) {
+        if let Some(issue) = backend_suite_backend_issue(value, expected_backend) {
+            match issue {
+                BackendSuiteBackendIssue::Missing { expected_backend } => blockers.push(format!(
+                    "{evidence}: backend suite is missing backend identity `{expected_backend}`"
+                )),
+                BackendSuiteBackendIssue::Mismatch {
+                    expected_backend,
+                    actual_backend,
+                } => blockers.push(format!(
+                    "{evidence}: backend suite backend `{actual_backend}` does not match required `{expected_backend}`"
+                )),
+            }
+        }
     }
     let family_count = value
         .get("family_count")
@@ -363,6 +380,12 @@ fn inspect_backend_suite_status_artifact_consistency(
     let Some(artifacts) = suite.get("artifacts").and_then(serde_json::Value::as_array) else {
         return;
     };
+    let expected_backend = expected_backend_for_suite_evidence(evidence).or_else(|| {
+        suite
+            .get("backend")
+            .and_then(serde_json::Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+    });
     for artifact in artifacts {
         let Some(artifact) = artifact.as_str() else {
             continue;
@@ -392,6 +415,35 @@ fn inspect_backend_suite_status_artifact_consistency(
             }
         };
         inspect_backend_suite_artifact_status(evidence, status, &artifact_report, blockers);
+        if let Some(expected_backend) = expected_backend {
+            let selected_backend = artifact_report
+                .get("selected_backend")
+                .and_then(serde_json::Value::as_str);
+            if selected_backend != Some(expected_backend) {
+                blockers.push(format!(
+                    "{evidence}: suite artifact `{artifact}` selected_backend `{:?}`, expected `{expected_backend}`",
+                    selected_backend
+                ));
+            }
+            if let Some(cases) = artifact_report
+                .get("cases")
+                .and_then(serde_json::Value::as_array)
+            {
+                for case in cases {
+                    let id = case
+                        .get("id")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("<unknown>");
+                    let backend_id = case.get("backend_id").and_then(serde_json::Value::as_str);
+                    if backend_id != Some(expected_backend) {
+                        blockers.push(format!(
+                            "{evidence}: suite artifact `{artifact}` case `{id}` backend `{:?}`, expected `{expected_backend}`",
+                            backend_id
+                        ));
+                    }
+                }
+            }
+        }
         inspect_suite_artifact_contract_baselines(evidence, artifact, &artifact_report, blockers);
         if let Some(source_fingerprint) = artifact_report
             .get("source_fingerprint")
@@ -640,6 +692,99 @@ mod part9_tests {
                 .iter()
                 .any(|blocker| blocker.contains("is dirty but has no worktree digest")),
             "Fix: completion audit must reject weak dirty provenance in backend suite status rows; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn completion_audit_rejects_filename_backend_identity_drift() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for completion backend suite identity test.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir).expect(
+            "Fix: create benchmark evidence directory for completion backend suite identity test.",
+        );
+        std::fs::write(
+            benchmark_dir.join("workload-01-condition-eval.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.condition_eval.1m",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "kernel_launches": {"samples": 30, "p50": 1}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 120.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize WGPU benchmark artifact for completion backend identity test."),
+        )
+        .expect("Fix: write WGPU benchmark artifact for completion backend identity test.");
+        let suite_path = benchmark_dir.join("cuda-release-suite.json");
+        let suite = serde_json::json!({
+            "schema_version": 2,
+            "backend": "wgpu",
+            "family_count": 1,
+            "artifacts": ["release/evidence/benchmarks/workload-01-condition-eval.json"],
+            "artifact_statuses": [
+                {
+                    "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "exists": true,
+                    "bytes": 1,
+                    "read_error": null,
+                    "source_fingerprint": "git:abc:dirty=false",
+                    "selected_backend": "wgpu",
+                    "case_count": 1,
+                    "failed_count": 0,
+                    "nonmatching_case_backend_count": 0,
+                    "min_wall_samples": 30,
+                    "min_baseline_wall_samples": 30,
+                    "min_wall_p50": 10,
+                    "min_wall_p95": 11,
+                    "min_wall_p99": 12,
+                    "min_baseline_wall_p50": 1000,
+                    "min_baseline_wall_p95": 1001,
+                    "min_baseline_wall_p99": 1002,
+                    "min_kernel_launches": 1,
+                    "blockers": []
+                }
+            ],
+            "blockers": []
+        });
+        std::fs::write(
+            &suite_path,
+            serde_json::to_string_pretty(&suite)
+                .expect("Fix: serialize CUDA suite with mismatched backend identity."),
+        )
+        .expect("Fix: write CUDA suite with mismatched backend identity.");
+        let mut blockers = Vec::new();
+
+        inspect_backend_suite_semantics(
+            "release/evidence/benchmarks/cuda-release-suite.json",
+            &suite_path,
+            &suite,
+            &mut blockers,
+        );
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "backend suite backend `wgpu` does not match required `cuda`"
+            )),
+            "Fix: completion audit must validate CUDA suite identity against the evidence filename; blockers={blockers:?}"
+        );
+        assert!(
+            blockers.iter().any(|blocker| blocker.contains(
+                "selected_backend `Some(\"wgpu\")`, expected `cuda`"
+            )),
+            "Fix: completion audit must validate suite artifacts against filename-implied backend, not a bad suite backend field; blockers={blockers:?}"
         );
     }
 }
