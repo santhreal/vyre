@@ -239,6 +239,9 @@ pub(crate) enum BackendSuiteParityIssue {
         cuda_count: usize,
         wgpu_count: usize,
     },
+    SharedArtifactPath {
+        path: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1132,6 +1135,11 @@ pub(crate) fn backend_suite_parity_issues(
             wgpu_count,
         });
     }
+    let cuda_paths = suite_all_artifact_paths(cuda_suite);
+    let wgpu_paths = suite_all_artifact_paths(wgpu_suite);
+    for path in cuda_paths.intersection(&wgpu_paths) {
+        issues.push(BackendSuiteParityIssue::SharedArtifactPath { path: path.clone() });
+    }
     for (family_id, requested_case_id) in cuda_pairs.difference(&wgpu_pairs) {
         issues.push(BackendSuiteParityIssue::MissingWgpuPair {
             family_id: family_id.clone(),
@@ -1441,6 +1449,13 @@ fn suite_status_path_counts(suite: &Value) -> BTreeMap<String, usize> {
             *counts.entry(path.to_string()).or_default() += 1;
             counts
         })
+}
+
+fn suite_all_artifact_paths(suite: &Value) -> BTreeSet<String> {
+    suite_artifact_path_counts(suite)
+        .into_keys()
+        .chain(suite_status_path_counts(suite).into_keys())
+        .collect()
 }
 
 fn non_empty_str(value: &Value) -> Option<&str> {
@@ -2939,6 +2954,38 @@ mod tests {
                 wgpu_count: 2,
             }],
             "Fix: duplicate suite metadata should not silently prove artifact-count parity."
+        );
+    }
+
+    #[test]
+    fn backend_suite_parity_rejects_shared_artifact_paths() {
+        let cuda = serde_json::json!({
+            "artifacts": ["release/evidence/benchmarks/workload-01-condition-eval.json"],
+            "artifact_statuses": [
+                {
+                    "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m"
+                }
+            ]
+        });
+        let wgpu = serde_json::json!({
+            "artifacts": ["release/evidence/benchmarks/workload-01-condition-eval.json"],
+            "artifact_statuses": [
+                {
+                    "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m"
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_parity_issues(&cuda, &wgpu),
+            vec![BackendSuiteParityIssue::SharedArtifactPath {
+                path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
+            }],
+            "Fix: WGPU fallback evidence must not reuse or overwrite CUDA release benchmark artifacts."
         );
     }
 }

@@ -831,6 +831,10 @@ pub(crate) fn check_backend_suite_parity(
                 "requirement `{}` WGPU/CUDA suite parity count mismatch: cuda={cuda_count}, wgpu={wgpu_count}",
                 requirement.id
             )),
+            BackendSuiteParityIssue::SharedArtifactPath { path } => failures.push(format!(
+                "requirement `{}` WGPU/CUDA suite parity reuses artifact path `{path}` across CUDA and WGPU suites",
+                requirement.id
+            )),
         }
     }
 }
