@@ -253,7 +253,7 @@ pub fn linear_4bit_affine_grouped(
     let shift = Expr::mul(lane_in_word.clone(), Expr::u32(4));
     let nibble = Expr::bitand(Expr::shr(Expr::var("packed_word"), shift), Expr::u32(0xF));
     let group = Expr::div(k.clone(), Expr::u32(group_size));
-    let sidecar_idx = Expr::add(Expr::mul(group, Expr::u32(out_dim)), out_idx.clone());
+    let chunk_sidecar_idx = Expr::add(Expr::mul(group, Expr::u32(out_dim)), out_idx.clone());
     let weight_f32 = Expr::mul(
         Expr::sub(
             Expr::cast(DataType::F32, nibble),
@@ -262,9 +262,106 @@ pub fn linear_4bit_affine_grouped(
         Expr::var("group_scale"),
     );
 
-    let mut per_output = vec![
-        Node::let_bind("local_acc", Expr::f32(0.0)),
-        Node::loop_for(
+    let mut per_output = vec![Node::let_bind("local_acc", Expr::f32(0.0))];
+    if group_size > tile && group_size % tile == 0 {
+        let group_chunks = group_size.div_ceil(tile);
+        per_output.push(Node::loop_for(
+            "group_idx",
+            Expr::u32(0),
+            Expr::u32(group_count),
+            vec![
+                Node::let_bind(
+                    "group_base",
+                    Expr::mul(Expr::var("group_idx"), Expr::u32(group_size)),
+                ),
+                Node::let_bind(
+                    "sidecar_idx",
+                    Expr::add(
+                        Expr::mul(Expr::var("group_idx"), Expr::u32(out_dim)),
+                        out_idx.clone(),
+                    ),
+                ),
+                Node::let_bind("scale_lane", Expr::f32(0.0)),
+                Node::let_bind("zero_point_lane", Expr::u32(0)),
+                Node::if_then(
+                    Expr::eq(lane.clone(), Expr::u32(0)),
+                    vec![
+                        Node::assign("scale_lane", Expr::load(scale, Expr::var("sidecar_idx"))),
+                        Node::assign(
+                            "zero_point_lane",
+                            Expr::load(zero_point, Expr::var("sidecar_idx")),
+                        ),
+                    ],
+                ),
+                Node::let_bind(
+                    "group_scale",
+                    Expr::subgroup_shuffle(Expr::var("scale_lane"), Expr::u32(0)),
+                ),
+                Node::let_bind(
+                    "group_zero_point",
+                    Expr::subgroup_shuffle(Expr::var("zero_point_lane"), Expr::u32(0)),
+                ),
+                Node::loop_for(
+                    "group_chunk",
+                    Expr::u32(0),
+                    Expr::u32(group_chunks),
+                    vec![
+                        Node::let_bind(
+                            "k",
+                            Expr::add(
+                                Expr::var("group_base"),
+                                Expr::add(
+                                    Expr::mul(Expr::var("group_chunk"), Expr::u32(tile)),
+                                    lane.clone(),
+                                ),
+                            ),
+                        ),
+                        Node::let_bind("lane_in_word", Expr::bitand(lane.clone(), Expr::u32(7))),
+                        Node::let_bind(
+                            "word_leader_lane",
+                            Expr::bitand(lane.clone(), Expr::u32(0xffff_fff8)),
+                        ),
+                        Node::let_bind(
+                            "word_leader_k",
+                            Expr::add(
+                                Expr::var("group_base"),
+                                Expr::add(
+                                    Expr::mul(Expr::var("group_chunk"), Expr::u32(tile)),
+                                    word_leader_lane.clone(),
+                                ),
+                            ),
+                        ),
+                        Node::let_bind("packed_word_lane", Expr::u32(0)),
+                        Node::if_then(
+                            Expr::and(
+                                Expr::eq(lane_in_word.clone(), Expr::u32(0)),
+                                Expr::lt(word_leader_k.clone(), Expr::u32(in_dim)),
+                            ),
+                            vec![Node::assign(
+                                "packed_word_lane",
+                                Expr::load(w_packed, packed_idx.clone()),
+                            )],
+                        ),
+                        Node::let_bind(
+                            "packed_word",
+                            Expr::subgroup_shuffle(Expr::var("packed_word_lane"), word_leader_lane),
+                        ),
+                        Node::if_then(
+                            Expr::lt(k.clone(), Expr::u32(in_dim)),
+                            vec![Node::assign(
+                                "local_acc",
+                                Expr::add(
+                                    Expr::var("local_acc"),
+                                    Expr::mul(Expr::load(x, k.clone()), weight_f32.clone()),
+                                ),
+                            )],
+                        ),
+                    ],
+                ),
+            ],
+        ));
+    } else {
+        per_output.push(Node::loop_for(
             "chunk",
             Expr::u32(0),
             Expr::u32(chunks),
@@ -300,26 +397,11 @@ pub fn linear_4bit_affine_grouped(
                     "packed_word",
                     Expr::subgroup_shuffle(Expr::var("packed_word_lane"), word_leader_lane),
                 ),
-                Node::let_bind("sidecar_idx", sidecar_idx),
-                Node::let_bind("scale_lane", Expr::f32(0.0)),
-                Node::let_bind("zero_point_lane", Expr::u32(0)),
-                Node::if_then(
-                    Expr::eq(lane.clone(), Expr::u32(0)),
-                    vec![
-                        Node::assign("scale_lane", Expr::load(scale, Expr::var("sidecar_idx"))),
-                        Node::assign(
-                            "zero_point_lane",
-                            Expr::load(zero_point, Expr::var("sidecar_idx")),
-                        ),
-                    ],
-                ),
-                Node::let_bind(
-                    "group_scale",
-                    Expr::subgroup_shuffle(Expr::var("scale_lane"), Expr::u32(0)),
-                ),
+                Node::let_bind("sidecar_idx", chunk_sidecar_idx),
+                Node::let_bind("group_scale", Expr::load(scale, Expr::var("sidecar_idx"))),
                 Node::let_bind(
                     "group_zero_point",
-                    Expr::subgroup_shuffle(Expr::var("zero_point_lane"), Expr::u32(0)),
+                    Expr::load(zero_point, Expr::var("sidecar_idx")),
                 ),
                 Node::if_then(
                     Expr::lt(k.clone(), Expr::u32(in_dim)),
@@ -332,9 +414,12 @@ pub fn linear_4bit_affine_grouped(
                     )],
                 ),
             ],
-        ),
-        Node::let_bind("warp_sum", Expr::subgroup_add(Expr::var("local_acc"))),
-    ];
+        ));
+    }
+    per_output.push(Node::let_bind(
+        "warp_sum",
+        Expr::subgroup_add(Expr::var("local_acc")),
+    ));
     per_output.push(Node::if_then(
         Expr::eq(lane.clone(), Expr::u32(0)),
         vec![Node::Store {
@@ -548,6 +633,26 @@ mod tests {
         })
     }
 
+    fn collect_loop_vars(nodes: &[Node], vars: &mut Vec<String>) {
+        for node in nodes {
+            match node {
+                Node::If {
+                    then, otherwise, ..
+                } => {
+                    collect_loop_vars(then, vars);
+                    collect_loop_vars(otherwise, vars);
+                }
+                Node::Loop { var, body, .. } => {
+                    vars.push(var.to_string());
+                    collect_loop_vars(body, vars);
+                }
+                Node::Block(body) => collect_loop_vars(body, vars),
+                Node::Region { body, .. } => collect_loop_vars(body, vars),
+                _ => {}
+            }
+        }
+    }
+
     fn affine_cpu_reference(
         x: &[f32],
         packed: &[u32],
@@ -679,6 +784,35 @@ mod tests {
         assert!(
             nodes_contain_subgroup_shuffle(program.entry()),
             "Fix: grouped INT4 release kernel must broadcast each packed u32 weight word across its 8 nibble lanes instead of reloading it per MAC."
+        );
+    }
+
+    #[test]
+    fn linear_4bit_affine_grouped_hoists_sidecars_for_aligned_release_groups() {
+        let aligned =
+            linear_4bit_affine_grouped("x", "w", "scale", "zp", "b", "out", 256, 4096, 64)
+                .expect("Fix: aligned grouped INT4 release fixture must build");
+        let mut aligned_loops = Vec::new();
+        collect_loop_vars(aligned.entry(), &mut aligned_loops);
+        assert!(
+            aligned_loops.iter().any(|var| var == "group_idx")
+                && aligned_loops.iter().any(|var| var == "group_chunk"),
+            "Fix: release-aligned grouped INT4 must load and broadcast sidecars once per quantization group, then scan that group's chunks: {aligned_loops:?}"
+        );
+        assert!(
+            !aligned_loops.iter().any(|var| var == "chunk"),
+            "Fix: release-aligned grouped INT4 must not use the per-chunk sidecar broadcast path: {aligned_loops:?}"
+        );
+
+        let single_tile =
+            linear_4bit_affine_grouped("x", "w", "scale", "zp", "b", "out", 32, 8, 32)
+                .expect("Fix: single-tile grouped INT4 fixture must build");
+        let mut single_tile_loops = Vec::new();
+        collect_loop_vars(single_tile.entry(), &mut single_tile_loops);
+        assert!(
+            single_tile_loops.iter().any(|var| var == "chunk")
+                && !single_tile_loops.iter().any(|var| var == "group_idx"),
+            "Fix: single-tile and non-tile-aligned quantization groups must retain chunk-indexed sidecar selection for correctness: {single_tile_loops:?}"
         );
     }
 
