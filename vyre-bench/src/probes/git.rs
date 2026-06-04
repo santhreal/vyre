@@ -18,7 +18,15 @@ pub fn capture_git_info_at(workspace_root: &Path) -> BTreeMap<String, String> {
     }
     let dirty_status = shell_bytes(
         workspace_root,
-        &["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+        &[
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=all",
+            "--",
+            ".",
+            ":!release/evidence/**",
+        ],
     );
     let dirty = match dirty_status.as_ref() {
         Ok(status) if status.is_empty() => "false",
@@ -114,10 +122,29 @@ fn source_tree_path_is_generated_evidence(path: &[u8]) -> bool {
 }
 
 fn dirty_worktree_fingerprint(workspace_root: &Path, status: &[u8]) -> Option<String> {
-    let diff = shell_bytes(workspace_root, &["diff", "--binary", "HEAD", "--"]).ok()?;
+    let diff = shell_bytes(
+        workspace_root,
+        &[
+            "diff",
+            "--binary",
+            "HEAD",
+            "--",
+            ".",
+            ":!release/evidence/**",
+        ],
+    )
+    .ok()?;
     let untracked = shell_bytes(
         workspace_root,
-        &["ls-files", "--others", "--exclude-standard", "-z"],
+        &[
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "-z",
+            "--",
+            ".",
+            ":!release/evidence/**",
+        ],
     )
     .unwrap_or_default();
     Some(dirty_worktree_fingerprint_from_parts(
@@ -327,6 +354,88 @@ mod tests {
         assert_ne!(
             base, source_changed,
             "Fix: source-tree provenance must still change when real source files change."
+        );
+    }
+
+    #[test]
+    fn source_fingerprint_ignores_generated_release_evidence_dirty_status() {
+        let workspace = std::env::temp_dir().join(format!(
+            "vyre-bench-source-fingerprint-evidence-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("Fix: system clock must support unix epoch duration for temp test id.")
+                .as_nanos()
+        ));
+        fs::create_dir_all(workspace.join("src"))
+            .expect("Fix: create source fingerprint fixture source directory.");
+        fs::create_dir_all(workspace.join("release/evidence/benchmarks"))
+            .expect("Fix: create source fingerprint fixture evidence directory.");
+        fs::write(workspace.join("src/lib.rs"), b"pub fn source() {}\n")
+            .expect("Fix: write source fingerprint source fixture.");
+        fs::write(
+            workspace.join("release/evidence/benchmarks/workload.json"),
+            b"{\"old\":true}\n",
+        )
+        .expect("Fix: write tracked generated evidence fixture.");
+        git_fixture(&workspace, &["init", "--quiet", "--initial-branch", "main"]);
+        git_fixture(
+            &workspace,
+            &["config", "user.email", "vyre@example.invalid"],
+        );
+        git_fixture(&workspace, &["config", "user.name", "Vyre Test"]);
+        git_fixture(
+            &workspace,
+            &[
+                "add",
+                "src/lib.rs",
+                "release/evidence/benchmarks/workload.json",
+            ],
+        );
+        git_fixture(&workspace, &["commit", "--quiet", "-m", "seed"]);
+
+        fs::write(
+            workspace.join("release/evidence/benchmarks/workload.json"),
+            b"{\"new\":true}\n",
+        )
+        .expect("Fix: mutate tracked generated evidence fixture.");
+        fs::write(
+            workspace.join("release/evidence/benchmarks/new-workload.json"),
+            b"{\"new\":true}\n",
+        )
+        .expect("Fix: write untracked generated evidence fixture.");
+        let evidence_only = capture_git_info_at(&workspace);
+        fs::write(
+            workspace.join("src/lib.rs"),
+            b"pub fn source_changed() {}\n",
+        )
+        .expect("Fix: mutate real source fixture.");
+        let source_changed = capture_git_info_at(&workspace);
+        let _ = fs::remove_dir_all(&workspace);
+
+        assert_eq!(
+            evidence_only.get("dirty").map(String::as_str),
+            Some("false"),
+            "Fix: generated release evidence writes must not mark benchmark source provenance dirty."
+        );
+        assert_eq!(
+            source_changed.get("dirty").map(String::as_str),
+            Some("true"),
+            "Fix: real source edits must still mark benchmark source provenance dirty."
+        );
+    }
+
+    fn git_fixture(workspace: &Path, args: &[&str]) {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(workspace)
+            .output()
+            .expect("Fix: git fixture command must start.");
+        assert!(
+            output.status.success(),
+            "Fix: git fixture command `git {}` failed: {}",
+            args.join(" "),
+            String::from_utf8_lossy(&output.stderr).trim()
         );
     }
 }

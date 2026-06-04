@@ -1969,7 +1969,11 @@ pub(crate) fn benchmark_case_proves_cpu_sota_100x(case: &Value, backend_id: Opti
 
 fn cpu_sota_100x_measured_speedup(case: &Value) -> Option<f64> {
     let metrics = case.get("metrics").and_then(Value::as_object)?;
-    let wall = metric_p50_f64(metrics.get("wall_ns"))?;
+    let active_gpu = metrics
+        .get("dispatch_ns")
+        .or_else(|| metrics.get("kernel_execute_ns"))
+        .or_else(|| metrics.get("wall_ns"));
+    let wall = metric_p50_f64(active_gpu)?;
     let baseline = metric_p50_f64(metrics.get("baseline_wall_ns"))?;
     (wall > 0.0).then_some(baseline / wall)
 }
@@ -4197,6 +4201,41 @@ mod tests {
             cpu_sota_100x_case_counts(&report),
             (1, 0),
             "Fix: CPU-SOTA passing counts must be backed by measured baseline_wall_ns / wall_ns speedup, not only performance.speedup_x claims."
+        );
+    }
+
+    #[test]
+    fn cpu_sota_100x_case_counts_use_runner_active_gpu_metric_order() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "cases": [
+                {
+                    "id": "release.dispatch-timed.1m",
+                    "backend_id": "cuda",
+                    "status": "pass",
+                    "contract": {
+                        "baselines": [
+                            {
+                                "class": "CpuSota",
+                                "backend_ids": ["cuda"],
+                                "min_speedup_x": 100.0
+                            }
+                        ]
+                    },
+                    "metrics": {
+                        "dispatch_ns": {"p50": 10},
+                        "wall_ns": {"p50": 2000},
+                        "baseline_wall_ns": {"p50": 1500}
+                    },
+                    "performance": {"contract_passed": true, "speedup_x": 150.0}
+                }
+            ]
+        });
+
+        assert_eq!(
+            cpu_sota_100x_case_counts(&report),
+            (1, 1),
+            "Fix: CPU-SOTA proof counts must mirror benchmark contract evaluation and prefer dispatch_ns before wall_ns."
         );
     }
 
