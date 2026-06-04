@@ -644,10 +644,10 @@ fn scan_audit_report_locations(
 
 fn check_required_cargo_wrappers(
     vyre_root: &Path,
-    santh_root: &Path,
+    _santh_root: &Path,
     findings: &mut Vec<HygieneFinding>,
 ) {
-    for path in [santh_root.join("cargo_full"), vyre_root.join("cargo_full")] {
+    for path in [vyre_root.join("cargo_full")] {
         if !path.is_file() {
             findings.push(HygieneFinding {
                 path: path.display().to_string(),
@@ -1323,5 +1323,25 @@ mod tests {
         assert!(is_hidden_fallback_guard_source(Path::new(
             "vyre-lints/src/gpu_skip_guards.rs"
         )));
+    }
+
+    #[test]
+    fn required_cargo_wrapper_is_tool_owned() {
+        let workspace = tempfile::TempDir::new()
+            .expect("Fix: create temp workspace for cargo wrapper hygiene test.");
+        let santh_root = workspace.path().join("Santh");
+        let vyre_root = santh_root.join("libs/performance/matching/vyre");
+        fs::create_dir_all(&vyre_root)
+            .expect("Fix: create temp vyre root for cargo wrapper hygiene test.");
+        fs::write(vyre_root.join("cargo_full"), b"#!/usr/bin/env bash\n")
+            .expect("Fix: write temp cargo_full wrapper for hygiene test.");
+
+        let mut findings = Vec::new();
+        check_required_cargo_wrappers(&vyre_root, &santh_root, &mut findings);
+
+        assert!(
+            findings.is_empty(),
+            "Fix: Vyre release hygiene must require the tool-owned bounded cargo wrapper without forcing a Santh backup-root file into the standalone tool repo; findings={findings:?}"
+        );
     }
 }

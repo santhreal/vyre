@@ -63,14 +63,6 @@
       "count": 13
     },
     {
-      "pattern": "invalid_cargo_full_xtask",
-      "count": 1
-    },
-    {
-      "pattern": "missing_cargo_wrapper",
-      "count": 2
-    },
-    {
       "pattern": "panic_macro",
       "count": 469
     },
@@ -2272,7 +2264,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/probes/git.rs",
-      "line": 174,
+      "line": 177,
       "pattern": "unbounded_read",
       "text": "if let Ok(bytes) = fs::read(workspace_root.join(path.as_ref())) {"
     },
@@ -9459,12 +9451,6 @@
       "text": "cargo test -p vyre-primitives --features graph --lib -q"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/scripts/install_lego_quick_hook.sh",
-      "line": 25,
-      "pattern": "invalid_cargo_full_xtask",
-      "text": "'# Runs `cargo_full xtask lego-quick` over the staged diff.' \\"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/scripts/docs.sh",
       "line": 47,
       "pattern": "raw_workspace_cargo",
@@ -10309,21 +10295,9 @@
       "line": 50,
       "pattern": "heredoc",
       "text": "python3 << 'PYEOF'"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/cargo_full",
-      "line": 1,
-      "pattern": "missing_cargo_wrapper",
-      "text": "required bounded cargo_full wrapper is missing"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/cargo_full",
-      "line": 1,
-      "pattern": "missing_cargo_wrapper",
-      "text": "required bounded cargo_full wrapper is missing"
     }
   ],
   "blockers": [
-    "1701 source hygiene finding(s) remain"
+    "1698 source hygiene finding(s) remain"
   ]
 }

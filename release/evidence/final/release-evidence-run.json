@@ -108,7 +108,7 @@
         {
           "path": "release/evidence/docs/test-architecture.md",
           "exists": true,
-          "bytes": 1486,
+          "bytes": 1700,
           "read_error": null
         },
         {
@@ -273,7 +273,7 @@
         {
           "path": "release/evidence/hygiene/hygiene-matrix.json",
           "exists": true,
-          "bytes": 437558,
+          "bytes": 434678,
           "read_error": null
         },
         {
@@ -285,7 +285,7 @@
         {
           "path": "release/evidence/hygiene/no-hidden-fallback-scan.json",
           "exists": true,
-          "bytes": 2326,
+          "bytes": 430,
           "read_error": null
         },
         {
@@ -303,7 +303,7 @@
         {
           "path": "release/evidence/hygiene/cargo-wrapper-scan.json",
           "exists": true,
-          "bytes": 43988,
+          "bytes": 43284,
           "read_error": null
         },
         {
@@ -351,7 +351,7 @@
         {
           "path": "release/evidence/tests/test-matrix.json",
           "exists": true,
-          "bytes": 215674,
+          "bytes": 60046,
           "read_error": null
         },
         {
@@ -363,7 +363,7 @@
         {
           "path": "release/evidence/tests/oversized-test-closure.json",
           "exists": true,
-          "bytes": 210073,
+          "bytes": 54444,
           "read_error": null
         },
         {
@@ -375,49 +375,49 @@
         {
           "path": "release/evidence/tests/unit-suite.json",
           "exists": true,
-          "bytes": 1229154,
+          "bytes": 1559394,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/adversarial-suite.json",
           "exists": true,
-          "bytes": 194617,
+          "bytes": 241710,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/property-suite.json",
           "exists": true,
-          "bytes": 83472,
+          "bytes": 104987,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/conformance-suite.json",
           "exists": true,
-          "bytes": 359721,
+          "bytes": 449947,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/corpus-suite.json",
           "exists": true,
-          "bytes": 91469,
+          "bytes": 113345,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/benchmark-suite.json",
           "exists": true,
-          "bytes": 1127439,
+          "bytes": 1426980,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/gap-suite.json",
           "exists": true,
-          "bytes": 16250,
+          "bytes": 20277,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/fuzz-suite.json",
           "exists": true,
-          "bytes": 28231,
+          "bytes": 35262,
           "read_error": null
         }
       ]

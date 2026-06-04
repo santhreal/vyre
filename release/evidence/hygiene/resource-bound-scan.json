@@ -100,7 +100,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/probes/git.rs",
-      "line": 174,
+      "line": 177,
       "pattern": "unbounded_read",
       "text": "if let Ok(bytes) = fs::read(workspace_root.join(path.as_ref())) {"
     },

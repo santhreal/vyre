@@ -12277,15 +12277,17 @@
         "benchmark",
         "unit"
       ],
-      "lines": 441,
+      "lines": 524,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
-      "line_threshold_exceeded": false,
+      "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
-      "assertion_count": 12,
+      "assertion_count": 16,
       "oversized": false,
       "god_test_candidate": false,
-      "recommended_split": []
+      "recommended_split": [
+        "move timing-only checks into benches/ or release benchmark cases"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cli.rs",
@@ -34268,12 +34270,12 @@
         "fuzz",
         "unit"
       ],
-      "lines": 1195,
+      "lines": 1347,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
-      "assertion_count": 4,
+      "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [

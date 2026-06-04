@@ -2734,12 +2734,12 @@
         "fuzz",
         "unit"
       ],
-      "lines": 1195,
+      "lines": 1347,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
-      "assertion_count": 4,
+      "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [

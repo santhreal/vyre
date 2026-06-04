@@ -22,7 +22,7 @@ HOOK="$HOOKS_DIR/pre-commit"
 printf '%s\n' \
     '#!/usr/bin/env bash' \
     '# Installed by libs/performance/matching/vyre/scripts/install_lego_quick_hook.sh' \
-    '# Runs `cargo_full xtask lego-quick` over the staged diff.' \
+    '# Runs `./cargo_full run --bin xtask -- lego-quick` over the staged diff.' \
     'set -euo pipefail' \
     'REPO_ROOT="$(git rev-parse --show-toplevel)"' \
     'VYRE_DIR="$REPO_ROOT/libs/performance/matching/vyre"' \

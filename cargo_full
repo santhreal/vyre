@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -z "${CARGO_TARGET_DIR:-}" ]; then
+    if [ -d /mnt/FlareTraining ] || [ -d /mnt/FlareTraining/santh-archive ]; then
+        export CARGO_TARGET_DIR=/mnt/FlareTraining/santh-archive/cargo-target
+    elif [ -d /var ]; then
+        export CARGO_TARGET_DIR=/var/santh-cargo-target
+    else
+        export CARGO_TARGET_DIR="${TMPDIR:-/tmp}/santh-cargo-target"
+    fi
+fi
+
+mkdir -p "$CARGO_TARGET_DIR"
+
+export CC="${CC:-gcc}"
+export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}"
+export VYRE_CARGO_RUNNER="${VYRE_CARGO_RUNNER:-$script_dir/cargo_full}"
+
+exec cargo "$@"

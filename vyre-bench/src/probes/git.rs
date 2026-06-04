@@ -118,7 +118,10 @@ fn source_tree_fingerprint_from_paths(workspace_root: &Path, paths: &[u8]) -> St
 }
 
 fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
-    path.starts_with(b"release/evidence/") || path.starts_with(b"xtask/")
+    path == b"cargo_full"
+        || path.starts_with(b"release/evidence/")
+        || path.starts_with(b"scripts/")
+        || path.starts_with(b"xtask/")
 }
 
 fn dirty_worktree_fingerprint(workspace_root: &Path, status: &[u8]) -> Option<String> {
@@ -369,8 +372,12 @@ mod tests {
         ));
         fs::create_dir_all(workspace.join("vyre-bench/src"))
             .expect("Fix: create benchmark source fixture directory.");
+        fs::create_dir_all(workspace.join("scripts"))
+            .expect("Fix: create release script fixture directory.");
         fs::create_dir_all(workspace.join("xtask/src"))
             .expect("Fix: create release tooling fixture directory.");
+        fs::write(workspace.join("cargo_full"), b"#!/usr/bin/env bash\n")
+            .expect("Fix: write cargo wrapper fixture.");
         fs::write(
             workspace.join("vyre-bench/src/lib.rs"),
             b"pub fn benchmark() {}\n",
@@ -381,9 +388,26 @@ mod tests {
             b"pub fn tooling() {}\n",
         )
         .expect("Fix: write release tooling fixture.");
-        let paths = b"vyre-bench/src/lib.rs\0xtask/src/hygiene_matrix.rs\0";
+        fs::write(
+            workspace.join("scripts/install_lego_quick_hook.sh"),
+            b"#!/usr/bin/env bash\n",
+        )
+        .expect("Fix: write release script fixture.");
+        let paths = b"cargo_full\0scripts/install_lego_quick_hook.sh\0vyre-bench/src/lib.rs\0xtask/src/hygiene_matrix.rs\0";
 
         let base = source_tree_fingerprint_from_paths(&workspace, paths);
+        fs::write(
+            workspace.join("cargo_full"),
+            b"#!/usr/bin/env bash\nexec cargo \"$@\"\n",
+        )
+        .expect("Fix: mutate cargo wrapper fixture.");
+        let wrapper_changed = source_tree_fingerprint_from_paths(&workspace, paths);
+        fs::write(
+            workspace.join("scripts/install_lego_quick_hook.sh"),
+            b"#!/usr/bin/env bash\n./cargo_full run --bin xtask -- lego-quick\n",
+        )
+        .expect("Fix: mutate release script fixture.");
+        let script_changed = source_tree_fingerprint_from_paths(&workspace, paths);
         fs::write(
             workspace.join("xtask/src/hygiene_matrix.rs"),
             b"pub fn tooling_changed() {}\n",
@@ -401,6 +425,14 @@ mod tests {
         assert_eq!(
             base, tooling_changed,
             "Fix: release evidence/tooling generators must not invalidate benchmark runtime source provenance."
+        );
+        assert_eq!(
+            base, wrapper_changed,
+            "Fix: bounded cargo wrapper changes must not invalidate benchmark runtime source provenance."
+        );
+        assert_eq!(
+            base, script_changed,
+            "Fix: release scripts must not invalidate benchmark runtime source provenance."
         );
         assert_ne!(
             base, benchmark_changed,
