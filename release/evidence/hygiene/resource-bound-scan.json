@@ -133,9 +133,141 @@
       "line": 1512,
       "pattern": "unbounded_read",
       "text": "let json = std::fs::read_to_string(path).map_err(|error| {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/validate.rs",
+      "line": 160,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(&path).map_err(|e| format!(\"read {}: {e}\", path.display()))?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 95,
+      "pattern": "unbounded_read",
+      "text": "let text = fs::read_to_string(&path)"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 212,
+      "pattern": "unbounded_read",
+      "text": "let Ok(text) = fs::read_to_string(&path) else {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/poc/mod.rs",
+      "line": 38,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/ir/rule_labels.rs",
+      "line": 40,
+      "pattern": "unbounded_read",
+      "text": "let source = std::fs::read_to_string(path).map_err(|err| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/ir/labels.rs",
+      "line": 295,
+      "pattern": "unbounded_read",
+      "text": "let source = fs::read_to_string(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/cmd_explain.rs",
+      "line": 47,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(&path).map_err(|source| surgec::Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/diff/scan.rs",
+      "line": 291,
+      "pattern": "unbounded_read",
+      "text": "let bytes = std::fs::read(&path).map_err(|source| crate::Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/io.rs",
+      "line": 66,
+      "pattern": "unbounded_read",
+      "text": "fs::read(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/decode/compression_extract.rs",
+      "line": 109,
+      "pattern": "unbounded_read",
+      "text": "limited.read_to_end(&mut decoded).ok()?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/decode/compression_extract.rs",
+      "line": 237,
+      "pattern": "unbounded_read",
+      "text": "if limited.read_to_end(&mut decoded).is_ok()"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/decode/compression_extract.rs",
+      "line": 306,
+      "pattern": "unbounded_read",
+      "text": "if limited.read_to_end(&mut decoded).is_ok()"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/decode/compression_extract.rs",
+      "line": 333,
+      "pattern": "unbounded_read",
+      "text": "limited.read_to_end(&mut decoded).ok()?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/compile_unit.rs",
+      "line": 65,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/compile_unit.rs",
+      "line": 116,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/compile_unit.rs",
+      "line": 138,
+      "pattern": "unbounded_read",
+      "text": "let text = fs::read_to_string(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/index/serialize.rs",
+      "line": 34,
+      "pattern": "unbounded_read",
+      "text": "let bytes = std::fs::read(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/tierb/format.rs",
+      "line": 108,
+      "pattern": "unbounded_read",
+      "text": "let source = std::fs::read_to_string(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/tierb/format.rs",
+      "line": 168,
+      "pattern": "unbounded_read",
+      "text": "std::fs::read_to_string(&rule_path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/bin/poc_verify.rs",
+      "line": 107,
+      "pattern": "unbounded_read",
+      "text": "let raw = match fs::read(&finding_path) {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/bin/sarif_diff.rs",
+      "line": 115,
+      "pattern": "unbounded_read",
+      "text": "fs::read_to_string(path).map_err(|error| format!(\"read {}: {error}\", path.display()))?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/main.rs",
+      "line": 89,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(path)?;"
     }
   ],
   "blockers": [
-    "22 `resource-bound` finding(s) remain"
+    "44 `resource-bound` finding(s) remain"
   ]
 }

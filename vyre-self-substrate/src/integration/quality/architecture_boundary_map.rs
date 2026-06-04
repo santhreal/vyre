@@ -556,11 +556,9 @@ mod tests {
                 include_str!(
                     "../../../../release/evidence/parser/dataflow-consumer-contracts.json"
                 ),
+                include_str!("../../../../release/evidence/parser/surgec-contracts.json"),
                 include_str!(
-                    "../../../../release/evidence/parser/security-analysis-consumer-contracts.json"
-                ),
-                include_str!(
-                    "../../../../release/evidence/parser/security-grammar-gen-contracts.json"
+                    "../../../../release/evidence/parser/surgec-grammar-gen-contracts.json"
                 ),
                 &backend_matrix,
                 include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json"),
@@ -590,11 +588,9 @@ mod tests {
                 include_str!(
                     "../../../../release/evidence/parser/dataflow-consumer-contracts.json"
                 ),
+                include_str!("../../../../release/evidence/parser/surgec-contracts.json"),
                 include_str!(
-                    "../../../../release/evidence/parser/security-analysis-consumer-contracts.json"
-                ),
-                include_str!(
-                    "../../../../release/evidence/parser/security-grammar-gen-contracts.json"
+                    "../../../../release/evidence/parser/surgec-grammar-gen-contracts.json"
                 ),
                 include_str!("../../../../release/evidence/backends/backend-matrix.json"),
                 &analysis,
@@ -648,10 +644,8 @@ mod tests {
             include_str!("../../../../release/evidence/parser/vyre-frontend-c-contracts.json"),
             include_str!("../../../../release/evidence/parser/vyrec-cli-contracts.json"),
             include_str!("../../../../release/evidence/parser/dataflow-consumer-contracts.json"),
-            include_str!(
-                "../../../../release/evidence/parser/security-analysis-consumer-contracts.json"
-            ),
-            include_str!("../../../../release/evidence/parser/security-grammar-gen-contracts.json"),
+            include_str!("../../../../release/evidence/parser/surgec-contracts.json"),
+            include_str!("../../../../release/evidence/parser/surgec-grammar-gen-contracts.json"),
             include_str!("../../../../release/evidence/backends/backend-matrix.json"),
             include_str!("../../../../release/evidence/dataflow/analysis-api-matrix.json"),
             include_str!("../../../../release/evidence/tests/modularization-map.json"),

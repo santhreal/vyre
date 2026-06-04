@@ -43,8 +43,8 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         "libs/performance/matching/vyre",
         "libs/dataflow/weir",
         "tools/vyrec",
-        "libs/tools/security-analysis-consumer",
-        "libs/shared/security-grammar-gen",
+        "libs/tools/surgec",
+        "libs/shared/surgec-grammar-gen",
     ] {
         if !matrix
             .get("scanned_roots")

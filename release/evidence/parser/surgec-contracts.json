@@ -8,13 +8,19 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/Cargo.toml",
       "exists": true,
       "read_error": null,
-      "source_bytes": 3524
+      "source_bytes": 3915
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lib.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4311
+      "source_bytes": 4438
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/README.md",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 5895
     }
   ],
   "required_terms": [
@@ -46,7 +52,7 @@
       "tree": "tests",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests",
       "exists": true,
-      "source_bytes": 1099765,
+      "source_bytes": 2660288,
       "unreadable_file_count": 0
     },
     {
@@ -60,7 +66,7 @@
       "tree": "fuzz",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz",
       "exists": true,
-      "source_bytes": 5379,
+      "source_bytes": 9310,
       "unreadable_file_count": 0
     }
   ],

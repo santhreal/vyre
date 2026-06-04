@@ -3,7 +3,7 @@
 // Enforces AGENTS.md real-tests rule: a test must assert specific expected
 // values, not merely check that something parsed, succeeded, or is non-empty.
 //
-// Walks every `#[test]` / `#[tokio::test]` in vyre-* + libs/tools/security-analysis-consumer +
+// Walks every `#[test]` / `#[tokio::test]` in vyre-* + libs/tools/surgec +
 // libs/surge.  Flags as SHAPE any test whose `assert*!` calls are exclusively:
 //   - `assert!(result.is_ok())`
 //   - `assert!(result.is_err())`
@@ -115,10 +115,7 @@ pub(crate) fn run(args: &[String]) {
 
     // Additional out-of-workspace crates (optional - skip quietly if absent).
     for (path, name) in [
-        (
-            repo_root.join("libs/tools/security-analysis-consumer"),
-            "security-analysis-consumer",
-        ),
+        (repo_root.join("libs/tools/surgec"), "surgec"),
         (repo_root.join("libs/surge"), "surge"),
     ] {
         if path.exists() {

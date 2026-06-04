@@ -2011,9 +2011,63 @@
       "line": 38,
       "pattern": "test_let_underscore_result",
       "text": "let _ = fs::remove_file(output);"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/per_shape_truth.rs",
+      "line": 20,
+      "pattern": "test_TODO",
+      "text": "//! Failure shows EVERY gap, not the first  -  close every TODO line"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/launch_rules.rs",
+      "line": 4,
+      "pattern": "test_TODO",
+      "text": "//! TODO launch gap contract:"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/launch_rules.rs",
+      "line": 5,
+      "pattern": "test_TODO",
+      "text": "//! TODO(<rule_slug>): <gap>"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/launch_rules.rs",
+      "line": 77,
+      "pattern": "test_TODO",
+      "text": "format!(\"TODO({rule_slug}): {}\", detail.as_ref())"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/per_class_truth.rs",
+      "line": 173,
+      "pattern": "test_TODO",
+      "text": ".push(format!(\"TODO({slug}): rule.srg has no `report` block.\"));"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/probe_rule_dispatch.rs",
+      "line": 34,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = build; // silence unused warning when build is not directly invoked here."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/diag_kmalloc_chain.rs",
+      "line": 229,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = lines;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/tests/gap.rs",
+      "line": 275,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = valid_blob; // original blob not used further; we construct the test case below"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/tests/adversarial.rs",
+      "line": 241,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = out; // content may vary, but must not panic"
     }
   ],
   "blockers": [
-    "335 `test-hygiene` finding(s) remain"
+    "344 `test-hygiene` finding(s) remain"
   ]
 }

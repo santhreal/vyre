@@ -419,7 +419,7 @@ mod tests {
           "blockers": ["cpu-demotion"],
           "findings": [],
           "scanned_files": 3000,
-          "scanned_roots": ["/matching/vyre", "/libs/dataflow/consumer", "/tools/vyrec", "/libs/tools/analyzer", "/libs/shared/security-grammar-gen"],
+          "scanned_roots": ["/matching/vyre", "/libs/dataflow/weir", "/tools/vyrec", "/libs/tools/surgec", "/libs/shared/surgec-grammar-gen"],
           "release_surface_coverage": {
             "cuda_driver_crate": true,
             "wgpu_driver_crate": true,

@@ -1124,7 +1124,7 @@
         "benchmark",
         "unit"
       ],
-      "lines": 3140,
+      "lines": 3396,
       "has_test_entrypoint": true,
       "assertion_count": 31,
       "oversized": true,
@@ -1141,7 +1141,7 @@
         "benchmark",
         "unit"
       ],
-      "lines": 886,
+      "lines": 1061,
       "has_test_entrypoint": true,
       "assertion_count": 27,
       "oversized": true,

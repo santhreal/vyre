@@ -184,19 +184,19 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
-      "line": 12,
+      "line": 16,
       "pattern": "undocumented_public_api",
       "text": "pub struct SparseOutputCompactionCount;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
-      "line": 13,
+      "line": 17,
       "pattern": "undocumented_public_api",
       "text": "pub struct CallgraphReachabilityStep;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
-      "line": 14,
+      "line": 18,
       "pattern": "undocumented_public_api",
       "text": "pub struct MetadataConditionBatch;"
     },
@@ -418,67 +418,67 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 112,
+      "line": 128,
       "pattern": "undocumented_public_api",
       "text": "pub struct PerformanceEvaluation {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 119,
+      "line": 135,
       "pattern": "undocumented_public_api",
       "text": "pub struct BenchRequirements {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 128,
+      "line": 144,
       "pattern": "undocumented_public_api",
       "text": "pub enum Correctness {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 142,
+      "line": 158,
       "pattern": "undocumented_public_api",
       "text": "pub struct ScratchPool {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 146,
+      "line": 162,
       "pattern": "undocumented_public_api",
       "text": "pub struct OptimizerPipeline {}"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 148,
+      "line": 164,
       "pattern": "undocumented_public_api",
       "text": "pub struct CpuReference {}"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 167,
+      "line": 183,
       "pattern": "undocumented_public_api",
       "text": "pub struct BenchContext {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 251,
+      "line": 272,
       "pattern": "undocumented_public_api",
       "text": "pub type PreparedCase = Box<dyn std::any::Any>;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 254,
+      "line": 275,
       "pattern": "undocumented_public_api",
       "text": "pub struct BenchRun {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 412,
+      "line": 433,
       "pattern": "undocumented_public_api",
       "text": "pub enum BenchError {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 425,
+      "line": 446,
       "pattern": "undocumented_public_api",
       "text": "pub trait BenchCase: Send + Sync {"
     },
@@ -1309,9 +1309,285 @@
       "line": 43,
       "pattern": "undocumented_public_api",
       "text": "pub trait Sealed {}"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 14,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CorpusMeta {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 23,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FetchEntry {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 35,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ExpectedFinding {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 44,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum Split {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 62,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Sample {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 77,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Manifest {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 86,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ManifestDoc {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/uninit_pointer_decl.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct UninitPointerDeclPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/vyre_nn_classify.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreNnClassifyPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/function_tagged.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FunctionTaggedPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/out_buffer_of.rs",
+      "line": 24,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OutBufferOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/flows_to_cross_lang.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FlowsToCrossLangPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/control_dependence.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ControlDependencePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/must_init.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MustInitPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/uses_of.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct UsesOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/vyre_security_path_canonical.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreSecurityPathCanonicalPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/type_confusion_memcpy.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TypeConfusionMemcpyPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/vyre_security_sql_param_bound.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreSecuritySqlParamBoundPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/offset_use_after_realloc.rs",
+      "line": 16,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OffsetUseAfterReallocPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/vyre_dataflow_range_check.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreDataflowRangeCheckPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/pointer_arith.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PointerArithPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/unsanitized_call_arg.rs",
+      "line": 35,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct UnsanitizedCallArgPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/may_alias.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MayAliasPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/bears_sanitizer_tag.rs",
+      "line": 28,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BearsSanitizerTagPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/bit_width.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BitWidthPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/value_set.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ValueSetPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/range_check.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RangeCheckPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/reaching_def.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReachingDefPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/vyre_security_xss_escape.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreSecurityXssEscapePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/encoding_family_of.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EncodingFamilyOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/realloc_call.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReallocCallPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/bears_bounded_check_tag.rs",
+      "line": 23,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BearsBoundedCheckTagPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/target_type.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TargetTypePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/null_assign.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct NullAssignPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/off_by_one_loop_write.rs",
+      "line": 25,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OffByOneLoopWritePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/escapes.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EscapesPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/source_type.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SourceTypePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/bears_receive_tag.rs",
+      "line": 31,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BearsReceiveTagPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/recursive_call.rs",
+      "line": 19,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RecursiveCallPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/live_at.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LiveAtPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/scc_query.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SccQueryPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/post_dominates_query.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PostDominatesQueryPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/may_alias_threads.rs",
+      "line": 27,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MayAliasThreadsPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/type_of.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TypeOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/sign_changing_cast.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SignChangingCastPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/pipeline/parse_driver.rs",
+      "line": 55,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CpuRayonParseDriver;"
     }
   ],
   "blockers": [
-    "218 `public-docs` finding(s) remain"
+    "264 `public-docs` finding(s) remain"
   ]
 }

@@ -286,44 +286,42 @@
       "unresolved_ownership_markers": []
     },
     {
-      "id": "security-analysis-consumer",
+      "id": "surgec",
       "role": "Security compiler consumer integration surface",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer",
-      "exists": false,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec",
+      "exists": true,
       "required_files": [
         {
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/Cargo.toml",
-          "exists": false,
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/Cargo.toml",
+          "exists": true,
           "read_error": null,
-          "source_bytes": 0
+          "source_bytes": 3915
         },
         {
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/src/lib.rs",
-          "exists": false,
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lib.rs",
+          "exists": true,
           "read_error": null,
-          "source_bytes": 0
+          "source_bytes": 4438
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/README.md",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 5895
         }
       ],
       "required_terms": [
         "surge",
         "compile"
       ],
-      "missing_terms": [
-        "surge",
-        "compile"
-      ],
+      "missing_terms": [],
       "required_contract_topics": [
         "consumer",
         "surge",
         "parser",
         "condition"
       ],
-      "missing_contract_topics": [
-        "consumer",
-        "surge",
-        "parser",
-        "condition"
-      ],
+      "missing_contract_topics": [],
       "required_test_categories": [
         "unit",
         "integration",
@@ -335,81 +333,69 @@
         "gap",
         "fuzz"
       ],
-      "missing_test_categories": [
-        "unit",
-        "integration",
-        "property",
-        "adversarial",
-        "corpus",
-        "benchmark",
-        "conformance",
-        "gap",
-        "fuzz"
-      ],
+      "missing_test_categories": [],
       "required_evidence_trees": [
         {
           "tree": "tests",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/tests",
-          "exists": false,
-          "source_bytes": 0,
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests",
+          "exists": true,
+          "source_bytes": 2660288,
           "unreadable_file_count": 0
         },
         {
           "tree": "benches",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/benches",
-          "exists": false,
-          "source_bytes": 0,
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/benches",
+          "exists": true,
+          "source_bytes": 23380,
           "unreadable_file_count": 0
         },
         {
           "tree": "fuzz",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/fuzz",
-          "exists": false,
-          "source_bytes": 0,
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz",
+          "exists": true,
+          "source_bytes": 9310,
           "unreadable_file_count": 0
         }
       ],
       "unresolved_ownership_markers": []
     },
     {
-      "id": "security-grammar-gen",
+      "id": "surgec-grammar-gen",
       "role": "Shared grammar generation substrate",
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/security-grammar-gen",
-      "exists": false,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen",
+      "exists": true,
       "required_files": [
         {
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/security-grammar-gen/Cargo.toml",
-          "exists": false,
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/Cargo.toml",
+          "exists": true,
           "read_error": null,
-          "source_bytes": 0
+          "source_bytes": 1249
         },
         {
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/security-grammar-gen/src/lib.rs",
-          "exists": false,
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/lib.rs",
+          "exists": true,
           "read_error": null,
-          "source_bytes": 0
+          "source_bytes": 2771
+        },
+        {
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/README.md",
+          "exists": true,
+          "read_error": null,
+          "source_bytes": 4836
         }
       ],
       "required_terms": [
         "grammar",
         "generate"
       ],
-      "missing_terms": [
-        "grammar",
-        "generate"
-      ],
+      "missing_terms": [],
       "required_contract_topics": [
         "grammar",
         "generate",
         "token",
         "parser"
       ],
-      "missing_contract_topics": [
-        "grammar",
-        "generate",
-        "token",
-        "parser"
-      ],
+      "missing_contract_topics": [],
       "required_test_categories": [
         "unit",
         "integration",
@@ -421,85 +407,32 @@
         "gap",
         "fuzz"
       ],
-      "missing_test_categories": [
-        "unit",
-        "integration",
-        "property",
-        "adversarial",
-        "corpus",
-        "benchmark",
-        "conformance",
-        "gap",
-        "fuzz"
-      ],
+      "missing_test_categories": [],
       "required_evidence_trees": [
         {
           "tree": "tests",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/security-grammar-gen/tests",
-          "exists": false,
-          "source_bytes": 0,
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/tests",
+          "exists": true,
+          "source_bytes": 66357,
           "unreadable_file_count": 0
         },
         {
           "tree": "benches",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/security-grammar-gen/benches",
-          "exists": false,
-          "source_bytes": 0,
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/benches",
+          "exists": true,
+          "source_bytes": 245,
           "unreadable_file_count": 0
         },
         {
           "tree": "fuzz",
-          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/security-grammar-gen/fuzz",
-          "exists": false,
-          "source_bytes": 0,
+          "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/fuzz",
+          "exists": true,
+          "source_bytes": 260,
           "unreadable_file_count": 0
         }
       ],
       "unresolved_ownership_markers": []
     }
   ],
-  "blockers": [
-    "parser component `security-analysis-consumer` is missing at /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer",
-    "parser component `security-analysis-consumer` is missing required file /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/Cargo.toml",
-    "parser component `security-analysis-consumer` is missing required file /media/mukund-thiru/SanthData/Santh/libs/tools/security-analysis-consumer/src/lib.rs",
-    "parser component `security-analysis-consumer` does not document or expose required term `surge`",
-    "parser component `security-analysis-consumer` does not document or expose required term `compile`",
-    "parser component `security-analysis-consumer` does not document parser contract topic `consumer`",
-    "parser component `security-analysis-consumer` does not document parser contract topic `surge`",
-    "parser component `security-analysis-consumer` does not document parser contract topic `parser`",
-    "parser component `security-analysis-consumer` does not document parser contract topic `condition`",
-    "parser component `security-analysis-consumer` does not expose required test category `unit`",
-    "parser component `security-analysis-consumer` does not expose required test category `integration`",
-    "parser component `security-analysis-consumer` does not expose required test category `property`",
-    "parser component `security-analysis-consumer` does not expose required test category `adversarial`",
-    "parser component `security-analysis-consumer` does not expose required test category `corpus`",
-    "parser component `security-analysis-consumer` does not expose required test category `benchmark`",
-    "parser component `security-analysis-consumer` does not expose required test category `conformance`",
-    "parser component `security-analysis-consumer` does not expose required test category `gap`",
-    "parser component `security-analysis-consumer` does not expose required test category `fuzz`",
-    "parser component `security-analysis-consumer` is missing required `tests` evidence tree",
-    "parser component `security-analysis-consumer` is missing required `benches` evidence tree",
-    "parser component `security-analysis-consumer` is missing required `fuzz` evidence tree",
-    "parser component `security-grammar-gen` is missing at /media/mukund-thiru/SanthData/Santh/libs/shared/security-grammar-gen",
-    "parser component `security-grammar-gen` is missing required file /media/mukund-thiru/SanthData/Santh/libs/shared/security-grammar-gen/Cargo.toml",
-    "parser component `security-grammar-gen` is missing required file /media/mukund-thiru/SanthData/Santh/libs/shared/security-grammar-gen/src/lib.rs",
-    "parser component `security-grammar-gen` does not document or expose required term `grammar`",
-    "parser component `security-grammar-gen` does not document or expose required term `generate`",
-    "parser component `security-grammar-gen` does not document parser contract topic `grammar`",
-    "parser component `security-grammar-gen` does not document parser contract topic `generate`",
-    "parser component `security-grammar-gen` does not document parser contract topic `token`",
-    "parser component `security-grammar-gen` does not document parser contract topic `parser`",
-    "parser component `security-grammar-gen` does not expose required test category `unit`",
-    "parser component `security-grammar-gen` does not expose required test category `integration`",
-    "parser component `security-grammar-gen` does not expose required test category `property`",
-    "parser component `security-grammar-gen` does not expose required test category `adversarial`",
-    "parser component `security-grammar-gen` does not expose required test category `corpus`",
-    "parser component `security-grammar-gen` does not expose required test category `benchmark`",
-    "parser component `security-grammar-gen` does not expose required test category `conformance`",
-    "parser component `security-grammar-gen` does not expose required test category `gap`",
-    "parser component `security-grammar-gen` does not expose required test category `fuzz`",
-    "parser component `security-grammar-gen` is missing required `tests` evidence tree",
-    "parser component `security-grammar-gen` is missing required `benches` evidence tree",
-    "parser component `security-grammar-gen` is missing required `fuzz` evidence tree"
-  ]
+  "blockers": []
 }

@@ -664,7 +664,7 @@
         "corpus",
         "unit"
       ],
-      "lines": 598,
+      "lines": 608,
       "has_test_entrypoint": true,
       "assertion_count": 4,
       "oversized": true,
@@ -2305,7 +2305,7 @@
         "fuzz",
         "unit"
       ],
-      "lines": 1197,
+      "lines": 1195,
       "has_test_entrypoint": true,
       "assertion_count": 4,
       "oversized": true,

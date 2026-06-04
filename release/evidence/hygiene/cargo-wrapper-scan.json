@@ -69,6 +69,42 @@
       "text": "//! conform harness, `cargo xtask print-composition`, and the"
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/validate.rs",
+      "line": 10,
+      "pattern": "raw_workspace_cargo",
+      "text": "//!   cargo run -p surgec --bin corpus-validate"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/validate.rs",
+      "line": 11,
+      "pattern": "raw_workspace_cargo",
+      "text": "//!   cargo run -p surgec --bin corpus-validate -- --manifest /path/to/manifest.toml"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/splits.rs",
+      "line": 8,
+      "pattern": "raw_workspace_cargo",
+      "text": "//!   cargo run -p surgec --bin corpus-splits -- --write"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/splits.rs",
+      "line": 9,
+      "pattern": "raw_workspace_cargo",
+      "text": "//!   cargo run -p surgec --bin corpus-splits -- --check"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz/fuzz_targets/rule_compiler.rs",
+      "line": 11,
+      "pattern": "raw_workspace_cargo",
+      "text": "//! Run with: `cargo fuzz build rule_compiler`"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz/fuzz_targets/scan_bytes.rs",
+      "line": 11,
+      "pattern": "raw_workspace_cargo",
+      "text": "//! Run with: cargo fuzz run scan_bytes"
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/scripts/bench_index.sh",
       "line": 19,
       "pattern": "heredoc",
@@ -1030,6 +1066,6 @@
     }
   ],
   "blockers": [
-    "171 `cargo-wrapper` finding(s) remain"
+    "177 `cargo-wrapper` finding(s) remain"
   ]
 }

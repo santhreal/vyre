@@ -37,9 +37,27 @@
       "line": 228,
       "pattern": "cpu_fallback",
       "text": "status: beta compile-evidence driver for active Vyre C compiler development; no CPU fallback\""
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/pipeline/parse_driver.rs",
+      "line": 53,
+      "pattern": "cpu_fallback",
+      "text": "note = \"CpuRayonParseDriver is a temporary CPU fallback. Use VyreGpuParseDriver when available.\""
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/findings/confidence.rs",
+      "line": 338,
+      "pattern": "cfg_not_gpu",
+      "text": "#[cfg(not(feature = \"gpu\"))]"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/cmd_scan.rs",
+      "line": 145,
+      "pattern": "cfg_not_gpu",
+      "text": "#[cfg(not(feature = \"gpu\"))]"
     }
   ],
   "blockers": [
-    "6 `no-hidden-fallback` finding(s) remain"
+    "9 `no-hidden-fallback` finding(s) remain"
   ]
 }

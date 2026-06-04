@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "total_commands": 13,
-  "successful_commands": 10,
-  "command_failures": 3,
+  "successful_commands": 11,
+  "command_failures": 2,
   "artifact_failures": 0,
   "command_count": 13,
   "required_command_count": 13,
@@ -273,37 +273,37 @@
         {
           "path": "release/evidence/hygiene/hygiene-matrix.json",
           "exists": true,
-          "bytes": 369096,
+          "bytes": 437558,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/no-stubs-scan.json",
           "exists": true,
-          "bytes": 3375,
+          "bytes": 17917,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/no-hidden-fallback-scan.json",
           "exists": true,
-          "bytes": 1630,
+          "bytes": 2326,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/resource-bound-scan.json",
           "exists": true,
-          "bytes": 5818,
+          "bytes": 10986,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/error-surface-scan.json",
           "exists": true,
-          "bytes": 170079,
+          "bytes": 203883,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/cargo-wrapper-scan.json",
           "exists": true,
-          "bytes": 42569,
+          "bytes": 43988,
           "read_error": null
         },
         {
@@ -315,13 +315,13 @@
         {
           "path": "release/evidence/hygiene/public-doc-scan.json",
           "exists": true,
-          "bytes": 53893,
+          "bytes": 64362,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/test-hygiene-scan.json",
           "exists": true,
-          "bytes": 89629,
+          "bytes": 91749,
           "read_error": null
         }
       ]
@@ -351,7 +351,7 @@
         {
           "path": "release/evidence/tests/test-matrix.json",
           "exists": true,
-          "bytes": 215671,
+          "bytes": 215674,
           "read_error": null
         },
         {
@@ -363,7 +363,7 @@
         {
           "path": "release/evidence/tests/oversized-test-closure.json",
           "exists": true,
-          "bytes": 210070,
+          "bytes": 210073,
           "read_error": null
         },
         {
@@ -375,13 +375,13 @@
         {
           "path": "release/evidence/tests/unit-suite.json",
           "exists": true,
-          "bytes": 1229153,
+          "bytes": 1229154,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/adversarial-suite.json",
           "exists": true,
-          "bytes": 194616,
+          "bytes": 194617,
           "read_error": null
         },
         {
@@ -405,7 +405,7 @@
         {
           "path": "release/evidence/tests/benchmark-suite.json",
           "exists": true,
-          "bytes": 1127438,
+          "bytes": 1127439,
           "read_error": null
         },
         {
@@ -585,16 +585,16 @@
         "release/evidence/parser/vyre-frontend-c-contracts.json",
         "release/evidence/parser/vyrec-cli-contracts.json",
         "release/evidence/parser/weir-contracts.json",
-        "release/evidence/parser/security-analysis-consumer-contracts.json",
-        "release/evidence/parser/security-grammar-gen-contracts.json"
+        "release/evidence/parser/surgec-contracts.json",
+        "release/evidence/parser/surgec-grammar-gen-contracts.json"
       ],
-      "status": "failed: exit status: 1",
-      "exit_code": 1,
+      "status": "success",
+      "exit_code": 0,
       "artifact_statuses": [
         {
           "path": "release/evidence/parser/distributed-parser-map.json",
           "exists": true,
-          "bytes": 17496,
+          "bytes": 12699,
           "read_error": null
         },
         {
@@ -616,15 +616,15 @@
           "read_error": null
         },
         {
-          "path": "release/evidence/parser/security-analysis-consumer-contracts.json",
+          "path": "release/evidence/parser/surgec-contracts.json",
           "exists": true,
-          "bytes": 5198,
+          "bytes": 1815,
           "read_error": null
         },
         {
-          "path": "release/evidence/parser/security-grammar-gen-contracts.json",
+          "path": "release/evidence/parser/surgec-grammar-gen-contracts.json",
           "exists": true,
-          "bytes": 4943,
+          "bytes": 1903,
           "read_error": null
         }
       ]
@@ -665,8 +665,7 @@
   ],
   "blockers": [
     "`xtask hygiene-matrix` failed with exit status: 1",
-    "`xtask test-matrix` failed with exit status: 1",
-    "`xtask parser-coherence` failed with exit status: 1"
+    "`xtask test-matrix` failed with exit status: 1"
   ],
   "reports": []
 }

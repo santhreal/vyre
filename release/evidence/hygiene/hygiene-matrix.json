@@ -3,17 +3,19 @@
   "scanned_roots": [
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre",
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir",
-    "/media/mukund-thiru/SanthData/Santh/tools/vyrec"
+    "/media/mukund-thiru/SanthData/Santh/tools/vyrec",
+    "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec",
+    "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen"
   ],
-  "scanned_files": 4444,
+  "scanned_files": 5024,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
     "wgpu_driver_crate": true,
     "weir_crate": true,
     "vyrec_tool": true,
-    "security_analysis_tool": false,
-    "security_grammar_gen": false,
+    "surgec_tool": true,
+    "surgec_grammar_gen": true,
     "release_scripts": true,
     "github_workflows": true,
     "branch_protection_controls": true,
@@ -46,15 +48,19 @@
   "finding_summary": [
     {
       "pattern": "TODO",
-      "count": 1
+      "count": 41
+    },
+    {
+      "pattern": "cfg_not_gpu",
+      "count": 2
     },
     {
       "pattern": "cpu_fallback",
-      "count": 5
+      "count": 6
     },
     {
       "pattern": "expect_call",
-      "count": 161
+      "count": 263
     },
     {
       "pattern": "gpu_unavailable_skip",
@@ -74,19 +80,23 @@
     },
     {
       "pattern": "panic_macro",
-      "count": 462
+      "count": 469
     },
     {
       "pattern": "placeholder_text",
-      "count": 10
+      "count": 14
     },
     {
       "pattern": "raw_workspace_cargo",
-      "count": 155
+      "count": 161
     },
     {
       "pattern": "stub_text",
-      "count": 2
+      "count": 18
+    },
+    {
+      "pattern": "test_TODO",
+      "count": 5
     },
     {
       "pattern": "test_ignored",
@@ -94,15 +104,15 @@
     },
     {
       "pattern": "test_let_underscore_result",
-      "count": 327
+      "count": 331
     },
     {
       "pattern": "unbounded_read",
-      "count": 22
+      "count": 44
     },
     {
       "pattern": "undocumented_public_api",
-      "count": 218
+      "count": 264
     },
     {
       "pattern": "unreadable_source_file",
@@ -110,7 +120,7 @@
     },
     {
       "pattern": "unwrap_call",
-      "count": 48
+      "count": 64
     }
   ],
   "findings": [
@@ -1880,25 +1890,25 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
-      "line": 12,
+      "line": 16,
       "pattern": "undocumented_public_api",
       "text": "pub struct SparseOutputCompactionCount;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
-      "line": 13,
+      "line": 17,
       "pattern": "undocumented_public_api",
       "text": "pub struct CallgraphReachabilityStep;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
-      "line": 14,
+      "line": 18,
       "pattern": "undocumented_public_api",
       "text": "pub struct MetadataConditionBatch;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
-      "line": 2340,
+      "line": 2596,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: CALLGRAPH_WORDS is derived from a nonzero node count\");"
     },
@@ -2138,67 +2148,67 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 112,
+      "line": 128,
       "pattern": "undocumented_public_api",
       "text": "pub struct PerformanceEvaluation {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 119,
+      "line": 135,
       "pattern": "undocumented_public_api",
       "text": "pub struct BenchRequirements {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 128,
+      "line": 144,
       "pattern": "undocumented_public_api",
       "text": "pub enum Correctness {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 142,
+      "line": 158,
       "pattern": "undocumented_public_api",
       "text": "pub struct ScratchPool {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 146,
+      "line": 162,
       "pattern": "undocumented_public_api",
       "text": "pub struct OptimizerPipeline {}"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 148,
+      "line": 164,
       "pattern": "undocumented_public_api",
       "text": "pub struct CpuReference {}"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 167,
+      "line": 183,
       "pattern": "undocumented_public_api",
       "text": "pub struct BenchContext {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 251,
+      "line": 272,
       "pattern": "undocumented_public_api",
       "text": "pub type PreparedCase = Box<dyn std::any::Any>;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 254,
+      "line": 275,
       "pattern": "undocumented_public_api",
       "text": "pub struct BenchRun {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 412,
+      "line": 433,
       "pattern": "undocumented_public_api",
       "text": "pub enum BenchError {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "line": 425,
+      "line": 446,
       "pattern": "undocumented_public_api",
       "text": "pub trait BenchCase: Send + Sync {"
     },
@@ -7771,6 +7781,1632 @@
       "text": "let _ = fs::remove_file(output);"
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/parser_differential_length_lies/shapes/parser_differential_length_lies/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/parser_differential_length_lies/shapes/parser_differential_length_lies/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/parser_differential_length_lies/shapes/parser_differential_length_lies/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/toctou_privilege/shapes/toctou_privilege/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/toctou_privilege/shapes/toctou_privilege/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/toctou_privilege/shapes/toctou_privilege/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/xss_reflected/shapes/xss_reflected/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/xss_reflected/shapes/xss_reflected/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/xss_reflected/shapes/xss_reflected/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/command_injection_v2/shapes/command_injection_v2/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/command_injection_v2/shapes/command_injection_v2/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/command_injection_v2/shapes/command_injection_v2/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/signed_unsigned_boundary/shapes/signed_unsigned_boundary/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/signed_unsigned_boundary/shapes/signed_unsigned_boundary/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/signed_unsigned_boundary/shapes/signed_unsigned_boundary/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/csrf_missing_token/shapes/csrf_missing_token/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/csrf_missing_token/shapes/csrf_missing_token/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/csrf_missing_token/shapes/csrf_missing_token/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/integer_overflow_alloc_arith/shapes/integer_overflow_alloc_arith/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/integer_overflow_alloc_arith/shapes/integer_overflow_alloc_arith/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/integer_overflow_alloc_arith/shapes/integer_overflow_alloc_arith/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/unsafe_deserialization/shapes/unsafe_deserialization/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/unsafe_deserialization/shapes/unsafe_deserialization/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/unsafe_deserialization/shapes/unsafe_deserialization/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/sql_injection/shapes/sql_injection/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/sql_injection/shapes/sql_injection/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/sql_injection/shapes/sql_injection/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/code_injection/shapes/code_injection/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/code_injection/shapes/code_injection/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/code_injection/shapes/code_injection/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/path_traversal_decode_chain/shapes/path_traversal_decode_chain/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/path_traversal_decode_chain/shapes/path_traversal_decode_chain/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/path_traversal_decode_chain/shapes/path_traversal_decode_chain/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_heap_overflow/shapes/remote_heap_overflow/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_heap_overflow/shapes/remote_heap_overflow/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_heap_overflow/shapes/remote_heap_overflow/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/stack_overflow_strcpy/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/stack_overflow_strcpy/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/oob_write_unbounded_index/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/oob_write_unbounded_index/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/pointer_arith_oob_write/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/pointer_arith_oob_write/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/uninit_pointer_deref/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/uninit_pointer_deref/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/heap_overflow_memcpy_tainted_size/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/heap_overflow_memcpy_tainted_size/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/type_confusion_downcast/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/type_confusion_downcast/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/sign_change_to_size_arg/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/sign_change_to_size_arg/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/tainted_size_recv_overflow/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/tainted_size_recv_overflow/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/stack_overflow_gets/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/stack_overflow_gets/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/format_string_user_controlled/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/format_string_user_controlled/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/null_pointer_deref_from_input/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/null_pointer_deref_from_input/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/narrowing_cast_to_size_arg/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/narrowing_cast_to_size_arg/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/stack_overflow_memcpy_tainted_size/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/stack_overflow_memcpy_tainted_size/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/use_after_free_double_drop/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/use_after_free_double_drop/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/stack_overflow_sprintf_unbounded/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/stack_overflow_sprintf_unbounded/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/realloc_shrink_use_after_offset/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/realloc_shrink_use_after_offset/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/oob_read_unbounded_index/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/oob_read_unbounded_index/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/recv_into_stack_buf_unbounded/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/recv_into_stack_buf_unbounded/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/heap_overflow_off_by_one_loop/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/heap_overflow_off_by_one_loop/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/heap_overflow_alloc_arith_wraps/property.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: proptest harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/remote_overflow/shapes/heap_overflow_alloc_arith_wraps/e2e_cli.rs",
+      "line": 1,
+      "pattern": "TODO",
+      "text": "// TODO: drives built binary"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/oob_write_size/shapes/oob_write_size/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/oob_write_size/shapes/oob_write_size/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/oob_write_size/shapes/oob_write_size/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/use_after_free/shapes/use_after_free/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/use_after_free/shapes/use_after_free/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/use_after_free/shapes/use_after_free/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/use_after_free_error_path/shapes/use_after_free_error_path/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/use_after_free_error_path/shapes/use_after_free_error_path/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/use_after_free_error_path/shapes/use_after_free_error_path/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/uninit_read_copy_to_user/shapes/uninit_read_copy_to_user/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/uninit_read_copy_to_user/shapes/uninit_read_copy_to_user/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/uninit_read_copy_to_user/shapes/uninit_read_copy_to_user/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/driver_ioctl_size_ptr/shapes/driver_ioctl_size_ptr/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/driver_ioctl_size_ptr/shapes/driver_ioctl_size_ptr/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/driver_ioctl_size_ptr/shapes/driver_ioctl_size_ptr/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/decompression_bomb_chain/shapes/decompression_bomb_chain/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/decompression_bomb_chain/shapes/decompression_bomb_chain/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/decompression_bomb_chain/shapes/decompression_bomb_chain/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/type_confusion/shapes/type_confusion/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/type_confusion/shapes/type_confusion/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/type_confusion/shapes/type_confusion/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/side_channel_spectre_v1/shapes/side_channel_spectre_v1/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/side_channel_spectre_v1/shapes/side_channel_spectre_v1/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/side_channel_spectre_v1/shapes/side_channel_spectre_v1/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/integer_trunc_undersize_alloc/shapes/integer_trunc_undersize_alloc/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/integer_trunc_undersize_alloc/shapes/integer_trunc_undersize_alloc/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/integer_trunc_undersize_alloc/shapes/integer_trunc_undersize_alloc/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/double_free_concurrent/shapes/double_free_concurrent/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/double_free_concurrent/shapes/double_free_concurrent/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/double_free_concurrent/shapes/double_free_concurrent/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/path_traversal/shapes/path_traversal/e2e_cli.rs",
+      "line": 16,
+      "pattern": "expect_call",
+      "text": ".expect(\"surgec binary runs; Fix: build surgec before running this test\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/path_traversal/shapes/path_traversal/e2e_cli.rs",
+      "line": 23,
+      "pattern": "expect_call",
+      "text": "serde_json::from_slice(&output.stdout).expect(\"valid JSON output; Fix: wire JSON encoder\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/rules/launch/path_traversal/shapes/path_traversal/e2e_cli.rs",
+      "line": 27,
+      "pattern": "expect_call",
+      "text": ".expect(\"findings array present; Fix: emit findings[] from scan\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/validate.rs",
+      "line": 10,
+      "pattern": "raw_workspace_cargo",
+      "text": "//!   cargo run -p surgec --bin corpus-validate"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/validate.rs",
+      "line": 11,
+      "pattern": "raw_workspace_cargo",
+      "text": "//!   cargo run -p surgec --bin corpus-validate -- --manifest /path/to/manifest.toml"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/validate.rs",
+      "line": 160,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(&path).map_err(|e| format!(\"read {}: {e}\", path.display()))?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/splits.rs",
+      "line": 8,
+      "pattern": "raw_workspace_cargo",
+      "text": "//!   cargo run -p surgec --bin corpus-splits -- --write"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/splits.rs",
+      "line": 9,
+      "pattern": "raw_workspace_cargo",
+      "text": "//!   cargo run -p surgec --bin corpus-splits -- --check"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 14,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CorpusMeta {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 23,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FetchEntry {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 35,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ExpectedFinding {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 44,
+      "pattern": "undocumented_public_api",
+      "text": "pub enum Split {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 62,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Sample {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 77,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct Manifest {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 86,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ManifestDoc {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 95,
+      "pattern": "unbounded_read",
+      "text": "let text = fs::read_to_string(&path)"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/corpus/manifest.rs",
+      "line": 212,
+      "pattern": "unbounded_read",
+      "text": "let Ok(text) = fs::read_to_string(&path) else {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/poc/templates.rs",
+      "line": 149,
+      "pattern": "panic_macro",
+      "text": "VulnerabilityClass::Complex => panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/poc/mod.rs",
+      "line": 38,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/signals/registry.rs",
+      "line": 122,
+      "pattern": "expect_call",
+      "text": "Self::try_global().expect("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/ir/rule_labels.rs",
+      "line": 40,
+      "pattern": "unbounded_read",
+      "text": "let source = std::fs::read_to_string(path).map_err(|err| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/ir/labels.rs",
+      "line": 295,
+      "pattern": "unbounded_read",
+      "text": "let source = fs::read_to_string(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/ir/node_kinds.rs",
+      "line": 326,
+      "pattern": "placeholder_text",
+      "text": "/// NN benign-code placeholder (always unset today)."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/ir/types.rs",
+      "line": 98,
+      "pattern": "expect_call",
+      "text": "Ok(self.fused.get().expect(\"fused dispatch just set\"))"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/cmd_explain.rs",
+      "line": 47,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(&path).map_err(|source| surgec::Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/uninit_pointer_decl.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct UninitPointerDeclPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/vyre_nn_classify.rs",
+      "line": 1,
+      "pattern": "placeholder_text",
+      "text": "//! `vyre.nn.classify.v1(model, $expr)` — NN code-eval gate (model placeholder)."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/vyre_nn_classify.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreNnClassifyPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/function_tagged.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FunctionTaggedPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/out_buffer_of.rs",
+      "line": 24,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OutBufferOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/flows_to_cross_lang.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct FlowsToCrossLangPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/control_dependence.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ControlDependencePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/must_init.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MustInitPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/uses_of.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct UsesOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/vyre_security_path_canonical.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreSecurityPathCanonicalPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/type_confusion_memcpy.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TypeConfusionMemcpyPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/vyre_security_sql_param_bound.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreSecuritySqlParamBoundPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/offset_use_after_realloc.rs",
+      "line": 16,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OffsetUseAfterReallocPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/vyre_dataflow_range_check.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreDataflowRangeCheckPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/pointer_arith.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PointerArithPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/unsanitized_call_arg.rs",
+      "line": 35,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct UnsanitizedCallArgPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/unsanitized_call_arg.rs",
+      "line": 198,
+      "pattern": "panic_macro",
+      "text": "panic!(\"unsanitized_call_arg: program composition must fuse cleanly: {error}\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/v3_routed_predicates.rs",
+      "line": 185,
+      "pattern": "stub_text",
+      "text": "// Stub predicates  -  not yet fully implemented, registered so rules compile"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/may_alias.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MayAliasPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/bears_sanitizer_tag.rs",
+      "line": 28,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BearsSanitizerTagPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/bit_width.rs",
+      "line": 10,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BitWidthPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/value_set.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ValueSetPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/range_check.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RangeCheckPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/reaching_def.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReachingDefPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/vyre_security_xss_escape.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct VyreSecurityXssEscapePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/encoding_family_of.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EncodingFamilyOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/realloc_call.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct ReallocCallPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/bears_bounded_check_tag.rs",
+      "line": 23,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BearsBoundedCheckTagPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/target_type.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TargetTypePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/null_assign.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct NullAssignPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/off_by_one_loop_write.rs",
+      "line": 25,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct OffByOneLoopWritePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/escapes.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct EscapesPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/source_type.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SourceTypePredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/bears_receive_tag.rs",
+      "line": 31,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct BearsReceiveTagPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/recursive_call.rs",
+      "line": 19,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct RecursiveCallPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/live_at.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct LiveAtPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/scc_query.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SccQueryPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/post_dominates_query.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct PostDominatesQueryPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/registry/mod.rs",
+      "line": 87,
+      "pattern": "panic_macro",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/may_alias_threads.rs",
+      "line": 27,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct MayAliasThreadsPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/type_of.rs",
+      "line": 9,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct TypeOfPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/predicates/sign_changing_cast.rs",
+      "line": 15,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct SignChangingCastPredicate;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/emit/predicate.rs",
+      "line": 258,
+      "pattern": "expect_call",
+      "text": "exprs.into_iter().next().expect(\"non-empty\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/emit/predicate_emit.rs",
+      "line": 110,
+      "pattern": "expect_call",
+      "text": "exprs.into_iter().next().expect(\"non-empty\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/pipeline/bank.rs",
+      "line": 187,
+      "pattern": "expect_call",
+      "text": ".expect(\"just inserted\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/pipeline/parse_driver.rs",
+      "line": 53,
+      "pattern": "cpu_fallback",
+      "text": "note = \"CpuRayonParseDriver is a temporary CPU fallback. Use VyreGpuParseDriver when available.\""
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/pipeline/parse_driver.rs",
+      "line": 55,
+      "pattern": "undocumented_public_api",
+      "text": "pub struct CpuRayonParseDriver;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/pipeline/produce.rs",
+      "line": 75,
+      "pattern": "unwrap_call",
+      "text": "for (name, mask) in overrides.unwrap() {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/diff/scan.rs",
+      "line": 66,
+      "pattern": "expect_call",
+      "text": "csr: Mutex::new(self.csr.lock().expect(\"dep graph csr poisoned\").clone()),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/diff/scan.rs",
+      "line": 83,
+      "pattern": "expect_call",
+      "text": ".expect(\"dep graph csr poisoned\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/diff/scan.rs",
+      "line": 99,
+      "pattern": "expect_call",
+      "text": "let mut csr = self.csr.lock().expect(\"dep graph csr poisoned\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/diff/scan.rs",
+      "line": 135,
+      "pattern": "unwrap_call",
+      "text": "let last = *csr.offsets.last().unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/diff/scan.rs",
+      "line": 140,
+      "pattern": "unwrap_call",
+      "text": "let last_offset = *csr.offsets.last().unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/diff/scan.rs",
+      "line": 158,
+      "pattern": "expect_call",
+      "text": "let csr = deps.csr.lock().expect(\"dep graph csr poisoned\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/diff/scan.rs",
+      "line": 291,
+      "pattern": "unbounded_read",
+      "text": "let bytes = std::fs::read(&path).map_err(|source| crate::Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/diff/scan.rs",
+      "line": 341,
+      "pattern": "expect_call",
+      "text": "let locked = cache.lock().expect(\"dep graph cache poisoned\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/diff/scan.rs",
+      "line": 350,
+      "pattern": "expect_call",
+      "text": "let mut locked = cache.lock().expect(\"dep graph cache poisoned\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/diff/scan.rs",
+      "line": 360,
+      "pattern": "expect_call",
+      "text": "cache.lock().expect(\"dep graph cache poisoned\").clear();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/layer.rs",
+      "line": 6,
+      "pattern": "unwrap_call",
+      "text": "let tempdir = tempfile::tempdir().unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/layer.rs",
+      "line": 9,
+      "pattern": "unwrap_call",
+      "text": "fs::write(&file_path, encoded).unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/layer.rs",
+      "line": 22,
+      "pattern": "unwrap_call",
+      "text": ".unwrap(),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/layer.rs",
+      "line": 24,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/layer.rs",
+      "line": 26,
+      "pattern": "unwrap_call",
+      "text": "let files = collector.collect_files().unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/layer.rs",
+      "line": 48,
+      "pattern": "unwrap_call",
+      "text": "let encoded = serde_json::to_string(&summary).unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/walk.rs",
+      "line": 5,
+      "pattern": "unwrap_call",
+      "text": "let tempdir = tempfile::tempdir().unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/walk.rs",
+      "line": 7,
+      "pattern": "unwrap_call",
+      "text": "fs::write(&file_path, b\"literal payload\").unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/walk.rs",
+      "line": 20,
+      "pattern": "unwrap_call",
+      "text": ".unwrap(),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/walk.rs",
+      "line": 22,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/walk.rs",
+      "line": 24,
+      "pattern": "unwrap_call",
+      "text": "let files = collector.collect_files().unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/io.rs",
+      "line": 66,
+      "pattern": "unbounded_read",
+      "text": "fs::read(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/collector/io.rs",
+      "line": 72,
+      "pattern": "placeholder_text",
+      "text": "/// Empty offset map placeholder. Used as the default"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/decode/compression_extract.rs",
+      "line": 109,
+      "pattern": "unbounded_read",
+      "text": "limited.read_to_end(&mut decoded).ok()?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/decode/compression_extract.rs",
+      "line": 237,
+      "pattern": "unbounded_read",
+      "text": "if limited.read_to_end(&mut decoded).is_ok()"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/decode/compression_extract.rs",
+      "line": 306,
+      "pattern": "unbounded_read",
+      "text": "if limited.read_to_end(&mut decoded).is_ok()"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/decode/compression_extract.rs",
+      "line": 333,
+      "pattern": "unbounded_read",
+      "text": "limited.read_to_end(&mut decoded).ok()?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/decode/fullwidth_extract.rs",
+      "line": 31,
+      "pattern": "expect_call",
+      "text": "let valid = std::str::from_utf8(&bytes[cursor..window_end]).expect(\"validated above\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/compile_unit.rs",
+      "line": 65,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/compile_unit.rs",
+      "line": 116,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/compile_unit.rs",
+      "line": 138,
+      "pattern": "unbounded_read",
+      "text": "let text = fs::read_to_string(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/readback.rs",
+      "line": 28,
+      "pattern": "unwrap_call",
+      "text": "/// let words = readback_zero_copy::<u32>(&bytes).unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/findings/confidence.rs",
+      "line": 56,
+      "pattern": "panic_macro",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/findings/confidence.rs",
+      "line": 338,
+      "pattern": "cfg_not_gpu",
+      "text": "#[cfg(not(feature = \"gpu\"))]"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/findings/provenance.rs",
+      "line": 64,
+      "pattern": "expect_call",
+      "text": "let rule_bytes = postcard::to_allocvec(rule).expect(\"surge::Rule must serialize\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/findings/proof_assembly.rs",
+      "line": 35,
+      "pattern": "stub_text",
+      "text": "//! lower class. No stub, no theater: the absence of data is the"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/index/serialize.rs",
+      "line": 34,
+      "pattern": "unbounded_read",
+      "text": "let bytes = std::fs::read(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/output/sarif.rs",
+      "line": 268,
+      "pattern": "expect_call",
+      "text": "write_sarif(&mut buf, findings, tool_version).expect("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/output/sarif.rs",
+      "line": 271,
+      "pattern": "expect_call",
+      "text": "String::from_utf8(buf).expect(\"serde_json output is valid UTF-8\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/cmd_scan.rs",
+      "line": 130,
+      "pattern": "unwrap_call",
+      "text": "let rules = rules_path.as_ref().unwrap();"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/cmd_scan.rs",
+      "line": 145,
+      "pattern": "cfg_not_gpu",
+      "text": "#[cfg(not(feature = \"gpu\"))]"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/main.rs",
+      "line": 392,
+      "pattern": "stub_text",
+      "text": "/// .vyre on-disk bundle format). This stub returns an error directing"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/frontend/applicability.rs",
+      "line": 64,
+      "pattern": "expect_call",
+      "text": "magic_len: u8::try_from(len).expect("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/predicates/any.rs",
+      "line": 48,
+      "pattern": "expect_call",
+      "text": "frontier_bufs.into_iter().next().expect(\"len 1 guaranteed\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/predicates/launch_predicates.rs",
+      "line": 108,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: uses_of fuse_programs failed; seed+expand arms must compose\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/predicates/launch_predicates.rs",
+      "line": 141,
+      "pattern": "placeholder_text",
+      "text": "// Model placeholder (MayOver): BENIGN_CODE_BY_NN is never stamped;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/predicates/launch_predicates.rs",
+      "line": 375,
+      "pattern": "stub_text",
+      "text": "// Stub: these cast kinds are not yet tagged in pg_node_tags_high."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/predicates/two_step_path.rs",
+      "line": 52,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: flows_to_via source→waypoint fuse failed\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/predicates/two_step_path.rs",
+      "line": 75,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: flows_to_via waypoint→sink fuse failed\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/mod.rs",
+      "line": 84,
+      "pattern": "expect_call",
+      "text": "// universe. Prior u32 version required .expect(overflow) which"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/mod.rs",
+      "line": 105,
+      "pattern": "stub_text",
+      "text": "// calling itself) and emit a safe stub instead of infinitely expanding."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/program_merge.rs",
+      "line": 34,
+      "pattern": "panic_macro",
+      "text": "panic!(\"surgec::lower::program_merge: pairwise fusion must succeed: {error}\")"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/call.rs",
+      "line": 471,
+      "pattern": "stub_text",
+      "text": "// Stub predicates  -  registered to allow rule compilation."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/call.rs",
+      "line": 502,
+      "pattern": "stub_text",
+      "text": "// Stub: near($a, $b, radius) returns empty bitset."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/call.rs",
+      "line": 531,
+      "pattern": "stub_text",
+      "text": "// Stub: field_out_of_source_layout($use, $src_ty) returns empty bitset."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/call.rs",
+      "line": 560,
+      "pattern": "stub_text",
+      "text": "// Stub: dominated_by_tag_check($use, $src_ty, $dst_ty) returns empty bitset."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/call.rs",
+      "line": 589,
+      "pattern": "stub_text",
+      "text": "// Stub: uses_data_from($consume, $out_sink) returns empty bitset."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/call.rs",
+      "line": 618,
+      "pattern": "stub_text",
+      "text": "// Stub: may_alias_threads($a, $b) returns empty bitset."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/call.rs",
+      "line": 647,
+      "pattern": "stub_text",
+      "text": "// Stub: may_alias($a, $b) returns empty bitset."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/call.rs",
+      "line": 676,
+      "pattern": "stub_text",
+      "text": "// Stub: pair($a, $b) returns empty bitset."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/call.rs",
+      "line": 968,
+      "pattern": "stub_text",
+      "text": "// would otherwise infinitely expand. Emit a safe empty-bitset stub."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/visitor.rs",
+      "line": 121,
+      "pattern": "expect_call",
+      "text": "let first = iter.next().expect(\"non-empty by branch\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/literal.rs",
+      "line": 284,
+      "pattern": "stub_text",
+      "text": "// Stub: len($x) returns 0 in scalar context so that"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/lower/literal.rs",
+      "line": 293,
+      "pattern": "stub_text",
+      "text": "// Stub: numeric_literal($x) returns u32::MAX in scalar context"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/tierb/format.rs",
+      "line": 108,
+      "pattern": "unbounded_read",
+      "text": "let source = std::fs::read_to_string(path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/tierb/format.rs",
+      "line": 163,
+      "pattern": "expect_call",
+      "text": ".expect(\"validate() guarantees path or surge\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/tierb/format.rs",
+      "line": 168,
+      "pattern": "unbounded_read",
+      "text": "std::fs::read_to_string(&rule_path).map_err(|source| Error::Io {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/bin/poc_verify.rs",
+      "line": 107,
+      "pattern": "unbounded_read",
+      "text": "let raw = match fs::read(&finding_path) {"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/bin/sarif_diff.rs",
+      "line": 115,
+      "pattern": "unbounded_read",
+      "text": "fs::read_to_string(path).map_err(|error| format!(\"read {}: {error}\", path.display()))?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz/fuzz_targets/rule_compiler.rs",
+      "line": 11,
+      "pattern": "raw_workspace_cargo",
+      "text": "//! Run with: `cargo fuzz build rule_compiler`"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz/fuzz_targets/scan_bytes.rs",
+      "line": 11,
+      "pattern": "raw_workspace_cargo",
+      "text": "//! Run with: cargo fuzz run scan_bytes"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/fuzz/fuzz_targets/scan_bytes.rs",
+      "line": 89,
+      "pattern": "panic_macro",
+      "text": "panic!(\"error missing Fix: directive: {msg}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/per_shape_truth.rs",
+      "line": 20,
+      "pattern": "test_TODO",
+      "text": "//! Failure shows EVERY gap, not the first  -  close every TODO line"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/launch_rules.rs",
+      "line": 4,
+      "pattern": "test_TODO",
+      "text": "//! TODO launch gap contract:"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/launch_rules.rs",
+      "line": 5,
+      "pattern": "test_TODO",
+      "text": "//! TODO(<rule_slug>): <gap>"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/launch_rules.rs",
+      "line": 77,
+      "pattern": "test_TODO",
+      "text": "format!(\"TODO({rule_slug}): {}\", detail.as_ref())"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/per_class_truth.rs",
+      "line": 173,
+      "pattern": "test_TODO",
+      "text": ".push(format!(\"TODO({slug}): rule.srg has no `report` block.\"));"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/probe_rule_dispatch.rs",
+      "line": 34,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = build; // silence unused warning when build is not directly invoked here."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/tests/diag_kmalloc_chain.rs",
+      "line": 229,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = lines;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/dfa.rs",
+      "line": 138,
+      "pattern": "expect_call",
+      "text": "next_state: u16::try_from(next_state).expect(\"next_state fits in u16\"),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/dfa.rs",
+      "line": 178,
+      "pattern": "expect_call",
+      "text": ".expect(\"failed to compile regex patterns to DFA\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/dfa.rs",
+      "line": 183,
+      "pattern": "expect_call",
+      "text": ".expect(\"must have start state\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/lex_c11_max_munch.rs",
+      "line": 31,
+      "pattern": "panic_macro",
+      "text": "panic!(\"C11 pattern compile failed {kind} `{pat}`: {e}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/main.rs",
+      "line": 89,
+      "pattern": "unbounded_read",
+      "text": "let bytes = fs::read(path)?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/lr.rs",
+      "line": 135,
+      "pattern": "expect_call",
+      "text": "let id = u32::try_from(self.table.productions.len()).expect(\"production count fits u32\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/wire.rs",
+      "line": 102,
+      "pattern": "expect_call",
+      "text": "u32::try_from(dfa.token_ids.len()).expect(\"token_ids count fits u32\"),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/wire.rs",
+      "line": 116,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: validate LR table dimensions before serializing SGGC LR blob\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/wire.rs",
+      "line": 233,
+      "pattern": "expect_call",
+      "text": "bytes[0..4].try_into().expect(\"4 bytes\"),"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/wire.rs",
+      "line": 254,
+      "pattern": "expect_call",
+      "text": "let got: [u8; 16] = bytes[total..checksum_end].try_into().expect(\"16 bytes\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/src/wire.rs",
+      "line": 275,
+      "pattern": "expect_call",
+      "text": "let payload_len = u32::try_from(payload.len()).expect(\"payload fits u32\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/tests/gap.rs",
+      "line": 275,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = valid_blob; // original blob not used further; we construct the test case below"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen/tests/adversarial.rs",
+      "line": 241,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = out; // content may vary, but must not panic"
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/release_completion_audit.rs",
       "line": 1,
       "pattern": "unreadable_source_file",
@@ -8744,6 +10380,6 @@
     }
   ],
   "blockers": [
-    "1438 source hygiene finding(s) remain"
+    "1709 source hygiene finding(s) remain"
   ]
 }

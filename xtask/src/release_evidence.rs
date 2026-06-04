@@ -284,8 +284,8 @@ fn expected_artifacts(args: &[&str]) -> &'static [&'static str] {
             "release/evidence/parser/vyre-frontend-c-contracts.json",
             "release/evidence/parser/vyrec-cli-contracts.json",
             "release/evidence/parser/weir-contracts.json",
-            "release/evidence/parser/security-analysis-consumer-contracts.json",
-            "release/evidence/parser/security-grammar-gen-contracts.json",
+            "release/evidence/parser/surgec-contracts.json",
+            "release/evidence/parser/surgec-grammar-gen-contracts.json",
         ],
         "weir-matrix" => &[
             "release/evidence/weir/weir-analysis-api-matrix.json",

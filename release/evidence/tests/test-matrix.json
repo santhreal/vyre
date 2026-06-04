@@ -957,8 +957,8 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
-      "lines": 3140,
-      "lines_over_threshold": 2640,
+      "lines": 3396,
+      "lines_over_threshold": 2896,
       "recommended_split": [
         "extract hostile-input cases into tests/adversarial/",
         "move timing-only checks into benches/ or release benchmark cases"
@@ -995,8 +995,8 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/resident.rs",
-      "lines": 886,
-      "lines_over_threshold": 386,
+      "lines": 1061,
+      "lines_over_threshold": 561,
       "recommended_split": [
         "extract hostile-input cases into tests/adversarial/",
         "move timing-only checks into benches/ or release benchmark cases"
@@ -1005,8 +1005,8 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/api/case.rs",
-      "lines": 580,
-      "lines_over_threshold": 80,
+      "lines": 601,
+      "lines_over_threshold": 101,
       "recommended_split": [
         "move timing-only checks into benches/ or release benchmark cases"
       ],
@@ -1042,8 +1042,8 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/runner/execute/metric_keys.rs",
-      "lines": 598,
-      "lines_over_threshold": 98,
+      "lines": 608,
+      "lines_over_threshold": 108,
       "recommended_split": [
         "extract fixture-driven cases into tests/corpus/",
         "move timing-only checks into benches/ or release benchmark cases"
@@ -1325,8 +1325,8 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/architecture_boundary_map.rs",
-      "lines": 661,
-      "lines_over_threshold": 161,
+      "lines": 655,
+      "lines_over_threshold": 155,
       "recommended_split": [
         "move timing-only checks into benches/ or release benchmark cases"
       ],
@@ -2805,8 +2805,8 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/hygiene_matrix.rs",
-      "lines": 1197,
-      "lines_over_threshold": 697,
+      "lines": 1195,
+      "lines_over_threshold": 695,
       "recommended_split": [
         "extract backend/op parity cases into tests/conformance/",
         "extract fixture-driven cases into tests/corpus/",

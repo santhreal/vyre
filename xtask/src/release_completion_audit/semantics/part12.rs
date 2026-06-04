@@ -421,8 +421,8 @@ fn is_parser_contract_evidence(evidence: &str) -> bool {
         "vyre-frontend-c-contracts.json",
         "vyrec-cli-contracts.json",
         "weir-contracts.json",
-        "security-analysis-consumer-contracts.json",
-        "security-grammar-gen-contracts.json",
+        "surgec-contracts.json",
+        "surgec-grammar-gen-contracts.json",
     ]
     .iter()
     .any(|suffix| evidence.ends_with(suffix))
@@ -444,8 +444,8 @@ fn inspect_distributed_parser_map_semantics(
         "vyre-frontend-c",
         "vyrec",
         "weir",
-        "security-analysis-consumer",
-        "security-grammar-gen",
+        "surgec",
+        "surgec-grammar-gen",
     ] {
         if !components.iter().any(|component| {
             component.get("id").and_then(serde_json::Value::as_str) == Some(required)
@@ -495,4 +495,3 @@ fn inspect_distributed_parser_map_semantics(
         }
     }
 }
-

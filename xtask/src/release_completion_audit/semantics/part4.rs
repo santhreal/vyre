@@ -100,8 +100,8 @@ fn inspect_release_evidence_run_semantics(
                 "vyre-frontend-c-contracts.json",
                 "vyrec-cli-contracts.json",
                 "weir-contracts.json",
-                "security-analysis-consumer-contracts.json",
-                "security-grammar-gen-contracts.json",
+                "surgec-contracts.json",
+                "surgec-grammar-gen-contracts.json",
             ],
         ),
         (
@@ -479,4 +479,3 @@ const REQUIRED_BENCHMARKED_OPTIMIZATION_FAMILIES: &[&str] = &[
     "weir-dataflow-loop-fission",
     "weir-dataflow-licm",
 ];
-

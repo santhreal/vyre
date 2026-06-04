@@ -265,8 +265,8 @@ fn inspect_hygiene_matrix_semantics(
         "libs/performance/matching/vyre",
         "libs/dataflow/weir",
         "tools/vyrec",
-        "libs/tools/security-analysis-consumer",
-        "libs/shared/security-grammar-gen",
+        "libs/tools/surgec",
+        "libs/shared/surgec-grammar-gen",
     ] {
         if !roots.iter().any(|root| {
             root.as_str()
@@ -294,8 +294,8 @@ fn inspect_hygiene_release_surface_coverage(
         "wgpu_driver_crate",
         "weir_crate",
         "vyrec_tool",
-        "security_analysis_tool",
-        "security_grammar_gen",
+        "surgec_tool",
+        "surgec_grammar_gen",
         "release_scripts",
         "github_workflows",
         "branch_protection_controls",

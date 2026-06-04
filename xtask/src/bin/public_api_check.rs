@@ -24,7 +24,7 @@ const CRATES: &[&str] = &[
     "vyre-frontend-c",
     "vyre-intrinsics",
     "vyre-reference",
-    "security-analysis-consumer",
+    "surgec",
     "surge",
     "surge-source",
 ];

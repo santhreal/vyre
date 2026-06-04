@@ -25,8 +25,8 @@ struct ReleaseSurfaceCoverage {
     wgpu_driver_crate: bool,
     weir_crate: bool,
     vyrec_tool: bool,
-    security_analysis_tool: bool,
-    security_grammar_gen: bool,
+    surgec_tool: bool,
+    surgec_grammar_gen: bool,
     release_scripts: bool,
     github_workflows: bool,
     branch_protection_controls: bool,
@@ -107,8 +107,8 @@ pub(crate) fn run(args: &[String]) {
     let roots = [vyre_root, santh_root.join("libs/dataflow/weir")];
     let optional_roots = [
         santh_root.join("tools/vyrec"),
-        santh_root.join("libs/tools/security-analysis-consumer"),
-        santh_root.join("libs/shared/security-grammar-gen"),
+        santh_root.join("libs/tools/surgec"),
+        santh_root.join("libs/shared/surgec-grammar-gen"),
     ];
     let mut scanned_roots = roots
         .iter()
@@ -139,8 +139,8 @@ pub(crate) fn run(args: &[String]) {
         roots[0].clone(),
         santh_root.join("libs/dataflow/weir"),
         santh_root.join("tools/vyrec"),
-        santh_root.join("libs/tools/security-analysis-consumer"),
-        santh_root.join("libs/shared/security-grammar-gen"),
+        santh_root.join("libs/tools/surgec"),
+        santh_root.join("libs/shared/surgec-grammar-gen"),
     ] {
         scan_audit_report_locations(&root, &mut scanned_files, &mut findings);
     }
@@ -206,11 +206,9 @@ fn release_surface_coverage(vyre_root: &Path, santh_root: &Path) -> ReleaseSurfa
         wgpu_driver_crate: vyre_root.join("vyre-driver-wgpu/src/lib.rs").is_file(),
         weir_crate: santh_root.join("libs/dataflow/weir/src/lib.rs").is_file(),
         vyrec_tool: santh_root.join("tools/vyrec/src").is_dir(),
-        security_analysis_tool: santh_root
-            .join("libs/tools/security-analysis-consumer/src")
-            .is_dir(),
-        security_grammar_gen: santh_root
-            .join("libs/shared/security-grammar-gen/src")
+        surgec_tool: santh_root.join("libs/tools/surgec/src").is_dir(),
+        surgec_grammar_gen: santh_root
+            .join("libs/shared/surgec-grammar-gen/src")
             .is_dir(),
         release_scripts: santh_root
             .join("scripts/apply-branch-protection.sh")
