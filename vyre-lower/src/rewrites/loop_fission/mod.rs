@@ -19,12 +19,29 @@ pub fn loop_fission_with_alias_facts(
 }
 
 #[must_use]
+pub fn loop_fission_with_weir_alias_facts(
+    desc: &KernelDescriptor,
+    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
+) -> KernelDescriptor {
+    loop_fission_with_alias_facts(desc, alias_facts)
+}
+
+#[must_use]
 pub fn loop_fission_with_dataflow_facts(
     desc: &KernelDescriptor,
     alias_facts: &crate::analyses::alias_facts::AliasFactSet,
     reaching_defs: &crate::analyses::reaching_def_facts::ReachingDefFactSet,
 ) -> KernelDescriptor {
     loop_fission_with_optional_dataflow_facts(desc, Some(alias_facts), Some(reaching_defs))
+}
+
+#[must_use]
+pub fn loop_fission_with_dataflow_analysis_facts(
+    desc: &KernelDescriptor,
+    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
+    reaching_defs: &crate::analyses::weir_reaching_def::ReachingDefFactSet,
+) -> KernelDescriptor {
+    loop_fission_with_dataflow_facts(desc, alias_facts, reaching_defs)
 }
 
 fn loop_fission_with_optional_dataflow_facts(

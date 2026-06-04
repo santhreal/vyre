@@ -9,8 +9,8 @@
       "marker": "loop_fusion_with_weir_alias_facts",
       "exists": true,
       "read_error": null,
-      "marker_present": false,
-      "marker_on_code_line": false,
+      "marker_present": true,
+      "marker_on_code_line": true,
       "unresolved_markers": [],
       "role": "Loop fusion consumes Weir alias facts"
     },
@@ -20,8 +20,8 @@
       "marker": "loop_fusion_with_dataflow_analysis_facts",
       "exists": true,
       "read_error": null,
-      "marker_present": false,
-      "marker_on_code_line": false,
+      "marker_present": true,
+      "marker_on_code_line": true,
       "unresolved_markers": [],
       "role": "Loop fusion consumes Weir reaching-definition facts"
     },
@@ -31,8 +31,8 @@
       "marker": "loop_fission_with_weir_alias_facts",
       "exists": true,
       "read_error": null,
-      "marker_present": false,
-      "marker_on_code_line": false,
+      "marker_present": true,
+      "marker_on_code_line": true,
       "unresolved_markers": [],
       "role": "Loop fission consumes Weir alias facts"
     },
@@ -42,8 +42,8 @@
       "marker": "loop_fission_with_dataflow_analysis_facts",
       "exists": true,
       "read_error": null,
-      "marker_present": false,
-      "marker_on_code_line": false,
+      "marker_present": true,
+      "marker_on_code_line": true,
       "unresolved_markers": [],
       "role": "Loop fission consumes Weir reaching-definition facts"
     },
@@ -51,10 +51,10 @@
       "id": "weir-alias-analysis-api",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_alias/mod.rs",
       "marker": "AliasFactSet",
-      "exists": false,
+      "exists": true,
       "read_error": null,
-      "marker_present": false,
-      "marker_on_code_line": false,
+      "marker_present": true,
+      "marker_on_code_line": true,
       "unresolved_markers": [],
       "role": "Vyre-lower imports Weir alias facts through an explicit API"
     },
@@ -62,10 +62,10 @@
       "id": "weir-reaching-def-analysis-api",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/analyses/weir_reaching_def/mod.rs",
       "marker": "import_descriptor_reaching_defs",
-      "exists": false,
+      "exists": true,
       "read_error": null,
-      "marker_present": false,
-      "marker_on_code_line": false,
+      "marker_present": true,
+      "marker_on_code_line": true,
       "unresolved_markers": [],
       "role": "Vyre-lower imports Weir reaching-def facts through an explicit API"
     },
@@ -73,10 +73,10 @@
       "id": "dataflow-analysis-loop-fusion-firing-test",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/dataflow_analysis_loop_rewrites.rs",
       "marker": "reaching_defs_unlock_alias_proven_loop_fusion",
-      "exists": false,
+      "exists": true,
       "read_error": null,
-      "marker_present": false,
-      "marker_on_code_line": false,
+      "marker_present": true,
+      "marker_on_code_line": true,
       "unresolved_markers": [],
       "role": "Integration test proves Weir facts unlock loop fusion"
     },
@@ -84,22 +84,13 @@
       "id": "dataflow-analysis-loop-fission-firing-test",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/tests/dataflow_analysis_loop_rewrites.rs",
       "marker": "reaching_defs_unlock_alias_proven_loop_fission",
-      "exists": false,
+      "exists": true,
       "read_error": null,
-      "marker_present": false,
-      "marker_on_code_line": false,
+      "marker_present": true,
+      "marker_on_code_line": true,
       "unresolved_markers": [],
       "role": "Integration test proves Weir facts unlock loop fission"
     }
   ],
-  "blockers": [
-    "marker `alias-aware-loop-fusion-entrypoint` is not present on a non-comment code line",
-    "marker `reaching-def-loop-fusion-entrypoint` is not present on a non-comment code line",
-    "marker `alias-aware-loop-fission-entrypoint` is not present on a non-comment code line",
-    "marker `reaching-def-loop-fission-entrypoint` is not present on a non-comment code line",
-    "marker `weir-alias-analysis-api` is not present on a non-comment code line",
-    "marker `weir-reaching-def-analysis-api` is not present on a non-comment code line",
-    "marker `dataflow-analysis-loop-fusion-firing-test` is not present on a non-comment code line",
-    "marker `dataflow-analysis-loop-fission-firing-test` is not present on a non-comment code line"
-  ]
+  "blockers": []
 }

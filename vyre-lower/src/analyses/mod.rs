@@ -28,6 +28,8 @@ pub mod shared_mem_promote;
 pub mod texture_promote;
 pub mod value_range;
 pub mod vec_pack;
+pub mod weir_alias;
+pub mod weir_reaching_def;
 pub mod workgroup_uniform;
 
 // Re-exports for the common case: a one-call combined audit.

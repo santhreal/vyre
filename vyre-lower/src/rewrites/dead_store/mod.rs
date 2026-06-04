@@ -42,12 +42,29 @@ pub fn dead_store_with_alias_facts(
 }
 
 #[must_use]
+pub fn dead_store_with_weir_alias_facts(
+    desc: &KernelDescriptor,
+    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
+) -> KernelDescriptor {
+    dead_store_with_alias_facts(desc, alias_facts)
+}
+
+#[must_use]
 pub fn dead_store_with_dataflow_facts(
     desc: &KernelDescriptor,
     alias_facts: &crate::analyses::alias_facts::AliasFactSet,
     reaching_defs: &crate::analyses::reaching_def_facts::ReachingDefFactSet,
 ) -> KernelDescriptor {
     dead_store_with_optional_dataflow_facts(desc, Some(alias_facts), Some(reaching_defs))
+}
+
+#[must_use]
+pub fn dead_store_with_dataflow_analysis_facts(
+    desc: &KernelDescriptor,
+    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
+    reaching_defs: &crate::analyses::weir_reaching_def::ReachingDefFactSet,
+) -> KernelDescriptor {
+    dead_store_with_dataflow_facts(desc, alias_facts, reaching_defs)
 }
 
 fn dead_store_with_optional_dataflow_facts(

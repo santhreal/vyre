@@ -50,12 +50,29 @@ pub fn load_forwarding_with_alias_facts(
 }
 
 #[must_use]
+pub fn load_forwarding_with_weir_alias_facts(
+    desc: &KernelDescriptor,
+    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
+) -> KernelDescriptor {
+    load_forwarding_with_alias_facts(desc, alias_facts)
+}
+
+#[must_use]
 pub fn load_forwarding_with_dataflow_facts(
     desc: &KernelDescriptor,
     alias_facts: &crate::analyses::alias_facts::AliasFactSet,
     reaching_defs: &crate::analyses::reaching_def_facts::ReachingDefFactSet,
 ) -> KernelDescriptor {
     load_forwarding_with_optional_dataflow_facts(desc, Some(alias_facts), Some(reaching_defs))
+}
+
+#[must_use]
+pub fn load_forwarding_with_dataflow_analysis_facts(
+    desc: &KernelDescriptor,
+    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
+    reaching_defs: &crate::analyses::weir_reaching_def::ReachingDefFactSet,
+) -> KernelDescriptor {
+    load_forwarding_with_dataflow_facts(desc, alias_facts, reaching_defs)
 }
 
 fn load_forwarding_with_optional_dataflow_facts(
@@ -1222,6 +1239,58 @@ mod tests {
         reaching.set_reaching_defs(2, vec![0]);
         let aliases = crate::analyses::alias_facts::AliasFactSet::default();
         let out = load_forwarding_with_dataflow_facts(&desc, &aliases, &reaching);
+        assert_eq!(out.body.ops[5].operands, vec![0, 0, 1]);
+    }
+
+    #[test]
+    fn dataflow_analysis_facts_forward_equivalent_index_results() {
+        let desc = KernelDescriptor {
+            id: "dataflow_analysis_forward".into(),
+            bindings: BindingLayout {
+                slots: vec![rw_slot()],
+            },
+            dispatch: Dispatch::new(1, 1, 1),
+            body: KernelBody {
+                ops: vec![
+                    KernelOp {
+                        kind: KernelOpKind::LocalInvocationId,
+                        operands: vec![0],
+                        result: Some(0),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![0],
+                        result: Some(1),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::Copy,
+                        operands: vec![0],
+                        result: Some(2),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::StoreGlobal,
+                        operands: vec![0, 0, 1],
+                        result: None,
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::LoadGlobal,
+                        operands: vec![0, 2],
+                        result: Some(3),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::StoreGlobal,
+                        operands: vec![0, 0, 3],
+                        result: None,
+                    },
+                ],
+                child_bodies: vec![],
+                literals: vec![LiteralValue::U32(7)],
+            },
+        };
+        let mut reaching = crate::analyses::weir_reaching_def::ReachingDefFactSet::default();
+        reaching.set_reaching_defs(2, vec![0]);
+        let aliases = crate::analyses::weir_alias::AliasFactSet::default();
+        let out = load_forwarding_with_dataflow_analysis_facts(&desc, &aliases, &reaching);
         assert_eq!(out.body.ops[5].operands, vec![0, 0, 1]);
     }
 }

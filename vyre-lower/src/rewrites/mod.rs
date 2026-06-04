@@ -120,7 +120,10 @@ pub use canonicalize::canonicalize;
 pub use cmp_normalize::cmp_normalize;
 pub use cmp_self_false::cmp_self_false;
 pub use const_buffer_promote::const_buffer_promote;
-pub use dead_store::{dead_store, dead_store_with_alias_facts, dead_store_with_dataflow_facts};
+pub use dead_store::{
+    dead_store, dead_store_with_alias_facts, dead_store_with_dataflow_analysis_facts,
+    dead_store_with_dataflow_facts, dead_store_with_weir_alias_facts,
+};
 pub use descriptor_const_fold::descriptor_const_fold;
 pub use descriptor_cse::descriptor_cse;
 pub use descriptor_dce::descriptor_dce;
@@ -130,14 +133,23 @@ pub use drop_unused_child_bodies::drop_unused_child_bodies;
 pub use drop_unused_literals::drop_unused_literals;
 pub use emit_order::emit_order;
 pub use identity_elim::identity_elim;
-pub use licm::{licm, licm_with_alias_facts, licm_with_dataflow_facts};
+pub use licm::{
+    licm, licm_with_alias_facts, licm_with_dataflow_analysis_facts, licm_with_dataflow_facts,
+    licm_with_weir_alias_facts,
+};
 pub use load_forwarding::{
-    load_forwarding, load_forwarding_with_alias_facts, load_forwarding_with_dataflow_facts,
+    load_forwarding, load_forwarding_with_alias_facts,
+    load_forwarding_with_dataflow_analysis_facts, load_forwarding_with_dataflow_facts,
+    load_forwarding_with_weir_alias_facts,
 };
 pub use loop_fission::{
-    loop_fission, loop_fission_with_alias_facts, loop_fission_with_dataflow_facts,
+    loop_fission, loop_fission_with_alias_facts, loop_fission_with_dataflow_analysis_facts,
+    loop_fission_with_dataflow_facts, loop_fission_with_weir_alias_facts,
 };
-pub use loop_fusion::{loop_fusion, loop_fusion_with_alias_facts, loop_fusion_with_dataflow_facts};
+pub use loop_fusion::{
+    loop_fusion, loop_fusion_with_alias_facts, loop_fusion_with_dataflow_analysis_facts,
+    loop_fusion_with_dataflow_facts, loop_fusion_with_weir_alias_facts,
+};
 pub use loop_unroll::loop_unroll;
 pub use loop_zero_iter::loop_zero_iter;
 pub use matmul_promote::{infer_matmul_tile_loops, matmul_promote, MatmulTileLoopPlan};
@@ -526,6 +538,16 @@ pub fn run_all_with_dataflow_facts(
     reaching_defs: &crate::analyses::reaching_def_facts::ReachingDefFactSet,
 ) -> crate::KernelDescriptor {
     run_all_with_dataflow_stats(desc, alias_facts, reaching_defs).0
+}
+
+/// Apply the canonical fixed-point rewrite pipeline with Weir dataflow-analysis facts.
+#[must_use]
+pub fn run_all_with_dataflow_analysis_facts(
+    desc: &crate::KernelDescriptor,
+    alias_facts: &crate::analyses::weir_alias::AliasFactSet,
+    reaching_defs: &crate::analyses::weir_reaching_def::ReachingDefFactSet,
+) -> crate::KernelDescriptor {
+    run_all_with_dataflow_facts(desc, alias_facts, reaching_defs)
 }
 
 /// Per-pipeline-run statistics. Useful for benchmarks, regression

@@ -89,7 +89,9 @@ fn import_body_reaching_defs(
     }
 }
 
-fn resolve_copy_alias(mut id: u32, copy_aliases: &FxHashMap<u32, u32>) -> u32 {
+/// Resolve a descriptor result id through a bounded chain of `Copy` aliases.
+#[must_use]
+pub fn resolve_copy_alias(mut id: u32, copy_aliases: &FxHashMap<u32, u32>) -> u32 {
     for _ in 0..32 {
         let Some(next) = copy_aliases.get(&id).copied() else {
             return id;
