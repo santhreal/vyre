@@ -61,7 +61,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": false,
+      "inventory_registered": true,
       "unresolved_markers": []
     },
     {
@@ -89,7 +89,7 @@
       "exists": true,
       "public_exported": true,
       "source_bytes": 2089,
-      "has_public_api": false,
+      "has_public_api": true,
       "required_api_items": [
         "andersen_points_to",
         "andersen_points_to_with_shape",
@@ -100,7 +100,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": false,
+      "inventory_registered": true,
       "unresolved_markers": []
     },
     {
@@ -128,7 +128,7 @@
       "exists": true,
       "public_exported": true,
       "source_bytes": 2553,
-      "has_public_api": false,
+      "has_public_api": true,
       "required_api_items": [
         "ifds_reach_step",
         "ifds_reach_step_exploded",
@@ -138,7 +138,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": false,
+      "inventory_registered": true,
       "unresolved_markers": []
     },
     {
@@ -168,7 +168,7 @@
       "exists": true,
       "public_exported": true,
       "source_bytes": 1681,
-      "has_public_api": false,
+      "has_public_api": true,
       "required_api_items": [
         "callgraph_build",
         "callgraph_build_with_count",
@@ -178,7 +178,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": false,
+      "inventory_registered": true,
       "unresolved_markers": []
     },
     {
@@ -227,7 +227,7 @@
       "exists": true,
       "public_exported": true,
       "source_bytes": 1730,
-      "has_public_api": false,
+      "has_public_api": true,
       "required_api_items": [
         "dominates",
         "cpu_ref",
@@ -239,7 +239,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": false,
+      "inventory_registered": true,
       "unresolved_markers": []
     },
     {
@@ -286,7 +286,7 @@
       "exists": true,
       "public_exported": true,
       "source_bytes": 1334,
-      "has_public_api": false,
+      "has_public_api": true,
       "required_api_items": [
         "live_step",
         "Liveness"
@@ -295,7 +295,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": false,
+      "inventory_registered": true,
       "unresolved_markers": []
     },
     {
@@ -323,7 +323,7 @@
       "exists": true,
       "public_exported": true,
       "source_bytes": 2330,
-      "has_public_api": false,
+      "has_public_api": true,
       "required_api_items": [
         "backward_slice",
         "backward_slice_with_shape",
@@ -333,7 +333,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": false,
+      "inventory_registered": true,
       "unresolved_markers": []
     },
     {
@@ -342,7 +342,7 @@
       "exists": true,
       "public_exported": true,
       "source_bytes": 2009,
-      "has_public_api": false,
+      "has_public_api": true,
       "required_api_items": [
         "summarize_function",
         "summarize_function_with_count",
@@ -352,7 +352,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": false,
+      "inventory_registered": true,
       "unresolved_markers": []
     },
     {
@@ -361,7 +361,7 @@
       "exists": true,
       "public_exported": true,
       "source_bytes": 1715,
-      "has_public_api": false,
+      "has_public_api": true,
       "required_api_items": [
         "loop_summarize",
         "loop_summarize_with_count",
@@ -371,7 +371,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": false,
+      "inventory_registered": true,
       "unresolved_markers": []
     },
     {
@@ -418,7 +418,7 @@
       "exists": true,
       "public_exported": true,
       "source_bytes": 1963,
-      "has_public_api": false,
+      "has_public_api": true,
       "required_api_items": [
         "range_propagate",
         "range_propagate_with_count",
@@ -428,7 +428,7 @@
       "required_policy_items": [],
       "missing_policy_items": [],
       "declares_op_id": true,
-      "inventory_registered": false,
+      "inventory_registered": true,
       "unresolved_markers": []
     },
     {
@@ -543,7 +543,7 @@
       "unresolved_markers": []
     }
   ],
-  "inventory_registered_count": 14,
+  "inventory_registered_count": 24,
   "required_api_item_count": 102,
   "missing_api_item_count": 0,
   "property_test_count": 16,
@@ -560,12 +560,12 @@
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/ifds_to_witness.rs",
       "exists": true,
-      "source_bytes": 2195,
+      "source_bytes": 2594,
       "read_error": null,
       "has_main": true,
       "uses_weir_crate": true,
       "has_serde_evidence": false,
-      "api_reference_count": 1,
+      "api_reference_count": 2,
       "unresolved_markers": []
     },
     {
@@ -582,12 +582,12 @@
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/witness_many.rs",
       "exists": true,
-      "source_bytes": 2395,
+      "source_bytes": 2795,
       "read_error": null,
       "has_main": true,
       "uses_weir_crate": true,
       "has_serde_evidence": false,
-      "api_reference_count": 0,
+      "api_reference_count": 2,
       "unresolved_markers": []
     }
   ],
@@ -1017,27 +1017,5 @@
       "unresolved_markers": []
     }
   ],
-  "blockers": [
-    "Weir analysis `reaching` declares OP_ID but does not submit a vyre_harness::OpEntry",
-    "Weir analysis `points_to` exposes no public API item",
-    "Weir analysis `points_to` declares OP_ID but does not submit a vyre_harness::OpEntry",
-    "Weir analysis `ifds` exposes no public API item",
-    "Weir analysis `ifds` declares OP_ID but does not submit a vyre_harness::OpEntry",
-    "Weir analysis `callgraph` exposes no public API item",
-    "Weir analysis `callgraph` declares OP_ID but does not submit a vyre_harness::OpEntry",
-    "Weir analysis `dominators` exposes no public API item",
-    "Weir analysis `dominators` declares OP_ID but does not submit a vyre_harness::OpEntry",
-    "Weir analysis `live` exposes no public API item",
-    "Weir analysis `live` declares OP_ID but does not submit a vyre_harness::OpEntry",
-    "Weir analysis `slice` exposes no public API item",
-    "Weir analysis `slice` declares OP_ID but does not submit a vyre_harness::OpEntry",
-    "Weir analysis `summary` exposes no public API item",
-    "Weir analysis `summary` declares OP_ID but does not submit a vyre_harness::OpEntry",
-    "Weir analysis `loop_sum` exposes no public API item",
-    "Weir analysis `loop_sum` declares OP_ID but does not submit a vyre_harness::OpEntry",
-    "Weir analysis `range` exposes no public API item",
-    "Weir analysis `range` declares OP_ID but does not submit a vyre_harness::OpEntry",
-    "Weir standalone example /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/ifds_to_witness.rs references 1 dataflow API token(s); release requires at least 2",
-    "Weir standalone example /media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/examples/witness_many.rs references 0 dataflow API token(s); release requires at least 2"
-  ]
+  "blockers": []
 }

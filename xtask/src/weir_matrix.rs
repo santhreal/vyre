@@ -283,13 +283,16 @@ pub(crate) fn run(args: &[String]) {
             String::new()
         };
         let lowered = text.to_ascii_lowercase();
-        let has_public_api = text.contains("pub fn ")
-            || text.contains("pub struct ")
-            || text.contains("pub enum ")
-            || text.contains("pub type ");
+        let module_scope_text =
+            analysis_module_scope_text(&weir_root, relative, &text, &mut blockers);
+        let has_public_api = module_scope_text.contains("pub fn ")
+            || module_scope_text.contains("pub struct ")
+            || module_scope_text.contains("pub enum ")
+            || module_scope_text.contains("pub type ")
+            || text.contains("pub use ");
         let declares_op_id = text.contains("OP_ID");
-        let inventory_registered =
-            text.contains("inventory::submit!") && text.contains("vyre_harness::OpEntry::new");
+        let inventory_registered = module_scope_text.contains("inventory::submit!")
+            && module_scope_text.contains("vyre_harness::OpEntry::new");
         let unresolved_markers = UNRESOLVED_MARKERS
             .iter()
             .copied()
@@ -790,7 +793,7 @@ fn write_weir_readme_artifact(parent: &Path) {
     };
     let lowered = text.to_ascii_lowercase();
     let required_tokens = vec![
-        "0.0.1",
+        "0.1.0",
         "dataflow",
         "vyre",
         "ssa",
@@ -901,6 +904,62 @@ fn default_output() -> PathBuf {
         .parent()
         .map(|path| path.join("release/evidence/weir/weir-analysis-api-matrix.json"))
         .unwrap_or_else(|| PathBuf::from("release/evidence/weir/weir-analysis-api-matrix.json"))
+}
+
+fn analysis_module_scope_text(
+    weir_root: &Path,
+    relative: &str,
+    top_level_text: &str,
+    blockers: &mut Vec<String>,
+) -> String {
+    let mut scope = String::from(top_level_text);
+    let Some(module_name) = relative
+        .strip_prefix("src/")
+        .and_then(|value| value.strip_suffix(".rs"))
+    else {
+        return scope;
+    };
+    let module_dir = weir_root.join("src").join(module_name);
+    if !module_dir.is_dir() {
+        return scope;
+    }
+    let entries = match fs::read_dir(&module_dir) {
+        Ok(entries) => entries,
+        Err(error) => {
+            blockers.push(format!(
+                "Weir analysis module `{module_name}` could not be scanned at {}: {error}",
+                module_dir.display()
+            ));
+            return scope;
+        }
+    };
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => {
+                blockers.push(format!(
+                    "Weir analysis module `{module_name}` had unreadable entry in {}: {error}",
+                    module_dir.display()
+                ));
+                continue;
+            }
+        };
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+            continue;
+        }
+        match read_text_bounded(&path) {
+            Ok(text) => {
+                scope.push('\n');
+                scope.push_str(&text);
+            }
+            Err(error) => blockers.push(format!(
+                "Weir analysis module `{module_name}` could not read {} while scanning registration scope: {error}",
+                path.display()
+            )),
+        }
+    }
+    scope
 }
 
 fn required_api_items_for(id: &str) -> Vec<&'static str> {
