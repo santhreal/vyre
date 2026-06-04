@@ -351,7 +351,7 @@
         {
           "path": "release/evidence/tests/test-matrix.json",
           "exists": true,
-          "bytes": 60046,
+          "bytes": 59477,
           "read_error": null
         },
         {
@@ -363,7 +363,7 @@
         {
           "path": "release/evidence/tests/oversized-test-closure.json",
           "exists": true,
-          "bytes": 54444,
+          "bytes": 53875,
           "read_error": null
         },
         {
@@ -375,49 +375,49 @@
         {
           "path": "release/evidence/tests/unit-suite.json",
           "exists": true,
-          "bytes": 1559394,
+          "bytes": 1549326,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/adversarial-suite.json",
           "exists": true,
-          "bytes": 241710,
+          "bytes": 241711,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/property-suite.json",
           "exists": true,
-          "bytes": 104987,
+          "bytes": 104988,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/conformance-suite.json",
           "exists": true,
-          "bytes": 449947,
+          "bytes": 448111,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/corpus-suite.json",
           "exists": true,
-          "bytes": 113345,
+          "bytes": 112589,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/benchmark-suite.json",
           "exists": true,
-          "bytes": 1426980,
+          "bytes": 1416912,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/gap-suite.json",
           "exists": true,
-          "bytes": 20277,
+          "bytes": 20278,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/fuzz-suite.json",
           "exists": true,
-          "bytes": 35262,
+          "bytes": 35263,
           "read_error": null
         }
       ]

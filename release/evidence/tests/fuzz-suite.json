@@ -543,12 +543,12 @@
         "property",
         "unit"
       ],
-      "lines": 820,
+      "lines": 906,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
-      "assertion_count": 7,
+      "assertion_count": 11,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [

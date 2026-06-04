@@ -67,6 +67,14 @@ struct TestFileRecord {
     recommended_split: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct TestFileKind {
+    dedicated_test_file: bool,
+    inline_test_module_file: bool,
+    has_test_entrypoint: bool,
+    is_test_file: bool,
+}
+
 #[derive(Debug, Serialize)]
 struct ModularizationMap {
     schema_version: u32,
@@ -601,10 +609,8 @@ fn scan_tests(
                 continue;
             }
         };
-        let dedicated_test_file = is_dedicated_test_evidence_file(&path_string);
-        let inline_test_module_file = !dedicated_test_file && has_test_entrypoint(&text);
-        let is_test_file = dedicated_test_file || inline_test_module_file;
-        if !is_test_file {
+        let test_file_kind = classify_test_file_kind(&path_string, &text);
+        if !test_file_kind.is_test_file {
             continue;
         }
         *test_files += 1;
@@ -614,10 +620,10 @@ fn scan_tests(
             layers.insert(*layer);
         }
         let line_threshold_exceeded = lines > OVERSIZED_TEST_THRESHOLD_LINES;
-        let oversized = dedicated_test_file && line_threshold_exceeded;
+        let oversized = test_file_kind.dedicated_test_file && line_threshold_exceeded;
         let recommended_split = recommended_split(&path_string, &file_layers, lines);
         let god_test_candidate =
-            dedicated_test_file && (oversized || path_string.ends_with("/tests.rs"));
+            test_file_kind.dedicated_test_file && (oversized || path_string.ends_with("/tests.rs"));
         if oversized {
             oversized_files.push(OversizedFile {
                 path: path_string.clone(),
@@ -631,15 +637,29 @@ fn scan_tests(
             path: path_string,
             layers: file_layers.into_iter().map(String::from).collect(),
             lines,
-            dedicated_test_file,
-            inline_test_module_file,
+            dedicated_test_file: test_file_kind.dedicated_test_file,
+            inline_test_module_file: test_file_kind.inline_test_module_file,
             line_threshold_exceeded,
-            has_test_entrypoint: has_test_entrypoint(&text),
+            has_test_entrypoint: test_file_kind.has_test_entrypoint,
             assertion_count: assertion_count(&text),
             oversized,
             god_test_candidate,
             recommended_split,
         });
+    }
+}
+
+fn classify_test_file_kind(path: &str, text: &str) -> TestFileKind {
+    let has_test_entrypoint = has_test_entrypoint(text);
+    let support_only_module = is_test_support_module(path) && !has_test_entrypoint;
+    let dedicated_test_file = is_dedicated_test_evidence_file(path) && !support_only_module;
+    let inline_test_module_file = !dedicated_test_file && has_test_entrypoint;
+    let is_test_file = dedicated_test_file || inline_test_module_file;
+    TestFileKind {
+        dedicated_test_file,
+        inline_test_module_file,
+        has_test_entrypoint,
+        is_test_file,
     }
 }
 
@@ -652,6 +672,13 @@ fn is_dedicated_test_evidence_file(path: &str) -> bool {
         || path.ends_with("_test.rs")
         || path.contains("_tests_")
         || path.contains("_test_")
+}
+
+fn is_test_support_module(path: &str) -> bool {
+    path.contains("/tests/common/")
+        || path.contains("/tests/support/")
+        || path.ends_with("/tests/common.rs")
+        || path.ends_with("/tests/support.rs")
 }
 
 fn recommended_split(path: &str, layers: &BTreeSet<&'static str>, lines: usize) -> Vec<String> {
@@ -817,4 +844,63 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
         ));
     }
     Ok(text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn support_helper_without_entrypoint_is_not_test_evidence() {
+        let kind = classify_test_file_kind(
+            "/repo/vyre-driver-cuda/tests/common/mod.rs",
+            "pub fn make_fixture() -> usize { 1 }",
+        );
+
+        assert_eq!(
+            kind,
+            TestFileKind {
+                dedicated_test_file: false,
+                inline_test_module_file: false,
+                has_test_entrypoint: false,
+                is_test_file: false,
+            }
+        );
+    }
+
+    #[test]
+    fn support_helper_with_entrypoint_remains_test_evidence() {
+        let kind = classify_test_file_kind(
+            "/repo/vyre-frontend-c/tests/support/ast_oracle.rs",
+            "#[test]\nfn parses_fixture() { assert!(true); }",
+        );
+
+        assert_eq!(
+            kind,
+            TestFileKind {
+                dedicated_test_file: true,
+                inline_test_module_file: false,
+                has_test_entrypoint: true,
+                is_test_file: true,
+            }
+        );
+    }
+
+    #[test]
+    fn inline_source_test_module_is_counted_without_dedicated_path() {
+        let kind = classify_test_file_kind(
+            "/repo/vyre-core/src/lib.rs",
+            "#[cfg(test)] mod tests { #[test] fn accepts_contract() {} }",
+        );
+
+        assert_eq!(
+            kind,
+            TestFileKind {
+                dedicated_test_file: false,
+                inline_test_module_file: true,
+                has_test_entrypoint: true,
+                is_test_file: true,
+            }
+        );
+    }
 }

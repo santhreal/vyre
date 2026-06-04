@@ -2,8 +2,8 @@
   "schema_version": 1,
   "threshold_lines": 500,
   "closed": false,
-  "total_oversized_files": 88,
-  "total_god_test_candidates": 163,
+  "total_oversized_files": 87,
+  "total_god_test_candidates": 162,
   "oversized_files": [
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/gpu_prep_kernel_libc_shape.rs",
@@ -410,17 +410,6 @@
       "lines": 579,
       "lines_over_threshold": 79,
       "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/common/mod.rs",
-      "lines": 642,
-      "lines_over_threshold": 142,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract fixture-driven cases into tests/corpus/",
         "move timing-only checks into benches/ or release benchmark cases"
       ],
       "release_blocker": true
@@ -933,7 +922,6 @@
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/self_optimizer_const_prop_e2e.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/misc_primitives_batch_gpu_parity.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/vectorized_memory_live_cuda.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/common/mod.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/generated_resident_cuda_reference_matrix.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/self_optimizer_pattern_match_extended.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/int4_quantized_gpu_parity.rs",
@@ -1029,9 +1017,9 @@
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/adversarial_stress_suite.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs"
   ],
-  "required_split_count": 154,
+  "required_split_count": 151,
   "blockers": [
-    "88 test file(s) exceed the 500-line modularity threshold",
-    "163 monolithic tests.rs file(s) still need modularization"
+    "87 test file(s) exceed the 500-line modularity threshold",
+    "162 monolithic tests.rs file(s) still need modularization"
   ]
 }

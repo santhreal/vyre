@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "corpus",
-  "file_count": 190,
-  "vyre_file_count": 185,
+  "file_count": 189,
+  "vyre_file_count": 184,
   "dataflow_consumer_file_count": 4,
   "vyrec_file_count": 1,
   "files": [
@@ -1383,29 +1383,6 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/common/mod.rs",
-      "layers": [
-        "benchmark",
-        "conformance",
-        "corpus",
-        "integration",
-        "unit"
-      ],
-      "lines": 642,
-      "dedicated_test_file": true,
-      "inline_test_module_file": false,
-      "line_threshold_exceeded": true,
-      "has_test_entrypoint": false,
-      "assertion_count": 17,
-      "oversized": true,
-      "god_test_candidate": true,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract fixture-driven cases into tests/corpus/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ]
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/pass_invariants.rs",
       "layers": [
         "benchmark",
@@ -2628,12 +2605,12 @@
         "property",
         "unit"
       ],
-      "lines": 820,
+      "lines": 906,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
-      "assertion_count": 7,
+      "assertion_count": 11,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [
