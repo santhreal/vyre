@@ -434,6 +434,93 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
 }
 
 #[test]
+fn wgpu_fallback_suite_covers_release_workload_matrix_families() {
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("Fix: vyre-bench must live under the workspace root");
+    let matrix =
+        read_json(&workspace.join("release/evidence/benchmarks/release-workload-matrix.json"));
+    let matrix_families = matrix["families"]
+        .as_array()
+        .expect("Fix: release workload matrix must list families.")
+        .iter()
+        .map(|family| json_str(family, "id").to_owned())
+        .collect::<BTreeSet<_>>();
+    let suite = read_json(&workspace.join("release/evidence/benchmarks/wgpu-fallback-suite.json"));
+    assert_eq!(
+        suite["schema_version"], 2,
+        "Fix: WGPU fallback suite evidence must use schema v2."
+    );
+    assert_eq!(
+        suite["backend"], "wgpu",
+        "Fix: WGPU fallback suite must be WGPU-bound evidence."
+    );
+    assert_eq!(
+        json_usize(&suite, "family_count"),
+        matrix_families.len(),
+        "Fix: WGPU fallback suite must cover every release workload matrix family."
+    );
+
+    let artifacts = suite["artifacts"]
+        .as_array()
+        .expect("Fix: WGPU fallback suite must list artifacts.");
+    let statuses = suite["artifact_statuses"]
+        .as_array()
+        .expect("Fix: WGPU fallback suite must list artifact_statuses.");
+    assert_eq!(
+        artifacts.len(),
+        statuses.len(),
+        "Fix: WGPU fallback suite artifacts and statuses must have one row per workload."
+    );
+
+    let mut covered_families = BTreeSet::new();
+    for status in statuses {
+        let path = json_str(status, "path");
+        assert!(
+            artifacts
+                .iter()
+                .any(|artifact| artifact.as_str() == Some(path)),
+            "Fix: WGPU fallback suite status references `{path}` but artifacts[] does not."
+        );
+        assert_eq!(
+            status["exists"], true,
+            "Fix: WGPU workload artifact `{path}` must exist."
+        );
+        assert!(
+            status["blockers"].as_array().is_some(),
+            "Fix: WGPU workload artifact `{path}` status must carry an explicit blockers array."
+        );
+        let artifact = read_json(&workspace.join(path));
+        assert_eq!(
+            artifact["schema"], "vyre-bench.result.v1",
+            "Fix: `{path}` must be a vyre-bench result artifact."
+        );
+        assert_eq!(
+            artifact["suite"], "release",
+            "Fix: `{path}` must be release-suite evidence."
+        );
+        assert_eq!(
+            artifact["selected_backend"], "wgpu",
+            "Fix: `{path}` must be WGPU evidence."
+        );
+        assert!(
+            artifact["environment"]["features"]
+                .as_array()
+                .expect("Fix: benchmark environment features must be an array.")
+                .iter()
+                .any(|feature| feature.as_str() == Some("backend.usable.wgpu")),
+            "Fix: `{path}` must prove WGPU was usable, not merely linked."
+        );
+        covered_families.insert(json_str(status, "family_id").to_owned());
+    }
+
+    assert_eq!(
+        covered_families, matrix_families,
+        "Fix: WGPU fallback suite family coverage must match release-workload-matrix exactly."
+    );
+}
+
+#[test]
 fn readme_benchmark_section_leads_with_cuda_macro_release_evidence() {
     let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -453,7 +540,7 @@ fn readme_benchmark_section_leads_with_cuda_macro_release_evidence() {
         "Fix: README benchmark claims must point at CUDA release-suite evidence."
     );
     assert!(
-        section.contains("13 macro workload families")
+        section.contains("16 macro workload families")
             && section.contains("explicit CPU-SOTA release contracts"),
         "Fix: README benchmark section must lead with macro release workloads and CPU-SOTA release contracts."
     );
