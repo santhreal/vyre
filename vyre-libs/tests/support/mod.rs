@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+pub(crate) mod gpu_pipeline_filter;
+
 pub(crate) fn crate_file(path: &str) -> String {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
     fs::read_to_string(manifest.join(path)).unwrap_or_else(|error| {

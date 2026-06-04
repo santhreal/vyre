@@ -19,7 +19,7 @@
     {
       "surface": "vyre",
       "file_count": 2568,
-      "assertion_count": 34383,
+      "assertion_count": 34379,
       "entrypoint_count": 2568,
       "layers": [
         "adversarial",
@@ -319,15 +319,6 @@
       "lines_over_threshold": 236,
       "recommended_split": [
         "extract hostile-input cases into tests/adversarial/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/gpu_pipeline_filter_roundtrip.rs",
-      "lines": 501,
-      "lines_over_threshold": 1,
-      "recommended_split": [
         "move timing-only checks into benches/ or release benchmark cases"
       ],
       "release_blocker": true
@@ -1110,7 +1101,6 @@
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/rust_lower_exec_oracle.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/gpu_if_expression_roundtrip.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/gpu_pipeline_driver_roundtrip.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/gpu_pipeline_filter_roundtrip.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/src/tests/wire_contracts.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/tests/data_type_generated_edge_matrix.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/scan_ac_irregular/tests.rs",
@@ -1249,7 +1239,7 @@
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs"
   ],
   "blockers": [
-    "87 test file(s) exceed the 500-line modularity threshold",
-    "162 monolithic test file(s) must be split into modular test layers"
+    "86 test file(s) exceed the 500-line modularity threshold",
+    "161 monolithic test file(s) must be split into modular test layers"
   ]
 }

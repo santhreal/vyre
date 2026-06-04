@@ -7,7 +7,7 @@
     "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec",
     "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen"
   ],
-  "scanned_files": 5024,
+  "scanned_files": 5025,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -2204,7 +2204,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/probes/git.rs",
-      "line": 178,
+      "line": 193,
       "pattern": "unbounded_read",
       "text": "if let Ok(bytes) = fs::read(workspace_root.join(path.as_ref())) {"
     },

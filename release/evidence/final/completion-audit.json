@@ -382,7 +382,7 @@
       "existing_evidence_count": 8,
       "missing_evidence": [],
       "semantic_blockers": [
-        "evidence/benchmarks/weir-dataflow-release.json: source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:06bd12961337b1020e3398c0e76b657d83bccc96:dirty=true:worktree=1a23eea54e879961b5e0455d08829e9793d40d329980165c1d702a72f6a09017`",
+        "evidence/benchmarks/weir-dataflow-release.json: source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:c0efb98bd3b8fb82660cc7d38bd036adea21c2de:dirty=true:worktree=3d0ea38c426be72c3319db31e481e68a811ff6691fae4afc3325dfe7505a9893`",
         "evidence/benchmarks/weir-dataflow-release.json: source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest"
       ],
       "complete": false

@@ -123,6 +123,21 @@ fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
         || path.starts_with(b"release/evidence/")
         || path.starts_with(b"scripts/")
         || path.starts_with(b"xtask/")
+        || source_tree_path_is_test_evidence(path)
+}
+
+fn source_tree_path_is_test_evidence(path: &[u8]) -> bool {
+    path.starts_with(b"tests/")
+        || path_contains(path, b"/tests/")
+        || path.ends_with(b"/tests.rs")
+        || path.ends_with(b"_tests.rs")
+        || path.ends_with(b"_test.rs")
+        || path_contains(path, b"_tests_")
+        || path_contains(path, b"_test_")
+}
+
+fn path_contains(path: &[u8], needle: &[u8]) -> bool {
+    !needle.is_empty() && path.windows(needle.len()).any(|window| window == needle)
 }
 
 fn dirty_worktree_fingerprint(workspace_root: &Path, status: &[u8]) -> Option<String> {
@@ -455,6 +470,79 @@ mod tests {
         assert_ne!(
             base, benchmark_changed,
             "Fix: benchmark source edits must still invalidate benchmark source provenance."
+        );
+    }
+
+    #[test]
+    fn source_tree_fingerprint_ignores_test_evidence() {
+        let workspace = std::env::temp_dir().join(format!(
+            "vyre-bench-source-tree-tests-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("Fix: system clock must support unix epoch duration for temp test id.")
+                .as_nanos()
+        ));
+        fs::create_dir_all(workspace.join("vyre-libs/src"))
+            .expect("Fix: create library source fixture directory.");
+        fs::create_dir_all(workspace.join("vyre-libs/tests/support"))
+            .expect("Fix: create integration test support fixture directory.");
+        fs::create_dir_all(workspace.join("vyre-libs/src/graph"))
+            .expect("Fix: create inline test fixture directory.");
+        fs::write(
+            workspace.join("vyre-libs/src/lib.rs"),
+            b"pub fn source() {}\n",
+        )
+        .expect("Fix: write source-tree fingerprint source fixture.");
+        fs::write(
+            workspace.join("vyre-libs/tests/filter_roundtrip.rs"),
+            b"#[test]\nfn roundtrip() {}\n",
+        )
+        .expect("Fix: write integration test fixture.");
+        fs::write(
+            workspace.join("vyre-libs/tests/support/filter.rs"),
+            b"pub fn helper() {}\n",
+        )
+        .expect("Fix: write test support fixture.");
+        fs::write(
+            workspace.join("vyre-libs/src/graph/tests.rs"),
+            b"#[test]\nfn graph_contract() {}\n",
+        )
+        .expect("Fix: write inline tests fixture.");
+        let paths = b"vyre-libs/src/lib.rs\0vyre-libs/tests/filter_roundtrip.rs\0vyre-libs/tests/support/filter.rs\0vyre-libs/src/graph/tests.rs\0";
+
+        let base = source_tree_fingerprint_from_paths(&workspace, paths);
+        fs::write(
+            workspace.join("vyre-libs/tests/filter_roundtrip.rs"),
+            b"#[test]\nfn roundtrip_modularized() {}\n",
+        )
+        .expect("Fix: mutate integration test fixture.");
+        fs::write(
+            workspace.join("vyre-libs/tests/support/filter.rs"),
+            b"pub fn helper_modularized() {}\n",
+        )
+        .expect("Fix: mutate test support fixture.");
+        fs::write(
+            workspace.join("vyre-libs/src/graph/tests.rs"),
+            b"#[test]\nfn graph_contract_modularized() {}\n",
+        )
+        .expect("Fix: mutate inline tests fixture.");
+        let tests_changed = source_tree_fingerprint_from_paths(&workspace, paths);
+        fs::write(
+            workspace.join("vyre-libs/src/lib.rs"),
+            b"pub fn source_changed() {}\n",
+        )
+        .expect("Fix: mutate production source fixture.");
+        let source_changed = source_tree_fingerprint_from_paths(&workspace, paths);
+        let _ = fs::remove_dir_all(&workspace);
+
+        assert_eq!(
+            base, tests_changed,
+            "Fix: test-only modularization must not invalidate runtime benchmark source provenance."
+        );
+        assert_ne!(
+            base, source_changed,
+            "Fix: source-tree provenance must still change when production source changes."
         );
     }
 
