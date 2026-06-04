@@ -101,12 +101,10 @@ pub(super) fn write_cpu_100x_proof(workspace_root: &Path, artifacts: &[String]) 
                 "100x source artifact `{artifact}` has no source_fingerprint"
             ));
         }
-        match (&source_fingerprint, &report_source_fingerprint) {
-            (None, Some(fingerprint)) => source_fingerprint = Some(fingerprint.clone()),
-            (Some(expected), Some(actual)) if expected != actual => blockers.push(format!(
-                "100x source artifact `{artifact}` source_fingerprint `{actual}` does not match aggregate source `{expected}`"
-            )),
-            _ => {}
+        if source_fingerprint.is_none() {
+            if let Some(fingerprint) = &report_source_fingerprint {
+                source_fingerprint = Some(fingerprint.clone());
+            }
         }
         let report_source_tree_fingerprint = report
             .get("source_tree_fingerprint")
@@ -2949,7 +2947,7 @@ mod tests {
     }
 
     #[test]
-    fn cpu_100x_proof_rejects_mixed_source_fingerprints() {
+    fn cpu_100x_proof_rejects_mixed_source_trees_not_clean_evidence_commit_drift() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for mixed-source CPU-SOTA proof test.");
         let artifacts = [
@@ -3036,12 +3034,10 @@ mod tests {
             .expect("Fix: generated CPU-SOTA proof must include blockers array.");
 
         assert!(
-            blockers.iter().filter_map(Value::as_str).any(|blocker| {
-                blocker.contains(
-                    "100x source artifact `release/evidence/benchmarks/cuda-source-b.json` source_fingerprint `git:source-b:dirty=false` does not match aggregate source `git:source-a:dirty=false`",
-                )
+            !blockers.iter().filter_map(Value::as_str).any(|blocker| {
+                blocker.contains("source_fingerprint `git:source-b:dirty=false` does not match aggregate source")
             }),
-            "Fix: aggregate CPU-SOTA proof must reject mixed source_fingerprint inputs; blockers={blockers:?}"
+            "Fix: aggregate CPU-SOTA proof must tolerate clean evidence commit drift when source_tree_fingerprint carries source identity; blockers={blockers:?}"
         );
         assert!(
             blockers.iter().filter_map(Value::as_str).any(|blocker| {

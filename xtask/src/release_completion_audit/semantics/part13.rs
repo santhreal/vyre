@@ -733,10 +733,10 @@ mod part13_tests {
             "Fix: completion audit must reject weak dirty source artifacts listed by a clean CPU-SOTA aggregate proof; blockers={blockers:?}"
         );
         assert!(
-            blockers.iter().any(|blocker| blocker.contains(
-                "source_artifact `release/evidence/benchmarks/workload-07.json` source_fingerprint `git:abc123:dirty=true` does not match aggregate source `git:aggregate:dirty=false`"
+            !blockers.iter().any(|blocker| blocker.contains(
+                "source_artifact `release/evidence/benchmarks/workload-07.json` source_fingerprint `git:abc123:dirty=true` does not match aggregate source"
             )),
-            "Fix: completion audit must reject CPU-SOTA aggregate proof source_artifacts from a different source fingerprint; blockers={blockers:?}"
+            "Fix: completion audit must rely on source_tree_fingerprint for CPU-SOTA aggregate source identity instead of raw evidence commit equality; blockers={blockers:?}"
         );
     }
 

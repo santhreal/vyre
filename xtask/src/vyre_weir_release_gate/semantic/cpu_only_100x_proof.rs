@@ -477,10 +477,10 @@ mod tests {
             "Fix: CPU-SOTA gate must reject weak dirty source artifacts listed by a clean aggregate proof; failures={failures:?}"
         );
         assert!(
-            failures.iter().any(|failure| failure.contains(
-                "source_artifact `release/evidence/benchmarks/workload-04.json` source_fingerprint `git:abc123:dirty=true` does not match aggregate source `git:aggregate:dirty=false`"
+            !failures.iter().any(|failure| failure.contains(
+                "source_artifact `release/evidence/benchmarks/workload-04.json` source_fingerprint `git:abc123:dirty=true` does not match aggregate source"
             )),
-            "Fix: CPU-SOTA gate must reject aggregate proof source_artifacts from a different source fingerprint; failures={failures:?}"
+            "Fix: CPU-SOTA gate must rely on source_tree_fingerprint for aggregate source identity instead of raw evidence commit equality; failures={failures:?}"
         );
     }
 

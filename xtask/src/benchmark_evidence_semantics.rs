@@ -351,7 +351,6 @@ pub(crate) fn cpu_sota_100x_source_artifact_issues(
     proof: &Value,
 ) -> Vec<String> {
     let mut issues = Vec::new();
-    let aggregate_source_fingerprint = proof.get("source_fingerprint").and_then(non_empty_str);
     let aggregate_source_tree_fingerprint =
         proof.get("source_tree_fingerprint").and_then(non_empty_str);
     for artifact in benchmark_source_artifact_paths(proof) {
@@ -417,13 +416,6 @@ pub(crate) fn cpu_sota_100x_source_artifact_issues(
                             "source_artifact `{artifact}` source_fingerprint `{source_fingerprint}` has invalid worktree digest `{worktree}`"
                         ));
                     }
-                }
-            }
-            if let Some(aggregate) = aggregate_source_fingerprint {
-                if fingerprint != aggregate {
-                    issues.push(format!(
-                        "source_artifact `{artifact}` source_fingerprint `{fingerprint}` does not match aggregate source `{aggregate}`"
-                    ));
                 }
             }
         } else {
@@ -3128,10 +3120,10 @@ mod tests {
             "Fix: CPU-SOTA aggregate source artifacts must reject weak dirty source_fingerprint provenance; issues={issues:?}"
         );
         assert!(
-            issues.iter().any(|issue| issue.contains(
+            !issues.iter().any(|issue| issue.contains(
                 "source_artifact `release/evidence/benchmarks/cuda-weak-source.json` source_fingerprint `git:abc123:dirty=true` does not match aggregate source"
             )),
-            "Fix: CPU-SOTA aggregate source artifacts must match the aggregate source fingerprint; issues={issues:?}"
+            "Fix: CPU-SOTA aggregate source artifacts must rely on source_tree_fingerprint for source identity instead of raw evidence commit equality; issues={issues:?}"
         );
         assert!(
             issues.iter().any(|issue| issue.contains(
