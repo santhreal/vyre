@@ -534,10 +534,11 @@
     {
       "name": "vyre-test-harness",
       "manifest": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-test-harness/Cargo.toml",
-      "feature_count": 1,
-      "has_default_feature": false,
+      "feature_count": 2,
+      "has_default_feature": true,
       "default_feature_members": [],
       "features": [
+        "default",
         "strict-fp"
       ],
       "malformed_features": [],
@@ -598,7 +599,5 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     }
   ],
-  "blockers": [
-    "vyre-test-harness defines 1 feature(s) but no explicit default feature policy"
-  ]
+  "blockers": []
 }

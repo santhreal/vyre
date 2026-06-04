@@ -75,132 +75,6 @@
       "text": "let _ = fs::remove_dir_all(&tmp);"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 305,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = s.read_to_string(&mut stdout);"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 310,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = s.read_to_string(&mut stderr);"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 378,
-      "pattern": "test_ignored",
-      "text": "#[ignore = \"real-corpus measurement; uses explicit fixture/system include roots\"]"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 489,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 494,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"\\n- corpus root: {}\", corpus_root.display());"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 495,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"- total files: {}\", files.len());"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 496,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 501,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"- attempted: {total_attempted}\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 502,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"- passed: {passes}\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 503,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"- failed: {}\", fails.len());"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 504,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"- elapsed: {:.2}s\", elapsed.as_secs_f64());"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 506,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"\\n## Failure clusters\\n\\n| Count | Cluster |\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 507,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"|-------|---------|\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 509,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"| {count} | {cluster} |\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part1.rs",
-      "line": 595,
-      "pattern": "test_ignored",
-      "text": "#[ignore = \"throughput measurement on synthetic safe corpus\"]"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part2.rs",
-      "line": 83,
-      "pattern": "test_ignored",
-      "text": "#[ignore = \"single-file timing for parse_translation_unit warm/cold profile\"]"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part2.rs",
-      "line": 139,
-      "pattern": "test_ignored",
-      "text": "#[ignore = \"real corpus per-file warm cost  -  bypasses summary cache by parsing each file once after pre-warming the per-file caches\"]"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part2.rs",
-      "line": 189,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = parse_translation_unit(f, &options);"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part2.rs",
-      "line": 217,
-      "pattern": "test_ignored",
-      "text": "#[ignore = \"cold-per-file: warm GPU pipeline cache, then measure each new source\"]"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/r2_corpus_measurement_part2.rs",
-      "line": 241,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = parse_translation_unit(warm_target, &options);"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/__law7_split/preprocess_differential_benchmark_part1.rs",
-      "line": 345,
-      "pattern": "test_ignored",
-      "text": "#[ignore = \"requires VYRE_LINUX_V68_ROOT pointing at Linux v6.8 source tree\"]"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/preprocess_token_spelling_parity.rs",
       "line": 53,
       "pattern": "test_ignored",
@@ -322,103 +196,103 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 488,
+      "line": 490,
       "pattern": "test_let_underscore_result",
       "text": "let _ = writeln!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 493,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"\\n- corpus root: {}\", corpus_root.display());"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 494,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"- total files: {}\", files.len());"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
       "line": 495,
       "pattern": "test_let_underscore_result",
+      "text": "let _ = writeln!(report, \"\\n- corpus root: {}\", corpus_root.display());"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
+      "line": 496,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = writeln!(report, \"- total files: {}\", files.len());"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
+      "line": 497,
+      "pattern": "test_let_underscore_result",
       "text": "let _ = writeln!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 500,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"- attempted: {total_attempted}\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 501,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"- passed: {passes}\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
       "line": 502,
       "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"- failed: {}\", fails.len());"
+      "text": "let _ = writeln!(report, \"- attempted: {total_attempted}\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
       "line": 503,
       "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"- elapsed: {:.2}s\", elapsed.as_secs_f64());"
+      "text": "let _ = writeln!(report, \"- passed: {passes}\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
+      "line": 504,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = writeln!(report, \"- failed: {}\", fails.len());"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
       "line": 505,
       "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"\\n## Failure clusters\\n\\n| Count | Cluster |\");"
+      "text": "let _ = writeln!(report, \"- elapsed: {:.2}s\", elapsed.as_secs_f64());"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 506,
+      "line": 507,
       "pattern": "test_let_underscore_result",
-      "text": "let _ = writeln!(report, \"|-------|---------|\");"
+      "text": "let _ = writeln!(report, \"\\n## Failure clusters\\n\\n| Count | Cluster |\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
       "line": 508,
       "pattern": "test_let_underscore_result",
+      "text": "let _ = writeln!(report, \"|-------|---------|\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
+      "line": 510,
+      "pattern": "test_let_underscore_result",
       "text": "let _ = writeln!(report, \"| {count} | {cluster} |\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 594,
+      "line": 596,
       "pattern": "test_ignored",
       "text": "#[ignore = \"throughput measurement on synthetic safe corpus\"]"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 678,
+      "line": 680,
       "pattern": "test_ignored",
       "text": "#[ignore = \"single-file timing for parse_translation_unit warm/cold profile\"]"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 734,
+      "line": 736,
       "pattern": "test_ignored",
       "text": "#[ignore = \"real corpus per-file warm cost  -  bypasses summary cache by parsing each file once after pre-warming the per-file caches\"]"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 784,
+      "line": 786,
       "pattern": "test_let_underscore_result",
       "text": "let _ = parse_translation_unit(f, &options);"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 812,
+      "line": 814,
       "pattern": "test_ignored",
       "text": "#[ignore = \"cold-per-file: warm GPU pipeline cache, then measure each new source\"]"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
-      "line": 836,
+      "line": 838,
       "pattern": "test_let_underscore_result",
       "text": "let _ = parse_translation_unit(warm_target, &options);"
     },
@@ -565,6 +439,18 @@
       "line": 61,
       "pattern": "test_let_underscore_result",
       "text": "let _ = vyre_libs::scan::substring_search(\"haystack\", \"needle\", \"matches\", n, 1);"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/rust_lower_exec_oracle.rs",
+      "line": 672,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = std::fs::remove_dir_all(&dir);"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/rust_sema_borrow_oracle.rs",
+      "line": 45,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = std::fs::remove_dir_all(&base);"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/wire_format_fuzz.rs",
@@ -718,13 +604,13 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/rustc_nll_facts.rs",
-      "line": 67,
+      "line": 74,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_dir_all(&base);"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/rustc_nll_facts.rs",
-      "line": 273,
+      "line": 307,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_dir_all(&base);"
     },
@@ -922,13 +808,13 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-rust/tests/diff_support/mod.rs",
-      "line": 55,
+      "line": 67,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_file(&rs);"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-rust/tests/diff_support/mod.rs",
-      "line": 56,
+      "line": 68,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_file(&meta);"
     },
@@ -940,13 +826,13 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-rust/tests/proptest_robustness.rs",
-      "line": 20,
+      "line": 25,
       "pattern": "test_let_underscore_result",
       "text": "let _ = RustPipeline::new(borrow_on).compile_unit(src);"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/graph_toposort_reachable_level_wave_gpu_parity.rs",
-      "line": 240,
+      "line": 248,
       "pattern": "test_let_underscore_result",
       "text": "let _ = reach_idx;"
     },
@@ -1020,47 +906,47 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/dispatch_overhead_profile.rs",
       "line": 99,
       "pattern": "test_let_underscore_result",
-      "text": "let _ = backend.dispatch(&program, &inputs, &config).expect(\"warm plain\");"
+      "text": "let _ = backend"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/dispatch_overhead_profile.rs",
-      "line": 104,
+      "line": 106,
       "pattern": "test_let_underscore_result",
-      "text": "let _ = backend.dispatch(&program, &inputs, &config).expect(\"plain dispatch\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/dispatch_overhead_profile.rs",
-      "line": 112,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = pipeline.dispatch(&inputs, &config).expect(\"warm pipeline\");"
+      "text": "let _ = backend"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/dispatch_overhead_profile.rs",
       "line": 116,
       "pattern": "test_let_underscore_result",
-      "text": "let _ = pipeline.dispatch(&inputs, &config).expect(\"pipeline dispatch\");"
+      "text": "let _ = pipeline.dispatch(&inputs, &config).expect(\"warm pipeline\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/dispatch_overhead_profile.rs",
-      "line": 127,
+      "line": 120,
       "pattern": "test_let_underscore_result",
-      "text": "let _ = pipeline.dispatch(v, &config).expect(\"pipeline varied dispatch\");"
+      "text": "let _ = pipeline"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/dispatch_overhead_profile.rs",
-      "line": 132,
+      "line": 134,
       "pattern": "test_let_underscore_result",
-      "text": "let _ = backend.dispatch(&program, v, &config).expect(\"plain varied dispatch\");"
+      "text": "let _ = pipeline"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/dispatch_overhead_profile.rs",
       "line": 141,
       "pattern": "test_let_underscore_result",
-      "text": "let _ = vyre_driver::pipeline::try_normalized_program_cache_digest(&program)"
+      "text": "let _ = backend"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/dispatch_overhead_profile.rs",
-      "line": 143,
+      "line": 152,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ ="
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/tests/dispatch_overhead_profile.rs",
+      "line": 154,
       "pattern": "test_let_underscore_result",
       "text": "let _ = vyre_driver::program_vsa_fingerprint_words(&program);"
     },
@@ -1377,12 +1263,6 @@
       "text": "let _ = backend"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_ast_gpu_parity_support/__law7_split/mod_part1.rs",
-      "line": 268,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = tx.send(result);"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_ast_gpu_parity_support/mod.rs",
       "line": 318,
       "pattern": "test_let_underscore_result",
@@ -1480,7 +1360,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/persistent_bfs/tests/part2.rs",
-      "line": 259,
+      "line": 282,
       "pattern": "test_let_underscore_result",
       "text": "let _ = persistent_bfs_batch("
     },
@@ -1492,19 +1372,25 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_forward_or_changed/tests/part2.rs",
-      "line": 90,
+      "line": 97,
       "pattern": "test_let_underscore_result",
       "text": "let _ = csr_forward_or_changed_parallel_batch("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_forward_or_changed/tests/part2.rs",
-      "line": 129,
+      "line": 136,
       "pattern": "test_let_underscore_result",
       "text": "let _ = csr_forward_or_changed_parallel_batch_global_slot("
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/scallop_join_wide_tests.rs",
+      "line": 36,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = cpu_ref(&[0b01], &[], 1, 2, 10);"
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_hash_fnv1a.rs",
-      "line": 26,
+      "line": 55,
       "pattern": "test_let_underscore_result",
       "text": "let _ = _dummy;"
     },
@@ -1528,25 +1414,25 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_text_utf8_validate.rs",
-      "line": 14,
+      "line": 149,
       "pattern": "test_let_underscore_result",
       "text": "let _ = _dummy;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_text_utf8_validate.rs",
-      "line": 27,
+      "line": 162,
       "pattern": "test_let_underscore_result",
       "text": "let _ = _dummy;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_text_utf8_validate.rs",
-      "line": 34,
+      "line": 169,
       "pattern": "test_let_underscore_result",
       "text": "let _ = _dummy;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_nfa.rs",
-      "line": 115,
+      "line": 106,
       "pattern": "test_let_underscore_result",
       "text": "let _ = nfa_step(\"s\", \"i\", \"t\", \"e\", \"o\", MAX_STATES_PER_SUBGROUP as u32);"
     },
@@ -1618,13 +1504,13 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_hash.rs",
-      "line": 80,
+      "line": 166,
       "pattern": "test_let_underscore_result",
       "text": "let _ = crc32(&input);"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_hash.rs",
-      "line": 82,
+      "line": 168,
       "pattern": "test_let_underscore_result",
       "text": "let _ = crc32(&input2);"
     },
@@ -1636,13 +1522,13 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/sweep_hash_blake3_g_volume_oracle_matrix.rs",
-      "line": 24,
+      "line": 31,
       "pattern": "test_let_underscore_result",
       "text": "let _ = MSG_SCHEDULE;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_graph_reachability_fixpoint.rs",
-      "line": 498,
+      "line": 497,
       "pattern": "test_let_underscore_result",
       "text": "let _ = dom_cpu_ref(2, &[0, 0, 0], &[], &[0, 0, 0], &[], &[]);"
     },
@@ -1699,12 +1585,6 @@
       "line": 143,
       "pattern": "test_let_underscore_result",
       "text": "let _ = sheaf_spectral_clustering::dominant_spectrum(&[0.5; 2], 4);"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/__law7_split/cert_artifact_part1.rs",
-      "line": 26,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = std::fs::remove_file(&out_path);"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/tests/cert_regression_pin.rs",
@@ -2134,6 +2014,6 @@
     }
   ],
   "blockers": [
-    "355 `test-hygiene` finding(s) remain"
+    "335 `test-hygiene` finding(s) remain"
   ]
 }

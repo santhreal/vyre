@@ -52,7 +52,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/pipeline/sparse_compaction/programs.rs",
-      "line": 227,
+      "line": 262,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -83,36 +83,6 @@
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/raw_syntax/sparse_programs.rs",
       "line": 376,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/__law7_split/resident_syntax_part1.rs",
-      "line": 391,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/__law7_split/resident_syntax_part1.rs",
-      "line": 442,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/__law7_split/resident_syntax_part1.rs",
-      "line": 452,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/__law7_split/resident_syntax_part1.rs",
-      "line": 471,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/__law7_split/resident_syntax_part1.rs",
-      "line": 480,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -221,48 +191,6 @@
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/resident_cache.rs",
       "line": 431,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/__law7_split/include_loader_cache_part1.rs",
-      "line": 104,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/__law7_split/include_loader_cache_part1.rs",
-      "line": 135,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/__law7_split/include_loader_cache_part1.rs",
-      "line": 176,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/__law7_split/include_loader_cache_part1.rs",
-      "line": 185,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/__law7_split/include_loader_cache_part1.rs",
-      "line": 284,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/__law7_split/include_loader_cache_part1.rs",
-      "line": 331,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/__law7_split/include_loader_cache_part1.rs",
-      "line": 341,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -471,12 +399,6 @@
       "text": "panic!("
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/pipeline/__law7_split/cache_part1.rs",
-      "line": 25,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/pipeline/cache.rs",
       "line": 25,
       "pattern": "panic_macro",
@@ -555,150 +477,6 @@
       "text": "panic!("
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/megakernel_barrier_part2.rs",
-      "line": 15,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: acyclic megakernel wave chain should be schedulable.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/tuner_part2.rs",
-      "line": 3,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/tuner_part2.rs",
-      "line": 95,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/tuner_part2.rs",
-      "line": 298,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/observability_part2.rs",
-      "line": 46,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/observability_part2.rs",
-      "line": 94,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: audit event test lock must not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/tuner_part1.rs",
-      "line": 53,
-      "pattern": "panic_macro",
-      "text": "Some(value) => panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/observability_part1.rs",
-      "line": 175,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/observability_part1.rs",
-      "line": 318,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|message| panic!(\"{message}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/observability_part1.rs",
-      "line": 320,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|message| panic!(\"{message}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/observability_part1.rs",
-      "line": 322,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|message| panic!(\"{message}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/observability_part1.rs",
-      "line": 338,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|message| panic!(\"{message}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/observability_part1.rs",
-      "line": 343,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|message| panic!(\"{message}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/observability_part1.rs",
-      "line": 428,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/persistent_part1.rs",
-      "line": 175,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/persistent_part1.rs",
-      "line": 197,
-      "pattern": "panic_macro",
-      "text": "Err(error) => panic!(\"{error}\"),"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/persistent_part1.rs",
-      "line": 352,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|message| panic!(\"{message}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/persistent_part1.rs",
-      "line": 364,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/persistent_part1.rs",
-      "line": 379,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/launch_fusion_part2.rs",
-      "line": 1,
-      "pattern": "expect_call",
-      "text": ".expect("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/launch_fusion_part2.rs",
-      "line": 19,
-      "pattern": "expect_call",
-      "text": "usize::try_from(plan.launch_count).expect(\"launch_count fits usize\"),"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/launch_fusion_part2.rs",
-      "line": 24,
-      "pattern": "expect_call",
-      "text": "usize::try_from(plan.avoided_launches).expect(\"avoided_launches fits usize\"),"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/persistent_part2.rs",
-      "line": 1,
-      "pattern": "unwrap_call",
-      "text": "assert_eq!(eng.enqueue(item(i)).unwrap(), i);"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/__law7_split/persistent_part2.rs",
-      "line": 4,
-      "pattern": "unwrap_call",
-      "text": "assert_eq!(eng.claim().unwrap().correlation, i);"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/aot.rs",
       "line": 87,
       "pattern": "panic_macro",
@@ -711,16 +489,16 @@
       "text": "panic!("
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/backend/__law7_split/vyre_backend_part1.rs",
-      "line": 777,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/backend/vyre_backend.rs",
+      "line": 833,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/backend/vyre_backend.rs",
-      "line": 777,
+      "line": 1174,
       "pattern": "panic_macro",
-      "text": "panic!("
+      "text": "panic!(\"Fix: default timed resident sequence test expects resident resources.\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/backend/validation.rs",
@@ -778,7 +556,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/device_signature.rs",
-      "line": 324,
+      "line": 323,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -808,105 +586,21 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/persistent.rs",
-      "line": 352,
+      "line": 354,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|message| panic!(\"{message}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/persistent.rs",
-      "line": 364,
+      "line": 366,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/persistent.rs",
-      "line": 379,
+      "line": 381,
       "pattern": "panic_macro",
       "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/toml_loader_part1.rs",
-      "line": 332,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/registry_part2.rs",
-      "line": 6,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: extern inventory bridge must register submitted ops\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/migration_part1.rs",
-      "line": 308,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/migration_part1.rs",
-      "line": 323,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/registry_part1.rs",
-      "line": 216,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/registry_part1.rs",
-      "line": 222,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/registry_part1.rs",
-      "line": 234,
-      "pattern": "panic_macro",
-      "text": "Self::validate_no_duplicates(defs.iter()).unwrap_or_else(|error| panic!(\"{error}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/registry_part1.rs",
-      "line": 242,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/registry_part1.rs",
-      "line": 252,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/registry_part1.rs",
-      "line": 269,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/registry_part1.rs",
-      "line": 276,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/registry_part1.rs",
-      "line": 285,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/registry_part1.rs",
-      "line": 308,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/__law7_split/registry_part1.rs",
-      "line": 325,
-      "pattern": "panic_macro",
-      "text": "Self::validate_no_duplicates(defs.iter()).unwrap_or_else(|err| panic!(\"{err}\"));"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/registry/registry.rs",
@@ -1036,33 +730,15 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/observability.rs",
-      "line": 507,
+      "line": 506,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver/src/observability.rs",
-      "line": 555,
+      "line": 554,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: audit event test lock must not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/norm/__law7_split/layer_norm_part2.rs",
-      "line": 9,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: layer_norm must keep its sum scratch buffer.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/attention/__law7_split/flash_attention_2_part2.rs",
-      "line": 13,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: output buffer present\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/attention/__law7_split/flash_attention_2_part2.rs",
-      "line": 23,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: reference eval must succeed\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/attention/flash_attention_2.rs",
@@ -1077,94 +753,10 @@
       "text": ".expect(\"Fix: reference eval must succeed\");"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/quant/__law7_split/int4_part2.rs",
-      "line": 22,
-      "pattern": "expect_call",
-      "text": ".expect("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/quant/__law7_split/int4_part2.rs",
-      "line": 30,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: packed-activation batched INT4 matmul output must decode as f32 rows.\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/quant/__law7_split/int4_part2.rs",
-      "line": 63,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: packed-activation INT4 top1 wrapper must execute in the reference oracle.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/quant/__law7_split/int4_part2.rs",
-      "line": 69,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: packed-activation INT4 top1 output must decode as f32 rows.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/__law7_split/primitive_catalog_part1.rs",
-      "line": 18,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/__law7_split/primitive_catalog_part1.rs",
-      "line": 76,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/__law7_split/primitive_catalog_part1.rs",
-      "line": 121,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/__law7_split/primitive_catalog_part1.rs",
-      "line": 127,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/__law7_split/primitive_catalog_part1.rs",
-      "line": 135,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/__law7_split/primitive_catalog_part1.rs",
-      "line": 172,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/__law7_split/primitive_catalog_part1.rs",
-      "line": 184,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/__law7_split/primitive_catalog_part1.rs",
-      "line": 191,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/pipeline.rs",
       "line": 63,
       "pattern": "panic_macro",
       "text": "panic!(\"vyre-libs scan Reference oracle post-process contract failed: {error}\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/__law7_split/regex_compile_part1.rs",
-      "line": 398,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: regex NFA state ids must be checked before exceeding u32 capacity\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/__law7_split/regex_compile_part1.rs",
-      "line": 402,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: regex NFA state count must not overflow host usize\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/post_process.rs",
@@ -1221,60 +813,6 @@
       "text": ".expect(\"Fix: matmul_strassen_one_level must execute in the reference interpreter.\");"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/linalg/__law7_split/matmul_strassen_part2.rs",
-      "line": 9,
-      "pattern": "unwrap_call",
-      "text": ".map(|c| f32::from_le_bytes(c.try_into().unwrap()))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/linalg/__law7_split/matmul_strassen_part2.rs",
-      "line": 32,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: matmul_strassen_2x2 must execute in the reference interpreter.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/linalg/__law7_split/matmul_strassen_part2.rs",
-      "line": 87,
-      "pattern": "expect_call",
-      "text": "let prog = matmul_strassen_one_level(\"a\", \"b\", \"c\", n).expect(\"Fix: build\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/linalg/__law7_split/matmul_strassen_part2.rs",
-      "line": 96,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: matmul_strassen_one_level must execute in the reference interpreter.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/linalg/__law7_split/matmul_part2.rs",
-      "line": 8,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: program must execute; restore this invariant before continuing.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/atomic/__law7_split/mod_part1.rs",
-      "line": 434,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: atomic op must run; restore this invariant before continuing.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/atomic/__law7_split/mod_part1.rs",
-      "line": 437,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: atomic state output must contain one u32.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/atomic/__law7_split/mod_part1.rs",
-      "line": 457,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: cas op must run; restore this invariant before continuing.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/atomic/__law7_split/mod_part1.rs",
-      "line": 460,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: CAS state output must contain one u32.\");"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/atomic/mod.rs",
       "line": 434,
       "pattern": "expect_call",
@@ -1312,163 +850,181 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/primitive_catalog.rs",
-      "line": 121,
+      "line": 120,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/primitive_catalog.rs",
-      "line": 127,
+      "line": 126,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/primitive_catalog.rs",
-      "line": 135,
+      "line": 134,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/primitive_catalog.rs",
-      "line": 172,
+      "line": 171,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/primitive_catalog.rs",
-      "line": 184,
+      "line": 183,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/primitive_catalog.rs",
-      "line": 191,
+      "line": 190,
       "pattern": "panic_macro",
       "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/__law7_split/source_cache_part1.rs",
-      "line": 241,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/__law7_split/source_cache_part1.rs",
-      "line": 312,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/__law7_split/source_cache_part1.rs",
-      "line": 321,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/__law7_split/source_cache_part2.rs",
-      "line": 8,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: source-cache worker must not panic\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 166,
+      "line": 208,
       "pattern": "expect_call",
       "text": "self.expect(KW_FN)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 167,
+      "line": 209,
       "pattern": "expect_call",
       "text": "let name = self.expect(IDENT)?.start;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 168,
+      "line": 210,
       "pattern": "expect_call",
       "text": "self.expect(LPAREN)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 170,
+      "line": 212,
       "pattern": "expect_call",
       "text": "self.expect(RPAREN)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 187,
+      "line": 234,
       "pattern": "expect_call",
       "text": "let name = self.expect(IDENT)?.start;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 188,
+      "line": 235,
       "pattern": "expect_call",
       "text": "self.expect(COLON)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 215,
+      "line": 310,
       "pattern": "expect_call",
       "text": "self.expect(LBRACE)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 220,
+      "line": 315,
       "pattern": "expect_call",
       "text": "self.expect(RBRACE)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 230,
+      "line": 337,
       "pattern": "expect_call",
       "text": "self.expect(SEMI)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 237,
+      "line": 353,
+      "pattern": "expect_call",
+      "text": "self.expect(SEMI)?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
+      "line": 370,
+      "pattern": "expect_call",
+      "text": "self.expect(SEMI)?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
+      "line": 378,
       "pattern": "expect_call",
       "text": "self.expect(KW_LET)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 239,
+      "line": 385,
       "pattern": "expect_call",
       "text": "let name = self.expect(IDENT)?.start;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 240,
+      "line": 386,
       "pattern": "expect_call",
       "text": "self.expect(COLON)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 242,
+      "line": 388,
       "pattern": "expect_call",
       "text": "self.expect(ASSIGN)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 244,
+      "line": 390,
       "pattern": "expect_call",
       "text": "self.expect(SEMI)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 249,
+      "line": 400,
+      "pattern": "expect_call",
+      "text": "self.expect(KW_FOR)?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
+      "line": 401,
+      "pattern": "expect_call",
+      "text": "let name = self.expect(IDENT)?.start;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
+      "line": 402,
+      "pattern": "expect_call",
+      "text": "self.expect(KW_IN)?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
+      "line": 404,
+      "pattern": "expect_call",
+      "text": "self.expect(DOTDOT)?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
+      "line": 416,
       "pattern": "expect_call",
       "text": "self.expect(KW_RETURN)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 251,
+      "line": 422,
       "pattern": "expect_call",
       "text": "self.expect(SEMI)?;"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
-      "line": 319,
+      "line": 555,
+      "pattern": "expect_call",
+      "text": "self.expect(RPAREN)?;"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/parse/mod.rs",
+      "line": 595,
       "pattern": "expect_call",
       "text": "self.expect(RPAREN)?;"
     },
@@ -1480,19 +1036,19 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/lex/lexer/core.rs",
-      "line": 67,
+      "line": 80,
       "pattern": "unwrap_call",
       "text": "let text = std::str::from_utf8(&source[start..i]).unwrap();"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/sema/mod.rs",
-      "line": 191,
+      "line": 219,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: resolver scope stack must be non-empty when declaring a binding\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/sema/mod.rs",
-      "line": 323,
+      "line": 422,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: resolve must record every variable use before typeck runs\");"
     },
@@ -1519,12 +1075,6 @@
       "line": 37,
       "pattern": "panic_macro",
       "text": "panic!(\"C VAST classify reference oracle received malformed input: {error}\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/parse/vast/__law7_split/ref_expr_shape_part1.rs",
-      "line": 52,
-      "pattern": "panic_macro",
-      "text": "panic!(\"C VAST expression-shape reference oracle received malformed input: {error}\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/parse/vast/ref_typedef.rs",
@@ -1629,24 +1179,6 @@
       "text": "panic!("
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/__law7_split/gpu_int_literal_scan_part2.rs",
-      "line": 23,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: GPU integer literal scanner reference evaluation must run.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/__law7_split/gpu_int_literal_scan_part2.rs",
-      "line": 28,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: integer literal value output must contain one u32.\"),"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/__law7_split/gpu_int_literal_scan_part2.rs",
-      "line": 30,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: integer literal consumed output must contain one u32.\"),"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_int_literal_scan.rs",
       "line": 494,
       "pattern": "expect_call",
@@ -1687,12 +1219,6 @@
       "line": 78,
       "pattern": "panic_macro",
       "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/intern/__law7_split/perfect_hash_part1.rs",
-      "line": 127,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"vyre-libs CHD perfect-hash construction failed: {error}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/intern/perfect_hash.rs",
@@ -1882,7 +1408,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/release_workloads.rs",
-      "line": 2038,
+      "line": 2340,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: CALLGRAPH_WORDS is derived from a nonzero node count\");"
     },
@@ -1917,18 +1443,6 @@
       "text": "serde_json::to_string(&entries).expect(\"Fix: JSON serialization cannot fail for basic types\")"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/scheduling/__law7_split/megakernel_schedule_part1.rs",
-      "line": 118,
-      "pattern": "panic_macro",
-      "text": "try_schedule_via_homotopy(costs, n, n_steps, dt).unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/scheduling/__law7_split/megakernel_schedule_part1.rs",
-      "line": 130,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"));"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/scheduling/megakernel_schedule.rs",
       "line": 118,
       "pattern": "panic_macro",
@@ -1939,12 +1453,6 @@
       "line": 130,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/hardware/__law7_split/memory_ownership_contract_part2.rs",
-      "line": 4,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: valid memory ownership contract should pass\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/hardware/scratch.rs",
@@ -1957,24 +1465,6 @@
       "line": 93,
       "pattern": "panic_macro",
       "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/persistent_bfs/__law7_split/tests_part2.rs",
-      "line": 5,
-      "pattern": "expect_call",
-      "text": "upload_resident_bfs_graph(&dispatcher, 4, &off, &tgt, &msk).expect(\"Fix: resident upload\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/persistent_bfs/__law7_split/tests_part2.rs",
-      "line": 20,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: zero-iteration resident BFS should validate and return seed frontier\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/persistent_bfs/__law7_split/tests_part2.rs",
-      "line": 33,
-      "pattern": "expect_call",
-      "text": "graph.free(&dispatcher).expect(\"Fix: graph free\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/persistent_bfs/reference.rs",
@@ -2007,30 +1497,6 @@
       "text": ".unwrap_or_else(|err| panic!(\"exploded IFDS self-substrate reference rejected input. {err}\"))"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_forward_or_changed/__law7_split/tests_part1.rs",
-      "line": 42,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: frontier recording mutex should not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_forward_or_changed/__law7_split/tests_part1.rs",
-      "line": 62,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: static input recording mutex should not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/adaptive_traverse/__law7_split/tests_part1.rs",
-      "line": 25,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: test dispatcher expected at least one resident upload sequence\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/adaptive_traverse/__law7_split/tests_part1.rs",
-      "line": 33,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: test dispatcher expected at least one resident dispatch sequence\")"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/structural_kernel_pipeline/references.rs",
       "line": 182,
       "pattern": "panic_macro",
@@ -2061,34 +1527,10 @@
       "text": ".unwrap_or_else(|err| panic!(\"structural rule3 reference rejected input. {err}\"))"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/dominator_frontier/__law7_split/tests_part1.rs",
-      "line": 81,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: recording dispatcher calls lock should not be poisoned\")"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/dominator_frontier/reference.rs",
       "line": 32,
       "pattern": "panic_macro",
       "text": "panic!(\"dominance-frontier self-substrate reference rejected input. {err}\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_bidirectional/__law7_split/tests_part1.rs",
-      "line": 43,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: bidirectional static-input recorder mutex should not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_bidirectional/__law7_split/tests_part2.rs",
-      "line": 11,
-      "pattern": "panic_macro",
-      "text": "panic!(\"empty bidirectional closure must not dispatch\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_bidirectional/__law7_split/tests_part2.rs",
-      "line": 32,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: canonical empty closure should validate and short-circuit\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/vast_tree_walk/builders.rs",
@@ -2103,250 +1545,46 @@
       "text": "panic!(\"Fix: trusted VAST postorder walk shape was not prevalidated: {error}\")"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/coverage/__law7_split/linux_corpus_parity_part2.rs",
-      "line": 9,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: valid Linux corpus slices should pass\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/__law7_split/public_api_boundary_part2.rs",
-      "line": 44,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: release public API boundary tests need adjacent dataflow consumers\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/__law7_split/public_api_boundary_part2.rs",
-      "line": 47,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: dataflow consumer discovery must read directory entries\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/__law7_split/public_api_boundary_part2.rs",
-      "line": 60,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/__law7_split/crate_metadata_readiness_part2.rs",
-      "line": 7,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: valid crate metadata should pass\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/math/quantized_dispatch/__law7_split/tests_part1.rs",
-      "line": 109,
-      "pattern": "panic_macro",
-      "text": "panic!(\"Fix: batched matvec dispatch must launch with [rows, batch, 1].\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/math/quantized_dispatch/__law7_split/tests_part1.rs",
-      "line": 114,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: fake batched matvec dispatcher requires nonzero batch\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/math/quantized_dispatch/__law7_split/tests_part1.rs",
-      "line": 151,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/math/__law7_split/differentiable_autotune_part2.rs",
-      "line": 7,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: second natural-gradient autotune dispatch should reuse buffers\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/data/__law7_split/matching_diagnostic_compaction_part1.rs",
-      "line": 360,
-      "pattern": "expect_call",
-      "text": ".expect(\"test fixture region split should reserve output columns\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/data/__law7_split/matching_diagnostic_compaction_part2.rs",
-      "line": 18,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: matching primitive should expose a region generator\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/data/__law7_split/matching_diagnostic_compaction_part2.rs",
-      "line": 54,
-      "pattern": "panic_macro",
-      "text": "other => panic!(\"unexpected matching primitive op id {other}\"),"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/data/__law7_split/scallop_provenance_part2.rs",
-      "line": 15,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: dispatch succeeds\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/data/__law7_split/scallop_provenance_part2.rs",
-      "line": 29,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: dispatch succeeds\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/data/__law7_split/reduction_metrics_part2.rs",
-      "line": 5,
-      "pattern": "panic_macro",
-      "text": "other => panic!(\"unexpected reduction primitive op id {other}\"),"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/data/matching_diagnostic_compaction.rs",
-      "line": 360,
+      "line": 365,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: caller must pre-size buffers; use fallible reserve or return ResourceExhausted - test fixture region split should reserve output columns\");"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/pipeline/__law7_split/tests_part2.rs",
-      "line": 11,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-rust/src/pipeline/lexer_dispatch.rs",
+      "line": 279,
       "pattern": "expect_call",
-      "text": ".expect(\"Fix: oversized materialized output cache entry should be a typed no-admission path, not an allocation or dispatch failure.\");"
+      "text": ".map(|chunk| u32::from_le_bytes(chunk.try_into().expect(\"u32 chunk\")))"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/pipeline/__law7_split/tests_part2.rs",
-      "line": 27,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/resident_io.rs",
+      "line": 1293,
       "pattern": "expect_call",
-      "text": ".expect(\"Fix: oversized no-admission lookup must remain fallible\"),"
+      "text": ".expect(\"Fix: synchronize_uploads must end inside the resident I/O impl.\");"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/__law7_split/resident_graph_session_part2.rs",
-      "line": 14,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/resident_io.rs",
+      "line": 1303,
       "pattern": "expect_call",
-      "text": ".expect(\"Fix: resident final-only plan should produce release evidence\");"
+      "text": ".expect(\"Fix: synchronize_uploads must synchronize the upload stream.\");"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/__law7_split/token_fact_frontier_execution_part2.rs",
-      "line": 1,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/resident_io.rs",
+      "line": 1306,
       "pattern": "expect_call",
-      "text": ".expect(\"Fix: frontier plan should adapt\");"
+      "text": ".expect(\"Fix: synchronize_uploads must record sync telemetry after success.\");"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/__law7_split/token_fact_frontier_execution_part2.rs",
-      "line": 20,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/resident_io.rs",
+      "line": 1309,
       "pattern": "expect_call",
-      "text": ".expect(\"Fix: token/fact frontier execution should plan\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/__law7_split/megakernel_barrier_planner_part3.rs",
-      "line": 15,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: first frontier execution plan should fit.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/__law7_split/megakernel_barrier_planner_part3.rs",
-      "line": 38,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: equivalent frontier execution pressure should reuse cached topology.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/egraph_kernel_plan/__law7_split/tests_part3.rs",
-      "line": 4,
-      "pattern": "expect_call",
-      "text": ".expect(\"valid egraph image must pack\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/egraph_kernel_plan/__law7_split/tests_part1.rs",
-      "line": 30,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: synthetic child-only view requires at least one row\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/egraph_kernel_plan/__law7_split/tests_part1.rs",
-      "line": 38,
-      "pattern": "expect_call",
-      "text": "let plan = plan_cuda_egraph_device_upload(&snapshot).expect(\"synthetic plan must pack\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/egraph_kernel_plan/__law7_split/tests_part1.rs",
-      "line": 40,
-      "pattern": "expect_call",
-      "text": ".expect(\"synthetic view must be valid\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/egraph_kernel_plan/__law7_split/tests_part1.rs",
-      "line": 45,
-      "pattern": "expect_call",
-      "text": ".expect(\"packed egraph image must have a CUDA upload plan\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/egraph_kernel_plan/__law7_split/tests_part1.rs",
-      "line": 47,
-      "pattern": "expect_call",
-      "text": ".expect(\"upload plan must resolve to a checked kernel view\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/egraph_kernel_plan/__law7_split/tests_part2.rs",
-      "line": 21,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: structural e-graph kernel args should build\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/egraph_kernel_plan/__law7_split/tests_part2.rs",
-      "line": 44,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: canonical rewrite e-graph kernel args should reuse table\");"
+      "text": ".expect(\"Fix: synchronize_uploads must release successfully synchronized streams.\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/jit_cache.rs",
       "line": 46,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - CUDA JIT cache env test lock must not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/__law7_split/eqsat_gpu_part1.rs",
-      "line": 407,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/__law7_split/eqsat_gpu_part1.rs",
-      "line": 453,
-      "pattern": "panic_macro",
-      "text": "Self::try_build(rows).unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/__law7_split/eqsat_gpu_part1.rs",
-      "line": 494,
-      "pattern": "panic_macro",
-      "text": "Self::try_from_egraph_with(egraph, &mut op_name).unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/__law7_split/eqsat_gpu_part1.rs",
-      "line": 723,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/__law7_split/effect_lattice_part2.rs",
-      "line": 2,
-      "pattern": "panic_macro",
-      "text": "other => panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/scheduler/__law7_split/tests_part1.rs",
-      "line": 293,
-      "pattern": "panic_macro",
-      "text": "panic!(\"cost-monotone scheduler must call try_transform before transform\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_lower_bound_normalize_part2.rs",
-      "line": 10,
-      "pattern": "panic_macro",
-      "text": "other => panic!(\"expected Var(i') + 4, got {other:?}\"),"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_lower_bound_normalize_part2.rs",
-      "line": 12,
-      "pattern": "panic_macro",
-      "text": "other => panic!(\"expected Store, got {other:?}\"),"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/passes/loops/__law7_split/loop_lower_bound_normalize_part2.rs",
-      "line": 15,
-      "pattern": "panic_macro",
-      "text": "other => panic!(\"expected Loop, got {other:?}\"),"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/optimizer/eqsat_gpu.rs",
@@ -2391,18 +1629,6 @@
       "text": ".expect(\"Fix: reparsing canonical to_wire bytes must succeed; restore this invariant before continuing.\");"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/pipeline/__law7_split/tests_part2.rs",
-      "line": 5,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: GPU required for trap-sidecar allocation delta test\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/pipeline/__law7_split/tests_part2.rs",
-      "line": 38,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: trapped program compile must succeed; restore this invariant before continuing.\");"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/pipeline/disk_cache_invalidation.rs",
       "line": 64,
       "pattern": "panic_macro",
@@ -2422,43 +1648,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/pipeline.rs",
-      "line": 785,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/__law7_split/dispatcher_part1.rs",
-      "line": 230,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/__law7_split/dispatcher_part1.rs",
-      "line": 242,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/__law7_split/dispatcher_part1.rs",
-      "line": 254,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/__law7_split/dispatcher_part2.rs",
-      "line": 81,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/__law7_split/dispatcher_part2.rs",
-      "line": 133,
-      "pattern": "panic_macro",
-      "text": "panic!(\"megakernel claim budget received zero workers. Fix: construct batch programs with at least one worker.\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/__law7_split/dispatcher_part2.rs",
-      "line": 143,
+      "line": 796,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -2482,57 +1672,27 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/dispatcher.rs",
-      "line": 925,
+      "line": 924,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/dispatcher.rs",
-      "line": 977,
+      "line": 976,
       "pattern": "panic_macro",
       "text": "panic!(\"megakernel claim budget received zero workers. Fix: construct batch programs with at least one worker.\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/dispatcher.rs",
-      "line": 987,
+      "line": 986,
       "pattern": "panic_macro",
       "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/__law7_split/pipeline_part1.rs",
-      "line": 118,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/__law7_split/pipeline_part1.rs",
-      "line": 128,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/__law7_split/pipeline_part2.rs",
-      "line": 123,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/buffer/__law7_split/pool_part1.rs",
-      "line": 247,
-      "pattern": "panic_macro",
-      "text": "panic!(\"Fix: tiering metadata worker did not drain pending buffer-pool events\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/buffer/pool.rs",
       "line": 247,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: tiering metadata worker did not drain pending buffer-pool events\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/runtime/device/__law7_split/selector_part1.rs",
-      "line": 117,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: WGPU adapter enumeration metadata allocation failed; reduce adapter fan-out or repair host memory pressure before release-path probing.\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/runtime/device/selector.rs",
@@ -2547,18 +1707,6 @@
       "text": "panic!("
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/engine/__law7_split/multi_gpu_part1.rs",
-      "line": 171,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/engine/__law7_split/multi_gpu_part1.rs",
-      "line": 269,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/engine/multi_gpu.rs",
       "line": 171,
       "pattern": "panic_macro",
@@ -2569,6 +1717,18 @@
       "line": 269,
       "pattern": "panic_macro",
       "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/execution/hashmap/subgroup.rs",
+      "line": 172,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: lane_value binding must be unique.\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/execution/hashmap/subgroup.rs",
+      "line": 176,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: source_lane binding must be unique.\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/lib.rs",
@@ -2620,49 +1780,67 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/dominator_frontier.rs",
-      "line": 389,
+      "line": 403,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|err| panic!(\"{err}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/dominator_frontier.rs",
-      "line": 609,
+      "line": 622,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: reject malformed oracle input via try_* APIs; do not call panicking wrappers on hostile data - dominator_frontier CPU oracle received malformed input or could not reserve output\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/dominator_frontier.rs",
-      "line": 661,
+      "line": 674,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: reject malformed oracle input via try_* APIs; do not call panicking wrappers on hostile data - dominator_frontier CPU oracle received malformed input or could not reserve output\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/persistent_bfs/cpu_ref.rs",
-      "line": 26,
+      "line": 27,
       "pattern": "expect_call",
       "text": ".expect("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/persistent_bfs/cpu_ref.rs",
-      "line": 106,
+      "line": 107,
       "pattern": "expect_call",
       "text": ".expect("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/persistent_bfs/program.rs",
-      "line": 197,
+      "line": 327,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|err| panic!(\"{err}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_frontier_queue.rs",
-      "line": 308,
+      "line": 62,
+      "pattern": "panic_macro",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_frontier_queue.rs",
+      "line": 478,
+      "pattern": "panic_macro",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_frontier_queue.rs",
+      "line": 874,
+      "pattern": "panic_macro",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_frontier_queue.rs",
+      "line": 1174,
       "pattern": "panic_macro",
       "text": "panic!(\"frontier_to_queue CPU oracle received malformed input. {err}\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_frontier_queue.rs",
-      "line": 387,
+      "line": 1244,
       "pattern": "panic_macro",
       "text": "panic!(\"csr_queue_forward_traverse CPU oracle received malformed input. {err}\")"
     },
@@ -2728,7 +1906,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/reachable.rs",
-      "line": 99,
+      "line": 105,
       "pattern": "panic_macro",
       "text": "panic!(\"reachable CPU oracle allocation failed. {message}\")"
     },
@@ -2787,6 +1965,12 @@
       "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|err| panic!(\"{err}\"))"
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_queue_delta.rs",
+      "line": 248,
+      "pattern": "panic_macro",
+      "text": "panic!(\"csr_queue_delta_enqueue CPU oracle received malformed input. {err}\")"
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/dominator_tree/cpu_ref.rs",
       "line": 43,
       "pattern": "panic_macro",
@@ -2797,6 +1981,12 @@
       "line": 24,
       "pattern": "panic_macro",
       "text": "try_lengauer_tarjan_idoms(node_count, entry, edges).unwrap_or_else(|error| panic!(\"{error}\"))"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/csr_queue_strided.rs",
+      "line": 294,
+      "pattern": "panic_macro",
+      "text": "panic!(\"csr_queue_strided_forward_traverse CPU oracle received malformed input. {err}\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/graph/do_calculus.rs",
@@ -2838,13 +2028,13 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/fixpoint/persistent_fixpoint.rs",
       "line": 184,
       "pattern": "expect_call",
-      "text": ".expect("
+      "text": ".expect(\"Fix: caller must size scratch for node_count; use try_cpu_ref on hostile layouts\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/fixpoint/persistent_fixpoint.rs",
-      "line": 206,
+      "line": 203,
       "pattern": "expect_call",
-      "text": ".expect("
+      "text": "try_cpu_ref_into(seed, max_iterations, transfer_step, current, next).expect("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/matching/dfa_compile.rs",
@@ -2865,38 +2055,14 @@
       "text": "other => panic!(\"Fix: {label} must build a Region entry, got {other:?}.\"),"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/reduce/multi_block_prefix_scan.rs",
-      "line": 65,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/reduce/multi_block_prefix_scan.rs",
-      "line": 112,
-      "pattern": "panic_macro",
-      "text": "Err(_) => panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/reduce/multi_block_prefix_scan.rs",
-      "line": 234,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/reduce/multi_block_prefix_scan.rs",
-      "line": 329,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/scallop_join.rs",
+      "line": 154,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/scallop_join.rs",
-      "line": 157,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/scallop_join.rs",
-      "line": 276,
+      "line": 254,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -3028,25 +2194,19 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/prefix_scan.rs",
-      "line": 161,
+      "line": 163,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/prefix_scan.rs",
-      "line": 211,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/prefix_scan.rs",
-      "line": 260,
+      "line": 251,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - prefix_scan cpu_ref failed: output allocation failed\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/prefix_scan.rs",
-      "line": 276,
+      "line": 267,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - prefix_scan cpu_ref_into failed: output allocation failed\");"
     },
@@ -3061,132 +2221,6 @@
       "line": 115,
       "pattern": "panic_macro",
       "text": "try_qsvt_block_encode_cpu_into(a, n, out).unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/amg_v_cycle_part1.rs",
-      "line": 313,
-      "pattern": "expect_call",
-      "text": ".expect(\"amg_v_cycle cpu_ref failed: invalid V-cycle dimensions\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/amg_v_cycle_part1.rs",
-      "line": 378,
-      "pattern": "expect_call",
-      "text": ".expect(\"amg_v_cycle cpu_ref_into failed: invalid V-cycle dimensions\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/preconditioner_part1.rs",
-      "line": 217,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/preconditioner_part1.rs",
-      "line": 224,
-      "pattern": "panic_macro",
-      "text": "try_newton_schulz_y_step_cpu_into(y_curr, yzy, out).unwrap_or_else(|error| panic!(\"{error}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/qsvt_part2.rs",
-      "line": 17,
-      "pattern": "expect_call",
-      "text": ".expect(\"QSVT apply CPU oracle should truncate stale output\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/randomized_svd_part1.rs",
-      "line": 158,
-      "pattern": "panic_macro",
-      "text": "try_randomized_projection_step_cpu(a, omega, m, n, l).unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/randomized_svd_part1.rs",
-      "line": 186,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/randomized_svd_part1.rs",
-      "line": 247,
-      "pattern": "panic_macro",
-      "text": "try_modified_gram_schmidt_cpu(y, m, l).unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/randomized_svd_part1.rs",
-      "line": 262,
-      "pattern": "panic_macro",
-      "text": "try_modified_gram_schmidt_cpu_into(y, m, l, q).unwrap_or_else(|error| panic!(\"{error}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/scallop_join_wide_part1.rs",
-      "line": 203,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/scallop_join_wide_part1.rs",
-      "line": 279,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/scallop_join_wide_part1.rs",
-      "line": 303,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/bigint_add_carry_part2.rs",
-      "line": 5,
-      "pattern": "expect_call",
-      "text": "bigint_add_carry_cpu_into(&a, &b, &mut sum, &mut carry).expect(\"Fix: matching limbs\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/fmm_part1.rs",
-      "line": 411,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/fmm_part1.rs",
-      "line": 423,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{error}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/sinkhorn_iterate_part1.rs",
-      "line": 184,
-      "pattern": "expect_call",
-      "text": ".expect(\"sinkhorn_iterate cpu_ref failed: invalid fixed-point Sinkhorn buffers\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/sinkhorn_iterate_part1.rs",
-      "line": 256,
-      "pattern": "expect_call",
-      "text": ".expect(\"sinkhorn_iterate cpu_ref_into failed: invalid fixed-point Sinkhorn buffers\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/qsvt_part1.rs",
-      "line": 108,
-      "pattern": "panic_macro",
-      "text": "try_qsvt_block_encode_cpu_into(a, n, &mut out).unwrap_or_else(|error| panic!(\"{error}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/qsvt_part1.rs",
-      "line": 115,
-      "pattern": "panic_macro",
-      "text": "try_qsvt_block_encode_cpu_into(a, n, out).unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/matroid_intersection_full_part1.rs",
-      "line": 241,
-      "pattern": "expect_call",
-      "text": ".expect(\"matroid_intersection_full cpu_ref failed: invalid exchange-graph buffers\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/__law7_split/matroid_intersection_full_part1.rs",
-      "line": 297,
-      "pattern": "expect_call",
-      "text": ".expect(\"matroid_intersection_full cpu_ref_into failed: invalid exchange-graph buffers\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/spectral_shape.rs",
@@ -3388,19 +2422,25 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/scallop_join_wide.rs",
-      "line": 203,
+      "line": 213,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/scallop_join_wide.rs",
-      "line": 279,
+      "line": 220,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/scallop_join_wide.rs",
-      "line": 303,
+      "line": 312,
+      "pattern": "panic_macro",
+      "text": "panic!("
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/math/scallop_join_wide.rs",
+      "line": 336,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -3441,60 +2481,6 @@
       "text": ".expect(\"Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sinkhorn_iterate cpu_ref_into failed: invalid fixed-point Sinkhorn buffers\")"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/__law7_split/four_russians_part1.rs",
-      "line": 91,
-      "pattern": "expect_call",
-      "text": ".expect("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/__law7_split/four_russians_part1.rs",
-      "line": 120,
-      "pattern": "expect_call",
-      "text": ".expect(\"dense Four-Russians byte-tile LUT builder failed\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/__law7_split/four_russians_part1.rs",
-      "line": 351,
-      "pattern": "expect_call",
-      "text": "try_cpu_ref_into(lhs, rhs, lut, &mut out).expect(\"Four-Russians byte-LUT CPU reference failed\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/__law7_split/four_russians_part1.rs",
-      "line": 358,
-      "pattern": "expect_call",
-      "text": "try_cpu_ref_into(lhs, rhs, lut, out).expect(\"Four-Russians byte-LUT CPU reference failed\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/__law7_split/four_russians_part1.rs",
-      "line": 417,
-      "pattern": "expect_call",
-      "text": ".expect(\"dense Four-Russians matvec CPU reference failed\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/__law7_split/four_russians_part1.rs",
-      "line": 431,
-      "pattern": "expect_call",
-      "text": ".expect(\"dense Four-Russians matvec CPU reference failed\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/__law7_split/four_russians_part2.rs",
-      "line": 2,
-      "pattern": "expect_call",
-      "text": "try_checked_dense_column_words(tile_count, dst_words).expect("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/__law7_split/four_russians_part2.rs",
-      "line": 19,
-      "pattern": "expect_call",
-      "text": "try_checked_dense_lut_words_usize(tile_count, dst_words).expect("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/__law7_split/four_russians_part2.rs",
-      "line": 35,
-      "pattern": "panic_macro",
-      "text": "panic!(\"Fix: dense Four-Russians {field} does not fit usize on this platform.\")"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/four_russians.rs",
       "line": 91,
       "pattern": "expect_call",
@@ -3532,43 +2518,43 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/four_russians.rs",
-      "line": 488,
+      "line": 487,
       "pattern": "expect_call",
       "text": "try_checked_dense_column_words(tile_count, dst_words).expect("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/four_russians.rs",
-      "line": 505,
+      "line": 504,
       "pattern": "expect_call",
       "text": "try_checked_dense_lut_words_usize(tile_count, dst_words).expect("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/bitset/four_russians.rs",
-      "line": 521,
+      "line": 520,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: dense Four-Russians {field} does not fit usize on this platform.\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/parsing/line_splice_classify.rs",
-      "line": 224,
+      "line": 274,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - line-splice classifier reference allocation failed\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/parsing/line_splice_classify.rs",
-      "line": 232,
+      "line": 282,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - line-splice classifier reference allocation failed\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/parsing/whitespace_classify_word.rs",
-      "line": 226,
+      "line": 239,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - whitespace word-classifier reference allocation failed\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/parsing/whitespace_classify_word.rs",
-      "line": 236,
+      "line": 249,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - whitespace word-classifier reference allocation failed\");"
     },
@@ -3577,24 +2563,6 @@
       "line": 69,
       "pattern": "panic_macro",
       "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/hash/__law7_split/crc32_part1.rs",
-      "line": 318,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: CRC32 chunk summary output word count overflowed u32; shard the input.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/hash/__law7_split/crc32_part1.rs",
-      "line": 346,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: CRC32 pair-reduce input word count overflowed u32; shard the input.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/hash/__law7_split/crc32_part1.rs",
-      "line": 350,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: CRC32 pair-reduce output word count overflowed u32; shard the input.\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/hash/crc32.rs",
@@ -3627,18 +2595,6 @@
       "text": "/// f32::from_le_bytes(c.try_into().unwrap())).collect()` pattern repeated"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/nfa/__law7_split/subgroup_nfa_part1.rs",
-      "line": 303,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/nfa/__law7_split/subgroup_nfa_part1.rs",
-      "line": 308,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/src/nfa/subgroup_nfa.rs",
       "line": 303,
       "pattern": "panic_macro",
@@ -3663,106 +2619,70 @@
       "text": ".expect(\"Fix: intrinsic must execute; restore this invariant before continuing.\")"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/__law7_split/audit_part2.rs",
-      "line": 59,
-      "pattern": "unwrap_call",
-      "text": "assert!(bank_pos.unwrap() < coalesce_pos.unwrap());"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/descriptor_const_fold/__law7_split/mod_part3.rs",
-      "line": 9,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: store survived\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/descriptor_const_fold/__law7_split/mod_part3.rs",
-      "line": 17,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: producer of val\");"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/rhs_lit_chain.rs",
-      "line": 137,
+      "line": 143,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: target op must exist\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/rhs_lit_chain.rs",
-      "line": 146,
+      "line": 152,
       "pattern": "panic_macro",
       "text": "_ => panic!(\"Fix: expected U32 literal\"),"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/rhs_lit_chain.rs",
-      "line": 255,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: child outer op must exist after rhs-chain rewrite.\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/rhs_lit_chain.rs",
       "line": 261,
       "pattern": "expect_call",
+      "text": ".expect(\"Fix: child outer op must exist after rhs-chain rewrite.\");"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/rhs_lit_chain.rs",
+      "line": 267,
+      "pattern": "expect_call",
       "text": ".expect(\"Fix: rewritten child literal must exist.\")"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/__law7_split/mod_part2.rs",
-      "line": 11,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/commutative_lit_chain.rs",
-      "line": 155,
+      "line": 157,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: target op must exist\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/commutative_lit_chain.rs",
-      "line": 164,
+      "line": 166,
       "pattern": "panic_macro",
       "text": "_ => panic!(\"Fix: expected U32 literal\"),"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/commutative_lit_chain.rs",
-      "line": 197,
+      "line": 199,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: generated non-overflow sample must combine\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/commutative_lit_chain.rs",
-      "line": 339,
+      "line": 341,
       "pattern": "unwrap_call",
       "text": ".unwrap();"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/commutative_lit_chain.rs",
-      "line": 346,
+      "line": 348,
       "pattern": "unwrap_call",
       "text": ".unwrap()"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/mod.rs",
-      "line": 461,
+      "line": 473,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lower/src/rewrites/self_binop.rs",
-      "line": 91,
+      "line": 87,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: test descriptor must contain the requested result id\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol/__law7_split/codec_part1.rs",
-      "line": 301,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol/__law7_split/codec_part1.rs",
-      "line": 311,
-      "pattern": "panic_macro",
-      "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol/codec.rs",
@@ -3849,228 +2769,6 @@
       "text": "Err(error) => panic!(\"{error}\"),"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 39,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 61,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 71,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 163,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 177,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 194,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 206,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 274,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 421,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 459,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 488,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 508,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 564,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 574,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 606,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 651,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 663,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 672,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part1.rs",
-      "line": 680,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/rule_catalog_part1.rs",
-      "line": 450,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part2.rs",
-      "line": 15,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part2.rs",
-      "line": 60,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part2.rs",
-      "line": 68,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/telemetry_part2.rs",
-      "line": 105,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/policy_part1.rs",
-      "line": 177,
-      "pattern": "panic_macro",
-      "text": "panic!(\"megakernel priority requeue_count overflowed u64. Fix: drain scheduler telemetry before counters reach u64::MAX.\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/policy_part1.rs",
-      "line": 185,
-      "pattern": "panic_macro",
-      "text": "panic!(\"megakernel aged_promotions overflowed u64. Fix: drain scheduler telemetry before counters reach u64::MAX.\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/policy_part1.rs",
-      "line": 213,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/policy_part1.rs",
-      "line": 263,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/policy_part1.rs",
-      "line": 874,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/policy_part1.rs",
-      "line": 913,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/builder_part1.rs",
-      "line": 203,
-      "pattern": "panic_macro",
-      "text": "Err(error) => panic!(\"{error}\"),"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/builder_part1.rs",
-      "line": 286,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/builder_part1.rs",
-      "line": 312,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/builder_part1.rs",
-      "line": 354,
-      "pattern": "panic_macro",
-      "text": "Err(error) => panic!(\"{error}\"),"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/policy_part2.rs",
-      "line": 49,
-      "pattern": "panic_macro",
-      "text": "panic!(\"{label} cannot fit usize: {error}. Fix: shard the autotune surface.\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/policy_part2.rs",
-      "line": 56,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/__law7_split/policy_part2.rs",
-      "line": 64,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/policy.rs",
       "line": 177,
       "pattern": "panic_macro",
@@ -4108,103 +2806,19 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/policy.rs",
-      "line": 1003,
+      "line": 1002,
       "pattern": "panic_macro",
       "text": "panic!(\"{label} cannot fit usize: {error}. Fix: shard the autotune surface.\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/policy.rs",
-      "line": 1010,
+      "line": 1009,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/policy.rs",
-      "line": 1018,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/fusion_part1.rs",
-      "line": 250,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/fusion_part2.rs",
-      "line": 71,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/fusion_part2.rs",
-      "line": 99,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/fusion_part2.rs",
-      "line": 107,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/barriers_part1.rs",
-      "line": 31,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/whole_megakernel_opt_part1.rs",
-      "line": 75,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/whole_megakernel_opt_part1.rs",
-      "line": 108,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/whole_megakernel_opt_part1.rs",
-      "line": 174,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/whole_megakernel_opt_part1.rs",
-      "line": 207,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/whole_megakernel_opt_part1.rs",
-      "line": 334,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/whole_megakernel_opt_part1.rs",
-      "line": 345,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/whole_megakernel_opt_part1.rs",
-      "line": 350,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/whole_megakernel_opt_part1.rs",
-      "line": 356,
-      "pattern": "panic_macro",
-      "text": "panic!(\"u64::BITS cannot fit usize: {error}. Fix: unsupported host index width.\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner/__law7_split/whole_megakernel_opt_part1.rs",
-      "line": 361,
+      "line": 1017,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -4414,25 +3028,25 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/telemetry.rs",
-      "line": 703,
+      "line": 702,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/telemetry.rs",
-      "line": 748,
+      "line": 747,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/telemetry.rs",
-      "line": 756,
+      "line": 755,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/telemetry.rs",
-      "line": 793,
+      "line": 792,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -4515,74 +3129,8 @@
       "text": "Err(error) => panic!(\"{error}\"),"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/execution/__law7_split/tests_part1.rs",
-      "line": 43,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: grid-sync recording mutex must not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/execution/__law7_split/tests_part1.rs",
-      "line": 126,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: persistent-handle recording mutex must not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/execution/__law7_split/tests_part1.rs",
-      "line": 151,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: persistent-handle recording mutex must not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/execution/__law7_split/tests_part1.rs",
-      "line": 184,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: persistent-handle recording mutex must not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/execution/__law7_split/tests_part1.rs",
-      "line": 217,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: persistent-handle recording mutex must not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/execution/__law7_split/tests_part1.rs",
-      "line": 249,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: persistent-handle recording mutex must not be poisoned\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/execution/__law7_split/tests_part2.rs",
-      "line": 4,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: persistent-handle backend must bootstrap\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/execution/__law7_split/tests_part2.rs",
-      "line": 14,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: persistent-handle dispatch_into must call the compiled pipeline handle API\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol_api/__law7_split/publish_part2.rs",
-      "line": 186,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol_api/__law7_split/tests_part2.rs",
-      "line": 2,
-      "pattern": "unwrap_call",
-      "text": "let control = Megakernel::encode_control(false, 1, 0).unwrap();"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol_api/__law7_split/tests_part2.rs",
-      "line": 3,
-      "pattern": "expect_call",
-      "text": "validate_control_bytes(&control).expect(\"Fix: valid control buffer must pass validation\");"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol_api/publish.rs",
-      "line": 693,
+      "line": 692,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -4615,24 +3163,6 @@
       "line": 163,
       "pattern": "panic_macro",
       "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/policy/__law7_split/tests_part2.rs",
-      "line": 10,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: policy should accept non-zero adapter limits\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/policy/__law7_split/tests_part2.rs",
-      "line": 18,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: policy should accept non-zero adapter limits\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/policy/__law7_split/tests_part2.rs",
-      "line": 28,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: policy should accept non-zero adapter limits\");"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/policy/cache.rs",
@@ -4720,151 +3250,67 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/tenant.rs",
-      "line": 387,
+      "line": 390,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|message| panic!(\"{message}\")),"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/tenant.rs",
-      "line": 441,
+      "line": 444,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/tenant.rs",
-      "line": 498,
+      "line": 501,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|message| panic!(\"{message}\"));"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/tenant.rs",
-      "line": 512,
+      "line": 513,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|message| panic!(\"{message}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/tenant_part1.rs",
-      "line": 74,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/tenant_part1.rs",
-      "line": 79,
-      "pattern": "panic_macro",
-      "text": "panic!(\"tenant quiesce backoff multiplier overflowed u32. Fix: lower shift cap.\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/tenant_part1.rs",
-      "line": 84,
-      "pattern": "panic_macro",
-      "text": "panic!(\"tenant quiesce backoff duration overflowed. Fix: lower quiesce park bounds.\")"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/tenant_part1.rs",
-      "line": 387,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|message| panic!(\"{message}\")),"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/tenant_part1.rs",
-      "line": 441,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/tenant_part2.rs",
-      "line": 44,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|message| panic!(\"{message}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/tenant_part2.rs",
-      "line": 58,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|message| panic!(\"{message}\"));"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/replay_part2.rs",
-      "line": 3,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: replay; restore this invariant before continuing.\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/replay_part2.rs",
-      "line": 73,
-      "pattern": "unwrap_call",
-      "text": "let mut f = std::fs::File::create(path).unwrap();"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/replay_part2.rs",
-      "line": 74,
-      "pattern": "unwrap_call",
-      "text": "f.write_all(LOG_MAGIC).unwrap();"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/replay_part2.rs",
-      "line": 75,
-      "pattern": "unwrap_call",
-      "text": "f.write_all(&LOG_VERSION.to_le_bytes()).unwrap();"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/replay_part2.rs",
-      "line": 76,
-      "pattern": "unwrap_call",
-      "text": "f.write_all(&0u32.to_le_bytes()).unwrap();"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/replay_part2.rs",
-      "line": 77,
-      "pattern": "unwrap_call",
-      "text": "f.write_all(&capacity.to_le_bytes()).unwrap();"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/__law7_split/replay_part2.rs",
-      "line": 78,
-      "pattern": "unwrap_call",
-      "text": "f.write_all(&cursor.to_le_bytes()).unwrap();"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/pipeline_cache/in_memory.rs",
-      "line": 39,
+      "line": 38,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/pipeline_cache/in_memory.rs",
-      "line": 113,
+      "line": 112,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|message| panic!(\"{message}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/pipeline_cache/in_memory.rs",
-      "line": 120,
+      "line": 119,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|message| panic!(\"{message}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/pipeline_cache/in_memory.rs",
-      "line": 127,
+      "line": 126,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|message| panic!(\"{message}\"))"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/pipeline_cache/in_memory.rs",
-      "line": 134,
+      "line": 133,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|message| panic!(\"{message}\"))"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/pipeline_cache/in_memory.rs",
+      "line": 284,
+      "pattern": "panic_macro",
+      "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/pipeline_cache/in_memory.rs",
       "line": 289,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/pipeline_cache/in_memory.rs",
-      "line": 294,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -4905,14 +3351,8 @@
       "text": ".unwrap_or_else(|message| panic!(\"{message}\"));"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/__law7_split/ring_part2.rs",
-      "line": 116,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/uring/ring.rs",
-      "line": 659,
+      "line": 658,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -4965,26 +3405,8 @@
       "text": "let next_idx = index_of_buffer(&program, next_name).expect(\"Fix: inferred next\");"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-test-harness/src/__law7_split/lens_part1.rs",
-      "line": 503,
-      "pattern": "expect_call",
-      "text": "let current_idx = index_of_buffer(&program, current_name).expect(\"Fix: inferred current\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-test-harness/src/__law7_split/lens_part1.rs",
-      "line": 504,
-      "pattern": "expect_call",
-      "text": "let next_idx = index_of_buffer(&program, next_name).expect(\"Fix: inferred next\");"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/src/__law7_split/main_part1.rs",
-      "line": 206,
-      "pattern": "panic_macro",
-      "text": "panic!(\"Fix: dispatch result must stay serializable: {error}\")"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/src/main.rs",
-      "line": 206,
+      "line": 209,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: dispatch result must stay serializable: {error}\")"
     },
@@ -5608,6 +4030,6 @@
     }
   ],
   "blockers": [
-    "934 `error-surface` finding(s) remain"
+    "671 `error-surface` finding(s) remain"
   ]
 }

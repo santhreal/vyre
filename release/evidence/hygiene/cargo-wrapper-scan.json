@@ -27,30 +27,6 @@
       "text": "pass!(\"release.crate-metadata-readiness\", \"release\", \"release-gate\", \"public crates have complete package metadata real code and exact cargo publish commands\", \"crate_metadata_readiness\"),"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/__law7_split/crate_metadata_readiness_part2.rs",
-      "line": 162,
-      "pattern": "raw_workspace_cargo",
-      "text": "publish_command: \"cargo publish\","
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/__law7_split/crate_metadata_readiness_part1.rs",
-      "line": 47,
-      "pattern": "raw_workspace_cargo",
-      "text": "/// Number of cargo publish receipts recorded."
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/__law7_split/crate_metadata_readiness_part1.rs",
-      "line": 80,
-      "pattern": "raw_workspace_cargo",
-      "text": "/// Publish command is not cargo publish."
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/__law7_split/crate_metadata_readiness_part1.rs",
-      "line": 210,
-      "pattern": "raw_workspace_cargo",
-      "text": "if !record.publish_command.contains(\"cargo publish\") {"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/crate_metadata_readiness.rs",
       "line": 47,
       "pattern": "raw_workspace_cargo",
@@ -76,13 +52,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/pipeline.rs",
-      "line": 837,
-      "pattern": "raw_workspace_cargo",
-      "text": "/// linkage for unchanged programs across `cargo test` cycles."
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/__law7_split/pipeline_part2.rs",
-      "line": 175,
+      "line": 848,
       "pattern": "raw_workspace_cargo",
       "text": "/// linkage for unchanged programs across `cargo test` cycles."
     },
@@ -343,6 +313,354 @@
       "line": 130,
       "pattern": "raw_workspace_cargo",
       "text": "action: \"cargo publish approved crates in dependency order\","
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/fuzz.yml",
+      "line": 33,
+      "pattern": "raw_workspace_cargo",
+      "text": "../.cargo fuzz run ${{ matrix.target }} --release -- -max_total_time=60"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/fuzz.yml",
+      "line": 60,
+      "pattern": "raw_workspace_cargo",
+      "text": "../.cargo fuzz run ${{ matrix.target }} --release -- -max_total_time=600"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/conform.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-conform-enforce --test op_matrix_truth -- --nocapture"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/conform.yml",
+      "line": 35,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-conform-runner --test release_gate_contracts -- --nocapture"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/conform.yml",
+      "line": 52,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-conform-spec"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/conform.yml",
+      "line": 56,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-conform-generate"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/conform.yml",
+      "line": 60,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-conform-enforce"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/conform.yml",
+      "line": 64,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-test-harness"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/conform.yml",
+      "line": 68,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-conform-runner"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/conform.yml",
+      "line": 73,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo test -p vyre-conform-runner --test cert_regression_pin"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/conform.yml",
+      "line": 74,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo test -p vyre-conform-runner --test cert_artifact"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/conform.yml",
+      "line": 78,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-conform-runner --test lens_parity"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/conform.yml",
+      "line": 82,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-conform-runner --test dispatch_grid_contracts"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/architectural-invariants.yml",
+      "line": 166,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p vyre-lints --release --quiet -- --workspace-root ."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/architectural-invariants.yml",
+      "line": 176,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p vyre-lints --release --quiet -- --check-drift --workspace-root ."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/architectural-invariants.yml",
+      "line": 190,
+      "pattern": "raw_workspace_cargo",
+      "text": "- name: cargo run -p xtask -- op-matrix --check"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/architectural-invariants.yml",
+      "line": 191,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p xtask -- op-matrix --check"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/architectural-invariants.yml",
+      "line": 208,
+      "pattern": "raw_workspace_cargo",
+      "text": "- name: cargo run -p xtask -- lego-audit --with-repo"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/architectural-invariants.yml",
+      "line": 209,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p xtask -- lego-audit --with-repo"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/strict.yml",
+      "line": 26,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo build --workspace --all-targets --all-features --locked"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/strict.yml",
+      "line": 29,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo run -p xtask -- abstraction-gate"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/strict.yml",
+      "line": 33,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo clippy --workspace --all-targets --all-features"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/strict.yml",
+      "line": 36,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo doc --workspace --all-features --no-deps"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/ci.yml",
+      "line": 29,
+      "pattern": "raw_workspace_cargo",
+      "text": "- name: cargo fmt"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/ci.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo fmt --check"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/ci.yml",
+      "line": 35,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p xtask -- abstraction-gate"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/ci.yml",
+      "line": 37,
+      "pattern": "raw_workspace_cargo",
+      "text": "- name: cargo clippy (advisory)"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/ci.yml",
+      "line": 40,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo clippy --workspace"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/ci.yml",
+      "line": 42,
+      "pattern": "raw_workspace_cargo",
+      "text": "- name: cargo test"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/ci.yml",
+      "line": 44,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test --workspace"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/ci.yml",
+      "line": 46,
+      "pattern": "raw_workspace_cargo",
+      "text": "- name: cargo doc"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/ci.yml",
+      "line": 48,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo doc --workspace"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/ci.yml",
+      "line": 65,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run --bin xtask -- release-evidence"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/bench-regression.yml",
+      "line": 26,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo bench -p vyre-bench-smoke --no-run"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/bench-regression.yml",
+      "line": 27,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo bench -p vyre-bench-deep --no-run"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/bench-regression.yml",
+      "line": 28,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo bench -p vyre-foundation --no-run"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/bench-regression.yml",
+      "line": 29,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo bench -p vyre-intrinsics --no-run"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/bench-regression.yml",
+      "line": 30,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo bench -p vyre-libs --no-run"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/bench-regression.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo bench -p vyre-reference --no-run"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/bench-regression.yml",
+      "line": 32,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo bench -p vyre-runtime --no-run"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/bench-regression.yml",
+      "line": 33,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo bench -p vyre-driver-wgpu --no-run"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/bench.yml",
+      "line": 26,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo bench -p vyre-libs -- --save-baseline main"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/bench.yml",
+      "line": 31,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo bench -p vyre-libs -- --baseline main --save-baseline pr 2>&1 | tee bench.log"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/dependency-audit.yml",
+      "line": 43,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo machete --with-metadata"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/loom.yml",
+      "line": 25,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo test --workspace --release -- --test-threads=1 loom_"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 42,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 54,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-libs --release --features vyre_wgpu --test op_pairwise pairwise_composition_parity -- --nocapture"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 66,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-driver-wgpu --release --test gap_determinism_contract -- --nocapture"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 78,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p vyre-conform-runner --release --features gpu --test parity_matrix --test ulp_audit -- --nocapture"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 90,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 102,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 132,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo test -p weir every_weir_inventory_op_parity_holds -- --nocapture"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 144,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p vyre-bench --release -- run --suite release --case lower.rewrites.impact.corpus --format json --measured-samples 30"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 146,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p vyre-bench --release -- run --suite release --case cuda.ptx.patterns.release.corpus --format json --measured-samples 30"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 148,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p vyre-bench --release -- run --suite release --case runtime.megakernel.condition.64k --format json --backend cuda --measured-samples 30"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 150,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p vyre-bench --release -- run --suite release --case conditions.yara_like.eval.1m --format json --backend cuda --measured-samples 30"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 152,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run -p vyre-bench --release -- run --suite release --case conditions.yara_like.batch.16x64k --format json --backend cuda --measured-samples 30"
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
+      "line": 154,
+      "pattern": "raw_workspace_cargo",
+      "text": "run: cargo run --release --bin xtask -- release-benchmarks --backend cuda --measured-samples 30"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
@@ -712,6 +1030,6 @@
     }
   ],
   "blockers": [
-    "118 `cargo-wrapper` finding(s) remain"
+    "171 `cargo-wrapper` finding(s) remain"
   ]
 }

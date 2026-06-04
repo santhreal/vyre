@@ -38,6 +38,26 @@ struct SyntheticCountWorkload {
     pattern: SyntheticPattern,
 }
 
+struct SyntheticCountPrepared {
+    program: Program,
+    inputs: Vec<Vec<u8>>,
+    input_bytes_total: u64,
+    logical_output_bytes: u64,
+    output_reset_payload: Vec<u8>,
+    baseline: SyntheticBaseline,
+    resident: Option<ResidentInputSet>,
+}
+
+enum SyntheticBaseline {
+    Count {
+        expected: u32,
+    },
+    StringBitmap {
+        pattern_bitmap: Vec<u32>,
+        rule_bitmap: Vec<u32>,
+    },
+}
+
 /// Public release macro workload program descriptor for local benchmark entrypoints.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct ReleaseMacroProgramSpec {
@@ -503,7 +523,7 @@ impl BenchCase for MetadataConditionBatch {
         }
         let baseline_outputs = vec![cpu_count.to_le_bytes().to_vec()];
         let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let accounting = metadata_transfer_accounting(
+        let accounting = resident_reset_transfer_accounting(
             prepared.input_bytes_total,
             output_bytes,
             resident_used,
@@ -571,7 +591,7 @@ impl BenchCase for MetadataConditionBatch {
     }
 }
 
-fn metadata_transfer_accounting(
+fn resident_reset_transfer_accounting(
     input_bytes_total: u64,
     output_bytes_total: u64,
     resident_used: bool,
@@ -630,11 +650,48 @@ impl BenchCase for SyntheticCountWorkload {
         ))
     }
 
-    fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        Ok(Box::new(build_synthetic_release_program(
-            self.pattern,
-            self.records,
-        )))
+    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
+        let program = build_synthetic_release_program(self.pattern, self.records);
+        let (inputs, baseline) = match self.pattern {
+            SyntheticPattern::StringBitmapScatter => {
+                let generated = string_bitmap_scatter_inputs(self.records);
+                (
+                    generated.inputs,
+                    SyntheticBaseline::StringBitmap {
+                        pattern_bitmap: generated.pattern_bitmap,
+                        rule_bitmap: generated.rule_bitmap,
+                    },
+                )
+            }
+            pattern => {
+                let generated = synthetic_inputs(pattern, self.records);
+                (
+                    generated.inputs,
+                    SyntheticBaseline::Count {
+                        expected: generated.expected,
+                    },
+                )
+            }
+        };
+        let input_bytes_total = input_bytes_total(&inputs);
+        let logical_output_bytes = synthetic_logical_output_bytes(self.pattern, self.records);
+        let output_reset_payload =
+            vec![0u8; synthetic_output_reset_bytes(self.pattern, self.records)];
+        let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+            ctx,
+            &program,
+            &inputs,
+            "synthetic release workload",
+        )?;
+        Ok(Box::new(SyntheticCountPrepared {
+            program,
+            inputs,
+            input_bytes_total,
+            logical_output_bytes,
+            output_reset_payload,
+            baseline,
+            resident,
+        }))
     }
 
     fn run(
@@ -642,72 +699,131 @@ impl BenchCase for SyntheticCountWorkload {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        if self.pattern == SyntheticPattern::StringBitmapScatter {
-            return self.run_string_bitmap_scatter(ctx, prepared);
-        }
-        let program = crate::api::case::prepared_program(prepared)?;
-        let generated = synthetic_inputs(self.pattern, self.records);
-        let timed = ctx
-            .dispatch_timed(program, &generated.inputs, &ctx.dispatch_config)
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+        let prepared = prepared
+            .downcast_ref::<SyntheticCountPrepared>()
+            .ok_or_else(|| {
+                BenchError::ExecutionFailed(
+                    "synthetic release prepared payload type mismatch".to_string(),
+                )
+            })?;
+        let (timed, resident_used, resident_reset_bytes) =
+            if let Some(resident) = prepared.resident.as_ref() {
+                if !prepared.output_reset_payload.is_empty() {
+                    resident.upload_resource(
+                        0,
+                        &prepared.output_reset_payload,
+                        "synthetic release resident output reset",
+                    )?;
+                }
+                let dispatch = dispatch_program_timed(
+                    ctx,
+                    &prepared.program,
+                    Some(resident),
+                    &prepared.inputs,
+                    &ctx.dispatch_config,
+                )?;
+                (
+                    dispatch.timed,
+                    dispatch.resident_used,
+                    prepared.output_reset_payload.len() as u64,
+                )
+            } else {
+                let dispatch = dispatch_program_timed(
+                    ctx,
+                    &prepared.program,
+                    None,
+                    &prepared.inputs,
+                    &ctx.dispatch_config,
+                )?;
+                (dispatch.timed, dispatch.resident_used, 0)
+            };
         let baseline_start = std::time::Instant::now();
-        let cpu_count = synthetic_cpu_count(self.pattern, self.records);
+        let baseline_outputs = match &prepared.baseline {
+            SyntheticBaseline::Count { expected } => {
+                let cpu_count = synthetic_cpu_count(self.pattern, self.records);
+                if cpu_count != *expected {
+                    return Err(BenchError::CorrectnessViolation(format!(
+                        "{} CPU baseline count disagreed with generator expectation",
+                        self.id
+                    )));
+                }
+                vec![cpu_count.to_le_bytes().to_vec()]
+            }
+            SyntheticBaseline::StringBitmap {
+                pattern_bitmap,
+                rule_bitmap,
+            } => {
+                let baseline_words =
+                    string_bitmap_scatter_expected_words(pattern_bitmap, rule_bitmap, self.records);
+                vec![baseline_words
+                    .first()
+                    .copied()
+                    .unwrap_or(0)
+                    .to_le_bytes()
+                    .to_vec()]
+            }
+        };
         let baseline_wall = baseline_start.elapsed().as_nanos() as u64;
-        if cpu_count != generated.expected {
-            return Err(BenchError::CorrectnessViolation(format!(
-                "{} CPU baseline count disagreed with generator expectation",
-                self.id
-            )));
-        }
-        let mut run = bench_run_from_timed(
+        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let accounting = resident_reset_transfer_accounting(
+            prepared.input_bytes_total,
+            output_bytes,
+            resident_used,
+            resident_reset_bytes,
+        );
+        let logical_bytes_touched = prepared
+            .input_bytes_total
+            .saturating_add(prepared.logical_output_bytes);
+        let mut run = bench_run_from_timed_with_accounting(
             timed,
-            generated.inputs,
-            vec![cpu_count.to_le_bytes().to_vec()],
+            prepared.input_bytes_total,
+            baseline_outputs,
             baseline_wall,
             self.metric_name,
             self.records,
+            logical_bytes_touched,
+            accounting,
         )?;
-        add_release_alias_metrics(self.pattern, self.records, cpu_count, &mut run);
+        run.metrics.custom.push(MetricPoint {
+            name: "synthetic_resident_buffers".to_string(),
+            value: u64::from(resident_used),
+        });
+        run.metrics.custom.push(MetricPoint {
+            name: "synthetic_resident_reset_bytes".to_string(),
+            value: resident_reset_bytes,
+        });
+        match &prepared.baseline {
+            SyntheticBaseline::Count { expected } => {
+                add_release_alias_metrics(self.pattern, self.records, *expected, &mut run);
+            }
+            SyntheticBaseline::StringBitmap { .. } => {
+                run.metrics.custom.push(MetricPoint {
+                    name: "scatter_materialized_words".to_string(),
+                    value: u64::from(self.records),
+                });
+            }
+        }
         Ok(run)
+    }
+
+    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
+        prepared
+            .downcast_ref::<SyntheticCountPrepared>()
+            .map(|prepared| &prepared.program)
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
         run.verify_exact_outputs()
     }
-}
 
-impl SyntheticCountWorkload {
-    fn run_string_bitmap_scatter(
-        &self,
-        ctx: &mut BenchContext,
-        prepared: &mut PreparedCase,
-    ) -> Result<BenchRun, BenchError> {
-        let program = crate::api::case::prepared_program(prepared)?;
-        let generated = string_bitmap_scatter_inputs(self.records);
-        let timed = ctx
-            .dispatch_timed(program, &generated.inputs, &ctx.dispatch_config)
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-        let baseline_start = std::time::Instant::now();
-        let baseline_words = string_bitmap_scatter_expected_words(
-            &generated.pattern_bitmap,
-            &generated.rule_bitmap,
-            self.records,
-        );
-        let baseline_outputs = vec![encode_u32_words(&baseline_words)];
-        let baseline_wall = baseline_start.elapsed().as_nanos() as u64;
-        let mut run = bench_run_from_timed(
-            timed,
-            generated.inputs,
-            baseline_outputs,
-            baseline_wall,
-            self.metric_name,
-            self.records,
-        )?;
-        run.metrics.custom.push(MetricPoint {
-            name: "scatter_materialized_words".to_string(),
-            value: u64::from(self.records),
-        });
-        Ok(run)
+    fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
+        prepared
+            .downcast_ref::<SyntheticCountPrepared>()
+            .map(|prepared| (prepared.input_bytes_total, prepared.logical_output_bytes))
+            .unwrap_or((
+                self.records as u64 * pattern_input_count(self.pattern) as u64 * 4,
+                synthetic_logical_output_bytes(self.pattern, self.records),
+            ))
     }
 }
 
@@ -755,10 +871,7 @@ fn string_bitmap_scatter_inputs(records: u32) -> StringBitmapScatterInputs {
         pattern_bitmap.push(row[0]);
         rule_bitmap.push(row[1]);
     }
-    let output_words = records.div_ceil(32);
-    let out_flags_init = vec![0u32; output_words as usize];
     let inputs = vec![
-        encode_u32_words(&out_flags_init),
         encode_u32_words(&pattern_bitmap),
         encode_u32_words(&rule_bitmap),
     ];
@@ -889,8 +1002,9 @@ fn string_bitmap_scatter_program(records: u32) -> Program {
     let output_words = records.div_ceil(32);
     Program::wrapped(
         vec![
-            BufferDecl::storage("out_flags", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(output_words),
+            BufferDecl::output("out_flags", 0, DataType::U32)
+                .with_count(output_words)
+                .with_output_byte_range(0..4),
             BufferDecl::storage("pattern_bitmap", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(records),
             BufferDecl::storage("rule_bitmap", 2, BufferAccess::ReadOnly, DataType::U32)
@@ -898,23 +1012,49 @@ fn string_bitmap_scatter_program(records: u32) -> Program {
         ],
         [256, 1, 1],
         vec![
-            Node::let_bind("idx", Expr::gid_x()),
+            Node::let_bind("word_idx", Expr::gid_x()),
             Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(records)),
-                vec![Node::if_then(
-                    Expr::and(
-                        Expr::ne(load_u32("pattern_bitmap"), Expr::u32(0)),
-                        Expr::ne(load_u32("rule_bitmap"), Expr::u32(0)),
+                Expr::lt(Expr::var("word_idx"), Expr::u32(output_words)),
+                vec![
+                    Node::let_bind("word", Expr::u32(0)),
+                    Node::loop_for(
+                        "lane",
+                        Expr::u32(0),
+                        Expr::u32(32),
+                        vec![
+                            Node::let_bind(
+                                "record_idx",
+                                Expr::add(
+                                    Expr::shl(Expr::var("word_idx"), Expr::u32(5)),
+                                    Expr::var("lane"),
+                                ),
+                            ),
+                            Node::if_then(
+                                Expr::and(
+                                    Expr::lt(Expr::var("record_idx"), Expr::u32(records)),
+                                    Expr::and(
+                                        Expr::ne(
+                                            Expr::load("pattern_bitmap", Expr::var("record_idx")),
+                                            Expr::u32(0),
+                                        ),
+                                        Expr::ne(
+                                            Expr::load("rule_bitmap", Expr::var("record_idx")),
+                                            Expr::u32(0),
+                                        ),
+                                    ),
+                                ),
+                                vec![Node::assign(
+                                    "word",
+                                    Expr::bitor(
+                                        Expr::var("word"),
+                                        Expr::shl(Expr::u32(1), Expr::var("lane")),
+                                    ),
+                                )],
+                            ),
+                        ],
                     ),
-                    vec![Node::let_bind(
-                        "_scatter",
-                        Expr::atomic_or(
-                            "out_flags",
-                            Expr::shr(Expr::var("idx"), Expr::u32(5)),
-                            Expr::shl(Expr::u32(1), Expr::bitand(Expr::var("idx"), Expr::u32(31))),
-                        ),
-                    )],
-                )],
+                    Node::store("out_flags", Expr::var("word_idx"), Expr::var("word")),
+                ],
             ),
         ],
     )
@@ -1575,6 +1715,20 @@ fn pattern_buffers(pattern: SyntheticPattern) -> &'static [&'static str] {
 
 fn pattern_input_count(pattern: SyntheticPattern) -> usize {
     pattern_buffers(pattern).len()
+}
+
+fn synthetic_output_reset_bytes(pattern: SyntheticPattern, _records: u32) -> usize {
+    match pattern {
+        SyntheticPattern::StringBitmapScatter => 0,
+        _ => 4,
+    }
+}
+
+fn synthetic_logical_output_bytes(pattern: SyntheticPattern, records: u32) -> u64 {
+    match pattern {
+        SyntheticPattern::StringBitmapScatter => u64::from(records.div_ceil(32)) * 4,
+        _ => 4,
+    }
 }
 
 fn synthetic_inputs(pattern: SyntheticPattern, records: u32) -> SyntheticInputs {
@@ -2321,6 +2475,34 @@ fn bench_run_from_timed(
     let input_bytes = inputs.iter().map(Vec::len).sum::<usize>() as u64;
     let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
     let bytes_touched = input_bytes.saturating_add(output_bytes);
+    let accounting = TransferAccounting {
+        bytes_touched,
+        bytes_read: input_bytes,
+        bytes_written: output_bytes,
+    };
+    bench_run_from_timed_with_accounting(
+        timed,
+        input_bytes,
+        baseline_outputs,
+        baseline_wall,
+        custom_name,
+        custom_value,
+        bytes_touched,
+        accounting,
+    )
+}
+
+fn bench_run_from_timed_with_accounting(
+    timed: vyre_driver::TimedDispatchResult,
+    input_bytes: u64,
+    baseline_outputs: Vec<Vec<u8>>,
+    baseline_wall: u64,
+    custom_name: &str,
+    custom_value: u32,
+    logical_bytes_touched: u64,
+    accounting: TransferAccounting,
+) -> Result<BenchRun, BenchError> {
+    let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
     let wall_ns = timed.wall_ns;
     let device_ns = timed.device_ns.unwrap_or(wall_ns);
     Ok(BenchRun {
@@ -2329,11 +2511,11 @@ fn bench_run_from_timed(
             dispatch_ns: timed.device_ns,
             input_bytes: Some(input_bytes),
             output_bytes: Some(output_bytes),
-            bytes_touched: Some(bytes_touched),
-            bytes_read: Some(input_bytes),
-            bytes_written: Some(output_bytes),
-            wall_throughput_gb_s: Some(gb_per_second(bytes_touched, wall_ns)),
-            device_throughput_gb_s: Some(gb_per_second(bytes_touched, device_ns)),
+            bytes_touched: Some(logical_bytes_touched),
+            bytes_read: Some(accounting.bytes_read),
+            bytes_written: Some(accounting.bytes_written),
+            wall_throughput_gb_s: Some(gb_per_second(logical_bytes_touched, wall_ns)),
+            device_throughput_gb_s: Some(gb_per_second(logical_bytes_touched, device_ns)),
             custom: vec![MetricPoint {
                 name: custom_name.to_string(),
                 value: u64::from(custom_value),
@@ -2344,7 +2526,7 @@ fn bench_run_from_timed(
             wall_ns: Some(baseline_wall),
             input_bytes: Some(input_bytes),
             output_bytes: Some(baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64),
-            bytes_touched: Some(bytes_touched),
+            bytes_touched: Some(logical_bytes_touched),
             bytes_read: Some(input_bytes),
             bytes_written: Some(output_bytes),
             ..Default::default()
@@ -2781,7 +2963,7 @@ mod tests {
     fn metadata_resident_accounting_separates_hot_transfer_from_logical_work() {
         let input_bytes = u64::from(METADATA_RECORDS) * 12;
         let output_bytes = METADATA_OUTPUT_RESET_BYTES;
-        let accounting = metadata_transfer_accounting(
+        let accounting = resident_reset_transfer_accounting(
             input_bytes,
             output_bytes,
             true,
@@ -2799,6 +2981,52 @@ mod tests {
             logical_bytes_touched > accounting.bytes_touched,
             "Fix: resident metadata benchmark must keep host-transfer accounting separate from logical throughput bytes."
         );
+    }
+
+    #[test]
+    fn synthetic_resident_accounting_resets_only_output_resource() {
+        let condition_input_bytes = u64::from(CONDITION_EVAL_BATCH.records)
+            * pattern_input_count(CONDITION_EVAL_BATCH.pattern) as u64
+            * 4;
+        let condition_output_bytes = synthetic_output_reset_bytes(
+            CONDITION_EVAL_BATCH.pattern,
+            CONDITION_EVAL_BATCH.records,
+        ) as u64;
+        let condition_accounting = resident_reset_transfer_accounting(
+            condition_input_bytes,
+            condition_output_bytes,
+            true,
+            condition_output_bytes,
+        );
+
+        assert_eq!(condition_accounting.bytes_read, 4);
+        assert_eq!(condition_accounting.bytes_written, 4);
+        assert!(
+            condition_input_bytes > condition_accounting.bytes_touched,
+            "Fix: resident condition workloads must not account the full input upload as sample traffic."
+        );
+
+        let scatter_reset = synthetic_output_reset_bytes(
+            STRING_BITMAP_SCATTER.pattern,
+            STRING_BITMAP_SCATTER.records,
+        ) as u64;
+        assert_eq!(scatter_reset, 0);
+        let scatter_logical_output = synthetic_logical_output_bytes(
+            STRING_BITMAP_SCATTER.pattern,
+            STRING_BITMAP_SCATTER.records,
+        );
+        assert_eq!(
+            scatter_logical_output,
+            u64::from(STRING_BITMAP_SCATTER.records.div_ceil(32)) * 4
+        );
+        let scatter_accounting = resident_reset_transfer_accounting(
+            u64::from(STRING_BITMAP_SCATTER.records) * 8,
+            4,
+            true,
+            scatter_reset,
+        );
+        assert_eq!(scatter_accounting.bytes_read, scatter_reset);
+        assert_eq!(scatter_accounting.bytes_written, 4);
     }
 
     #[test]
@@ -2824,14 +3052,14 @@ mod tests {
 
             assert_eq!(
                 generated.inputs.len(),
-                program.buffers().len(),
-                "records={records} must pass one input per program binding"
+                2,
+                "records={records} must pass only read-only bitmap inputs"
             );
-            assert_eq!(generated.inputs[0].len(), output_words * 4);
+            assert_eq!(generated.inputs[0].len(), records as usize * 4);
             assert_eq!(generated.inputs[1].len(), records as usize * 4);
-            assert_eq!(generated.inputs[2].len(), records as usize * 4);
             assert_eq!(program.buffers()[0].name.as_ref(), "out_flags");
             assert_eq!(program.buffers()[0].count, records.div_ceil(32));
+            assert_eq!(program.buffers()[0].output_byte_range(), Some(0..4));
             assert_eq!(program.buffers()[1].name.as_ref(), "pattern_bitmap");
             assert_eq!(program.buffers()[1].count, records);
             assert_eq!(program.buffers()[2].name.as_ref(), "rule_bitmap");
@@ -2869,8 +3097,13 @@ mod tests {
 
             assert_eq!(
                 outputs,
-                vec![encode_u32_words(&expected_words)],
-                "records={records} must scatter exactly the CPU oracle bitmap"
+                vec![expected_words
+                    .first()
+                    .copied()
+                    .unwrap_or(0)
+                    .to_le_bytes()
+                    .to_vec()],
+                "records={records} must scatter the CPU oracle bitmap and expose the configured proof word"
             );
         }
     }

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "required_closed_families": 12,
+  "required_closed_families": 13,
   "required_cpu_sota_100x_families": [
     "condition-eval",
     "string-bitmap-scatter",
@@ -16,7 +16,7 @@
   ],
   "missing_required_cpu_sota_100x_families": [],
   "matched_required_families": 13,
-  "release_suite_case_count": 66,
+  "release_suite_case_count": 26,
   "cpu_sota_contract_count": 39,
   "cpu_sota_100x_contract_count": 15,
   "cpu_sota_100x_contract_cases": [
@@ -36,7 +36,7 @@
     "runtime.megakernel.condition.64k",
     "sparse.compaction.count.1m"
   ],
-  "cpu_sota_100x_family_count": 12,
+  "cpu_sota_100x_family_count": 11,
   "cpu_sota_100x_families": [
     "alias-reaching-def",
     "c-ast-traversal",
@@ -47,7 +47,6 @@
     "megakernel-queued-batches",
     "offset-count-aggregation",
     "quantified-condition-loops",
-    "quantized-linear",
     "sparse-output-compaction",
     "string-bitmap-scatter"
   ],

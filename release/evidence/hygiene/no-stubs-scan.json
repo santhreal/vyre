@@ -16,45 +16,51 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 229,
+      "line": 240,
       "pattern": "placeholder_text",
       "text": "let mut placeholder = Vec::new();"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 234,
+      "line": 245,
       "pattern": "placeholder_text",
       "text": "placeholder.push((origins.intern(f[0]), loans.intern(f[1])));"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 272,
+      "line": 283,
       "pattern": "placeholder_text",
       "text": "placeholder,"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 379,
+      "line": 463,
       "pattern": "placeholder_text",
-      "text": "/// placeholder origins that is not a known/declared placeholder subset."
+      "text": "/// derived subset between two placeholder origins that is not a"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 387,
+      "line": 464,
+      "pattern": "placeholder_text",
+      "text": "/// known/declared placeholder subset."
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
+      "line": 469,
       "pattern": "placeholder_text",
       "text": "let placeholders: HashSet<Origin> = self.placeholder.iter().map(|&(o, _)| o).collect();"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/lex/lexer/plan.rs",
-      "line": 16,
-      "pattern": "not_implemented_text",
-      "text": "/// **Not implemented:** returns an empty program. `vyre-frontend-rust` must"
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/borrowck/rustc_facts.rs",
+      "line": 491,
+      "pattern": "placeholder_text",
+      "text": "/// placeholder origins that is not a known/declared placeholder subset."
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/rust/lower/mod.rs",
-      "line": 18,
-      "pattern": "not_implemented_text",
-      "text": "/// Lowering is not implemented for the nano-subset."
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/scan_ac_irregular.rs",
+      "line": 83,
+      "pattern": "TODO",
+      "text": "b\"TODO:\","
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/src/analysis_family.rs",
@@ -76,6 +82,6 @@
     }
   ],
   "blockers": [
-    "12 `no-stubs` finding(s) remain"
+    "13 `no-stubs` finding(s) remain"
   ]
 }

@@ -20,7 +20,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/README.md",
       "exists": true,
       "read_error": null,
-      "source_bytes": 5870
+      "source_bytes": 6136
     }
   ],
   "required_terms": [
@@ -56,7 +56,7 @@
       "tree": "tests",
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests",
       "exists": true,
-      "source_bytes": 1321752,
+      "source_bytes": 1172258,
       "unreadable_file_count": 0
     },
     {

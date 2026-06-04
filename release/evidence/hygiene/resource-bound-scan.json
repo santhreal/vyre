@@ -58,7 +58,7 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/module_forks.rs",
-      "line": 95,
+      "line": 90,
       "pattern": "unbounded_read",
       "text": "&std::fs::read_to_string(path)"
     },
@@ -93,16 +93,16 @@
       "text": "let object_bytes = std::fs::read(&paths.object).map_err(|error| {"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/integration/quality/__law7_split/public_api_boundary_part2.rs",
-      "line": 50,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/probes/git.rs",
+      "line": 110,
       "pattern": "unbounded_read",
-      "text": "let Ok(source) = fs::read_to_string(&path) else {"
+      "text": "match fs::read(workspace_root.join(path.as_ref())) {"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/__law7_split/module_cache_part1.rs",
-      "line": 460,
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/probes/git.rs",
+      "line": 174,
       "pattern": "unbounded_read",
-      "text": "match std::fs::read_to_string(&path) {"
+      "text": "if let Ok(bytes) = fs::read(workspace_root.join(path.as_ref())) {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/module_cache.rs",
@@ -118,9 +118,9 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/build.rs",
-      "line": 20,
+      "line": 19,
       "pattern": "unbounded_read",
-      "text": "let workspace = fs::read_to_string(&workspace_toml).unwrap_or_else(|error| {"
+      "text": "let manifest = fs::read_to_string(&manifest_path).unwrap_or_else(|error| {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-intrinsics/build.rs",
@@ -129,19 +129,13 @@
       "text": "let src = fs::read_to_string(path).unwrap_or_else(|e| {"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/src/__law7_split/main_part4.rs",
-      "line": 2,
-      "pattern": "unbounded_read",
-      "text": "let json = std::fs::read_to_string(path).map_err(|error| {"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/conform/vyre-conform-runner/src/main.rs",
-      "line": 1566,
+      "line": 1512,
       "pattern": "unbounded_read",
       "text": "let json = std::fs::read_to_string(path).map_err(|error| {"
     }
   ],
   "blockers": [
-    "23 `resource-bound` finding(s) remain"
+    "22 `resource-bound` finding(s) remain"
   ]
 }

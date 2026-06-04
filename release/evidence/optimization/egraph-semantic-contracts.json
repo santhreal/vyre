@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "egraph-semantic-contracts",
-  "source_matrix": "release/evidence/optimization/optimization-integration-matrix.json",
+  "source_matrix": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/release/evidence/optimization/optimization-integration-matrix.json",
   "markers": [
     {
       "id": "egraph-saturation",

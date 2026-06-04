@@ -13,9 +13,8 @@
         "libs/performance/matching/vyre/release/evidence/benchmarks/release-workload-matrix.json",
         "libs/performance/matching/vyre/release/evidence/version/release-tag-plan.json",
         "release/evidence/",
-        "release/evidence/**/*.json",
         "release/evidence/backends/backend-matrix.json",
-        "release/evidence/benchmarks/bench-legendary-axes.json",
+        "release/evidence/benchmarks/bench-release-axes.json",
         "release/evidence/benchmarks/release-workload-matrix.json",
         "release/evidence/conformance/conformance-matrix.json",
         "release/evidence/conformance/cuda-conformance.json",
@@ -40,11 +39,8 @@
         "release/evidence/weir/weir-readme-contracts.json",
         "release/evidence/weir/weir-vyre-integration-tests.json"
       ],
-      "evidence_artifact_ref_count": 30,
-      "missing_evidence_artifact_refs": [
-        "release/evidence/**/*.json",
-        "release/evidence/benchmarks/bench-legendary-axes.json"
-      ],
+      "evidence_artifact_ref_count": 29,
+      "missing_evidence_artifact_refs": [],
       "required_topics": [
         "vyre",
         "weir",
@@ -54,9 +50,7 @@
         "conformance"
       ],
       "missing_topics": [],
-      "unresolved_markers": [
-        "todo"
-      ]
+      "unresolved_markers": []
     },
     {
       "id": "vyre-readme",
@@ -139,9 +133,10 @@
       "contains_release_evidence_rule": true,
       "evidence_artifact_refs": [
         "release/evidence/",
-        "release/evidence/final/completion-audit.json"
+        "release/evidence/final/completion-audit.json",
+        "release/evidence/weir/weir-analysis-api-matrix.json"
       ],
-      "evidence_artifact_ref_count": 2,
+      "evidence_artifact_ref_count": 3,
       "missing_evidence_artifact_refs": [],
       "required_topics": [
         "release",
@@ -149,9 +144,7 @@
         "cuda",
         "weir"
       ],
-      "missing_topics": [
-        "weir"
-      ],
+      "missing_topics": [],
       "unresolved_markers": []
     },
     {
@@ -173,9 +166,7 @@
         "evidence"
       ],
       "missing_topics": [],
-      "unresolved_markers": [
-        "todo"
-      ]
+      "unresolved_markers": []
     },
     {
       "id": "vyre-testing",
@@ -225,9 +216,7 @@
         "pass",
         "evidence"
       ],
-      "missing_topics": [
-        "gpu"
-      ],
+      "missing_topics": [],
       "unresolved_markers": []
     },
     {
@@ -251,9 +240,7 @@
         "semantic",
         "evidence"
       ],
-      "missing_topics": [
-        "semantic"
-      ],
+      "missing_topics": [],
       "unresolved_markers": []
     },
     {
@@ -286,8 +273,13 @@
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
-      "evidence_artifact_refs": [],
-      "evidence_artifact_ref_count": 0,
+      "evidence_artifact_refs": [
+        "release/evidence/parser/c-parser-diagnostics-summary.json",
+        "release/evidence/parser/c-parser-linux-subsystem.json",
+        "release/evidence/parser/c-parser-throughput.json",
+        "release/evidence/parser/distributed-parser-map.json"
+      ],
+      "evidence_artifact_ref_count": 4,
       "missing_evidence_artifact_refs": [],
       "required_topics": [
         "c",
@@ -304,8 +296,13 @@
       "exists": true,
       "read_error": null,
       "contains_release_evidence_rule": true,
-      "evidence_artifact_refs": [],
-      "evidence_artifact_ref_count": 0,
+      "evidence_artifact_refs": [
+        "release/evidence/parser/c-parser-diagnostics-summary.json",
+        "release/evidence/parser/c-parser-linux-subsystem.json",
+        "release/evidence/parser/c-parser-throughput.json",
+        "release/evidence/parser/distributed-parser-map.json"
+      ],
+      "evidence_artifact_ref_count": 4,
       "missing_evidence_artifact_refs": [],
       "required_topics": [
         "vyrec",
@@ -355,9 +352,7 @@
         "value-set",
         "witness"
       ],
-      "missing_topics": [
-        "range-check"
-      ],
+      "missing_topics": [],
       "unresolved_markers": []
     },
     {
@@ -409,15 +404,5 @@
     }
   ],
   "limitation_findings": [],
-  "blockers": [
-    "required documentation `release-plan` references 2 missing release evidence artifact(s)",
-    "required documentation `release-plan` contains unresolved marker `todo`",
-    "required documentation `vyre-release-checklist` does not cover required topic `weir`",
-    "required documentation `vyre-publish-gate` contains unresolved marker `todo`",
-    "required documentation `vyre-optimization` does not cover required topic `gpu`",
-    "required documentation `vyre-conformance` does not cover required topic `semantic`",
-    "required documentation `vyre-frontend-c` does not reference concrete release evidence artifacts",
-    "required documentation `vyrec-readme` does not reference concrete release evidence artifacts",
-    "required documentation `weir-readme` does not cover required topic `range-check`"
-  ]
+  "blockers": []
 }

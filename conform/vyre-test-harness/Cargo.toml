@@ -17,6 +17,7 @@ workspace = true
 path = "src/lib.rs"
 
 [features]
+default = []
 strict-fp = ["vyre-harness/strict-fp"]
 
 [dependencies]

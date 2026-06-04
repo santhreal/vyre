@@ -128,6 +128,10 @@ shape.
 
 Release readiness for this document is proven through the Vyre/Weir evidence manifest and generated artifacts under `release/evidence/`. Claims here must map to concrete gate output, benchmark output, conformance output, parser corpus output, or documentation proof files before the release requirement can be closed.
 
+Semantic conformance is the release contract: backend parity is accepted only
+when the generated conformance evidence proves the same semantic result as the
+CPU reference for the claimed op/backend surface.
+
 Concrete evidence anchors:
 
 - `release/evidence/conformance/conformance-matrix.json`

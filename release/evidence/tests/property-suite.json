@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "property",
-  "file_count": 189,
-  "vyre_file_count": 154,
+  "file_count": 187,
+  "vyre_file_count": 152,
   "dataflow_consumer_file_count": 34,
   "vyrec_file_count": 1,
   "files": [
@@ -27,7 +27,7 @@
         "property",
         "unit"
       ],
-      "lines": 613,
+      "lines": 612,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": true,
@@ -38,34 +38,6 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/norm/__law7_split/layer_norm_part2.rs",
-      "layers": [
-        "benchmark",
-        "property",
-        "unit"
-      ],
-      "lines": 148,
-      "has_test_entrypoint": true,
-      "assertion_count": 9,
-      "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/attention/__law7_split/softmax_part2.rs",
-      "layers": [
-        "benchmark",
-        "property",
-        "unit"
-      ],
-      "lines": 124,
-      "has_test_entrypoint": true,
-      "assertion_count": 8,
-      "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/nn/attention/softmax.rs",
       "layers": [
         "benchmark",
@@ -73,9 +45,9 @@
         "property",
         "unit"
       ],
-      "lines": 592,
+      "lines": 593,
       "has_test_entrypoint": true,
-      "assertion_count": 14,
+      "assertion_count": 17,
       "oversized": true,
       "god_test_candidate": true,
       "recommended_split": [
@@ -129,27 +101,13 @@
       "recommended_split": []
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/linalg/__law7_split/matmul_part2.rs",
-      "layers": [
-        "benchmark",
-        "property",
-        "unit"
-      ],
-      "lines": 307,
-      "has_test_entrypoint": true,
-      "assertion_count": 13,
-      "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/math/linalg/matmul.rs",
       "layers": [
         "benchmark",
         "property",
         "unit"
       ],
-      "lines": 776,
+      "lines": 780,
       "has_test_entrypoint": true,
       "assertion_count": 15,
       "oversized": true,
@@ -160,18 +118,24 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/intern/__law7_split/perfect_hash_part2.rs",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/expr_parser/tests.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "property",
         "unit"
       ],
-      "lines": 60,
+      "lines": 299,
       "has_test_entrypoint": true,
-      "assertion_count": 9,
+      "assertion_count": 42,
       "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
+      "god_test_candidate": true,
+      "recommended_split": [
+        "extract hostile-input cases into tests/adversarial/",
+        "extract property invariants into tests/properties/",
+        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
+        "move timing-only checks into benches/ or release benchmark cases"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/intern/perfect_hash.rs",
@@ -181,7 +145,7 @@
         "property",
         "unit"
       ],
-      "lines": 512,
+      "lines": 511,
       "has_test_entrypoint": true,
       "assertion_count": 35,
       "oversized": true,
@@ -482,6 +446,21 @@
       "recommended_split": []
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/src/cases/dataflow_irregular/tests/queue_closure_generated.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 349,
+      "has_test_entrypoint": true,
+      "assertion_count": 42,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-bench/tests/cross_emitter_property.rs",
       "layers": [
         "benchmark",
@@ -489,7 +468,7 @@
         "property",
         "unit"
       ],
-      "lines": 324,
+      "lines": 326,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -504,7 +483,7 @@
         "property",
         "unit"
       ],
-      "lines": 67,
+      "lines": 100,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -520,7 +499,7 @@
         "property",
         "unit"
       ],
-      "lines": 170,
+      "lines": 212,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -570,7 +549,7 @@
         "property",
         "unit"
       ],
-      "lines": 712,
+      "lines": 711,
       "has_test_entrypoint": true,
       "assertion_count": 60,
       "oversized": true,
@@ -581,41 +560,13 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/transform/__law7_split/visit_part2.rs",
-      "layers": [
-        "benchmark",
-        "property",
-        "unit"
-      ],
-      "lines": 261,
-      "has_test_entrypoint": true,
-      "assertion_count": 8,
-      "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/transform/__law7_split/collectives_part1.rs",
-      "layers": [
-        "benchmark",
-        "property",
-        "unit"
-      ],
-      "lines": 450,
-      "has_test_entrypoint": true,
-      "assertion_count": 14,
-      "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/transform/visit.rs",
       "layers": [
         "benchmark",
         "property",
         "unit"
       ],
-      "lines": 727,
+      "lines": 726,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": true,
@@ -916,27 +867,13 @@
       "recommended_split": []
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/buffer/__law7_split/pool_part2.rs",
-      "layers": [
-        "benchmark",
-        "property",
-        "unit"
-      ],
-      "lines": 377,
-      "has_test_entrypoint": true,
-      "assertion_count": 17,
-      "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/buffer/pool.rs",
       "layers": [
         "benchmark",
         "property",
         "unit"
       ],
-      "lines": 924,
+      "lines": 922,
       "has_test_entrypoint": true,
       "assertion_count": 17,
       "oversized": true,
@@ -1129,7 +1066,7 @@
         "property",
         "unit"
       ],
-      "lines": 99,
+      "lines": 103,
       "has_test_entrypoint": true,
       "assertion_count": 1,
       "oversized": false,
@@ -1194,7 +1131,7 @@
         "property",
         "unit"
       ],
-      "lines": 170,
+      "lines": 173,
       "has_test_entrypoint": true,
       "assertion_count": 19,
       "oversized": false,
@@ -1208,7 +1145,7 @@
         "property",
         "unit"
       ],
-      "lines": 456,
+      "lines": 462,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -1238,7 +1175,7 @@
         "property",
         "unit"
       ],
-      "lines": 598,
+      "lines": 596,
       "has_test_entrypoint": true,
       "assertion_count": 3,
       "oversized": true,
@@ -1249,20 +1186,6 @@
         "extract property invariants into tests/properties/",
         "move timing-only checks into benches/ or release benchmark cases"
       ]
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/src/execution/__law7_split/expr_part2.rs",
-      "layers": [
-        "benchmark",
-        "property",
-        "unit"
-      ],
-      "lines": 131,
-      "has_test_entrypoint": true,
-      "assertion_count": 3,
-      "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-reference/tests/value_signed_narrowing_property_contracts.rs",
@@ -1476,7 +1399,7 @@
         "property",
         "unit"
       ],
-      "lines": 119,
+      "lines": 121,
       "has_test_entrypoint": true,
       "assertion_count": 4,
       "oversized": false,
@@ -1521,9 +1444,9 @@
         "property",
         "unit"
       ],
-      "lines": 146,
+      "lines": 176,
       "has_test_entrypoint": true,
-      "assertion_count": 12,
+      "assertion_count": 13,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -1617,7 +1540,7 @@
         "property",
         "unit"
       ],
-      "lines": 809,
+      "lines": 807,
       "has_test_entrypoint": true,
       "assertion_count": 7,
       "oversized": true,
@@ -1632,76 +1555,6 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/__law7_split/weir_matrix_part2.rs",
-      "layers": [
-        "benchmark",
-        "property",
-        "unit"
-      ],
-      "lines": 451,
-      "has_test_entrypoint": true,
-      "assertion_count": 8,
-      "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/__law7_split/test_matrix_part2.rs",
-      "layers": [
-        "adversarial",
-        "benchmark",
-        "conformance",
-        "corpus",
-        "fuzz",
-        "gap",
-        "property",
-        "unit"
-      ],
-      "lines": 349,
-      "has_test_entrypoint": true,
-      "assertion_count": 7,
-      "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/__law7_split/weir_matrix_part1.rs",
-      "layers": [
-        "benchmark",
-        "conformance",
-        "fuzz",
-        "property",
-        "unit"
-      ],
-      "lines": 627,
-      "has_test_entrypoint": true,
-      "assertion_count": 0,
-      "oversized": true,
-      "god_test_candidate": true,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract property invariants into tests/properties/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ]
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/__law7_split/test_matrix_part1.rs",
-      "layers": [
-        "benchmark",
-        "conformance",
-        "corpus",
-        "fuzz",
-        "property",
-        "unit"
-      ],
-      "lines": 458,
-      "has_test_entrypoint": true,
-      "assertion_count": 0,
-      "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/weir_matrix.rs",
       "layers": [
         "benchmark",
@@ -1710,7 +1563,7 @@
         "property",
         "unit"
       ],
-      "lines": 1080,
+      "lines": 1137,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": true,
@@ -1729,9 +1582,25 @@
         "property",
         "unit"
       ],
-      "lines": 49,
+      "lines": 112,
       "has_test_entrypoint": true,
-      "assertion_count": 8,
+      "assertion_count": 20,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_text_encoding_classify.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 255,
+      "has_test_entrypoint": true,
+      "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -1793,9 +1662,9 @@
         "property",
         "unit"
       ],
-      "lines": 55,
+      "lines": 271,
       "has_test_entrypoint": true,
-      "assertion_count": 14,
+      "assertion_count": 37,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -1811,6 +1680,22 @@
       "lines": 73,
       "has_test_entrypoint": true,
       "assertion_count": 10,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_prefix_scan_large.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 242,
+      "has_test_entrypoint": true,
+      "assertion_count": 15,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -1856,9 +1741,9 @@
         "property",
         "unit"
       ],
-      "lines": 27,
+      "lines": 106,
       "has_test_entrypoint": true,
-      "assertion_count": 4,
+      "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -1874,6 +1759,23 @@
       "lines": 32,
       "has_test_entrypoint": true,
       "assertion_count": 5,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_csr_queue_strided.rs",
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 228,
+      "has_test_entrypoint": true,
+      "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -1957,6 +1859,22 @@
       "recommended_split": []
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_csr_frontier_queue.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 293,
+      "has_test_entrypoint": true,
+      "assertion_count": 18,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_bitset_not_involution.rs",
       "layers": [
         "benchmark",
@@ -2004,6 +1922,22 @@
       "recommended_split": []
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_multi_block_prefix_scan.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 208,
+      "has_test_entrypoint": true,
+      "assertion_count": 20,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_text_byte_histogram.rs",
       "layers": [
         "benchmark",
@@ -2012,9 +1946,9 @@
         "property",
         "unit"
       ],
-      "lines": 64,
+      "lines": 119,
       "has_test_entrypoint": true,
-      "assertion_count": 12,
+      "assertion_count": 18,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -2099,6 +2033,23 @@
       "recommended_split": []
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_csr_queue_split.rs",
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 394,
+      "has_test_entrypoint": true,
+      "assertion_count": 22,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_ziftsieve.rs",
       "layers": [
         "benchmark",
@@ -2140,6 +2091,22 @@
       "lines": 76,
       "has_test_entrypoint": true,
       "assertion_count": 4,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/proptest_text_line_index.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 326,
+      "has_test_entrypoint": true,
+      "assertion_count": 36,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -2219,6 +2186,23 @@
       "lines": 51,
       "has_test_entrypoint": true,
       "assertion_count": 10,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_frontier_queue_clear.rs",
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "conformance",
+        "integration",
+        "property",
+        "unit"
+      ],
+      "lines": 157,
+      "has_test_entrypoint": true,
+      "assertion_count": 13,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -2405,7 +2389,7 @@
         "property",
         "unit"
       ],
-      "lines": 233,
+      "lines": 235,
       "has_test_entrypoint": true,
       "assertion_count": 15,
       "oversized": false,

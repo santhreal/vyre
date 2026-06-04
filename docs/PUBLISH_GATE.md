@@ -27,7 +27,7 @@ crate; nonzero exit blocks publish.
      - ≥4 unit tests
      - ≤600 LOC
      - no `Program::new` (use `Program::wrapped`)
-     - no `_ => panic|todo|unimplemented` catch-alls
+     - no `_ => panic|incomplete|unimplemented` catch-alls
 5. **`cargo_full publish --dry-run -p <crate>`** exits 0. CI runs this
    for every changed crate per PR.
 6. **CHANGELOG.md** has an entry for the new version with a

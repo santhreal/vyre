@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "warm_us_per_file": 35.828,
-  "cold_pipeline_build_ms": 0.494032,
-  "gbs_scan_throughput": 31.094,
+  "warm_us_per_file": 32.912,
+  "cold_pipeline_build_ms": 0.438326,
+  "gbs_scan_throughput": 28.798,
   "ulp_drift_max": 0,
   "max_vram_mib": 32607,
   "source_artifacts": [
@@ -23,21 +23,5 @@
     "release/evidence/benchmarks/workload-15-adaptive-routing.json",
     "release/evidence/benchmarks/workload-16-quantized-linear.json"
   ],
-  "blockers": [
-    "source_artifact `release/evidence/benchmarks/workload-01-condition-eval.json` source_tree_fingerprint `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` source_tree_fingerprint `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` source_tree_fingerprint `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-05-entropy-window.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json` source_tree_fingerprint `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-08-ifds-witness.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-09-c-ast-traversal.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-11-egraph-saturation.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-12-sparse-output-compaction.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-13-callgraph-reachability.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-14-compound-fused-filter.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`",
-    "source_artifact `release/evidence/benchmarks/workload-16-quantized-linear.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:f88be45f0b78b887c2301ae0cbb2d477143e51719e0dee1fe31757508de70958`"
-  ]
+  "blockers": []
 }

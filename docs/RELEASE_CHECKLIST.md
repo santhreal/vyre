@@ -36,6 +36,7 @@ required workflow.
 - [ ] Parser coherence evidence covers `vyre-frontend-c`, `tools/vyrec`, dataflow integration, consumer, and grammar generation boundaries.
 - [ ] `tools/vyrec` emits actionable `Fix:` diagnostics for user-facing failures.
 - [ ] The dataflow consumer `0.0.1` metadata, README, examples, soundness vocabulary, and Vyre integration evidence are coherent.
+- [ ] Weir release evidence is refreshed through `release/evidence/weir/weir-analysis-api-matrix.json` and linked from the release gate.
 
 ## Conformance and CI
 

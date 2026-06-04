@@ -144,3 +144,10 @@ Readiness for this crate is separate from the core Vyre platform release.
 Claims here must map to concrete gate output, benchmark output, conformance
 output, parser corpus output, or documentation proof files before `vyrec` can
 graduate from beta.
+
+Concrete release evidence anchors:
+
+- `release/evidence/parser/distributed-parser-map.json`
+- `release/evidence/parser/c-parser-linux-subsystem.json`
+- `release/evidence/parser/c-parser-diagnostics-summary.json`
+- `release/evidence/parser/c-parser-throughput.json`

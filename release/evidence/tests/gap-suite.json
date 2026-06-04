@@ -343,7 +343,7 @@
         "property",
         "unit"
       ],
-      "lines": 99,
+      "lines": 103,
       "has_test_entrypoint": true,
       "assertion_count": 1,
       "oversized": false,
@@ -409,7 +409,7 @@
         "property",
         "unit"
       ],
-      "lines": 119,
+      "lines": 121,
       "has_test_entrypoint": true,
       "assertion_count": 4,
       "oversized": false,
@@ -428,7 +428,7 @@
         "property",
         "unit"
       ],
-      "lines": 809,
+      "lines": 807,
       "has_test_entrypoint": true,
       "assertion_count": 7,
       "oversized": true,
@@ -443,23 +443,23 @@
       ]
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/__law7_split/test_matrix_part2.rs",
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/xtask/src/release_benchmarks/runner.rs",
       "layers": [
-        "adversarial",
         "benchmark",
         "conformance",
-        "corpus",
-        "fuzz",
         "gap",
-        "property",
         "unit"
       ],
-      "lines": 349,
+      "lines": 838,
       "has_test_entrypoint": true,
-      "assertion_count": 7,
-      "oversized": false,
-      "god_test_candidate": false,
-      "recommended_split": []
+      "assertion_count": 15,
+      "oversized": true,
+      "god_test_candidate": true,
+      "recommended_split": [
+        "extract backend/op parity cases into tests/conformance/",
+        "extract expected-failure coverage into tests/gap/",
+        "move timing-only checks into benches/ or release benchmark cases"
+      ]
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/tests/gap/release_gap_contracts.rs",

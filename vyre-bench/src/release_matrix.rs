@@ -317,17 +317,24 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
         families.push(build_family_report(family, &release_cases));
     }
 
+    let required_closed_families = families.iter().filter(|family| family.required).count();
     let matched_required_families = families
         .iter()
         .filter(|family| family.required && !family.matched_cases.is_empty())
         .count();
+    let required_matched_release_cases = families
+        .iter()
+        .filter(|family| family.required)
+        .flat_map(|family| family.matched_cases.iter().cloned())
+        .collect::<BTreeSet<_>>();
     let mut cpu_sota_100x_families = families
         .iter()
+        .filter(|family| family.required)
         .filter(|family| {
             family
-                .matched_cases
-                .iter()
-                .any(|case| cpu_sota_100x_contract_ids.contains(case))
+                .max_cpu_sota_min_speedup_x
+                .is_some_and(|speedup| speedup >= 100.0)
+                && !family.cpu_sota_100x_cases.is_empty()
         })
         .map(|family| family.id)
         .collect::<Vec<_>>();
@@ -418,11 +425,11 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
 
     ReleaseWorkloadMatrix {
         schema_version: 1,
-        required_closed_families: REQUIRED_CLOSED_FAMILIES,
+        required_closed_families,
         required_cpu_sota_100x_families: REQUIRED_CPU_SOTA_100X_FAMILY_IDS.to_vec(),
         missing_required_cpu_sota_100x_families,
         matched_required_families,
-        release_suite_case_count: release_cases.len(),
+        release_suite_case_count: required_matched_release_cases.len(),
         cpu_sota_contract_count: cpu_sota_contract_ids.len(),
         cpu_sota_100x_contract_count: cpu_sota_100x_contract_ids.len(),
         cpu_sota_100x_contract_cases,

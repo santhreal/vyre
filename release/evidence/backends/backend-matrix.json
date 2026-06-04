@@ -84,7 +84,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/emitter/body.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 7501,
+      "source_bytes": 13578,
       "implementation_tokens": [
         "vector-load gap",
         "find_latency_filler_avoiding_results"
@@ -113,7 +113,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/emitter/vector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 13314,
+      "source_bytes": 13307,
       "implementation_tokens": [
         "ld.global",
         "v4"
@@ -127,7 +127,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/emitter/vector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 13314,
+      "source_bytes": 13307,
       "implementation_tokens": [
         "st.global",
         "v4"
@@ -169,7 +169,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/resident_dispatch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 739,
+      "source_bytes": 784,
       "implementation_tokens": [
         "dispatch_resident",
         "ptx"
@@ -183,7 +183,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/resident_io.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 42038,
+      "source_bytes": 55694,
       "implementation_tokens": [
         "download_resident_readbacks_many",
         "upload_resident_at_many",
@@ -198,7 +198,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/cuda_graph.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 51288,
+      "source_bytes": 56880,
       "implementation_tokens": [
         "record_cuda_graph",
         "cugraph"
@@ -212,7 +212,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/module_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 60139,
+      "source_bytes": 60136,
       "implementation_tokens": [
         "function_for_ptx",
         "ptx_target_sm"
@@ -226,7 +226,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/module_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 60139,
+      "source_bytes": 60136,
       "implementation_tokens": [
         "CudaPtxSourceCache",
         "CudaPtxSourceCacheSnapshot",
@@ -244,7 +244,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-cuda/src/backend/ptx_target.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4861,
+      "source_bytes": 4860,
       "implementation_tokens": [
         "select_loadable_ptx_target_sm",
         "cumoduleloaddata"
@@ -290,7 +290,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel/dispatcher.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 57296,
+      "source_bytes": 57294,
       "implementation_tokens": [
         "megakernel",
         "dispatch"
@@ -304,7 +304,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/runtime/readback_ring.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 27915,
+      "source_bytes": 27914,
       "implementation_tokens": [
         "ring",
         "readback"
@@ -318,7 +318,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/async_dispatch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 18056,
+      "source_bytes": 18055,
       "implementation_tokens": [
         "dispatch_borrowed_async",
         "PipelinePrefetch"
@@ -346,7 +346,7 @@
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/pipeline/disk_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 24916,
+      "source_bytes": 24914,
       "implementation_tokens": [
         "cache",
         "pipeline",
