@@ -196,7 +196,7 @@
       "exists": true,
       "read_error": null,
       "role": "Vector packing analysis",
-      "source_bytes": 13509,
+      "source_bytes": 21009,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []

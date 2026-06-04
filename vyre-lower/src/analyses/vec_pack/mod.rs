@@ -1,8 +1,9 @@
 //! B1 substrate: adjacent-load packing analysis.
 //!
 //! Detects chains of `LoadGlobal` ops on the same binding slot whose
-//! literal indices are consecutive (`i`, `i+1`, `i+2`, `i+3`). Such
-//! chains are candidates for vec2/vec4 packed loads  -  one wide
+//! normalized indices share one base and have consecutive offsets
+//! (`base+i`, `base+i+1`, `base+i+2`, `base+i+3`). Such chains are
+//! candidates for vec2/vec4 packed loads  -  one wide
 //! transaction instead of N narrow ones, saving (N-1) memory
 //! request slots and improving coalescing.
 //!
@@ -11,8 +12,9 @@
 //! projections) is downstream work in `vyre-lower::rewrites`. This
 //! substrate just produces the per-body chain inventory.
 
-use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
+use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 use rustc_hash::FxHashMap;
+use vyre_foundation::ir::BinOp;
 
 /// One detected adjacent-load chain.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -22,7 +24,7 @@ pub struct VecPackChain {
     /// Op indices in the body, in chain order. Length is the
     /// chain length (always >= 2  -  single loads are not a chain).
     pub op_indices: Vec<usize>,
-    /// Starting literal index. Subsequent loads target
+    /// Starting literal index or constant offset. Subsequent loads target
     /// `start_index + 1`, `+ 2`, ...
     pub start_index: u32,
 }
@@ -80,22 +82,22 @@ fn walk_body(body: &KernelBody, report: &mut VecPackReport) {
 }
 
 fn detect_chains_in_body(body: &KernelBody, report: &mut VecPackReport) {
-    let literal_indices = literal_index_by_result(body);
-    let mut by_slot: FxHashMap<u32, Vec<(u32, usize)>> =
+    let indices = index_expr_by_result(body);
+    let mut by_slot_and_base: FxHashMap<(u32, Option<u32>), Vec<(u32, usize)>> =
         FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
 
     for (op_idx, op) in body.ops.iter().enumerate() {
-        let Some((slot, literal_index)) = load_with_literal_index(op, &literal_indices) else {
+        let Some((slot, index)) = load_with_index_expr(op, &indices) else {
             continue;
         };
-        by_slot
-            .entry(slot)
+        by_slot_and_base
+            .entry((slot, index.base_result))
             .or_default()
-            .push((literal_index, op_idx));
+            .push((index.offset, op_idx));
     }
 
-    for (slot, mut candidates) in by_slot {
-        candidates.sort_unstable_by_key(|(literal_index, op_idx)| (*literal_index, *op_idx));
+    for ((slot, _base_result), mut candidates) in by_slot_and_base {
+        candidates.sort_unstable_by_key(|(offset, op_idx)| (*offset, *op_idx));
         let mut run_start = 0usize;
         while run_start < candidates.len() {
             let mut run_end = run_start + 1;
@@ -120,40 +122,77 @@ fn detect_chains_in_body(body: &KernelBody, report: &mut VecPackReport) {
     }
 }
 
-fn literal_index_by_result(body: &KernelBody) -> FxHashMap<u32, u32> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct IndexExpr {
+    base_result: Option<u32>,
+    offset: u32,
+}
+
+fn index_expr_by_result(body: &KernelBody) -> FxHashMap<u32, IndexExpr> {
     let mut out = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
     for op in &body.ops {
-        if !matches!(op.kind, KernelOpKind::Literal) {
-            continue;
-        }
         let Some(result) = op.result else {
             continue;
         };
-        let Some(pool_idx) = op.operands.first() else {
-            continue;
-        };
-        let Some(LiteralValue::U32(value)) = body.literals.get(*pool_idx as usize) else {
-            continue;
-        };
-        out.insert(result, *value);
+        if let Some(expr) = literal_index_expr(op, body).or_else(|| add_index_expr(op, &out)) {
+            out.insert(result, expr);
+        } else {
+            out.insert(
+                result,
+                IndexExpr {
+                    base_result: Some(result),
+                    offset: 0,
+                },
+            );
+        }
     }
     out
 }
 
-/// Returns `Some((slot, literal_index))` when `op` is a `LoadGlobal` whose
-/// index operand resolves to a `LiteralValue::U32`. Otherwise `None`.
-fn load_with_literal_index(
-    op: &crate::KernelOp,
-    literal_indices: &FxHashMap<u32, u32>,
-) -> Option<(u32, u32)> {
+fn literal_index_expr(op: &KernelOp, body: &KernelBody) -> Option<IndexExpr> {
+    if !matches!(op.kind, KernelOpKind::Literal) {
+        return None;
+    }
+    let pool_idx = *op.operands.first()?;
+    let LiteralValue::U32(value) = body.literals.get(pool_idx as usize)? else {
+        return None;
+    };
+    Some(IndexExpr {
+        base_result: None,
+        offset: *value,
+    })
+}
+
+fn add_index_expr(op: &KernelOp, indices: &FxHashMap<u32, IndexExpr>) -> Option<IndexExpr> {
+    if !matches!(op.kind, KernelOpKind::BinOpKind(BinOp::Add)) {
+        return None;
+    }
+    let lhs = indices.get(op.operands.first()?)?;
+    let rhs = indices.get(op.operands.get(1)?)?;
+    let base_result = match (lhs.base_result, rhs.base_result) {
+        (None, None) => None,
+        (Some(base), None) | (None, Some(base)) => Some(base),
+        (Some(lhs_base), Some(rhs_base)) if lhs_base == rhs_base => Some(lhs_base),
+        (Some(_), Some(_)) => return None,
+    };
+    Some(IndexExpr {
+        base_result,
+        offset: lhs.offset.checked_add(rhs.offset)?,
+    })
+}
+
+/// Returns `Some((slot, index))` when `op` is a `LoadGlobal` whose index
+/// operand resolves to a normalized expression.
+fn load_with_index_expr(
+    op: &KernelOp,
+    indices: &FxHashMap<u32, IndexExpr>,
+) -> Option<(u32, IndexExpr)> {
     if !matches!(op.kind, KernelOpKind::LoadGlobal) {
         return None;
     }
     let slot = *op.operands.first()?;
     let index_op_id = *op.operands.get(1)?;
-    literal_indices
-        .get(&index_op_id)
-        .map(|literal_index| (slot, *literal_index))
+    indices.get(&index_op_id).map(|index| (slot, *index))
 }
 
 #[cfg(test)]
@@ -342,9 +381,187 @@ mod tests {
     }
 
     #[test]
-    fn non_literal_index_is_not_chainable() {
-        // LoadGlobal whose index is the result of an Add op (not a
-        // literal) should not count as a chain candidate.
+    fn dynamic_base_plus_adjacent_offsets_forms_chain() {
+        let body = KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::LocalInvocationId,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                    operands: vec![0, 1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![2],
+                    result: Some(4),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![3],
+                    result: Some(5),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![4],
+                    result: Some(6),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![2, 3],
+                    result: Some(7),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![2, 4],
+                    result: Some(8),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![2, 5],
+                    result: Some(9),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![2, 6],
+                    result: Some(10),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 7],
+                    result: Some(11),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 8],
+                    result: Some(12),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 9],
+                    result: Some(13),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 10],
+                    result: Some(14),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![
+                LiteralValue::U32(4),
+                LiteralValue::U32(0),
+                LiteralValue::U32(1),
+                LiteralValue::U32(2),
+                LiteralValue::U32(3),
+            ],
+        };
+        let report = analyze(&desc_with_body(body));
+        assert_eq!(report.chains.len(), 1);
+        assert_eq!(report.chains[0].op_indices, vec![11, 12, 13, 14]);
+        assert_eq!(report.chains[0].start_index, 0);
+        assert_eq!(report.chains[0].pack_width(), 4);
+        assert_eq!(report.total_ops_eliminated, 3);
+    }
+
+    #[test]
+    fn adjacent_offsets_from_different_dynamic_bases_do_not_chain() {
+        let body = KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::LocalInvocationId,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                    operands: vec![0, 1],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                    operands: vec![0, 2],
+                    result: Some(4),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![3, 1],
+                    result: Some(5),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![4, 2],
+                    result: Some(6),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 5],
+                    result: Some(7),
+                },
+                KernelOp {
+                    kind: KernelOpKind::LoadGlobal,
+                    operands: vec![0, 6],
+                    result: Some(8),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
+        };
+        let report = analyze(&desc_with_body(body));
+        assert!(!report.has_chains());
+        assert_eq!(report.total_ops_eliminated, 0);
+    }
+
+    #[test]
+    fn release_a16_fixture_cases_trigger_vec_pack_analysis() {
+        let cases = crate::optimization_corpus::generate_release_corpus();
+        let a16_cases = cases
+            .iter()
+            .filter(|case| case.family == "A16-vec-pack-fixture")
+            .collect::<Vec<_>>();
+        assert_eq!(a16_cases.len(), 256);
+
+        let mut total_chains = 0usize;
+        let mut total_ops_eliminated = 0u32;
+        for case in a16_cases {
+            let report = analyze(&case.descriptor);
+            assert!(
+                report.has_chains(),
+                "case `{}` produced no vec-pack chain",
+                case.id
+            );
+            total_chains += report.chains.len();
+            total_ops_eliminated = total_ops_eliminated.saturating_add(report.total_ops_eliminated);
+        }
+        assert_eq!(total_chains, 256);
+        assert_eq!(total_ops_eliminated, 768);
+    }
+
+    #[test]
+    fn singleton_computed_index_is_not_chainable() {
         let body = KernelBody {
             ops: vec![
                 KernelOp {
@@ -362,7 +579,6 @@ mod tests {
                     operands: vec![0, 1],
                     result: Some(2),
                 },
-                // LoadGlobal(slot=0, index=result_of_Add_op_id_2)
                 KernelOp {
                     kind: KernelOpKind::LoadGlobal,
                     operands: vec![0, 2],
