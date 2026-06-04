@@ -176,7 +176,13 @@ fn inspect_workload_benchmark_provenance(
                 ));
             }
         }
-        if !metrics_has_positive_any(metrics, &["kernel_launches", "launch_count", "launches"]) {
+        if is_cuda_ptx_patterns_case(id) {
+            if !metrics_has_zero_any(metrics, LAUNCH_COUNT_METRICS) {
+                blockers.push(format!(
+                    "{evidence}: case `{id}` must include zero kernel launch count metric for PTX emitter evidence"
+                ));
+            }
+        } else if !metrics_has_positive_any(metrics, LAUNCH_COUNT_METRICS) {
             blockers.push(format!(
                 "{evidence}: case `{id}` must include positive kernel launch count metric"
             ));
@@ -293,6 +299,28 @@ fn metrics_has_positive_any(
                 metric_p50(Some(value)).is_some_and(|sample| sample > 0.0)
                     || value.as_u64().is_some_and(|number| number > 0)
                     || value.as_f64().is_some_and(|number| number > 0.0)
+            })
+        })
+    })
+}
+
+const CUDA_PTX_PATTERNS_CASE_ID: &str = "cuda.ptx.patterns.release.corpus";
+const LAUNCH_COUNT_METRICS: &[&str] = &["kernel_launches", "launch_count", "launches"];
+
+fn is_cuda_ptx_patterns_case(case_id: &str) -> bool {
+    case_id == CUDA_PTX_PATTERNS_CASE_ID
+}
+
+fn metrics_has_zero_any(
+    metrics: Option<&serde_json::Map<String, serde_json::Value>>,
+    fields: &[&str],
+) -> bool {
+    metrics.is_some_and(|metrics| {
+        fields.iter().any(|field| {
+            metrics.get(*field).is_some_and(|value| {
+                metric_p50(Some(value)).is_some_and(|sample| sample == 0.0)
+                    || value.as_u64() == Some(0)
+                    || value.as_f64().is_some_and(|number| number == 0.0)
             })
         })
     })
@@ -538,6 +566,24 @@ mod tests {
             scalar.as_object(),
             &["kernel_launches", "launch_count", "launches"]
         ));
+    }
+
+    #[test]
+    fn completion_audit_ptx_pattern_launch_metric_requires_zero_value() {
+        let metrics = serde_json::json!({
+            "kernel_launches": {
+                "p50": 0,
+                "samples": 30
+            }
+        });
+        let metrics = metrics.as_object();
+
+        assert!(is_cuda_ptx_patterns_case(CUDA_PTX_PATTERNS_CASE_ID));
+        assert!(metrics_has_zero_any(metrics, LAUNCH_COUNT_METRICS));
+        assert!(
+            !metrics_has_positive_any(metrics, LAUNCH_COUNT_METRICS),
+            "Fix: PTX emitter evidence must prove zero dispatches instead of being counted as a launched CUDA kernel."
+        );
     }
 
     #[test]
