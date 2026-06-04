@@ -176,10 +176,10 @@ fn inspect_workload_benchmark_provenance(
                 ));
             }
         }
-        if is_cuda_ptx_patterns_case(id) {
+        if is_non_dispatch_proof_case(id) {
             if !metrics_has_zero_any(metrics, LAUNCH_COUNT_METRICS) {
                 blockers.push(format!(
-                    "{evidence}: case `{id}` must include zero kernel launch count metric for PTX emitter evidence"
+                    "{evidence}: case `{id}` must include zero kernel launch count metric for non-dispatch proof evidence"
                 ));
             }
         } else if !metrics_has_positive_any(metrics, LAUNCH_COUNT_METRICS) {
@@ -304,11 +304,16 @@ fn metrics_has_positive_any(
     })
 }
 
-const CUDA_PTX_PATTERNS_CASE_ID: &str = "cuda.ptx.patterns.release.corpus";
 const LAUNCH_COUNT_METRICS: &[&str] = &["kernel_launches", "launch_count", "launches"];
+const NON_DISPATCH_PROOF_CASE_IDS: &[&str] = &[
+    "cuda.ptx.patterns.release.corpus",
+    "lower.rewrites.impact.corpus",
+    "lower.egraph_saturation",
+    "lower.alias_aware_optimizations",
+];
 
-fn is_cuda_ptx_patterns_case(case_id: &str) -> bool {
-    case_id == CUDA_PTX_PATTERNS_CASE_ID
+fn is_non_dispatch_proof_case(case_id: &str) -> bool {
+    NON_DISPATCH_PROOF_CASE_IDS.contains(&case_id)
 }
 
 fn metrics_has_zero_any(
@@ -569,7 +574,7 @@ mod tests {
     }
 
     #[test]
-    fn completion_audit_ptx_pattern_launch_metric_requires_zero_value() {
+    fn completion_audit_non_dispatch_proof_launch_metric_requires_zero_value() {
         let metrics = serde_json::json!({
             "kernel_launches": {
                 "p50": 0,
@@ -578,11 +583,16 @@ mod tests {
         });
         let metrics = metrics.as_object();
 
-        assert!(is_cuda_ptx_patterns_case(CUDA_PTX_PATTERNS_CASE_ID));
+        for case_id in NON_DISPATCH_PROOF_CASE_IDS {
+            assert!(
+                is_non_dispatch_proof_case(case_id),
+                "Fix: `{case_id}` must be recognized as a zero-dispatch proof case."
+            );
+        }
         assert!(metrics_has_zero_any(metrics, LAUNCH_COUNT_METRICS));
         assert!(
             !metrics_has_positive_any(metrics, LAUNCH_COUNT_METRICS),
-            "Fix: PTX emitter evidence must prove zero dispatches instead of being counted as a launched CUDA kernel."
+            "Fix: non-dispatch proof evidence must prove zero dispatches instead of being counted as a launched CUDA kernel."
         );
     }
 
