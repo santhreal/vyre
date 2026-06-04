@@ -12,10 +12,10 @@
     "A14-shared-mem-promote-fixture",
     "A15-bank-conflict-fixture",
     "A16-vec-pack-fixture",
-    "dataflow-dse",
-    "dataflow-loop-fusion",
-    "dataflow-loop-fission",
-    "dataflow-licm"
+    "weir-dataflow-dse",
+    "weir-dataflow-loop-fusion",
+    "weir-dataflow-loop-fission",
+    "weir-dataflow-licm"
   ],
   "missing_required_families": [],
   "families": [
@@ -44,22 +44,6 @@
       "cases": 256
     },
     {
-      "family": "dataflow-dse",
-      "cases": 256
-    },
-    {
-      "family": "dataflow-licm",
-      "cases": 256
-    },
-    {
-      "family": "dataflow-loop-fission",
-      "cases": 256
-    },
-    {
-      "family": "dataflow-loop-fusion",
-      "cases": 256
-    },
-    {
       "family": "egraph",
       "cases": 1792
     },
@@ -74,6 +58,22 @@
     {
       "family": "vector-layout",
       "cases": 1024
+    },
+    {
+      "family": "weir-dataflow-dse",
+      "cases": 256
+    },
+    {
+      "family": "weir-dataflow-licm",
+      "cases": 256
+    },
+    {
+      "family": "weir-dataflow-loop-fission",
+      "cases": 256
+    },
+    {
+      "family": "weir-dataflow-loop-fusion",
+      "cases": 256
     }
   ],
   "blockers": []

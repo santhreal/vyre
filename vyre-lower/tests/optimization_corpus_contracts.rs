@@ -53,6 +53,36 @@ fn release_optimization_corpus_has_multiple_families() {
 }
 
 #[test]
+fn release_optimization_corpus_uses_weir_dataflow_family_contracts() {
+    let cases = generate_release_corpus();
+    let manifest = manifest_for(&cases);
+    let family_names = manifest
+        .families
+        .iter()
+        .map(|family| family.family.as_str())
+        .collect::<BTreeSet<_>>();
+    for required in [
+        "weir-dataflow-dse",
+        "weir-dataflow-loop-fusion",
+        "weir-dataflow-loop-fission",
+        "weir-dataflow-licm",
+    ] {
+        assert!(
+            family_names.contains(required),
+            "Fix: release optimization corpus must publish required Weir-aware family `{required}`."
+        );
+    }
+    assert_eq!(
+        manifest.dataflow_analysis_cases, 1024,
+        "Fix: release optimization corpus must expose every Weir-aware optimization fixture through dataflow_analysis_cases."
+    );
+    assert_eq!(
+        manifest.dataflow_analysis_optimized_cases, 1024,
+        "Fix: every Weir-aware release optimization fixture must fire under dataflow facts."
+    );
+}
+
+#[test]
 fn release_optimization_corpus_descriptors_verify() {
     let cases = generate_release_corpus();
     let manifest = manifest_for(&cases);

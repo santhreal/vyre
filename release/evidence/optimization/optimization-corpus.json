@@ -4,8 +4,8 @@
   "generated_cases": 12288,
   "verified_cases": 12288,
   "optimized_cases": 10386,
-  "dataflow_cases": 1024,
-  "dataflow_optimized_cases": 1024,
+  "dataflow_analysis_cases": 1024,
+  "dataflow_analysis_optimized_cases": 1024,
   "non_converged_cases": 0,
   "total_ops_before": 48640,
   "total_ops_after": 25369,
@@ -35,22 +35,6 @@
       "cases": 256
     },
     {
-      "family": "dataflow-dse",
-      "cases": 256
-    },
-    {
-      "family": "dataflow-licm",
-      "cases": 256
-    },
-    {
-      "family": "dataflow-loop-fission",
-      "cases": 256
-    },
-    {
-      "family": "dataflow-loop-fusion",
-      "cases": 256
-    },
-    {
       "family": "egraph",
       "cases": 1792
     },
@@ -65,6 +49,22 @@
     {
       "family": "vector-layout",
       "cases": 1024
+    },
+    {
+      "family": "weir-dataflow-dse",
+      "cases": 256
+    },
+    {
+      "family": "weir-dataflow-licm",
+      "cases": 256
+    },
+    {
+      "family": "weir-dataflow-loop-fission",
+      "cases": 256
+    },
+    {
+      "family": "weir-dataflow-loop-fusion",
+      "cases": 256
     }
   ],
   "blockers": []

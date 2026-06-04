@@ -19,10 +19,10 @@ const REQUIRED_OPTIMIZATION_FAMILIES: &[&str] = &[
     "A14-shared-mem-promote-fixture",
     "A15-bank-conflict-fixture",
     "A16-vec-pack-fixture",
-    "dataflow-dse",
-    "dataflow-loop-fusion",
-    "dataflow-loop-fission",
-    "dataflow-licm",
+    "weir-dataflow-dse",
+    "weir-dataflow-loop-fusion",
+    "weir-dataflow-loop-fission",
+    "weir-dataflow-licm",
 ];
 
 #[derive(Debug, Serialize)]
@@ -32,8 +32,8 @@ struct OptimizationCorpusContracts {
     generated_cases: usize,
     verified_cases: usize,
     optimized_cases: usize,
-    dataflow_cases: usize,
-    dataflow_optimized_cases: usize,
+    dataflow_analysis_cases: usize,
+    dataflow_analysis_optimized_cases: usize,
     non_converged_cases: usize,
     total_ops_before: usize,
     total_ops_after: usize,
@@ -60,7 +60,7 @@ struct OptimizationCaseManifest {
     duplicate_case_ids: Vec<String>,
     family_count: usize,
     required_family_count: usize,
-    dataflow_cases: usize,
+    dataflow_analysis_cases: usize,
     cases_with_child_bodies: usize,
     cases_with_bindings: usize,
     cases_with_literals: usize,
@@ -190,8 +190,8 @@ fn write_sibling_artifacts(
             generated_cases: manifest.generated_cases,
             verified_cases: manifest.verified_cases,
             optimized_cases: manifest.optimized_cases,
-            dataflow_cases: manifest.dataflow_cases,
-            dataflow_optimized_cases: manifest.dataflow_optimized_cases,
+            dataflow_analysis_cases: manifest.dataflow_analysis_cases,
+            dataflow_analysis_optimized_cases: manifest.dataflow_analysis_optimized_cases,
             non_converged_cases: manifest.non_converged_cases,
             total_ops_before: manifest.total_ops_before,
             total_ops_after: manifest.total_ops_after,
@@ -251,14 +251,14 @@ fn write_sibling_artifacts(
             ));
         }
     }
-    if manifest.dataflow_cases == 0 {
+    if manifest.dataflow_analysis_cases == 0 {
         family_blockers
             .push("optimization corpus has zero Weir dataflow-aware DSE cases".to_string());
     }
-    if manifest.dataflow_optimized_cases < manifest.dataflow_cases {
+    if manifest.dataflow_analysis_optimized_cases < manifest.dataflow_analysis_cases {
         family_blockers.push(format!(
             "Weir dataflow-aware pipeline optimized {} of {} generated DSE case(s)",
-            manifest.dataflow_optimized_cases, manifest.dataflow_cases
+            manifest.dataflow_analysis_optimized_cases, manifest.dataflow_analysis_cases
         ));
     }
     write_json(
@@ -565,7 +565,7 @@ fn write_case_manifest(
             duplicate_case_ids: duplicate_case_ids.into_iter().collect(),
             family_count: manifest.families.len(),
             required_family_count: REQUIRED_OPTIMIZATION_FAMILIES.len(),
-            dataflow_cases: manifest.dataflow_cases,
+            dataflow_analysis_cases: manifest.dataflow_analysis_cases,
             cases_with_child_bodies,
             cases_with_bindings,
             cases_with_literals,

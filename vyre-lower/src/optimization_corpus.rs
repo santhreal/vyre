@@ -41,9 +41,9 @@ pub struct OptimizationCorpusManifest {
     /// Number of cases changed by the canonical optimization pipeline.
     pub optimized_cases: usize,
     /// Number of cases that exercise Dataflow-aware rewrites.
-    pub dataflow_cases: usize,
+    pub dataflow_analysis_cases: usize,
     /// Number of Dataflow-aware cases that actually fired.
-    pub dataflow_optimized_cases: usize,
+    pub dataflow_analysis_optimized_cases: usize,
     /// Number of cases that exhausted rewrite convergence fuel.
     pub non_converged_cases: usize,
     /// Total operation count before optimization.
@@ -93,8 +93,8 @@ pub fn manifest_for(cases: &[OptimizationCorpusCase]) -> OptimizationCorpusManif
         generated_cases: cases.len(),
         verified_cases: validation.verified_cases,
         optimized_cases: validation.optimized_cases,
-        dataflow_cases: validation.dataflow_cases,
-        dataflow_optimized_cases: validation.dataflow_optimized_cases,
+        dataflow_analysis_cases: validation.dataflow_analysis_cases,
+        dataflow_analysis_optimized_cases: validation.dataflow_analysis_optimized_cases,
         non_converged_cases: validation.non_converged_cases,
         total_ops_before: validation.total_ops_before,
         total_ops_after: validation.total_ops_after,
@@ -117,9 +117,9 @@ pub struct OptimizationCorpusValidation {
     /// Number of generated descriptors changed by optimization.
     pub optimized_cases: usize,
     /// Number of generated descriptors using Dataflow facts.
-    pub dataflow_cases: usize,
+    pub dataflow_analysis_cases: usize,
     /// Number of Dataflow descriptors changed by external-dataflow optimization.
-    pub dataflow_optimized_cases: usize,
+    pub dataflow_analysis_optimized_cases: usize,
     /// Number of descriptors that did not converge.
     pub non_converged_cases: usize,
     /// Total operation count before optimization.
@@ -136,8 +136,8 @@ pub struct OptimizationCorpusValidation {
 pub fn validate_release_corpus(cases: &[OptimizationCorpusCase]) -> OptimizationCorpusValidation {
     let mut verified_cases = 0usize;
     let mut optimized_cases = 0usize;
-    let mut dataflow_cases = 0usize;
-    let mut dataflow_optimized_cases = 0usize;
+    let mut dataflow_analysis_cases = 0usize;
+    let mut dataflow_analysis_optimized_cases = 0usize;
     let mut non_converged_cases = 0usize;
     let mut total_ops_before = 0usize;
     let mut total_ops_after = 0usize;
@@ -159,11 +159,12 @@ pub fn validate_release_corpus(cases: &[OptimizationCorpusCase]) -> Optimization
                         case.id
                     ));
                 }
-                if case.family.starts_with("dataflow-") {
-                    dataflow_cases += 1;
+                if is_weir_dataflow_family(&case.family) {
+                    dataflow_analysis_cases += 1;
                     let alias_facts = release_alias_facts();
                     let reaching_defs = release_reaching_defs(&case.family);
-                    let (optimized, dataflow_stats) = if case.family == "dataflow-loop-fission" {
+                    let (optimized, dataflow_stats) = if case.family == "weir-dataflow-loop-fission"
+                    {
                         (
                             crate::rewrites::loop_fission_with_dataflow_facts(
                                 &case.descriptor,
@@ -194,7 +195,7 @@ pub fn validate_release_corpus(cases: &[OptimizationCorpusCase]) -> Optimization
                             case.id
                         ));
                     } else {
-                        dataflow_optimized_cases += 1;
+                        dataflow_analysis_optimized_cases += 1;
                     }
                     if !dataflow_stats.converged {
                         non_converged_cases += 1;
@@ -215,8 +216,8 @@ pub fn validate_release_corpus(cases: &[OptimizationCorpusCase]) -> Optimization
     OptimizationCorpusValidation {
         verified_cases,
         optimized_cases,
-        dataflow_cases,
-        dataflow_optimized_cases,
+        dataflow_analysis_cases,
+        dataflow_analysis_optimized_cases,
         non_converged_cases,
         total_ops_before,
         total_ops_after,
@@ -256,12 +257,24 @@ fn top_level_load_count(body: &KernelBody) -> usize {
 
 fn dataflow_case_fired(family: &str, before: &KernelDescriptor, after: &KernelDescriptor) -> bool {
     match family {
-        "dataflow-dse" => store_count(&after.body) < store_count(&before.body),
-        "dataflow-loop-fusion" => loop_count(&after.body) < loop_count(&before.body),
-        "dataflow-loop-fission" => loop_count(&after.body) > loop_count(&before.body),
-        "dataflow-licm" => top_level_load_count(&after.body) > top_level_load_count(&before.body),
+        "weir-dataflow-dse" => store_count(&after.body) < store_count(&before.body),
+        "weir-dataflow-loop-fusion" => loop_count(&after.body) < loop_count(&before.body),
+        "weir-dataflow-loop-fission" => loop_count(&after.body) > loop_count(&before.body),
+        "weir-dataflow-licm" => {
+            top_level_load_count(&after.body) > top_level_load_count(&before.body)
+        }
         _ => after != before,
     }
+}
+
+fn is_weir_dataflow_family(family: &str) -> bool {
+    matches!(
+        family,
+        "weir-dataflow-dse"
+            | "weir-dataflow-loop-fusion"
+            | "weir-dataflow-loop-fission"
+            | "weir-dataflow-licm"
+    )
 }
 
 fn release_alias_facts() -> crate::analyses::alias_facts::AliasFactSet {
@@ -283,7 +296,7 @@ fn release_alias_facts() -> crate::analyses::alias_facts::AliasFactSet {
 
 fn release_reaching_defs(family: &str) -> crate::analyses::reaching_def_facts::ReachingDefFactSet {
     let mut facts = crate::analyses::reaching_def_facts::ReachingDefFactSet::default();
-    if family == "dataflow-dse" {
+    if family == "weir-dataflow-dse" {
         facts.set_reaching_defs(20, vec![10]);
     } else {
         facts.set_reaching_defs(20, vec![11]);
@@ -441,7 +454,7 @@ fn push_memory_cases(seed: u32, cases: &mut Vec<OptimizationCorpusCase>) {
 }
 
 fn dataflow_dse_case(seed: u32) -> OptimizationCorpusCase {
-    let family = "dataflow-dse";
+    let family = "weir-dataflow-dse";
     let mut desc = literal_descriptor(family, "equivalent_dynamic_index", seed);
     desc.bindings.slots = vec![buffer_slot(
         0,
@@ -521,7 +534,7 @@ fn push_control_cases(seed: u32, cases: &mut Vec<OptimizationCorpusCase>) {
 }
 
 fn dataflow_loop_fusion_case(seed: u32) -> OptimizationCorpusCase {
-    let family = "dataflow-loop-fusion";
+    let family = "weir-dataflow-loop-fusion";
     let mut desc = loop_descriptor_with_parent_values(family, "equivalent_alias_indices", seed);
     desc.body.ops.push(structured_loop(0));
     desc.body.ops.push(structured_loop(1));
@@ -545,7 +558,7 @@ fn dataflow_loop_fusion_case(seed: u32) -> OptimizationCorpusCase {
 }
 
 fn dataflow_loop_fission_case(seed: u32) -> OptimizationCorpusCase {
-    let family = "dataflow-loop-fission";
+    let family = "weir-dataflow-loop-fission";
     let mut desc = loop_descriptor_with_parent_values(family, "equivalent_alias_indices", seed);
     desc.body.ops.push(structured_loop(0));
     desc.body.child_bodies = vec![KernelBody {
@@ -561,7 +574,7 @@ fn dataflow_loop_fission_case(seed: u32) -> OptimizationCorpusCase {
 }
 
 fn dataflow_licm_case(seed: u32) -> OptimizationCorpusCase {
-    let family = "dataflow-licm";
+    let family = "weir-dataflow-licm";
     let mut desc = loop_descriptor_with_parent_values(family, "equivalent_alias_indices", seed);
     let index_literal = desc.body.literals.len() as u32;
     desc.body
