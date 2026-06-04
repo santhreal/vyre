@@ -1065,10 +1065,10 @@ mod part7_tests {
         check_backend_suite_parity(&requirement, &release_dir, &mut failures);
 
         assert!(
-            failures.iter().any(|failure| failure.contains(
-                "field `source_fingerprint` mismatch for family `condition-eval` case `release.condition_eval.1m`: cuda=Some(\"git:cuda:dirty=false\"), wgpu=Some(\"git:wgpu:dirty=false\")"
+            !failures.iter().any(|failure| failure.contains(
+                "field `source_fingerprint` mismatch for family `condition-eval` case `release.condition_eval.1m`"
             )),
-            "Fix: WGPU parity gate must report source_fingerprint drift on matching suite rows; failures={failures:?}"
+            "Fix: WGPU parity gate must not report raw evidence-commit fingerprint drift when source_tree_fingerprint carries the backend source identity; failures={failures:?}"
         );
         assert!(
             failures.iter().any(|failure| failure.contains(

@@ -807,10 +807,10 @@ mod part9_tests {
         );
 
         assert!(
-            blockers.iter().any(|blocker| blocker.contains(
-                "field `source_fingerprint` mismatch for family `condition-eval` case `release.condition_eval.1m`: cuda=Some(\"git:cuda:dirty=false\"), wgpu=Some(\"git:wgpu:dirty=false\")"
+            !blockers.iter().any(|blocker| blocker.contains(
+                "field `source_fingerprint` mismatch for family `condition-eval` case `release.condition_eval.1m`"
             )),
-            "Fix: completion audit must report source_fingerprint drift on matching WGPU/CUDA suite rows; blockers={blockers:?}"
+            "Fix: completion audit must not report raw evidence-commit fingerprint drift when source_tree_fingerprint carries the backend source identity; blockers={blockers:?}"
         );
         assert!(
             blockers.iter().any(|blocker| blocker.contains(

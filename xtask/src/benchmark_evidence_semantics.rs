@@ -2266,7 +2266,7 @@ pub(crate) fn backend_suite_parity_issues(
                 });
             }
         }
-        for field in ["source_fingerprint", "source_tree_fingerprint"] {
+        for field in ["source_tree_fingerprint"] {
             let cuda_value = cuda_status
                 .get(field)
                 .and_then(non_empty_str)
@@ -4418,7 +4418,7 @@ mod tests {
                     "failed_count": 0,
                     "nonmatching_case_backend_count": 0,
                     "source_fingerprint": "git:cuda-source:dirty=false",
-                    "source_tree_fingerprint": "source-tree-v1:cuda"
+                    "source_tree_fingerprint": "source-tree-v1:shared"
                 }
             ]
         });
@@ -4432,7 +4432,7 @@ mod tests {
                     "failed_count": 1,
                     "nonmatching_case_backend_count": 0,
                     "source_fingerprint": "git:wgpu-source:dirty=false",
-                    "source_tree_fingerprint": "source-tree-v1:wgpu"
+                    "source_tree_fingerprint": "source-tree-v1:shared"
                 }
             ]
         });
@@ -4453,14 +4453,40 @@ mod tests {
                     field: "failed_count",
                     cuda_value: Some(0),
                     wgpu_value: Some(1),
-                },
-                BackendSuiteParityIssue::StatusStringFieldMismatch {
-                    family_id: "condition-eval".to_string(),
-                    requested_case_id: "release.condition_eval.1m".to_string(),
-                    field: "source_fingerprint",
-                    cuda_value: Some("git:cuda-source:dirty=false".to_string()),
-                    wgpu_value: Some("git:wgpu-source:dirty=false".to_string()),
-                },
+                }
+            ],
+            "Fix: WGPU parity must compare proof strength for matching suite rows while tolerating evidence-only commit fingerprint drift."
+        );
+    }
+
+    #[test]
+    fn backend_suite_parity_rejects_source_tree_drift_not_evidence_commit_drift() {
+        let cuda = serde_json::json!({
+            "backend": "cuda",
+            "artifact_statuses": [
+                {
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "source_fingerprint": "git:cuda-evidence-commit:dirty=false",
+                    "source_tree_fingerprint": "source-tree-v1:cuda"
+                }
+            ]
+        });
+        let wgpu = serde_json::json!({
+            "backend": "wgpu",
+            "artifact_statuses": [
+                {
+                    "family_id": "condition-eval",
+                    "requested_case_id": "release.condition_eval.1m",
+                    "source_fingerprint": "git:wgpu-evidence-commit:dirty=false",
+                    "source_tree_fingerprint": "source-tree-v1:wgpu"
+                }
+            ]
+        });
+
+        assert_eq!(
+            backend_suite_parity_issues(&cuda, &wgpu),
+            vec![
                 BackendSuiteParityIssue::StatusStringFieldMismatch {
                     family_id: "condition-eval".to_string(),
                     requested_case_id: "release.condition_eval.1m".to_string(),
@@ -4469,7 +4495,7 @@ mod tests {
                     wgpu_value: Some("source-tree-v1:wgpu".to_string()),
                 },
             ],
-            "Fix: WGPU parity must compare proof strength and source provenance of matching suite rows, not only family/case labels."
+            "Fix: WGPU parity must reject source tree drift without treating benchmark evidence commits as backend source drift."
         );
     }
 
