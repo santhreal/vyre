@@ -263,6 +263,66 @@ impl CompiledPipeline for WgpuPipeline {
         Ok(outputs)
     }
 
+    fn dispatch_borrowed_timed(
+        &self,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<TimedDispatchResult, BackendError> {
+        self.enforce_static_output_budget(config)?;
+        let started = Instant::now();
+        let enqueue_started = Instant::now();
+        let iterations = resolve_fixpoint_iterations_usize(config, "WGPU")?;
+        let iterations = u32::try_from(iterations).map_err(|source| {
+            BackendError::new(format!(
+                "WGPU compiled borrowed timed dispatch iteration count cannot fit u32: {source}. Fix: split fixpoint replay before command recording."
+            ))
+        })?;
+        let workgroup_count = self.workgroups_for_dispatch(config)?;
+        let pending = crate::engine::record_and_readback::record_and_submit_async(
+            crate::engine::record_and_readback::RecordAndReadback {
+                device_queue: &self.device_queue,
+                pool: &self.persistent_pool,
+                readback_rings: None,
+                pipeline: &self.pipeline,
+                bind_group_layouts: &self.bind_group_layouts,
+                bind_group_cache: Some(self.bind_group_cache.as_ref()),
+                buffer_bindings: &self.buffer_bindings,
+                inputs,
+                output_bindings: &self.output_bindings,
+                trap_tags: &self.trap_tags,
+                workgroup_count,
+                indirect: self.indirect.as_ref(),
+                labels: crate::engine::record_and_readback::DispatchLabels {
+                    bind_group: "vyre compiled timed bind group",
+                    encoder: "vyre compiled timed dispatch",
+                    compute: "vyre compiled timed compute",
+                },
+                iterations,
+                timestamp_profile: true,
+            },
+        )?;
+        let enqueue_ns = checked_elapsed_ns(enqueue_started, "WGPU compiled timed enqueue")?;
+
+        let wait_started = Instant::now();
+        let deadline = config
+            .timeout
+            .and_then(|timeout| started.checked_add(timeout));
+        let (outputs, device_ns) = match deadline {
+            Some(deadline) => pending.await_timed_result_until(deadline)?,
+            None => pending.await_timed_result()?,
+        };
+        enforce_actual_output_budget(config, outputs.as_slice())?;
+        let wait_ns = checked_elapsed_ns(wait_started, "WGPU compiled timed wait")?;
+
+        Ok(TimedDispatchResult {
+            outputs,
+            wall_ns: checked_elapsed_ns(started, "WGPU compiled timed dispatch")?,
+            device_ns,
+            enqueue_ns: Some(enqueue_ns),
+            wait_ns: Some(wait_ns),
+        })
+    }
+
     fn dispatch_borrowed_batched(
         &self,
         batches: &[&[&[u8]]],

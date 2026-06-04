@@ -274,6 +274,69 @@ fn bind_group_cache_shared_per_compiled_shader() {
 }
 
 #[test]
+fn compiled_borrowed_timed_dispatch_reports_device_ns() {
+    use std::sync::Arc;
+
+    use vyre_driver::CompiledPipeline;
+
+    let ((device, queue), adapter_info, enabled_features) =
+        crate::runtime::init_device().expect("Fix: GPU required for compiled timing test");
+    assert!(
+        device.features().contains(wgpu::Features::TIMESTAMP_QUERY)
+            && device
+                .features()
+                .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS),
+        "Fix: WGPU compiled timing test requires timestamp query features to be negotiated."
+    );
+    let device_queue = Arc::new((device, queue));
+    let config = DispatchConfig::default();
+    let arena = Arc::new(crate::DispatchArena::new(
+        device_queue.0.clone(),
+        device_queue.1.clone(),
+        &config,
+    ));
+    let pool = arena.pool().clone();
+    let pipeline_cache = Arc::new(crate::runtime::cache::pipeline::LruPipelineCache::new(
+        vyre_driver::pipeline::DEFAULT_PIPELINE_CACHE_ENTRIES as u32,
+    ));
+    let layout_cache = Arc::new(super::BindGroupLayoutCache::with_hasher(
+        std::hash::BuildHasherDefault::<rustc_hash::FxHasher>::default(),
+    ));
+
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
+    );
+    let pipeline = super::WgpuPipeline::compile_with_device_queue(
+        &program,
+        &config,
+        adapter_info,
+        enabled_features,
+        device_queue,
+        arena,
+        pool,
+        pipeline_cache,
+        layout_cache,
+    )
+    .expect("Fix: compiled timed dispatch test pipeline must compile.");
+
+    let timed = pipeline
+        .dispatch_borrowed_timed(&[], &config)
+        .expect("Fix: compiled borrowed timed dispatch must succeed.");
+    assert_eq!(
+        u32::from_le_bytes(timed.outputs[0][0..4].try_into().unwrap()),
+        7
+    );
+    assert!(
+        timed.device_ns.is_some_and(|ns| ns > 0),
+        "Fix: WGPU compiled borrowed timed dispatch must report GPU device nanoseconds."
+    );
+    assert!(timed.enqueue_ns.is_some_and(|ns| ns > 0));
+    assert!(timed.wait_ns.is_some_and(|ns| ns > 0));
+}
+
+#[test]
 fn direct_record_and_readback_reuses_bind_groups() {
     use std::sync::Arc;
 
