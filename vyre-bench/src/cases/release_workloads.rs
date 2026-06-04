@@ -3,12 +3,27 @@ use crate::api::case::{
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::resident::{
+    dispatch_program_timed, input_bytes_total, ResidentInputSet, TransferAccounting,
+};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
 pub struct SparseOutputCompactionCount;
 pub struct CallgraphReachabilityStep;
 pub struct MetadataConditionBatch;
+
+struct MetadataConditionPrepared {
+    program: Program,
+    filesize: Vec<u32>,
+    header: Vec<u32>,
+    entropy: Vec<u32>,
+    inputs: Vec<Vec<u8>>,
+    input_bytes_total: u64,
+    expected_count: u32,
+    resident: Option<ResidentInputSet>,
+}
+
 struct SyntheticCountWorkload {
     id: &'static str,
     name: &'static str,
@@ -74,6 +89,7 @@ const RELEASE_SUITES: &[crate::api::suite::SuiteKind] = &[
 
 const SPARSE_ITEMS: u32 = 1_048_576;
 const METADATA_RECORDS: u32 = 1_048_576;
+const METADATA_OUTPUT_RESET_BYTES: u64 = 4;
 const CALLGRAPH_NODES: u32 = 262_144;
 const CALLGRAPH_EDGES: u32 = CALLGRAPH_NODES - 1;
 const CALLGRAPH_WORDS: usize = CALLGRAPH_NODES.div_ceil(32) as usize;
@@ -353,7 +369,7 @@ impl BenchCase for MetadataConditionBatch {
         ))
     }
 
-    fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
+    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
         let program = Program::wrapped(
             vec![
                 BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
@@ -391,15 +407,6 @@ impl BenchCase for MetadataConditionBatch {
                 ),
             ],
         );
-        Ok(Box::new(program))
-    }
-
-    fn run(
-        &self,
-        ctx: &mut BenchContext,
-        prepared: &mut PreparedCase,
-    ) -> Result<BenchRun, BenchError> {
-        let program = crate::api::case::prepared_program(prepared)?;
         let mut filesize = Vec::with_capacity(METADATA_RECORDS as usize);
         let mut header = Vec::with_capacity(METADATA_RECORDS as usize);
         let mut entropy = Vec::with_capacity(METADATA_RECORDS as usize);
@@ -422,35 +429,163 @@ impl BenchCase for MetadataConditionBatch {
             encode_u32_words(&header),
             encode_u32_words(&entropy),
         ];
-        let timed = ctx
-            .dispatch_timed(program, &inputs, &ctx.dispatch_config)
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+        let input_bytes_total = input_bytes_total(&inputs);
+        let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+            ctx,
+            &program,
+            &inputs,
+            "metadata condition bench",
+        )?;
+        Ok(Box::new(MetadataConditionPrepared {
+            program,
+            filesize,
+            header,
+            entropy,
+            inputs,
+            input_bytes_total,
+            expected_count: expected,
+            resident,
+        }))
+    }
+
+    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
+        prepared
+            .downcast_ref::<MetadataConditionPrepared>()
+            .map(|prepared| &prepared.program)
+    }
+
+    fn run(
+        &self,
+        ctx: &mut BenchContext,
+        prepared: &mut PreparedCase,
+    ) -> Result<BenchRun, BenchError> {
+        let prepared = prepared
+            .downcast_ref::<MetadataConditionPrepared>()
+            .ok_or_else(|| {
+                BenchError::ExecutionFailed(
+                    "metadata condition prepared payload type mismatch".to_string(),
+                )
+            })?;
+        let resident_reset_bytes = if let Some(resident) = prepared.resident.as_ref() {
+            resident.upload_resource(
+                0,
+                &0u32.to_le_bytes(),
+                "metadata condition resident counter reset",
+            )?;
+            METADATA_OUTPUT_RESET_BYTES
+        } else {
+            0
+        };
+        let dispatch = dispatch_program_timed(
+            ctx,
+            &prepared.program,
+            prepared.resident.as_ref(),
+            &prepared.inputs,
+            &ctx.dispatch_config,
+        )?;
+        let resident_used = dispatch.resident_used;
+        let timed = dispatch.timed;
+        let outputs = timed.outputs;
         let baseline_start = std::time::Instant::now();
         let mut cpu_count = 0u32;
-        for index in 0..filesize.len() {
+        for index in 0..prepared.filesize.len() {
             cpu_count += u32::from(
-                filesize[index] > 4096 && header[index] == 0x0000_4550 && entropy[index] > 7200,
+                prepared.filesize[index] > 4096
+                    && prepared.header[index] == 0x0000_4550
+                    && prepared.entropy[index] > 7200,
             );
         }
         let baseline_wall = baseline_start.elapsed().as_nanos() as u64;
-        if cpu_count != expected {
+        if cpu_count != prepared.expected_count {
             return Err(BenchError::CorrectnessViolation(
                 "metadata CPU baseline count disagreed with generator expectation".to_string(),
             ));
         }
         let baseline_outputs = vec![cpu_count.to_le_bytes().to_vec()];
-        bench_run_from_timed(
-            timed,
-            inputs,
-            baseline_outputs,
-            baseline_wall,
-            "metadata_records",
-            METADATA_RECORDS,
-        )
+        let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let accounting = metadata_transfer_accounting(
+            prepared.input_bytes_total,
+            output_bytes,
+            resident_used,
+            resident_reset_bytes,
+        );
+        let logical_bytes_touched = prepared.input_bytes_total.saturating_add(output_bytes);
+        Ok(BenchRun {
+            metrics: BenchMetrics {
+                wall_ns: Some(timed.wall_ns),
+                dispatch_ns: timed.device_ns,
+                input_bytes: Some(prepared.input_bytes_total),
+                output_bytes: Some(output_bytes),
+                bytes_read: Some(accounting.bytes_read),
+                bytes_written: Some(accounting.bytes_written),
+                bytes_touched: Some(logical_bytes_touched),
+                custom: vec![
+                    MetricPoint {
+                        name: "metadata_records".to_string(),
+                        value: u64::from(METADATA_RECORDS),
+                    },
+                    MetricPoint {
+                        name: "metadata_expected_matches".to_string(),
+                        value: u64::from(prepared.expected_count),
+                    },
+                    MetricPoint {
+                        name: "metadata_resident_buffers".to_string(),
+                        value: u64::from(resident_used),
+                    },
+                    MetricPoint {
+                        name: "metadata_resident_reset_bytes".to_string(),
+                        value: resident_reset_bytes,
+                    },
+                ],
+                ..Default::default()
+            },
+            baseline_metrics: Some(BenchMetrics {
+                wall_ns: Some(baseline_wall),
+                input_bytes: Some(prepared.input_bytes_total),
+                output_bytes: Some(baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64),
+                bytes_touched:
+                    Some(
+                        prepared.input_bytes_total.saturating_add(
+                            baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64,
+                        ),
+                    ),
+                ..Default::default()
+            }),
+            outputs,
+            baseline_outputs: Some(baseline_outputs),
+        })
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
         run.verify_exact_outputs()
+    }
+
+    fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
+        prepared
+            .downcast_ref::<MetadataConditionPrepared>()
+            .map(|prepared| (prepared.input_bytes_total, METADATA_OUTPUT_RESET_BYTES))
+            .unwrap_or((
+                u64::from(METADATA_RECORDS) * 12,
+                METADATA_OUTPUT_RESET_BYTES,
+            ))
+    }
+}
+
+fn metadata_transfer_accounting(
+    input_bytes_total: u64,
+    output_bytes_total: u64,
+    resident_used: bool,
+    resident_reset_bytes: u64,
+) -> TransferAccounting {
+    let bytes_read = if resident_used {
+        resident_reset_bytes
+    } else {
+        input_bytes_total
+    };
+    TransferAccounting {
+        bytes_touched: bytes_read.saturating_add(output_bytes_total),
+        bytes_read,
+        bytes_written: output_bytes_total,
     }
 }
 
@@ -2641,6 +2776,30 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn metadata_resident_accounting_separates_hot_transfer_from_logical_work() {
+        let input_bytes = u64::from(METADATA_RECORDS) * 12;
+        let output_bytes = METADATA_OUTPUT_RESET_BYTES;
+        let accounting = metadata_transfer_accounting(
+            input_bytes,
+            output_bytes,
+            true,
+            METADATA_OUTPUT_RESET_BYTES,
+        );
+        let logical_bytes_touched = input_bytes.saturating_add(output_bytes);
+
+        assert_eq!(accounting.bytes_read, METADATA_OUTPUT_RESET_BYTES);
+        assert_eq!(accounting.bytes_written, output_bytes);
+        assert_eq!(
+            accounting.bytes_touched,
+            METADATA_OUTPUT_RESET_BYTES.saturating_add(output_bytes)
+        );
+        assert!(
+            logical_bytes_touched > accounting.bytes_touched,
+            "Fix: resident metadata benchmark must keep host-transfer accounting separate from logical throughput bytes."
+        );
+    }
 
     #[test]
     fn sparse_compaction_dispatch_inputs_match_program_abi() {

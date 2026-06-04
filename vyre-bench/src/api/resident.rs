@@ -4,7 +4,7 @@ use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver::{BackendError, CompiledPipeline, Resource, TimedDispatchResult};
 
-use crate::api::case::{BenchContext, BenchError};
+use crate::api::case::{dispatch_config_with_inferred_grid, BenchContext, BenchError};
 
 /// Prepared resident input buffers for a benchmark case.
 ///
@@ -222,8 +222,16 @@ pub fn dispatch_program_timed(
     config: &DispatchConfig,
 ) -> Result<ResidentDispatch, BenchError> {
     if let Some(resident) = resident {
+        let config = dispatch_config_with_inferred_grid(program, inputs, config)
+            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+        vyre_driver::validate_program_for_backend(
+            ctx.preferred_backend.as_ref(),
+            program,
+            config.as_ref(),
+        )
+        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
         let timed = resident
-            .dispatch_timed(program, config)
+            .dispatch_timed(program, config.as_ref())
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
         return Ok(ResidentDispatch {
             timed,

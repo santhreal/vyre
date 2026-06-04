@@ -1,8 +1,8 @@
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use vyre::{DispatchConfig, VyreBackend};
-use vyre_driver::CompiledPipeline;
+use vyre_driver::{BackendError, CompiledPipeline};
 pub use vyre_spec::DeterminismClass;
 
 use super::metric::BenchMetrics;
@@ -185,17 +185,8 @@ impl BenchContext {
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-        let mut inferred_config;
-        let config = if config.grid_override.is_none() {
-            inferred_config = config.clone();
-            inferred_config.grid_override = Some(vyre_driver::program_walks::infer_dispatch_grid(
-                prog, inputs, config,
-            )?);
-            &inferred_config
-        } else {
-            config
-        };
-        vyre_driver::validate_program_for_backend(self.preferred_backend.as_ref(), prog, config)?;
+        let config = dispatch_config_with_inferred_grid(prog, inputs, config)?;
+        vyre_driver::validate_program_for_backend(self.preferred_backend.as_ref(), prog, &config)?;
         if self
             .compiled_program_fingerprint
             .is_some_and(|fingerprint| fingerprint == prog.fingerprint())
@@ -206,11 +197,11 @@ impl BenchContext {
                 )
             })?;
             let borrowed_inputs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-            pipeline.dispatch_borrowed(&borrowed_inputs, config)
+            pipeline.dispatch_borrowed(&borrowed_inputs, &config)
         } else {
             let borrowed_inputs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
             self.preferred_backend
-                .dispatch_borrowed(prog, &borrowed_inputs, config)
+                .dispatch_borrowed(prog, &borrowed_inputs, &config)
         }
     }
 
@@ -220,17 +211,8 @@ impl BenchContext {
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
-        let mut inferred_config;
-        let config = if config.grid_override.is_none() {
-            inferred_config = config.clone();
-            inferred_config.grid_override = Some(vyre_driver::program_walks::infer_dispatch_grid(
-                prog, inputs, config,
-            )?);
-            &inferred_config
-        } else {
-            config
-        };
-        vyre_driver::validate_program_for_backend(self.preferred_backend.as_ref(), prog, config)?;
+        let config = dispatch_config_with_inferred_grid(prog, inputs, config)?;
+        vyre_driver::validate_program_for_backend(self.preferred_backend.as_ref(), prog, &config)?;
         let borrowed_inputs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
         if self
             .compiled_program_fingerprint
@@ -241,12 +223,29 @@ impl BenchContext {
                     "compiled program fingerprint was set without a compiled pipeline. Fix: keep BenchContext compiled pipeline state coherent.",
                 )
             })?;
-            pipeline.dispatch_borrowed_timed(&borrowed_inputs, config)
+            pipeline.dispatch_borrowed_timed(&borrowed_inputs, &config)
         } else {
             self.preferred_backend
-                .dispatch_borrowed_timed(prog, &borrowed_inputs, config)
+                .dispatch_borrowed_timed(prog, &borrowed_inputs, &config)
         }
     }
+}
+
+/// Return a dispatch config with the benchmark's backend-neutral grid inference applied.
+pub fn dispatch_config_with_inferred_grid<'a>(
+    prog: &vyre::ir::Program,
+    inputs: &[Vec<u8>],
+    config: &'a DispatchConfig,
+) -> Result<Cow<'a, DispatchConfig>, BackendError> {
+    if config.grid_override.is_some() {
+        return Ok(Cow::Borrowed(config));
+    }
+
+    let mut inferred_config = config.clone();
+    inferred_config.grid_override = Some(vyre_driver::program_walks::infer_dispatch_grid(
+        prog, inputs, config,
+    )?);
+    Ok(Cow::Owned(inferred_config))
 }
 
 pub type PreparedCase = Box<dyn std::any::Any>;
@@ -503,6 +502,42 @@ mod tests {
                 "Fix: CPU-SOTA release contracts must apply to `{backend}` evidence."
             );
         }
+    }
+
+    #[test]
+    fn dispatch_config_infers_grid_from_input_bindings_not_sparse_outputs() {
+        let program = vyre::ir::Program::wrapped(
+            vec![
+                vyre::ir::BufferDecl::output("out_count", 0, vyre::ir::DataType::U32).with_count(1),
+                vyre::ir::BufferDecl::storage(
+                    "records",
+                    1,
+                    vyre::ir::BufferAccess::ReadOnly,
+                    vyre::ir::DataType::U32,
+                )
+                .with_count(1024),
+            ],
+            [256, 1, 1],
+            vec![vyre::ir::Node::let_bind(
+                "_slot",
+                vyre::ir::Expr::atomic_add(
+                    "out_count",
+                    vyre::ir::Expr::u32(0),
+                    vyre::ir::Expr::load("records", vyre::ir::Expr::InvocationId { axis: 0 }),
+                ),
+            )],
+        );
+        let inputs = vec![vec![0u8; 1024 * 4]];
+        let default_config = DispatchConfig::default();
+
+        let inferred = dispatch_config_with_inferred_grid(&program, &inputs, &default_config)
+            .expect("Fix: benchmark dispatch grid inference must handle sparse-output cases.");
+
+        assert_eq!(
+            inferred.grid_override,
+            Some([4, 1, 1]),
+            "Fix: resident sparse-output benchmarks must launch over input records, not the one-word output counter."
+        );
     }
 
     #[test]
