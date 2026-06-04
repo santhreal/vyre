@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "test_files": 2850,
-  "vyre_test_files": 2567,
+  "test_files": 2851,
+  "vyre_test_files": 2568,
   "weir_test_files": 272,
   "vyrec_test_files": 11,
   "layers": [
@@ -18,9 +18,9 @@
   "surface_coverages": [
     {
       "surface": "vyre",
-      "file_count": 2567,
-      "assertion_count": 34375,
-      "entrypoint_count": 2567,
+      "file_count": 2568,
+      "assertion_count": 34377,
+      "entrypoint_count": 2568,
       "layers": [
         "adversarial",
         "benchmark",

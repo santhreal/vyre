@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use crate::api::object_io::read_object_bytes_bounded;
 use crate::object_format::{parse_embedded_vyrecob2, SectionTag, Vyrecob2};
 
 /// Decoded token stream from the embedded `VYRECOB1` lex section.
@@ -92,8 +93,7 @@ pub(crate) fn decode_object_lex_index_from_container(
 
 /// Read and decode the token stream from an object path.
 pub fn decode_object_lex_index_file(path: &Path) -> Result<CObjectLexIndex, String> {
-    let bytes = std::fs::read(path)
-        .map_err(|error| format!("vyre-frontend-c: read object {}: {error}", path.display()))?;
+    let bytes = read_object_bytes_bounded(path)?;
     decode_object_lex_index(&bytes)
 }
 

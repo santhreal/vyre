@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "benchmark",
-  "file_count": 2583,
-  "vyre_file_count": 2567,
+  "file_count": 2584,
+  "vyre_file_count": 2568,
   "dataflow_consumer_file_count": 15,
   "vyrec_file_count": 1,
   "files": [
@@ -809,6 +809,22 @@
         "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
         "move timing-only checks into benches/ or release benchmark cases"
       ]
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/object_io.rs",
+      "layers": [
+        "benchmark",
+        "unit"
+      ],
+      "lines": 103,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/megakernel_workspace/tests.rs",

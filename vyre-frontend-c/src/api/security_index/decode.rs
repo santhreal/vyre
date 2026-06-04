@@ -1,4 +1,5 @@
 use super::*;
+use crate::api::object_io::read_object_bytes_bounded;
 /// Decode the complete static-analysis index from object bytes.
 pub fn decode_object_security_index(object_bytes: &[u8]) -> Result<CObjectSecurityIndex, String> {
     let container = parse_embedded_vyrecob2(object_bytes)?;
@@ -16,7 +17,6 @@ pub fn decode_object_security_index(object_bytes: &[u8]) -> Result<CObjectSecuri
 
 /// Read and decode the complete static-analysis index from an object file.
 pub fn decode_object_security_index_file(path: &Path) -> Result<CObjectSecurityIndex, String> {
-    let bytes = std::fs::read(path)
-        .map_err(|error| format!("vyre-frontend-c: read object {}: {error}", path.display()))?;
+    let bytes = read_object_bytes_bounded(path)?;
     decode_object_security_index(&bytes)
 }

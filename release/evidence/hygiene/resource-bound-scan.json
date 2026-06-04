@@ -9,24 +9,6 @@
       "text": "let bytes = match std::fs::read(&path) {"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/lex_index.rs",
-      "line": 95,
-      "pattern": "unbounded_read",
-      "text": "let bytes = std::fs::read(path)"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/security_index/decode.rs",
-      "line": 19,
-      "pattern": "unbounded_read",
-      "text": "let bytes = std::fs::read(path)"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/object_io.rs",
-      "line": 17,
-      "pattern": "unbounded_read",
-      "text": "let bytes = std::fs::read(path)"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/engine.rs",
       "line": 205,
       "pattern": "unbounded_read",
@@ -268,6 +250,6 @@
     }
   ],
   "blockers": [
-    "44 `resource-bound` finding(s) remain"
+    "41 `resource-bound` finding(s) remain"
   ]
 }

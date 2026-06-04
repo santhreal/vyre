@@ -92,7 +92,7 @@
     },
     {
       "pattern": "unbounded_read",
-      "count": 44
+      "count": 41
     },
     {
       "pattern": "undocumented_public_api",
@@ -259,12 +259,6 @@
       "text": "panic!("
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/lex_index.rs",
-      "line": 95,
-      "pattern": "unbounded_read",
-      "text": "let bytes = std::fs::read(path)"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/resident_syntax.rs",
       "line": 391,
       "pattern": "panic_macro",
@@ -299,18 +293,6 @@
       "line": 3,
       "pattern": "panic_macro",
       "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/security_index/decode.rs",
-      "line": 19,
-      "pattern": "unbounded_read",
-      "text": "let bytes = std::fs::read(path)"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/api/object_io.rs",
-      "line": 17,
-      "pattern": "unbounded_read",
-      "text": "let bytes = std::fs::read(path)"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/include_loader_cache.rs",
@@ -9644,6 +9626,6 @@
     }
   ],
   "blockers": [
-    "1589 source hygiene finding(s) remain"
+    "1586 source hygiene finding(s) remain"
   ]
 }
