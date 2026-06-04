@@ -100,10 +100,10 @@
       "family_id": "offset-count-aggregation",
       "requested_case_id": "release.offset_count_aggregation.1m",
       "exists": true,
-      "bytes": 27235,
+      "bytes": 27174,
       "read_error": null,
-      "source_fingerprint": "git:5608672727b512ad62098b9048e960d9ac8f74cd:dirty=false",
-      "source_tree_fingerprint": "source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24",
+      "source_fingerprint": "git:5ae0f6eca8aac13df2591f1fa9c21d4c3b9f90f8:dirty=false",
+      "source_tree_fingerprint": "source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502",
       "selected_backend": "cuda",
       "host_cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
       "gpu_model": "NVIDIA GeForce RTX 5090",
@@ -120,19 +120,17 @@
       "failed_count": 0,
       "nonmatching_case_backend_count": 0,
       "min_wall_samples": 30,
-      "min_wall_p50": 1860908,
-      "min_wall_p95": 2955733,
-      "min_wall_p99": 3186417,
+      "min_wall_p50": 1963532,
+      "min_wall_p95": 2733985,
+      "min_wall_p99": 3606721,
       "min_baseline_wall_samples": 30,
-      "min_baseline_wall_p50": 358736311,
-      "min_baseline_wall_p95": 371017973,
-      "min_baseline_wall_p99": 372295322,
+      "min_baseline_wall_p50": 367025502,
+      "min_baseline_wall_p95": 373297053,
+      "min_baseline_wall_p99": 373846792,
       "cpu_sota_100x_required": true,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/workload-04-metadata-conditions.json",
@@ -641,7 +639,6 @@
     }
   ],
   "blockers": [
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-05-entropy-window.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",

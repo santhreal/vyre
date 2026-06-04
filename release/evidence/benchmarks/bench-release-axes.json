@@ -24,7 +24,6 @@
     "release/evidence/benchmarks/workload-16-quantized-linear.json"
   ],
   "blockers": [
-    "source_artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "source_artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "source_artifact `release/evidence/benchmarks/workload-05-entropy-window.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "source_artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",

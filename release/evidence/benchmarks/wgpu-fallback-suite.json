@@ -100,10 +100,10 @@
       "family_id": "offset-count-aggregation",
       "requested_case_id": "release.offset_count_aggregation.1m",
       "exists": true,
-      "bytes": 17249,
+      "bytes": 17264,
       "read_error": null,
-      "source_fingerprint": "git:5608672727b512ad62098b9048e960d9ac8f74cd:dirty=false",
-      "source_tree_fingerprint": "source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24",
+      "source_fingerprint": "git:5ae0f6eca8aac13df2591f1fa9c21d4c3b9f90f8:dirty=false",
+      "source_tree_fingerprint": "source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502",
       "selected_backend": "wgpu",
       "host_cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
       "gpu_model": "NVIDIA GeForce RTX 5090",
@@ -120,19 +120,17 @@
       "failed_count": 0,
       "nonmatching_case_backend_count": 0,
       "min_wall_samples": 30,
-      "min_wall_p50": 2550779,
-      "min_wall_p95": 2806290,
-      "min_wall_p99": 3192989,
+      "min_wall_p50": 2813054,
+      "min_wall_p95": 4349561,
+      "min_wall_p99": 4572962,
       "min_baseline_wall_samples": 30,
-      "min_baseline_wall_p50": 355204382,
-      "min_baseline_wall_p95": 365190637,
-      "min_baseline_wall_p99": 366202445,
+      "min_baseline_wall_p50": 368783883,
+      "min_baseline_wall_p95": 376603987,
+      "min_baseline_wall_p99": 377030520,
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-04-metadata-conditions.json",
@@ -641,7 +639,6 @@
     }
   ],
   "blockers": [
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-04-metadata-conditions.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-05-entropy-window.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
