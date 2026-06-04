@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "warm_us_per_file": 35.036,
-  "cold_pipeline_build_ms": 1.523812,
-  "gbs_scan_throughput": 8.304,
+  "warm_us_per_file": 32.31,
+  "cold_pipeline_build_ms": 0.47286,
+  "gbs_scan_throughput": 8.788,
   "ulp_drift_max": 0,
   "max_vram_mib": 32607,
   "source_artifacts": [
@@ -23,31 +23,5 @@
     "release/evidence/benchmarks/workload-15-adaptive-routing.json",
     "release/evidence/benchmarks/workload-16-quantized-linear.json"
   ],
-  "blockers": [
-    "source_artifact `release/evidence/benchmarks/workload-01-condition-eval.json` source_fingerprint `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-01-condition-eval.json` source_fingerprint `git:e029637092a475b28c9d8a8c75ca45d9f60d449e:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` source_fingerprint `git:353daa21fd8cc5a75d7e119e517bb03f5560103f:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` source_fingerprint `git:353daa21fd8cc5a75d7e119e517bb03f5560103f:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-05-entropy-window.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-05-entropy-window.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-08-ifds-witness.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-08-ifds-witness.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-09-c-ast-traversal.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-09-c-ast-traversal.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-11-egraph-saturation.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-11-egraph-saturation.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-12-sparse-output-compaction.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest",
-    "source_artifact `release/evidence/benchmarks/workload-12-sparse-output-compaction.json` source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:680b53f84e52b9adb8ec5202e35afde99e1534c6:dirty=true:worktree=b05529320a71bc29798702038917afd4e1e23c60c939df86cef6b5963255386a`",
-    "source_artifact `release/evidence/benchmarks/workload-13-callgraph-reachability.json` source_tree_fingerprint `source-tree-v1:66c1411b180a0913275a548eba1e59b04ca2cae821df81caff5df826d26985f9` does not match current workspace source `source-tree-v1:2d34428c47db97d2d73b710691ad07c21e392b3c6528a8a1167fd81a94646fec`"
-  ]
+  "blockers": []
 }
