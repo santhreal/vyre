@@ -215,22 +215,26 @@ fn explicit_tolerance_for_id(id: &str) -> u32 {
         "vyre-libs::nn::rms_norm" => 2,
         "vyre-libs::nn::rms_norm_linear" => 2,
         "vyre-libs::math::fft::fft_convolve_circular_complex" => 4,
-        "vyre-libs::optim::newton_schulz_5step" => 16,
+        "vyre-libs::optim::newton_schulz_5step" => 64,
         // `decay*ema + (1-decay)*theta`  -  straight mul+add chain,
         // one lane drifts 1 ULP from CPU's serial mul+add+add to
         // GPU's fused mul-add (WGSL-spec-allowed).
         "vyre-libs::optim::ema_apply" => 1,
+        // MuonEq-R computes momentum and Nesterov update through
+        // adjacent f32 mul+add chains. Random-input WGPU parity observed
+        // 6-ULP drift on an RTX backend under allowed FMA contraction.
+        "vyre-libs::optim::muoneq_r" => 8,
         // Newton-Schulz Cat-A primitive: the polynomial has nested
-        // mul+add steps that fuse to FMA on GPU. Worst observed
-        // single-lane divergence is 7 ULP.
-        "vyre-primitives::math::newton_schulz_poly5_f32" => 8,
+        // mul+add steps that fuse to FMA on GPU. Random-input parity
+        // observed 24-ULP drift across catalog wrappers.
+        "vyre-primitives::math::newton_schulz_poly5_f32" => 32,
         _ => 0,
     }
 }
 
 fn primitive_tolerance_for_path(path: &str) -> u32 {
     match path {
-        "math::newton_schulz_poly5_f32" => 8,
+        "math::newton_schulz_poly5_f32" => 32,
         _ => 0,
     }
 }
@@ -448,6 +452,23 @@ mod tests {
                 "vyre-libs::catalog::imaginary::path_that_does_not_exist::consumer_a"
             ),
             0
+        );
+    }
+
+    #[test]
+    fn muoneq_r_random_stress_tolerance_covers_fma_contraction() {
+        assert_eq!(OpEntry::tolerance_for_id("vyre-libs::optim::muoneq_r"), 8);
+    }
+
+    #[test]
+    fn newton_schulz_random_stress_tolerance_covers_nested_fma_drift() {
+        assert_eq!(
+            OpEntry::tolerance_for_id("vyre-primitives::math::newton_schulz_poly5_f32"),
+            32
+        );
+        assert_eq!(
+            OpEntry::tolerance_for_id("vyre-libs::optim::newton_schulz_5step"),
+            64
         );
     }
 

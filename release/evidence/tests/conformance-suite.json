@@ -7515,12 +7515,12 @@
         "conformance",
         "unit"
       ],
-      "lines": 505,
+      "lines": 526,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
-      "assertion_count": 14,
+      "assertion_count": 17,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [

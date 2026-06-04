@@ -7,7 +7,7 @@
     "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec",
     "/media/mukund-thiru/SanthData/Santh/libs/shared/surgec-grammar-gen"
   ],
-  "scanned_files": 5028,
+  "scanned_files": 5029,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -6230,13 +6230,13 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/common/mod.rs",
-      "line": 97,
+      "line": 98,
       "pattern": "test_let_underscore_result",
       "text": "let _ = pending.is_ready();"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/common/mod.rs",
-      "line": 133,
+      "line": 134,
       "pattern": "test_let_underscore_result",
       "text": "let _ = backend"
     },

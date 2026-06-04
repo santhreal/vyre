@@ -30333,17 +30333,15 @@
         "integration",
         "unit"
       ],
-      "lines": 527,
+      "lines": 214,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 1,
-      "oversized": true,
-      "god_test_candidate": true,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ]
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/gemini_c_ast_contracts.rs",
@@ -31373,12 +31371,12 @@
         "conformance",
         "unit"
       ],
-      "lines": 505,
+      "lines": 526,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
-      "assertion_count": 14,
+      "assertion_count": 17,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [

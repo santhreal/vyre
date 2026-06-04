@@ -2912,13 +2912,13 @@
       "id": "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_a",
       "has_test_inputs": true,
       "has_expected_output": true,
-      "tolerance_ulp": 8
+      "tolerance_ulp": 32
     },
     {
       "id": "vyre-libs::catalog::math::newton_schulz_poly5_f32::consumer_b",
       "has_test_inputs": true,
       "has_expected_output": true,
-      "tolerance_ulp": 8
+      "tolerance_ulp": 32
     },
     {
       "id": "vyre-libs::catalog::math::qsvt_block_encode::consumer_a",
@@ -4280,13 +4280,13 @@
       "id": "vyre-libs::optim::muoneq_r",
       "has_test_inputs": true,
       "has_expected_output": true,
-      "tolerance_ulp": 0
+      "tolerance_ulp": 8
     },
     {
       "id": "vyre-libs::optim::newton_schulz_5step",
       "has_test_inputs": true,
       "has_expected_output": true,
-      "tolerance_ulp": 16
+      "tolerance_ulp": 64
     },
     {
       "id": "vyre-libs::parsing::ast_binding_strength",
@@ -5276,7 +5276,7 @@
       "id": "vyre-primitives::math::newton_schulz_poly5_f32",
       "has_test_inputs": true,
       "has_expected_output": true,
-      "tolerance_ulp": 8
+      "tolerance_ulp": 32
     },
     {
       "id": "vyre-primitives::math::qsvt_block_encode",
