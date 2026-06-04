@@ -23,14 +23,14 @@ jobs:
 
       - name: Compile non-GPU bench targets
         run: |
-          cargo bench -p vyre-bench-smoke --no-run
-          cargo bench -p vyre-bench-deep --no-run
-          cargo bench -p vyre-foundation --no-run
-          cargo bench -p vyre-intrinsics --no-run
-          cargo bench -p vyre-libs --no-run
-          cargo bench -p vyre-reference --no-run
-          cargo bench -p vyre-runtime --no-run
-          cargo bench -p vyre-driver-wgpu --no-run
+          ./cargo_full bench -p vyre-bench-smoke --no-run
+          ./cargo_full bench -p vyre-bench-deep --no-run
+          ./cargo_full bench -p vyre-foundation --no-run
+          ./cargo_full bench -p vyre-intrinsics --no-run
+          ./cargo_full bench -p vyre-libs --no-run
+          ./cargo_full bench -p vyre-reference --no-run
+          ./cargo_full bench -p vyre-runtime --no-run
+          ./cargo_full bench -p vyre-driver-wgpu --no-run
 
       - name: Enforce smoke benchmark runtime budget
         run: scripts/check_bench_smoke_runtime.sh

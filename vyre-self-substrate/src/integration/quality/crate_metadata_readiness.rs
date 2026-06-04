@@ -41,10 +41,10 @@ pub struct MetadataMatrixArtifactProof {
     pub publishable_package_count: u64,
 }
 
-/// Validated cargo package/publish receipt proof.
+/// Validated cargo_full package/publish receipt proof.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PublishReceiptArtifactProof {
-    /// Number of cargo publish receipts recorded.
+    /// Number of cargo_full publish receipts recorded.
     pub publish_receipt_count: u64,
 }
 
@@ -77,7 +77,7 @@ pub enum CrateMetadataReadinessError {
         /// Crate name.
         name: String,
     },
-    /// Publish command is not cargo publish.
+    /// Publish command is not cargo_full publish.
     InvalidPublishCommand {
         /// Crate name.
         name: String,
@@ -117,7 +117,7 @@ impl std::fmt::Display for CrateMetadataReadinessError {
         match self {
             Self::EmptyRecords => write!(
                 f,
-                "crate metadata readiness records are empty. Fix: validate package metadata before cargo publish."
+                "crate metadata readiness records are empty. Fix: validate package metadata before cargo_full publish."
             ),
             Self::DuplicateCrate { name } => write!(
                 f,
@@ -137,7 +137,7 @@ impl std::fmt::Display for CrateMetadataReadinessError {
             ),
             Self::InvalidPublishCommand { name, command } => write!(
                 f,
-                "crate `{name}` publish command `{command}` is not cargo publish. Fix: record the exact cargo publish command."
+                "crate `{name}` publish command `{command}` is not cargo_full publish. Fix: record the exact cargo_full publish command."
             ),
             Self::ArtifactMissingEvidence { evidence } => write!(
                 f,
@@ -153,7 +153,7 @@ impl std::fmt::Display for CrateMetadataReadinessError {
             ),
             Self::PublishReceiptMissingEvidence { evidence } => write!(
                 f,
-                "publish receipt artifact is missing {evidence}. Fix: record cargo package dry-run and cargo publish receipts for approved release crates."
+                "publish receipt artifact is missing {evidence}. Fix: record cargo_full package dry-run and cargo_full publish receipts for approved release crates."
             ),
             Self::PublishReceiptFailure { field, observed } => write!(
                 f,
@@ -207,7 +207,7 @@ pub fn validate_crate_metadata_readiness(
                 name: record.name.to_owned(),
             });
         }
-        if !record.publish_command.contains("cargo publish") {
+        if !record.publish_command.contains("cargo_full publish") {
             return Err(CrateMetadataReadinessError::InvalidPublishCommand {
                 name: record.name.to_owned(),
                 command: record.publish_command.to_owned(),
@@ -294,7 +294,7 @@ pub fn validate_publish_receipt_artifact(
             "dataflow consumer package receipt",
             "\"crate_role\": \"dataflow-consumer\"",
         ),
-        ("Vyre publish command", "cargo publish -p vyre"),
+        ("Vyre publish command", "cargo_full publish -p vyre"),
         (
             "dataflow consumer publish command",
             "\"dataflow_consumer_publish_command\"",
@@ -515,14 +515,14 @@ mod tests {
     #[test]
     fn crate_metadata_rejects_wrong_publish_command() {
         let mut record = record("vyre");
-        record.publish_command = "cargo package";
+        record.publish_command = "cargo_full package";
 
         assert_eq!(
             validate_crate_metadata_readiness(&[record])
                 .expect_err("wrong publish command should fail"),
             CrateMetadataReadinessError::InvalidPublishCommand {
                 name: "vyre".to_owned(),
-                command: "cargo package".to_owned(),
+                command: "cargo_full package".to_owned(),
             }
         );
     }
@@ -534,14 +534,14 @@ mod tests {
               "schema_version": 1,
               "plan_path": "release/plans/paradigm-shift-100-concrete.md",
               "cargo_package_dry_run_receipts": [
-                {"crate": "vyre", "command": "cargo package -p vyre", "status": "executed"},
-                {"crate": "dataflow-consumer", "crate_role": "dataflow-consumer", "command": "cargo package -p dataflow-consumer", "status": "executed"}
+                {"crate": "vyre", "command": "cargo_full package -p vyre", "status": "executed"},
+                {"crate": "dataflow-consumer", "crate_role": "dataflow-consumer", "command": "cargo_full package -p dataflow-consumer", "status": "executed"}
               ],
               "cargo_publish_receipts": [
-                {"crate": "vyre", "command": "cargo publish -p vyre", "status": "executed"},
-                {"crate": "dataflow-consumer", "crate_role": "dataflow-consumer", "command": "cargo publish -p dataflow-consumer", "status": "executed"}
+                {"crate": "vyre", "command": "cargo_full publish -p vyre", "status": "executed"},
+                {"crate": "dataflow-consumer", "crate_role": "dataflow-consumer", "command": "cargo_full publish -p dataflow-consumer", "status": "executed"}
               ],
-              "dataflow_consumer_publish_command": "cargo publish -p dataflow-consumer",
+              "dataflow_consumer_publish_command": "cargo_full publish -p dataflow-consumer",
               "package_failures": 0,
               "publish_failures": 0,
               "publish_receipt_count": 2,
@@ -575,14 +575,14 @@ mod tests {
               "schema_version": 1,
               "plan_path": "release/plans/paradigm-shift-100-concrete.md",
               "cargo_package_dry_run_receipts": [
-                {"crate": "vyre", "command": "cargo package -p vyre", "status": "executed"},
-                {"crate": "dataflow-consumer", "crate_role": "dataflow-consumer", "command": "cargo package -p dataflow-consumer", "status": "executed"}
+                {"crate": "vyre", "command": "cargo_full package -p vyre", "status": "executed"},
+                {"crate": "dataflow-consumer", "crate_role": "dataflow-consumer", "command": "cargo_full package -p dataflow-consumer", "status": "executed"}
               ],
               "cargo_publish_receipts": [
-                {"crate": "vyre", "command": "cargo publish -p vyre", "status": "executed"},
-                {"crate": "dataflow-consumer", "crate_role": "dataflow-consumer", "command": "cargo publish -p dataflow-consumer", "status": "failed"}
+                {"crate": "vyre", "command": "cargo_full publish -p vyre", "status": "executed"},
+                {"crate": "dataflow-consumer", "crate_role": "dataflow-consumer", "command": "cargo_full publish -p dataflow-consumer", "status": "failed"}
               ],
-              "dataflow_consumer_publish_command": "cargo publish -p dataflow-consumer",
+              "dataflow_consumer_publish_command": "cargo_full publish -p dataflow-consumer",
               "package_failures": 0,
               "publish_failures": 1,
               "publish_receipt_count": 2,
@@ -610,7 +610,7 @@ mod tests {
             repository: "https://github.com/santh/vyre",
             documentation: "https://docs.rs/vyre",
             real_code: true,
-            publish_command: "cargo publish",
+            publish_command: "cargo_full publish",
         }
     }
 }

@@ -163,7 +163,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: vyre-lints  -  no raw IR construction in vyre-libs
-        run: cargo run -p vyre-lints --release --quiet -- --workspace-root .
+        run: ./cargo_full run -p vyre-lints --release --quiet -- --workspace-root .
 
   vyre-lints-allowlist-drift:
     runs-on: ubuntu-latest
@@ -173,22 +173,22 @@ jobs:
           fetch-depth: 0  # full history so git blame can age allowlist entries
       - uses: dtolnay/rust-toolchain@stable
       - name: vyre-lints  -  allowlist drift sentinel (≤14 days)
-        run: cargo run -p vyre-lints --release --quiet -- --check-drift --workspace-root .
+        run: ./cargo_full run -p vyre-lints --release --quiet -- --check-drift --workspace-root .
 
   op-matrix-coverage:
     runs-on: ubuntu-latest
     # ROADMAP S6: every registered op family must have an OP_MATRIX.toml
     # row. The matrix is generated from inventory registries plus manual
     # foundation rows; any drift between source and `OP_MATRIX.toml`
-    # fails this check. Run `cargo run -p xtask -- op-matrix --write` locally to
+    # fails this check. Run `./cargo_full run -p xtask -- op-matrix --write` locally to
     # regenerate when registries change.
     # ROADMAP S7: validate_records also enforces tier-vs-id consistency
     # so a Tier-2.5 row can't carry `vyre-libs::` ops or vice versa.
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: cargo run -p xtask -- op-matrix --check
-        run: cargo run -p xtask -- op-matrix --check
+      - name: cargo_full run -p xtask -- op-matrix --check
+        run: ./cargo_full run -p xtask -- op-matrix --check
 
   lego-audit:
     runs-on: ubuntu-latest
@@ -205,5 +205,5 @@ jobs:
         with:
           fetch-depth: 0  # check 7 (trend) needs the previous tag
       - uses: dtolnay/rust-toolchain@stable
-      - name: cargo run -p xtask -- lego-audit --with-repo
-        run: cargo run -p xtask -- lego-audit --with-repo
+      - name: cargo_full run -p xtask -- lego-audit --with-repo
+        run: ./cargo_full run -p xtask -- lego-audit --with-repo

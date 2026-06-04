@@ -146,7 +146,7 @@ pub fn bundle(
         ## Build the launcher\n\n\
         ```\n\
         cd {crate_name}\n\
-        cargo build --release\n\
+        ./cargo_full build --release\n\
         ```\n\n\
         ## Run\n\n\
         ```\n\

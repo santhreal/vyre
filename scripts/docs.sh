@@ -11,6 +11,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+source scripts/lib/cargo_runner.sh
+vyre_select_cargo_runner
 
 CHANGED_ONLY=0
 for arg in "$@"; do
@@ -44,7 +46,7 @@ if [[ "$CHANGED_ONLY" -eq 1 ]]; then
     
     if ! git rev-parse "$BASE_COMMIT" >/dev/null 2>&1; then
         echo "Base commit $BASE_COMMIT not found. Building documentation for all workspace crates..."
-        cargo doc --no-deps --workspace --keep-going
+        "$CARGO_RUNNER" doc --no-deps --workspace --keep-going
         exit 0
     fi
     
@@ -59,7 +61,7 @@ if [[ "$CHANGED_ONLY" -eq 1 ]]; then
     # If workspace-level configs, root README, or root Cargo.toml changed, build everything
     if echo "$changed_files" | grep -qE '^(Cargo\.toml|Cargo\.lock|README\.md|docs/)'; then
         echo "Workspace-level changes detected. Building documentation for all workspace crates..."
-        cargo doc --no-deps --workspace --keep-going
+        "$CARGO_RUNNER" doc --no-deps --workspace --keep-going
         exit 0
     fi
     
@@ -94,11 +96,11 @@ if [[ "$CHANGED_ONLY" -eq 1 ]]; then
     echo "Building documentation for affected packages: ${unique_packages[*]}"
     for pkg in "${unique_packages[@]}"; do
         echo "Building docs for $pkg..."
-        cargo doc --no-deps -p "$pkg" --keep-going
+        "$CARGO_RUNNER" doc --no-deps -p "$pkg" --keep-going
     done
 else
     echo "Building documentation for the entire workspace..."
-    cargo doc --no-deps --workspace --keep-going
+    "$CARGO_RUNNER" doc --no-deps --workspace --keep-going
 fi
 
 echo "Documentation build complete."

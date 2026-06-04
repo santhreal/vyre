@@ -39,7 +39,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: capability + async dispatch contracts
-        run: cargo test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture
 
   composition-parity-gpu:
     name: Composition parity on real GPU
@@ -51,7 +51,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run composition parity
-        run: cargo test -p vyre-libs --release --features vyre_wgpu --test op_pairwise pairwise_composition_parity -- --nocapture
+        run: ./cargo_full test -p vyre-libs --release --features vyre_wgpu --test op_pairwise pairwise_composition_parity -- --nocapture
 
   determinism-stress-gpu:
     name: Determinism stress on real GPU
@@ -63,7 +63,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run determinism stress
-        run: cargo test -p vyre-driver-wgpu --release --test gap_determinism_contract -- --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --release --test gap_determinism_contract -- --nocapture
 
   mandatory-gpu-enforcer:
     name: Mandatory GPU enforcement
@@ -75,7 +75,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run GPU mandatory tests
-        run: cargo test -p vyre-conform-runner --release --features gpu --test parity_matrix --test ulp_audit -- --nocapture
+        run: ./cargo_full test -p vyre-conform-runner --release --features gpu --test parity_matrix --test ulp_audit -- --nocapture
 
   cuda-conformance-all-ops:
     name: CUDA conformance all ops
@@ -87,7 +87,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run vyre-conform against CUDA for every registered op
-        run: cargo run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all
+        run: ./cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all
 
   wgpu-conformance-all-ops:
     name: WGPU conformance all ops
@@ -99,7 +99,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run vyre-conform against WGPU for every registered op
-        run: cargo run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all
+        run: ./cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all
 
   release-conformance-artifacts:
     name: Release conformance artifacts
@@ -113,7 +113,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Generate release conformance evidence artifacts
-        run: cargo_full run --release --bin xtask -- release-conformance --backend all
+        run: ./cargo_full run --release --bin xtask -- release-conformance --backend all
       - uses: actions/upload-artifact@v4
         with:
           name: vyre-release-conformance-evidence
@@ -129,7 +129,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run Weir CUDA parity inventory gate
-        run: cargo test -p weir every_weir_inventory_op_parity_holds -- --nocapture
+        run: ./cargo_full test -p weir every_weir_inventory_op_parity_holds -- --nocapture
 
   cuda-release-bench-evidence:
     name: CUDA release benchmark evidence
@@ -141,17 +141,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Lower rewrite optimization evidence
-        run: cargo run -p vyre-bench --release -- run --suite release --case lower.rewrites.impact.corpus --format json --measured-samples 30
+        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case lower.rewrites.impact.corpus --format json --measured-samples 30
       - name: CUDA PTX pattern evidence
-        run: cargo run -p vyre-bench --release -- run --suite release --case cuda.ptx.patterns.release.corpus --format json --measured-samples 30
+        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case cuda.ptx.patterns.release.corpus --format json --measured-samples 30
       - name: Megakernel condition evidence
-        run: cargo run -p vyre-bench --release -- run --suite release --case runtime.megakernel.condition.64k --format json --backend cuda --measured-samples 30
+        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case runtime.megakernel.condition.64k --format json --backend cuda --measured-samples 30
       - name: CPU-favorable conditional eval evidence
-        run: cargo run -p vyre-bench --release -- run --suite release --case conditions.yara_like.eval.1m --format json --backend cuda --measured-samples 30
+        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case conditions.yara_like.eval.1m --format json --backend cuda --measured-samples 30
       - name: Batched conditional eval evidence
-        run: cargo run -p vyre-bench --release -- run --suite release --case conditions.yara_like.batch.16x64k --format json --backend cuda --measured-samples 30
+        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case conditions.yara_like.batch.16x64k --format json --backend cuda --measured-samples 30
       - name: Generate release benchmark evidence artifacts
-        run: cargo run --release --bin xtask -- release-benchmarks --backend cuda --measured-samples 30
+        run: ./cargo_full run --release --bin xtask -- release-benchmarks --backend cuda --measured-samples 30
       - uses: actions/upload-artifact@v4
         with:
           name: vyre-release-benchmark-evidence

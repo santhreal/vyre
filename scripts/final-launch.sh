@@ -7,7 +7,7 @@
 #
 # It performs the three approval-gated actions that complete
 # release/plans/paradigm-shift-100-concrete.md:
-#   1. cargo publish in audited dependency order.
+#   1. cargo_full publish in audited dependency order.
 #   2. make approved GitHub repositories public.
 #   3. push the release branch and product-scoped tags.
 
@@ -127,7 +127,7 @@ jq -n \
                 evidence: $conformance
             },
             {
-                action: "cargo publish approved crates in dependency order",
+                action: "cargo_full publish approved crates in dependency order",
                 status: "complete",
                 evidence: "scripts/publish-release.sh"
             },

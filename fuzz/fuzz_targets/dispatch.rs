@@ -8,7 +8,7 @@
 //! 2. `from_wire` errors carry a `Fix:` hint.
 //! 3. GPU dispatch is attempted only when inputs fit under the byte cap.
 //!
-//! Run with: `cargo fuzz build dispatch`
+//! Run with: `./cargo_full fuzz build dispatch`
 
 #![no_main]
 

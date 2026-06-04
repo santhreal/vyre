@@ -675,7 +675,7 @@ pub const RELEASE_VALIDATION_MATRIX: &[ReleaseValidationCommand] = &[
         command: "./cargo_full test -j1 -p vyre-self-substrate release_launch_sequence",
         working_dir: ".",
         requires_gpu_probe: false,
-        evidence: "final release order is cargo_full green then cargo publish then public repos then git push and tags",
+        evidence: "final release order is cargo_full green then cargo_full publish then public repos then git push and tags",
     },
     ReleaseValidationCommand {
         id: "release-checklist-gate",
@@ -691,7 +691,7 @@ pub const RELEASE_VALIDATION_MATRIX: &[ReleaseValidationCommand] = &[
         command: "./cargo_full test -j1 -p vyre-self-substrate release_completion_audit",
         working_dir: ".",
         requires_gpu_probe: false,
-        evidence: "completion audit evidence must target the active paradigm-shift plan and include cargo publish, public repo, branch push, and tag push proof",
+        evidence: "completion audit evidence must target the active paradigm-shift plan and include cargo_full publish, public repo, branch push, and tag push proof",
     },
     ReleaseValidationCommand {
         id: "release-paradigm-shift-plan-audit",

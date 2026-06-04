@@ -57,7 +57,7 @@ impl std::fmt::Display for ReleaseCompletionAuditError {
                 required,
             } => write!(
                 f,
-                "release completion audit {field}={observed} missed required {required}. Fix: close every explicit requirement before cargo publish or git push."
+                "release completion audit {field}={observed} missed required {required}. Fix: close every explicit requirement before cargo_full publish or git push."
             ),
             Self::MissingRequirementId { id } => write!(
                 f,
@@ -117,12 +117,12 @@ pub fn validate_release_completion_audit(
         ),
         ("C parser Linux subsystem", "c-parser-linux-subsystem"),
         ("Dataflow consumer release evidence", "dataflow"),
-        ("cargo publish final step", "cargo publish"),
+        ("cargo_full publish final step", "cargo_full publish"),
         ("public repository action", "public"),
         ("release branch push", "git push origin release"),
         ("release tag push", "git push --tags"),
         ("launch receipts", "\"launch_receipts\""),
-        ("cargo publish receipts", "\"cargo_publish_receipts\""),
+        ("cargo_full publish receipts", "\"cargo_publish_receipts\""),
         (
             "repository visibility receipt",
             "\"repository_visibility_receipt\"",
@@ -275,7 +275,7 @@ mod tests {
           "blocked_or_open_requirements": 0,
           "total_requirements": 100,
           "blockers": [],
-          "final_launch": ["cargo publish", "public"],
+          "final_launch": ["cargo_full publish", "public"],
           "artifacts": ["c-parser-linux-subsystem"]
         }}"#,
             requirement_rows(),
@@ -325,7 +325,7 @@ mod tests {
           "blocked_or_open_requirements": 0,
           "total_requirements": 100,
           "blockers": [],
-          "final_launch": ["cargo publish", "public", "git push origin release", "git push --tags"],
+          "final_launch": ["cargo_full publish", "public", "git push origin release", "git push --tags"],
           "launch_receipts": {{
             "cargo_publish_receipts": [{{"status": "executed"}}],
             "repository_visibility_receipt": {{"status": "executed"}},
@@ -373,7 +373,7 @@ mod tests {
           "blocked_or_open_requirements": 0,
           "total_requirements": 100,
           "blockers": [],
-          "final_launch": ["cargo publish", "public", "git push origin release", "git push --tags"],
+          "final_launch": ["cargo_full publish", "public", "git push origin release", "git push --tags"],
           "artifacts": ["c-parser-linux-subsystem"]
         }}"#,
             requirement_rows(),
@@ -407,7 +407,7 @@ mod tests {
           "blocked_or_open_requirements": 0,
           "total_requirements": {total_requirements},
           "blockers": [],
-          "final_launch": ["cargo publish", "public", "git push origin release", "git push --tags"],
+          "final_launch": ["cargo_full publish", "public", "git push origin release", "git push --tags"],
           "launch_receipts": {{
             "cargo_publish_receipts": [{{"status": "executed"}}],
             "repository_visibility_receipt": {{"status": "executed"}},

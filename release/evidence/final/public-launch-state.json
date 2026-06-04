@@ -12,7 +12,7 @@
   },
   "external_actions": [
     {
-      "action": "cargo publish approved crates in dependency order",
+      "action": "cargo_full publish approved crates in dependency order",
       "status": "blocked_pending_user_approval",
       "evidence": "scripts/final-launch.sh + scripts/publish-release.sh + release/evidence/package/publish-readiness.json"
     },
@@ -28,7 +28,7 @@
     }
   ],
   "blockers": [
-    "cargo publish is not approved or completed",
+    "cargo_full publish is not approved or completed",
     "repository public launch is not approved or completed",
     "git push release branch and tags is not approved or completed"
   ],

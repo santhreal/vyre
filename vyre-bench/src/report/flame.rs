@@ -31,7 +31,7 @@
 //!
 //! Pipe into `inferno-flamegraph` to render an SVG:
 //! ```text
-//! cargo run -p vyre-bench --release -- ... | inferno-flamegraph > flame.svg
+//! ./cargo_full run -p vyre-bench --release -- ... | inferno-flamegraph > flame.svg
 //! ```
 //!
 //! Why p50 and not mean: the bench harness already collects

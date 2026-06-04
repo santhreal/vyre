@@ -22,4 +22,4 @@ jobs:
       - name: Run loom tests
         run: |
           # Only run tests named loom_* under cfg loom. If a crate has none, it is a no-op.
-          cargo test --workspace --release -- --test-threads=1 loom_
+          ./cargo_full test --workspace --release -- --test-threads=1 loom_

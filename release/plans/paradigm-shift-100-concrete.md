@@ -2,7 +2,7 @@
 
 Scope: platform, dataflow, and compiler frontend only. The goal is not cleanup. The goal is a release-worthy GPU-first dataflow/compiler platform with concrete software-level innovation, measurable performance wins, deep validation, contributor-grade organization, and no half-migrations.
 
-Release definition: this plan is complete only when the code, tests, benchmarks, docs, packaging, and public launch path are all finished. The final steps intentionally end in cargo publish and git push after deep review.
+Release definition: this plan is complete only when the code, tests, benchmarks, docs, packaging, and public launch path are all finished. The final steps intentionally end in cargo_full publish and git push after deep review.
 
 ## A. Non-negotiable architecture invariants
 
@@ -120,4 +120,4 @@ Release definition: this plan is complete only when the code, tests, benchmarks,
 97. Run deep personal review of every public crate file touched by the release and fix every finding before publishing.
 98. Run the full GPU validation and benchmark suite on local RTX 5090 and record exact hardware, driver, and command outputs in release artifacts.
 99. Publish only after the release checklist is green: cargo_full checks/tests, GPU tests, fuzz/gap findings triaged, benchmarks, docs, crate metadata, and public API review.
-100. Final launch step: cargo publish the approved crates, make the repositories public, and git push the release branch and tags.
+100. Final launch step: cargo_full publish the approved crates, make the repositories public, and git push the release branch and tags.

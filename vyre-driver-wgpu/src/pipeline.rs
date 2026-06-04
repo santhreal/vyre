@@ -845,7 +845,7 @@ pub(crate) mod descriptor_metadata;
 /// On-disk WGSL + compiled-pipeline cache. Front-end calls
 /// `load_or_compile_disk_wgsl` / `compiled_pipeline_cache_key` /
 /// `persist_compiled_pipeline_cache` to skip Naga + Tint + driver
-/// linkage for unchanged programs across `cargo test` cycles.
+/// linkage for unchanged programs across `./cargo_full test` cycles.
 pub(crate) mod disk_cache;
 /// Sibling of `disk_cache`  -  cache invalidation triggered by source
 /// edits, adapter changes, or feature-flag flips.

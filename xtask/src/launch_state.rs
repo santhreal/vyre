@@ -64,7 +64,7 @@ pub(crate) fn run(args: &[String]) {
         },
         external_actions: vec![
             ExternalAction {
-                action: "cargo publish approved crates in dependency order",
+                action: "cargo_full publish approved crates in dependency order",
                 status: if complete {
                     "complete"
                 } else {
@@ -95,7 +95,7 @@ pub(crate) fn run(args: &[String]) {
             Vec::new()
         } else {
             vec![
-                "cargo publish is not approved or completed",
+                "cargo_full publish is not approved or completed",
                 "repository public launch is not approved or completed",
                 "git push release branch and tags is not approved or completed",
             ]
@@ -177,7 +177,7 @@ fn completion_marker_complete(path: &Path) -> bool {
             .and_then(serde_json::Value::as_array)
             .is_some_and(|actions| {
                 [
-                    "cargo publish approved crates in dependency order",
+                    "cargo_full publish approved crates in dependency order",
                     "make repositories public",
                     "git push release branch and tags",
                 ]

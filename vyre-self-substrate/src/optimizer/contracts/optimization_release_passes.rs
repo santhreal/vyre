@@ -171,7 +171,7 @@ pub const RELEASE_OPTIMIZATION_PASSES: &[OptimizationPass] = &[
     pass!("release.gpu-evidence", "release", "release-gate", "release artifacts record nvidia-smi CUDA hardware driver and cargo_full commands", "release_gpu_evidence"),
     pass!("release.gap-findings", "release", "release-gate", "missing clang or dataflow parity is tracked as reproducible gap findings instead of silent green evidence", "release_gap_findings"),
     pass!("release.checklist-green", "release", "release-gate", "cargo_full GPU fuzz gap benchmarks docs metadata public API and deep review evidence are all green", "release_checklist_gate"),
-    pass!("release.launch-sequence", "release", "release-gate", "final release order is cargo_full green then cargo publish then public repos then git push and tags", "release_launch_sequence"),
-    pass!("release.crate-metadata-readiness", "release", "release-gate", "public crates have complete package metadata real code and exact cargo publish commands", "crate_metadata_readiness"),
+    pass!("release.launch-sequence", "release", "release-gate", "final release order is cargo_full green then cargo_full publish then public repos then git push and tags", "release_launch_sequence"),
+    pass!("release.crate-metadata-readiness", "release", "release-gate", "public crates have complete package metadata real code and exact cargo_full publish commands", "crate_metadata_readiness"),
     pass!("release.deep-personal-review", "release", "release-gate", "every touched public crate file is read in full and every review finding is fixed", "deep_review_gate"),
 ];

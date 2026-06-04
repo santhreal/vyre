@@ -80,7 +80,7 @@ impl std::fmt::Display for ReleaseLaunchSequenceError {
         match self {
             Self::MissingOrOutOfOrder { expected, index } => write!(
                 f,
-                "release launch sequence missing `{expected}` at index {index}. Fix: run release gates before publish, then cargo publish, then public repo switch, then git push and tags."
+                "release launch sequence missing `{expected}` at index {index}. Fix: run release gates before publish, then cargo_full publish, then public repo switch, then git push and tags."
             ),
             Self::EmptyMetadata { id, field } => write!(
                 f,
@@ -104,7 +104,7 @@ impl std::fmt::Display for ReleaseLaunchSequenceError {
             ),
             Self::ReceiptMissingEvidence { evidence } => write!(
                 f,
-                "release launch receipt is missing {evidence}. Fix: record executed cargo publish, public repository switch, release branch push, and tag push receipts after they actually complete."
+                "release launch receipt is missing {evidence}. Fix: record executed cargo_full publish, public repository switch, release branch push, and tag push receipts after they actually complete."
             ),
         }
     }
@@ -114,7 +114,7 @@ impl std::error::Error for ReleaseLaunchSequenceError {}
 
 const REQUIRED_STEPS: &[(&str, &str)] = &[
     ("release-checklist-green", "./cargo_full"),
-    ("cargo-publish", "cargo publish"),
+    ("cargo-publish", "cargo_full publish"),
     ("repos-public", "public"),
     ("git-push-release", "git push"),
     ("git-push-tags", "git push --tags"),
@@ -215,7 +215,7 @@ pub fn validate_release_launch_receipts(
             "\"plan_path\": \"release/plans/paradigm-shift-100-concrete.md\"",
         ),
         ("launch receipts object", "\"launch_receipts\""),
-        ("cargo publish receipts", "\"cargo_publish_receipts\""),
+        ("cargo_full publish receipts", "\"cargo_publish_receipts\""),
         ("Vyre publish receipt", "\"crate\": \"vyre\""),
         (
             "dataflow consumer publish receipt",
@@ -295,14 +295,14 @@ mod tests {
         );
 
         let mut wrong = steps();
-        wrong[1].command = "cargo package";
+        wrong[1].command = "cargo_full package";
         assert_eq!(
             validate_release_launch_sequence(&wrong)
                 .expect_err("wrong publish command should fail"),
             ReleaseLaunchSequenceError::InvalidCommand {
                 id: "cargo-publish".to_owned(),
-                command: "cargo package".to_owned(),
-                required_fragment: "cargo publish",
+                command: "cargo_full package".to_owned(),
+                required_fragment: "cargo_full publish",
             }
         );
     }
@@ -340,8 +340,8 @@ mod tests {
               "plan_path": "release/plans/paradigm-shift-100-concrete.md",
               "launch_receipts": {
                 "cargo_publish_receipts": [
-                  {"crate": "vyre", "command": "cargo publish -p vyre", "status": "executed"},
-                  {"crate": "dataflow-consumer", "crate_role": "dataflow-consumer", "command": "cargo publish -p dataflow-consumer", "status": "executed"}
+                  {"crate": "vyre", "command": "cargo_full publish -p vyre", "status": "executed"},
+                  {"crate": "dataflow-consumer", "crate_role": "dataflow-consumer", "command": "cargo_full publish -p dataflow-consumer", "status": "executed"}
                 ],
                 "repository_visibility_receipt": {"visibility": "public", "status": "executed"},
                 "release_branch_push_receipt": {"command": "git push origin release", "status": "executed"},
@@ -361,7 +361,7 @@ mod tests {
             r#"{
               "schema_version": 1,
               "plan_path": "release/plans/paradigm-shift-100-concrete.md",
-              "final_launch_order": ["cargo publish -p vyre", "cargo publish -p dataflow-consumer", "git push origin release", "git push --tags"],
+              "final_launch_order": ["cargo_full publish -p vyre", "cargo_full publish -p dataflow-consumer", "git push origin release", "git push --tags"],
               "blockers": []
             }"#,
         )
@@ -384,7 +384,7 @@ mod tests {
             },
             ReleaseLaunchStep {
                 id: "cargo-publish",
-                command: "cargo publish -p vyre",
+                command: "cargo_full publish -p vyre",
                 green: true,
             },
             ReleaseLaunchStep {

@@ -119,6 +119,7 @@ fn source_tree_fingerprint_from_paths(workspace_root: &Path, paths: &[u8]) -> St
 
 fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
     path == b"cargo_full"
+        || path.starts_with(b".github/")
         || path.starts_with(b"release/evidence/")
         || path.starts_with(b"scripts/")
         || path.starts_with(b"xtask/")
@@ -372,6 +373,8 @@ mod tests {
         ));
         fs::create_dir_all(workspace.join("vyre-bench/src"))
             .expect("Fix: create benchmark source fixture directory.");
+        fs::create_dir_all(workspace.join(".github/workflows"))
+            .expect("Fix: create workflow fixture directory.");
         fs::create_dir_all(workspace.join("scripts"))
             .expect("Fix: create release script fixture directory.");
         fs::create_dir_all(workspace.join("xtask/src"))
@@ -393,7 +396,12 @@ mod tests {
             b"#!/usr/bin/env bash\n",
         )
         .expect("Fix: write release script fixture.");
-        let paths = b"cargo_full\0scripts/install_lego_quick_hook.sh\0vyre-bench/src/lib.rs\0xtask/src/hygiene_matrix.rs\0";
+        fs::write(
+            workspace.join(".github/workflows/ci.yml"),
+            b"run: ./cargo_full test --workspace\n",
+        )
+        .expect("Fix: write workflow fixture.");
+        let paths = b".github/workflows/ci.yml\0cargo_full\0scripts/install_lego_quick_hook.sh\0vyre-bench/src/lib.rs\0xtask/src/hygiene_matrix.rs\0";
 
         let base = source_tree_fingerprint_from_paths(&workspace, paths);
         fs::write(
@@ -408,6 +416,12 @@ mod tests {
         )
         .expect("Fix: mutate release script fixture.");
         let script_changed = source_tree_fingerprint_from_paths(&workspace, paths);
+        fs::write(
+            workspace.join(".github/workflows/ci.yml"),
+            b"run: ./cargo_full test --workspace --all-targets\n",
+        )
+        .expect("Fix: mutate workflow fixture.");
+        let workflow_changed = source_tree_fingerprint_from_paths(&workspace, paths);
         fs::write(
             workspace.join("xtask/src/hygiene_matrix.rs"),
             b"pub fn tooling_changed() {}\n",
@@ -433,6 +447,10 @@ mod tests {
         assert_eq!(
             base, script_changed,
             "Fix: release scripts must not invalidate benchmark runtime source provenance."
+        );
+        assert_eq!(
+            base, workflow_changed,
+            "Fix: CI workflow edits must not invalidate benchmark runtime source provenance."
         );
         assert_ne!(
             base, benchmark_changed,

@@ -30,7 +30,7 @@ jobs:
       - name: Run smoke fuzz
         run: |
           cd vyre-foundation/fuzz
-          ../.cargo fuzz run ${{ matrix.target }} --release -- -max_total_time=60
+          ../../cargo_full fuzz run ${{ matrix.target }} --release -- -max_total_time=60
       - name: Upload crash artifact
         if: failure()
         uses: actions/upload-artifact@v4
@@ -57,7 +57,7 @@ jobs:
       - name: Run CI fuzz
         run: |
           cd vyre-foundation/fuzz
-          ../.cargo fuzz run ${{ matrix.target }} --release -- -max_total_time=600
+          ../../cargo_full fuzz run ${{ matrix.target }} --release -- -max_total_time=600
       - name: Upload crash artifact
         if: failure()
         uses: actions/upload-artifact@v4

@@ -305,7 +305,7 @@ fn inspect_public_launch_state_semantics(
         .cloned()
         .unwrap_or_default();
     for required in [
-        "cargo publish approved crates in dependency order",
+        "cargo_full publish approved crates in dependency order",
         "make repositories public",
         "git push release branch and tags",
     ] {

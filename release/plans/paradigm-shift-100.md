@@ -112,7 +112,7 @@ This file defines the minimum concrete work needed before Vyre can honestly be c
 97. Add release-blocking issue templates for performance regression, GPU fallback regression, parser parity regression, and architecture boundary regression.
 98. Add final release review checklist requiring every public API, every file over the line limit, every unsafe block, every GPU fallback, and every benchmark claim to be personally reviewed.
 99. Run the final release gate: deep tests, GPU tests, fuzz smoke, benchmark comparison, corpus comparison, docs build, package dry run, and crate metadata review.
-100. Publish only after the gate is clean: tag the release, run `cargo publish` for approved crates, push the public launch branch, and publish the GitHub release notes with measured claims only.
+100. Publish only after the gate is clean: tag the release, run `cargo_full publish` for approved crates, push the public launch branch, and publish the GitHub release notes with measured claims only.
 
 ## First execution focus
 

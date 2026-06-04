@@ -5,7 +5,7 @@
 //! For an architectural overview of this three-registry split, see `vyre-harness/README.md`.
 //!
 //! Mirrors `vyre_libs::harness::OpEntry` so that the universal
-//! conform harness, `cargo xtask print-composition`, and the
+//! conform harness, `./cargo_full run --bin xtask -- print-composition`, and the
 //! cross-backend parity matrix discover primitives via the same
 //! `inventory::iter::<OpEntry>` walk they already use for Tier-3
 //! dialects. The Tier-2.5 bucket is a separate `inventory::collect!`

@@ -382,7 +382,7 @@
       "existing_evidence_count": 8,
       "missing_evidence": [],
       "semantic_blockers": [
-        "evidence/benchmarks/weir-dataflow-release.json: source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:abe284d3020fe255f2b5ca68c5a9a93c147f060e:dirty=true:worktree=05080b50ccef4c6ecf36a37f2ee1055b6ef02b6bc498a86da6d79409bf145e5d`",
+        "evidence/benchmarks/weir-dataflow-release.json: source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` does not match current workspace source `git:f615ca03cad730580eee15beb35b42294bb6812a:dirty=true:worktree=6f5ca89cdaa48d9cb5123e5fbe37a67fd097b7d7d47c8b212f65e1aced694dd2`",
         "evidence/benchmarks/weir-dataflow-release.json: source_fingerprint `git:468e1b1ddee805a28e18d2320700114db30dc7c9:dirty=true` is dirty but has no worktree digest"
       ],
       "complete": false
@@ -564,7 +564,7 @@
         "evidence/final/public-launch-state.json: reports 3 blocker(s)",
         "evidence/final/public-launch-state.json: public launch is incomplete with 3 blocker(s)",
         "evidence/final/public-launch-state.json: completion_status is not `complete`",
-        "evidence/final/public-launch-state.json: external action `cargo publish approved crates in dependency order` is not complete",
+        "evidence/final/public-launch-state.json: external action `cargo_full publish approved crates in dependency order` is not complete",
         "evidence/final/public-launch-state.json: external action `make repositories public` is not complete",
         "evidence/final/public-launch-state.json: external action `git push release branch and tags` is not complete"
       ],
@@ -613,7 +613,7 @@
     "release/evidence/final/public-launch-state.json: reports 3 blocker(s)",
     "release/evidence/final/public-launch-state.json: public launch is incomplete with 3 blocker(s)",
     "release/evidence/final/public-launch-state.json: completion_status is not `complete`",
-    "release/evidence/final/public-launch-state.json: external action `cargo publish approved crates in dependency order` is not complete",
+    "release/evidence/final/public-launch-state.json: external action `cargo_full publish approved crates in dependency order` is not complete",
     "release/evidence/final/public-launch-state.json: external action `make repositories public` is not complete",
     "release/evidence/final/public-launch-state.json: external action `git push release branch and tags` is not complete"
   ]

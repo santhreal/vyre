@@ -38,17 +38,17 @@ P-RELEASE-1. Every box must tick before the 1.0 tag.
 
 ## Publishing
 
-- [ ] `cargo publish --dry-run -p vyre-foundation` clean.
-- [ ] `cargo publish --dry-run -p vyre-spec` clean.
-- [ ] `cargo publish --dry-run -p vyre-driver` clean.
-- [ ] `cargo publish --dry-run -p vyre-driver-wgpu` clean.
-- [ ] `cargo publish --dry-run -p vyre-driver-spirv` clean.
-- [ ] `cargo publish --dry-run -p vyre-libs` clean.
-- [ ] `cargo publish --dry-run -p vyre-runtime` clean.
-- [ ] `cargo publish --dry-run -p vyre-primitives` clean.
-- [ ] `cargo publish --dry-run -p vyre-intrinsics` clean.
-- [ ] `cargo publish --dry-run -p vyre-harness` clean.
-- [ ] `cargo publish --dry-run -p vyre` (meta-shim) clean.
+- [ ] `cargo_full publish --dry-run -p vyre-foundation` clean.
+- [ ] `cargo_full publish --dry-run -p vyre-spec` clean.
+- [ ] `cargo_full publish --dry-run -p vyre-driver` clean.
+- [ ] `cargo_full publish --dry-run -p vyre-driver-wgpu` clean.
+- [ ] `cargo_full publish --dry-run -p vyre-driver-spirv` clean.
+- [ ] `cargo_full publish --dry-run -p vyre-libs` clean.
+- [ ] `cargo_full publish --dry-run -p vyre-runtime` clean.
+- [ ] `cargo_full publish --dry-run -p vyre-primitives` clean.
+- [ ] `cargo_full publish --dry-run -p vyre-intrinsics` clean.
+- [ ] `cargo_full publish --dry-run -p vyre-harness` clean.
+- [ ] `cargo_full publish --dry-run -p vyre` (meta-shim) clean.
 
 ## Documentation
 

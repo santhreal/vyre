@@ -1,4 +1,4 @@
-name: cargo-udeps
+name: cargo_full-udeps
 
 on:
   push:
@@ -21,4 +21,4 @@ jobs:
       - name: Install cargo-udeps
         run: cargo install cargo-udeps --locked
       - name: Run
-        run: cargo +nightly udeps --workspace --all-targets --all-features
+        run: ./cargo_full +nightly udeps --workspace --all-targets --all-features

@@ -13,6 +13,8 @@ set -euo pipefail
 # Run from the vyre root regardless of CWD.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}/.."
+source scripts/lib/cargo_runner.sh
+vyre_select_cargo_runner
 
 # Same env-var as the workflow so proptest cases stay CI-sized (1k, not 10k).
 export PROPTEST_CASES="${PROPTEST_CASES:-1000}"
@@ -24,44 +26,44 @@ export CARGO_INCREMENTAL=0
 log() { printf '\n\033[1;36m▸ %s\033[0m\n' "$*"; }
 
 log "fmt — wire surface"
-cargo fmt -p vyre-primitives -- --check vyre-primitives/src/wire.rs
+"$CARGO_RUNNER" fmt -p vyre-primitives -- --check vyre-primitives/src/wire.rs
 
 log "clippy — wire crates (--no-deps keeps the gate scoped to our code)"
-cargo clippy -p vyre-primitives --no-deps \
+"$CARGO_RUNNER" clippy -p vyre-primitives --no-deps \
     --features "matching cpu-parity hash inventory-registry" -- -D warnings
-cargo clippy -p vyre-libs --no-deps -- -D warnings
+"$CARGO_RUNNER" clippy -p vyre-libs --no-deps -- -D warnings
 
 log "check — wire and consumers"
-cargo check -p vyre-primitives
-cargo check -p vyre-libs
-cargo check -p vyre-frontend-c
-cargo check -p vyre-intrinsics
-cargo check -p vyre-self-substrate
-cargo check -p vyre-bench
-cargo check -p vyre-driver
+"$CARGO_RUNNER" check -p vyre-primitives
+"$CARGO_RUNNER" check -p vyre-libs
+"$CARGO_RUNNER" check -p vyre-frontend-c
+"$CARGO_RUNNER" check -p vyre-intrinsics
+"$CARGO_RUNNER" check -p vyre-self-substrate
+"$CARGO_RUNNER" check -p vyre-bench
+"$CARGO_RUNNER" check -p vyre-driver
 
 log "test — wire contracts (positive + negative + property + differential)"
-cargo test -p vyre-primitives --test wire_pack_into_contracts --features matching
-cargo test -p vyre-primitives --test wire_differential_std_io --features matching
-cargo test -p vyre-primitives --test proptest_wire_roundtrip --features matching
+"$CARGO_RUNNER" test -p vyre-primitives --test wire_pack_into_contracts --features matching
+"$CARGO_RUNNER" test -p vyre-primitives --test wire_differential_std_io --features matching
+"$CARGO_RUNNER" test -p vyre-primitives --test proptest_wire_roundtrip --features matching
 
 log "test — cross-crate compat"
-cargo test -p vyre-libs --test wire_cross_crate_compat
+"$CARGO_RUNNER" test -p vyre-libs --test wire_cross_crate_compat
 
 log "harness — build + run the agent-harness smoke binary"
-cargo build --release --example wire_harness_smoke -p vyre-primitives
-cargo test -p vyre-primitives --test wire_harness_smoke_test --features matching
+"$CARGO_RUNNER" build --release --example wire_harness_smoke -p vyre-primitives
+"$CARGO_RUNNER" test -p vyre-primitives --test wire_harness_smoke_test --features matching
 
 log "doc-build — wire module doctests"
-cargo test --doc -p vyre-primitives wire
+"$CARGO_RUNNER" test --doc -p vyre-primitives wire
 
 log "determinism — run the contract suite twice; outputs must match"
 TMP1="$(mktemp)"
 TMP2="$(mktemp)"
 trap 'rm -f "$TMP1" "$TMP2"' EXIT
-cargo test -p vyre-primitives --test wire_pack_into_contracts --features matching \
+"$CARGO_RUNNER" test -p vyre-primitives --test wire_pack_into_contracts --features matching \
     -- --nocapture --test-threads=1 > "$TMP1" 2>&1 || true
-cargo test -p vyre-primitives --test wire_pack_into_contracts --features matching \
+"$CARGO_RUNNER" test -p vyre-primitives --test wire_pack_into_contracts --features matching \
     -- --nocapture --test-threads=1 > "$TMP2" 2>&1 || true
 diff <(grep -E '^test ' "$TMP1" | sort) <(grep -E '^test ' "$TMP2" | sort)
 

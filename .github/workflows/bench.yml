@@ -23,12 +23,12 @@ jobs:
         run: |
           git fetch origin main
           git checkout origin/main
-          cargo bench -p vyre-libs -- --save-baseline main
+          ./cargo_full bench -p vyre-libs -- --save-baseline main
           git checkout -
 
       - name: Compare PR against baseline
         run: |
-          cargo bench -p vyre-libs -- --baseline main --save-baseline pr 2>&1 | tee bench.log
+          ./cargo_full bench -p vyre-libs -- --baseline main --save-baseline pr 2>&1 | tee bench.log
 
       - name: Check for regressions > 5%
         shell: bash

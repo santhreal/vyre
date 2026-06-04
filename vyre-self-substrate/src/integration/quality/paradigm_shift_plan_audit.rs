@@ -115,7 +115,7 @@ fn validate_plan_identity(plan_text: &str) -> Result<(), ParadigmShiftPlanAuditE
             "completion definition",
             "code, tests, benchmarks, docs, packaging, and public launch path",
         ),
-        ("cargo publish final step", "cargo publish"),
+        ("cargo_full publish final step", "cargo_full publish"),
         ("git push final step", "git push"),
     ] {
         if !plan_text.contains(needle) {

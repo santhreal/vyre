@@ -13,7 +13,7 @@
 //   1. Identify the rule category (unary, binop, select, fma, cast).
 //   2. Add the rule to the appropriate submodule's function.
 //   3. Add a test to the `tests` module below.
-//   4. Run `cargo test -p vyre-foundation --lib` to verify.
+//   4. Run `./cargo_full test -p vyre-foundation --lib` to verify.
 
 pub(crate) mod binop_identities;
 mod cast_rules;

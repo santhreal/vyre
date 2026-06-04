@@ -232,7 +232,7 @@ EOL
     
     if [[ "$benches_found" -eq 0 ]]; then
         cat << EOF >> "$OUTPUT_FILE"
-                    <li class="no-benches">No local benchmarks found. Run cargo bench to generate reports.</li>
+                    <li class="no-benches">No local benchmarks found. Run ./cargo_full bench to generate reports.</li>
 EOF
     fi
     

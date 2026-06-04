@@ -161,7 +161,7 @@ persistent kernel.
 ## Build
 
 ```
-cargo build --release
+./cargo_full build --release
 ```
 
 The release binary is heavily size-optimized:
