@@ -7,7 +7,7 @@
       "exists": true,
       "read_error": null,
       "role": "Dead-store elimination",
-      "source_bytes": 32106,
+      "source_bytes": 32104,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -18,7 +18,7 @@
       "exists": true,
       "read_error": null,
       "role": "Store/load forwarding",
-      "source_bytes": 46273,
+      "source_bytes": 46189,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -29,7 +29,7 @@
       "exists": true,
       "read_error": null,
       "role": "Loop-invariant code motion",
-      "source_bytes": 48590,
+      "source_bytes": 48588,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -62,7 +62,7 @@
       "exists": true,
       "read_error": null,
       "role": "Loop transform substrate",
-      "source_bytes": 24544,
+      "source_bytes": 24542,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -95,7 +95,7 @@
       "exists": true,
       "read_error": null,
       "role": "Strength reduction",
-      "source_bytes": 12546,
+      "source_bytes": 12581,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -106,7 +106,7 @@
       "exists": true,
       "read_error": null,
       "role": "Shared-memory promotion",
-      "source_bytes": 14862,
+      "source_bytes": 14756,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -117,7 +117,7 @@
       "exists": true,
       "read_error": null,
       "role": "Bank-conflict padding",
-      "source_bytes": 14160,
+      "source_bytes": 14161,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -128,7 +128,7 @@
       "exists": true,
       "read_error": null,
       "role": "Bounded e-graph saturation",
-      "source_bytes": 15178,
+      "source_bytes": 15216,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -152,7 +152,7 @@
       "exists": true,
       "read_error": null,
       "role": "Range facts",
-      "source_bytes": 27601,
+      "source_bytes": 27600,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -163,7 +163,7 @@
       "exists": true,
       "read_error": null,
       "role": "Memory coalescing analysis",
-      "source_bytes": 36257,
+      "source_bytes": 36256,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -185,7 +185,7 @@
       "exists": true,
       "read_error": null,
       "role": "Bank-conflict analysis",
-      "source_bytes": 31858,
+      "source_bytes": 31857,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []

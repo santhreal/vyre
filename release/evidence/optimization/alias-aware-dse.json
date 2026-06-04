@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "alias-aware-dse",
-  "source_matrix": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/release/evidence/optimization/optimization-integration-matrix.json",
+  "source_matrix": "release/evidence/optimization/optimization-integration-matrix.json",
   "markers": [
     {
       "id": "alias-aware-dse-entrypoint",
