@@ -203,8 +203,8 @@ pub use backend::{
     replace_output_buffers_preserving_slots, validate_buffer_ownership,
     validate_program_for_backend, BackendError, BackendRegistration, CompiledPipeline,
     DeviceBuffer, DispatchConfig, Executable, HostShimBuffer, Memory, MemoryRef, OutputBuffers,
-    PendingDispatch, ResidentDispatchStep, ResidentReadRange, Resource, TimedDispatchResult,
-    TypedDispatchExt, VyreBackend, DEVICE_BUFFER_FEATURE,
+    PendingDispatch, ResidentDispatchStep, ResidentReadRange, ResidentSequenceTiming, Resource,
+    TimedDispatchResult, TypedDispatchExt, VyreBackend, DEVICE_BUFFER_FEATURE,
 };
 pub use binding::{
     binding_plans_share_layout, BackendLayoutClass, BackendLayoutFingerprint, BackendLayoutSlot,

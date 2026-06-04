@@ -7,8 +7,6 @@
 //! and entropy-style metadata. The GPU path executes the same condition graph as
 //! vyre IR, one invocation per rule.
 
-use std::time::Instant;
-
 use super::byte_pack::u32_bytes;
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
@@ -336,7 +334,13 @@ impl BenchCase for ConditionalEval {
         let (outputs, wall_ns, dispatch_ns, resident_used, device_reset_sequence) =
             if let Some(resident) = &prepared.resident {
                 let sequence = dispatch_resident_conditional_sequence(ctx, prepared, resident)?;
-                (sequence.outputs, sequence.wall_ns, None, true, true)
+                (
+                    sequence.outputs,
+                    sequence.wall_ns,
+                    sequence.dispatch_ns,
+                    true,
+                    true,
+                )
             } else {
                 let dispatch = dispatch_program_timed(
                     ctx,
@@ -496,6 +500,7 @@ fn cpu_conditional_eval_raw(
 struct ConditionalResidentSequenceRun {
     outputs: Vec<Vec<u8>>,
     wall_ns: u64,
+    dispatch_ns: Option<u64>,
 }
 
 fn dispatch_resident_conditional_sequence(
@@ -544,19 +549,19 @@ fn dispatch_resident_conditional_sequence(
 
     let mut count_output = Vec::with_capacity(prepared.baseline_output[0].len());
     let mut rules_output = Vec::with_capacity(prepared.baseline_output[1].len());
-    let started = Instant::now();
-    ctx.preferred_backend
-        .dispatch_resident_sequence_read_ranges_into(
+    let timing = ctx
+        .preferred_backend
+        .dispatch_resident_sequence_read_ranges_timed_into(
             &[reset_step, conditional_step],
             &read_ranges,
             &mut [&mut count_output, &mut rules_output],
         )
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-    let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
 
     Ok(ConditionalResidentSequenceRun {
         outputs: vec![count_output, rules_output],
-        wall_ns,
+        wall_ns: timing.wall_ns,
+        dispatch_ns: timing.device_ns,
     })
 }
 

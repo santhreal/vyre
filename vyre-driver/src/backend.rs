@@ -58,7 +58,9 @@ pub use error::{BackendError, ErrorCode};
 pub use pending_dispatch::PendingDispatch;
 pub use resource::Resource;
 pub use typed_dispatch::TypedDispatchExt;
-pub use vyre_backend::{ResidentDispatchStep, ResidentReadRange, VyreBackend};
+pub use vyre_backend::{
+    ResidentDispatchStep, ResidentReadRange, ResidentSequenceTiming, VyreBackend,
+};
 
 #[doc(hidden)]
 pub mod private {

@@ -30,6 +30,19 @@ pub struct ResidentReadRange<'a> {
     pub byte_len: usize,
 }
 
+/// Timing captured for an ordered resident dispatch sequence.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ResidentSequenceTiming {
+    /// Host-observed sequence duration including requested readbacks.
+    pub wall_ns: u64,
+    /// Device-observed elapsed dispatch time when the backend exposes timers.
+    pub device_ns: Option<u64>,
+    /// Host time spent enqueueing backend work before waiting.
+    pub enqueue_ns: Option<u64>,
+    /// Host time spent waiting for completion and collecting outputs.
+    pub wait_ns: Option<u64>,
+}
+
 /// The frozen contract between vyre and every execution backend.
 ///
 /// A backend is a pure function from a validated `Program` and input buffers
@@ -439,6 +452,49 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
             .map(|range| (range.resource, range.byte_offset, range.byte_len))
             .collect::<SmallVec<[_; 8]>>();
         self.download_resident_ranges_into(&ranges, outputs)
+    }
+
+    /// Timed variant of
+    /// [`VyreBackend::dispatch_resident_sequence_read_ranges_into`].
+    ///
+    /// The default preserves correctness by summing each step's resident
+    /// dispatch timing and then downloading the requested ranges. Backends with
+    /// a fused resident sequence path should override this to keep their
+    /// optimized stream/queue behavior while exposing device timing.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] when any step fails, when readback ranges are
+    /// invalid, or when resident sequence timing overflows.
+    fn dispatch_resident_sequence_read_ranges_timed_into(
+        &self,
+        steps: &[ResidentDispatchStep<'_>],
+        read_ranges: &[ResidentReadRange<'_>],
+        outputs: &mut [&mut Vec<u8>],
+    ) -> Result<ResidentSequenceTiming, BackendError> {
+        let started = std::time::Instant::now();
+        let mut device_ns = Some(0_u64);
+        let mut enqueue_ns = Some(0_u64);
+        let mut wait_ns = Some(0_u64);
+        for step in steps {
+            let mut config = DispatchConfig::default();
+            config.grid_override = step.grid_override;
+            let timed = self.dispatch_resident_timed(step.program, step.resources, &config)?;
+            device_ns = sum_optional_timing(device_ns, timed.device_ns, "device timing")?;
+            enqueue_ns = sum_optional_timing(enqueue_ns, timed.enqueue_ns, "enqueue timing")?;
+            wait_ns = sum_optional_timing(wait_ns, timed.wait_ns, "wait timing")?;
+        }
+        let ranges = read_ranges
+            .iter()
+            .map(|range| (range.resource, range.byte_offset, range.byte_len))
+            .collect::<SmallVec<[_; 8]>>();
+        self.download_resident_ranges_into(&ranges, outputs)?;
+        Ok(ResidentSequenceTiming {
+            wall_ns: elapsed_resident_sequence_wall_ns(started)?,
+            device_ns,
+            enqueue_ns,
+            wait_ns,
+        })
     }
 
     /// Dispatch a resident prefix, repeat a resident sub-sequence, and read
@@ -1016,10 +1072,36 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
     }
 }
 
+fn elapsed_resident_sequence_wall_ns(started: std::time::Instant) -> Result<u64, BackendError> {
+    u64::try_from(started.elapsed().as_nanos()).map_err(|error| BackendError::InvalidProgram {
+        fix: format!(
+            "Fix: resident sequence wall timing cannot fit u64 nanoseconds: {error}. Split telemetry windows or report per-step timing."
+        ),
+    })
+}
+
+fn sum_optional_timing(
+    accumulator: Option<u64>,
+    next: Option<u64>,
+    field: &'static str,
+) -> Result<Option<u64>, BackendError> {
+    match (accumulator, next) {
+        (Some(left), Some(right)) => Ok(Some(left.checked_add(right).ok_or_else(|| {
+            BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: resident sequence {field} overflowed u64 nanoseconds. Split telemetry windows or report per-step timing instead of silently clamping."
+                ),
+            }
+        })?)),
+        _ => Ok(None),
+    }
+}
+
 #[cfg(test)]
 
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     struct TelemetryBackend;
 
@@ -1037,6 +1119,66 @@ mod tests {
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(vec![vec![1, 2], vec![3, 4]])
+        }
+    }
+
+    struct SequenceTimingBackend {
+        dispatches: AtomicUsize,
+    }
+
+    impl private::Sealed for SequenceTimingBackend {}
+
+    impl VyreBackend for SequenceTimingBackend {
+        fn id(&self) -> &'static str {
+            "sequence-timing-test"
+        }
+
+        fn dispatch(
+            &self,
+            _program: &Program,
+            _inputs: &[Vec<u8>],
+            _config: &DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, BackendError> {
+            Ok(Vec::new())
+        }
+
+        fn dispatch_resident_timed(
+            &self,
+            _program: &Program,
+            _resources: &[Resource],
+            config: &DispatchConfig,
+        ) -> Result<TimedDispatchResult, BackendError> {
+            let index = self.dispatches.fetch_add(1, Ordering::SeqCst) as u64;
+            assert_eq!(
+                config.grid_override,
+                Some([index as u32 + 1, 1, 1]),
+                "Fix: default resident sequence timing must preserve each step's grid override."
+            );
+            Ok(TimedDispatchResult {
+                outputs: Vec::new(),
+                wall_ns: 10 + index,
+                device_ns: Some(7 + index),
+                enqueue_ns: Some(3 + index),
+                wait_ns: Some(4 + index),
+            })
+        }
+
+        fn download_resident_ranges_into(
+            &self,
+            ranges: &[(&Resource, usize, usize)],
+            outputs: &mut [&mut Vec<u8>],
+        ) -> Result<(), BackendError> {
+            assert_eq!(ranges.len(), outputs.len());
+            for ((resource, offset, len), output) in ranges.iter().zip(outputs.iter_mut()) {
+                let Resource::Resident(id) = resource else {
+                    panic!("Fix: default timed resident sequence test expects resident resources.");
+                };
+                output.clear();
+                output.extend_from_slice(&id.to_le_bytes());
+                output.extend_from_slice(&(*offset as u64).to_le_bytes());
+                output.extend_from_slice(&(*len as u64).to_le_bytes());
+            }
+            Ok(())
         }
     }
 
@@ -1064,6 +1206,49 @@ mod tests {
         assert!(telemetry.output_slots_reused >= before.output_slots_reused + 1);
         assert!(telemetry.output_slots_moved >= before.output_slots_moved + 1);
         assert!(telemetry.output_slots_appended >= before.output_slots_appended);
+    }
+
+    #[test]
+    fn default_resident_sequence_timing_sums_step_device_times_and_reads_ranges() {
+        let backend = SequenceTimingBackend {
+            dispatches: AtomicUsize::new(0),
+        };
+        let program = Program::empty();
+        let first_resources = [Resource::Resident(11)];
+        let second_resources = [Resource::Resident(22)];
+        let steps = [
+            ResidentDispatchStep {
+                program: &program,
+                resources: &first_resources,
+                grid_override: Some([1, 1, 1]),
+            },
+            ResidentDispatchStep {
+                program: &program,
+                resources: &second_resources,
+                grid_override: Some([2, 1, 1]),
+            },
+        ];
+        let read_resource = Resource::Resident(33);
+        let reads = [ResidentReadRange {
+            resource: &read_resource,
+            byte_offset: 4,
+            byte_len: 8,
+        }];
+        let mut output = Vec::new();
+
+        let timing = backend
+            .dispatch_resident_sequence_read_ranges_timed_into(&steps, &reads, &mut [&mut output])
+            .expect("Fix: default timed resident sequence must execute and read ranges.");
+
+        assert_eq!(backend.dispatches.load(Ordering::SeqCst), 2);
+        assert_eq!(timing.device_ns, Some(15));
+        assert_eq!(timing.enqueue_ns, Some(7));
+        assert_eq!(timing.wait_ns, Some(9));
+        assert!(timing.wall_ns > 0);
+        assert_eq!(output.len(), 24);
+        assert_eq!(u64::from_le_bytes(output[0..8].try_into().unwrap()), 33);
+        assert_eq!(u64::from_le_bytes(output[8..16].try_into().unwrap()), 4);
+        assert_eq!(u64::from_le_bytes(output[16..24].try_into().unwrap()), 8);
     }
 
     #[test]
