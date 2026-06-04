@@ -30,24 +30,16 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_primitives::predicate::node_kind;
 use vyre_reference::value::Value;
+
+mod c_ast_expression_support;
+
+use c_ast_expression_support::{bytes, row_indices, starts_for_lens, word_at};
+
 const VAST_STRIDE_U32: u32 = 10;
 const VAST_STRIDE_BYTES: usize = (VAST_STRIDE_U32 as usize) * core::mem::size_of::<u32>();
 const PG_STRIDE_U32: u32 = 6;
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 const OP_ID: &str = "vyre-libs::parsing::c::lower::ast_to_pg_nodes";
-fn bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
-fn starts_for_lens(lens: &[u32]) -> Vec<u32> {
-    let mut cursor = 0u32;
-    lens.iter()
-        .map(|len| {
-            let start = cursor;
-            cursor = cursor.saturating_add(*len).saturating_add(1);
-            start
-        })
-        .collect()
-}
 mod common;
 use common::c_fixture::*;
 fn gnu_c_stress_fixture_source_and_tokens() -> (String, Vec<u32>, Vec<u32>, Vec<u32>) {
@@ -416,20 +408,6 @@ fn build_vast_node(
 }
 fn build_vast(nodes: &[Vec<u32>]) -> Vec<u8> {
     nodes.iter().flat_map(|node| bytes(node)).collect()
-}
-fn word_at(bytes: &[u8], word: usize) -> u32 {
-    let offset = word * 4;
-    u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap())
-}
-fn row_indices(bytes: &[u8], stride_words: usize, kind: u32) -> Vec<usize> {
-    bytes
-        .chunks_exact(stride_words * 4)
-        .enumerate()
-        .filter_map(|(idx, row)| {
-            let row_kind = u32::from_le_bytes(row[0..4].try_into().unwrap());
-            (row_kind == kind).then_some(idx)
-        })
-        .collect()
 }
 fn assert_pg_row(
     rows: &[u8],

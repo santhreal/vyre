@@ -2,8 +2,8 @@
   "schema_version": 1,
   "threshold_lines": 500,
   "closed": false,
-  "total_oversized_files": 83,
-  "total_god_test_candidates": 158,
+  "total_oversized_files": 82,
+  "total_god_test_candidates": 157,
   "oversized_files": [
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/gpu_prep_kernel_libc_shape.rs",
@@ -482,16 +482,6 @@
       "release_blocker": true
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_lower_ast_to_pg_nodes.rs",
-      "lines": 516,
-      "lines_over_threshold": 16,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/buf_len_array_length.rs",
       "lines": 944,
       "lines_over_threshold": 444,
@@ -907,7 +897,6 @@
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/resident_buffer_contracts.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/every_op_random_inputs.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_ast_gpu_parity_support/mod.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_lower_ast_to_pg_nodes.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/buf_len_array_length.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/tests.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/tests/data_tensor.rs",
@@ -975,9 +964,9 @@
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/adversarial_stress_suite.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs"
   ],
-  "required_split_count": 145,
+  "required_split_count": 143,
   "blockers": [
-    "83 test file(s) exceed the 500-line modularity threshold",
-    "158 monolithic tests.rs file(s) still need modularization"
+    "82 test file(s) exceed the 500-line modularity threshold",
+    "157 monolithic tests.rs file(s) still need modularization"
   ]
 }
