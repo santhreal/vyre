@@ -34,7 +34,9 @@ pub(super) use classified_memory::classified_cache_key;
 #[cfg(test)]
 pub(super) use classified_memory::ClassifiedCacheKey;
 #[cfg(test)]
-pub(super) use disk_common::{cache_key_stem, CLASSIFIED_DISK_MAGIC};
+pub(super) use disk_common::{
+    cache_key_stem, read_disk_cache_file_bounded_with_limit, CLASSIFIED_DISK_MAGIC,
+};
 #[cfg(test)]
 pub(super) use payload_codec::{decode_payloads, encode_payloads};
 #[cfg(test)]

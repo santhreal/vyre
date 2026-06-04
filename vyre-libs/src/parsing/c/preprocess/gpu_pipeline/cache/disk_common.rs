@@ -1,3 +1,4 @@
+use std::io::Read as _;
 use std::path::PathBuf;
 
 use super::classified_memory::{ClassifiedCacheKey, PREPROCESS_CACHE_SEMANTIC_VERSION};
@@ -19,6 +20,8 @@ pub(crate) const CLASSIFIED_DISK_MAGIC: &[u8; 8] = b"VYRECTS1";
 
 pub(crate) static DISK_CACHE_TMP_COUNTER: std::sync::atomic::AtomicU64 =
     std::sync::atomic::AtomicU64::new(0);
+
+const MAX_PREPROCESS_DISK_CACHE_ENTRY_BYTES: u64 = 512 * 1024 * 1024;
 
 pub(crate) fn parsed_ast_cache_dir() -> PathBuf {
     let base = std::env::var_os("XDG_CACHE_HOME")
@@ -53,6 +56,62 @@ pub(crate) fn remove_disk_cache_file(path: &std::path::Path, context: &str) {
             )
         }
     }
+}
+
+pub(crate) fn read_disk_cache_file_bounded(
+    path: &std::path::Path,
+    context: &str,
+) -> Result<Option<Vec<u8>>, String> {
+    read_disk_cache_file_bounded_with_limit(path, context, MAX_PREPROCESS_DISK_CACHE_ENTRY_BYTES)
+}
+
+pub(crate) fn read_disk_cache_file_bounded_with_limit(
+    path: &std::path::Path,
+    context: &str,
+    max_bytes: u64,
+) -> Result<Option<Vec<u8>>, String> {
+    let metadata = match std::fs::metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(format!(
+                "vyre C GPU preprocessor disk cache could not inspect {context} entry {}: {error}. Fix: repair cache directory permissions or delete the cache root.",
+                path.display()
+            ));
+        }
+    };
+    if metadata.len() > max_bytes {
+        remove_disk_cache_file(path, context);
+        return Ok(None);
+    }
+    let capacity = usize::try_from(metadata.len()).map_err(|_| {
+        format!(
+            "vyre C GPU preprocessor disk cache {context} entry {} is {} bytes and exceeds host addressable memory. Fix: delete the cache root or lower cache entry size.",
+            path.display(),
+            metadata.len()
+        )
+    })?;
+    let mut file = std::fs::File::open(path).map_err(|error| {
+        format!(
+            "vyre C GPU preprocessor disk cache could not read {context} entry {}: {error}. Fix: repair cache directory permissions or delete the cache root.",
+            path.display()
+        )
+    })?;
+    let mut bytes = Vec::with_capacity(capacity);
+    file.by_ref()
+        .take(max_bytes.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .map_err(|error| {
+            format!(
+                "vyre C GPU preprocessor disk cache could not read {context} entry {}: {error}. Fix: repair cache directory permissions or delete the cache root.",
+                path.display()
+            )
+        })?;
+    if bytes.len() as u64 > max_bytes {
+        remove_disk_cache_file(path, context);
+        return Ok(None);
+    }
+    Ok(Some(bytes))
 }
 
 pub(crate) fn publish_disk_cache_file(

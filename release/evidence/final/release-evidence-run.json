@@ -273,7 +273,7 @@
         {
           "path": "release/evidence/hygiene/hygiene-matrix.json",
           "exists": true,
-          "bytes": 405531,
+          "bytes": 404239,
           "read_error": null
         },
         {
@@ -291,13 +291,13 @@
         {
           "path": "release/evidence/hygiene/resource-bound-scan.json",
           "exists": true,
-          "bytes": 10269,
+          "bytes": 9460,
           "read_error": null
         },
         {
           "path": "release/evidence/hygiene/error-surface-scan.json",
           "exists": true,
-          "bytes": 203883,
+          "bytes": 203400,
           "read_error": null
         },
         {
@@ -375,7 +375,7 @@
         {
           "path": "release/evidence/tests/unit-suite.json",
           "exists": true,
-          "bytes": 1549812,
+          "bytes": 1549813,
           "read_error": null
         },
         {
@@ -405,7 +405,7 @@
         {
           "path": "release/evidence/tests/benchmark-suite.json",
           "exists": true,
-          "bytes": 1417398,
+          "bytes": 1417399,
           "read_error": null
         },
         {

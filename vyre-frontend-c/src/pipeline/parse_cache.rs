@@ -24,7 +24,8 @@
 //! these caches are keyed by attacker-controlled translation-unit bytes, and a
 //! collision returns wrong parser/sema evidence without running the GPU path.
 
-use std::path::PathBuf;
+use std::io::Read as _;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use super::parse_memory_cache::{LexerOutputCache, SummaryCache};
@@ -217,31 +218,71 @@ fn decode_summary(bytes: &[u8]) -> Option<CParseSummary> {
 
 pub(crate) fn load_summary_from_disk(key: CacheKey) -> Result<Option<CParseSummary>, String> {
     let path = summary_disk_cache_path(key)?;
-    let bytes = match std::fs::read(&path) {
-        Ok(bytes) => bytes,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => {
-            return Err(format!(
-                "vyre-frontend-c summary cache read failed at {}: {error}. Fix: repair cache directory permissions.",
-                path.display()
-            ));
-        }
+    let Some(bytes) = read_summary_cache_entry_bounded(&path)? else {
+        return Ok(None);
     };
     match decode_summary(&bytes) {
         Some(summary) => Ok(Some(summary)),
         None => {
-            match std::fs::remove_file(&path) {
-                Ok(()) => {}
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-                Err(error) => {
-                    return Err(format!(
-                        "vyre-frontend-c summary cache entry {} is invalid and could not be removed: {error}. Fix: repair cache directory permissions or delete the cache root.",
-                        path.display()
-                    ));
-                }
-            }
+            remove_summary_cache_entry(&path)?;
             Ok(None)
         }
+    }
+}
+
+fn read_summary_cache_entry_bounded(path: &Path) -> Result<Option<Vec<u8>>, String> {
+    let metadata = match std::fs::metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(format!(
+                "vyre-frontend-c summary cache metadata read failed at {}: {error}. Fix: repair cache directory permissions.",
+                path.display()
+            ));
+        }
+    };
+    if metadata.len() > SUMMARY_WIRE_BYTES as u64 {
+        remove_summary_cache_entry(path)?;
+        return Ok(None);
+    }
+    let capacity = usize::try_from(metadata.len()).map_err(|_| {
+        format!(
+            "vyre-frontend-c summary cache entry {} is {} bytes and exceeds host addressable memory. Fix: delete the cache root.",
+            path.display(),
+            metadata.len()
+        )
+    })?;
+    let mut file = std::fs::File::open(path).map_err(|error| {
+        format!(
+            "vyre-frontend-c summary cache open failed at {}: {error}. Fix: repair cache directory permissions.",
+            path.display()
+        )
+    })?;
+    let mut bytes = Vec::with_capacity(capacity);
+    file.by_ref()
+        .take(SUMMARY_WIRE_BYTES as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| {
+            format!(
+                "vyre-frontend-c summary cache read failed at {}: {error}. Fix: repair cache directory permissions.",
+                path.display()
+            )
+        })?;
+    if bytes.len() > SUMMARY_WIRE_BYTES {
+        remove_summary_cache_entry(path)?;
+        return Ok(None);
+    }
+    Ok(Some(bytes))
+}
+
+fn remove_summary_cache_entry(path: &Path) -> Result<(), String> {
+    match std::fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!(
+            "vyre-frontend-c summary cache entry {} is invalid and could not be removed: {error}. Fix: repair cache directory permissions or delete the cache root.",
+            path.display()
+        )),
     }
 }
 
@@ -358,5 +399,43 @@ mod tests {
             cache_key_hex([0xabu8; 16]),
             "abababababababababababababababab"
         );
+    }
+
+    fn temp_summary_path(name: &str) -> std::path::PathBuf {
+        let mut path = std::env::temp_dir();
+        path.push(format!(
+            "vyre_frontend_c_summary_cache_{}_{}_{:?}",
+            name,
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        path
+    }
+
+    #[test]
+    fn summary_cache_reader_accepts_exact_wire_size() {
+        let path = temp_summary_path("exact");
+        let bytes = encode_summary(&fixture_summary());
+        std::fs::write(&path, bytes).expect("Fix: temp summary fixture must be writable");
+
+        let loaded = read_summary_cache_entry_bounded(&path)
+            .expect("Fix: exact summary cache entry must be readable")
+            .expect("Fix: exact summary cache entry must be present");
+
+        assert_eq!(loaded.len(), SUMMARY_WIRE_BYTES);
+        std::fs::remove_file(path).ok();
+    }
+
+    #[test]
+    fn summary_cache_reader_removes_oversized_entry() {
+        let path = temp_summary_path("oversized");
+        std::fs::write(&path, vec![0x31u8; SUMMARY_WIRE_BYTES + 1])
+            .expect("Fix: temp summary fixture must be writable");
+
+        let loaded = read_summary_cache_entry_bounded(&path)
+            .expect("Fix: oversized summary cache entry should be removable");
+
+        assert!(loaded.is_none());
+        assert!(!path.exists());
     }
 }

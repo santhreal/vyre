@@ -64,7 +64,7 @@
     },
     {
       "pattern": "panic_macro",
-      "count": 469
+      "count": 467
     },
     {
       "pattern": "placeholder_text",
@@ -92,7 +92,7 @@
     },
     {
       "pattern": "unbounded_read",
-      "count": 41
+      "count": 38
     },
     {
       "pattern": "undocumented_public_api",
@@ -173,12 +173,6 @@
       "line": 53,
       "pattern": "panic_macro",
       "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/pipeline/parse_cache.rs",
-      "line": 220,
-      "pattern": "unbounded_read",
-      "text": "let bytes = match std::fs::read(&path) {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/pipeline/parse_memory_cache.rs",
@@ -1375,56 +1369,32 @@
       "text": "panic!("
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/payload_disk.rs",
-      "line": 11,
-      "pattern": "unbounded_read",
-      "text": "let bytes = match std::fs::read(&path) {"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/payload_disk.rs",
-      "line": 15,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/classified_disk.rs",
-      "line": 12,
-      "pattern": "unbounded_read",
-      "text": "let bytes = match std::fs::read(&path) {"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/classified_disk.rs",
-      "line": 16,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/disk_common.rs",
-      "line": 28,
+      "line": 31,
       "pattern": "panic_macro",
       "text": "panic!(\"vyre C GPU preprocessor disk cache has no XDG_CACHE_HOME or HOME. Fix: configure a writable cache root; silent cache disable is a production performance regression.\")"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/disk_common.rs",
-      "line": 32,
+      "line": 35,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/disk_common.rs",
-      "line": 50,
+      "line": 53,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/disk_common.rs",
-      "line": 68,
+      "line": 127,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/disk_common.rs",
-      "line": 75,
+      "line": 134,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -9626,6 +9596,6 @@
     }
   ],
   "blockers": [
-    "1586 source hygiene finding(s) remain"
+    "1581 source hygiene finding(s) remain"
   ]
 }

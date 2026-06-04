@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use super::cache::{
     cache_key_stem, classified_cache_key, decode_classified, decode_payloads, encode_classified,
     encode_payloads, macro_fingerprint, payloads_cache_key, production_payloads_cache_key,
-    ClassifiedCacheKey, DecodeError, PayloadCache, PayloadsCacheKey, CLASSIFIED_DISK_MAGIC,
+    read_disk_cache_file_bounded_with_limit, ClassifiedCacheKey, DecodeError, PayloadCache,
+    PayloadsCacheKey, CLASSIFIED_DISK_MAGIC,
 };
 use super::live_conditional_cache::{LiveConditionalCache, LiveConditionalCacheKey};
 use super::{ClassifiedTokens, DirectivePayload};
@@ -219,6 +220,43 @@ fn production_payload_cache_key_is_macro_independent() {
         production, compatibility,
         "compatibility snapshot extraction may still key on the supplied macro set"
     );
+}
+
+fn temp_disk_cache_path(name: &str) -> std::path::PathBuf {
+    let mut path = std::env::temp_dir();
+    path.push(format!(
+        "vyre_gpu_preprocess_disk_cache_{}_{}_{:?}",
+        name,
+        std::process::id(),
+        std::thread::current().id()
+    ));
+    path
+}
+
+#[test]
+fn bounded_disk_cache_read_accepts_entry_at_limit() {
+    let path = temp_disk_cache_path("at_limit");
+    std::fs::write(&path, [0xA7u8; 8]).expect("Fix: temp cache fixture must be writable");
+
+    let bytes = read_disk_cache_file_bounded_with_limit(&path, "test", 8)
+        .expect("Fix: cache entry at byte cap must not report an I/O error")
+        .expect("Fix: cache entry at byte cap must be readable");
+
+    assert_eq!(bytes.len(), 8);
+    std::fs::remove_file(path).ok();
+}
+
+#[test]
+fn bounded_disk_cache_read_removes_entry_over_limit() {
+    let path = temp_disk_cache_path("over_limit");
+    std::fs::write(&path, [0x5Cu8; 9]).expect("Fix: temp cache fixture must be writable");
+
+    let bytes = read_disk_cache_file_bounded_with_limit(&path, "test", 8);
+
+    assert!(bytes
+        .expect("Fix: oversized cache entry should be removable")
+        .is_none());
+    assert!(!path.exists());
 }
 
 fn payload_cache_key(id: u8) -> PayloadsCacheKey {

@@ -52,7 +52,7 @@ pub(super) fn prepare_file_inputs(
         let classified = if let Some(classified) = cached_classified_tokens(&classified_key)? {
             trace.log("classified cache hit");
             classified
-        } else if let Some(classified) = load_classified_from_disk(&classified_key) {
+        } else if let Some(classified) = load_classified_from_disk(&classified_key)? {
             trace.log("classified disk cache hit");
             let classified = Arc::new(classified);
             insert_classified_tokens(classified_key.clone(), Arc::clone(&classified))?;
@@ -81,7 +81,7 @@ pub(super) fn prepare_file_inputs(
         let payloads = if let Some(payloads) = cached_payloads(&payloads_key)? {
             trace.log("payloads cache hit");
             payloads
-        } else if let Some(payloads) = load_payloads_from_disk(&payloads_key) {
+        } else if let Some(payloads) = load_payloads_from_disk(&payloads_key)? {
             trace.log("payloads disk cache hit");
             let payloads = Arc::from(payloads.into_boxed_slice());
             insert_payloads(payloads_key.clone(), Arc::clone(&payloads))?;

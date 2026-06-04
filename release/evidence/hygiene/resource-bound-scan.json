@@ -3,28 +3,10 @@
   "scan": "resource-bound",
   "findings": [
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/pipeline/parse_cache.rs",
-      "line": 220,
-      "pattern": "unbounded_read",
-      "text": "let bytes = match std::fs::read(&path) {"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/scan/engine.rs",
       "line": 205,
       "pattern": "unbounded_read",
       "text": "if let Ok(bytes) = std::fs::read(&path) {"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/payload_disk.rs",
-      "line": 11,
-      "pattern": "unbounded_read",
-      "text": "let bytes = match std::fs::read(&path) {"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/src/parsing/c/preprocess/gpu_pipeline/cache/classified_disk.rs",
-      "line": 12,
-      "pattern": "unbounded_read",
-      "text": "let bytes = match std::fs::read(&path) {"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/production_cpu_fallbacks.rs",
@@ -250,6 +232,6 @@
     }
   ],
   "blockers": [
-    "41 `resource-bound` finding(s) remain"
+    "38 `resource-bound` finding(s) remain"
   ]
 }

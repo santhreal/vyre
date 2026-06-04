@@ -485,12 +485,12 @@
         "benchmark",
         "unit"
       ],
-      "lines": 362,
+      "lines": 441,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 9,
+      "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
@@ -7166,12 +7166,12 @@
         "benchmark",
         "unit"
       ],
-      "lines": 296,
+      "lines": 334,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 24,
+      "assertion_count": 27,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []
