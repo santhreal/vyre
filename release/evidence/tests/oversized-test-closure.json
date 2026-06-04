@@ -2,7 +2,7 @@
   "schema_version": 1,
   "threshold_lines": 500,
   "closed": false,
-  "total_oversized_files": 78,
+  "total_oversized_files": 77,
   "total_god_test_candidates": 153,
   "oversized_files": [
     {
@@ -551,16 +551,6 @@
       "release_blocker": true
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol_api/tests.rs",
-      "lines": 531,
-      "lines_over_threshold": 31,
-      "recommended_split": [
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/policy/tests.rs",
       "lines": 570,
       "lines_over_threshold": 70,
@@ -922,9 +912,9 @@
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/adversarial_stress_suite.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs"
   ],
-  "required_split_count": 137,
+  "required_split_count": 135,
   "blockers": [
-    "78 test file(s) exceed the 500-line modularity threshold",
+    "77 test file(s) exceed the 500-line modularity threshold",
     "153 monolithic tests.rs file(s) still need modularization"
   ]
 }

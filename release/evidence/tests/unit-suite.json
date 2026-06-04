@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "unit",
-  "file_count": 2853,
-  "vyre_file_count": 2570,
+  "file_count": 2854,
+  "vyre_file_count": 2571,
   "dataflow_consumer_file_count": 272,
   "vyrec_file_count": 11,
   "files": [
@@ -42576,18 +42576,35 @@
         "benchmark",
         "unit"
       ],
-      "lines": 531,
+      "lines": 313,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 77,
-      "oversized": true,
+      "assertion_count": 36,
+      "oversized": false,
       "god_test_candidate": true,
       "recommended_split": [
         "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
         "move timing-only checks into benches/ or release benchmark cases"
       ]
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/protocol_api/tests/publish_contracts.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 221,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 41,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-runtime/src/megakernel/speculation.rs",
