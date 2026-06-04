@@ -769,6 +769,7 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
             || lower.contains("gpu not available")
             || lower.contains("no gpu available"))
             && (lower.contains("skip") || lower.contains("fallback") || lower.contains("fall back"))
+            && !is_hidden_fallback_guard_source(path)
         {
             findings.push(HygieneFinding {
                 path: path.display().to_string(),
@@ -1014,6 +1015,15 @@ fn line_contains_blocked_pattern(
     if is_hygiene_rule_source(path) {
         return false;
     }
+    if is_hidden_fallback_pattern(name) && is_hidden_fallback_guard_source(path) {
+        return false;
+    }
+    if is_hidden_fallback_pattern(name) && is_negated_hidden_fallback_statement(lower) {
+        return false;
+    }
+    if name == "cfg_not_gpu" && !line_cfg_not_gpu_hides_work(lower) {
+        return false;
+    }
     if is_release_rule_text(trimmed) {
         return false;
     }
@@ -1024,6 +1034,38 @@ fn line_contains_blocked_pattern(
         "TODO" | "FIXME" => line.contains(pattern),
         _ => line.contains(pattern) || lower.contains(pattern),
     }
+}
+
+fn is_hidden_fallback_pattern(name: &str) -> bool {
+    matches!(
+        name,
+        "silent_gpu_skip"
+            | "silent_gpu_skipped"
+            | "gpu_unavailable_skip"
+            | "cfg_not_gpu"
+            | "cpu_fallback"
+            | "software_fallback"
+            | "fallback_dispatch"
+            | "falling_back_to_cpu"
+            | "fallback_to_cpu"
+            | "synthetic_gpu_timing"
+            | "fake_gpu_timing_formula"
+    )
+}
+
+fn is_negated_hidden_fallback_statement(lower: &str) -> bool {
+    lower.contains("no cpu fallback")
+        || lower.contains("no hidden fallback")
+        || lower.contains("no software fallback")
+        || lower.contains("never hides")
+        || lower.contains("must not hide")
+}
+
+fn line_cfg_not_gpu_hides_work(lower: &str) -> bool {
+    lower.contains("fallback")
+        || lower.contains("skip")
+        || lower.contains("return ok")
+        || lower.contains("success")
 }
 
 fn line_contains_raw_workspace_cargo(line: &str) -> bool {
@@ -1115,6 +1157,20 @@ fn is_hygiene_rule_source(path: &Path) -> bool {
     .any(|suffix| normalized.ends_with(suffix))
 }
 
+fn is_hidden_fallback_guard_source(path: &Path) -> bool {
+    let normalized = path.to_string_lossy().replace('\\', "/");
+    [
+        "vyre-lints/src/production_cpu_fallbacks.rs",
+        "vyre-lints/src/gpu_skip_guards.rs",
+        "vyre-lints/src/lib.rs",
+        "vyre-lints/src/main.rs",
+        "vyre-lints/tests/production_cpu_fallbacks.rs",
+        "vyre-lints/tests/gpu_skip_guards.rs",
+    ]
+    .iter()
+    .any(|suffix| normalized.ends_with(suffix))
+}
+
 fn contains_word(haystack: &str, needle: &str) -> bool {
     haystack.match_indices(needle).any(|(index, _)| {
         is_word_start(haystack, index) && is_word_end(haystack, index + needle.len())
@@ -1192,4 +1248,80 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
         ));
     }
     Ok(text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hidden_fallback_scan_ignores_guard_implementation_text() {
+        let guard = Path::new("vyre-lints/src/production_cpu_fallbacks.rs");
+
+        assert!(
+            !line_contains_blocked_pattern(
+                guard,
+                "cpu_fallback",
+                "cpu fallback",
+                "//! Production CPU fallback guard.",
+                "//! production cpu fallback guard.",
+            ),
+            "Fix: hygiene evidence must not count the guard's own forbidden-token description as shipped fallback behavior."
+        );
+    }
+
+    #[test]
+    fn hidden_fallback_scan_ignores_negated_product_status() {
+        let source = Path::new("tools/vyrec/src/lib.rs");
+
+        assert!(
+            !line_contains_blocked_pattern(
+                source,
+                "cpu_fallback",
+                "cpu fallback",
+                "status: beta compile-evidence driver; no CPU fallback",
+                "status: beta compile-evidence driver; no cpu fallback",
+            ),
+            "Fix: explicit no-fallback product status text must not be reported as hidden fallback behavior."
+        );
+    }
+
+    #[test]
+    fn hidden_fallback_scan_still_flags_positive_product_fallback() {
+        let source = Path::new("libs/tools/surgec/src/scan/pipeline/parse_driver.rs");
+
+        assert!(
+            line_contains_blocked_pattern(
+                source,
+                "cpu_fallback",
+                "cpu fallback",
+                "CpuRayonParseDriver is a temporary CPU fallback.",
+                "cpurayonparsedriver is a temporary cpu fallback.",
+            ),
+            "Fix: real positive fallback claims must remain visible in release hygiene evidence."
+        );
+    }
+
+    #[test]
+    fn cfg_not_gpu_attr_is_not_a_hidden_fallback_by_itself() {
+        let source = Path::new("libs/tools/surgec/src/cmd_scan.rs");
+
+        assert!(
+            !line_contains_blocked_pattern(
+                source,
+                "cfg_not_gpu",
+                "cfg(not(feature = \"gpu\"))",
+                "#[cfg(not(feature = \"gpu\"))]",
+                "#[cfg(not(feature = \"gpu\"))]",
+            ),
+            "Fix: a fail-closed compile-time GPU feature guard must not be treated as a runtime hidden fallback without fallback behavior."
+        );
+    }
+
+    #[test]
+    fn hidden_fallback_guard_source_is_identified_for_gpu_skip_phrases() {
+        assert!(is_hidden_fallback_guard_source(Path::new(
+            "vyre-lints/src/gpu_skip_guards.rs"
+        )));
+    }
 }

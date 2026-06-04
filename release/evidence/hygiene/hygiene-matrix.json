@@ -51,20 +51,12 @@
       "count": 41
     },
     {
-      "pattern": "cfg_not_gpu",
-      "count": 2
-    },
-    {
       "pattern": "cpu_fallback",
-      "count": 6
+      "count": 1
     },
     {
       "pattern": "expect_call",
       "count": 263
-    },
-    {
-      "pattern": "gpu_unavailable_skip",
-      "count": 1
     },
     {
       "pattern": "heredoc",
@@ -1590,12 +1582,6 @@
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/production_cpu_fallbacks.rs",
-      "line": 1,
-      "pattern": "cpu_fallback",
-      "text": "//! Production CPU fallback guard."
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/production_cpu_fallbacks.rs",
       "line": 124,
       "pattern": "unbounded_read",
       "text": "std::fs::read_to_string(path).with_context(|| format!(\"read {}\", path.display()))?;"
@@ -1631,24 +1617,6 @@
       "text": "let bytes = std::fs::read_to_string(path)"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/main.rs",
-      "line": 54,
-      "pattern": "cpu_fallback",
-      "text": "/// Run the production CPU fallback guard instead of the raw-IR lint."
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/main.rs",
-      "line": 279,
-      "pattern": "cpu_fallback",
-      "text": ".context(\"running production CPU fallback guard\")?;"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/gpu_skip_guards.rs",
-      "line": 22,
-      "pattern": "gpu_unavailable_skip",
-      "text": "\"gpu unavailable, skipping\","
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/gpu_skip_guards.rs",
       "line": 76,
       "pattern": "unbounded_read",
@@ -1665,12 +1633,6 @@
       "line": 40,
       "pattern": "undocumented_public_api",
       "text": "pub enum ViolationKind {"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/lib.rs",
-      "line": 84,
-      "pattern": "cpu_fallback",
-      "text": "/// Run the production CPU fallback guard over selected crate roots."
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/consumer_coupling.rs",
@@ -7763,12 +7725,6 @@
       "text": "let _ = resident.free(&backend);"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/src/lib.rs",
-      "line": 228,
-      "pattern": "cpu_fallback",
-      "text": "status: beta compile-evidence driver for active Vyre C compiler development; no CPU fallback\""
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/tests/compile_smoke_contracts.rs",
       "line": 37,
       "pattern": "test_let_underscore_result",
@@ -9053,12 +9009,6 @@
       "text": "panic!("
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/findings/confidence.rs",
-      "line": 338,
-      "pattern": "cfg_not_gpu",
-      "text": "#[cfg(not(feature = \"gpu\"))]"
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/findings/provenance.rs",
       "line": 64,
       "pattern": "expect_call",
@@ -9093,12 +9043,6 @@
       "line": 130,
       "pattern": "unwrap_call",
       "text": "let rules = rules_path.as_ref().unwrap();"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/cmd_scan.rs",
-      "line": 145,
-      "pattern": "cfg_not_gpu",
-      "text": "#[cfg(not(feature = \"gpu\"))]"
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/main.rs",
@@ -10380,6 +10324,6 @@
     }
   ],
   "blockers": [
-    "1709 source hygiene finding(s) remain"
+    "1701 source hygiene finding(s) remain"
   ]
 }

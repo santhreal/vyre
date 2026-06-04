@@ -3,61 +3,13 @@
   "scan": "no-hidden-fallback",
   "findings": [
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/production_cpu_fallbacks.rs",
-      "line": 1,
-      "pattern": "cpu_fallback",
-      "text": "//! Production CPU fallback guard."
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/main.rs",
-      "line": 54,
-      "pattern": "cpu_fallback",
-      "text": "/// Run the production CPU fallback guard instead of the raw-IR lint."
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/main.rs",
-      "line": 279,
-      "pattern": "cpu_fallback",
-      "text": ".context(\"running production CPU fallback guard\")?;"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/gpu_skip_guards.rs",
-      "line": 22,
-      "pattern": "gpu_unavailable_skip",
-      "text": "\"gpu unavailable, skipping\","
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-lints/src/lib.rs",
-      "line": 84,
-      "pattern": "cpu_fallback",
-      "text": "/// Run the production CPU fallback guard over selected crate roots."
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/tools/vyrec/src/lib.rs",
-      "line": 228,
-      "pattern": "cpu_fallback",
-      "text": "status: beta compile-evidence driver for active Vyre C compiler development; no CPU fallback\""
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/pipeline/parse_driver.rs",
       "line": 53,
       "pattern": "cpu_fallback",
       "text": "note = \"CpuRayonParseDriver is a temporary CPU fallback. Use VyreGpuParseDriver when available.\""
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/scan/findings/confidence.rs",
-      "line": 338,
-      "pattern": "cfg_not_gpu",
-      "text": "#[cfg(not(feature = \"gpu\"))]"
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/tools/surgec/src/cmd_scan.rs",
-      "line": 145,
-      "pattern": "cfg_not_gpu",
-      "text": "#[cfg(not(feature = \"gpu\"))]"
     }
   ],
   "blockers": [
-    "9 `no-hidden-fallback` finding(s) remain"
+    "1 `no-hidden-fallback` finding(s) remain"
   ]
 }

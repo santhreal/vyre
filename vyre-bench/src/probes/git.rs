@@ -103,7 +103,7 @@ fn source_tree_fingerprint_from_paths(workspace_root: &Path, paths: &[u8]) -> St
     for path in paths
         .split(|byte| *byte == 0)
         .filter(|path| !path.is_empty())
-        .filter(|path| !source_tree_path_is_generated_evidence(path))
+        .filter(|path| !source_tree_path_is_benchmark_provenance_ignored(path))
     {
         update_hash_field(&mut hasher, b"path", path);
         let path = String::from_utf8_lossy(path);
@@ -117,8 +117,8 @@ fn source_tree_fingerprint_from_paths(workspace_root: &Path, paths: &[u8]) -> St
     hasher.finalize().to_hex().to_string()
 }
 
-fn source_tree_path_is_generated_evidence(path: &[u8]) -> bool {
-    path.starts_with(b"release/evidence/")
+fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
+    path.starts_with(b"release/evidence/") || path.starts_with(b"xtask/")
 }
 
 fn dirty_worktree_fingerprint(workspace_root: &Path, status: &[u8]) -> Option<String> {
@@ -354,6 +354,57 @@ mod tests {
         assert_ne!(
             base, source_changed,
             "Fix: source-tree provenance must still change when real source files change."
+        );
+    }
+
+    #[test]
+    fn source_tree_fingerprint_ignores_release_tooling_source() {
+        let workspace = std::env::temp_dir().join(format!(
+            "vyre-bench-source-tree-tooling-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("Fix: system clock must support unix epoch duration for temp test id.")
+                .as_nanos()
+        ));
+        fs::create_dir_all(workspace.join("vyre-bench/src"))
+            .expect("Fix: create benchmark source fixture directory.");
+        fs::create_dir_all(workspace.join("xtask/src"))
+            .expect("Fix: create release tooling fixture directory.");
+        fs::write(
+            workspace.join("vyre-bench/src/lib.rs"),
+            b"pub fn benchmark() {}\n",
+        )
+        .expect("Fix: write benchmark source fixture.");
+        fs::write(
+            workspace.join("xtask/src/hygiene_matrix.rs"),
+            b"pub fn tooling() {}\n",
+        )
+        .expect("Fix: write release tooling fixture.");
+        let paths = b"vyre-bench/src/lib.rs\0xtask/src/hygiene_matrix.rs\0";
+
+        let base = source_tree_fingerprint_from_paths(&workspace, paths);
+        fs::write(
+            workspace.join("xtask/src/hygiene_matrix.rs"),
+            b"pub fn tooling_changed() {}\n",
+        )
+        .expect("Fix: mutate release tooling fixture.");
+        let tooling_changed = source_tree_fingerprint_from_paths(&workspace, paths);
+        fs::write(
+            workspace.join("vyre-bench/src/lib.rs"),
+            b"pub fn benchmark_changed() {}\n",
+        )
+        .expect("Fix: mutate benchmark source fixture.");
+        let benchmark_changed = source_tree_fingerprint_from_paths(&workspace, paths);
+        let _ = fs::remove_dir_all(&workspace);
+
+        assert_eq!(
+            base, tooling_changed,
+            "Fix: release evidence/tooling generators must not invalidate benchmark runtime source provenance."
+        );
+        assert_ne!(
+            base, benchmark_changed,
+            "Fix: benchmark source edits must still invalidate benchmark source provenance."
         );
     }
 
