@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+pub(crate) mod gpu_if_expression;
 pub(crate) mod gpu_pipeline_filter;
 
 pub(crate) fn crate_file(path: &str) -> String {

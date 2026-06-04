@@ -9207,17 +9207,15 @@
         "integration",
         "unit"
       ],
-      "lines": 545,
+      "lines": 318,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 7,
-      "oversized": true,
-      "god_test_candidate": true,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ]
+      "assertion_count": 5,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-libs/tests/c_frontend_cpu_oracle_boundary.rs",
