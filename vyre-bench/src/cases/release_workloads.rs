@@ -4,10 +4,14 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
-    dispatch_program_timed, input_bytes_total, ResidentInputSet, TransferAccounting,
+    dispatch_program_timed, input_bytes_total, ResidentInputPool, ResidentInputSet,
+    TransferAccounting,
 };
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
+
+const STRING_BITMAP_RESIDENT_BATCH_SIZE: usize = 16;
+const METADATA_CONDITION_RESIDENT_BATCH_SIZE: usize = 16;
 
 pub struct SparseOutputCompactionCount;
 pub struct CallgraphReachabilityStep;
@@ -22,6 +26,7 @@ struct MetadataConditionPrepared {
     input_bytes_total: u64,
     expected_count: u32,
     resident: Option<ResidentInputSet>,
+    resident_batch: Option<ResidentInputPool>,
 }
 
 struct SyntheticCountWorkload {
@@ -46,6 +51,7 @@ struct SyntheticCountPrepared {
     output_reset_payload: Vec<u8>,
     baseline: SyntheticBaseline,
     resident: Option<ResidentInputSet>,
+    resident_batch: Option<ResidentInputPool>,
 }
 
 enum SyntheticBaseline {
@@ -456,6 +462,14 @@ impl BenchCase for MetadataConditionBatch {
             &inputs,
             "metadata condition bench",
         )?;
+        let resident_batch =
+            ResidentInputPool::upload_program_ordered_with_zeroed_outputs_optional(
+                ctx,
+                &program,
+                &inputs,
+                METADATA_CONDITION_RESIDENT_BATCH_SIZE,
+                "metadata condition bench batch",
+            )?;
         Ok(Box::new(MetadataConditionPrepared {
             program,
             filesize,
@@ -465,6 +479,7 @@ impl BenchCase for MetadataConditionBatch {
             input_bytes_total,
             expected_count: expected,
             resident,
+            resident_batch,
         }))
     }
 
@@ -486,26 +501,84 @@ impl BenchCase for MetadataConditionBatch {
                     "metadata condition prepared payload type mismatch".to_string(),
                 )
             })?;
-        let resident_reset_bytes = if let Some(resident) = prepared.resident.as_ref() {
-            resident.upload_resource(
+        let mut metadata_batch_wall_ns = None;
+        let mut metadata_batch_len = None;
+        let (timed, resident_used, resident_reset_bytes) = if let (
+            Some(resident_batch),
+            Some(pipeline),
+        ) = (
+            prepared.resident_batch.as_ref(),
+            ctx.compiled_pipeline_for(&prepared.program)
+                .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
+        ) {
+            resident_batch.upload_resource_to_all_sets(
                 0,
                 &0u32.to_le_bytes(),
-                "metadata condition resident counter reset",
+                "metadata condition resident batch counter reset",
             )?;
-            METADATA_OUTPUT_RESET_BYTES
+            let config = crate::api::case::dispatch_config_with_inferred_grid(
+                &prepared.program,
+                &prepared.inputs,
+                &ctx.dispatch_config,
+            )
+            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+            vyre_driver::validate_program_for_backend(
+                ctx.preferred_backend.as_ref(),
+                &prepared.program,
+                &config,
+            )
+            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+            match resident_batch.dispatch_compiled_batch_timed(
+                pipeline,
+                METADATA_CONDITION_RESIDENT_BATCH_SIZE,
+                &config,
+            ) {
+                Ok(batch) => {
+                    if batch.outputs.len() != METADATA_CONDITION_RESIDENT_BATCH_SIZE {
+                        return Err(BenchError::ExecutionFailed(format!(
+                            "metadata condition resident batch returned {} output row(s), expected {}",
+                            batch.outputs.len(),
+                            METADATA_CONDITION_RESIDENT_BATCH_SIZE
+                        )));
+                    }
+                    let first_outputs = batch.outputs.first().cloned().ok_or_else(|| {
+                        BenchError::ExecutionFailed(
+                            "metadata condition resident batch returned no output rows".to_string(),
+                        )
+                    })?;
+                    if let Some((index, _)) = batch
+                        .outputs
+                        .iter()
+                        .enumerate()
+                        .find(|(_, outputs)| **outputs != first_outputs)
+                    {
+                        return Err(BenchError::CorrectnessViolation(format!(
+                            "metadata condition resident batch output row {index} disagreed with row 0"
+                        )));
+                    }
+                    metadata_batch_wall_ns = Some(batch.wall_ns_total);
+                    metadata_batch_len = Some(batch.batch_len as u64);
+                    (
+                        vyre_driver::TimedDispatchResult {
+                            outputs: first_outputs,
+                            wall_ns: batch.per_item_wall_ns(),
+                            device_ns: None,
+                            enqueue_ns: None,
+                            wait_ns: None,
+                        },
+                        true,
+                        METADATA_OUTPUT_RESET_BYTES,
+                    )
+                }
+                Err(vyre_driver::BackendError::UnsupportedFeature { .. }) => {
+                    dispatch_single_metadata_resident(ctx, prepared)?
+                }
+                Err(error) => return Err(BenchError::BackendFailed(error.to_string())),
+            }
         } else {
-            0
+            dispatch_single_metadata_resident(ctx, prepared)?
         };
-        let dispatch = dispatch_program_timed(
-            ctx,
-            &prepared.program,
-            prepared.resident.as_ref(),
-            &prepared.inputs,
-            &ctx.dispatch_config,
-        )?;
-        let resident_used = dispatch.resident_used;
-        let timed = dispatch.timed;
-        let outputs = timed.outputs;
+        let outputs = timed.outputs.clone();
         let baseline_start = std::time::Instant::now();
         let mut cpu_count = 0u32;
         for index in 0..prepared.filesize.len() {
@@ -530,6 +603,36 @@ impl BenchCase for MetadataConditionBatch {
             resident_reset_bytes,
         );
         let logical_bytes_touched = prepared.input_bytes_total.saturating_add(output_bytes);
+        let mut custom = vec![
+            MetricPoint {
+                name: "metadata_records".to_string(),
+                value: u64::from(METADATA_RECORDS),
+            },
+            MetricPoint {
+                name: "metadata_expected_matches".to_string(),
+                value: u64::from(prepared.expected_count),
+            },
+            MetricPoint {
+                name: "metadata_resident_buffers".to_string(),
+                value: u64::from(resident_used),
+            },
+            MetricPoint {
+                name: "metadata_resident_reset_bytes".to_string(),
+                value: resident_reset_bytes,
+            },
+        ];
+        if let Some(batch_wall_ns) = metadata_batch_wall_ns {
+            custom.push(MetricPoint {
+                name: "metadata_resident_batch_wall_ns".to_string(),
+                value: batch_wall_ns,
+            });
+        }
+        if let Some(batch_len) = metadata_batch_len {
+            custom.push(MetricPoint {
+                name: "metadata_resident_batch_len".to_string(),
+                value: batch_len,
+            });
+        }
         Ok(BenchRun {
             metrics: BenchMetrics {
                 wall_ns: Some(timed.wall_ns),
@@ -539,24 +642,7 @@ impl BenchCase for MetadataConditionBatch {
                 bytes_read: Some(accounting.bytes_read),
                 bytes_written: Some(accounting.bytes_written),
                 bytes_touched: Some(logical_bytes_touched),
-                custom: vec![
-                    MetricPoint {
-                        name: "metadata_records".to_string(),
-                        value: u64::from(METADATA_RECORDS),
-                    },
-                    MetricPoint {
-                        name: "metadata_expected_matches".to_string(),
-                        value: u64::from(prepared.expected_count),
-                    },
-                    MetricPoint {
-                        name: "metadata_resident_buffers".to_string(),
-                        value: u64::from(resident_used),
-                    },
-                    MetricPoint {
-                        name: "metadata_resident_reset_bytes".to_string(),
-                        value: resident_reset_bytes,
-                    },
-                ],
+                custom,
                 ..Default::default()
             },
             baseline_metrics: Some(BenchMetrics {
@@ -571,7 +657,7 @@ impl BenchCase for MetadataConditionBatch {
                     ),
                 ..Default::default()
             }),
-            outputs,
+            outputs: timed.outputs,
             baseline_outputs: Some(baseline_outputs),
         })
     }
@@ -607,6 +693,77 @@ fn resident_reset_transfer_accounting(
         bytes_read,
         bytes_written: output_bytes_total,
     }
+}
+
+fn dispatch_single_metadata_resident(
+    ctx: &BenchContext,
+    prepared: &MetadataConditionPrepared,
+) -> Result<(vyre_driver::TimedDispatchResult, bool, u64), BenchError> {
+    let resident_reset_bytes = if let Some(resident) = prepared.resident.as_ref() {
+        resident.upload_resource(
+            0,
+            &0u32.to_le_bytes(),
+            "metadata condition resident counter reset",
+        )?;
+        METADATA_OUTPUT_RESET_BYTES
+    } else {
+        0
+    };
+    let dispatch = dispatch_program_timed(
+        ctx,
+        &prepared.program,
+        prepared.resident.as_ref(),
+        &prepared.inputs,
+        &ctx.dispatch_config,
+    )?;
+    Ok((dispatch.timed, dispatch.resident_used, resident_reset_bytes))
+}
+
+fn dispatch_single_synthetic_resident(
+    ctx: &BenchContext,
+    prepared: &SyntheticCountPrepared,
+) -> Result<
+    (
+        vyre_driver::TimedDispatchResult,
+        bool,
+        u64,
+        Option<u64>,
+        Option<u64>,
+    ),
+    BenchError,
+> {
+    if let Some(resident) = prepared.resident.as_ref() {
+        if !prepared.output_reset_payload.is_empty() {
+            resident.upload_resource(
+                0,
+                &prepared.output_reset_payload,
+                "synthetic release resident output reset",
+            )?;
+        }
+        let dispatch = dispatch_program_timed(
+            ctx,
+            &prepared.program,
+            Some(resident),
+            &prepared.inputs,
+            &ctx.dispatch_config,
+        )?;
+        return Ok((
+            dispatch.timed,
+            dispatch.resident_used,
+            prepared.output_reset_payload.len() as u64,
+            None,
+            None,
+        ));
+    }
+
+    let dispatch = dispatch_program_timed(
+        ctx,
+        &prepared.program,
+        None,
+        &prepared.inputs,
+        &ctx.dispatch_config,
+    )?;
+    Ok((dispatch.timed, dispatch.resident_used, 0, None, None))
 }
 
 impl BenchCase for SyntheticCountWorkload {
@@ -683,6 +840,17 @@ impl BenchCase for SyntheticCountWorkload {
             &inputs,
             "synthetic release workload",
         )?;
+        let resident_batch = if self.pattern == SyntheticPattern::StringBitmapScatter {
+            ResidentInputPool::upload_program_ordered_with_zeroed_outputs_optional(
+                ctx,
+                &program,
+                &inputs,
+                STRING_BITMAP_RESIDENT_BATCH_SIZE,
+                "synthetic release workload batch",
+            )?
+        } else {
+            None
+        };
         Ok(Box::new(SyntheticCountPrepared {
             program,
             inputs,
@@ -691,6 +859,7 @@ impl BenchCase for SyntheticCountWorkload {
             output_reset_payload,
             baseline,
             resident,
+            resident_batch,
         }))
     }
 
@@ -706,37 +875,112 @@ impl BenchCase for SyntheticCountWorkload {
                     "synthetic release prepared payload type mismatch".to_string(),
                 )
             })?;
-        let (timed, resident_used, resident_reset_bytes) =
-            if let Some(resident) = prepared.resident.as_ref() {
-                if !prepared.output_reset_payload.is_empty() {
-                    resident.upload_resource(
+        let (timed, resident_used, resident_reset_bytes, batch_wall_ns, batch_len) = if let (
+            SyntheticPattern::StringBitmapScatter,
+            true,
+            Some(resident_batch),
+            Some(pipeline),
+        ) = (
+            self.pattern,
+            ctx.preferred_backend.id() == "cuda",
+            prepared.resident_batch.as_ref(),
+            ctx.compiled_pipeline_for(&prepared.program)
+                .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
+        ) {
+            let config = crate::api::case::dispatch_config_with_inferred_grid(
+                &prepared.program,
+                &prepared.inputs,
+                &ctx.dispatch_config,
+            )
+            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+            vyre_driver::validate_program_for_backend(
+                ctx.preferred_backend.as_ref(),
+                &prepared.program,
+                &config,
+            )
+            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+            match resident_batch.dispatch_compiled_batch_timed(
+                pipeline,
+                STRING_BITMAP_RESIDENT_BATCH_SIZE,
+                &config,
+            ) {
+                Ok(batch) => {
+                    if batch.outputs.len() != STRING_BITMAP_RESIDENT_BATCH_SIZE {
+                        return Err(BenchError::ExecutionFailed(format!(
+                            "{} resident batch returned {} output row(s), expected {}",
+                            self.id,
+                            batch.outputs.len(),
+                            STRING_BITMAP_RESIDENT_BATCH_SIZE
+                        )));
+                    }
+                    let first_outputs = batch.outputs.first().cloned().ok_or_else(|| {
+                        BenchError::ExecutionFailed(format!(
+                            "{} resident batch returned no output rows",
+                            self.id
+                        ))
+                    })?;
+                    if let Some((index, _)) = batch
+                        .outputs
+                        .iter()
+                        .enumerate()
+                        .find(|(_, outputs)| **outputs != first_outputs)
+                    {
+                        return Err(BenchError::CorrectnessViolation(format!(
+                            "{} resident batch output row {index} disagreed with row 0",
+                            self.id
+                        )));
+                    }
+                    (
+                        vyre_driver::TimedDispatchResult {
+                            outputs: first_outputs,
+                            wall_ns: batch.per_item_wall_ns(),
+                            device_ns: None,
+                            enqueue_ns: None,
+                            wait_ns: None,
+                        },
+                        true,
                         0,
-                        &prepared.output_reset_payload,
-                        "synthetic release resident output reset",
-                    )?;
+                        Some(batch.wall_ns_total),
+                        Some(batch.batch_len as u64),
+                    )
                 }
-                let dispatch = dispatch_program_timed(
-                    ctx,
-                    &prepared.program,
-                    Some(resident),
-                    &prepared.inputs,
-                    &ctx.dispatch_config,
+                Err(vyre_driver::BackendError::UnsupportedFeature { .. }) => {
+                    dispatch_single_synthetic_resident(ctx, prepared)?
+                }
+                Err(error) => return Err(BenchError::BackendFailed(error.to_string())),
+            }
+        } else if let Some(resident) = prepared.resident.as_ref() {
+            if !prepared.output_reset_payload.is_empty() {
+                resident.upload_resource(
+                    0,
+                    &prepared.output_reset_payload,
+                    "synthetic release resident output reset",
                 )?;
-                (
-                    dispatch.timed,
-                    dispatch.resident_used,
-                    prepared.output_reset_payload.len() as u64,
-                )
-            } else {
-                let dispatch = dispatch_program_timed(
-                    ctx,
-                    &prepared.program,
-                    None,
-                    &prepared.inputs,
-                    &ctx.dispatch_config,
-                )?;
-                (dispatch.timed, dispatch.resident_used, 0)
-            };
+            }
+            let dispatch = dispatch_program_timed(
+                ctx,
+                &prepared.program,
+                Some(resident),
+                &prepared.inputs,
+                &ctx.dispatch_config,
+            )?;
+            (
+                dispatch.timed,
+                dispatch.resident_used,
+                prepared.output_reset_payload.len() as u64,
+                None,
+                None,
+            )
+        } else {
+            let dispatch = dispatch_program_timed(
+                ctx,
+                &prepared.program,
+                None,
+                &prepared.inputs,
+                &ctx.dispatch_config,
+            )?;
+            (dispatch.timed, dispatch.resident_used, 0, None, None)
+        };
         let baseline_start = std::time::Instant::now();
         let baseline_outputs = match &prepared.baseline {
             SyntheticBaseline::Count { expected } => {
@@ -792,6 +1036,18 @@ impl BenchCase for SyntheticCountWorkload {
             name: "synthetic_resident_reset_bytes".to_string(),
             value: resident_reset_bytes,
         });
+        if let Some(batch_wall_ns) = batch_wall_ns {
+            run.metrics.custom.push(MetricPoint {
+                name: "synthetic_resident_batch_wall_ns".to_string(),
+                value: batch_wall_ns,
+            });
+        }
+        if let Some(batch_len) = batch_len {
+            run.metrics.custom.push(MetricPoint {
+                name: "synthetic_resident_batch_len".to_string(),
+                value: batch_len,
+            });
+        }
         match &prepared.baseline {
             SyntheticBaseline::Count { expected } => {
                 add_release_alias_metrics(self.pattern, self.records, *expected, &mut run);

@@ -71,6 +71,22 @@ impl PerformanceContract {
         baseline: impl Into<String>,
         min_speedup_x: f64,
     ) -> Self {
+        Self::cpu_sota_min_speedup_for_backends(
+            primitive,
+            crate_name,
+            baseline,
+            min_speedup_x,
+            ["cuda", "wgpu"],
+        )
+    }
+
+    fn cpu_sota_min_speedup_for_backends(
+        primitive: impl Into<String>,
+        crate_name: impl Into<String>,
+        baseline: impl Into<String>,
+        min_speedup_x: f64,
+        backend_ids: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Self {
         Self {
             primitive: primitive.into(),
             baselines: vec![BaselineTarget {
@@ -78,7 +94,7 @@ impl PerformanceContract {
                 crate_name: crate_name.into(),
                 class: BaselineClass::CpuSota,
                 min_speedup_x,
-                backend_ids: vec!["cuda".to_string(), "wgpu".to_string()],
+                backend_ids: backend_ids.into_iter().map(Into::into).collect(),
             }],
         }
     }
@@ -179,6 +195,27 @@ pub struct BenchContext {
 }
 
 impl BenchContext {
+    pub fn compiled_pipeline_for(
+        &self,
+        prog: &vyre::ir::Program,
+    ) -> Result<Option<&dyn CompiledPipeline>, vyre_driver::BackendError> {
+        if !self
+            .compiled_program_fingerprint
+            .is_some_and(|fingerprint| fingerprint == prog.fingerprint())
+        {
+            return Ok(None);
+        }
+
+        self.compiled_pipeline
+            .as_deref()
+            .map(Some)
+            .ok_or_else(|| {
+                vyre_driver::BackendError::new(
+                    "compiled program fingerprint was set without a compiled pipeline. Fix: keep BenchContext compiled pipeline state coherent.",
+                )
+            })
+    }
+
     pub fn dispatch(
         &self,
         prog: &vyre::ir::Program,
@@ -187,15 +224,7 @@ impl BenchContext {
     ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
         let config = dispatch_config_with_inferred_grid(prog, inputs, config)?;
         vyre_driver::validate_program_for_backend(self.preferred_backend.as_ref(), prog, &config)?;
-        if self
-            .compiled_program_fingerprint
-            .is_some_and(|fingerprint| fingerprint == prog.fingerprint())
-        {
-            let pipeline = self.compiled_pipeline.as_ref().ok_or_else(|| {
-                vyre_driver::BackendError::new(
-                    "compiled program fingerprint was set without a compiled pipeline. Fix: keep BenchContext compiled pipeline state coherent.",
-                )
-            })?;
+        if let Some(pipeline) = self.compiled_pipeline_for(prog)? {
             let borrowed_inputs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
             pipeline.dispatch_borrowed(&borrowed_inputs, &config)
         } else {
@@ -214,15 +243,7 @@ impl BenchContext {
         let config = dispatch_config_with_inferred_grid(prog, inputs, config)?;
         vyre_driver::validate_program_for_backend(self.preferred_backend.as_ref(), prog, &config)?;
         let borrowed_inputs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        if self
-            .compiled_program_fingerprint
-            .is_some_and(|fingerprint| fingerprint == prog.fingerprint())
-        {
-            let pipeline = self.compiled_pipeline.as_ref().ok_or_else(|| {
-                vyre_driver::BackendError::new(
-                    "compiled program fingerprint was set without a compiled pipeline. Fix: keep BenchContext compiled pipeline state coherent.",
-                )
-            })?;
+        if let Some(pipeline) = self.compiled_pipeline_for(prog)? {
             pipeline.dispatch_borrowed_timed(&borrowed_inputs, &config)
         } else {
             self.preferred_backend

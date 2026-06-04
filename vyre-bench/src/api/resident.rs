@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre::{DispatchConfig, VyreBackend};
-use vyre_driver::{BackendError, CompiledPipeline, Resource, TimedDispatchResult};
+use vyre_driver::{BackendError, CompiledPipeline, OutputBuffers, Resource, TimedDispatchResult};
 
 use crate::api::case::{dispatch_config_with_inferred_grid, BenchContext, BenchError};
 
@@ -35,6 +35,23 @@ pub struct ResidentInputPool {
 pub struct ResidentDispatch {
     pub timed: TimedDispatchResult,
     pub resident_used: bool,
+}
+
+/// Batched resident dispatch outputs plus batch-level wall timing.
+pub struct ResidentBatchDispatch {
+    pub outputs: Vec<OutputBuffers>,
+    pub wall_ns_total: u64,
+    pub batch_len: usize,
+}
+
+impl ResidentBatchDispatch {
+    /// Conservative per-item wall latency for steady-state batch throughput.
+    pub fn per_item_wall_ns(&self) -> u64 {
+        if self.batch_len == 0 {
+            return self.wall_ns_total;
+        }
+        self.wall_ns_total.saturating_add(self.batch_len as u64 - 1) / self.batch_len as u64
+    }
 }
 
 /// Host-transfer accounting for a dispatch sample.
@@ -230,6 +247,21 @@ pub fn dispatch_program_timed(
             config.as_ref(),
         )
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+        if let Some(pipeline) = ctx
+            .compiled_pipeline_for(program)
+            .map_err(|error| BenchError::BackendFailed(error.to_string()))?
+        {
+            match resident.dispatch_compiled_timed(pipeline, config.as_ref()) {
+                Ok(timed) => {
+                    return Ok(ResidentDispatch {
+                        timed,
+                        resident_used: true,
+                    });
+                }
+                Err(BackendError::UnsupportedFeature { .. }) => {}
+                Err(error) => return Err(BenchError::BackendFailed(error.to_string())),
+            }
+        }
         let timed = resident
             .dispatch_timed(program, config.as_ref())
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
@@ -325,6 +357,15 @@ impl ResidentInputSet {
     ) -> Result<TimedDispatchResult, BackendError> {
         self.backend
             .dispatch_resident_timed(program, &self.resources, config)
+    }
+
+    /// Dispatch against the uploaded resident resources through a compiled pipeline.
+    pub fn dispatch_compiled_timed(
+        &self,
+        compiled: &dyn CompiledPipeline,
+        config: &DispatchConfig,
+    ) -> Result<TimedDispatchResult, BackendError> {
+        compiled.dispatch_persistent_handles_timed(&self.resources, config)
     }
 
     /// Re-upload a small payload into an existing resident resource.
@@ -484,6 +525,26 @@ impl ResidentInputPool {
         }
     }
 
+    /// Upload `set_count` copies of host inputs plus zero-filled outputs in program binding order.
+    pub fn upload_program_ordered_with_zeroed_outputs_optional(
+        ctx: &BenchContext,
+        program: &Program,
+        inputs: &[Vec<u8>],
+        set_count: usize,
+        cleanup_label: &'static str,
+    ) -> Result<Option<Self>, BenchError> {
+        let payloads = program_order_resident_payloads(program, inputs, cleanup_label)?;
+        match Self::upload_payloads(ctx, &payloads, set_count, cleanup_label) {
+            Ok(pool) => Ok(Some(pool)),
+            Err(BackendError::UnsupportedFeature { name, .. })
+                if name == "resident buffer allocation" =>
+            {
+                Ok(None)
+            }
+            Err(error) => Err(BenchError::BackendFailed(error.to_string())),
+        }
+    }
+
     /// Return the next resident input set, re-uploading when the pool wraps.
     pub fn next_set<'a>(&'a mut self, inputs: &[Vec<u8>]) -> Result<&'a [Resource], BenchError> {
         if self.sets.is_empty() {
@@ -511,6 +572,59 @@ impl ResidentInputPool {
         }
         self.next_set = self.next_set.saturating_add(1);
         Ok(&self.sets[index])
+    }
+
+    /// Dispatch the first `batch_len` resident sets through a compiled batched pipeline.
+    pub fn dispatch_compiled_batch_timed(
+        &self,
+        compiled: &dyn CompiledPipeline,
+        batch_len: usize,
+        config: &DispatchConfig,
+    ) -> Result<ResidentBatchDispatch, BackendError> {
+        if batch_len == 0 {
+            return Err(BackendError::new(
+                "resident compiled batch dispatch requires at least one resident set. Fix: configure a positive resident batch size.",
+            ));
+        }
+        if batch_len > self.sets.len() {
+            return Err(BackendError::new(format!(
+                "resident compiled batch dispatch requested {batch_len} set(s) but pool has {}. Fix: upload a resident pool at least as large as the requested batch.",
+                self.sets.len()
+            )));
+        }
+        let batches = self.sets[..batch_len]
+            .iter()
+            .map(Vec::as_slice)
+            .collect::<Vec<_>>();
+        let started = std::time::Instant::now();
+        let outputs = compiled.dispatch_persistent_handles_batched(&batches, config)?;
+        let wall_ns_total = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+        Ok(ResidentBatchDispatch {
+            outputs,
+            wall_ns_total,
+            batch_len,
+        })
+    }
+
+    /// Re-upload one resource index in every resident set.
+    pub fn upload_resource_to_all_sets(
+        &self,
+        index: usize,
+        payload: &[u8],
+        context: &str,
+    ) -> Result<(), BenchError> {
+        let mut uploads = Vec::with_capacity(self.sets.len());
+        for (set_index, set) in self.sets.iter().enumerate() {
+            let resource = set.get(index).ok_or_else(|| {
+                BenchError::ExecutionFailed(format!(
+                    "{context} resident pool set {set_index} is missing resource at index {index}"
+                ))
+            })?;
+            uploads.push((resource, payload));
+        }
+        self.backend
+            .upload_resident_many(&uploads)
+            .map_err(|error| BenchError::BackendFailed(error.to_string()))
     }
 
     fn upload(
@@ -577,6 +691,67 @@ impl ResidentInputPool {
             backend,
             sets,
             input_count: inputs.len(),
+            next_set: 0,
+            cleanup_label,
+        })
+    }
+
+    fn upload_payloads(
+        ctx: &BenchContext,
+        payloads: &[ResidentResourcePayload<'_>],
+        set_count: usize,
+        cleanup_label: &'static str,
+    ) -> Result<Self, BackendError> {
+        if set_count == 0 {
+            return Ok(Self {
+                backend: Arc::clone(&ctx.preferred_backend),
+                sets: Vec::new(),
+                input_count: payloads
+                    .iter()
+                    .filter(|payload| matches!(payload, ResidentResourcePayload::Input(_)))
+                    .count(),
+                next_set: 0,
+                cleanup_label,
+            });
+        }
+
+        let backend = Arc::clone(&ctx.preferred_backend);
+        let mut sets = Vec::with_capacity(set_count);
+        let mut zero_scratch = Vec::new();
+        let result = (|| {
+            for _ in 0..set_count {
+                sets.push(Vec::with_capacity(payloads.len()));
+                let resource_index = sets.len() - 1;
+                allocate_and_upload_resident_payloads(
+                    backend.as_ref(),
+                    &mut sets[resource_index],
+                    payloads,
+                    &mut zero_scratch,
+                )?;
+            }
+            Ok(())
+        })();
+
+        if let Err(error) = result {
+            for set in sets {
+                for resource in set {
+                    if let Err(cleanup_error) = backend.free_resident(resource) {
+                        eprintln!(
+                            "{cleanup_label} resident pool rollback cleanup failed: {cleanup_error}"
+                        );
+                    }
+                }
+            }
+            return Err(error);
+        }
+
+        Ok(Self {
+            backend,
+            sets,
+            input_count: payloads
+                .iter()
+                .filter(|payload| matches!(payload, ResidentResourcePayload::Input(_)))
+                .count(),
             next_set: 0,
             cleanup_label,
         })
