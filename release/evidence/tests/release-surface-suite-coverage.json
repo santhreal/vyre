@@ -4,7 +4,7 @@
     {
       "surface": "vyre",
       "file_count": 2571,
-      "assertion_count": 34380,
+      "assertion_count": 34374,
       "entrypoint_count": 2571,
       "layers": [
         "adversarial",

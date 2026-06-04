@@ -2,8 +2,11 @@ use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 use std::sync::Mutex;
-use vyre_foundation::ir::Program;
 use vyre_primitives::graph::dominator_frontier::cpu_ref as reference_dominator_frontier;
+
+mod support;
+
+use support::{DominatorDispatcher, DominatorInputShapeDispatcher, RecordingDominatorDispatcher};
 
 #[test]
 fn checked_reference_surfaces_bad_seed_width() {
@@ -14,74 +17,6 @@ fn checked_reference_surfaces_bad_seed_width() {
         err.contains("seed"),
         "Fix: dominance-frontier checked wrapper must preserve primitive seed diagnostics, got: {err}"
     );
-}
-
-struct DominatorDispatcher {
-    outputs: Vec<Vec<u8>>,
-}
-
-impl OptimizerDispatcher for DominatorDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([1, 1, 1]));
-        if inputs.len() != 6 {
-            return Err(DispatchError::BadInputs(format!(
-                "Fix: dominator frontier test dispatcher expected 6 inputs, got {}.",
-                inputs.len()
-            )));
-        }
-        Ok(self.outputs.clone())
-    }
-}
-
-struct DominatorInputShapeDispatcher;
-
-impl OptimizerDispatcher for DominatorInputShapeDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([1, 1, 1]));
-        assert_eq!(inputs.len(), 6);
-        assert_eq!(
-            inputs[1].len(),
-            4,
-            "Fix: empty dominance targets must be padded to one u32 from the primitive plan"
-        );
-        assert_eq!(
-            inputs[3].len(),
-            4,
-            "Fix: empty predecessor targets must be padded to one u32 from the primitive plan"
-        );
-        Ok(vec![u32_slice_to_le_bytes(&[0])])
-    }
-}
-
-struct RecordingDominatorDispatcher {
-    calls: Mutex<Vec<Vec<Vec<u8>>>>,
-    output: Vec<u8>,
-}
-
-impl OptimizerDispatcher for RecordingDominatorDispatcher {
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([1, 1, 1]));
-        self.calls
-            .lock()
-            .expect("Fix: recording dispatcher calls lock should not be poisoned")
-            .push(inputs.to_vec());
-        Ok(vec![self.output.clone()])
-    }
 }
 
 /// Linear chain 0 -> 1 -> 2 -> 3. Dominance closure: each node
