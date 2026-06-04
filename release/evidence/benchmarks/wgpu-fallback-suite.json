@@ -57,7 +57,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -96,7 +96,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -135,7 +135,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -174,7 +174,7 @@
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -213,7 +213,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -252,7 +252,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -260,10 +260,10 @@
       "family_id": "alias-reaching-def",
       "requested_case_id": "release.alias_reaching_def.1m",
       "exists": true,
-      "bytes": 17250,
+      "bytes": 17998,
       "read_error": null,
-      "source_fingerprint": "git:5608672727b512ad62098b9048e960d9ac8f74cd:dirty=false",
-      "source_tree_fingerprint": "source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24",
+      "source_fingerprint": "git:bdb4f306a0b4b74a6d01d600ec087d15a29f41f9:dirty=false",
+      "source_tree_fingerprint": "source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09",
       "selected_backend": "wgpu",
       "host_cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
       "gpu_model": "NVIDIA GeForce RTX 5090",
@@ -280,19 +280,17 @@
       "failed_count": 0,
       "nonmatching_case_backend_count": 0,
       "min_wall_samples": 30,
-      "min_wall_p50": 2774120,
-      "min_wall_p95": 3491712,
-      "min_wall_p99": 4472722,
+      "min_wall_p50": 2435601,
+      "min_wall_p95": 2672377,
+      "min_wall_p99": 3208668,
       "min_baseline_wall_samples": 30,
-      "min_baseline_wall_p50": 359414826,
-      "min_baseline_wall_p95": 371829269,
-      "min_baseline_wall_p99": 384992233,
+      "min_baseline_wall_p50": 361845735,
+      "min_baseline_wall_p95": 390104489,
+      "min_baseline_wall_p99": 395008152,
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-08-ifds-witness.json",
@@ -330,7 +328,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -369,7 +367,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -408,7 +406,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -447,7 +445,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -486,7 +484,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -525,7 +523,7 @@
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -564,7 +562,7 @@
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -603,7 +601,7 @@
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     },
     {
@@ -642,26 +640,25 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
       ]
     }
   ],
   "blockers": [
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-01-condition-eval.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-04-metadata-conditions.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-05-entropy-window.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-07-alias-reaching-def.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-08-ifds-witness.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-09-c-ast-traversal.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-10-megakernel-queued-batches.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-11-egraph-saturation.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-12-sparse-output-compaction.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-13-callgraph-reachability.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-14-compound-fused-filter.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-15-adaptive-routing.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`",
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-16-quantized-linear.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:a00cdc73532aa017025c3cb6106b9d5ba24aae368ee1c63d48d4ac477d0cb5a0`"
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-01-condition-eval.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-04-metadata-conditions.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-05-entropy-window.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-08-ifds-witness.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-09-c-ast-traversal.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-10-megakernel-queued-batches.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-11-egraph-saturation.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-12-sparse-output-compaction.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-13-callgraph-reachability.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-14-compound-fused-filter.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-15-adaptive-routing.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`",
+    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-16-quantized-linear.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:8964917270208fdfa79876e8be366983754828198f010cddbd1c7fc14f5aae09`"
   ]
 }
