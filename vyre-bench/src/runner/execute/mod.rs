@@ -265,6 +265,10 @@ pub fn execute_suite(
     let git = crate::probes::capture_git_info();
     let source_fingerprint = crate::probes::source_fingerprint(&git);
     let source_tree_fingerprint = crate::probes::source_tree_fingerprint();
+    let blockers = cases_report
+        .iter()
+        .flat_map(CaseReport::evidence_blockers)
+        .collect();
     let report = ReportSchema {
         schema: "vyre-bench.result.v1".to_string(),
         run_id: format!("vyre-bench.{}", suite.as_str()),
@@ -283,6 +287,7 @@ pub fn execute_suite(
             total_time_ns: started.elapsed().as_nanos() as u64,
             cache_hit_rate,
         },
+        blockers,
     };
 
     if config.snapshot_on_pass && report.summary.failed == 0 {

@@ -95,9 +95,14 @@ fn test_suite_completeness() {
             optimization_passes_applied: vec![],
             artifacts: vec![],
         }],
+        blockers: vec![],
     };
     let json_str = vyre_bench::report::json::generate_json_report(&dummy_report).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+    assert!(
+        parsed["blockers"].as_array().is_some_and(Vec::is_empty),
+        "Top-level JSON must carry an explicit blockers array"
+    );
     let cases = parsed["cases"].as_array().unwrap();
     let case_obj = cases[0].as_object().unwrap();
     assert!(

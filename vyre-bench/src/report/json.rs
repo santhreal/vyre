@@ -21,6 +21,8 @@ pub struct ReportSchema {
     pub features: Vec<String>,
     pub cases: Vec<CaseReport>,
     pub summary: ReportSummary,
+    #[serde(default)]
+    pub blockers: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -75,6 +77,34 @@ impl CaseReport {
                 .as_ref()
                 .is_some_and(|performance| !performance.contract_passed)
     }
+
+    pub fn evidence_blockers(&self) -> Vec<String> {
+        let mut blockers = Vec::new();
+        if self.status != "pass" {
+            blockers.push(format!("case `{}` status `{}`", self.id, self.status));
+        }
+        if let Correctness::Invalid { reason } = &self.correctness {
+            blockers.push(format!("case `{}` correctness invalid: {reason}", self.id));
+        }
+        if let Some(performance) = &self.performance {
+            if !performance.contract_passed {
+                if performance.violations.is_empty() {
+                    blockers.push(format!(
+                        "case `{}` failed its performance contract without a violation reason",
+                        self.id
+                    ));
+                } else {
+                    for violation in &performance.violations {
+                        blockers.push(format!(
+                            "case `{}` performance contract failed: {violation}",
+                            self.id
+                        ));
+                    }
+                }
+            }
+        }
+        blockers
+    }
 }
 
 impl ReportSchema {
@@ -103,6 +133,24 @@ impl ReportSchema {
             ));
         }
         Ok(())
+    }
+
+    pub fn validate_blocker_evidence(&self) -> Result<(), String> {
+        let derived = self.derived_blockers();
+        if self.blockers != derived {
+            return Err(format!(
+                "top-level blockers {:?} contradict case-derived blockers {:?}. Fix: regenerate the benchmark report from case status, correctness, and performance contracts.",
+                self.blockers, derived
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn derived_blockers(&self) -> Vec<String> {
+        self.cases
+            .iter()
+            .flat_map(CaseReport::evidence_blockers)
+            .collect()
     }
 }
 

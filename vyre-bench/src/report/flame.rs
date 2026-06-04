@@ -226,6 +226,7 @@ mod tests {
                 total_time_ns: 0,
                 cache_hit_rate: None,
             },
+            blockers: Vec::new(),
         }
     }
 

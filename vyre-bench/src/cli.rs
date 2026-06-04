@@ -401,6 +401,9 @@ fn load_report(path: &str) -> anyhow::Result<ReportSchema> {
     report
         .validate_summary_evidence()
         .map_err(|error| anyhow::anyhow!("invalid benchmark report `{}`: {error}", path))?;
+    report
+        .validate_blocker_evidence()
+        .map_err(|error| anyhow::anyhow!("invalid benchmark report `{}`: {error}", path))?;
     Ok(report)
 }
 
@@ -864,6 +867,7 @@ mod tests {
                 cache_hit_rate: None,
             },
             cases,
+            blockers: Vec::new(),
         }
     }
 
@@ -927,6 +931,40 @@ mod tests {
         assert!(
             error.contains("invalid benchmark report") && error.contains("contradicts case evidence"),
             "Fix: report loader should explain that summary counts disagree with case evidence: {error}"
+        );
+    }
+
+    #[test]
+    fn load_report_rejects_blockers_that_hide_contract_failed_case() {
+        let mut forged = report(
+            vec![case_report("release.condition_eval.1m", "pass", false)],
+            0,
+            1,
+        );
+        forged.blockers.clear();
+        let path = std::env::temp_dir().join(format!(
+            "vyre-bench-forged-blockers-{}-{}.json",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system clock must be after UNIX_EPOCH")
+                .as_nanos()
+        ));
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&forged).expect("test report should serialize"),
+        )
+        .expect("test report should be writable");
+
+        let error = load_report(&path.to_string_lossy())
+            .expect_err("Fix: loaded benchmark evidence must reject hidden blockers");
+        let _ = std::fs::remove_file(&path);
+        let error = error.to_string();
+        assert!(
+            error.contains("invalid benchmark report")
+                && error.contains("top-level blockers")
+                && error.contains("contradict case-derived blockers"),
+            "Fix: report loader should explain that top-level blockers disagree with case evidence: {error}"
         );
     }
 
