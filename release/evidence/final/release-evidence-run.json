@@ -273,7 +273,7 @@
         {
           "path": "release/evidence/hygiene/hygiene-matrix.json",
           "exists": true,
-          "bytes": 407535,
+          "bytes": 406248,
           "read_error": null
         },
         {
@@ -303,7 +303,7 @@
         {
           "path": "release/evidence/hygiene/cargo-wrapper-scan.json",
           "exists": true,
-          "bytes": 16141,
+          "bytes": 14855,
           "read_error": null
         },
         {

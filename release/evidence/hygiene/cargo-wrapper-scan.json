@@ -39,42 +39,6 @@
       "text": "//! Run with: cargo fuzz run scan_bytes"
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/scripts/bench_index.sh",
-      "line": 19,
-      "pattern": "heredoc",
-      "text": "cat << 'EOF' > \"$OUTPUT_FILE\""
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/scripts/bench_index.sh",
-      "line": 199,
-      "pattern": "heredoc",
-      "text": "cat << EOF >> \"$OUTPUT_FILE\""
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/scripts/bench_index.sh",
-      "line": 224,
-      "pattern": "heredoc",
-      "text": "cat << EOL >> \"$OUTPUT_FILE\""
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/scripts/bench_index.sh",
-      "line": 234,
-      "pattern": "heredoc",
-      "text": "cat << EOF >> \"$OUTPUT_FILE\""
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/scripts/bench_index.sh",
-      "line": 239,
-      "pattern": "heredoc",
-      "text": "cat << EOF >> \"$OUTPUT_FILE\""
-    },
-    {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/scripts/bench_index.sh",
-      "line": 246,
-      "pattern": "heredoc",
-      "text": "cat << 'EOF' >> \"$OUTPUT_FILE\""
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/README.md",
       "line": 237,
       "pattern": "raw_workspace_cargo",
@@ -430,6 +394,6 @@
     }
   ],
   "blockers": [
-    "71 `cargo-wrapper` finding(s) remain"
+    "65 `cargo-wrapper` finding(s) remain"
   ]
 }
