@@ -9,37 +9,11 @@
 #![cfg(feature = "graph")]
 #![cfg(feature = "cpu-parity")]
 
-use vyre_foundation::ir::Program;
+mod common;
+
+use common::reference_eval_idoms;
 use vyre_primitives::graph::dominator_frontier::cpu_ref as df_cpu_ref;
 use vyre_primitives::graph::dominator_tree::*;
-use vyre_reference::value::Value;
-
-fn reference_eval_idoms(
-    program: &Program,
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    pred_offsets: &[u32],
-    pred_targets: &[u32],
-) -> Vec<u32> {
-    let to_bytes = |w: &[u32]| w.iter().flat_map(|v| v.to_le_bytes()).collect::<Vec<u8>>();
-
-    let values: Vec<Value> = vec![
-        Value::from(to_bytes(edge_offsets)),
-        Value::from(to_bytes(edge_targets)),
-        Value::from(to_bytes(pred_offsets)),
-        Value::from(to_bytes(pred_targets)),
-        Value::from(to_bytes(&vec![0u32; node_count as usize])),
-        Value::from(to_bytes(&vec![0u32; node_count as usize])),
-    ];
-
-    let outputs = vyre_reference::reference_eval(program, &values).unwrap();
-    let bytes = outputs[0].to_bytes();
-    bytes
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
-        .collect()
-}
 
 // ------------------------------------------------------------------
 // Tier 1 - Positive truth: 10+ canonical CFG fixtures
