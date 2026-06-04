@@ -713,16 +713,6 @@
       "release_blocker": true
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c11_build_vast_nodes.rs",
-      "lines": 509,
-      "lines_over_threshold": 9,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_lower_ast_to_pg_nodes.rs",
       "lines": 516,
       "lines_over_threshold": 16,
@@ -1148,7 +1138,6 @@
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/resident_buffer_contracts.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/every_op_random_inputs.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_ast_gpu_parity_support/mod.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c11_build_vast_nodes.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/c_lower_ast_to_pg_nodes.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests/buf_len_array_length.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-emit-ptx/src/tests.rs",
@@ -1218,7 +1207,7 @@
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs"
   ],
   "blockers": [
-    "84 test file(s) exceed the 500-line modularity threshold",
-    "159 monolithic test file(s) must be split into modular test layers"
+    "83 test file(s) exceed the 500-line modularity threshold",
+    "158 monolithic test file(s) must be split into modular test layers"
   ]
 }

@@ -23,24 +23,13 @@ use vyre_libs::parsing::c::parse::vast::{
     C_EXPR_SHAPE_STRIDE_U32,
 };
 use vyre_primitives::predicate::node_kind;
+
+mod c_ast_expression_support;
+
+use c_ast_expression_support::{bytes, starts_for_lens, word_at};
+
 const VAST_STRIDE_U32: usize = 10;
-fn bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
-fn word_at(bytes: &[u8], word: usize) -> u32 {
-    let offset = word * 4;
-    u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap())
-}
-fn starts_for_lens(lens: &[u32]) -> Vec<u32> {
-    let mut cursor = 0u32;
-    lens.iter()
-        .map(|len| {
-            let start = cursor;
-            cursor = cursor.saturating_add(*len).saturating_add(1);
-            start
-        })
-        .collect()
-}
+
 fn expression_operator_fixture() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     let tok_types = vec![
         TOK_IDENTIFIER,
