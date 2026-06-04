@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "unit",
-  "file_count": 2851,
-  "vyre_file_count": 2568,
+  "file_count": 2852,
+  "vyre_file_count": 2569,
   "dataflow_consumer_file_count": 272,
   "vyrec_file_count": 11,
   "files": [
@@ -39466,6 +39466,23 @@
       "recommended_split": []
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/bitset_words_sizing_contracts.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 48,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 16,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/wire_pack_into_contracts.rs",
       "layers": [
         "benchmark",
@@ -40208,18 +40225,15 @@
         "integration",
         "unit"
       ],
-      "lines": 517,
+      "lines": 468,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 79,
-      "oversized": true,
-      "god_test_candidate": true,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ]
+      "assertion_count": 63,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-primitives/tests/adversarial_registry_closure.rs",
