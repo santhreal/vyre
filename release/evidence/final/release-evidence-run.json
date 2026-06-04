@@ -351,7 +351,7 @@
         {
           "path": "release/evidence/tests/test-matrix.json",
           "exists": true,
-          "bytes": 54029,
+          "bytes": 53473,
           "read_error": null
         },
         {
@@ -363,7 +363,7 @@
         {
           "path": "release/evidence/tests/oversized-test-closure.json",
           "exists": true,
-          "bytes": 48427,
+          "bytes": 47871,
           "read_error": null
         },
         {
@@ -375,13 +375,13 @@
         {
           "path": "release/evidence/tests/unit-suite.json",
           "exists": true,
-          "bytes": 1550390,
+          "bytes": 1550392,
           "read_error": null
         },
         {
           "path": "release/evidence/tests/adversarial-suite.json",
           "exists": true,
-          "bytes": 241427,
+          "bytes": 241429,
           "read_error": null
         },
         {
@@ -393,7 +393,7 @@
         {
           "path": "release/evidence/tests/conformance-suite.json",
           "exists": true,
-          "bytes": 447673,
+          "bytes": 447675,
           "read_error": null
         },
         {
@@ -405,7 +405,7 @@
         {
           "path": "release/evidence/tests/benchmark-suite.json",
           "exists": true,
-          "bytes": 1417976,
+          "bytes": 1417978,
           "read_error": null
         },
         {

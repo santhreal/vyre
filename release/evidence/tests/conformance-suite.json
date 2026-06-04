@@ -1725,13 +1725,13 @@
         "conformance",
         "unit"
       ],
-      "lines": 548,
+      "lines": 491,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 44,
-      "oversized": true,
+      "oversized": false,
       "god_test_candidate": true,
       "recommended_split": [
         "extract backend/op parity cases into tests/conformance/",

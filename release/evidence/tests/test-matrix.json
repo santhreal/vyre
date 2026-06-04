@@ -353,18 +353,6 @@
       "release_blocker": true
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/exploded/tests.rs",
-      "lines": 548,
-      "lines_over_threshold": 48,
-      "recommended_split": [
-        "extract backend/op parity cases into tests/conformance/",
-        "extract hostile-input cases into tests/adversarial/",
-        "move monolithic src/tests.rs coverage into focused tests/<domain>/ files",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-self-substrate/src/graph/csr_forward_or_changed/tests.rs",
       "lines": 660,
       "lines_over_threshold": 160,
@@ -1134,7 +1122,7 @@
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs"
   ],
   "blockers": [
-    "76 test file(s) exceed the 500-line modularity threshold",
+    "75 test file(s) exceed the 500-line modularity threshold",
     "153 monolithic test file(s) must be split into modular test layers"
   ]
 }
