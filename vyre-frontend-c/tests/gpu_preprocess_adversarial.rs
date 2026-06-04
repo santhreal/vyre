@@ -3,49 +3,19 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+mod support;
+
+use support::gpu_preprocess::{IncludeEventResidencyAssert, NullLoader, ReferenceDispatcher};
+
 #[allow(unused_imports)]
 use vyre_driver_cuda as _;
 #[allow(unused_imports)]
 use vyre_driver_wgpu as _;
 
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
-    gpu_filter_source_bytes, gpu_preprocess_translation_unit, BackendDispatcher, GpuDispatcher,
+    gpu_filter_source_bytes, gpu_preprocess_translation_unit, BackendDispatcher,
     IncludeAccelerationKind, IncludeLoader,
 };
-
-struct ReferenceDispatcher;
-
-impl GpuDispatcher for ReferenceDispatcher {
-    fn dispatch(
-        &self,
-        program: &vyre::ir::Program,
-        inputs: &[Vec<u8>],
-    ) -> Result<Vec<Vec<u8>>, String> {
-        let value_inputs: Vec<vyre_reference::value::Value> =
-            inputs.iter().cloned().map(Into::into).collect();
-        let outs = vyre_reference::reference_eval(program, &value_inputs)
-            .map_err(|error| format!("reference_eval: {error}"))?;
-        Ok(outs.into_iter().map(|value| value.to_bytes()).collect())
-    }
-
-    fn requires_output_inputs(&self) -> bool {
-        true
-    }
-}
-
-struct NullLoader;
-
-impl IncludeLoader for NullLoader {
-    fn load(
-        &self,
-        _path: &[u8],
-        _is_system: bool,
-        _is_next: bool,
-        _from: &Path,
-    ) -> Result<Option<(PathBuf, std::sync::Arc<[u8]>)>, String> {
-        Ok(None)
-    }
-}
 
 #[test]
 fn adversarial_recursive_object_macro_does_not_loop_or_cpu_fallback() {
@@ -509,19 +479,4 @@ fn adversarial_active_macro_diagnostic_is_actionable_error() {
 
     assert!(err.contains("active #error directive"), "{err}");
     assert!(err.contains("hostile diagnostic"), "{err}");
-}
-
-trait IncludeEventResidencyAssert {
-    fn is_gpu_resident_request(&self) -> bool;
-}
-
-impl IncludeEventResidencyAssert
-    for vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEventResidency
-{
-    fn is_gpu_resident_request(&self) -> bool {
-        matches!(
-            self,
-            vyre_libs::parsing::c::preprocess::gpu_pipeline::IncludeEventResidency::GpuResidentRequest
-        )
-    }
 }

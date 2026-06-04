@@ -8,6 +8,7 @@ pub(crate) mod clang_abi;
 pub(crate) mod clang_diagnostics;
 pub(crate) mod clang_tokens;
 pub(crate) mod fixtures;
+pub(crate) mod gpu_preprocess;
 pub(crate) mod object;
 pub(crate) mod object_envelope;
 

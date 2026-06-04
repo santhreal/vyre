@@ -246,16 +246,6 @@
       "release_blocker": true
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/gpu_preprocess_adversarial.rs",
-      "lines": 527,
-      "lines_over_threshold": 27,
-      "recommended_split": [
-        "extract hostile-input cases into tests/adversarial/",
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/support/ast_oracle.rs",
       "lines": 1019,
       "lines_over_threshold": 519,
@@ -1033,7 +1023,6 @@
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/tests.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/src/tu_host/preprocess/expr/tests.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/gpu_prep_kernel_libc_shape.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/gpu_preprocess_adversarial.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/support/ast_oracle.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/preprocess_differential_benchmark.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-frontend-c/tests/r2_corpus_measurement.rs",
@@ -1185,7 +1174,7 @@
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs"
   ],
   "blockers": [
-    "81 test file(s) exceed the 500-line modularity threshold",
-    "156 monolithic test file(s) must be split into modular test layers"
+    "80 test file(s) exceed the 500-line modularity threshold",
+    "155 monolithic test file(s) must be split into modular test layers"
   ]
 }
