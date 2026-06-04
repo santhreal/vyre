@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "benchmark",
-  "file_count": 2585,
-  "vyre_file_count": 2569,
+  "file_count": 2586,
+  "vyre_file_count": 2570,
   "dataflow_consumer_file_count": 15,
   "vyrec_file_count": 1,
   "files": [
@@ -22790,6 +22790,23 @@
       "recommended_split": []
     },
     {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/__split/autodiff_transform_contracts_support.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 192,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": false,
+      "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/__split/wire_adversarial_chunk1.rs",
       "layers": [
         "adversarial",
@@ -23466,17 +23483,15 @@
         "integration",
         "unit"
       ],
-      "lines": 530,
+      "lines": 346,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 27,
-      "oversized": true,
-      "god_test_candidate": true,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ]
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/prefix_boundary.rs",

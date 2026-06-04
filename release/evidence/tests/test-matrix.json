@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "test_files": 2852,
-  "vyre_test_files": 2569,
+  "test_files": 2853,
+  "vyre_test_files": 2570,
   "weir_test_files": 272,
   "vyrec_test_files": 11,
   "layers": [
@@ -18,9 +18,9 @@
   "surface_coverages": [
     {
       "surface": "vyre",
-      "file_count": 2569,
+      "file_count": 2570,
       "assertion_count": 34380,
-      "entrypoint_count": 2569,
+      "entrypoint_count": 2570,
       "layers": [
         "adversarial",
         "benchmark",
@@ -656,15 +656,6 @@
       "release_blocker": true
     },
     {
-      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/autodiff_transform_contracts.rs",
-      "lines": 530,
-      "lines_over_threshold": 30,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ],
-      "release_blocker": true
-    },
-    {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/pipeline/tests.rs",
       "lines": 753,
       "lines_over_threshold": 253,
@@ -1091,7 +1082,6 @@
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/execution_plan/fusion/tests.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/engine/tests.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/src/dispatch/dialect_lookup/tests.rs",
-    "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-foundation/tests/autodiff_transform_contracts.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-macros/src/tests.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/pipeline/tests.rs",
     "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/src/runtime/cache/tests.rs",
@@ -1164,7 +1154,7 @@
     "/media/mukund-thiru/SanthData/Santh/libs/dataflow/weir/tests/df_parity_inventory_sweep.rs"
   ],
   "blockers": [
-    "79 test file(s) exceed the 500-line modularity threshold",
-    "154 monolithic test file(s) must be split into modular test layers"
+    "78 test file(s) exceed the 500-line modularity threshold",
+    "153 monolithic test file(s) must be split into modular test layers"
   ]
 }
