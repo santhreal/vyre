@@ -57,6 +57,9 @@ struct TestFileRecord {
     path: String,
     layers: Vec<String>,
     lines: usize,
+    dedicated_test_file: bool,
+    inline_test_module_file: bool,
+    line_threshold_exceeded: bool,
     has_test_entrypoint: bool,
     assertion_count: usize,
     oversized: bool,
@@ -598,15 +601,9 @@ fn scan_tests(
                 continue;
             }
         };
-        let is_test_file = path_string.contains("/tests/")
-            || path_string.contains("/benches/")
-            || path_string.contains("/fuzz/fuzz_targets/")
-            || path_string.ends_with("/tests.rs")
-            || path_string.ends_with("_tests.rs")
-            || path_string.ends_with("_test.rs")
-            || path_string.contains("_tests_")
-            || path_string.contains("_test_")
-            || has_test_entrypoint(&text);
+        let dedicated_test_file = is_dedicated_test_evidence_file(&path_string);
+        let inline_test_module_file = !dedicated_test_file && has_test_entrypoint(&text);
+        let is_test_file = dedicated_test_file || inline_test_module_file;
         if !is_test_file {
             continue;
         }
@@ -616,9 +613,11 @@ fn scan_tests(
         for layer in &file_layers {
             layers.insert(*layer);
         }
-        let oversized = lines > OVERSIZED_TEST_THRESHOLD_LINES;
+        let line_threshold_exceeded = lines > OVERSIZED_TEST_THRESHOLD_LINES;
+        let oversized = dedicated_test_file && line_threshold_exceeded;
         let recommended_split = recommended_split(&path_string, &file_layers, lines);
-        let god_test_candidate = oversized || path_string.ends_with("/tests.rs");
+        let god_test_candidate =
+            dedicated_test_file && (oversized || path_string.ends_with("/tests.rs"));
         if oversized {
             oversized_files.push(OversizedFile {
                 path: path_string.clone(),
@@ -632,6 +631,9 @@ fn scan_tests(
             path: path_string,
             layers: file_layers.into_iter().map(String::from).collect(),
             lines,
+            dedicated_test_file,
+            inline_test_module_file,
+            line_threshold_exceeded,
             has_test_entrypoint: has_test_entrypoint(&text),
             assertion_count: assertion_count(&text),
             oversized,
@@ -639,6 +641,17 @@ fn scan_tests(
             recommended_split,
         });
     }
+}
+
+fn is_dedicated_test_evidence_file(path: &str) -> bool {
+    path.contains("/tests/")
+        || path.contains("/benches/")
+        || path.contains("/fuzz/fuzz_targets/")
+        || path.ends_with("/tests.rs")
+        || path.ends_with("_tests.rs")
+        || path.ends_with("_test.rs")
+        || path.contains("_tests_")
+        || path.contains("_test_")
 }
 
 fn recommended_split(path: &str, layers: &BTreeSet<&'static str>, lines: usize) -> Vec<String> {

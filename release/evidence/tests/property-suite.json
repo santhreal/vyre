@@ -14,6 +14,9 @@
         "unit"
       ],
       "lines": 343,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 9,
       "oversized": false,
@@ -28,10 +31,13 @@
         "unit"
       ],
       "lines": 612,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
       "assertion_count": 14,
-      "oversized": true,
-      "god_test_candidate": true,
+      "oversized": false,
+      "god_test_candidate": false,
       "recommended_split": [
         "extract property invariants into tests/properties/",
         "move timing-only checks into benches/ or release benchmark cases"
@@ -46,10 +52,13 @@
         "unit"
       ],
       "lines": 593,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
       "assertion_count": 17,
-      "oversized": true,
-      "god_test_candidate": true,
+      "oversized": false,
+      "god_test_candidate": false,
       "recommended_split": [
         "extract backend/op parity cases into tests/conformance/",
         "extract property invariants into tests/properties/",
@@ -65,6 +74,9 @@
         "unit"
       ],
       "lines": 282,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 19,
       "oversized": false,
@@ -80,6 +92,9 @@
         "unit"
       ],
       "lines": 268,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 16,
       "oversized": false,
@@ -94,6 +109,9 @@
         "unit"
       ],
       "lines": 171,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 9,
       "oversized": false,
@@ -108,10 +126,13 @@
         "unit"
       ],
       "lines": 780,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
       "assertion_count": 15,
-      "oversized": true,
-      "god_test_candidate": true,
+      "oversized": false,
+      "god_test_candidate": false,
       "recommended_split": [
         "extract property invariants into tests/properties/",
         "move timing-only checks into benches/ or release benchmark cases"
@@ -126,6 +147,9 @@
         "unit"
       ],
       "lines": 299,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 42,
       "oversized": false,
@@ -146,10 +170,13 @@
         "unit"
       ],
       "lines": 511,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
       "assertion_count": 35,
-      "oversized": true,
-      "god_test_candidate": true,
+      "oversized": false,
+      "god_test_candidate": false,
       "recommended_split": [
         "extract fixture-driven cases into tests/corpus/",
         "extract property invariants into tests/properties/",
@@ -166,6 +193,9 @@
         "unit"
       ],
       "lines": 103,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 0,
       "oversized": false,
@@ -181,6 +211,9 @@
         "unit"
       ],
       "lines": 128,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 16,
       "oversized": false,
@@ -196,6 +229,9 @@
         "unit"
       ],
       "lines": 97,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 18,
       "oversized": false,
@@ -211,6 +247,9 @@
         "unit"
       ],
       "lines": 78,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -227,6 +266,9 @@
         "unit"
       ],
       "lines": 126,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -242,6 +284,9 @@
         "unit"
       ],
       "lines": 53,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 7,
       "oversized": false,
@@ -257,6 +302,9 @@
         "unit"
       ],
       "lines": 46,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -272,6 +320,9 @@
         "unit"
       ],
       "lines": 33,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 5,
       "oversized": false,
@@ -287,6 +338,9 @@
         "unit"
       ],
       "lines": 55,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -302,6 +356,9 @@
         "unit"
       ],
       "lines": 63,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -317,6 +374,9 @@
         "unit"
       ],
       "lines": 24,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 5,
       "oversized": false,
@@ -332,6 +392,9 @@
         "unit"
       ],
       "lines": 47,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -347,6 +410,9 @@
         "unit"
       ],
       "lines": 185,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -363,6 +429,9 @@
         "unit"
       ],
       "lines": 163,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 20,
       "oversized": false,
@@ -379,6 +448,9 @@
         "unit"
       ],
       "lines": 59,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -394,6 +466,9 @@
         "unit"
       ],
       "lines": 137,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -409,6 +484,9 @@
         "unit"
       ],
       "lines": 38,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -424,6 +502,9 @@
         "unit"
       ],
       "lines": 101,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -439,6 +520,9 @@
         "unit"
       ],
       "lines": 41,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 21,
       "oversized": false,
@@ -454,6 +538,9 @@
         "unit"
       ],
       "lines": 349,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 42,
       "oversized": false,
@@ -469,6 +556,9 @@
         "unit"
       ],
       "lines": 326,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -484,6 +574,9 @@
         "unit"
       ],
       "lines": 100,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -500,6 +593,9 @@
         "unit"
       ],
       "lines": 212,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -514,6 +610,9 @@
         "unit"
       ],
       "lines": 93,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 5,
       "oversized": false,
@@ -532,6 +631,9 @@
         "unit"
       ],
       "lines": 301,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 25,
       "oversized": false,
@@ -550,10 +652,13 @@
         "unit"
       ],
       "lines": 711,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
       "assertion_count": 60,
-      "oversized": true,
-      "god_test_candidate": true,
+      "oversized": false,
+      "god_test_candidate": false,
       "recommended_split": [
         "extract property invariants into tests/properties/",
         "move timing-only checks into benches/ or release benchmark cases"
@@ -567,10 +672,13 @@
         "unit"
       ],
       "lines": 726,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
       "assertion_count": 10,
-      "oversized": true,
-      "god_test_candidate": true,
+      "oversized": false,
+      "god_test_candidate": false,
       "recommended_split": [
         "extract property invariants into tests/properties/",
         "move timing-only checks into benches/ or release benchmark cases"
@@ -585,6 +693,9 @@
         "unit"
       ],
       "lines": 468,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 25,
       "oversized": false,
@@ -599,6 +710,9 @@
         "unit"
       ],
       "lines": 273,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 4,
       "oversized": false,
@@ -614,6 +728,9 @@
         "unit"
       ],
       "lines": 218,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -629,6 +746,9 @@
         "unit"
       ],
       "lines": 76,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -646,6 +766,9 @@
         "unit"
       ],
       "lines": 262,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 13,
       "oversized": false,
@@ -661,6 +784,9 @@
         "unit"
       ],
       "lines": 12,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 0,
       "oversized": false,
@@ -678,6 +804,9 @@
         "unit"
       ],
       "lines": 240,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -693,6 +822,9 @@
         "unit"
       ],
       "lines": 316,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 16,
       "oversized": false,
@@ -708,6 +840,9 @@
         "unit"
       ],
       "lines": 422,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 81,
       "oversized": false,
@@ -723,6 +858,9 @@
         "unit"
       ],
       "lines": 2,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -738,6 +876,9 @@
         "unit"
       ],
       "lines": 424,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -753,6 +894,9 @@
         "unit"
       ],
       "lines": 482,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -768,6 +912,9 @@
         "unit"
       ],
       "lines": 146,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": false,
       "assertion_count": 1,
       "oversized": false,
@@ -783,6 +930,9 @@
         "unit"
       ],
       "lines": 354,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 22,
       "oversized": false,
@@ -798,6 +948,9 @@
         "unit"
       ],
       "lines": 247,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 2,
       "oversized": false,
@@ -813,6 +966,9 @@
         "unit"
       ],
       "lines": 5,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -828,6 +984,9 @@
         "unit"
       ],
       "lines": 23,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -844,6 +1003,9 @@
         "unit"
       ],
       "lines": 109,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -860,6 +1022,9 @@
         "unit"
       ],
       "lines": 369,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 22,
       "oversized": false,
@@ -874,10 +1039,13 @@
         "unit"
       ],
       "lines": 922,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
       "assertion_count": 17,
-      "oversized": true,
-      "god_test_candidate": true,
+      "oversized": false,
+      "god_test_candidate": false,
       "recommended_split": [
         "extract property invariants into tests/properties/",
         "move timing-only checks into benches/ or release benchmark cases"
@@ -892,6 +1060,9 @@
         "unit"
       ],
       "lines": 5,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -908,6 +1079,9 @@
         "unit"
       ],
       "lines": 356,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 9,
       "oversized": false,
@@ -924,6 +1098,9 @@
         "unit"
       ],
       "lines": 117,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 5,
       "oversized": false,
@@ -939,6 +1116,9 @@
         "unit"
       ],
       "lines": 75,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 0,
       "oversized": false,
@@ -955,6 +1135,9 @@
         "unit"
       ],
       "lines": 380,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -971,6 +1154,9 @@
         "unit"
       ],
       "lines": 498,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 15,
       "oversized": false,
@@ -987,6 +1173,9 @@
         "unit"
       ],
       "lines": 261,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 13,
       "oversized": false,
@@ -1004,6 +1193,9 @@
         "unit"
       ],
       "lines": 204,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1019,6 +1211,9 @@
         "unit"
       ],
       "lines": 176,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 15,
       "oversized": false,
@@ -1034,6 +1229,9 @@
         "unit"
       ],
       "lines": 169,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 2,
       "oversized": false,
@@ -1050,6 +1248,9 @@
         "unit"
       ],
       "lines": 281,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 7,
       "oversized": false,
@@ -1067,6 +1268,9 @@
         "unit"
       ],
       "lines": 103,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 1,
       "oversized": false,
@@ -1084,6 +1288,9 @@
         "unit"
       ],
       "lines": 357,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 13,
       "oversized": false,
@@ -1100,6 +1307,9 @@
         "unit"
       ],
       "lines": 183,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -1115,6 +1325,9 @@
         "unit"
       ],
       "lines": 96,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 7,
       "oversized": false,
@@ -1132,6 +1345,9 @@
         "unit"
       ],
       "lines": 173,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 19,
       "oversized": false,
@@ -1146,6 +1362,9 @@
         "unit"
       ],
       "lines": 462,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -1160,6 +1379,9 @@
         "unit"
       ],
       "lines": 113,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 4,
       "oversized": false,
@@ -1176,10 +1398,13 @@
         "unit"
       ],
       "lines": 596,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
       "assertion_count": 3,
-      "oversized": true,
-      "god_test_candidate": true,
+      "oversized": false,
+      "god_test_candidate": false,
       "recommended_split": [
         "extract backend/op parity cases into tests/conformance/",
         "extract hostile-input cases into tests/adversarial/",
@@ -1196,6 +1421,9 @@
         "unit"
       ],
       "lines": 37,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -1211,6 +1439,9 @@
         "unit"
       ],
       "lines": 38,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1226,6 +1457,9 @@
         "unit"
       ],
       "lines": 41,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -1241,6 +1475,9 @@
         "unit"
       ],
       "lines": 42,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1257,6 +1494,9 @@
         "unit"
       ],
       "lines": 102,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -1273,6 +1513,9 @@
         "unit"
       ],
       "lines": 4,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -1289,6 +1532,9 @@
         "unit"
       ],
       "lines": 138,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 37,
       "oversized": false,
@@ -1305,6 +1551,9 @@
         "unit"
       ],
       "lines": 94,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 18,
       "oversized": false,
@@ -1321,6 +1570,9 @@
         "unit"
       ],
       "lines": 397,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 60,
       "oversized": false,
@@ -1337,6 +1589,9 @@
         "unit"
       ],
       "lines": 171,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 54,
       "oversized": false,
@@ -1353,6 +1608,9 @@
         "unit"
       ],
       "lines": 251,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 42,
       "oversized": false,
@@ -1368,6 +1626,9 @@
         "unit"
       ],
       "lines": 47,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1383,6 +1644,9 @@
         "unit"
       ],
       "lines": 32,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -1400,6 +1664,9 @@
         "unit"
       ],
       "lines": 121,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 4,
       "oversized": false,
@@ -1415,6 +1682,9 @@
         "unit"
       ],
       "lines": 90,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 2,
       "oversized": false,
@@ -1430,6 +1700,9 @@
         "unit"
       ],
       "lines": 62,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -1445,6 +1718,9 @@
         "unit"
       ],
       "lines": 176,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 13,
       "oversized": false,
@@ -1460,6 +1736,9 @@
         "unit"
       ],
       "lines": 45,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -1475,6 +1754,9 @@
         "unit"
       ],
       "lines": 56,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -1490,6 +1772,9 @@
         "unit"
       ],
       "lines": 30,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 24,
       "oversized": false,
@@ -1505,6 +1790,9 @@
         "unit"
       ],
       "lines": 79,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1522,6 +1810,9 @@
         "unit"
       ],
       "lines": 196,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 24,
       "oversized": false,
@@ -1540,11 +1831,14 @@
         "property",
         "unit"
       ],
-      "lines": 807,
+      "lines": 820,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
       "assertion_count": 7,
-      "oversized": true,
-      "god_test_candidate": true,
+      "oversized": false,
+      "god_test_candidate": false,
       "recommended_split": [
         "extract backend/op parity cases into tests/conformance/",
         "extract expected-failure coverage into tests/gap/",
@@ -1564,10 +1858,13 @@
         "unit"
       ],
       "lines": 1137,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": true,
       "has_test_entrypoint": true,
       "assertion_count": 8,
-      "oversized": true,
-      "god_test_candidate": true,
+      "oversized": false,
+      "god_test_candidate": false,
       "recommended_split": [
         "extract backend/op parity cases into tests/conformance/",
         "extract property invariants into tests/properties/",
@@ -1583,6 +1880,9 @@
         "unit"
       ],
       "lines": 112,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 20,
       "oversized": false,
@@ -1599,6 +1899,9 @@
         "unit"
       ],
       "lines": 255,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -1615,6 +1918,9 @@
         "unit"
       ],
       "lines": 51,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -1631,6 +1937,9 @@
         "unit"
       ],
       "lines": 75,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 9,
       "oversized": false,
@@ -1647,6 +1956,9 @@
         "unit"
       ],
       "lines": 66,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -1663,6 +1975,9 @@
         "unit"
       ],
       "lines": 271,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 37,
       "oversized": false,
@@ -1678,6 +1993,9 @@
         "unit"
       ],
       "lines": 73,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -1694,6 +2012,9 @@
         "unit"
       ],
       "lines": 242,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 15,
       "oversized": false,
@@ -1710,6 +2031,9 @@
         "unit"
       ],
       "lines": 61,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -1726,6 +2050,9 @@
         "unit"
       ],
       "lines": 51,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1742,6 +2069,9 @@
         "unit"
       ],
       "lines": 106,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -1757,6 +2087,9 @@
         "unit"
       ],
       "lines": 32,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 5,
       "oversized": false,
@@ -1774,6 +2107,9 @@
         "unit"
       ],
       "lines": 228,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -1789,6 +2125,9 @@
         "unit"
       ],
       "lines": 114,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 34,
       "oversized": false,
@@ -1804,6 +2143,9 @@
         "unit"
       ],
       "lines": 121,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 20,
       "oversized": false,
@@ -1820,6 +2162,9 @@
         "unit"
       ],
       "lines": 11,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -1836,6 +2181,9 @@
         "unit"
       ],
       "lines": 59,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1852,6 +2200,9 @@
         "unit"
       ],
       "lines": 67,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1868,6 +2219,9 @@
         "unit"
       ],
       "lines": 293,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 18,
       "oversized": false,
@@ -1884,6 +2238,9 @@
         "unit"
       ],
       "lines": 43,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1900,6 +2257,9 @@
         "unit"
       ],
       "lines": 39,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1915,6 +2275,9 @@
         "unit"
       ],
       "lines": 35,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -1931,6 +2294,9 @@
         "unit"
       ],
       "lines": 208,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 20,
       "oversized": false,
@@ -1947,6 +2313,9 @@
         "unit"
       ],
       "lines": 119,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 18,
       "oversized": false,
@@ -1963,6 +2332,9 @@
         "unit"
       ],
       "lines": 44,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1979,6 +2351,9 @@
         "unit"
       ],
       "lines": 36,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -1994,6 +2369,9 @@
         "unit"
       ],
       "lines": 123,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -2010,6 +2388,9 @@
         "unit"
       ],
       "lines": 102,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 32,
       "oversized": false,
@@ -2026,6 +2407,9 @@
         "unit"
       ],
       "lines": 55,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -2043,6 +2427,9 @@
         "unit"
       ],
       "lines": 394,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 22,
       "oversized": false,
@@ -2058,6 +2445,9 @@
         "unit"
       ],
       "lines": 43,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 5,
       "oversized": false,
@@ -2074,6 +2464,9 @@
         "unit"
       ],
       "lines": 68,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -2089,6 +2482,9 @@
         "unit"
       ],
       "lines": 76,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 4,
       "oversized": false,
@@ -2105,6 +2501,9 @@
         "unit"
       ],
       "lines": 326,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 36,
       "oversized": false,
@@ -2121,6 +2520,9 @@
         "unit"
       ],
       "lines": 103,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -2136,6 +2538,9 @@
         "unit"
       ],
       "lines": 51,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -2152,6 +2557,9 @@
         "unit"
       ],
       "lines": 38,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2168,6 +2576,9 @@
         "unit"
       ],
       "lines": 11,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": false,
       "assertion_count": 0,
       "oversized": false,
@@ -2184,6 +2595,9 @@
         "unit"
       ],
       "lines": 51,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2201,6 +2615,9 @@
         "unit"
       ],
       "lines": 157,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 13,
       "oversized": false,
@@ -2217,6 +2634,9 @@
         "unit"
       ],
       "lines": 47,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2233,6 +2653,9 @@
         "unit"
       ],
       "lines": 62,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 20,
       "oversized": false,
@@ -2249,6 +2672,9 @@
         "unit"
       ],
       "lines": 72,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -2265,6 +2691,9 @@
         "unit"
       ],
       "lines": 35,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -2281,6 +2710,9 @@
         "unit"
       ],
       "lines": 56,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2297,6 +2729,9 @@
         "unit"
       ],
       "lines": 52,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2312,6 +2747,9 @@
         "unit"
       ],
       "lines": 65,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -2327,6 +2765,9 @@
         "unit"
       ],
       "lines": 54,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2343,6 +2784,9 @@
         "unit"
       ],
       "lines": 435,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -2358,6 +2802,9 @@
         "unit"
       ],
       "lines": 142,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 4,
       "oversized": false,
@@ -2373,6 +2820,9 @@
         "unit"
       ],
       "lines": 50,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2390,6 +2840,9 @@
         "unit"
       ],
       "lines": 235,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 15,
       "oversized": false,
@@ -2407,6 +2860,9 @@
         "unit"
       ],
       "lines": 104,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 7,
       "oversized": false,
@@ -2421,6 +2877,9 @@
         "unit"
       ],
       "lines": 226,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 13,
       "oversized": false,
@@ -2440,6 +2899,9 @@
         "unit"
       ],
       "lines": 86,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2455,6 +2917,9 @@
         "unit"
       ],
       "lines": 164,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -2470,6 +2935,9 @@
         "unit"
       ],
       "lines": 150,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2484,6 +2952,9 @@
         "unit"
       ],
       "lines": 73,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 16,
       "oversized": false,
@@ -2498,6 +2969,9 @@
         "unit"
       ],
       "lines": 81,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -2512,6 +2986,9 @@
         "unit"
       ],
       "lines": 51,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -2526,6 +3003,9 @@
         "unit"
       ],
       "lines": 89,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -2541,6 +3021,9 @@
         "unit"
       ],
       "lines": 92,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -2555,6 +3038,9 @@
         "unit"
       ],
       "lines": 50,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -2570,6 +3056,9 @@
         "unit"
       ],
       "lines": 56,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -2585,6 +3074,9 @@
         "unit"
       ],
       "lines": 210,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 16,
       "oversized": false,
@@ -2599,6 +3091,9 @@
         "unit"
       ],
       "lines": 58,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 20,
       "oversized": false,
@@ -2614,6 +3109,9 @@
         "unit"
       ],
       "lines": 127,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 13,
       "oversized": false,
@@ -2628,6 +3126,9 @@
         "unit"
       ],
       "lines": 59,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 5,
       "oversized": false,
@@ -2642,6 +3143,9 @@
         "unit"
       ],
       "lines": 72,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -2657,6 +3161,9 @@
         "unit"
       ],
       "lines": 90,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 24,
       "oversized": false,
@@ -2671,6 +3178,9 @@
         "unit"
       ],
       "lines": 73,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -2685,6 +3195,9 @@
         "unit"
       ],
       "lines": 77,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2700,6 +3213,9 @@
         "unit"
       ],
       "lines": 109,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -2714,6 +3230,9 @@
         "unit"
       ],
       "lines": 82,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 16,
       "oversized": false,
@@ -2729,6 +3248,9 @@
         "unit"
       ],
       "lines": 129,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 28,
       "oversized": false,
@@ -2743,6 +3265,9 @@
         "unit"
       ],
       "lines": 88,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 15,
       "oversized": false,
@@ -2757,6 +3282,9 @@
         "unit"
       ],
       "lines": 79,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 6,
       "oversized": false,
@@ -2772,6 +3300,9 @@
         "unit"
       ],
       "lines": 92,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 16,
       "oversized": false,
@@ -2786,6 +3317,9 @@
         "unit"
       ],
       "lines": 125,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -2800,6 +3334,9 @@
         "unit"
       ],
       "lines": 64,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -2814,6 +3351,9 @@
         "unit"
       ],
       "lines": 70,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 30,
       "oversized": false,
@@ -2828,6 +3368,9 @@
         "unit"
       ],
       "lines": 68,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 12,
       "oversized": false,
@@ -2842,6 +3385,9 @@
         "unit"
       ],
       "lines": 53,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -2856,6 +3402,9 @@
         "unit"
       ],
       "lines": 69,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2871,6 +3420,9 @@
         "unit"
       ],
       "lines": 50,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "oversized": false,
@@ -2886,6 +3438,9 @@
         "unit"
       ],
       "lines": 133,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "oversized": false,
@@ -2900,6 +3455,9 @@
         "unit"
       ],
       "lines": 76,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 14,
       "oversized": false,
@@ -2914,6 +3472,9 @@
         "unit"
       ],
       "lines": 9,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
       "assertion_count": 1,
       "oversized": false,

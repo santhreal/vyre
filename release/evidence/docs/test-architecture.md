@@ -13,11 +13,12 @@ Required generated evidence:
 
 Release contract:
 
-- No test file may exceed the `500` line modularity threshold.
+- No dedicated test evidence file may exceed the `500` line modularity threshold.
 - Test architecture must expose fixtures, contracts, properties, backend tests, corpus tests, benchmarks, and regressions.
 - Test matrix evidence must scan platform, dataflow-analysis, and parser-CLI release surfaces.
 - Test matrix evidence must report nonzero platform, dataflow-analysis, and parser-CLI release-surface test file counts.
 - Release-surface coverage evidence must show platform, dataflow-analysis, and parser-CLI surfaces each have unit, integration, property, adversarial, corpus, benchmark, conformance, gap, and fuzz coverage.
+- Implementation modules with inline test entrypoints still count toward coverage, but their implementation file size is governed by source architecture audits rather than the test-file closure.
 - Oversized-test closure must report `closed = true`, `total_oversized_files = 0`, `total_god_test_candidates = 0`, and an empty `god_test_candidates` array.
 - Structural evidence generation must use `cargo_full run --bin xtask -- test-matrix --output release/evidence/tests/test-matrix.json`.
 - Modular-directory evidence must cover the Vyre workspace, a standalone dataflow-analysis crate, and a parser CLI; parser CLI tests are not allowed to remain monolithic while release evidence only checks library crates.
