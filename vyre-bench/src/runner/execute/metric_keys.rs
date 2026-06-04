@@ -121,6 +121,8 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         }
         ("", "dataflow_nodes") => Some("dataflow_nodes"),
         ("", "dataflow_bitset_words") => Some("dataflow_bitset_words"),
+        ("", "weir_nodes") => Some("weir_nodes"),
+        ("", "weir_bitset_words") => Some("weir_bitset_words"),
         ("", "dataflow_graph_nodes") => Some("dataflow_graph_nodes"),
         ("", "dataflow_graph_edges") => Some("dataflow_graph_edges"),
         ("", "dataflow_ifds_step") => Some("dataflow_ifds_step"),
@@ -562,6 +564,13 @@ mod tests {
             "dataflow_ifds_queue_fused_frontier_clear",
             "dataflow_ifds_queue_reset_grid_lanes",
         ] {
+            assert_eq!(custom_metric_key("", name), Some(name));
+        }
+    }
+
+    #[test]
+    fn custom_metric_key_keeps_weir_release_shape_metrics_visible() {
+        for name in ["weir_nodes", "weir_bitset_words"] {
             assert_eq!(custom_metric_key("", name), Some(name));
         }
     }

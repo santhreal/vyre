@@ -97,6 +97,7 @@ evidence = [
   "evidence/weir/weir-readme-contracts.json",
   "../../../../dataflow/weir/Cargo.toml",
   "evidence/optimization/weir-facts-pass-firing.json",
+  "evidence/benchmarks/dataflow-analysis-release.json",
   "evidence/benchmarks/weir-dataflow-release.json",
   "evidence/docs/weir-integration.md",
 ]

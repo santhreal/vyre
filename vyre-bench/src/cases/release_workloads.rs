@@ -2228,11 +2228,11 @@ fn add_release_alias_metrics(
     match pattern {
         SyntheticPattern::AliasReachingDef => {
             run.metrics.custom.push(MetricPoint {
-                name: "nodes".to_string(),
+                name: "weir_nodes".to_string(),
                 value: u64::from(records),
             });
             run.metrics.custom.push(MetricPoint {
-                name: "bitset_words".to_string(),
+                name: "weir_bitset_words".to_string(),
                 value: u64::from(records.div_ceil(32)),
             });
         }
@@ -2714,5 +2714,35 @@ mod tests {
                 "records={records} must scatter exactly the CPU oracle bitmap"
             );
         }
+    }
+
+    #[test]
+    fn alias_reaching_def_release_metrics_expose_weir_shape() {
+        let mut run = BenchRun {
+            metrics: BenchMetrics::default(),
+            baseline_metrics: None,
+            outputs: Vec::new(),
+            baseline_outputs: None,
+        };
+
+        add_release_alias_metrics(SyntheticPattern::AliasReachingDef, 65, 0, &mut run);
+
+        let metric = |name: &str| {
+            run.metrics
+                .custom
+                .iter()
+                .find(|point| point.name == name)
+                .map(|point| point.value)
+        };
+        assert_eq!(
+            metric("weir_nodes"),
+            Some(65),
+            "Fix: dataflow release evidence must expose the Weir node count under the gate-visible metric name."
+        );
+        assert_eq!(
+            metric("weir_bitset_words"),
+            Some(3),
+            "Fix: dataflow release evidence must expose ceil(nodes/32) bitset words under the gate-visible metric name."
+        );
     }
 }
