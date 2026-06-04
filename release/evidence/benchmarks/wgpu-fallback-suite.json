@@ -63,10 +63,10 @@
       "family_id": "string-bitmap-scatter",
       "requested_case_id": "release.string_bitmap_scatter.1m",
       "exists": true,
-      "bytes": 17403,
+      "bytes": 17421,
       "read_error": null,
-      "source_fingerprint": "git:5608672727b512ad62098b9048e960d9ac8f74cd:dirty=false",
-      "source_tree_fingerprint": "source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24",
+      "source_fingerprint": "git:d9af2ddcb86562111a50f0377761079032c647a7:dirty=false",
+      "source_tree_fingerprint": "source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502",
       "selected_backend": "wgpu",
       "host_cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
       "gpu_model": "NVIDIA GeForce RTX 5090",
@@ -83,19 +83,17 @@
       "failed_count": 0,
       "nonmatching_case_backend_count": 0,
       "min_wall_samples": 30,
-      "min_wall_p50": 1967048,
-      "min_wall_p95": 2451992,
-      "min_wall_p99": 2663532,
+      "min_wall_p50": 2469095,
+      "min_wall_p95": 2934363,
+      "min_wall_p99": 3079568,
       "min_baseline_wall_samples": 30,
-      "min_baseline_wall_p50": 5895574,
-      "min_baseline_wall_p95": 6202062,
-      "min_baseline_wall_p99": 6214395,
+      "min_baseline_wall_p50": 5969135,
+      "min_baseline_wall_p95": 6385921,
+      "min_baseline_wall_p99": 7077706,
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json",
@@ -643,7 +641,6 @@
     }
   ],
   "blockers": [
-    "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-04-metadata-conditions.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
     "backend `wgpu` release suite artifact `release/evidence/benchmarks/wgpu-workload-05-entropy-window.json`: source_tree_fingerprint `source-tree-v1:f2e2ed6fbf16e070ad2513abc68841b41e64007a785d827d03c68272f2512c24` does not match current workspace source `source-tree-v1:961a26fdcc05d59a076ba0c5bdcf33cf8d55723b60fc820214360dddd2a00502`",
