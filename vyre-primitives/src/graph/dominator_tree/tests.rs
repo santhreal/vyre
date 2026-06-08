@@ -10,6 +10,52 @@ fn program_builds_without_panic() {
 }
 
 #[test]
+fn program_exposes_chk_phases_as_child_regions() {
+    use vyre_foundation::ir::Node;
+
+    fn collect(nodes: &[Node], generators: &mut Vec<String>) {
+        for node in nodes {
+            match node {
+                Node::Region {
+                    generator,
+                    source_region,
+                    body,
+                } => {
+                    if source_region.is_some() {
+                        generators.push(generator.as_str().to_string());
+                    }
+                    collect(body.as_ref(), generators);
+                }
+                Node::Block(children) => collect(children, generators),
+                Node::If {
+                    then, otherwise, ..
+                } => {
+                    collect(then, generators);
+                    collect(otherwise, generators);
+                }
+                Node::Loop { body, .. } => collect(body, generators),
+                _ => {}
+            }
+        }
+    }
+
+    let p = dominator_tree_program(4, 4, 4, "idom");
+    let mut generators = Vec::new();
+    collect(p.entry(), &mut generators);
+
+    assert!(
+        generators.iter().any(|g| g == "vyre-primitives::graph::dominator_tree::init_state")
+            && generators
+                .iter()
+                .any(|g| g == "vyre-primitives::graph::dominator_tree::recompute_depth")
+            && generators.iter().any(|g| {
+                g == "vyre-primitives::graph::dominator_tree::intersect_predecessors"
+            }),
+        "Fix: dominator_tree must expose CHK initialization, depth recompute, and predecessor intersection as child regions so LegoGate and print-composition can see real phase boundaries: {generators:?}"
+    );
+}
+
+#[test]
 fn checked_builder_rejects_u32_max_node_count() {
     let err = try_dominator_tree_program(u32::MAX, 0, 0, "idom").unwrap_err();
     assert!(err.contains("u32::MAX collides with IDOM_NONE"));

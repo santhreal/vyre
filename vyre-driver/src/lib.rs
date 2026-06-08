@@ -77,6 +77,8 @@ pub mod diagnostics;
 pub mod dispatch_policy;
 /// Backend-neutral dispatch-shape comparison helpers.
 pub mod dispatch_shape;
+/// Backend-neutral evidence bundles and source provenance.
+pub mod evidence;
 /// Device-profile-aware extraction cost helpers (ROADMAP A7).
 pub mod extraction_cost;
 /// Backend-neutral fixpoint-iteration resolution.
@@ -213,12 +215,17 @@ pub use binding::{
 pub use device_extraction::{
     extract_best_for_device, extract_best_for_devices, DeviceExtraction, ExtractionDevice,
 };
-pub use device_profile::DeviceProfile;
+pub use device_profile::{DeviceProfile, DeviceTimingQuality};
 pub use device_signature::{DeviceSignature, DeviceSignatureTable};
 pub use diagnostics::{Diagnostic, DiagnosticCode, OpLocation, Severity};
 pub use dispatch_shape::{
     borrowed_input_batch_shapes_match, borrowed_input_shapes_match,
     dispatch_configs_share_launch_shape,
+};
+pub use evidence::{
+    capture_git_info, capture_git_info_at, source_fingerprint, source_tree_fingerprint,
+    source_tree_fingerprint_at, DispatchTimingEvidence, EvidenceArtifact, EvidenceBundle,
+    ReplayEvidence, SourceProvenance,
 };
 pub use error::Error;
 pub use fixpoint_iterations::{resolve_fixpoint_iterations, resolve_fixpoint_iterations_usize};
@@ -226,16 +233,18 @@ pub use launch::{program_vsa_fingerprint, program_vsa_fingerprint_words, LaunchP
 pub use pipeline::{
     compile, compile_owned, compile_owned_with_telemetry, compile_shared,
     compile_shared_with_telemetry, compile_with_telemetry, hex_encode, hex_short,
-    CompiledPipelineBuild, DiskPipelineCache, PipelineCacheKey, PipelineCacheSnapshot,
-    PipelineDeviceFingerprint, PipelineFeatureFlags, CURRENT_PIPELINE_CACHE_KEY_VERSION,
+    CompiledPipelineBuild, DiskPipelineCache, PipelineCacheIdentity, PipelineCacheKey,
+    PipelineCacheMissEvidence, PipelineCacheMissReason, PipelineCacheSnapshot, PipelineDeviceFingerprint,
+    PipelineFeatureFlags, CURRENT_PIPELINE_CACHE_KEY_VERSION,
 };
 pub use program_walks::{
-    coerce_to_pow2_with_tail_mask, dispatch_element_count, dispatch_param_words,
-    dispatch_param_words_into, element_size_bytes, enforce_actual_output_budget,
-    find_indirect_dispatch, infer_dispatch_grid, infer_dispatch_grid_for_count,
-    output_binding_layout, output_binding_layouts, output_layout_from_program,
-    try_coerce_to_pow2_with_tail_mask, try_dispatch_param_words, try_dispatch_param_words_into,
-    IndirectDispatch, OutputBindingLayout, OutputLayout, TailMaskPolicy,
+    coerce_to_pow2_with_tail_mask, dispatch_element_count, dispatch_element_count_for_program,
+    dispatch_param_words, dispatch_param_words_into, element_size_bytes,
+    enforce_actual_output_budget, find_indirect_dispatch, infer_dispatch_grid,
+    infer_dispatch_grid_for_count, output_binding_layout, output_binding_layouts,
+    output_layout_from_program, try_coerce_to_pow2_with_tail_mask, try_dispatch_param_words,
+    try_dispatch_param_words_into, IndirectDispatch, OutputBindingLayout, OutputLayout,
+    TailMaskPolicy,
 };
 pub use registry::{
     default_validator, intern_string, AttrSchema, AttrType, Category, Chain, Dialect,

@@ -9,7 +9,7 @@ use super::schedule::{
     is_latency_load, is_schedulable_pure_op, is_scheduling_fence, op_reads_operand,
     operand_is_immediate,
 };
-use super::BodyCtx;
+use super::{body_descendants_read_operand, BodyCtx};
 use crate::reg::PtxType;
 use crate::EmitError;
 
@@ -26,7 +26,8 @@ impl BodyCtx<'_> {
                 continue;
             }
             if let Some(chain) = self.collect_vec_load_chain(body, &facts, idx)? {
-                self.emit_vec_load_chain(body, &chain)?;
+                self.emit_vec_load_chain(body, &chain)
+                    .map_err(|error| emit_context_error(error, body, idx))?;
                 for &op_idx in chain.iter().skip(1) {
                     skip[op_idx] = true;
                 }
@@ -49,14 +50,16 @@ impl BodyCtx<'_> {
                         self.text,
                         "    // schedule: hoist independent op#{filler_idx} into vector-load gap after op#{idx}"
                     );
-                    self.emit_op(body, &body.ops[filler_idx])?;
+                    self.emit_op(body, &body.ops[filler_idx])
+                        .map_err(|error| emit_context_error(error, body, filler_idx))?;
                     skip[filler_idx] = true;
                 }
                 idx += 1;
                 continue;
             }
             if let Some(chain) = self.collect_vec_store_chain(body, &facts, idx)? {
-                self.emit_vec_store_chain(body, &chain)?;
+                self.emit_vec_store_chain(body, &chain)
+                    .map_err(|error| emit_context_error(error, body, idx))?;
                 for &op_idx in chain.iter().skip(1) {
                     skip[op_idx] = true;
                 }
@@ -69,11 +72,15 @@ impl BodyCtx<'_> {
                 idx += 1;
                 continue;
             }
-            if self.emit_integer_mad_from_add(body, &facts, &body.ops[idx])? {
+            if self
+                .emit_integer_mad_from_add(body, &facts, &body.ops[idx])
+                .map_err(|error| emit_context_error(error, body, idx))?
+            {
                 idx += 1;
                 continue;
             }
-            self.emit_op(body, &body.ops[idx])?;
+            self.emit_op(body, &body.ops[idx])
+                .map_err(|error| emit_context_error(error, body, idx))?;
             if is_latency_load(&body.ops[idx]) {
                 let blocked_results = body.ops[idx]
                     .result
@@ -93,7 +100,8 @@ impl BodyCtx<'_> {
                         self.text,
                         "    // schedule: hoist independent op#{filler_idx} into load-use gap after op#{idx}"
                     );
-                    self.emit_op(body, &body.ops[filler_idx])?;
+                    self.emit_op(body, &body.ops[filler_idx])
+                        .map_err(|error| emit_context_error(error, body, filler_idx))?;
                     skip[filler_idx] = true;
                 }
             }
@@ -175,6 +183,9 @@ impl BodyCtx<'_> {
         let Some(result) = op.result else {
             return false;
         };
+        if body_descendants_read_operand(body, result) {
+            return false;
+        }
         let consumer_idx = match facts.consumer_indices(result) {
             Some([idx]) => *idx,
             _ => return false,
@@ -191,6 +202,20 @@ impl BodyCtx<'_> {
         }
         let lhs = consumer.operands[0];
         let rhs = consumer.operands[1];
+        let other = if lhs == result { rhs } else { lhs };
+        if let Some(other_producer_idx) = facts.producer_idx(other) {
+            if other_producer_idx != op_idx {
+                if let Some(other_producer) = body.ops.get(other_producer_idx) {
+                    if matches!(other_producer.kind, KernelOpKind::BinOpKind(BinOp::Mul))
+                        && other_producer.result == Some(other)
+                        && facts.consumer_indices(other) == Some(&[consumer_idx][..])
+                        && other_producer_idx < op_idx
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
         self.structural_integer_mad_type(body, facts, lhs, rhs)
             .is_some()
             || self
@@ -373,4 +398,40 @@ impl BodyCtx<'_> {
             _ => None,
         }
     }
+}
+
+fn emit_context_error(error: EmitError, body: &KernelBody, op_idx: usize) -> EmitError {
+    let Some(op) = body.ops.get(op_idx) else {
+        return error;
+    };
+    match error {
+        EmitError::InvalidDescriptor(message) => EmitError::InvalidDescriptor(format!(
+            "{message}; while emitting op#{op_idx} kind={:?} operands={:?} result={:?} producers={}",
+            op.kind,
+            op.operands,
+            op.result,
+            operand_producer_summary(body, op)
+        )),
+        other => other,
+    }
+}
+
+fn operand_producer_summary(body: &KernelBody, op: &KernelOp) -> String {
+    let mut parts = Vec::with_capacity(op.operands.len());
+    for (pos, operand) in op.operands.iter().copied().enumerate() {
+        let producer = body
+            .ops
+            .iter()
+            .enumerate()
+            .find(|(_, candidate)| candidate.result_ids().any(|result| result == operand));
+        if let Some((producer_idx, producer_op)) = producer {
+            parts.push(format!(
+                "#{pos}:{operand}->op#{producer_idx}:{:?}",
+                producer_op.kind
+            ));
+        } else {
+            parts.push(format!("#{pos}:{operand}->external"));
+        }
+    }
+    parts.join(",")
 }

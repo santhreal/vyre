@@ -28,6 +28,30 @@ fn test_result_schema_fields() {
     assert!(parsed["schema"].is_string(), "schema field must be present");
     assert!(parsed["run_id"].is_string(), "run_id field must be present");
     assert!(parsed["suite"].is_string(), "suite field must be present");
+    assert!(
+        parsed["backend_profile"].is_object(),
+        "backend_profile field must be populated by benchmark execution"
+    );
+    assert!(
+        parsed["backend_profile"]["backend"].is_string(),
+        "backend_profile.backend must be present"
+    );
+    assert!(
+        parsed["backend_profile"]["timing_quality"].is_string(),
+        "backend_profile.timing_quality must be present"
+    );
+    assert!(
+        parsed["backend_profile"]["supports_device_timestamps"].is_boolean(),
+        "backend_profile.supports_device_timestamps must be present"
+    );
+    assert!(
+        parsed["backend_profile"]["supports_hardware_counters"].is_boolean(),
+        "backend_profile.supports_hardware_counters must be present"
+    );
+    assert!(
+        parsed["backend_profile"]["max_workgroup_size"].is_array(),
+        "backend_profile.max_workgroup_size must be present"
+    );
     assert!(parsed["git"].is_object(), "git field must be present");
     assert!(
         parsed["source_fingerprint"].is_string(),

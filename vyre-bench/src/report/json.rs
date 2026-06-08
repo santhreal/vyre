@@ -12,6 +12,8 @@ pub struct ReportSchema {
     pub suite: String,
     #[serde(default)]
     pub selected_backend: Option<String>,
+    #[serde(default)]
+    pub backend_profile: Option<ReportBackendProfile>,
     pub git: BTreeMap<String, String>,
     #[serde(default)]
     pub source_fingerprint: String,
@@ -23,6 +25,52 @@ pub struct ReportSchema {
     pub summary: ReportSummary,
     #[serde(default)]
     pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ReportBackendProfile {
+    pub backend: String,
+    pub timing_quality: String,
+    pub supports_device_timestamps: bool,
+    pub supports_hardware_counters: bool,
+    pub supports_subgroup_ops: bool,
+    pub supports_indirect_dispatch: bool,
+    pub max_workgroup_size: [u32; 3],
+    pub max_invocations_per_workgroup: u32,
+    pub max_shared_memory_bytes: u32,
+    pub max_storage_buffer_binding_size: u64,
+    pub subgroup_size: u32,
+    pub compute_units: u32,
+    pub mem_bw_gbps: u32,
+}
+
+impl ReportBackendProfile {
+    #[must_use]
+    pub fn from_device_profile(profile: vyre_driver::DeviceProfile) -> Self {
+        Self {
+            backend: profile.backend.to_string(),
+            timing_quality: profile.timing_quality.as_str().to_string(),
+            supports_device_timestamps: profile.supports_device_timestamps,
+            supports_hardware_counters: profile.supports_hardware_counters,
+            supports_subgroup_ops: profile.supports_subgroup_ops,
+            supports_indirect_dispatch: profile.supports_indirect_dispatch,
+            max_workgroup_size: profile.max_workgroup_size,
+            max_invocations_per_workgroup: profile.max_invocations_per_workgroup,
+            max_shared_memory_bytes: profile.max_shared_memory_bytes,
+            max_storage_buffer_binding_size: profile.max_storage_buffer_binding_size,
+            subgroup_size: profile.subgroup_size,
+            compute_units: profile.compute_units,
+            mem_bw_gbps: profile.mem_bw_gbps,
+        }
+    }
+
+    #[must_use]
+    pub fn has_valid_timing_quality(&self) -> bool {
+        matches!(
+            self.timing_quality.as_str(),
+            "host_only" | "host_enqueue_wait" | "device_timestamps" | "hardware_counters"
+        )
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -146,6 +194,57 @@ impl ReportSchema {
         Ok(())
     }
 
+    pub fn validate_backend_profile_evidence(
+        &self,
+        expected_backend: Option<&str>,
+    ) -> Result<(), String> {
+        let expected_backend = expected_backend.or(self.selected_backend.as_deref());
+        if let Some(expected_backend) = expected_backend {
+            let profile = self.backend_profile.as_ref().ok_or_else(|| {
+                format!(
+                    "report for backend `{expected_backend}` lacks backend_profile. Fix: regenerate the benchmark report with a current vyre-bench binary so backend profile and timing-quality evidence are recorded."
+                )
+            })?;
+            if profile.backend != expected_backend {
+                return Err(format!(
+                    "backend_profile.backend `{}` contradicts expected backend `{expected_backend}`. Fix: regenerate the report from the selected backend instead of editing JSON by hand.",
+                    profile.backend
+                ));
+            }
+        }
+        if let Some(selected_backend) = self.selected_backend.as_deref() {
+            if let Some(profile) = self.backend_profile.as_ref() {
+                if profile.backend != selected_backend {
+                    return Err(format!(
+                        "backend_profile.backend `{}` contradicts selected_backend `{selected_backend}`. Fix: regenerate the benchmark report from one backend acquisition path.",
+                        profile.backend
+                    ));
+                }
+            }
+        }
+        if let Some(profile) = self.backend_profile.as_ref() {
+            if !profile.has_valid_timing_quality() {
+                return Err(format!(
+                    "backend_profile.timing_quality `{}` is not a stable timing-quality value. Fix: use DeviceTimingQuality::as_str() when generating reports.",
+                    profile.timing_quality
+                ));
+            }
+            if profile.max_workgroup_size.contains(&0) {
+                return Err(format!(
+                    "backend_profile.max_workgroup_size {:?} contains zero. Fix: report conservative nonzero dispatch limits for benchmark evidence.",
+                    profile.max_workgroup_size
+                ));
+            }
+            if profile.max_invocations_per_workgroup == 0 {
+                return Err(
+                    "backend_profile.max_invocations_per_workgroup is zero. Fix: report a conservative nonzero invocation limit for benchmark evidence."
+                        .to_string(),
+                );
+            }
+        }
+        Ok(())
+    }
+
     pub fn derived_blockers(&self) -> Vec<String> {
         self.cases
             .iter()
@@ -200,6 +299,29 @@ mod tests {
                 vec!["speedup below release floor".to_string()]
             },
         }
+    }
+
+    #[test]
+    fn backend_profile_projects_timing_quality_for_reports() {
+        let mut profile = vyre_driver::DeviceProfile::conservative("metal");
+        profile.timing_quality = vyre_driver::DeviceTimingQuality::HostEnqueueWait;
+        profile.supports_device_timestamps = false;
+        profile.supports_hardware_counters = false;
+        profile.supports_subgroup_ops = true;
+        profile.max_workgroup_size = [1024, 1, 1];
+        profile.max_invocations_per_workgroup = 1024;
+        profile.max_storage_buffer_binding_size = 1 << 30;
+
+        let report_profile = ReportBackendProfile::from_device_profile(profile);
+
+        assert_eq!(report_profile.backend, "metal");
+        assert_eq!(report_profile.timing_quality, "host_enqueue_wait");
+        assert!(!report_profile.supports_device_timestamps);
+        assert!(!report_profile.supports_hardware_counters);
+        assert!(report_profile.supports_subgroup_ops);
+        assert_eq!(report_profile.max_workgroup_size, [1024, 1, 1]);
+        assert_eq!(report_profile.max_invocations_per_workgroup, 1024);
+        assert_eq!(report_profile.max_storage_buffer_binding_size, 1 << 30);
     }
 
     #[test]

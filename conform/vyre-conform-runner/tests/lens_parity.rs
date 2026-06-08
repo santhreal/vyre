@@ -13,6 +13,8 @@ use vyre_conform_runner::lens::{self, LensOutcome};
 use vyre::VyreBackend;
 
 #[cfg(feature = "gpu")]
+use vyre_driver_metal as _;
+#[cfg(feature = "gpu")]
 use vyre_driver_wgpu as _;
 
 fn report(op_id: &str, lens_name: &'static str, outcome: LensOutcome, failures: &mut Vec<String>) {
@@ -172,7 +174,7 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
     }
 
     fn sin_inputs() -> Vec<Vec<Vec<u8>>> {
-        vec![vec![vec![0u8; 4]]]
+        vec![vec![]]
     }
 
     let entry = vyre_libs::harness::OpEntry {
@@ -192,9 +194,18 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
 }
 
 fn build_dispatch_backend() -> Box<dyn VyreBackend> {
+    force_link_backend_inventory();
+    let selected = std::env::var("VYRE_BACKEND")
+        .ok()
+        .filter(|value| !value.trim().is_empty());
     let registration = vyre::backend::registered_backends()
         .iter()
-        .find(|r| vyre::backend::backend_dispatches(r.id))
+        .find(|r| {
+            vyre::backend::backend_dispatches(r.id)
+                && selected
+                    .as_deref()
+                    .map_or(true, |backend| r.id == backend)
+        })
         .expect(
             "Fix: a dispatch-capable backend must be registered for convergence lens. \
              Link a concrete driver crate into the test binary.",
@@ -205,4 +216,13 @@ fn build_dispatch_backend() -> Box<dyn VyreBackend> {
             registration.id
         )
     })
+}
+
+fn force_link_backend_inventory() {
+    #[cfg(feature = "gpu")]
+    {
+        let metal_acquire: fn() -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
+            vyre_driver_metal::acquire;
+        std::hint::black_box(metal_acquire);
+    }
 }

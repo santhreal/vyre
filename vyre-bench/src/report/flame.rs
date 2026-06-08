@@ -197,6 +197,7 @@ mod tests {
             run_id: "test".to_string(),
             suite: "flame_test".to_string(),
             selected_backend: Some("test".to_string()),
+            backend_profile: None,
             git: BTreeMap::new(),
             source_fingerprint: "test-source".to_string(),
             source_tree_fingerprint: "test-source-tree".to_string(),

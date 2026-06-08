@@ -3,6 +3,7 @@
 use rustc_hash::FxHashMap;
 use std::collections::HashSet;
 use std::sync::OnceLock;
+use std::time::Instant;
 use vyre_foundation::ir::OpId;
 
 use super::inventory_streams::{
@@ -10,6 +11,7 @@ use super::inventory_streams::{
 };
 use crate::allocation::{reserve_hash_map_to_capacity, reserve_vec_to_capacity};
 use crate::backend::{default_supported_ops, BackendError, VyreBackend};
+use crate::{DeviceProfile, DeviceTimingQuality};
 
 enum CacheState<T> {
     Ready(T),
@@ -235,6 +237,14 @@ pub fn acquire_preferred_dispatch_backend() -> Result<Box<dyn VyreBackend>, Back
         "reference-skip slot",
         "reduce linked backend inventory or request a backend by id",
     )?;
+    let mut candidates = Vec::new();
+    reserve_vec_to_capacity(
+        &mut candidates,
+        registrations.len(),
+        "preferred backend acquisition",
+        "selection candidate slot",
+        "reduce linked backend inventory or request a backend by id",
+    )?;
     for registration in registrations {
         if !backend_dispatches_result(registration.id)? {
             continue;
@@ -243,8 +253,20 @@ pub fn acquire_preferred_dispatch_backend() -> Result<Box<dyn VyreBackend>, Back
             skipped_reference_oracles.push(registration.id);
             continue;
         }
+        let started = Instant::now();
         match registration.acquire() {
-            Ok(backend) => return Ok(backend),
+            Ok(backend) => {
+                let profile = backend.device_profile();
+                let facts = BackendSelectionFacts {
+                    id: registration.id,
+                    precedence: backend_precedence_result(registration.id)?,
+                    capability_score: backend_capability_score(profile),
+                    timing_quality_score: timing_quality_score(profile.timing_quality),
+                    memory_bandwidth_gbps: profile.mem_bw_gbps,
+                    acquisition_ns: elapsed_ns_saturating(started),
+                };
+                candidates.push(PreferredBackendCandidate { facts, backend });
+            }
             Err(error) => {
                 tracing::trace!(
                     "acquire_preferred_dispatch_backend: failed to initialize backend `{}`: {}",
@@ -254,6 +276,19 @@ pub fn acquire_preferred_dispatch_backend() -> Result<Box<dyn VyreBackend>, Back
                 failures.push(format!("{}: {error}", registration.id))
             }
         }
+    }
+    if !candidates.is_empty() {
+        candidates.sort_unstable_by(|left, right| compare_backend_selection_facts(left.facts, right.facts));
+        let selected = candidates.remove(0);
+        tracing::trace!(
+            "acquire_preferred_dispatch_backend: selected backend `{}` with capability_score={} timing_quality_score={} precedence={} acquisition_ns={}",
+            selected.facts.id,
+            selected.facts.capability_score,
+            selected.facts.timing_quality_score,
+            selected.facts.precedence,
+            selected.facts.acquisition_ns
+        );
+        return Ok(selected.backend);
     }
     let detail = if !failures.is_empty() {
         failures.join("; ")
@@ -268,6 +303,92 @@ pub fn acquire_preferred_dispatch_backend() -> Result<Box<dyn VyreBackend>, Back
     Err(BackendError::new(format!(
         "no usable GPU dispatch backend is available ({detail}). Fix: link a dispatch-capable GPU backend driver crate and repair the GPU driver probe; the CPU reference backend is explicit conformance-oracle infrastructure only."
     )))
+}
+
+struct PreferredBackendCandidate {
+    facts: BackendSelectionFacts,
+    backend: Box<dyn VyreBackend>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct BackendSelectionFacts {
+    id: &'static str,
+    precedence: u32,
+    capability_score: u32,
+    timing_quality_score: u32,
+    memory_bandwidth_gbps: u32,
+    acquisition_ns: u64,
+}
+
+fn compare_backend_selection_facts(
+    left: BackendSelectionFacts,
+    right: BackendSelectionFacts,
+) -> std::cmp::Ordering {
+    right
+        .capability_score
+        .cmp(&left.capability_score)
+        .then_with(|| right.timing_quality_score.cmp(&left.timing_quality_score))
+        .then_with(|| right.memory_bandwidth_gbps.cmp(&left.memory_bandwidth_gbps))
+        .then_with(|| left.precedence.cmp(&right.precedence))
+        .then_with(|| left.acquisition_ns.cmp(&right.acquisition_ns))
+        .then_with(|| left.id.cmp(right.id))
+}
+
+fn backend_capability_score(profile: DeviceProfile) -> u32 {
+    let mut score = 0_u32;
+    if profile.max_storage_buffer_binding_size > 0 {
+        score += 16;
+    }
+    if profile.max_invocations_per_workgroup >= 64 {
+        score += 8;
+    }
+    if profile.max_invocations_per_workgroup >= 256 {
+        score += 4;
+    }
+    if profile.subgroup_size > 0 {
+        score += 8;
+    }
+    if profile.supports_subgroup_ops {
+        score += 8;
+    }
+    if profile.has_subgroup_shuffle {
+        score += 4;
+    }
+    if profile.has_shared_memory {
+        score += 4;
+    }
+    if profile.supports_f16 {
+        score += 2;
+    }
+    if profile.supports_bf16 {
+        score += 2;
+    }
+    if profile.supports_tensor_cores {
+        score += 4;
+    }
+    if profile.supports_indirect_dispatch {
+        score += 2;
+    }
+    if profile.supports_device_timestamps {
+        score += 2;
+    }
+    if profile.supports_hardware_counters {
+        score += 2;
+    }
+    score
+}
+
+fn timing_quality_score(quality: DeviceTimingQuality) -> u32 {
+    match quality {
+        DeviceTimingQuality::HostOnly => 0,
+        DeviceTimingQuality::HostEnqueueWait => 1,
+        DeviceTimingQuality::DeviceTimestamps => 2,
+        DeviceTimingQuality::HardwareCounters => 3,
+    }
+}
+
+fn elapsed_ns_saturating(started: Instant) -> u64 {
+    u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX)
 }
 
 fn is_reference_oracle_backend(id: &str) -> bool {
@@ -302,5 +423,77 @@ mod tests {
             Ok(registration) => assert!(registration.is_none()),
             Err(error) => panic!("registry id query failed: {error}"),
         }
+    }
+
+    #[test]
+    fn preferred_selection_uses_typed_capability_before_precedence() {
+        let weak_low_rank = BackendSelectionFacts {
+            id: "low-rank",
+            precedence: 1,
+            capability_score: 1,
+            timing_quality_score: 0,
+            memory_bandwidth_gbps: 0,
+            acquisition_ns: 10,
+        };
+        let strong_high_rank = BackendSelectionFacts {
+            id: "high-rank",
+            precedence: 50,
+            capability_score: 2,
+            timing_quality_score: 0,
+            memory_bandwidth_gbps: 0,
+            acquisition_ns: 10,
+        };
+
+        assert_eq!(
+            compare_backend_selection_facts(strong_high_rank, weak_low_rank),
+            std::cmp::Ordering::Less,
+            "Fix: implicit backend selection must prefer typed capability evidence before falling back to BackendPrecedence rank."
+        );
+    }
+
+    #[test]
+    fn preferred_selection_uses_measured_acquisition_cost_as_tie_breaker() {
+        let faster = BackendSelectionFacts {
+            id: "faster",
+            precedence: 10,
+            capability_score: 8,
+            timing_quality_score: 1,
+            memory_bandwidth_gbps: 100,
+            acquisition_ns: 5,
+        };
+        let slower = BackendSelectionFacts {
+            id: "slower",
+            acquisition_ns: 50,
+            ..faster
+        };
+
+        assert_eq!(
+            compare_backend_selection_facts(faster, slower),
+            std::cmp::Ordering::Less,
+            "Fix: implicit backend selection must use measured acquisition cost once typed capability and precedence facts tie."
+        );
+    }
+
+    #[test]
+    fn preferred_selection_keeps_precedence_as_tie_breaker() {
+        let higher_precedence = BackendSelectionFacts {
+            id: "rank-a",
+            precedence: 5,
+            capability_score: 8,
+            timing_quality_score: 1,
+            memory_bandwidth_gbps: 100,
+            acquisition_ns: 5,
+        };
+        let lower_precedence = BackendSelectionFacts {
+            id: "rank-b",
+            precedence: 10,
+            ..higher_precedence
+        };
+
+        assert_eq!(
+            compare_backend_selection_facts(higher_precedence, lower_precedence),
+            std::cmp::Ordering::Less,
+            "Fix: BackendPrecedence must remain the deterministic tie-breaker after typed capability facts."
+        );
     }
 }

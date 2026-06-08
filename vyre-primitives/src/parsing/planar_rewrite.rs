@@ -79,13 +79,6 @@ pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k
     let body = vec![Node::if_then(
         Expr::eq(t.clone(), Expr::u32(0)),
         vec![
-            // Initialize chosen to all 0s (caller may not have).
-            Node::loop_for(
-                "init",
-                Expr::u32(0),
-                Expr::u32(cells),
-                vec![Node::store(chosen, Expr::var("init"), Expr::u32(0))],
-            ),
             Node::loop_for(
                 "r",
                 Expr::u32(0),
@@ -99,6 +92,7 @@ pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k
                             "addr",
                             Expr::add(Expr::mul(Expr::var("r"), Expr::u32(w)), Expr::var("c")),
                         ),
+                        Node::store(chosen, Expr::var("addr"), Expr::u32(0)),
                         Node::if_then(
                             Expr::ne(Expr::load(candidates, Expr::var("addr")), Expr::u32(0)),
                             vec![

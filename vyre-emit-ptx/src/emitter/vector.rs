@@ -8,7 +8,7 @@ use super::facts::EmitFacts;
 use super::format::{is_ptx_vectorizable_dtype, write_reg_tuple};
 use super::operands::{read_store_operands, read_two_operands};
 use super::schedule::{is_schedulable_pure_op, is_scheduling_fence};
-use super::BodyCtx;
+use super::{body_descendants_read_operand, BodyCtx};
 use crate::reg::PtxType;
 use crate::EmitError;
 
@@ -289,6 +289,9 @@ impl BodyCtx<'_> {
             let Some(result_id) = body.ops[producer_idx].result else {
                 continue;
             };
+            if body_descendants_read_operand(body, result_id) {
+                continue;
+            }
             let consumers = facts.consumer_indices(result_id).unwrap_or(&[]);
             if consumers.iter().all(|consumer_idx| {
                 chain.contains(consumer_idx)

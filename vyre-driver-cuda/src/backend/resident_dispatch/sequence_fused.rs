@@ -234,6 +234,27 @@ impl CudaBackend {
             0,
         )?;
         let mut readback_host_transfers: Option<HostTransferAllocations> = None;
+        // Device active-time capture for the resident sequence. CUDA timing
+        // events bracket the kernel launches so telemetry can separate kernel
+        // device time from host enqueue/readback overhead in the wall window.
+        // Timing is best-effort observability: an exhausted event pool degrades
+        // to host-wall-only and must never fail the dispatch itself.
+        let dispatch_wall_started = std::time::Instant::now();
+        let has_launch_work = !prefix_step_indices.is_empty()
+            || (repeat_count != 0 && !repeated_step_indices.is_empty());
+        let timing_events = if has_launch_work {
+            match self.launch_resources.acquire_timing_event_pair() {
+                Ok(pair) => Some(pair),
+                Err(error) => {
+                    tracing::debug!(
+                        "[cuda-trace] resident sequence device timing disabled (event pool exhausted): {error}"
+                    );
+                    None
+                }
+            }
+        } else {
+            None
+        };
         let result = (|| {
             let mut sequence_view_cache = ResidentViewCache::new();
             reserve_smallvec(
@@ -399,6 +420,9 @@ impl CudaBackend {
                 Ok(())
             };
 
+            if let Some((start_event, _)) = timing_events.as_ref() {
+                start_event.record(stream.raw())?;
+            }
             for &step_index in &prefix_step_indices {
                 launch_resolved_step(step_index)?;
             }
@@ -406,6 +430,9 @@ impl CudaBackend {
                 for &step_index in &repeated_step_indices {
                     launch_resolved_step(step_index)?;
                 }
+            }
+            if let Some((_, end_event)) = timing_events.as_ref() {
+                end_event.record(stream.raw())?;
             }
             let mut requested_readbacks = SmallVec::<[ResidentReadbackCopy; 8]>::new();
             reserve_smallvec(
@@ -535,6 +562,33 @@ impl CudaBackend {
             );
             Ok(())
         })();
+        // On the success path the closure synchronized the stream before
+        // returning, so both timing events are recorded and complete; read the
+        // device interval and record it. A timing-read failure is logged and
+        // dropped — observability never converts a successful scan into an error.
+        if result.is_ok() {
+            if let Some((start_event, end_event)) = timing_events.as_ref() {
+                let timing = crate::numeric::CUDA_NUMERIC
+                    .elapsed_nanos_u64(
+                        dispatch_wall_started,
+                        "resident sequence dispatch wall latency",
+                    )
+                    .and_then(|wall_ns| {
+                        start_event
+                            .elapsed_time_ns(end_event)
+                            .map(|device_ns| (wall_ns, device_ns))
+                    });
+                match timing {
+                    Ok((wall_ns, device_ns)) => {
+                        self.telemetry
+                            .record_timed_dispatch(wall_ns, Some(device_ns), None, None);
+                    }
+                    Err(error) => tracing::debug!(
+                        "[cuda-trace] resident sequence device timing unavailable: {error}"
+                    ),
+                }
+            }
+        }
         if result.is_err() {
             match stream.synchronize() {
                 Ok(()) => self.telemetry.record_sync_point(),
@@ -548,9 +602,17 @@ impl CudaBackend {
                     std::mem::forget(host_transfers);
                     std::mem::forget(upload_host_transfers);
                     std::mem::forget(readback_host_transfers);
+                    // The stream failed to synchronize, so its recorded timing
+                    // events may still be referenced by in-flight work; forget
+                    // them with the other resources instead of recycling.
+                    std::mem::forget(timing_events);
                     return result;
                 }
             }
+        }
+        if let Some((start_event, end_event)) = timing_events {
+            self.launch_resources.release_timing_event(start_event);
+            self.launch_resources.release_timing_event(end_event);
         }
         self.launch_resources.release_stream(stream);
         drop(resident_use);

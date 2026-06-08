@@ -37,6 +37,7 @@ vyre-driver-spirv.workspace = true
 vyre-frontend-c.workspace = true
 vyre-lints.workspace = true
 vyre-lower.workspace = true
+vyre-emit-metal.workspace = true
 inventory.workspace = true
 toml.workspace = true
 syn = { workspace = true, features = ["full", "visit"] }

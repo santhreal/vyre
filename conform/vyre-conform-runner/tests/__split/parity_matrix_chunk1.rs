@@ -25,6 +25,8 @@ use vyre_spec::expr_variants;
 #[cfg(feature = "gpu")]
 use vyre_driver_cuda as _;
 #[cfg(feature = "gpu")]
+use vyre_driver_metal as _;
+#[cfg(feature = "gpu")]
 use vyre_driver_wgpu as _;
 use vyre_intrinsics as _;
 use vyre_libs as _;
@@ -696,8 +698,17 @@ fn parity_matrix_across_all_registered_ops() {
 }
 
 fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
+    force_link_backend_inventory();
+    let selected = env::var("VYRE_BACKEND")
+        .ok()
+        .filter(|value| !value.trim().is_empty());
     let mut registrations: Vec<&BackendRegistration> =
         registered_backends().iter().copied().collect();
+    registrations.retain(|registration| {
+        selected
+            .as_deref()
+            .map_or(true, |backend| registration.id == backend)
+    });
     registrations.sort_by(|left, right| left.id.cmp(right.id));
     summary.backends_linked = registrations.len() + 1;
 
@@ -730,6 +741,15 @@ fn build_backend_runner(registration: &BackendRegistration) -> Option<BackendRun
             "Fix: registered dispatch backend `{}` failed its factory probe in the strict parity matrix: {error}",
             registration.id
         ),
+    }
+}
+
+fn force_link_backend_inventory() {
+    #[cfg(feature = "gpu")]
+    {
+        let metal_acquire: fn() -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
+            vyre_driver_metal::acquire;
+        std::hint::black_box(metal_acquire);
     }
 }
 

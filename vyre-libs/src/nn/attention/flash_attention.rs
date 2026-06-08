@@ -100,17 +100,6 @@ pub fn flash_attention(
         // the rest of the codebase already uses), l = 0.
         Node::let_bind("flash_m", Expr::f32(f32::MIN)),
         Node::let_bind("flash_l", Expr::f32(0.0)),
-        // Zero the per-row scratch o[d].
-        Node::loop_for(
-            "init_t",
-            Expr::u32(0),
-            Expr::u32(d),
-            vec![Node::store(
-                "flash_o",
-                scratch_index(Expr::var("init_t")),
-                Expr::f32(0.0),
-            )],
-        ),
         // For each j in [0, s) update (m, l, o). Wrapped in a Region
         // marked with `source_region: Some(...)` so the structural
         // discipline gate treats the j/k_idx/t loop nest as a child
@@ -211,7 +200,11 @@ pub fn flash_attention(
                         Expr::add(
                             Expr::mul(
                                 Expr::var("flash_rescale"),
-                                Expr::load("flash_o", scratch_index(Expr::var("t"))),
+                                Expr::select(
+                                    Expr::eq(Expr::var("j"), Expr::u32(0)),
+                                    Expr::f32(0.0),
+                                    Expr::load("flash_o", scratch_index(Expr::var("t"))),
+                                ),
                             ),
                             Expr::mul(
                                 Expr::var("flash_prob"),

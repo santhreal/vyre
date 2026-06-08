@@ -233,6 +233,13 @@ pub mod direct_gpu;
 #[cfg(feature = "matching-nfa")]
 pub mod mega_scan;
 
+/// Resident-buffer dispatch session for [`mega_scan::RulePipeline`]. Uploads the
+/// immutable NFA transition/epsilon tables into backend-resident resources once,
+/// so repeated scans transfer only the haystack instead of re-uploading the
+/// multi-MiB tables on every dispatch (the borrowed `RulePipeline::scan` cost).
+#[cfg(feature = "matching-nfa")]
+pub mod resident;
+
 /// Regex AST → NfaPlan frontend. Lowers a regex string into the same
 /// `(NfaPlan, transition_table, epsilon_table)` triple that
 /// [`nfa::compile`] produces for literals, so every downstream component
@@ -272,6 +279,8 @@ pub use literal_set::{
 };
 #[cfg(feature = "matching-nfa")]
 pub use mega_scan::{build as build_rule_pipeline, PipelineWireError, RulePipeline};
+#[cfg(feature = "matching-nfa")]
+pub use resident::ResidentRulePipeline;
 pub use pipeline::{Pipeline, PostProcessFn};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use post_process::{

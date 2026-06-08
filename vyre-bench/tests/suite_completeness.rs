@@ -46,6 +46,7 @@ fn test_suite_completeness() {
         run_id: "test".to_string(),
         suite: "smoke".to_string(),
         selected_backend: Some("test".to_string()),
+        backend_profile: None,
         git: std::collections::BTreeMap::new(),
         source_fingerprint: "test-source".to_string(),
         source_tree_fingerprint: "test-source-tree".to_string(),

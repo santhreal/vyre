@@ -105,7 +105,7 @@ impl BodyCtx<'_> {
 
     pub(super) fn emit_store_value(
         &mut self,
-        guard: Option<(&str, Reg)>,
+        guard: Option<(String, Reg)>,
         address: MemAddress,
         element_type: &DataType,
         value_reg: Reg,
@@ -175,7 +175,7 @@ impl BodyCtx<'_> {
 
     fn emit_raw_store(
         &mut self,
-        guard: Option<(&str, Reg)>,
+        guard: Option<(String, Reg)>,
         address: MemAddress,
         ptx_type: &str,
         value_reg: Reg,
@@ -401,6 +401,29 @@ impl BodyCtx<'_> {
             "    selp.u32    {safe_idx}, {raw_idx}, {zero}, {in_bounds};"
         );
         safe_idx
+    }
+
+    pub(super) fn emit_index_in_bounds_pred(
+        &mut self,
+        binding_slot: u32,
+        index_op_id: u32,
+    ) -> Result<Reg, EmitError> {
+        let raw_idx = self.lookup_operand(index_op_id)?;
+        Ok(self.emit_index_reg_in_bounds_pred(binding_slot, raw_idx))
+    }
+
+    pub(super) fn emit_index_reg_in_bounds_pred(
+        &mut self,
+        binding_slot: u32,
+        raw_idx: Reg,
+    ) -> Reg {
+        let len_reg = self.ensure_buffer_length_reg(binding_slot);
+        let in_bounds = self.alloc(PtxType::Bool);
+        let _ = writeln!(
+            self.text,
+            "    setp.lt.u32    {in_bounds}, {raw_idx}, {len_reg};"
+        );
+        in_bounds
     }
 
     fn ensure_buffer_length_reg(&mut self, binding_slot: u32) -> Reg {

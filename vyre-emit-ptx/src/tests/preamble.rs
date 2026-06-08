@@ -162,3 +162,14 @@ fn emit_emits_literal_mov_then_store() {
     assert!(s.contains("mov.u32"));
     assert!(s.contains("st.global.u32"));
 }
+
+#[test]
+fn scalar_kernel_keeps_entry_element_count_guard() {
+    let s = emit(&one_store_kernel()).unwrap();
+    assert!(
+        s.contains("ld.global.ca.u32   %r26, [%rd0];")
+            && s.contains("setp.ge.u32     %p0, %r3, %r26;")
+            && s.contains("@%p0 bra $L_exit;"),
+        "scalar kernels without barriers/shared memory should keep the entry element-count guard:\n{s}"
+    );
+}

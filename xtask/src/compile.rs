@@ -203,10 +203,8 @@ fn emit_target(
             "Fix: PTX artifact emission requires the CUDA backend crate to provide an emitter before --to secondary_text can be used."
                 .to_string(),
         ),
-        Target::Metal => Err(
-            "Fix: Metal artifact emission requires the Metal backend crate to provide an emitter before --to native_module can be used."
-                .to_string(),
-        ),
+        Target::Metal => vyre_emit_metal::emit_program_artifact_bytes(canonical)
+            .map_err(|error| format!("Fix: Metal native_module emission failed: {error}")),
         Target::Hlsl => Err(
             "Fix: HLSL artifact emission requires a DXC backend emitter before --to hlsl can be used."
                 .to_string(),
@@ -242,4 +240,49 @@ fn read_bytes_bounded(path: &PathBuf) -> io::Result<Vec<u8>> {
         ));
     }
     Ok(bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{emit_target, Target};
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+
+    #[test]
+    fn native_module_target_emits_metal_artifact_json() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(16),
+            ],
+            [64, 1, 1],
+            vec![Node::Store {
+                buffer: Ident::from("out"),
+                index: Expr::InvocationId { axis: 0 },
+                value: Expr::LitU32(7),
+            }],
+        );
+
+        let bytes = emit_target(Target::Metal, &program).expect(
+            "Fix: xtask native_module target must route through vyre-emit-metal instead of the historical placeholder error.",
+        );
+        let json: serde_json::Value = serde_json::from_slice(&bytes).expect(
+            "Fix: native_module target must emit structured JSON artifact bytes.",
+        );
+
+        assert_eq!(json["target"], "native_module");
+        let entry_point = json["entry_point"]
+            .as_str()
+            .expect("Fix: native_module artifact must record the emitted Metal function name.");
+        assert_eq!(json["workgroup_size"], serde_json::json!([64, 1, 1]));
+        assert_eq!(json["schema"], 3);
+        assert!(
+            json["msl"]
+                .as_str()
+                .is_some_and(|source| !source.is_empty() && source.contains(entry_point)),
+            "native_module artifact must carry generated MSL source containing the emitted entry point"
+        );
+        assert_eq!(json["bindings"][0]["name"], "out");
+        assert_eq!(json["bindings"][0]["metal_buffer_index"], 0);
+        assert_eq!(json["sizes_buffer_index"], 1);
+    }
 }

@@ -97,6 +97,7 @@ vyre-self-substrate = { workspace = true }
 vyre-primitives = { workspace = true, features = ["text", "matching", "decode", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "nfa", "inventory-registry", "geom", "opt", "topology", "visual"] }
 smallvec.workspace = true
 inventory.workspace = true
+serde.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 regex-syntax = { workspace = true, optional = true }

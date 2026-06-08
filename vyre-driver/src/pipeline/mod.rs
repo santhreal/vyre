@@ -7,7 +7,10 @@ pub mod compiler;
 /// Stable cache hashing and device fingerprint helpers.
 pub mod hashing;
 
-pub use cache::{DiskPipelineCache, PipelineCacheKey, PipelineFeatureFlags};
+pub use cache::{
+    DiskPipelineCache, PipelineCacheIdentity, PipelineCacheKey, PipelineCacheMissEvidence,
+    PipelineCacheMissReason, PipelineFeatureFlags,
+};
 pub use compiler::{
     compile, compile_owned, compile_owned_with_telemetry, compile_shared,
     compile_shared_with_telemetry, compile_with_telemetry, prewarm, prewarm_owned, prewarm_shared,

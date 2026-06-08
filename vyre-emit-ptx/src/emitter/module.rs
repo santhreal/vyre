@@ -77,6 +77,7 @@ impl ModuleBuilder {
             .map(|candidate| candidate.binding_slot)
             .collect::<FxHashSet<_>>();
         let mut body_ctx = BodyCtx::new(
+            desc,
             &desc.bindings,
             self.options,
             read_only_cache_slots,

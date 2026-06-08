@@ -17,7 +17,7 @@ use crate::api::case::{BenchContext, BenchError, Correctness, PerformanceContrac
 use crate::api::suite::SuiteKind;
 use crate::probes::environment::{capture_environment, EnvironmentData};
 use crate::registry::BenchRegistry;
-use crate::report::json::{CaseReport, ReportSchema, ReportSummary};
+use crate::report::json::{CaseReport, ReportBackendProfile, ReportSchema, ReportSummary};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -93,6 +93,7 @@ pub fn execute_suite(
     let mut failed = 0;
     let mut total_cache_hits = 0;
     let mut total_cache_observed = 0;
+    let mut selected_backend_profile = None;
 
     let selected_cases: Vec<_> = registry
         .iter()
@@ -133,6 +134,12 @@ pub fn execute_suite(
                     continue;
                 }
             };
+
+        if selected_backend_profile.is_none() {
+            selected_backend_profile = Some(ReportBackendProfile::from_device_profile(
+                preferred_backend.device_profile(),
+            ));
+        }
 
         let mut ctx = BenchContext {
             backends: vec![],
@@ -262,9 +269,10 @@ pub fn execute_suite(
             .find_map(|case| case.backend_id.as_ref().cloned())
     });
 
-    let git = crate::probes::capture_git_info();
-    let source_fingerprint = crate::probes::source_fingerprint(&git);
-    let source_tree_fingerprint = crate::probes::source_tree_fingerprint();
+    let source_provenance = vyre_driver::SourceProvenance::capture_current();
+    let git = source_provenance.git.clone();
+    let source_fingerprint = source_provenance.source_fingerprint;
+    let source_tree_fingerprint = source_provenance.source_tree_fingerprint;
     let blockers = cases_report
         .iter()
         .flat_map(CaseReport::evidence_blockers)
@@ -274,6 +282,7 @@ pub fn execute_suite(
         run_id: format!("vyre-bench.{}", suite.as_str()),
         suite: suite.as_str().to_string(),
         selected_backend,
+        backend_profile: selected_backend_profile,
         git,
         source_fingerprint,
         source_tree_fingerprint,

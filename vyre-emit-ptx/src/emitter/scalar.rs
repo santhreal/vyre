@@ -669,22 +669,35 @@ impl BodyCtx<'_> {
     fn emit_f32_subgroup_add(&mut self, value: Reg) -> Reg {
         let acc = self.alloc(PtxType::F32);
         let mask = self.alloc(PtxType::U32);
+        let lane = self.alloc(PtxType::U32);
         let lane_mask = self.subgroup_lane_mask();
         let _ = writeln!(self.text, "    mov.f32    {acc}, {value};");
         let _ = writeln!(self.text, "    activemask.b32    {mask};");
+        let _ = writeln!(self.text, "    mov.u32    {lane}, %laneid;");
 
         let mut offset = self.options.subgroup_size / 2;
         while offset > 0 {
+            let source_lane = self.alloc(PtxType::U32);
+            let has_source = self.alloc(PtxType::Bool);
             let bits = self.alloc(PtxType::U32);
             let shuffled_bits = self.alloc(PtxType::U32);
             let shuffled = self.alloc(PtxType::F32);
+            let _ = writeln!(self.text, "    add.u32    {source_lane}, {lane}, {offset};");
+            let _ = writeln!(
+                self.text,
+                "    setp.lt.u32    {has_source}, {source_lane}, {};",
+                self.options.subgroup_size
+            );
             let _ = writeln!(self.text, "    mov.b32    {bits}, {acc};");
             let _ = writeln!(
                 self.text,
                 "    shfl.sync.down.b32    {shuffled_bits}, {bits}, {offset}, 0x{lane_mask:x}, {mask};"
             );
             let _ = writeln!(self.text, "    mov.b32    {shuffled}, {shuffled_bits};");
-            let _ = writeln!(self.text, "    add.f32    {acc}, {acc}, {shuffled};");
+            let _ = writeln!(
+                self.text,
+                "    @{has_source} add.f32    {acc}, {acc}, {shuffled};"
+            );
             offset /= 2;
         }
         acc

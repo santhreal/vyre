@@ -482,6 +482,7 @@ mod tests {
             "host_transfers",
             "upload_host_transfers",
             "readback_host_transfers",
+            "timing_events",
         ] {
             assert!(
                 cleanup.contains(&format!("std::mem::forget({resource});")),
@@ -524,6 +525,77 @@ mod tests {
                 && readback.contains("stream.synchronize()?")
                 && readback.contains("transfers.collect_output_range_into"),
             "Fix: resident sequence compact readback staging must remain owned by outer cleanup until stream completion is proven and outputs are collected."
+        );
+    }
+
+    #[test]
+    fn resident_sequence_captures_kernel_device_time_around_launches() {
+        let source = super::resident_dispatch_production_source();
+        let sequence = source
+            .split("pub(crate) fn fill_upload_resident_many_repeated_sequence_read_ranges_borrowed_into")
+            .nth(1)
+            .expect("Fix: resident sequence fused dispatch function must exist.")
+            .split("    }\n}")
+            .next()
+            .expect("Fix: resident sequence fused dispatch must end inside its module impl.");
+
+        // Timing is acquired only when the sequence actually launches kernels, so
+        // pure fill/upload/readback sequences never pay for a CUDA event pair, and
+        // an exhausted event pool degrades to host-wall-only instead of failing.
+        assert!(
+            sequence.contains("let has_launch_work = !prefix_step_indices.is_empty()")
+                && sequence
+                    .contains("|| (repeat_count != 0 && !repeated_step_indices.is_empty());")
+                && sequence.contains("if has_launch_work {")
+                && sequence.contains("self.launch_resources.acquire_timing_event_pair()"),
+            "Fix: CUDA resident sequence must acquire a CUDA timing-event pair, gated on real launch work, to measure kernel device time."
+        );
+
+        // The events must bracket exactly the kernel launches: start before the
+        // first launch, end after the last, so the measured interval is kernel
+        // device time and not host enqueue/readback overhead.
+        let start_record = sequence
+            .find("start_event.record(stream.raw())?;")
+            .expect("Fix: CUDA resident sequence must record a start timing event before launching kernels.");
+        let prefix_launch = sequence
+            .find("for &step_index in &prefix_step_indices {")
+            .expect("Fix: CUDA resident sequence must launch prefix steps by index.");
+        let repeated_launch = sequence
+            .find("for &step_index in &repeated_step_indices {")
+            .expect("Fix: CUDA resident sequence must launch repeated steps by index.");
+        let end_record = sequence
+            .find("end_event.record(stream.raw())?;")
+            .expect("Fix: CUDA resident sequence must record an end timing event after launching kernels.");
+        assert!(
+            start_record < prefix_launch && repeated_launch < end_record,
+            "Fix: CUDA resident sequence timing events must bracket the kernel launches (start before the first launch, end after the last)."
+        );
+
+        // The kernel interval is recorded through telemetry only on the success
+        // path (the closure already synchronized the stream), and a timing-read
+        // failure must degrade to a debug log instead of failing a completed scan.
+        let success_timing = sequence
+            .split("if result.is_ok() {")
+            .nth(1)
+            .expect("Fix: CUDA resident sequence must record device time on the success path.")
+            .split("if result.is_err() {")
+            .next()
+            .expect("Fix: CUDA resident sequence success-path timing must precede error handling.");
+        assert!(
+            success_timing
+                .contains(".record_timed_dispatch(wall_ns, Some(device_ns), None, None)")
+                && success_timing.contains(".elapsed_time_ns(end_event)")
+                && success_timing.contains("tracing::debug!")
+                && !success_timing.contains(".elapsed_time_ns(end_event)?"),
+            "Fix: CUDA resident sequence must record measured kernel device time via telemetry on success and must not turn a timing-read failure into a dispatch error."
+        );
+
+        // Events are recycled to the pool on the normal path and forgotten with
+        // the other in-flight resources when stream completion is unproven.
+        assert!(
+            sequence.contains("self.launch_resources.release_timing_event(start_event);")
+                && sequence.contains("self.launch_resources.release_timing_event(end_event);"),
+            "Fix: CUDA resident sequence must release timing events back to the pool after a successful dispatch."
         );
     }
 

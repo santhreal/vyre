@@ -571,9 +571,13 @@ pub fn python312_extract_with_blocks(
         [256, 1, 1],
         vec![wrap_anonymous(
             "vyre-libs::parsing::python312_extract_with_blocks",
-            vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(haystack_len)),
-                body,
+            vec![child_phase(
+                "vyre-libs::parsing::python312_extract_with_blocks",
+                vyre_primitives::text::line_index::OP_ID,
+                vec![Node::if_then(
+                    Expr::lt(t.clone(), Expr::u32(haystack_len)),
+                    body,
+                )],
             )],
         )],
     )

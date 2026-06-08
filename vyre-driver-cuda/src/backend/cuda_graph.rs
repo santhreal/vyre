@@ -169,6 +169,41 @@ fn synchronize_cuda_graph_stream(
     crate::stream::synchronize_raw_stream(stream.ptr().as_ptr(), label)
 }
 
+#[derive(Clone, Copy)]
+struct OutputClear {
+    dst: u64,
+    byte_len: usize,
+}
+
+fn record_cuda_graph_output_clears(
+    clears: &[OutputClear],
+    stream: &StreamGuard,
+    label: &'static str,
+) -> Result<(), BackendError> {
+    for clear in clears {
+        if clear.byte_len == 0 {
+            continue;
+        }
+        // SAFETY: The output device allocation was created before capture
+        // and retained by CachedCudaGraph for the captured graph lifetime.
+        // Capturing this memset preserves the host-dispatch contract that
+        // output-only buffers start as zero before sparse stores run.
+        unsafe {
+            super::copy::memset_d8_async_checked(
+                clear.dst,
+                0,
+                clear.byte_len,
+                stream.ptr().as_ptr(),
+            )
+            .map_err(|error| BackendError::DispatchFailed {
+                code: None,
+                message: format!("{label} failed: {error}"),
+            })?;
+        }
+    }
+    Ok(())
+}
+
 fn record_cuda_graph_output_readbacks(
     host_buffers: &mut [PinnedHostAllocation],
     output_lens: &[usize],
@@ -661,6 +696,25 @@ mod tests {
     }
 
     #[test]
+    fn cuda_graph_capture_records_output_clears_for_sparse_outputs() {
+        let source = include_str!("cuda_graph.rs");
+
+        assert_eq!(
+            source
+                .matches(concat!("record_cuda_graph_output_", "clears("))
+                .count(),
+            3,
+            "Fix: CUDA graph full and resident-input captures must share one output clear helper."
+        );
+        assert!(
+            source.contains("cuMemsetD8Async (capture output clear)")
+                && source.contains("cuMemsetD8Async (resident input capture output clear)")
+                && source.contains("output_clears.push(OutputClear"),
+            "Fix: CUDA graph replay must capture output-only zero fills before sparse stores so unwritten output lanes cannot retain stale device bytes."
+        );
+    }
+
+    #[test]
     fn cuda_graph_capture_argument_tables_use_checked_fallible_reservation() {
         let source = include_str!("cuda_graph.rs");
 
@@ -947,6 +1001,12 @@ impl CudaBackend {
             output_device_capacity,
             "cuda graph output device pointer guards",
         )?;
+        let mut output_clears = SmallVec::<[OutputClear; 8]>::new();
+        reserve_smallvec(
+            &mut output_clears,
+            output_device_capacity,
+            "cuda graph output clear captures",
+        )?;
         let mut output_indices = SmallVec::<[usize; 8]>::new();
         reserve_smallvec(
             &mut output_indices,
@@ -1053,6 +1113,10 @@ impl CudaBackend {
                 input_indices.push(input_index);
                 input_device_ptrs.push(DevicePtrGuard::new(device_ptr));
             } else {
+                output_clears.push(OutputClear {
+                    dst: device_ptr,
+                    byte_len: device_byte_len,
+                });
                 output_device_ptrs.push(DevicePtrGuard::new(device_ptr));
             }
             if let Some(output_index) = binding.output_index {
@@ -1199,6 +1263,12 @@ impl CudaBackend {
             }
         }
 
+        record_cuda_graph_output_clears(
+            &output_clears,
+            &stream,
+            "cuMemsetD8Async (capture output clear)",
+        )?;
+
         // Record kernel launch. Build kernel_args mirroring the production
         // launch_module path: per-buffer u64 ptr-of-ptr, then param ptr.
         let launch_pointer_capacity = capture_binding_plan.kernel_pointer_capacity;
@@ -1295,6 +1365,11 @@ impl CudaBackend {
         let mut resident_capture_guard = begin_cuda_graph_capture(
             &stream,
             "cuStreamBeginCapture_v2 (resident input cuda_graph)",
+        )?;
+        record_cuda_graph_output_clears(
+            &output_clears,
+            &stream,
+            "cuMemsetD8Async (resident input capture output clear)",
         )?;
         for _ in 0..prepared.fixpoint_iterations {
             super::launch::launch_cuda_function(

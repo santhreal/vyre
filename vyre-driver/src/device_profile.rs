@@ -8,6 +8,32 @@
 use vyre_foundation::optimizer::AdapterCaps;
 use vyre_foundation::validate;
 
+/// Quality class for backend timing data exposed through [`DeviceProfile`].
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DeviceTimingQuality {
+    /// The backend reports host wall-clock timing only.
+    HostOnly,
+    /// The backend can split host enqueue and host wait timing, but not trusted device elapsed time.
+    HostEnqueueWait,
+    /// The backend can report device elapsed time through timestamp queries or events.
+    DeviceTimestamps,
+    /// The backend can report device elapsed time plus hardware counter samples.
+    HardwareCounters,
+}
+
+impl DeviceTimingQuality {
+    /// Stable report/config string for timing-quality evidence.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::HostOnly => "host_only",
+            Self::HostEnqueueWait => "host_enqueue_wait",
+            Self::DeviceTimestamps => "device_timestamps",
+            Self::HardwareCounters => "hardware_counters",
+        }
+    }
+}
+
 /// Device capability snapshot used across driver-shared planning.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct DeviceProfile {
@@ -59,6 +85,12 @@ pub struct DeviceProfile {
     pub l2_cache_bytes: u32,
     /// Peak memory bandwidth in GB/s, or `0` when unknown.
     pub mem_bw_gbps: u32,
+    /// Timing-data quality exposed by this backend/device.
+    pub timing_quality: DeviceTimingQuality,
+    /// Device timestamp queries/events are available for dispatch timing.
+    pub supports_device_timestamps: bool,
+    /// Hardware counter sampling is available for benchmark telemetry.
+    pub supports_hardware_counters: bool,
     /// Device-profile preferred unroll depth, or `0` when unknown.
     pub ideal_unroll_depth: u32,
     /// Device-profile preferred vector pack width in bits, or `0` when unknown.
@@ -106,6 +138,9 @@ impl DeviceProfile {
             l1_cache_bytes: 0,
             l2_cache_bytes: 0,
             mem_bw_gbps: 0,
+            timing_quality: DeviceTimingQuality::HostOnly,
+            supports_device_timestamps: false,
+            supports_hardware_counters: false,
             ideal_unroll_depth: 0,
             ideal_vector_pack_bits: 0,
             ideal_workgroup_tile: [0, 0, 0],
@@ -143,6 +178,9 @@ impl DeviceProfile {
             l1_cache_bytes: 0,
             l2_cache_bytes: 0,
             mem_bw_gbps: 0,
+            timing_quality: DeviceTimingQuality::HostOnly,
+            supports_device_timestamps: false,
+            supports_hardware_counters: false,
             ideal_unroll_depth: 0,
             ideal_vector_pack_bits: 0,
             ideal_workgroup_tile: [0, 0, 0],
@@ -219,7 +257,24 @@ impl From<DeviceProfile> for validate::BackendCapabilities {
 
 #[cfg(test)]
 mod tests {
-    use super::DeviceProfile;
+    use super::{DeviceProfile, DeviceTimingQuality};
+
+    #[test]
+    fn timing_quality_has_stable_report_strings() {
+        assert_eq!(DeviceTimingQuality::HostOnly.as_str(), "host_only");
+        assert_eq!(
+            DeviceTimingQuality::HostEnqueueWait.as_str(),
+            "host_enqueue_wait"
+        );
+        assert_eq!(
+            DeviceTimingQuality::DeviceTimestamps.as_str(),
+            "device_timestamps"
+        );
+        assert_eq!(
+            DeviceTimingQuality::HardwareCounters.as_str(),
+            "hardware_counters"
+        );
+    }
 
     #[test]
     fn projections_share_the_same_feature_bits() {
@@ -248,6 +303,9 @@ mod tests {
             l1_cache_bytes: 128 * 1024,
             l2_cache_bytes: 64 * 1024 * 1024,
             mem_bw_gbps: 1700,
+            timing_quality: super::DeviceTimingQuality::HardwareCounters,
+            supports_device_timestamps: true,
+            supports_hardware_counters: true,
             ideal_unroll_depth: 8,
             ideal_vector_pack_bits: 128,
             ideal_workgroup_tile: [16, 16, 1],
@@ -268,5 +326,11 @@ mod tests {
         assert_eq!(adapter.ideal_vector_pack_bits, 128);
         assert_eq!(adapter.ideal_workgroup_tile, [16, 16, 1]);
         assert_eq!(strategy.max_native_int_width, 64);
+        assert_eq!(
+            profile.timing_quality,
+            super::DeviceTimingQuality::HardwareCounters
+        );
+        assert!(profile.supports_device_timestamps);
+        assert!(profile.supports_hardware_counters);
     }
 }

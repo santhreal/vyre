@@ -44,6 +44,7 @@ pub(crate) fn cast_is_valid(source: &DataType, target: &DataType) -> bool {
             | (&DataType::Bool, &DataType::F32)
             | (&DataType::F32, &DataType::U32)
             | (&DataType::F32, &DataType::I32)
+            | (&DataType::F32, &DataType::Bool)
     )
 }
 
@@ -102,7 +103,7 @@ mod tests {
         assert!(cast_is_valid(&DataType::Bool, &DataType::F32));
         assert!(cast_is_valid(&DataType::F32, &DataType::U32));
         assert!(cast_is_valid(&DataType::F32, &DataType::I32));
-        assert!(!cast_is_valid(&DataType::F32, &DataType::Bool));
+        assert!(cast_is_valid(&DataType::F32, &DataType::Bool));
     }
 
     #[test]

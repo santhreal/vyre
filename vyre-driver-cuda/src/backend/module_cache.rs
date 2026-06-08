@@ -32,7 +32,7 @@ const PTX_SOURCE_CACHE_RETAIN_AFTER_EVICTION: usize = PTX_SOURCE_CACHE_SOFT_CAP 
 const PTX_SOURCE_CACHE_SOFT_BYTES: usize = 256 * 1024 * 1024;
 const PTX_SOURCE_CACHE_MAX_ARTIFACT_BYTES: u64 = 1024 * 1024 * 1024;
 const PTX_LOWERING_CONTRACT: &[u8] =
-    b"vyre-cuda-ptx-lowering-contract:v11:ssa-carrier-snapshots+f32-canonical+select-pred-normalization+bool-cast-boundary+f32-bool-nan-truthiness+bool-numeric-materialization+bool-memory-word-abi+f32-ne-unordered+masked-integer-shifts+no-mutable-loop-unroll";
+    b"vyre-cuda-ptx-lowering-contract:v14:ssa-carrier-snapshots+f32-canonical+select-pred-normalization+bool-cast-boundary+f32-bool-nan-truthiness+bool-numeric-materialization+bool-memory-word-abi+f32-ne-unordered+masked-integer-shifts+no-mutable-loop-unroll+full-workgroup-entry+bounded-full-workgroup-stores+child-captured-producer-liveness+single-mad-dual-mul-liveness";
 const CUDA_PTX_SOURCE_FROM_PROGRAM_DOMAIN: &[u8] = b"vyre.cuda.ptx-source-cache.program.v1";
 const CUDA_MODULE_FROM_PTX_SOURCE_KEY_DOMAIN: &[u8] = b"vyre.cuda.module-cache.ptx-source-key.v1";
 const CUDA_MODULE_FROM_RAW_PTX_ARTIFACT_DOMAIN: &[u8] =
@@ -860,6 +860,19 @@ mod tests {
         assert!(
             !key_section.contains(&["blake", "3::Hasher::new()"].concat()),
             "Fix: CUDA PTX source-cache key derivation must not fork local tuple hashing."
+        );
+    }
+
+    #[test]
+    fn ptx_source_cache_contract_versions_full_workgroup_entry_semantics() {
+        let source = include_str!("module_cache.rs");
+        assert!(
+            source.contains("vyre-cuda-ptx-lowering-contract:v14")
+                && source.contains("full-workgroup-entry")
+                && source.contains("bounded-full-workgroup-stores")
+                && source.contains("child-captured-producer-liveness")
+                && source.contains("single-mad-dual-mul-liveness"),
+            "Fix: CUDA PTX source cache keys must change when PTX lowering changes barrier/shared-memory entry behavior, full-workgroup store predication, parent-result liveness across child bodies, or MAD deferral liveness."
         );
     }
 }

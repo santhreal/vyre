@@ -102,8 +102,8 @@ pub(super) fn run_case(
                 );
             }
 
-            // Only capture hardware telemetry on the final sample to avoid jitter
-            if sample_index == target_samples - 1 {
+            // Only capture NVIDIA hardware telemetry on the final CUDA sample to avoid jitter.
+            if sample_index == target_samples - 1 && ctx.preferred_backend.id() == "cuda" {
                 let nvml_counters = crate::probes::capture_nvml_telemetry().map_err(|error| {
                     format!("NVML telemetry error on sample {sample_index}: {error}")
                 })?;

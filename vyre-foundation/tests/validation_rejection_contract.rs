@@ -207,17 +207,15 @@ fn cast_u64_to_f32_is_rejected() {
 }
 
 #[test]
-fn cast_f32_to_bool_is_rejected() {
+fn cast_f32_to_bool_is_allowed() {
     let program = output_program(vec![Node::let_bind(
         "x",
         Expr::cast(DataType::Bool, Expr::f32(1.0)),
     )]);
     let errors = validate(&program);
     assert!(
-        errors.iter().any(|e| e
-            .message()
-            .contains("unsupported cast from `f32` to `bool`")),
-        "Cast from F32 to Bool must be rejected, got {:?}",
+        errors.is_empty(),
+        "Cast from F32 to Bool must be allowed, got {:?}",
         errors
     );
 }

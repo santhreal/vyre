@@ -31,6 +31,7 @@ FLOOR["vyre-core"]=0          # 1 file, no tests
 FLOOR["vyre-foundation"]=15
 FLOOR["vyre-driver"]=10
 FLOOR["vyre-driver-wgpu"]=10
+FLOOR["vyre-driver-metal"]=50
 FLOOR["vyre-driver-spirv"]=30
 FLOOR["vyre-driver-cuda"]=50
 FLOOR["vyre-driver-reference"]=10

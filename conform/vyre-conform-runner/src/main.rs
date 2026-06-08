@@ -20,6 +20,8 @@ use vyre_reference::value::Value;
 
 #[cfg(feature = "gpu")]
 use vyre_driver_cuda as _;
+#[cfg(feature = "gpu")]
+use vyre_driver_metal as _;
 use vyre_driver_reference as _;
 #[cfg(feature = "gpu")]
 use vyre_driver_wgpu as _;
@@ -36,6 +38,53 @@ struct PairResult {
     backend_id: String,
     passed: bool,
     message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    replay_capsule: Option<ReplayCapsule>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct ReplayCapsule {
+    schema_version: u32,
+    op_id: String,
+    backend_id: String,
+    case_index: usize,
+    replay_command: String,
+    program_blake3: String,
+    witness_input_blake3: String,
+    reference_output_blake3: String,
+    backend_output_blake3: String,
+    witness_input_buffers_hex: Vec<String>,
+    reference_output_buffers_hex: Vec<String>,
+    backend_output_buffers_hex: Vec<String>,
+    witness_input_count: usize,
+    reference_output_count: usize,
+    backend_output_count: usize,
+    first_mismatch: ReplayMismatch,
+    minimization: ReplayMinimization,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct ReplayMismatch {
+    kind: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    output_index: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    byte_index: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reference_len: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    backend_len: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reference_byte: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    backend_byte: Option<u8>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct ReplayMinimization {
+    strategy: &'static str,
+    original_case_count: usize,
+    retained_case_count: usize,
 }
 
 #[derive(Debug, Serialize)]
@@ -259,6 +308,7 @@ fn dispatch_pairs(backend_id: &str, ops: &str) -> Result<Vec<PairResult>, String
                     backend_id: backend_id.clone(),
                     passed: false,
                     message: error,
+                    replay_capsule: None,
                 });
                 continue;
             }
@@ -273,6 +323,7 @@ fn dispatch_pairs(backend_id: &str, ops: &str) -> Result<Vec<PairResult>, String
                     message: format!(
                         "backend acquisition failed before dispatch: {error}. Fix: isolate or reset the backend after the preceding failing op, then repair the op that poisoned device state."
                     ),
+                    replay_capsule: None,
                 });
                 continue;
             }
@@ -318,11 +369,21 @@ fn acquire_backend(backend_id: &str) -> Result<Box<dyn VyreBackend>, String> {
 }
 
 fn dispatch_capable_backends() -> Vec<&'static vyre::BackendRegistration> {
+    force_link_backend_inventory();
     registered_backends()
         .iter()
         .copied()
         .filter(|backend| backend_dispatches(backend.id))
         .collect()
+}
+
+fn force_link_backend_inventory() {
+    #[cfg(feature = "gpu")]
+    {
+        let metal_acquire: fn() -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
+            vyre_driver_metal::acquire;
+        std::hint::black_box(metal_acquire);
+    }
 }
 
 fn parse_proof_options(
@@ -331,7 +392,10 @@ fn parse_proof_options(
 ) -> Result<ProofOptions, String> {
     let mut out = None;
     let mut certificates_dir = None::<String>;
-    let mut backend_filter = "all".to_string();
+    let mut backend_filter = std::env::var("VYRE_BACKEND")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| "all".to_string());
     let mut ops_filter = "all".to_string();
     let mut shard = None::<ShardSpec>;
     let mut it = args.into_iter();
@@ -733,6 +797,7 @@ fn prepare_entries_in_parallel(
                         backend_id: backend.id.to_string(),
                         passed: false,
                         message: error.clone(),
+                        replay_capsule: None,
                     });
                 }
                 any_failed = true;
@@ -778,6 +843,7 @@ fn prove_backends_in_parallel(
                                 backend_id: backend.id.to_string(),
                                 passed: false,
                                 message: message.clone(),
+                                replay_capsule: None,
                             })
                             .collect(),
                     );
@@ -804,15 +870,16 @@ fn prove_one_backend(
             return prepared_entries
                 .iter()
                 .map(|entry| PairResult {
-                    op_id: entry.id.into(),
-                    backend_id: backend_id.clone(),
-                    passed: false,
-                    message: format!(
-                        "backend `{}` unavailable: {error}. Fix: make the backend available before claiming parity.",
-                        backend.id
-                    ),
-                })
-                .collect();
+                            op_id: entry.id.into(),
+                            backend_id: backend_id.clone(),
+                            passed: false,
+                            message: format!(
+                                "backend `{}` unavailable: {error}. Fix: make the backend available before claiming parity.",
+                                backend.id
+                            ),
+                            replay_capsule: None,
+                        })
+                        .collect();
         }
     };
     let instance = instance.as_ref();
@@ -871,6 +938,7 @@ fn prove_one_backend(
                                 backend_id: backend.id.to_string(),
                                 passed: false,
                                 message: message.clone(),
+                                replay_capsule: None,
                             },
                         )
                     }));
@@ -973,6 +1041,7 @@ fn compare_backend_against_reference(
                         message: format!(
                             "backend fixpoint loop failed on case {case_index}: {error}. Fix: align backend.dispatch with vyre-reference under the convergence lens."
                         ),
+                        replay_capsule: None,
                     };
                 }
             };
@@ -987,6 +1056,14 @@ fn compare_backend_against_reference(
                     message: format!(
                         "backend output diverged from vyre-reference after fixpoint convergence on case {case_index}: {detail}. Fix: align backend.dispatch with vyre-reference under the backend-transcendental-aware ULP window (byte-exact for non-F32, <= program-derived ULP cap for F32)."
                     ),
+                    replay_capsule: Some(build_replay_capsule(
+                        &backend_id,
+                        prepared,
+                        case_index,
+                        inputs,
+                        &outputs,
+                        reference,
+                    )),
                 };
             }
         } else {
@@ -1000,6 +1077,7 @@ fn compare_backend_against_reference(
                     backend_id: backend_id.clone(),
                     passed: false,
                     message: error,
+                    replay_capsule: None,
                 };
             }
             let dispatch_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -1023,6 +1101,14 @@ fn compare_backend_against_reference(
                             message: format!(
                                 "backend output diverged from vyre-reference on case {case_index}: {detail}. Fix: align backend.dispatch with vyre-reference under the backend-transcendental-aware ULP window (byte-exact for non-F32, <= program-derived ULP cap for F32)."
                             ),
+                            replay_capsule: Some(build_replay_capsule(
+                                &backend_id,
+                                prepared,
+                                case_index,
+                                inputs,
+                                &outputs,
+                                reference,
+                            )),
                         };
                     }
                 }
@@ -1034,6 +1120,7 @@ fn compare_backend_against_reference(
                         message: format!(
                             "backend dispatch failed on case {case_index}: {error}. Fix: make backend.dispatch execute this witness."
                         ),
+                        replay_capsule: None,
                     };
                 }
                 Err(payload) => {
@@ -1045,6 +1132,7 @@ fn compare_backend_against_reference(
                             "backend dispatch panicked on case {case_index}: {}. Fix: backend.dispatch must return BackendError instead of unwinding, then execute this witness.",
                             panic_message(payload)
                         ),
+                        replay_capsule: None,
                     };
                 }
             }
@@ -1059,6 +1147,134 @@ fn compare_backend_against_reference(
         message: format!(
             "{checked_cases} witness case(s) matched vyre-reference byte-for-byte via backend.dispatch"
         ),
+        replay_capsule: None,
+    }
+}
+
+fn build_replay_capsule(
+    backend_id: &str,
+    prepared: &PreparedEntry,
+    case_index: usize,
+    inputs: &[Vec<u8>],
+    backend_outputs: &[Vec<u8>],
+    reference_outputs: &[Vec<u8>],
+) -> ReplayCapsule {
+    ReplayCapsule {
+        schema_version: 1,
+        op_id: prepared.id.to_string(),
+        backend_id: backend_id.to_string(),
+        case_index,
+        replay_command: format!(
+            "vyre-conform dispatch --backend {} --ops {}",
+            backend_id, prepared.id
+        ),
+        program_blake3: hex::encode(prepared.program.content_hash()),
+        witness_input_blake3: hash_buffer_stream(
+            b"vyre-conform-runner/replay-capsule/witness-input/v1",
+            inputs,
+        ),
+        reference_output_blake3: hash_buffer_stream(
+            b"vyre-conform-runner/replay-capsule/reference-output/v1",
+            reference_outputs,
+        ),
+        backend_output_blake3: hash_buffer_stream(
+            b"vyre-conform-runner/replay-capsule/backend-output/v1",
+            backend_outputs,
+        ),
+        witness_input_buffers_hex: hex_buffers(inputs),
+        reference_output_buffers_hex: hex_buffers(reference_outputs),
+        backend_output_buffers_hex: hex_buffers(backend_outputs),
+        witness_input_count: inputs.len(),
+        reference_output_count: reference_outputs.len(),
+        backend_output_count: backend_outputs.len(),
+        first_mismatch: first_replay_mismatch(backend_outputs, reference_outputs),
+        minimization: ReplayMinimization {
+            strategy: "single_witness_case",
+            original_case_count: prepared.cases.len(),
+            retained_case_count: 1,
+        },
+    }
+}
+
+fn hash_buffer_stream(domain: &[u8], buffers: &[Vec<u8>]) -> String {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(domain);
+    update_hash_len(&mut hasher, buffers.len());
+    for buffer in buffers {
+        update_hash_len(&mut hasher, buffer.len());
+        hasher.update(buffer);
+    }
+    hasher.finalize().to_hex().to_string()
+}
+
+fn update_hash_len(hasher: &mut blake3::Hasher, len: usize) {
+    let encoded = u64::try_from(len).unwrap_or(u64::MAX).to_le_bytes();
+    hasher.update(&encoded);
+}
+
+fn hex_buffers(buffers: &[Vec<u8>]) -> Vec<String> {
+    buffers.iter().map(hex::encode).collect()
+}
+
+fn first_replay_mismatch(
+    backend_outputs: &[Vec<u8>],
+    reference_outputs: &[Vec<u8>],
+) -> ReplayMismatch {
+    if backend_outputs.len() != reference_outputs.len() {
+        return ReplayMismatch {
+            kind: "output_count",
+            output_index: None,
+            byte_index: None,
+            reference_len: Some(reference_outputs.len()),
+            backend_len: Some(backend_outputs.len()),
+            reference_byte: None,
+            backend_byte: None,
+        };
+    }
+
+    for (output_index, (backend, reference)) in backend_outputs
+        .iter()
+        .zip(reference_outputs.iter())
+        .enumerate()
+    {
+        if backend.len() != reference.len() {
+            return ReplayMismatch {
+                kind: "output_length",
+                output_index: Some(output_index),
+                byte_index: None,
+                reference_len: Some(reference.len()),
+                backend_len: Some(backend.len()),
+                reference_byte: None,
+                backend_byte: None,
+            };
+        }
+        if let Some((byte_index, (backend_byte, reference_byte))) = backend
+            .iter()
+            .copied()
+            .zip(reference.iter().copied())
+            .enumerate()
+            .find(|(_, (backend_byte, reference_byte))| backend_byte != reference_byte)
+        {
+            return ReplayMismatch {
+                kind: "byte",
+                output_index: Some(output_index),
+                byte_index: Some(byte_index),
+                reference_len: Some(reference.len()),
+                backend_len: Some(backend.len()),
+                reference_byte: Some(reference_byte),
+                backend_byte: Some(backend_byte),
+            };
+        }
+    }
+
+    ReplayMismatch {
+        kind: "unclassified",
+        output_index: None,
+        byte_index: None,
+        reference_len: None,
+        backend_len: None,
+        reference_byte: None,
+        backend_byte: None,
     }
 }
 
@@ -1165,6 +1381,134 @@ mod tests {
             reference_cases,
             vec![vec![1u32.to_le_bytes().to_vec()]],
             "Fix: prove reference preparation must match the input stream used by backend dispatch."
+        );
+    }
+
+    #[test]
+    fn replay_capsule_records_hashes_and_first_byte_mismatch() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(1),
+                BufferDecl::output("out", 1, DataType::U32).with_count(1),
+            ],
+            [1, 1, 1],
+            Vec::<Node>::new(),
+        );
+        let input = 7u32.to_le_bytes().to_vec();
+        let reference_output = vec![1, 2, 3, 4];
+        let backend_output = vec![1, 2, 9, 4];
+        let prepared = PreparedEntry {
+            id: "test.replay_capsule",
+            dispatch_config: dispatch_grid::config_for_program(&program)
+                .expect("Fix: one-workgroup program must have a dispatch grid."),
+            input_plan: backend_dispatch_plan(&program)
+                .expect("Fix: replay-capsule test program must plan backend inputs."),
+            program,
+            cases: vec![vec![input.clone()]],
+            reference_cases: vec![vec![reference_output.clone()]],
+            convergence_max_iterations: None,
+        };
+
+        let capsule = build_replay_capsule(
+            "metal",
+            &prepared,
+            0,
+            &prepared.cases[0],
+            &[backend_output],
+            &[reference_output],
+        );
+
+        assert_eq!(capsule.schema_version, 1);
+        assert_eq!(capsule.op_id, "test.replay_capsule");
+        assert_eq!(capsule.backend_id, "metal");
+        assert_eq!(capsule.case_index, 0);
+        assert_eq!(
+            capsule.replay_command,
+            "vyre-conform dispatch --backend metal --ops test.replay_capsule"
+        );
+        assert_hex64(&capsule.program_blake3);
+        assert_hex64(&capsule.witness_input_blake3);
+        assert_hex64(&capsule.reference_output_blake3);
+        assert_hex64(&capsule.backend_output_blake3);
+        assert_eq!(capsule.witness_input_buffers_hex, vec![hex::encode(input)]);
+        assert_eq!(capsule.reference_output_buffers_hex, vec!["01020304"]);
+        assert_eq!(capsule.backend_output_buffers_hex, vec!["01020904"]);
+        assert_eq!(capsule.witness_input_count, 1);
+        assert_eq!(capsule.reference_output_count, 1);
+        assert_eq!(capsule.backend_output_count, 1);
+        assert_eq!(capsule.first_mismatch.kind, "byte");
+        assert_eq!(capsule.first_mismatch.output_index, Some(0));
+        assert_eq!(capsule.first_mismatch.byte_index, Some(2));
+        assert_eq!(capsule.first_mismatch.reference_byte, Some(3));
+        assert_eq!(capsule.first_mismatch.backend_byte, Some(9));
+        assert_eq!(capsule.minimization.strategy, "single_witness_case");
+        assert_eq!(capsule.minimization.original_case_count, 1);
+        assert_eq!(capsule.minimization.retained_case_count, 1);
+    }
+
+    #[test]
+    fn pair_result_omits_capsule_on_success_and_serializes_capsule_on_failure() {
+        let success = PairResult {
+            op_id: "test.success".into(),
+            backend_id: "metal".to_string(),
+            passed: true,
+            message: "ok".to_string(),
+            replay_capsule: None,
+        };
+        let success_json =
+            serde_json::to_value(&success).expect("Fix: success pair must serialize.");
+        assert!(
+            success_json.get("replay_capsule").is_none(),
+            "Fix: passing pairs must not grow empty replay_capsule fields."
+        );
+
+        let program = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            Vec::<Node>::new(),
+        );
+        let prepared = PreparedEntry {
+            id: "test.failure",
+            dispatch_config: dispatch_grid::config_for_program(&program)
+                .expect("Fix: output-only program must have a dispatch grid."),
+            input_plan: backend_dispatch_plan(&program)
+                .expect("Fix: output-only program must still have a backend plan."),
+            program,
+            cases: vec![vec![]],
+            reference_cases: vec![vec![vec![0]]],
+            convergence_max_iterations: None,
+        };
+        let failure = PairResult {
+            op_id: "test.failure".into(),
+            backend_id: "metal".to_string(),
+            passed: false,
+            message: "diverged".to_string(),
+            replay_capsule: Some(build_replay_capsule(
+                "metal",
+                &prepared,
+                0,
+                &prepared.cases[0],
+                &[vec![1]],
+                &[vec![0]],
+            )),
+        };
+        let failure_json =
+            serde_json::to_value(&failure).expect("Fix: failure pair must serialize.");
+        let capsule = failure_json
+            .get("replay_capsule")
+            .expect("Fix: diverging pairs must serialize replay_capsule.");
+        assert_eq!(capsule["first_mismatch"]["kind"], "byte");
+        assert_eq!(capsule["first_mismatch"]["byte_index"], 0);
+        assert_eq!(capsule["backend_output_buffers_hex"][0], "01");
+        assert_eq!(capsule["reference_output_buffers_hex"][0], "00");
+    }
+
+    fn assert_hex64(value: &str) {
+        assert_eq!(value.len(), 64, "Fix: replay fingerprints must be BLAKE3 hex.");
+        assert!(
+            value.bytes().all(|byte| byte.is_ascii_hexdigit()),
+            "Fix: replay fingerprints must contain only hex characters."
         );
     }
 }

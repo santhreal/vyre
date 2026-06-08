@@ -15,6 +15,7 @@ use super::fft_radix2_complex;
 use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::math::fft::fft_convolve_circular_complex";
+const FFT_OP_ID: &str = "vyre-libs::math::fft::fft_radix2";
 const MULTIPLY_OP_ID: &str = "vyre-libs::math::fft::pointwise_complex_multiply_conjugate";
 const SCALE_OP_ID: &str = "vyre-libs::math::fft::scale_conjugate_inverse";
 
@@ -49,20 +50,12 @@ pub fn fft_convolve_circular_complex(
     ])?;
     let elements = validate_complex_len(n, "fft_convolve_circular_complex")?;
 
-    // Each `fft_radix2_complex` body emits Let bindings (`u_re_*`,
-    // `u_im_*`, butterfly twiddles) at the body's outer scope. If we
-    // flatten three of them into the same `entry` Vec they all
-    // collide  -  V032 catches the duplicate sibling let. Wrap each
-    // FFT body in its own Block so the bindings live in distinct
-    // scopes and the outer entry only sees the Block (not its
-    // internal Let nodes).
+    // Each FFT body is a registered composition boundary. The Region keeps
+    // its Let bindings scoped while letting Gate 1 and print-composition see
+    // this as reuse of `fft_radix2`, not inline FFT reinvention.
     let mut entry = Vec::new();
-    entry.push(Node::Block(
-        fft_radix2_complex(signal, signal_freq, n)?.into_entry_vec(),
-    ));
-    entry.push(Node::Block(
-        fft_radix2_complex(kernel, kernel_freq, n)?.into_entry_vec(),
-    ));
+    entry.push(fft_region(signal, signal_freq, n)?);
+    entry.push(fft_region(kernel, kernel_freq, n)?);
     entry.push(Node::Region {
         generator: Ident::from(MULTIPLY_OP_ID),
         // source_region: Some(...) marks this as a child composition so
@@ -79,9 +72,7 @@ pub fn fft_convolve_circular_complex(
             n,
         )),
     });
-    entry.push(Node::Block(
-        fft_radix2_complex(product_freq, output, n)?.into_entry_vec(),
-    ));
+    entry.push(fft_region(product_freq, output, n)?);
     entry.push(Node::Region {
         generator: Ident::from(SCALE_OP_ID),
         source_region: Some(GeneratorRef {
@@ -121,6 +112,16 @@ fn validate_names(names: &[&str]) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn fft_region(input: &str, output: &str, n: u32) -> Result<Node, String> {
+    Ok(Node::Region {
+        generator: Ident::from(FFT_OP_ID),
+        source_region: Some(GeneratorRef {
+            name: FFT_OP_ID.to_string(),
+        }),
+        body: Arc::new(fft_radix2_complex(input, output, n)?.into_entry_vec()),
+    })
 }
 
 fn multiply_and_conjugate_body(

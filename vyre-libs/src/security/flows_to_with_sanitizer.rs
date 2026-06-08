@@ -138,6 +138,10 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::security::facts::{
+        finding_from_sanitized_source_to_sink_query, AnalysisFact, AnalysisFactTable,
+        AnalysisSourceSpan, FactId, FactKind, SourceToSinkFindingRequest,
+    };
     use crate::security::flow_composition::linear_dataflow;
 
     #[test]
@@ -185,5 +189,101 @@ mod tests {
         let (off, tgt, msk) = linear_dataflow(4);
         let result = cpu_ref(4, &off, &tgt, &msk, &[0b0001], &[0], &[0]);
         assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn unsanitized_query_hit_emits_fact_backed_finding_bundle() {
+        let (off, tgt, msk) = linear_dataflow(4);
+        let hit = cpu_ref(4, &off, &tgt, &msk, &[0b0001], &[0b0010], &[0b1000]);
+        assert_eq!(hit, 1);
+
+        let table = source_sink_table(3);
+        let bundle = finding_from_sanitized_source_to_sink_query(
+            &table,
+            SourceToSinkFindingRequest {
+                finding_id: "finding.security.unsanitized-source-to-sink".to_string(),
+                query_id: OP_ID.to_string(),
+                backend_id: "cpu-ref".to_string(),
+                evidence_digest: "evidence:test".to_string(),
+                source_fact_id: FactId(1),
+                sink_fact_id: FactId(3),
+                path_fact_ids: vec![FactId(2)],
+                sanitizer_fact_ids: vec![FactId(4)],
+                query_hit: hit,
+                confidence_bps: 9900,
+                reason: "source reaches sink and considered sanitizer does not kill the path"
+                    .to_string(),
+            },
+        )
+        .expect("Fix: positive sanitized source-to-sink query should build proof bundle")
+        .expect("Fix: positive sanitized source-to-sink query should emit finding");
+
+        assert_eq!(bundle.query_id, OP_ID);
+        assert_eq!(bundle.fact_ids, vec![FactId(1), FactId(2), FactId(4), FactId(3)]);
+        assert_eq!(bundle.proof_path[0].role, "source");
+        assert_eq!(bundle.proof_path[1].role, "dataflow-path");
+        assert_eq!(bundle.proof_path[2].role, "sanitizer-considered");
+        assert_eq!(bundle.proof_path[3].role, "sink");
+    }
+
+    #[test]
+    fn sanitizer_killed_query_emits_no_finding_but_validates_considered_facts() {
+        let (off, tgt, msk) = linear_dataflow(4);
+        let hit = cpu_ref(4, &off, &tgt, &msk, &[0b0001], &[0b0010], &[0b0010]);
+        assert_eq!(hit, 0);
+
+        let table = source_sink_table(1);
+        let bundle = finding_from_sanitized_source_to_sink_query(
+            &table,
+            SourceToSinkFindingRequest {
+                finding_id: "finding.security.sanitized-source-to-sink".to_string(),
+                query_id: OP_ID.to_string(),
+                backend_id: "cpu-ref".to_string(),
+                evidence_digest: "evidence:test".to_string(),
+                source_fact_id: FactId(1),
+                sink_fact_id: FactId(3),
+                path_fact_ids: vec![FactId(2)],
+                sanitizer_fact_ids: vec![FactId(4)],
+                query_hit: hit,
+                confidence_bps: 9900,
+                reason: "source-to-sink path is killed by sanitizer".to_string(),
+            },
+        )
+        .expect("Fix: sanitized no-hit query should still validate referenced facts");
+
+        assert_eq!(
+            bundle, None,
+            "Fix: sanitizer-killed source-to-sink query must not emit a finding."
+        );
+    }
+
+    fn source_sink_table(sanitizer_subject: u64) -> AnalysisFactTable {
+        let source = AnalysisFact::exact(
+            FactId(1),
+            FactKind::Source,
+            AnalysisSourceSpan::byte_range(1, 0, 4),
+            0,
+        );
+        let mut edge = AnalysisFact::exact(
+            FactId(2),
+            FactKind::Dataflow,
+            AnalysisSourceSpan::byte_range(1, 5, 9),
+            0,
+        );
+        edge.object = Some(1);
+        edge.provenance.push(FactId(1));
+        let sink = AnalysisFact::exact(
+            FactId(3),
+            FactKind::Sink,
+            AnalysisSourceSpan::byte_range(1, 10, 14),
+            1,
+        );
+        let sanitizer = AnalysisFact::exact(
+            FactId(4),
+            FactKind::Sanitizer,
+            AnalysisSourceSpan::byte_range(1, 15, 19),
+            sanitizer_subject,
+        );
+        AnalysisFactTable::new(vec![source, edge, sink, sanitizer])
     }
 }

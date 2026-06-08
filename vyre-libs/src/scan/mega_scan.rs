@@ -334,7 +334,7 @@ pub fn build(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) 
     }
 }
 
-fn hit_buffer_byte_len(max_matches: u32) -> Result<usize, vyre::BackendError> {
+pub(crate) fn hit_buffer_byte_len(max_matches: u32) -> Result<usize, vyre::BackendError> {
     let match_words = usize::try_from(max_matches)
         .map_err(|_| {
             vyre::BackendError::new(

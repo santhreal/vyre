@@ -4,7 +4,10 @@ use crate::reg::{PtxType, Reg};
 use crate::{EmitError, PtxEmitOptions};
 use rustc_hash::{FxHashMap, FxHashSet};
 use vyre_lower::descriptor::Name;
-use vyre_lower::{BindingSlot, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
+use vyre_lower::verify::{classify_operand, OperandClass};
+use vyre_lower::{
+    BindingSlot, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+};
 
 mod async_copy;
 mod atomic;
@@ -89,6 +92,11 @@ struct BodyCtx<'a> {
     /// Binding slot lookup table. Emission performs this lookup for
     /// every memory op; keep it O(1) instead of scanning the layout.
     slot_to_binding: FxHashMap<u32, &'a BindingSlot>,
+    /// True when the descriptor contains barriers or shared memory and
+    /// every lane in the launched workgroup must remain live through the
+    /// preamble. In this mode memory side effects use per-op bounds
+    /// predicates instead of relying on an entry-wide element-count exit.
+    full_workgroup_entry: bool,
 }
 
 impl BodyCtx<'_> {
@@ -112,9 +120,51 @@ impl BodyCtx<'_> {
         let value_reg = self.coerce_for_store(self.lookup_operand(value_op_id)?, elem_ty);
         let address =
             self.emit_memory_address(binding_slot, index_op_id, &element_type, memory_class)?;
-        let guard = if negate { "@!" } else { "@" };
-        self.emit_store_value(Some((guard, pred)), address, &element_type, value_reg)?;
+        let guard =
+            self.store_guard_for_index(binding_slot, index_op_id, memory_class, Some((if negate {
+                "@!"
+            } else {
+                "@"
+            }, pred)))?;
+        self.emit_store_value(guard, address, &element_type, value_reg)?;
         Ok(true)
+    }
+
+    fn store_guard_for_index(
+        &mut self,
+        binding_slot: u32,
+        index_op_id: u32,
+        memory_class: MemoryClass,
+        existing: Option<(&str, Reg)>,
+    ) -> Result<Option<(String, Reg)>, EmitError> {
+        let existing = existing.map(|(prefix, pred)| (prefix.to_string(), pred));
+        if !self.full_workgroup_entry || !matches!(memory_class, MemoryClass::Global) {
+            return Ok(existing);
+        }
+
+        let in_bounds = self.emit_index_in_bounds_pred(binding_slot, index_op_id)?;
+        let Some((prefix, pred)) = existing else {
+            return Ok(Some(("@".to_string(), in_bounds)));
+        };
+        let branch_live = match prefix.as_str() {
+            "@" => pred,
+            "@!" => {
+                let not_pred = self.alloc(PtxType::Bool);
+                let _ = writeln!(self.text, "    not.pred    {not_pred}, {pred};");
+                not_pred
+            }
+            other => {
+                return Err(EmitError::InvalidDescriptor(format!(
+                    "unsupported PTX store guard prefix {other:?}. Fix: use @ or @! predication."
+                )));
+            }
+        };
+        let combined = self.alloc(PtxType::Bool);
+        let _ = writeln!(
+            self.text,
+            "    and.pred    {combined}, {branch_live}, {in_bounds};"
+        );
+        Ok(Some(("@".to_string(), combined)))
     }
 
     fn emit_op(&mut self, body: &KernelBody, op: &KernelOp) -> Result<(), EmitError> {
@@ -219,7 +269,9 @@ impl BodyCtx<'_> {
                     &element_type,
                     memory_class,
                 )?;
-                self.emit_store_value(None, address, &element_type, value_reg)?;
+                let guard =
+                    self.store_guard_for_index(binding_slot, index_op_id, memory_class, None)?;
+                self.emit_store_value(guard, address, &element_type, value_reg)?;
             }
             BinOpKind(bin_op) => {
                 let left_id = *op
@@ -606,4 +658,24 @@ impl BodyCtx<'_> {
         }
         Ok(())
     }
+}
+
+pub(super) fn body_descendants_read_operand(body: &KernelBody, result_id: u32) -> bool {
+    body.child_bodies
+        .iter()
+        .any(|child| body_reads_operand_recursive(child, result_id))
+}
+
+fn body_reads_operand_recursive(body: &KernelBody, result_id: u32) -> bool {
+    body.ops.iter().any(|op| {
+        op.operands
+            .iter()
+            .enumerate()
+            .any(|(pos, &operand)| {
+                operand == result_id && classify_operand(&op.kind, pos) == OperandClass::ResultRef
+            })
+    }) || body
+        .child_bodies
+        .iter()
+        .any(|child| body_reads_operand_recursive(child, result_id))
 }

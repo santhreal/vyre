@@ -10,7 +10,8 @@ A **target** is a substrate that can execute vyre IR. Each target lives in its o
 | `spirv` | `backends/spirv` | Emission/validation target | vyre IR → naga Module → `naga::back::spv` → Vulkan direct |
 | `photonic` | `backends/photonic` | Contract-check target, no dispatch | registers, `supports_dispatch = false`, listed by `registered_backends()` |
 | `cuda` | `backends/cuda` | Registered backend work only if the crate is present in the workspace build | vyre IR → PTX emitter → CUDA Driver API |
-| `native_module` | `backends/native_module` | Registered backend work only if the crate is present in the workspace build | vyre IR → MSL emitter → Metal Shading Language |
+| `metal` | `vyre-driver-metal` | Native Apple runtime backend; registers only on Apple targets and never fabricates a backend on non-Apple builds | vyre IR → `vyre-lower` → `vyre-emit-metal` → MSL → Metal.framework |
+| `native_module` | `vyre-emit-metal` | Artifact emission implemented; runtime dispatch requires the native `metal` backend crate | vyre IR → `vyre-lower` → `vyre-emit-naga` → `naga::back::msl` → structured Metal artifact |
 | `cpu` | `vyre-reference` | Oracle | Pure-Rust structural interpreter  -  the conformance reference, not a production target |
 
 ## Capabilities

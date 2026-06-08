@@ -1,7 +1,9 @@
 use std::fmt::Write as _;
 
 use rustc_hash::{FxHashMap, FxHashSet};
-use vyre_lower::{BindingLayout, BindingSlot, KernelDescriptor, MemoryClass, TRAP_SIDECAR_NAME};
+use vyre_lower::{
+    BindingLayout, BindingSlot, KernelDescriptor, KernelOpKind, MemoryClass, TRAP_SIDECAR_NAME,
+};
 
 use super::names::sanitize_param_name;
 use super::BodyCtx;
@@ -10,6 +12,7 @@ use crate::{EmitError, PtxEmitOptions};
 
 impl<'a> BodyCtx<'a> {
     pub(super) fn new(
+        desc: &'a KernelDescriptor,
         bindings: &'a BindingLayout,
         options: PtxEmitOptions,
         read_only_cache_slots: FxHashSet<u32>,
@@ -17,6 +20,7 @@ impl<'a> BodyCtx<'a> {
         op_capacity: usize,
     ) -> Self {
         let slot_count = bindings.slots.len();
+        let full_workgroup_entry = requires_full_workgroup_entry(desc);
         let slot_to_binding = bindings
             .slots
             .iter()
@@ -46,6 +50,7 @@ impl<'a> BodyCtx<'a> {
             named_carrier_result_ids: FxHashMap::with_capacity_and_hasher(16, Default::default()),
             slot_to_length_reg: FxHashMap::with_capacity_and_hasher(slot_count, Default::default()),
             slot_to_binding,
+            full_workgroup_entry,
         };
         this.emit_thread_geometry();
         this
@@ -174,9 +179,15 @@ impl<'a> BodyCtx<'a> {
             );
             self.slot_to_length_reg.insert(binding.slot, len_reg);
         }
-        self.text.push_str("    ld.global.ca.u32   %r26, [%rd0];\n");
-        self.text.push_str("    setp.ge.u32     %p0, %r3, %r26;\n");
-        self.text.push_str("    @%p0 bra $L_exit;\n\n");
+        if self.full_workgroup_entry {
+            self.text.push_str(
+                "    // Full-workgroup entry: keep every lane live before barriers/shared memory.\n\n",
+            );
+        } else {
+            self.text.push_str("    ld.global.ca.u32   %r26, [%rd0];\n");
+            self.text.push_str("    setp.ge.u32     %p0, %r3, %r26;\n");
+            self.text.push_str("    @%p0 bra $L_exit;\n\n");
+        }
         Ok(())
     }
 
@@ -204,4 +215,14 @@ impl<'a> BodyCtx<'a> {
             MemoryClass::Scratch => "global",
         }
     }
+}
+
+fn requires_full_workgroup_entry(desc: &KernelDescriptor) -> bool {
+    desc.bindings
+        .slots
+        .iter()
+        .any(|binding| matches!(binding.memory_class, MemoryClass::Shared))
+        || desc
+            .ops_iter()
+            .any(|op| matches!(op.kind, KernelOpKind::Barrier { .. }))
 }

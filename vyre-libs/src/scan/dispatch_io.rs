@@ -99,7 +99,10 @@ pub fn pack_haystack_u32_into(haystack: &[u8], packed: &mut Vec<u8>) -> Result<(
     Ok(())
 }
 
-fn haystack_padded_u32_byte_len(byte_len: usize) -> Result<usize, BackendError> {
+/// Byte length of `byte_len` haystack bytes packed and zero-padded to the next
+/// `u32` word boundary — the exact size a resident haystack buffer must be
+/// allocated at so [`pack_haystack_u32_into`] output uploads in place.
+pub fn haystack_padded_u32_byte_len(byte_len: usize) -> Result<usize, BackendError> {
     byte_len
         .checked_add(3)
         .map(|len| (len / 4) * 4)

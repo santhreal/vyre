@@ -185,6 +185,7 @@ define_bitset_and_security_op!(
 );
 mod catalog;
 pub mod dominator_tree;
+pub mod facts;
 pub(crate) mod flow_composition;
 pub mod flows_to;
 pub mod flows_to_to_sink;
@@ -309,6 +310,10 @@ pub use auth_check_dominates::auth_check_dominates;
 pub use bounded_by_comparison::bounded_by_comparison;
 pub use buffer_size_check::buffer_size_check;
 pub use dominator_tree::dominator_tree;
+pub use facts::{
+    AnalysisFact, AnalysisFactColumns, AnalysisFactError, AnalysisFactTable, AnalysisSourceSpan,
+    FactId, FactKind, FindingProofBundle, FindingProofStep,
+};
 pub use flows_to::flows_to;
 pub use flows_to_to_sink::flows_to_to_sink;
 pub use flows_to_with_sanitizer::flows_to_with_sanitizer;

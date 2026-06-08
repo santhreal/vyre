@@ -3448,6 +3448,7 @@ dependencies = [
  "vyre",
  "vyre-driver",
  "vyre-driver-cuda",
+ "vyre-driver-metal",
  "vyre-driver-reference",
  "vyre-driver-spirv",
  "vyre-driver-wgpu",
@@ -3508,6 +3509,7 @@ dependencies = [
  "vyre",
  "vyre-driver",
  "vyre-driver-cuda",
+ "vyre-driver-metal",
  "vyre-driver-reference",
  "vyre-driver-wgpu",
  "vyre-foundation",
@@ -3604,6 +3606,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "vyre-driver-metal"
+version = "0.6.1"
+dependencies = [
+ "inventory",
+ "metal",
+ "serde_json",
+ "vyre-driver",
+ "vyre-driver-wgpu",
+ "vyre-emit-metal",
+ "vyre-foundation",
+ "vyre-lower",
+]
+
+[[package]]
 name = "vyre-driver-reference"
 version = "0.6.1"
 dependencies = [
@@ -3678,6 +3694,22 @@ dependencies = [
  "vyre-spec",
  "vyre-test-harness",
  "wgpu",
+]
+
+[[package]]
+name = "vyre-emit-metal"
+version = "0.6.1"
+dependencies = [
+ "bincode",
+ "blake3",
+ "naga",
+ "proptest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "vyre-emit-naga",
+ "vyre-foundation",
+ "vyre-lower",
 ]
 
 [[package]]
@@ -3858,6 +3890,7 @@ dependencies = [
  "regex",
  "regex-syntax",
  "rustc-hash 2.1.2",
+ "serde",
  "smallvec",
  "surgec-grammar-gen",
  "tempfile",
@@ -4717,6 +4750,7 @@ dependencies = [
  "vyre-driver-reference",
  "vyre-driver-spirv",
  "vyre-driver-wgpu",
+ "vyre-emit-metal",
  "vyre-foundation",
  "vyre-frontend-c",
  "vyre-harness",

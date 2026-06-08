@@ -11,6 +11,7 @@ use vyre_libs::parsing::rust::lex::lexer::core::{lex as lex_cpu, Token};
 use vyre_libs::parsing::rust::lex::lexer::plan::RustLexerPlan;
 use vyre_libs::parsing::rust::lex::tokens::{EOF, ERROR};
 
+#[cfg(not(target_os = "macos"))]
 use vyre_driver_cuda as _;
 use vyre_driver_wgpu as _;
 

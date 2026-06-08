@@ -13,7 +13,7 @@
 //! [`vyre_foundation::optimizer::AdapterCaps`] shape. No dispatch happens.
 
 use crate::runtime::device::EnabledFeatures;
-use vyre_driver::{DeviceProfile, DeviceSignatureTable};
+use vyre_driver::{DeviceProfile, DeviceSignatureTable, DeviceTimingQuality};
 use vyre_foundation::optimizer::AdapterCaps;
 
 /// Probe a live wgpu adapter and return the substrate-neutral
@@ -35,6 +35,8 @@ pub fn probe_profile(adapter: &wgpu::Adapter) -> DeviceProfile {
         limits.max_compute_workgroup_size_y,
         limits.max_compute_workgroup_size_z,
     ];
+    let timestamp_queries = features.contains(wgpu::Features::TIMESTAMP_QUERY)
+        && features.contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS);
     let subgroup_caps = crate::capabilities::subgroup_caps_for_adapter(features, &limits);
     let profile = DeviceProfile {
         backend: backend_id_for(info.backend),
@@ -65,6 +67,13 @@ pub fn probe_profile(adapter: &wgpu::Adapter) -> DeviceProfile {
         l1_cache_bytes: 0,
         l2_cache_bytes: 0,
         mem_bw_gbps: 0,
+        timing_quality: if timestamp_queries {
+            DeviceTimingQuality::DeviceTimestamps
+        } else {
+            DeviceTimingQuality::HostEnqueueWait
+        },
+        supports_device_timestamps: timestamp_queries,
+        supports_hardware_counters: false,
         ideal_unroll_depth: 0,
         ideal_vector_pack_bits: 0,
         ideal_workgroup_tile: [0, 0, 0],
@@ -98,6 +107,7 @@ pub fn from_backend_profile(
     enabled: &EnabledFeatures,
 ) -> DeviceProfile {
     let subgroup_caps = crate::capabilities::subgroup_caps(enabled);
+    let timestamp_queries = enabled.timestamp_query && enabled.timestamp_query_inside_encoders;
     let profile = DeviceProfile {
         backend: backend_id_for(adapter_info.backend),
         supports_subgroup_ops: subgroup_caps.supports_subgroup,
@@ -126,6 +136,13 @@ pub fn from_backend_profile(
         l1_cache_bytes: 0,
         l2_cache_bytes: 0,
         mem_bw_gbps: 0,
+        timing_quality: if timestamp_queries {
+            DeviceTimingQuality::DeviceTimestamps
+        } else {
+            DeviceTimingQuality::HostEnqueueWait
+        },
+        supports_device_timestamps: timestamp_queries,
+        supports_hardware_counters: false,
         ideal_unroll_depth: 0,
         ideal_vector_pack_bits: 0,
         ideal_workgroup_tile: [0, 0, 0],

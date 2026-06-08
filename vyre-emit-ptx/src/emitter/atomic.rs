@@ -63,6 +63,9 @@ impl BodyCtx<'_> {
         let index_reg = self.lookup_operand(index_op_id)?;
         let value_reg =
             self.atomic_value_reg(atomic_op, self.lookup_operand(value_op_id)?, elem_ty)?;
+        let in_bounds = self
+            .full_workgroup_entry
+            .then(|| self.emit_index_reg_in_bounds_pred(binding_slot, index_reg));
         let stride = element_type
             .size_bytes()
             .ok_or_else(|| EmitError::UnsupportedDataType(format!("{element_type:?}")))?;
@@ -78,10 +81,18 @@ impl BodyCtx<'_> {
         );
         let type_suffix = atomic_type_suffix(atomic_op, elem_ty)?;
         let result_reg = self.alloc(elem_ty);
-        let _ = writeln!(
-            self.text,
-            "    atom.global.{mnemonic}.{type_suffix}    {result_reg}, [{final_addr}], {value_reg};"
-        );
+        if let Some(in_bounds) = in_bounds {
+            let _ = writeln!(self.text, "    mov.{}    {result_reg}, 0;", elem_ty.ptx_type_str());
+            let _ = writeln!(
+                self.text,
+                "    @{in_bounds} atom.global.{mnemonic}.{type_suffix}    {result_reg}, [{final_addr}], {value_reg};"
+            );
+        } else {
+            let _ = writeln!(
+                self.text,
+                "    atom.global.{mnemonic}.{type_suffix}    {result_reg}, [{final_addr}], {value_reg};"
+            );
+        }
         self.bind_result(op, result_reg)
     }
 
@@ -123,12 +134,12 @@ impl BodyCtx<'_> {
             .operands
             .get(3)
             .ok_or_else(|| EmitError::InvalidDescriptor("AtomicCAS missing new value".into()))?;
-        let binding = self.binding_for_slot(binding_slot)?;
-        let elem_ty = PtxType::from_dtype(&binding.element_type)?;
+        let element_type = self.binding_for_slot(binding_slot)?.element_type.clone();
+        let elem_ty = PtxType::from_dtype(&element_type)?;
         if !matches!(elem_ty, PtxType::U32 | PtxType::I32) {
             return Err(EmitError::UnsupportedDataType(format!(
                 "atom.global.cas requires 32-bit element type; got {:?}",
-                binding.element_type
+                element_type
             )));
         }
         let global_ptr =
@@ -142,10 +153,12 @@ impl BodyCtx<'_> {
         let index_reg = self.lookup_operand(index_op_id)?;
         let cmp_reg = self.lookup_operand(cmp_op_id)?;
         let new_reg = self.lookup_operand(new_op_id)?;
-        let stride = binding
-            .element_type
+        let in_bounds = self
+            .full_workgroup_entry
+            .then(|| self.emit_index_reg_in_bounds_pred(binding_slot, index_reg));
+        let stride = element_type
             .size_bytes()
-            .ok_or_else(|| EmitError::UnsupportedDataType(format!("{:?}", binding.element_type)))?;
+            .ok_or_else(|| EmitError::UnsupportedDataType(format!("{element_type:?}")))?;
         let addr_reg = self.alloc(PtxType::U64);
         let _ = writeln!(
             self.text,
@@ -157,10 +170,18 @@ impl BodyCtx<'_> {
             "    add.u64    {final_addr}, {global_ptr}, {addr_reg};"
         );
         let result_reg = self.alloc(elem_ty);
-        let _ = writeln!(
-            self.text,
-            "    atom.global.cas.b32    {result_reg}, [{final_addr}], {cmp_reg}, {new_reg};"
-        );
+        if let Some(in_bounds) = in_bounds {
+            let _ = writeln!(self.text, "    mov.{}    {result_reg}, 0;", elem_ty.ptx_type_str());
+            let _ = writeln!(
+                self.text,
+                "    @{in_bounds} atom.global.cas.b32    {result_reg}, [{final_addr}], {cmp_reg}, {new_reg};"
+            );
+        } else {
+            let _ = writeln!(
+                self.text,
+                "    atom.global.cas.b32    {result_reg}, [{final_addr}], {cmp_reg}, {new_reg};"
+            );
+        }
         self.bind_result(op, result_reg)
     }
 }

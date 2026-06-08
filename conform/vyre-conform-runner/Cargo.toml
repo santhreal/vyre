@@ -18,7 +18,7 @@ path = "src/lib.rs"
 
 [features]
 default = ["gpu"]
-gpu = ["dep:vyre-driver-cuda", "dep:vyre-driver-wgpu"]
+gpu = ["dep:vyre-driver-cuda", "dep:vyre-driver-metal", "dep:vyre-driver-wgpu"]
 
 [dependencies]
 blake3 = { workspace = true }
@@ -33,6 +33,7 @@ tempfile = { workspace = true }
 vyre = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-driver-cuda = { workspace = true, optional = true }
+vyre-driver-metal = { workspace = true, optional = true }
 vyre-driver-reference = { workspace = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
 vyre-foundation = { workspace = true }

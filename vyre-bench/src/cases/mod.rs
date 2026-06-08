@@ -29,6 +29,7 @@ pub mod matmul;
 pub mod megakernel_condition;
 pub mod megakernel_latency;
 pub mod megakernel_truth;
+#[cfg(target_os = "linux")]
 pub mod nvme_gpu_ingest;
 pub mod optimizer_impact;
 pub mod quantized_linear;

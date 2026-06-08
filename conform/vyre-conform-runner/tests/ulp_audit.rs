@@ -25,6 +25,8 @@ use vyre_reference::value::Value;
 #[cfg(feature = "gpu")]
 use vyre_driver_cuda as _;
 #[cfg(feature = "gpu")]
+use vyre_driver_metal as _;
+#[cfg(feature = "gpu")]
 use vyre_driver_wgpu as _;
 use vyre_intrinsics as _;
 use vyre_libs as _;
@@ -495,9 +497,18 @@ fn adversarial_value_requires_ulp(value: f32) -> bool {
 }
 
 fn build_dispatch_backend() -> Box<dyn VyreBackend> {
+    force_link_backend_inventory();
+    let selected = std::env::var("VYRE_BACKEND")
+        .ok()
+        .filter(|value| !value.trim().is_empty());
     let registration = vyre::backend::registered_backends()
         .iter()
-        .find(|r| vyre::backend::backend_dispatches(r.id))
+        .find(|r| {
+            vyre::backend::backend_dispatches(r.id)
+                && selected
+                    .as_deref()
+                    .map_or(true, |backend| r.id == backend)
+        })
         .expect(
             "Fix: a dispatch-capable backend must be registered for ULP audit. \
              Link a concrete driver crate into the test binary.",
@@ -508,6 +519,15 @@ fn build_dispatch_backend() -> Box<dyn VyreBackend> {
             registration.id
         )
     })
+}
+
+fn force_link_backend_inventory() {
+    #[cfg(feature = "gpu")]
+    {
+        let metal_acquire: fn() -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
+            vyre_driver_metal::acquire;
+        std::hint::black_box(metal_acquire);
+    }
 }
 
 #[test]

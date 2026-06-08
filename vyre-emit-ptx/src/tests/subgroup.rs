@@ -120,6 +120,9 @@ fn f32_subgroup_add_emits_shuffle_tree() {
     let s = emit(&kernel).unwrap();
     assert!(s.contains("activemask.b32"));
     assert!(s.contains("shfl.sync.down.b32"));
+    assert!(s.contains("%laneid"));
+    assert!(s.matches("setp.lt.u32").count() >= 5);
+    assert!(s.contains("add.f32"));
     assert!(!s.contains("redux.sync.add.f32"));
 }
 

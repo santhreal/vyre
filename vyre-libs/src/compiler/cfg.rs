@@ -38,7 +38,7 @@ pub fn c11_build_cfg_and_gotos(
         )
     };
 
-    let loop_body = vec![
+    let label_phase = vec![
         Node::let_bind("opcode", Expr::load(ssa_nodes, t.clone())),
         // 1. Label definition: register `label_hash -> ssa_index` in the
         //    open-addressing hash table. Linear probe with atomic CAS
@@ -87,6 +87,9 @@ pub fn c11_build_cfg_and_gotos(
                 ),
             ],
         ),
+    ];
+    let goto_phase = vec![
+        Node::let_bind("opcode", Expr::load(ssa_nodes, t.clone())),
         // 2. Goto site: look up `target_hash` in the same table, write
         //    the resolved SSA index (or EMPTY_SLOT on miss) into
         //    `out_cfg_blocks[t]`.
@@ -163,7 +166,11 @@ pub fn c11_build_cfg_and_gotos(
                 GeneratorRef {
                     name: "vyre-libs::parsing::c11_build_cfg_and_gotos".to_string(),
                 },
-                vec![Node::if_then(Expr::lt(t.clone(), num_ssa), loop_body)],
+                vec![
+                    Node::if_then(Expr::lt(t.clone(), num_ssa.clone()), label_phase),
+                    Node::barrier(),
+                    Node::if_then(Expr::lt(t.clone(), num_ssa), goto_phase),
+                ],
             )],
         )],
     )

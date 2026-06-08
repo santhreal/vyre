@@ -167,6 +167,13 @@ impl ModuleBuilder {
             },
             Span::UNDEFINED,
         );
+        module.special_types.predeclared_types.insert(
+            naga::PredeclaredType::AtomicCompareExchangeWeakResult(Scalar {
+                kind: ScalarKind::Uint,
+                width: 4,
+            }),
+            atomic_compare_exchange_u32_ty,
+        );
         Self {
             module,
             types: TypeHandles {

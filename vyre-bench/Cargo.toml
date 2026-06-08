@@ -15,7 +15,7 @@ vyre = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-driver-wgpu = { workspace = true }
-vyre-driver-cuda = { workspace = true }
+vyre-driver-metal = { workspace = true }
 vyre-driver-spirv = { workspace = true }
 vyre-driver-reference = { workspace = true }
 vyre-reference = { workspace = true }
@@ -56,6 +56,9 @@ rusqlite = { workspace = true }
 core_affinity = { workspace = true }
 tree-sitter = { workspace = true }
 tree-sitter-c = { workspace = true }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+vyre-driver-cuda = { workspace = true }
 
 [features]
 default = []

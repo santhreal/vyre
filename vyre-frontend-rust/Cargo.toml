@@ -17,7 +17,6 @@ categories = ["compilers", "development-tools"]
 vyre = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-driver = { workspace = true }
-vyre-driver-cuda = { workspace = true }
 vyre-driver-wgpu = { workspace = true }
 vyre-primitives = { workspace = true }
 vyre-libs = { workspace = true, features = ["rust-parser"] }
@@ -27,6 +26,9 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 serde = { workspace = true, optional = true }
 smallvec = { workspace = true }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+vyre-driver-cuda = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

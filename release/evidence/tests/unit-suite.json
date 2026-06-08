@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "unit",
-  "file_count": 2854,
-  "vyre_file_count": 2571,
+  "file_count": 2855,
+  "vyre_file_count": 2572,
   "dataflow_consumer_file_count": 272,
   "vyrec_file_count": 11,
   "files": [
@@ -10562,17 +10562,15 @@
         "integration",
         "unit"
       ],
-      "lines": 550,
+      "lines": 420,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
-      "line_threshold_exceeded": true,
+      "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 32,
-      "oversized": true,
-      "god_test_candidate": true,
-      "recommended_split": [
-        "move timing-only checks into benches/ or release benchmark cases"
-      ]
+      "assertion_count": 26,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
     },
     {
       "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/src/tests/source_hygiene.rs",
@@ -10621,6 +10619,23 @@
       "line_threshold_exceeded": false,
       "has_test_entrypoint": false,
       "assertion_count": 0,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": []
+    },
+    {
+      "path": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-spec/src/tests/wire_contracts/support.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 138,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": false,
+      "assertion_count": 6,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": []

@@ -21,6 +21,21 @@ enum ReductionScope {
     FirstWorkgroup,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ReductionValueType {
+    F32,
+    U32,
+}
+
+impl ReductionValueType {
+    fn neutral(self) -> Expr {
+        match self {
+            Self::F32 => Expr::f32(0.0),
+            Self::U32 => Expr::u32(0),
+        }
+    }
+}
+
 /// Lower workgroup-tree reductions to subgroup ops when the adapter supports it.
 ///
 /// The pass is gated by `caps.supports_subgroup_ops`. A workgroup that fits
@@ -153,11 +168,14 @@ fn try_lower_workgroup_reduction(
     body: &[Node],
     plan: SubgroupReductionPlan,
 ) -> Option<Vec<Node>> {
+    if has_standalone_reduction_preamble(body) {
+        return None;
+    }
     let scratch = extract_scratch_buffer(body)?;
     let scope = detect_scope(body)?;
 
-    if generator.starts_with(WORKGROUP_SUM_PREFIX) {
-        Some(subgroup_sum_body(&scratch, scope, plan))
+    if let Some(value_type) = workgroup_sum_value_type(generator) {
+        Some(subgroup_sum_body(&scratch, scope, plan, value_type))
     } else if generator.starts_with(WORKGROUP_MAX_PREFIX) {
         // Max reductions are lowered via a shuffle-based tree using
         // subgroup_shuffle.  For simplicity we emit the same load+
@@ -168,6 +186,27 @@ fn try_lower_workgroup_reduction(
     } else {
         None
     }
+}
+
+fn workgroup_sum_value_type(generator: &str) -> Option<ReductionValueType> {
+    let suffix = generator.strip_prefix(WORKGROUP_SUM_PREFIX)?;
+    if suffix.starts_with("f32") {
+        Some(ReductionValueType::F32)
+    } else if suffix.starts_with("u32") {
+        Some(ReductionValueType::U32)
+    } else {
+        None
+    }
+}
+
+fn has_standalone_reduction_preamble(body: &[Node]) -> bool {
+    matches!(
+        body.first(),
+        Some(Node::Let {
+            name,
+            value: Expr::LocalId { axis: 0 }
+        }) if name.as_str() == "local"
+    )
 }
 
 /// Extract the scratch buffer name from the first `Store` in the body.
@@ -235,11 +274,12 @@ fn subgroup_sum_body(
     scratch: &str,
     scope: ReductionScope,
     plan: SubgroupReductionPlan,
+    value_type: ReductionValueType,
 ) -> Vec<Node> {
     if plan.workgroup_total <= plan.subgroup_size {
         return single_subgroup_sum_body(scratch, scope);
     }
-    two_level_subgroup_sum_body(scratch, scope, plan)
+    two_level_subgroup_sum_body(scratch, scope, plan, value_type)
 }
 
 fn single_subgroup_sum_body(scratch: &str, scope: ReductionScope) -> Vec<Node> {
@@ -263,6 +303,7 @@ fn two_level_subgroup_sum_body(
     scratch: &str,
     scope: ReductionScope,
     plan: SubgroupReductionPlan,
+    value_type: ReductionValueType,
 ) -> Vec<Node> {
     let subgroup_count = plan.workgroup_total.div_ceil(plan.subgroup_size);
     let subgroup_slot = Expr::div(Expr::var("local"), Expr::u32(plan.subgroup_size));
@@ -282,7 +323,7 @@ fn two_level_subgroup_sum_body(
     let second_level_sum = Expr::subgroup_add(Expr::select(
         Expr::lt(Expr::var("local"), Expr::u32(subgroup_count)),
         Expr::load(scratch, Expr::var("local")),
-        Expr::f32(0.0),
+        value_type.neutral(),
     ));
     let second_level = vec![
         Node::let_bind("vyre_workgroup_sum", second_level_sum),
@@ -329,6 +370,172 @@ mod tests {
             supports_subgroup_ops: true,
             subgroup_size: size,
             ..AdapterCaps::default()
+        }
+    }
+
+    #[test]
+    fn does_not_replace_full_standalone_workgroup_sum_region() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::workgroup("scratch", 4, DataType::F32),
+                BufferDecl::output("out", 0, DataType::F32).with_count(1),
+            ],
+            [4, 1, 1],
+            vec![Node::Region {
+                generator: "vyre-primitives::reduce::workgroup_sum_f32".into(),
+                source_region: None,
+                body: Arc::new(vec![
+                    Node::let_bind("local", Expr::LocalId { axis: 0 }),
+                    Node::store("scratch", Expr::var("local"), Expr::f32(1.0)),
+                    Node::barrier(),
+                    Node::store("out", Expr::u32(0), Expr::load("scratch", Expr::u32(0))),
+                ]),
+            }],
+        );
+
+        let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+        let [Node::Region { body, .. }] = lowered.entry() else {
+            panic!("Fix: standalone workgroup sum must remain wrapped in one region.");
+        };
+
+        assert!(
+            has_standalone_reduction_preamble(body),
+            "Fix: subgroup lowering must not drop the standalone local-id preamble."
+        );
+        assert!(
+            body.iter()
+                .any(|node| matches!(node, Node::Store { buffer, .. } if buffer.as_str() == "out")),
+            "Fix: subgroup lowering must not drop the standalone final output store."
+        );
+    }
+
+    #[test]
+    fn u32_two_level_workgroup_sum_uses_u32_neutral() {
+        let program = Program::wrapped(
+            vec![BufferDecl::workgroup("scratch", 64, DataType::U32)],
+            [64, 1, 1],
+            vec![Node::Region {
+                generator: "vyre-primitives::reduce::workgroup_sum_u32".into(),
+                source_region: None,
+                body: Arc::new(vec![
+                    Node::store(
+                        "scratch",
+                        Expr::var("local"),
+                        Expr::load("scratch", Expr::var("local")),
+                    ),
+                    Node::barrier(),
+                ]),
+            }],
+        );
+
+        let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+        let [Node::Region { body, .. }] = lowered.entry() else {
+            panic!("Fix: u32 workgroup sum must remain wrapped in one region.");
+        };
+
+        assert!(
+            nodes_contain_select_false_u32_zero(body),
+            "Fix: u32 two-level subgroup lowering must use a u32 zero neutral."
+        );
+        assert!(
+            !nodes_contain_select_false_f32_zero(body),
+            "Fix: u32 two-level subgroup lowering must not emit a f32 zero neutral into a u32 select."
+        );
+    }
+
+    fn nodes_contain_select_false_u32_zero(nodes: &[Node]) -> bool {
+        nodes_contain_select_false(nodes, |expr| matches!(expr, Expr::LitU32(0)))
+    }
+
+    fn nodes_contain_select_false_f32_zero(nodes: &[Node]) -> bool {
+        nodes_contain_select_false(nodes, |expr| matches!(expr, Expr::LitF32(value) if *value == 0.0))
+    }
+
+    fn nodes_contain_select_false(
+        nodes: &[Node],
+        predicate: fn(&Expr) -> bool,
+    ) -> bool {
+        nodes
+            .iter()
+            .any(|node| node_contains_select_false(node, predicate))
+    }
+
+    fn node_contains_select_false(node: &Node, predicate: fn(&Expr) -> bool) -> bool {
+        match node {
+            Node::Let { value, .. } | Node::Assign { value, .. } => {
+                expr_contains_select_false(value, predicate)
+            }
+            Node::Store { index, value, .. } => {
+                expr_contains_select_false(index, predicate)
+                    || expr_contains_select_false(value, predicate)
+            }
+            Node::If {
+                cond,
+                then,
+                otherwise,
+            } => {
+                expr_contains_select_false(cond, predicate)
+                    || nodes_contain_select_false(then, predicate)
+                    || nodes_contain_select_false(otherwise, predicate)
+            }
+            Node::Loop { from, to, body, .. } => {
+                expr_contains_select_false(from, predicate)
+                    || expr_contains_select_false(to, predicate)
+                    || nodes_contain_select_false(body, predicate)
+            }
+            Node::Block(body) => nodes_contain_select_false(body, predicate),
+            Node::Region { body, .. } => nodes_contain_select_false(body, predicate),
+            Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
+                expr_contains_select_false(offset, predicate)
+                    || expr_contains_select_false(size, predicate)
+            }
+            Node::Trap { address, .. } => expr_contains_select_false(address, predicate),
+            _ => false,
+        }
+    }
+
+    fn expr_contains_select_false(expr: &Expr, predicate: fn(&Expr) -> bool) -> bool {
+        match expr {
+            Expr::Select {
+                cond,
+                true_val,
+                false_val,
+            } => {
+                predicate(false_val)
+                    || expr_contains_select_false(cond, predicate)
+                    || expr_contains_select_false(true_val, predicate)
+                    || expr_contains_select_false(false_val, predicate)
+            }
+            Expr::Load { index, .. }
+            | Expr::UnOp { operand: index, .. }
+            | Expr::Cast { value: index, .. }
+            | Expr::SubgroupBallot { cond: index }
+            | Expr::SubgroupAdd { value: index } => expr_contains_select_false(index, predicate),
+            Expr::BinOp { left, right, .. } | Expr::SubgroupShuffle { value: left, lane: right } => {
+                expr_contains_select_false(left, predicate)
+                    || expr_contains_select_false(right, predicate)
+            }
+            Expr::Call { args, .. } => args
+                .iter()
+                .any(|arg| expr_contains_select_false(arg, predicate)),
+            Expr::Fma { a, b, c } => {
+                expr_contains_select_false(a, predicate)
+                    || expr_contains_select_false(b, predicate)
+                    || expr_contains_select_false(c, predicate)
+            }
+            Expr::Atomic {
+                index,
+                expected,
+                value,
+                ..
+            } => {
+                expr_contains_select_false(index, predicate)
+                    || expected
+                        .as_ref()
+                        .is_some_and(|expected| expr_contains_select_false(expected, predicate))
+                    || expr_contains_select_false(value, predicate)
+            }
+            _ => false,
         }
     }
 

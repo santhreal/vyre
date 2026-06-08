@@ -42,8 +42,29 @@ pub fn capture_environment() -> std::io::Result<EnvironmentData> {
         .unwrap_or(1);
 
     let mut features = vec!["vyre-bench".to_string()];
-    let gpu_devices = nvidia_smi_gpu_devices()?;
-    let nvidia_versions = nvidia_smi_versions()?;
+    let gpu_devices = match nvidia_smi_gpu_devices() {
+        Ok(devices) => devices,
+        Err(error) => {
+            features.push(format!(
+                "gpu.nvidia_smi.devices_unavailable:{:?}",
+                error.kind()
+            ));
+            Vec::new()
+        }
+    };
+    let nvidia_versions = match nvidia_smi_versions() {
+        Ok(versions) => versions,
+        Err(error) => {
+            features.push(format!(
+                "gpu.nvidia_smi.versions_unavailable:{:?}",
+                error.kind()
+            ));
+            NvidiaSmiVersions {
+                driver_version: None,
+                cuda_version: None,
+            }
+        }
+    };
     let nvidia_gpu = !gpu_devices.is_empty();
     if nvidia_gpu {
         features.push("gpu.nvidia_smi".to_string());

@@ -14,6 +14,12 @@ use std::process::Command;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde_json::Value;
 
+fn selected_backend_override() -> Option<String> {
+    std::env::var("VYRE_BACKEND")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+}
+
 #[test]
 fn prove_refuses_certificate_when_backend_cannot_dispatch() {
     // In the default build only SPIR-V (emission-only, no device) and
@@ -60,7 +66,9 @@ fn prove_refuses_certificate_when_backend_cannot_dispatch() {
 #[test]
 fn prove_emits_signed_certificate_on_gpu_build() {
     let out = tempfile::NamedTempFile::new().expect("tempfile");
-    let status = Command::new("cargo")
+    let selected_backend = selected_backend_override();
+    let mut command = Command::new("cargo");
+    command
         .env("VYRE_CONFORM_PROOF_WORKERS", "16")
         .args([
             "run",
@@ -71,8 +79,12 @@ fn prove_emits_signed_certificate_on_gpu_build() {
             "--quiet",
             "--",
             "prove",
-            "--out",
-        ])
+        ]);
+    if let Some(backend) = selected_backend.as_deref() {
+        command.args(["--backend", backend]);
+    }
+    let status = command
+        .arg("--out")
         .arg(out.path())
         .status()
         .expect("Fix: cargo must be available in PATH");
@@ -148,27 +160,42 @@ fn prove_emits_signed_certificate_on_gpu_build() {
             .to_string();
         by_backend.entry(backend).or_default().insert(op);
     }
-    for required_backend in ["cuda", "wgpu", "cpu-ref"] {
-        let ops = by_backend.get(required_backend).unwrap_or_else(|| {
-            panic!("Fix: signed certificate must include backend `{required_backend}`.")
+    if let Some(selected) = selected_backend.as_deref() {
+        let ops = by_backend.get(selected).unwrap_or_else(|| {
+            panic!("Fix: signed certificate must include selected backend `{selected}`.")
         });
         assert!(
-            ops.len() >= 300,
-            "Fix: signed certificate backend `{required_backend}` must cover the catalog-scale executable registry, got {} ops.",
-            ops.len()
+            !ops.is_empty(),
+            "Fix: signed certificate backend `{selected}` must cover executable registry pairs."
         );
-    }
-    let cuda_ops = by_backend
-        .get("cuda")
-        .expect("Fix: signed certificate must include cuda ops");
-    for backend in ["wgpu", "cpu-ref"] {
-        let ops = by_backend
-            .get(backend)
-            .unwrap_or_else(|| panic!("Fix: signed certificate must include `{backend}` ops."));
         assert_eq!(
-            ops, cuda_ops,
-            "Fix: signed certificate backend `{backend}` must cover the same executable op set as cuda."
+            by_backend.len(),
+            1,
+            "Fix: VYRE_BACKEND={selected} must restrict prove to the selected backend."
         );
+    } else {
+        for required_backend in ["cuda", "wgpu", "cpu-ref"] {
+            let ops = by_backend.get(required_backend).unwrap_or_else(|| {
+                panic!("Fix: signed certificate must include backend `{required_backend}`.")
+            });
+            assert!(
+                ops.len() >= 300,
+                "Fix: signed certificate backend `{required_backend}` must cover the catalog-scale executable registry, got {} ops.",
+                ops.len()
+            );
+        }
+        let cuda_ops = by_backend
+            .get("cuda")
+            .expect("Fix: signed certificate must include cuda ops");
+        for backend in ["wgpu", "cpu-ref"] {
+            let ops = by_backend
+                .get(backend)
+                .unwrap_or_else(|| panic!("Fix: signed certificate must include `{backend}` ops."));
+            assert_eq!(
+                ops, cuda_ops,
+                "Fix: signed certificate backend `{backend}` must cover the same executable op set as cuda."
+            );
+        }
     }
 
     let signature_hex = parsed["signature"]
@@ -206,6 +233,7 @@ fn prove_emits_signed_certificate_on_gpu_build() {
 #[test]
 fn prove_emits_signed_cuda_release_certificate_on_gpu_build() {
     let out = tempfile::NamedTempFile::new().expect("tempfile");
+    let selected_backend = selected_backend_override().unwrap_or_else(|| "cuda".to_string());
     let status = Command::new("cargo")
         .env("VYRE_CONFORM_PROOF_WORKERS", "16")
         .args([
@@ -218,7 +246,9 @@ fn prove_emits_signed_cuda_release_certificate_on_gpu_build() {
             "--",
             "prove",
             "--backend",
-            "cuda",
+        ])
+        .arg(&selected_backend)
+        .args([
             "--out",
         ])
         .arg(out.path())
@@ -226,7 +256,7 @@ fn prove_emits_signed_cuda_release_certificate_on_gpu_build() {
         .expect("Fix: cargo must be available in PATH");
     assert!(
         status.success(),
-        "Fix: CUDA is the release path; `prove --backend cuda` must produce a signed certificate on a live GPU."
+        "Fix: selected GPU release backend `{selected_backend}` must produce a signed certificate on a live GPU."
     );
 
     let cert =
@@ -236,15 +266,19 @@ fn prove_emits_signed_cuda_release_certificate_on_gpu_build() {
         .as_array()
         .expect("Fix: CUDA certificate must carry executable parity pairs.");
     assert!(
-        pairs.len() >= 300,
+        selected_backend != "cuda" || pairs.len() >= 300,
         "Fix: CUDA release certificate must cover the catalog-scale executable registry, got {} pairs.",
         pairs.len()
+    );
+    assert!(
+        selected_backend == "cuda" || !pairs.is_empty(),
+        "Fix: selected backend `{selected_backend}` release certificate must carry executable pairs."
     );
     for pair in pairs {
         assert_eq!(
             pair["backend_id"].as_str(),
-            Some("cuda"),
-            "Fix: CUDA release certificate must be filtered to the CUDA backend."
+            Some(selected_backend.as_str()),
+            "Fix: selected release certificate must be filtered to `{selected_backend}`."
         );
         assert_eq!(
             pair["passed"].as_bool(),
@@ -271,9 +305,11 @@ fn prove_merges_live_gpu_certificate_shards() {
     let shard_a = dir.path().join("live-shard-a.json");
     let shard_b = dir.path().join("live-shard-b.json");
     let merged = dir.path().join("live-merged.json");
+    let selected_backend = selected_backend_override();
 
     for (shard, path) in [("0/64", &shard_a), ("1/64", &shard_b)] {
-        let status = Command::new("cargo")
+        let mut command = Command::new("cargo");
+        command
             .env("VYRE_CONFORM_PROOF_WORKERS", "16")
             .args([
                 "run",
@@ -286,8 +322,12 @@ fn prove_merges_live_gpu_certificate_shards() {
                 "prove",
                 "--shard",
                 shard,
-                "--out",
-            ])
+            ]);
+        if let Some(backend) = selected_backend.as_deref() {
+            command.args(["--backend", backend]);
+        }
+        let status = command
+            .arg("--out")
             .arg(path)
             .status()
             .expect("Fix: cargo must be available in PATH");
@@ -331,7 +371,7 @@ fn prove_merges_live_gpu_certificate_shards() {
         .as_array()
         .expect("Fix: merged live certificate must carry pair results.");
     assert!(
-        pairs.len() >= 30,
+        pairs.len() >= if selected_backend.is_some() { 1 } else { 30 },
         "Fix: merged live certificate shards must cover multiple real GPU/backend pairs, got {}.",
         pairs.len()
     );
@@ -347,11 +387,19 @@ fn prove_merges_live_gpu_certificate_shards() {
             "Fix: merged live certificate must not contain failing pairs: {pair}"
         );
     }
-    for required in ["cuda", "wgpu", "cpu-ref"] {
-        assert!(
-            backends.contains(required),
-            "Fix: merged live GPU shards must preserve backend `{required}`."
+    if let Some(selected) = selected_backend.as_deref() {
+        assert_eq!(
+            backends,
+            [selected.to_string()].into_iter().collect(),
+            "Fix: VYRE_BACKEND={selected} merged shards must preserve only the selected backend."
         );
+    } else {
+        for required in ["cuda", "wgpu", "cpu-ref"] {
+            assert!(
+                backends.contains(required),
+                "Fix: merged live GPU shards must preserve backend `{required}`."
+            );
+        }
     }
     assert_eq!(
         parsed["plan"]["pair_count"].as_u64(),

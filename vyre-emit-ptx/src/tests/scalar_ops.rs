@@ -421,3 +421,72 @@ fn trap_emits_lane_exit() {
     assert!(s.contains("// trap tag: t"));
     assert!(s.contains("bra $L_exit;"));
 }
+
+#[test]
+fn add_of_two_single_use_muls_keeps_one_mul_available_for_mad() {
+    let kernel = two_slot_u32_kernel(
+        "mul_mul_add",
+        vec![
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![0],
+                result: Some(0),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![1],
+                result: Some(1),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![2],
+                result: Some(2),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![3],
+                result: Some(3),
+            },
+            KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![4],
+                result: Some(4),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                operands: vec![1, 2],
+                result: Some(5),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Mul),
+                operands: vec![3, 4],
+                result: Some(6),
+            },
+            KernelOp {
+                kind: KernelOpKind::BinOpKind(BinOp::Add),
+                operands: vec![5, 6],
+                result: Some(7),
+            },
+            KernelOp {
+                kind: KernelOpKind::StoreGlobal,
+                operands: vec![1, 0, 7],
+                result: None,
+            },
+        ],
+        vec![
+            LiteralValue::U32(0),
+            LiteralValue::U32(2),
+            LiteralValue::U32(3),
+            LiteralValue::U32(5),
+            LiteralValue::U32(7),
+        ],
+    );
+
+    let s = emit(&kernel)
+        .expect("Fix: MAD fusion must not defer both Mul operands feeding one Add.");
+
+    assert!(
+        s.contains("mad.lo.u32") && s.contains("st.global.u32"),
+        "one product must remain materialized as the MAD addend while the other Mul fuses:\n{s}"
+    );
+}
