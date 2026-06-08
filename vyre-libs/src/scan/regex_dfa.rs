@@ -40,7 +40,7 @@ use vyre_foundation::ir::Program;
 use vyre_primitives::matching::{nfa_to_dfa, CompiledDfa, NfaTables, NfaToDfaError};
 
 use crate::scan::classic_ac::try_build_ac_bounded_ranges_program_ext;
-use crate::scan::regex_compile::{compile_regex_set, RegexCompileError};
+use crate::scan::regex_compile::{compile_regex_set, CompiledRegexSet, RegexCompileError};
 
 /// Ready-to-dispatch regex DFA pipeline.
 ///
@@ -151,7 +151,81 @@ pub fn build_regex_dfa_pipeline_ext(
     use_subgroup_coalesce: bool,
 ) -> Result<RegexDfaPipeline, RegexDfaError> {
     let regex_set = compile_regex_set(patterns)?;
+    finish_regex_dfa_pipeline(
+        regex_set,
+        patterns,
+        max_matches,
+        max_dfa_states,
+        use_subgroup_coalesce,
+    )
+}
 
+/// **Unanchored (find-anywhere)** counterpart of [`build_regex_dfa_pipeline`].
+///
+/// [`build_regex_dfa_pipeline`] compiles an *anchored* DFA: it only matches a
+/// pattern starting at the scan origin (a secret at byte 9 of a file is missed).
+/// This variant adds the implicit `.*` prefix at the **NFA-table level** — it
+/// self-loops the NFA start state on every byte so the automaton stays live at
+/// every position (Aho-Corasick semantics), then runs the same subset
+/// construction. Match offsets are reported at the match END, exactly as the
+/// literal AC path.
+///
+/// This is done on the bit-table, NOT by prepending `(?s).*?` to the regex
+/// source: the regex-text approach explodes NFA/DFA construction for complex
+/// patterns (measured OOM across a 1.7k-pattern set), while the start self-loop
+/// is O(256) and leaves the rest of the automaton untouched.
+///
+/// # Errors
+/// See [`RegexDfaError`].
+pub fn build_regex_dfa_unanchored(
+    patterns: &[&str],
+    max_matches: u32,
+    max_dfa_states: usize,
+) -> Result<RegexDfaPipeline, RegexDfaError> {
+    let mut regex_set = compile_regex_set(patterns)?;
+    add_implicit_dotstar_prefix(
+        &mut regex_set.transition_table,
+        regex_set.plan.num_states as usize,
+    );
+    finish_regex_dfa_pipeline(regex_set, patterns, max_matches, max_dfa_states, true)
+}
+
+/// Add an implicit `.*` prefix to a subgroup-NFA transition table: self-loop the
+/// start state (state 0 — lane 0, bit 0) on every byte so it remains active at
+/// each input position. This is the standard unanchored/Aho-Corasick transform,
+/// applied to the lane-major `[num_states × 256 × LANES]` table where entry
+/// `trans[src*256*LANES + byte*LANES + lane]` holds the destination-state bits
+/// lane `lane` owns. For `src = 0, lane = 0` over every byte we OR in bit 0.
+fn add_implicit_dotstar_prefix(transition_table: &mut [u32], num_states: usize) {
+    if num_states == 0 {
+        return;
+    }
+    // LANES = table_len / (num_states * 256); derive it so this stays correct if
+    // LANES_PER_SUBGROUP ever changes, with no extra feature import.
+    let denom = num_states.saturating_mul(256);
+    if denom == 0 || transition_table.len() % denom != 0 {
+        return; // malformed table — leave it to nfa_to_dfa to reject.
+    }
+    let lanes = transition_table.len() / denom;
+    for byte in 0..256usize {
+        // src = 0, lane = 0  →  index = 0*256*lanes + byte*lanes + 0
+        let idx = byte * lanes;
+        if idx < transition_table.len() {
+            transition_table[idx] |= 1; // bit 0 = state 0 (start) self-loop
+        }
+    }
+}
+
+/// Shared tail of the regex→DFA build: turn a compiled NFA regex set into a
+/// dispatchable [`RegexDfaPipeline`] (subset construction + AC program). Called
+/// by both the anchored and unanchored entry points.
+fn finish_regex_dfa_pipeline(
+    regex_set: CompiledRegexSet,
+    patterns: &[&str],
+    max_matches: u32,
+    max_dfa_states: usize,
+    use_subgroup_coalesce: bool,
+) -> Result<RegexDfaPipeline, RegexDfaError> {
     // The NFA `plan` carries accept_states as `(pattern_id, match_len)`
     // tuples. nfa_to_dfa wants the pattern ids and the max len
     // separately; max_pattern_len doubles as the AC kernel's per-
@@ -235,6 +309,52 @@ fn reserve_regex_vec<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Single-pass DFA replay from the start state — the exact semantics the
+    /// megakernel batch dispatcher uses (one pass per file, no per-position
+    /// restart). Returns the end offsets where the DFA accepts.
+    fn single_pass_accept_ends(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<usize> {
+        let mut state = 0u32;
+        let mut ends = Vec::new();
+        for (i, &b) in haystack.iter().enumerate() {
+            state = dfa.transitions[state as usize * 256 + b as usize];
+            if dfa.accept[state as usize] != 0 {
+                ends.push(i + 1);
+            }
+        }
+        ends
+    }
+
+    /// The unanchored build must match a pattern at ANY offset under a single
+    /// forward pass (find-anywhere), while the anchored build dies on a
+    /// non-matching prefix. This is the property the keyhog megakernel fallback
+    /// port depends on (a secret is rarely at byte 0).
+    #[test]
+    fn unanchored_dfa_matches_at_any_offset_single_pass() {
+        let anchored = build_regex_dfa_pipeline(&["abc"], 1024, 1024).expect("anchored compiles");
+        let unanchored = build_regex_dfa_unanchored(&["abc"], 1024, 1024).expect("unanchored compiles");
+
+        // Unanchored: one pass over "xxabc" accepts at end=5 (abc at bytes 2..4).
+        assert_eq!(
+            single_pass_accept_ends(&unanchored.dfa, b"xxabc"),
+            vec![5],
+            "unanchored DFA must match `abc` after a non-matching prefix"
+        );
+        // Anchored: the leading 'x' drives state 0 to a dead state → no accept.
+        assert!(
+            single_pass_accept_ends(&anchored.dfa, b"xxabc").is_empty(),
+            "anchored DFA must NOT match `abc` after a non-matching prefix"
+        );
+        // Both match at the start.
+        assert_eq!(single_pass_accept_ends(&unanchored.dfa, b"abc"), vec![3]);
+        assert_eq!(single_pass_accept_ends(&anchored.dfa, b"abc"), vec![3]);
+        // Unanchored finds every occurrence in one pass.
+        assert_eq!(
+            single_pass_accept_ends(&unanchored.dfa, b"abcxabc"),
+            vec![3, 7],
+            "unanchored DFA must find all occurrences"
+        );
+    }
 
     /// End-to-end: a literal regex set should produce a Program whose
     /// CompiledDfa accepts the literal at the expected end offset. The

@@ -135,6 +135,11 @@ pub const API_INDEX: &[(&str, ApiKind, Option<&str>)] = &[
         ApiKind::Function,
         Some("matching-regex"),
     ),
+    (
+        "build_regex_dfa_unanchored",
+        ApiKind::Function,
+        Some("matching-regex"),
+    ),
     ("RegexDfaPipeline", ApiKind::Struct, Some("matching-regex")),
     ("RegexDfaError", ApiKind::Enum, Some("matching-regex")),
 ];
@@ -293,7 +298,9 @@ pub use regex_compile::{
     build_rule_pipeline_from_regex, compile_regex_set, CompiledRegexSet, RegexCompileError,
 };
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-pub use regex_dfa::{build_regex_dfa_pipeline, RegexDfaError, RegexDfaPipeline};
+pub use regex_dfa::{
+    build_regex_dfa_pipeline, build_regex_dfa_unanchored, RegexDfaError, RegexDfaPipeline,
+};
 #[cfg(feature = "matching-substring")]
 pub use substring::{substring_search, SCAN_SUBSTRING_OP_ID};
 // Re-export the cross-program fusion API at the matching layer so consumers

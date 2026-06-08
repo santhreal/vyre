@@ -31,8 +31,9 @@
 //! Resident dispatch requires a backend that implements the resident half of
 //! the [`VyreBackend`] contract (`allocate_resident`, `upload_resident*`,
 //! `dispatch_resident_timed`). The wgpu and CUDA backends do; the CPU reference
-//! does not. [`RulePipeline::prepare_resident`] surfaces the backend's
-//! `UnsupportedFeature` error so the caller can fall back to the borrowed path.
+//! does not. [`RulePipeline::prepare_resident`] returns the backend's
+//! `UnsupportedFeature` error **loudly** — the caller must handle it explicitly
+//! (fail closed, or a loud/recorded fallback), never degrade silently.
 
 use vyre::{BackendError, DispatchConfig, VyreBackend};
 use vyre_driver::Resource;
@@ -91,9 +92,9 @@ impl RulePipeline {
     /// # Errors
     ///
     /// Returns [`BackendError`] when the backend does not support resident
-    /// resources (the caller should fall back to the borrowed
-    /// [`scan`](Self::scan) path), or when allocation / upload of the resident
-    /// tables fails.
+    /// resources, or when allocation / upload of the resident tables fails. The
+    /// caller must handle this loudly (fail closed or a recorded fallback) —
+    /// never degrade silently.
     pub fn prepare_resident(
         &self,
         backend: &dyn VyreBackend,
