@@ -7,7 +7,143 @@ use crate::scan::dfa::CompiledDfa;
 use super::super::super::count_program::{
     suffix3_bloom_bit_index_expr, CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
-use super::super::bounded_ranges_scan_nodes;
+use super::super::{
+    bounded_ranges_presence_by_region_nodes, bounded_ranges_presence_nodes, bounded_ranges_scan_nodes,
+};
+
+/// The suffix2/suffix3 candidate-gating body shared by the match-emitting scan
+/// program and the presence-bitmap program. Both run the IDENTICAL prefilter
+/// cascade (byte end-mask → suffix2 → suffix3 bloom) and only differ in the
+/// `replay_nodes` they execute at an accepted candidate position. Extracted so
+/// the two output modes cannot drift in their candidate logic.
+#[allow(clippy::too_many_arguments)]
+fn suffix3_prefilter_body(
+    haystack: &str,
+    haystack_len: &str,
+    candidate_end_mask: &str,
+    candidate_suffix2_mask: &str,
+    candidate_suffix3_bloom: &str,
+    replay_nodes: Vec<Node>,
+) -> Vec<Node> {
+    let i = Expr::var("i");
+    let candidate_byte = load_packed_byte_expr(haystack, i.clone());
+    let previous_byte =
+        load_packed_byte_expr(haystack, Expr::saturating_sub(i.clone(), Expr::u32(1)));
+    let previous2_byte =
+        load_packed_byte_expr(haystack, Expr::saturating_sub(i.clone(), Expr::u32(2)));
+    let suffix2_index = Expr::bitor(
+        Expr::shl(Expr::var("previous_byte"), Expr::u32(8)),
+        Expr::var("candidate_byte"),
+    );
+    let suffix3_index = Expr::bitor(
+        Expr::bitor(
+            Expr::shl(Expr::var("previous2_byte"), Expr::u32(16)),
+            Expr::shl(Expr::var("previous_byte"), Expr::u32(8)),
+        ),
+        Expr::var("candidate_byte"),
+    );
+    let suffix3_bit_index = suffix3_bloom_bit_index_expr(Expr::var("suffix3_index"));
+
+    vec![
+        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::if_then(
+            Expr::lt(i.clone(), Expr::load(haystack_len, Expr::u32(0))),
+            vec![
+                Node::let_bind("candidate_byte", candidate_byte),
+                Node::let_bind(
+                    "candidate_word",
+                    Expr::load(
+                        candidate_end_mask,
+                        Expr::shr(Expr::var("candidate_byte"), Expr::u32(5)),
+                    ),
+                ),
+                Node::let_bind(
+                    "candidate_bit",
+                    Expr::shl(
+                        Expr::u32(1),
+                        Expr::bitand(Expr::var("candidate_byte"), Expr::u32(31)),
+                    ),
+                ),
+                Node::if_then(
+                    Expr::ne(
+                        Expr::bitand(Expr::var("candidate_word"), Expr::var("candidate_bit")),
+                        Expr::u32(0),
+                    ),
+                    vec![Node::if_then_else(
+                        Expr::eq(i.clone(), Expr::u32(0)),
+                        replay_nodes.clone(),
+                        vec![
+                            Node::let_bind("previous_byte", previous_byte),
+                            Node::let_bind("suffix2_index", suffix2_index),
+                            Node::let_bind(
+                                "suffix2_word",
+                                Expr::load(
+                                    candidate_suffix2_mask,
+                                    Expr::shr(Expr::var("suffix2_index"), Expr::u32(5)),
+                                ),
+                            ),
+                            Node::let_bind(
+                                "suffix2_bit",
+                                Expr::shl(
+                                    Expr::u32(1),
+                                    Expr::bitand(Expr::var("suffix2_index"), Expr::u32(31)),
+                                ),
+                            ),
+                            Node::if_then(
+                                Expr::ne(
+                                    Expr::bitand(
+                                        Expr::var("suffix2_word"),
+                                        Expr::var("suffix2_bit"),
+                                    ),
+                                    Expr::u32(0),
+                                ),
+                                vec![Node::if_then_else(
+                                    Expr::eq(i.clone(), Expr::u32(1)),
+                                    replay_nodes.clone(),
+                                    vec![
+                                        Node::let_bind("previous2_byte", previous2_byte),
+                                        Node::let_bind("suffix3_index", suffix3_index),
+                                        Node::let_bind("suffix3_bit_index", suffix3_bit_index),
+                                        Node::let_bind(
+                                            "suffix3_word",
+                                            Expr::load(
+                                                candidate_suffix3_bloom,
+                                                Expr::shr(
+                                                    Expr::var("suffix3_bit_index"),
+                                                    Expr::u32(5),
+                                                ),
+                                            ),
+                                        ),
+                                        Node::let_bind(
+                                            "suffix3_bit",
+                                            Expr::shl(
+                                                Expr::u32(1),
+                                                Expr::bitand(
+                                                    Expr::var("suffix3_bit_index"),
+                                                    Expr::u32(31),
+                                                ),
+                                            ),
+                                        ),
+                                        Node::if_then(
+                                            Expr::ne(
+                                                Expr::bitand(
+                                                    Expr::var("suffix3_word"),
+                                                    Expr::var("suffix3_bit"),
+                                                ),
+                                                Expr::u32(0),
+                                            ),
+                                            replay_nodes,
+                                        ),
+                                    ],
+                                )],
+                            ),
+                        ],
+                    )],
+                ),
+            ],
+        ),
+    ]
+}
 
 /// Build a bounded-window AC ranges program with byte, suffix2, and suffix3
 /// candidate filters before match-emitting replay.
@@ -75,24 +211,6 @@ pub fn classic_ac_bounded_ranges_suffix3_prefilter_program_ext(
     max_pattern_len: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    let i = Expr::var("i");
-    let candidate_byte = load_packed_byte_expr(haystack, i.clone());
-    let previous_byte =
-        load_packed_byte_expr(haystack, Expr::saturating_sub(i.clone(), Expr::u32(1)));
-    let previous2_byte =
-        load_packed_byte_expr(haystack, Expr::saturating_sub(i.clone(), Expr::u32(2)));
-    let suffix2_index = Expr::bitor(
-        Expr::shl(Expr::var("previous_byte"), Expr::u32(8)),
-        Expr::var("candidate_byte"),
-    );
-    let suffix3_index = Expr::bitor(
-        Expr::bitor(
-            Expr::shl(Expr::var("previous2_byte"), Expr::u32(16)),
-            Expr::shl(Expr::var("previous_byte"), Expr::u32(8)),
-        ),
-        Expr::var("candidate_byte"),
-    );
-    let suffix3_bit_index = suffix3_bloom_bit_index_expr(Expr::var("suffix3_index"));
     let scan_nodes = bounded_ranges_scan_nodes(
         haystack,
         transitions,
@@ -104,106 +222,14 @@ pub fn classic_ac_bounded_ranges_suffix3_prefilter_program_ext(
         max_pattern_len,
         use_subgroup_coalesce,
     );
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::load(haystack_len, Expr::u32(0))),
-            vec![
-                Node::let_bind("candidate_byte", candidate_byte),
-                Node::let_bind(
-                    "candidate_word",
-                    Expr::load(
-                        candidate_end_mask,
-                        Expr::shr(Expr::var("candidate_byte"), Expr::u32(5)),
-                    ),
-                ),
-                Node::let_bind(
-                    "candidate_bit",
-                    Expr::shl(
-                        Expr::u32(1),
-                        Expr::bitand(Expr::var("candidate_byte"), Expr::u32(31)),
-                    ),
-                ),
-                Node::if_then(
-                    Expr::ne(
-                        Expr::bitand(Expr::var("candidate_word"), Expr::var("candidate_bit")),
-                        Expr::u32(0),
-                    ),
-                    vec![Node::if_then_else(
-                        Expr::eq(i.clone(), Expr::u32(0)),
-                        scan_nodes.clone(),
-                        vec![
-                            Node::let_bind("previous_byte", previous_byte),
-                            Node::let_bind("suffix2_index", suffix2_index),
-                            Node::let_bind(
-                                "suffix2_word",
-                                Expr::load(
-                                    candidate_suffix2_mask,
-                                    Expr::shr(Expr::var("suffix2_index"), Expr::u32(5)),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "suffix2_bit",
-                                Expr::shl(
-                                    Expr::u32(1),
-                                    Expr::bitand(Expr::var("suffix2_index"), Expr::u32(31)),
-                                ),
-                            ),
-                            Node::if_then(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("suffix2_word"),
-                                        Expr::var("suffix2_bit"),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                vec![Node::if_then_else(
-                                    Expr::eq(i.clone(), Expr::u32(1)),
-                                    scan_nodes.clone(),
-                                    vec![
-                                        Node::let_bind("previous2_byte", previous2_byte),
-                                        Node::let_bind("suffix3_index", suffix3_index),
-                                        Node::let_bind("suffix3_bit_index", suffix3_bit_index),
-                                        Node::let_bind(
-                                            "suffix3_word",
-                                            Expr::load(
-                                                candidate_suffix3_bloom,
-                                                Expr::shr(
-                                                    Expr::var("suffix3_bit_index"),
-                                                    Expr::u32(5),
-                                                ),
-                                            ),
-                                        ),
-                                        Node::let_bind(
-                                            "suffix3_bit",
-                                            Expr::shl(
-                                                Expr::u32(1),
-                                                Expr::bitand(
-                                                    Expr::var("suffix3_bit_index"),
-                                                    Expr::u32(31),
-                                                ),
-                                            ),
-                                        ),
-                                        Node::if_then(
-                                            Expr::ne(
-                                                Expr::bitand(
-                                                    Expr::var("suffix3_word"),
-                                                    Expr::var("suffix3_bit"),
-                                                ),
-                                                Expr::u32(0),
-                                            ),
-                                            scan_nodes,
-                                        ),
-                                    ],
-                                )],
-                            ),
-                        ],
-                    )],
-                ),
-            ],
-        ),
-    ];
+    let body = suffix3_prefilter_body(
+        haystack,
+        haystack_len,
+        candidate_end_mask,
+        candidate_suffix2_mask,
+        candidate_suffix3_bloom,
+        scan_nodes,
+    );
 
     Program::wrapped(
         vec![
@@ -244,6 +270,265 @@ pub fn classic_ac_bounded_ranges_suffix3_prefilter_program_ext(
             body,
         )],
     )
+}
+
+/// Number of u32 words a presence bitmap needs for `pattern_count` patterns.
+#[must_use]
+pub fn presence_bitmap_words(pattern_count: u32) -> u32 {
+    pattern_count.div_ceil(32).max(1)
+}
+
+/// Build a suffix3-prefiltered bounded-ranges AC PRESENCE program: same candidate
+/// gating + DFA replay as the match-emitting scan, but each accepted pattern sets
+/// one idempotent bit in a `presence_bitmap_words(pattern_count)`-word read-write
+/// bitmap (binding 6, replacing the `match_count` + `matches` buffers) via
+/// `atomic_or`. The inputs at bindings 0-5 and 7-9 (haystack, DFA tables, prefilter
+/// masks) are byte-identical to the scan program, so a resident integration can
+/// share the uploaded static tables. There is NO match-triple output and the entire
+/// readback is the small bitmap — removing the dense-workload output bottleneck.
+#[must_use]
+#[allow(clippy::too_many_arguments)]
+pub fn classic_ac_bounded_ranges_suffix3_presence_program_ext(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    output_records: &str,
+    pattern_lengths: &str,
+    haystack_len: &str,
+    presence: &str,
+    candidate_end_mask: &str,
+    candidate_suffix2_mask: &str,
+    candidate_suffix3_bloom: &str,
+    state_count: u32,
+    output_records_len: u32,
+    pattern_count: u32,
+    max_pattern_len: u32,
+) -> Program {
+    let presence_words = presence_bitmap_words(pattern_count);
+    let replay_nodes = bounded_ranges_presence_nodes(
+        haystack,
+        transitions,
+        output_offsets,
+        output_records,
+        presence,
+        max_pattern_len,
+    );
+    let body = suffix3_prefilter_body(
+        haystack,
+        haystack_len,
+        candidate_end_mask,
+        candidate_suffix2_mask,
+        candidate_suffix3_bloom,
+        replay_nodes,
+    );
+
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(state_count.saturating_mul(256)),
+            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(state_count.saturating_add(1)),
+            BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(output_records_len),
+            BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(pattern_count),
+            BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(1),
+            BufferDecl::read_write(presence, 6, DataType::U32).with_count(presence_words),
+            BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(8),
+            BufferDecl::storage(
+                candidate_suffix2_mask,
+                8,
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
+            BufferDecl::storage(
+                candidate_suffix3_bloom,
+                9,
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
+        ],
+        [128, 1, 1],
+        vec![wrap_anonymous(
+            "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence",
+            body,
+        )],
+    )
+}
+
+/// Build the suffix3-prefiltered PRESENCE program for a compiled DFA.
+///
+/// # Errors
+/// Returns an actionable error when DFA output-record metadata exceeds the u32
+/// GPU buffer-count ABI.
+pub fn try_build_ac_bounded_ranges_suffix3_presence_program(
+    dfa: &CompiledDfa,
+    pattern_count: u32,
+) -> Result<Program, String> {
+    let output_records_len = u32::try_from(dfa.output_records.len()).map_err(|source| {
+        format!(
+            "AC bounded-ranges suffix3 presence DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
+            dfa.output_records.len()
+        )
+    })?;
+    Ok(classic_ac_bounded_ranges_suffix3_presence_program_ext(
+        "haystack",
+        "transitions",
+        "output_offsets",
+        "output_records",
+        "pattern_lengths",
+        "haystack_len",
+        "presence",
+        "candidate_end_mask",
+        "candidate_suffix2_mask",
+        "candidate_suffix3_bloom",
+        dfa.state_count,
+        output_records_len,
+        pattern_count,
+        dfa.max_pattern_len,
+    ))
+}
+
+/// `ceil(log2(n))` for the binary-search iteration count, with a floor of 1 so a
+/// 1- or 2-region program still runs one narrowing step.
+#[must_use]
+fn ceil_log2(n: u32) -> u32 {
+    match n {
+        0 | 1 => 1,
+        _ => (32 - (n - 1).leading_zeros()).max(1),
+    }
+}
+
+/// Number of u32 words a per-region presence bitmap needs for `region_count`
+/// regions of `pattern_count` patterns each: `region_count × presence_words`.
+#[must_use]
+pub fn presence_by_region_words(pattern_count: u32, max_regions: u32) -> u32 {
+    presence_bitmap_words(pattern_count).saturating_mul(max_regions.max(1))
+}
+
+/// Region-attributed variant of [`classic_ac_bounded_ranges_suffix3_presence_program_ext`]:
+/// the presence bitmap (binding 6) is `max_regions × presence_bitmap_words(pattern_count)`
+/// words, and a `region_starts` table (binding 10, the ascending file start
+/// offsets of the coalesced buffer with `region_starts[0] == 0`) maps each hit to
+/// its region row. Same candidate gating + DFA replay + idempotent `atomic_or` as
+/// the global presence program, so it keeps the dense-input scan ceiling; the only
+/// added per-hit work is a `ceil(log2(max_regions))`-iteration binary search. One
+/// compiled program serves any batch with `region_count <= max_regions` (the live
+/// count is read from `buf_len(region_starts)`).
+#[must_use]
+#[allow(clippy::too_many_arguments)]
+pub fn classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    output_records: &str,
+    pattern_lengths: &str,
+    haystack_len: &str,
+    presence: &str,
+    candidate_end_mask: &str,
+    candidate_suffix2_mask: &str,
+    candidate_suffix3_bloom: &str,
+    region_starts: &str,
+    state_count: u32,
+    output_records_len: u32,
+    pattern_count: u32,
+    max_pattern_len: u32,
+    max_regions: u32,
+) -> Program {
+    let presence_words = presence_bitmap_words(pattern_count);
+    let total_presence_words = presence_by_region_words(pattern_count, max_regions);
+    let replay_nodes = bounded_ranges_presence_by_region_nodes(
+        haystack,
+        transitions,
+        output_offsets,
+        output_records,
+        presence,
+        region_starts,
+        max_pattern_len,
+        presence_words,
+        ceil_log2(max_regions),
+    );
+    let body = suffix3_prefilter_body(
+        haystack,
+        haystack_len,
+        candidate_end_mask,
+        candidate_suffix2_mask,
+        candidate_suffix3_bloom,
+        replay_nodes,
+    );
+
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(state_count.saturating_mul(256)),
+            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(state_count.saturating_add(1)),
+            BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(output_records_len),
+            BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(pattern_count),
+            BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(1),
+            BufferDecl::read_write(presence, 6, DataType::U32).with_count(total_presence_words),
+            BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(8),
+            BufferDecl::storage(candidate_suffix2_mask, 8, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
+            BufferDecl::storage(candidate_suffix3_bloom, 9, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
+            // Region start offsets (ascending, region_starts[0] == 0). Dynamic
+            // length: the kernel reads region_count via buf_len(region_starts).
+            BufferDecl::storage(region_starts, 10, BufferAccess::ReadOnly, DataType::U32),
+        ],
+        [128, 1, 1],
+        vec![wrap_anonymous(
+            "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_by_region",
+            body,
+        )],
+    )
+}
+
+/// Build the region-attributed suffix3 PRESENCE program for a compiled DFA, sized
+/// for up to `max_regions` coalesced files.
+///
+/// # Errors
+/// Returns an actionable error when DFA output-record metadata exceeds the u32
+/// GPU buffer-count ABI.
+pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
+    dfa: &CompiledDfa,
+    pattern_count: u32,
+    max_regions: u32,
+) -> Result<Program, String> {
+    let output_records_len = u32::try_from(dfa.output_records.len()).map_err(|source| {
+        format!(
+            "AC bounded-ranges suffix3 region-presence DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
+            dfa.output_records.len()
+        )
+    })?;
+    Ok(classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext(
+        "haystack",
+        "transitions",
+        "output_offsets",
+        "output_records",
+        "pattern_lengths",
+        "haystack_len",
+        "presence",
+        "candidate_end_mask",
+        "candidate_suffix2_mask",
+        "candidate_suffix3_bloom",
+        "region_starts",
+        dfa.state_count,
+        output_records_len,
+        pattern_count,
+        dfa.max_pattern_len,
+        max_regions,
+    ))
 }
 
 /// Build the suffix-prefiltered bounded-ranges AC scan for a compiled DFA.
@@ -457,5 +742,48 @@ mod tests {
         );
         assert_eq!(program.buffers()[10].name(), "matches");
         assert_eq!(program.buffers()[10].count, 1024 * 3);
+    }
+
+    #[test]
+    fn region_presence_program_has_region_attributed_shape() {
+        let ac = classic_ac_compile(&[b"token", b"tok", b"secret"]);
+        let pattern_count = 3u32;
+        let max_regions = 8u32;
+        let program = try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
+            &ac.dfa,
+            pattern_count,
+            max_regions,
+        )
+        .expect("Fix: region-presence program must build for a small DFA");
+
+        // Bindings 0-9 match the global presence program; the per-region variant
+        // adds `region_starts` at binding 10 and widens `presence` to a per-region
+        // bitmap (row stride × max_regions) instead of a single global row.
+        assert_eq!(program.workgroup_size(), [128, 1, 1]);
+        assert_eq!(program.buffers().len(), 11);
+        assert_eq!(program.buffers()[6].name(), "presence");
+        let words = presence_bitmap_words(pattern_count);
+        assert_eq!(program.buffers()[6].count, words * max_regions);
+        assert_eq!(
+            program.buffers()[6].count,
+            presence_by_region_words(pattern_count, max_regions)
+        );
+        assert_eq!(program.buffers()[10].name(), "region_starts");
+    }
+
+    #[test]
+    fn ceil_log2_bounds_binary_search_iterations() {
+        // ceil(log2(n)) with a floor of 1: the number of narrowing steps a
+        // binary search over n regions needs (n region rows → 1 index).
+        assert_eq!(ceil_log2(0), 1);
+        assert_eq!(ceil_log2(1), 1);
+        assert_eq!(ceil_log2(2), 1);
+        assert_eq!(ceil_log2(3), 2);
+        assert_eq!(ceil_log2(4), 2);
+        assert_eq!(ceil_log2(5), 3);
+        assert_eq!(ceil_log2(8), 3);
+        assert_eq!(ceil_log2(9), 4);
+        assert_eq!(ceil_log2(16), 4);
+        assert_eq!(ceil_log2(65536), 16);
     }
 }

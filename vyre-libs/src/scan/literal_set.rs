@@ -5,8 +5,10 @@
 use crate::scan::classic_ac::{
     build_ac_bounded_count_suffix3_prefilter_program,
     build_ac_bounded_ranges_suffix3_prefilter_program_ext,
-    classic_ac_candidate_suffix3_bloom_words,
-    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext, CLASSIC_AC_SUFFIX2_MASK_WORDS,
+    classic_ac_candidate_suffix3_bloom_words, presence_bitmap_words, presence_by_region_words,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
+    try_build_ac_bounded_ranges_suffix3_presence_program, CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
 use crate::scan::dfa::{dfa_compile, CompiledDfa};
 use crate::scan::dispatch_io::ScanDispatchScratch;
@@ -605,6 +607,233 @@ impl GpuLiteralSet {
             count_program,
             prefilter_tables,
         )
+    }
+
+    /// GPU PRESENCE scan: return a per-pattern presence bitmap as packed `u32`
+    /// words (bit `p` — word `p >> 5`, bit `p & 31` — set iff pattern `p`'s literal
+    /// occurs in `haystack`). This is the compact-output counterpart of
+    /// [`Self::scan`] for prefilter consumers that need only WHICH patterns fired,
+    /// not where. The kernel performs one idempotent `atomic_or` per hit into a
+    /// `ceil(patterns/32)`-word bitmap instead of appending an `(id,start,end)`
+    /// triple through an atomic counter, so match-DENSE inputs stay near the scan
+    /// throughput ceiling rather than collapsing on per-hit output serialization +
+    /// large triple readback (the dominant cost measured on dense corpora).
+    ///
+    /// The bitmap is sound for presence: concurrent lanes setting the same bit
+    /// race harmlessly (OR is idempotent), and bits in the same word are merged by
+    /// `atomic_or`. Inputs 0-5 / 7-9 are byte-identical to [`Self::scan`].
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] on dispatch/readback failure, scan-boundary
+    /// validation, or a pattern count exceeding the u32 GPU ABI.
+    pub fn scan_presence<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+    ) -> Result<Vec<u32>, vyre::BackendError> {
+        let mut scratch = ScanDispatchScratch::default();
+        self.scan_presence_with_scratch(backend, haystack, &mut scratch)
+    }
+
+    /// [`Self::scan_presence`] with caller-owned hot-loop scratch (reuses the
+    /// packed-haystack staging buffer across repeated scans).
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence`].
+    pub fn scan_presence_with_scratch<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        scratch: &mut ScanDispatchScratch,
+    ) -> Result<Vec<u32>, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "literal_set presence: pattern count exceeds u32 GPU ABI".to_string(),
+            )
+        })?;
+        let presence_words = presence_bitmap_words(pattern_count) as usize;
+        let program =
+            try_build_ac_bounded_ranges_suffix3_presence_program(&self.dfa, pattern_count)
+                .map_err(vyre::BackendError::new)?;
+        let prefilter_tables = self.build_prefilter_tables()?;
+
+        let haystack_len = dispatch_io::scan_guard(
+            haystack,
+            "literal_set_presence",
+            dispatch_io::DEFAULT_MAX_SCAN_BYTES,
+        )?;
+        dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
+        let haystack_bytes = scratch.haystack_bytes.as_slice();
+        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.transitions);
+        let output_offset_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets);
+        let output_record_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_records);
+        let pattern_length_bytes = dispatch_io::u32_words_as_le_bytes(&self.pattern_lengths);
+        let candidate_end_mask_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_end_mask);
+        let candidate_suffix2_mask_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix2_mask);
+        let candidate_suffix3_bloom_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix3_bloom);
+        let haystack_len_word = [haystack_len];
+        let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
+        // Presence buffer (binding 6) is read-write: uploaded zeroed, dispatched,
+        // and read back. It is the entire output.
+        let presence_zeroed = vec![0u8; presence_words.saturating_mul(4)];
+
+        let config =
+            dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
+        let borrowed_inputs: smallvec::SmallVec<[&[u8]; 10]> = [
+            haystack_bytes,                         // 0: haystack (Packed U32)
+            transition_bytes.as_ref(),              // 1: transitions
+            output_offset_bytes.as_ref(),           // 2: output_offsets
+            output_record_bytes.as_ref(),           // 3: output_records
+            pattern_length_bytes.as_ref(),          // 4: pattern_lengths
+            haystack_len_bytes.as_ref(),            // 5: haystack_len
+            presence_zeroed.as_slice(),             // 6: presence (read_write)
+            candidate_end_mask_bytes.as_ref(),      // 7: candidate_end_mask
+            candidate_suffix2_mask_bytes.as_ref(),  // 8: candidate_suffix2_mask
+            candidate_suffix3_bloom_bytes.as_ref(), // 9: candidate_suffix3_bloom
+        ]
+        .into_iter()
+        .collect();
+        let outputs = backend.dispatch_borrowed(&program, &borrowed_inputs, &config)?;
+        // `presence` is the only read-write/output buffer, so it is outputs[0].
+        let presence_bytes = dispatch_io::try_output_bytes(&outputs, 0, "literal_set presence")?;
+        let words: Vec<u32> = presence_bytes
+            .chunks_exact(4)
+            .take(presence_words)
+            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect();
+        Ok(words)
+    }
+
+    /// GPU REGION-PRESENCE scan: return a per-REGION presence bitmap, where region
+    /// `r` is the slice `[region_starts[r], region_starts[r+1])` of `haystack` (a
+    /// coalesced batch of independent files). The result is `region_starts.len() ×
+    /// presence_bitmap_words(pattern_count)` packed `u32` words: bit `p` of region
+    /// `r`'s row is set iff pattern `p`'s literal occurs inside region `r`.
+    ///
+    /// This is the dense-batch counterpart of [`Self::scan_presence`]: it keeps the
+    /// idempotent-`atomic_or` output (no per-hit counter, no triple readback, so it
+    /// stays near the scan-throughput ceiling on match-dense corpora) while
+    /// preserving per-file attribution, which the global presence bitmap loses. The
+    /// consumer (e.g. keyhog's coalesced GPU phase-1) gets the exact per-file
+    /// trigger set it needs without materializing spans or reducing triples on the
+    /// host.
+    ///
+    /// `region_starts` must be ascending with `region_starts[0] == 0`. A match never
+    /// spans a region boundary (the consumer inserts separator bytes between files),
+    /// so the end-position attribution the kernel performs equals start attribution.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] on dispatch/readback failure, scan-boundary
+    /// validation, an empty or non-zero-based `region_starts`, or a pattern/region
+    /// count exceeding the u32 GPU ABI.
+    pub fn scan_presence_by_region<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        region_starts: &[u32],
+    ) -> Result<Vec<u32>, vyre::BackendError> {
+        let mut scratch = ScanDispatchScratch::default();
+        self.scan_presence_by_region_with_scratch(backend, haystack, region_starts, &mut scratch)
+    }
+
+    /// [`Self::scan_presence_by_region`] with caller-owned hot-loop scratch.
+    ///
+    /// # Errors
+    /// See [`Self::scan_presence_by_region`].
+    pub fn scan_presence_by_region_with_scratch<B: VyreBackend + ?Sized>(
+        &self,
+        backend: &B,
+        haystack: &[u8],
+        region_starts: &[u32],
+        scratch: &mut ScanDispatchScratch,
+    ) -> Result<Vec<u32>, vyre::BackendError> {
+        use crate::scan::dispatch_io;
+
+        let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "literal_set region-presence: pattern count exceeds u32 GPU ABI".to_string(),
+            )
+        })?;
+        let region_count = u32::try_from(region_starts.len()).map_err(|_| {
+            vyre::BackendError::new(
+                "literal_set region-presence: region count exceeds u32 GPU ABI".to_string(),
+            )
+        })?;
+        if region_count == 0 {
+            return Err(vyre::BackendError::new(
+                "literal_set region-presence: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0.".to_string(),
+            ));
+        }
+        if region_starts[0] != 0 {
+            return Err(vyre::BackendError::new(
+                "literal_set region-presence: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0.".to_string(),
+            ));
+        }
+        let presence_words = presence_bitmap_words(pattern_count) as usize;
+        let total_words = presence_by_region_words(pattern_count, region_count) as usize;
+        let program = try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
+            &self.dfa,
+            pattern_count,
+            region_count,
+        )
+        .map_err(vyre::BackendError::new)?;
+        let prefilter_tables = self.build_prefilter_tables()?;
+
+        let haystack_len = dispatch_io::scan_guard(
+            haystack,
+            "literal_set_presence_by_region",
+            dispatch_io::DEFAULT_MAX_SCAN_BYTES,
+        )?;
+        dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
+        let haystack_bytes = scratch.haystack_bytes.as_slice();
+        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.transitions);
+        let output_offset_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_offsets);
+        let output_record_bytes = dispatch_io::u32_words_as_le_bytes(&self.dfa.output_records);
+        let pattern_length_bytes = dispatch_io::u32_words_as_le_bytes(&self.pattern_lengths);
+        let candidate_end_mask_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_end_mask);
+        let candidate_suffix2_mask_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix2_mask);
+        let candidate_suffix3_bloom_bytes =
+            dispatch_io::u32_words_as_le_bytes(&prefilter_tables.candidate_suffix3_bloom);
+        let haystack_len_word = [haystack_len];
+        let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
+        let region_starts_bytes = dispatch_io::u32_words_as_le_bytes(region_starts);
+        // Per-region presence buffer (binding 6) is read-write: uploaded zeroed,
+        // dispatched, read back. It is the entire output.
+        let presence_zeroed = vec![0u8; total_words.saturating_mul(4)];
+
+        let config =
+            dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
+        let borrowed_inputs: smallvec::SmallVec<[&[u8]; 11]> = [
+            haystack_bytes,                         // 0: haystack (Packed U32)
+            transition_bytes.as_ref(),              // 1: transitions
+            output_offset_bytes.as_ref(),           // 2: output_offsets
+            output_record_bytes.as_ref(),           // 3: output_records
+            pattern_length_bytes.as_ref(),          // 4: pattern_lengths
+            haystack_len_bytes.as_ref(),            // 5: haystack_len
+            presence_zeroed.as_slice(),             // 6: per-region presence (read_write)
+            candidate_end_mask_bytes.as_ref(),      // 7: candidate_end_mask
+            candidate_suffix2_mask_bytes.as_ref(),  // 8: candidate_suffix2_mask
+            candidate_suffix3_bloom_bytes.as_ref(), // 9: candidate_suffix3_bloom
+            region_starts_bytes.as_ref(),           // 10: region_starts
+        ]
+        .into_iter()
+        .collect();
+        let outputs = backend.dispatch_borrowed(&program, &borrowed_inputs, &config)?;
+        let presence_bytes =
+            dispatch_io::try_output_bytes(&outputs, 0, "literal_set presence_by_region")?;
+        let words: Vec<u32> = presence_bytes
+            .chunks_exact(4)
+            .take(total_words)
+            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect();
+        Ok(words)
     }
 
     fn scan_into_with_program<B: VyreBackend + ?Sized>(
