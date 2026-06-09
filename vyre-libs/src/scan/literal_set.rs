@@ -738,10 +738,18 @@ impl GpuLiteralSet {
         region_starts: &[u32],
     ) -> Result<Vec<u32>, vyre::BackendError> {
         let mut scratch = ScanDispatchScratch::default();
-        self.scan_presence_by_region_with_scratch(backend, haystack, region_starts, &mut scratch)
+        self.scan_presence_by_region_with_scratch(backend, haystack, region_starts, 0, &mut scratch)
     }
 
-    /// [`Self::scan_presence_by_region`] with caller-owned hot-loop scratch.
+    /// [`Self::scan_presence_by_region`] with caller-owned hot-loop scratch and an
+    /// explicit `region_base` shard offset.
+    ///
+    /// `region_base` is added to every candidate position before the region
+    /// binary search, so a SHARDED caller can dispatch a slice `haystack` (with
+    /// local positions) against the WHOLE batch's `region_starts` by passing the
+    /// shard's global start offset. Pass `0` for a single-dispatch scan. Each
+    /// shard returns the full `region_count × words` bitmap (rows it didn't touch
+    /// stay zero); OR the per-shard bitmaps to assemble the batch result.
     ///
     /// # Errors
     /// See [`Self::scan_presence_by_region`].
@@ -750,6 +758,7 @@ impl GpuLiteralSet {
         backend: &B,
         haystack: &[u8],
         region_starts: &[u32],
+        region_base: u32,
         scratch: &mut ScanDispatchScratch,
     ) -> Result<Vec<u32>, vyre::BackendError> {
         use crate::scan::dispatch_io;
@@ -804,13 +813,14 @@ impl GpuLiteralSet {
         let haystack_len_word = [haystack_len];
         let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
         let region_starts_bytes = dispatch_io::u32_words_as_le_bytes(region_starts);
+        let region_base_bytes = region_base.to_le_bytes();
         // Per-region presence buffer (binding 6) is read-write: uploaded zeroed,
         // dispatched, read back. It is the entire output.
         let presence_zeroed = vec![0u8; total_words.saturating_mul(4)];
 
         let config =
             dispatch_io::byte_scan_dispatch_config(haystack_len, program.workgroup_size[0]);
-        let borrowed_inputs: smallvec::SmallVec<[&[u8]; 11]> = [
+        let borrowed_inputs: smallvec::SmallVec<[&[u8]; 12]> = [
             haystack_bytes,                         // 0: haystack (Packed U32)
             transition_bytes.as_ref(),              // 1: transitions
             output_offset_bytes.as_ref(),           // 2: output_offsets
@@ -822,6 +832,7 @@ impl GpuLiteralSet {
             candidate_suffix2_mask_bytes.as_ref(),  // 8: candidate_suffix2_mask
             candidate_suffix3_bloom_bytes.as_ref(), // 9: candidate_suffix3_bloom
             region_starts_bytes.as_ref(),           // 10: region_starts
+            region_base_bytes.as_slice(),           // 11: region_base (shard offset)
         ]
         .into_iter()
         .collect();

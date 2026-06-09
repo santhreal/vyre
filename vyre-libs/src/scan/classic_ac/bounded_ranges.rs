@@ -360,6 +360,7 @@ fn bounded_ranges_presence_by_region_nodes(
     output_records: &str,
     presence: &str,
     region_starts: &str,
+    region_base: &str,
     max_pattern_len: u32,
     presence_words: u32,
     log2_max_regions: u32,
@@ -375,14 +376,24 @@ fn bounded_ranges_presence_by_region_nodes(
     let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
 
     // Region lookup + presence writes, run ONLY when this candidate has matches
-    // (`out_begin < out_end`). `region = largest r with region_starts[r] <= i`,
-    // found by a fixed-iteration binary search. `select` evaluates both arms, so
-    // the `rs_mid - 1` arm can underflow to u32::MAX on the rejected branch — it
-    // is discarded (rs_mid == 0 only when rs_lo == rs_hi == 0, where region_starts
-    // [0] == 0 <= i forces the `cond` arm), so the wrap is harmless.
+    // (`out_begin < out_end`). `region = largest r with region_starts[r] <= pos`
+    // where `pos = i + region_base` is the GLOBAL byte position: a sharded
+    // dispatch scans a slice with local positions `i` but attributes against the
+    // whole batch's `region_starts` by adding the shard's base offset (0 for the
+    // single-dispatch path). The binary search is fixed-iteration; `select`
+    // evaluates both arms, so the `rs_mid - 1` arm can underflow to u32::MAX on
+    // the rejected branch — it is discarded (rs_mid == 0 only when rs_lo == rs_hi
+    // == 0, where region_starts[0] == 0 <= pos forces the `cond` arm), harmless.
     let region_and_emit = vec![
+        Node::let_bind(
+            "rs_pos",
+            Expr::add(i.clone(), Expr::load(region_base, Expr::u32(0))),
+        ),
         Node::let_bind("rs_lo", Expr::u32(0)),
-        Node::let_bind("rs_hi", Expr::sub(Expr::buf_len(region_starts), Expr::u32(1))),
+        Node::let_bind(
+            "rs_hi",
+            Expr::sub(Expr::buf_len(region_starts), Expr::u32(1)),
+        ),
         Node::loop_for(
             "rs_step",
             Expr::u32(0),
@@ -400,11 +411,18 @@ fn bounded_ranges_presence_by_region_nodes(
                 ),
                 Node::let_bind(
                     "rs_cond",
-                    Expr::le(Expr::load(region_starts, Expr::var("rs_mid")), i.clone()),
+                    Expr::le(
+                        Expr::load(region_starts, Expr::var("rs_mid")),
+                        Expr::var("rs_pos"),
+                    ),
                 ),
                 Node::assign(
                     "rs_lo",
-                    Expr::select(Expr::var("rs_cond"), Expr::var("rs_mid"), Expr::var("rs_lo")),
+                    Expr::select(
+                        Expr::var("rs_cond"),
+                        Expr::var("rs_mid"),
+                        Expr::var("rs_lo"),
+                    ),
                 ),
                 Node::assign(
                     "rs_hi",

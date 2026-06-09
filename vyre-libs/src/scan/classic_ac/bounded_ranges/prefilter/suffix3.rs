@@ -8,7 +8,8 @@ use super::super::super::count_program::{
     suffix3_bloom_bit_index_expr, CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 use super::super::{
-    bounded_ranges_presence_by_region_nodes, bounded_ranges_presence_nodes, bounded_ranges_scan_nodes,
+    bounded_ranges_presence_by_region_nodes, bounded_ranges_presence_nodes,
+    bounded_ranges_scan_nodes,
 };
 
 /// The suffix2/suffix3 candidate-gating body shared by the match-emitting scan
@@ -434,6 +435,7 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext(
     candidate_suffix2_mask: &str,
     candidate_suffix3_bloom: &str,
     region_starts: &str,
+    region_base: &str,
     state_count: u32,
     output_records_len: u32,
     pattern_count: u32,
@@ -449,6 +451,7 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext(
         output_records,
         presence,
         region_starts,
+        region_base,
         max_pattern_len,
         presence_words,
         ceil_log2(max_regions),
@@ -478,13 +481,28 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext(
             BufferDecl::read_write(presence, 6, DataType::U32).with_count(total_presence_words),
             BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(8),
-            BufferDecl::storage(candidate_suffix2_mask, 8, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
-            BufferDecl::storage(candidate_suffix3_bloom, 9, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
+            BufferDecl::storage(
+                candidate_suffix2_mask,
+                8,
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
+            BufferDecl::storage(
+                candidate_suffix3_bloom,
+                9,
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
             // Region start offsets (ascending, region_starts[0] == 0). Dynamic
             // length: the kernel reads region_count via buf_len(region_starts).
             BufferDecl::storage(region_starts, 10, BufferAccess::ReadOnly, DataType::U32),
+            // Shard base offset (1 u32): added to each local candidate position so
+            // a sharded dispatch attributes against the whole-batch region table.
+            // 0 for the single-dispatch path.
+            BufferDecl::storage(region_base, 11, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(1),
         ],
         [128, 1, 1],
         vec![wrap_anonymous(
@@ -511,24 +529,27 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
             dfa.output_records.len()
         )
     })?;
-    Ok(classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext(
-        "haystack",
-        "transitions",
-        "output_offsets",
-        "output_records",
-        "pattern_lengths",
-        "haystack_len",
-        "presence",
-        "candidate_end_mask",
-        "candidate_suffix2_mask",
-        "candidate_suffix3_bloom",
-        "region_starts",
-        dfa.state_count,
-        output_records_len,
-        pattern_count,
-        dfa.max_pattern_len,
-        max_regions,
-    ))
+    Ok(
+        classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext(
+            "haystack",
+            "transitions",
+            "output_offsets",
+            "output_records",
+            "pattern_lengths",
+            "haystack_len",
+            "presence",
+            "candidate_end_mask",
+            "candidate_suffix2_mask",
+            "candidate_suffix3_bloom",
+            "region_starts",
+            "region_base",
+            dfa.state_count,
+            output_records_len,
+            pattern_count,
+            dfa.max_pattern_len,
+            max_regions,
+        ),
+    )
 }
 
 /// Build the suffix-prefiltered bounded-ranges AC scan for a compiled DFA.
@@ -757,10 +778,11 @@ mod tests {
         .expect("Fix: region-presence program must build for a small DFA");
 
         // Bindings 0-9 match the global presence program; the per-region variant
-        // adds `region_starts` at binding 10 and widens `presence` to a per-region
-        // bitmap (row stride × max_regions) instead of a single global row.
+        // adds `region_starts` at binding 10 and a `region_base` shard offset at
+        // binding 11, and widens `presence` to a per-region bitmap (row stride ×
+        // max_regions) instead of a single global row.
         assert_eq!(program.workgroup_size(), [128, 1, 1]);
-        assert_eq!(program.buffers().len(), 11);
+        assert_eq!(program.buffers().len(), 12);
         assert_eq!(program.buffers()[6].name(), "presence");
         let words = presence_bitmap_words(pattern_count);
         assert_eq!(program.buffers()[6].count, words * max_regions);
@@ -769,6 +791,8 @@ mod tests {
             presence_by_region_words(pattern_count, max_regions)
         );
         assert_eq!(program.buffers()[10].name(), "region_starts");
+        assert_eq!(program.buffers()[11].name(), "region_base");
+        assert_eq!(program.buffers()[11].count, 1);
     }
 
     #[test]
