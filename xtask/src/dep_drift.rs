@@ -33,7 +33,7 @@ pub(crate) fn run(_args: &[String]) {
     let mut failures = Vec::new();
     collect_manifests(&workspace_root, &mut manifests, &mut failures);
     collect_manifests(
-        &repo_root.join("libs/shared/surgec-grammar-gen"),
+        &repo_root.join("libs/performance/matching/vyre/vyre-grammar-gen"),
         &mut manifests,
         &mut failures,
     );

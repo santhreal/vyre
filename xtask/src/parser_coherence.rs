@@ -127,7 +127,7 @@ const COMPONENTS: &[(&str, &str, &str, &[&str], &[&str], &[&str], &[&str])] = &[
     (
         "surgec",
         "Security compiler consumer integration surface",
-        "libs/tools/surgec",
+        "libs/surge/surgec",
         &["Cargo.toml", "src/lib.rs", "README.md"],
         &["surge", "compile"],
         &["consumer", "surge", "parser", "condition"],
@@ -136,7 +136,7 @@ const COMPONENTS: &[(&str, &str, &str, &[&str], &[&str], &[&str], &[&str])] = &[
     (
         "surgec-grammar-gen",
         "Shared grammar generation substrate",
-        "libs/shared/surgec-grammar-gen",
+        "libs/performance/matching/vyre/vyre-grammar-gen",
         &["Cargo.toml", "src/lib.rs", "README.md"],
         &["grammar", "generate"],
         &["grammar", "generate", "token", "parser"],

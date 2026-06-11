@@ -265,8 +265,8 @@ fn inspect_hygiene_matrix_semantics(
         "libs/performance/matching/vyre",
         "libs/dataflow/weir",
         "tools/vyrec",
-        "libs/tools/surgec",
-        "libs/shared/surgec-grammar-gen",
+        "libs/surge/surgec",
+        "libs/performance/matching/vyre/vyre-grammar-gen",
     ] {
         if !roots.iter().any(|root| {
             root.as_str()

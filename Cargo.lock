@@ -2972,18 +2972,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
-name = "surgec-grammar-gen"
-version = "0.6.0"
-dependencies = [
- "blake3",
- "clap",
- "regex",
- "regex-automata",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3670,7 +3658,6 @@ dependencies = [
  "serde",
  "smallvec",
  "stats_alloc",
- "surgec-grammar-gen",
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
@@ -3683,6 +3670,7 @@ dependencies = [
  "vyre-driver",
  "vyre-emit-naga",
  "vyre-foundation",
+ "vyre-grammar-gen",
  "vyre-harness",
  "vyre-intrinsics",
  "vyre-libs",
@@ -3759,6 +3747,7 @@ dependencies = [
  "vyre-emit-ptx",
  "vyre-foundation",
  "vyre-lower",
+ "vyre-primitives",
 ]
 
 [[package]]
@@ -3802,7 +3791,6 @@ dependencies = [
  "object",
  "serde_json",
  "smallvec",
- "surgec-grammar-gen",
  "thiserror 2.0.18",
  "toml",
  "tree-sitter",
@@ -3813,6 +3801,7 @@ dependencies = [
  "vyre-driver-cuda",
  "vyre-driver-wgpu",
  "vyre-foundation",
+ "vyre-grammar-gen",
  "vyre-libs",
  "vyre-lower",
  "vyre-primitives",
@@ -3841,6 +3830,19 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-runtime",
+]
+
+[[package]]
+name = "vyre-grammar-gen"
+version = "0.6.0"
+dependencies = [
+ "blake3",
+ "clap",
+ "proptest",
+ "regex",
+ "regex-automata",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3891,8 +3893,8 @@ dependencies = [
  "regex-syntax",
  "rustc-hash 2.1.2",
  "serde",
+ "serde_json",
  "smallvec",
- "surgec-grammar-gen",
  "tempfile",
  "thiserror 2.0.18",
  "tracing",
@@ -3901,9 +3903,11 @@ dependencies = [
  "vyre",
  "vyre-driver",
  "vyre-driver-reference",
+ "vyre-driver-wgpu",
  "vyre-emit-naga",
  "vyre-emit-ptx",
  "vyre-foundation",
+ "vyre-grammar-gen",
  "vyre-harness",
  "vyre-intrinsics",
  "vyre-lower",
@@ -3911,6 +3915,7 @@ dependencies = [
  "vyre-reference",
  "vyre-self-substrate",
  "vyre-spec",
+ "weir",
 ]
 
 [[package]]
@@ -3937,6 +3942,7 @@ dependencies = [
  "serde_json",
  "smallvec",
  "thiserror 2.0.18",
+ "toml",
  "vyre-foundation",
 ]
 
