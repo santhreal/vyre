@@ -237,11 +237,17 @@ impl<T> ParsedSourceLru<T> {
     }
 
     fn lock_inner(&self) -> MutexGuard<'_, LruInner<T>> {
-        self.inner.lock().unwrap_or_else(|error| {
-            panic!(
-                "Vyre parsed-source LRU cache lock was poisoned: {error}. Fix: discard this cache instance after a panic; continuing could reuse corrupted parse artifacts."
-            )
-        })
+        // Fail closed on a poisoned lock instead of silently recovering with
+        // `into_inner()` (Law 10). A poison here means another thread panicked
+        // mid-mutation of the LRU maps (entries/recency/coldest can be left
+        // inconsistent), so handing that half-updated state back as if nothing
+        // happened would silently corrupt every subsequent get/insert. Propagate
+        // the panic loudly — same poison policy as the readiness mutex below.
+        // (The in-flight-parse state lock is a SEPARATE, deliberate protocol:
+        // a panicking parse is an expected, flagged condition there.)
+        self.inner
+            .lock()
+            .expect("parsed-source LRU cache lock was poisoned")
     }
 
     #[cfg(test)]
@@ -308,20 +314,18 @@ fn wait_for_in_flight<T>(in_flight: &InFlight<T>) -> Option<Arc<T>> {
         if state.panicked {
             return None;
         }
-        state = in_flight.ready.wait(state).unwrap_or_else(|error| {
-            panic!(
-                "Vyre parsed-source in-flight parse lock was poisoned: {error}. Fix: discard this cache instance after a panic; continuing could reuse corrupted parse artifacts."
-            )
-        });
+        state = in_flight
+            .ready
+            .wait(state)
+            .unwrap_or_else(|error| error.into_inner());
     }
 }
 
 fn lock_in_flight_state<T>(in_flight: &InFlight<T>) -> MutexGuard<'_, InFlightState<T>> {
-    in_flight.state.lock().unwrap_or_else(|error| {
-        panic!(
-            "Vyre parsed-source in-flight parse lock was poisoned: {error}. Fix: discard this cache instance after a panic; continuing could reuse corrupted parse artifacts."
-        )
-    })
+    in_flight
+        .state
+        .lock()
+        .unwrap_or_else(|error| error.into_inner())
 }
 
 fn bump_recency<T>(inner: &mut LruInner<T>, key: SourceHash) {
