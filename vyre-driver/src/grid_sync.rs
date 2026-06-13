@@ -581,16 +581,38 @@ fn wrap_split_segment(program: &Program, wrappers: &[EntryWrapper], entry: Vec<N
     program.with_rewritten_entry(wrapped_entry)
 }
 
+/// Diagnostics: the host-split segment **programs** (post buffer-rewrite) that
+/// the fallback dispatch path (`dispatch_with_grid_sync_split*`) validates and
+/// launches when the backend lacks native grid-sync. Exposed so tooling and
+/// tests can inspect or validate each segment without a live backend — the
+/// raw [`try_split_on_grid_sync`] output omits the per-segment buffer
+/// access/role rewrite, so it is not what the backend actually sees.
+///
+/// # Errors
+/// Propagates any [`BackendError`] from splitting or buffer rewriting.
+pub fn plan_host_grid_sync_segment_programs(
+    program: &Program,
+) -> Result<Vec<Program>, BackendError> {
+    Ok(plan_host_grid_sync_segments(program)?
+        .into_iter()
+        .map(|segment| segment.program)
+        .collect())
+}
+
 fn plan_host_grid_sync_segments(
     program: &Program,
 ) -> Result<Vec<PlannedGridSyncSegment>, BackendError> {
     let split = try_split_on_grid_sync(program)?;
+    let first_writer = first_writer_segment_per_buffer(&split, program)?;
     let mut planned = Vec::new();
     reserve_grid_sync_vec(&mut planned, split.len(), "grid-sync planned host segments")?;
-    let segment_count = split.len();
     for (segment_idx, segment) in split.into_iter().enumerate() {
-        let rewritten =
-            rewrite_segment_buffers_for_host_split(program, &segment, segment_idx, segment_count)?;
+        let rewritten = rewrite_segment_buffers_for_host_split(
+            program,
+            &segment,
+            segment_idx,
+            &first_writer,
+        )?;
         let input_names = segment_input_names(&rewritten)?;
         let output_names = segment_output_names(&rewritten)?;
         planned.push(PlannedGridSyncSegment {
@@ -602,11 +624,56 @@ fn plan_host_grid_sync_segments(
     Ok(planned)
 }
 
+/// For each buffer name, the index of the FIRST split segment that writes it.
+///
+/// A source-output buffer written by more than one segment is an
+/// **accumulator**: each segment writes only its own slots (e.g. a fused
+/// multi-rule `results_packed`, where every rule's result-store lands in a
+/// different grid-sync segment). A LATER writer must therefore read+merge the
+/// value forwarded from earlier segments via `current_inputs`, never overwrite
+/// it with a fresh WriteOnly buffer — which would silently zero every earlier
+/// segment's slots (recall=0 for every rule whose store is not in the final
+/// segment). `rewrite_segment_buffers_for_host_split` uses this map to keep an
+/// already-produced output buffer as a `ReadWrite` accumulator in later
+/// segments instead of a write-only output.
+fn first_writer_segment_per_buffer(
+    split: &[Program],
+    program: &Program,
+) -> Result<HashMap<Ident, usize>, BackendError> {
+    let mut first_writer: HashMap<Ident, usize> = HashMap::new();
+    reserve_grid_sync_hash_map(
+        &mut first_writer,
+        program.buffers().len(),
+        "grid-sync first-writer map",
+    )?;
+    for (segment_idx, segment) in split.iter().enumerate() {
+        let mut reads = HashSet::new();
+        let mut writes = HashSet::new();
+        reserve_grid_sync_hash_set(
+            &mut reads,
+            program.buffers().len(),
+            "grid-sync first-writer read scan",
+        )?;
+        reserve_grid_sync_hash_set(
+            &mut writes,
+            program.buffers().len(),
+            "grid-sync first-writer write scan",
+        )?;
+        for node in entry_sequence(segment) {
+            collect_segment_buffer_targets(node, &mut reads, &mut writes);
+        }
+        for name in writes {
+            first_writer.entry(name).or_insert(segment_idx);
+        }
+    }
+    Ok(first_writer)
+}
+
 fn rewrite_segment_buffers_for_host_split(
     source: &Program,
     segment: &Program,
     segment_idx: usize,
-    segment_count: usize,
+    first_writer: &HashMap<Ident, usize>,
 ) -> Result<Program, BackendError> {
     let mut reads = HashSet::new();
     let mut writes = HashSet::new();
@@ -650,7 +717,24 @@ fn rewrite_segment_buffers_for_host_split(
             continue;
         }
 
+        // A source-output buffer that an EARLIER segment already wrote is an
+        // accumulator across the split: this segment must read the value
+        // forwarded via `current_inputs` and merge its own slots, never
+        // overwrite it with a fresh WriteOnly buffer (which zeroes the earlier
+        // segments' slots — the silent recall=0 mode for any fused rule whose
+        // result-store does not land in the final segment).
+        let is_source_output = buffer.is_output() || buffer.is_pipeline_live_out();
+        let earlier_segment_wrote_output = is_source_output
+            && first_writer
+                .get(&name)
+                .is_some_and(|&first| first < segment_idx);
+
         let access = if readwrite_passthrough {
+            BufferAccess::ReadWrite
+        } else if earlier_segment_wrote_output && writes_this {
+            // Later writer of a multi-segment output accumulator: read the
+            // accumulated prior value (uploaded as input) and merge this
+            // segment's slots in place.
             BufferAccess::ReadWrite
         } else {
             match (reads_this, writes_this) {
@@ -661,8 +745,16 @@ fn rewrite_segment_buffers_for_host_split(
             }
         };
         rewrite_segment_buffer_access(&mut rewritten, access);
-        rewritten.is_output = buffer.is_output() && writes_this && segment_idx + 1 == segment_count;
-        rewritten.pipeline_live_out = rewritten.is_output;
+        // Never mark a split segment's buffer as the program output: a
+        // multi-segment output accumulator must CONSUME its forwarded prior
+        // value as input in later segments, and `segment_buffer_consumes_input`
+        // refuses any `is_output` buffer. Each writing segment still produces
+        // the buffer (WriteOnly/ReadWrite both produce output), so its bytes
+        // are captured into `current_inputs`; the final host-visible values are
+        // reassembled by name from the SOURCE program's output set in
+        // `collect_final_named_outputs`, independent of any per-segment flag.
+        rewritten.is_output = false;
+        rewritten.pipeline_live_out = false;
         buffers.push(rewritten);
     }
 
@@ -1061,18 +1153,48 @@ pub fn dispatch_with_grid_sync_split_into(
     )?;
     let final_output_names = original_output_names(program)?;
 
-    for (segment_idx, segment) in segments.iter().enumerate() {
-        let borrowed = borrowed_grid_sync_inputs_by_name(segment, &current_inputs)?;
-        backend
-            .dispatch_borrowed_into(
-                &segment.program,
-                borrowed.as_slice(),
-                config,
-                &mut segment_outputs,
-            )
-            .map_err(|error| grid_sync_segment_error(error, segment_idx, segments.len()))?;
-        drop(borrowed);
-        refresh_named_outputs(segment, &mut segment_outputs, &mut current_inputs)?;
+    // Honor the program's fixpoint contract across the split. The
+    // non-split dispatch path (`dispatch_borrowed`) re-runs the WHOLE
+    // program `fixpoint_iterations` times with persistent ReadWrite
+    // buffers, so a program authored as a fixpoint closure converges —
+    // a multi-hop reachability/dataflow closure is exactly this shape: a
+    // `seed (acc |= source) → hop (acc' = step(acc)) → merge (acc |= acc')`
+    // body whose accumulator grows by ONE dataflow hop per whole-program
+    // pass, relying on the dispatcher to iterate it to a fixpoint.
+    //
+    // GridSync barriers split that body across segments, so ONE pass over
+    // the segment sequence advances the accumulator by exactly one hop.
+    // Re-running an individual SEGMENT N times (the previous behavior:
+    // `config` with its fixpoint count reached each segment) does NOT
+    // converge — re-launching the isolated `hop` segment recomputes the
+    // same frontier from an unchanged `acc`. The whole SEQUENCE must be
+    // looped instead, with each segment run once per pass. Net device work
+    // is identical (sequence_len × iterations launches either way); only
+    // the nesting order changes, which is what makes the closure converge.
+    // A flow that needs k hops through k-1 intermediate variables (the
+    // dominant launch-rule shape: `q = src; sink(q)`) silently returned an
+    // empty frontier under the old single-pass split — recall=0.
+    let iterations = crate::fixpoint_iterations::resolve_fixpoint_iterations(
+        config,
+        "grid-sync split",
+    )?;
+    let mut segment_config = config.clone();
+    segment_config.fixpoint_iterations = Some(1);
+
+    for _ in 0..iterations {
+        for (segment_idx, segment) in segments.iter().enumerate() {
+            let borrowed = borrowed_grid_sync_inputs_by_name(segment, &current_inputs)?;
+            backend
+                .dispatch_borrowed_into(
+                    &segment.program,
+                    borrowed.as_slice(),
+                    &segment_config,
+                    &mut segment_outputs,
+                )
+                .map_err(|error| grid_sync_segment_error(error, segment_idx, segments.len()))?;
+            drop(borrowed);
+            refresh_named_outputs(segment, &mut segment_outputs, &mut current_inputs)?;
+        }
     }
     collect_final_named_outputs(&final_output_names, &mut current_inputs, outputs)?;
     Ok(())
@@ -1614,6 +1736,119 @@ mod tests {
         assert_eq!(outputs[0].as_ptr() as usize, slot_addr);
     }
 
+    /// Each `dispatch_borrowed_into` reads `inputs[0][0]`, writes `+1`. With the
+    /// ReadWrite buffer rotating between segments, a single pass over a
+    /// two-segment program advances the accumulator by 2. The multi-hop
+    /// `flows_to` closure relies on the WHOLE sequence being re-run
+    /// `fixpoint_iterations` times (one dataflow hop per pass); a single pass
+    /// is one hop, which silently dropped every flow through an intermediate
+    /// variable to recall=0.
+    struct IncrementingBackend {
+        calls: AtomicUsize,
+    }
+
+    impl crate::backend::private::Sealed for IncrementingBackend {}
+
+    impl VyreBackend for IncrementingBackend {
+        fn id(&self) -> &'static str {
+            "grid-sync-incrementing"
+        }
+
+        fn dispatch(
+            &self,
+            _program: &Program,
+            _inputs: &[Vec<u8>],
+            _config: &DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, BackendError> {
+            unreachable!("test uses dispatch_borrowed_into")
+        }
+
+        fn dispatch_borrowed_into(
+            &self,
+            _program: &Program,
+            inputs: &[&[u8]],
+            config: &DispatchConfig,
+            outputs: &mut OutputBuffers,
+        ) -> Result<(), BackendError> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            // Each segment must run exactly once per outer pass: the whole
+            // sequence carries the fixpoint, not any single segment.
+            assert_eq!(
+                config.fixpoint_iterations,
+                Some(1),
+                "segment dispatch must receive fixpoint_iterations=1; the outer split loop owns the iteration count"
+            );
+            if outputs.is_empty() {
+                outputs.push(Vec::new());
+            }
+            outputs[0].clear();
+            outputs[0].extend_from_slice(inputs[0]);
+            outputs[0][0] = outputs[0][0].saturating_add(1);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn split_into_loops_whole_sequence_fixpoint_iterations_times() {
+        // Two segments separated by a GridSync barrier.
+        let program = Program::wrapped(
+            vec![buffer()],
+            [1, 1, 1],
+            vec![
+                region("a", vec![Node::Return]),
+                Node::barrier_with_ordering(MemoryOrdering::GridSync),
+                region("b", vec![Node::Return]),
+            ],
+        );
+
+        // Single pass (default): 2 segment launches, accumulator = 2.
+        let backend = IncrementingBackend {
+            calls: AtomicUsize::new(0),
+        };
+        let mut outputs = vec![Vec::new()];
+        dispatch_with_grid_sync_split_into(
+            &backend,
+            &program,
+            &[[0u8, 0, 0, 0].as_slice()],
+            &DispatchConfig::default(),
+            &mut outputs,
+        )
+        .expect("single-pass split dispatch");
+        assert_eq!(backend.calls.load(Ordering::SeqCst), 2);
+        assert_eq!(outputs, vec![vec![2, 0, 0, 0]]);
+
+        // Three fixpoint iterations: 3 passes × 2 segments = 6 launches, and
+        // the accumulator advances one hop per pass to 6. This is the exact
+        // property the multi-hop `flows_to` split depended on and the
+        // single-pass implementation lacked.
+        let backend = IncrementingBackend {
+            calls: AtomicUsize::new(0),
+        };
+        let config = DispatchConfig {
+            fixpoint_iterations: Some(3),
+            ..DispatchConfig::default()
+        };
+        let mut outputs = vec![Vec::new()];
+        dispatch_with_grid_sync_split_into(
+            &backend,
+            &program,
+            &[[0u8, 0, 0, 0].as_slice()],
+            &config,
+            &mut outputs,
+        )
+        .expect("multi-pass split dispatch");
+        assert_eq!(
+            backend.calls.load(Ordering::SeqCst),
+            6,
+            "split must re-run the whole 2-segment sequence 3 times"
+        );
+        assert_eq!(
+            outputs,
+            vec![vec![6, 0, 0, 0]],
+            "accumulator must advance one hop per fixpoint pass (2 segments × 3 passes)"
+        );
+    }
+
     struct OwnedFinalReserveBackend {
         calls: AtomicUsize,
     }
@@ -1811,6 +2046,220 @@ mod tests {
 
         assert_eq!(backend.calls.load(Ordering::SeqCst), 3);
         assert_eq!(outputs, vec![vec![4, 0, 0, 0]]);
+    }
+
+    #[test]
+    fn split_keeps_multi_segment_output_as_readwrite_accumulator() {
+        // An OUTPUT buffer whose slots are written by DIFFERENT grid-sync
+        // segments (the fused multi-rule `results_packed` shape: each rule's
+        // result-store lands in its own segment) must ACCUMULATE across the host
+        // split. The first writer establishes it (WriteOnly); every LATER writer
+        // must read the forwarded value and merge its own slots (ReadWrite)
+        // instead of overwriting it with a fresh write-only buffer — which would
+        // silently zero the earlier segments' slots (recall=0 for every rule
+        // whose store is not in the final segment).
+        let out = BufferDecl::output("out", 0, DataType::U32).with_count(4);
+        let program = Program::wrapped(
+            vec![out],
+            [1, 1, 1],
+            vec![
+                region("a", vec![Node::store("out", Expr::u32(0), Expr::u32(0xAA))]),
+                Node::barrier_with_ordering(MemoryOrdering::GridSync),
+                region("b", vec![Node::store("out", Expr::u32(2), Expr::u32(0xBB))]),
+            ],
+        );
+        let segments =
+            plan_host_grid_sync_segment_programs(&program).expect("plan host grid-sync segments");
+        assert_eq!(segments.len(), 2, "one GridSync barrier -> two segments");
+
+        let seg0_out = segments[0]
+            .buffers()
+            .iter()
+            .find(|b| b.name() == "out")
+            .expect("segment 0 must declare the output it writes");
+        assert_eq!(
+            seg0_out.access(),
+            BufferAccess::WriteOnly,
+            "the first writer establishes the accumulator as write-only"
+        );
+        assert!(
+            !seg0_out.is_output() && !seg0_out.is_pipeline_live_out(),
+            "split segment buffers must never be marked program-output; final values are reassembled by name"
+        );
+
+        let seg1_out = segments[1]
+            .buffers()
+            .iter()
+            .find(|b| b.name() == "out")
+            .expect("segment 1 must declare the output it writes");
+        assert_eq!(
+            seg1_out.access(),
+            BufferAccess::ReadWrite,
+            "a later writer of a multi-segment output must read+merge the accumulated value, not overwrite it"
+        );
+        assert!(
+            !seg1_out.is_output() && !seg1_out.is_pipeline_live_out(),
+            "the later writer must consume its forwarded prior value, which `segment_buffer_consumes_input` refuses for is_output buffers"
+        );
+        assert!(
+            segment_input_names(&segments[1])
+                .expect("segment 1 input names")
+                .iter()
+                .any(|n| n.as_str() == "out"),
+            "the accumulated output must be forwarded as an input to the later writing segment"
+        );
+    }
+
+    /// Emulates a backend that lacks native grid-sync: for the single output
+    /// buffer `out`, it starts from the forwarded prior value (when the segment
+    /// consumes it) or zeros, then applies that segment's literal `Store out[i]
+    /// = v` writes — exactly the per-slot store shape a fused multi-rule program
+    /// produces. Proves end-to-end that earlier segments' slots survive.
+    struct SlotStoringBackend {
+        calls: AtomicUsize,
+    }
+
+    impl crate::backend::private::Sealed for SlotStoringBackend {}
+
+    impl VyreBackend for SlotStoringBackend {
+        fn id(&self) -> &'static str {
+            "grid-sync-slot-storing"
+        }
+
+        fn dispatch(
+            &self,
+            _program: &Program,
+            _inputs: &[Vec<u8>],
+            _config: &DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, BackendError> {
+            unreachable!("test uses dispatch_borrowed_into")
+        }
+
+        fn dispatch_borrowed_into(
+            &self,
+            program: &Program,
+            inputs: &[&[u8]],
+            _config: &DispatchConfig,
+            outputs: &mut OutputBuffers,
+        ) -> Result<(), BackendError> {
+            // Locate `out`'s positional input/output slots using the SAME
+            // role convention the host split planner uses.
+            let mut in_pos = None;
+            let mut cur_in = 0usize;
+            let mut out_pos = None;
+            let mut cur_out = 0usize;
+            for buffer in program.buffers() {
+                if matches!(buffer.access(), BufferAccess::Workgroup) {
+                    continue;
+                }
+                let consumes = segment_buffer_consumes_input(buffer);
+                let produces = segment_buffer_produces_output(buffer);
+                if buffer.name() == "out" {
+                    if consumes {
+                        in_pos = Some(cur_in);
+                    }
+                    if produces {
+                        out_pos = Some(cur_out);
+                    }
+                }
+                if consumes {
+                    cur_in += 1;
+                }
+                if produces {
+                    cur_out += 1;
+                }
+            }
+            let out_pos = out_pos.expect("every writing segment must produce `out`");
+            let mut state = match in_pos {
+                Some(i) => inputs[i].to_vec(),
+                None => vec![0u8; 16],
+            };
+
+            fn apply(nodes: &[Node], state: &mut [u8]) {
+                for node in nodes {
+                    match node {
+                        Node::Store {
+                            buffer,
+                            index: Expr::LitU32(i),
+                            value: Expr::LitU32(v),
+                        } if buffer.as_str() == "out" => {
+                            let off = (*i as usize) * 4;
+                            state[off] = (*v & 0xff) as u8;
+                        }
+                        Node::Region { body, .. } => apply(body, state),
+                        Node::Block(body) => apply(body, state),
+                        Node::If {
+                            then, otherwise, ..
+                        } => {
+                            apply(then, state);
+                            apply(otherwise, state);
+                        }
+                        Node::Loop { body, .. } => apply(body, state),
+                        _ => {}
+                    }
+                }
+            }
+            apply(entry_sequence(program), &mut state);
+
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            while outputs.len() <= out_pos {
+                outputs.push(Vec::new());
+            }
+            outputs[out_pos].clear();
+            outputs[out_pos].extend_from_slice(&state);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn split_preserves_earlier_segment_output_slots_end_to_end() {
+        // Regression: a fused multi-arm program where arm A's result-store is in
+        // segment 0 (slot at element 0) and arm B's in the final segment (slot
+        // at element 2). Before the accumulator fix the final segment's
+        // write-only `out` zeroed element 0, dropping arm A entirely (a co-fused
+        // rule whose result-store does not land in the final grid-sync segment
+        // returned recall=0). Both slots must now survive.
+        let out = BufferDecl::output("out", 0, DataType::U32).with_count(4);
+        let program = Program::wrapped(
+            vec![out],
+            [1, 1, 1],
+            vec![
+                region("a", vec![Node::store("out", Expr::u32(0), Expr::u32(0xAA))]),
+                Node::barrier_with_ordering(MemoryOrdering::GridSync),
+                region("b", vec![Node::store("out", Expr::u32(2), Expr::u32(0xBB))]),
+            ],
+        );
+        let backend = SlotStoringBackend {
+            calls: AtomicUsize::new(0),
+        };
+        let mut outputs = vec![Vec::new()];
+        dispatch_with_grid_sync_split_into(
+            &backend,
+            &program,
+            &[],
+            &DispatchConfig::default(),
+            &mut outputs,
+        )
+        .expect("split dispatch");
+        assert_eq!(
+            backend.calls.load(Ordering::SeqCst),
+            2,
+            "two segments, single fixpoint pass"
+        );
+        assert_eq!(outputs.len(), 1);
+        assert_eq!(
+            outputs[0].len(),
+            16,
+            "output buffer is 4 × u32 = 16 bytes"
+        );
+        assert_eq!(
+            outputs[0][0], 0xAA,
+            "segment 0's slot (element 0) must survive the final segment's write"
+        );
+        assert_eq!(
+            outputs[0][8], 0xBB,
+            "the final segment's slot (element 2) is also present"
+        );
     }
 
     struct ResidentReuseBackend {
