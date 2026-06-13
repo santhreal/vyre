@@ -1181,6 +1181,14 @@ pub fn dispatch_with_grid_sync_split_into(
     let mut segment_config = config.clone();
     segment_config.fixpoint_iterations = Some(1);
 
+    // Adaptive convergence: `iterations` is an UPPER bound (the worst-case hop
+    // depth, one hop per whole-sequence pass). The segment sequence is a
+    // deterministic function of its live buffers, so once a full pass leaves
+    // every evolving (Owned) accumulator unchanged the closure has reached a
+    // fixpoint — every remaining pass would re-dispatch the entire segment
+    // sequence (hundreds of launches on a large fused program) for zero new
+    // dataflow. Stop as soon as two consecutive passes produce the same state.
+    let mut prev_fingerprint: Option<u64> = None;
     for _ in 0..iterations {
         for (segment_idx, segment) in segments.iter().enumerate() {
             let borrowed = borrowed_grid_sync_inputs_by_name(segment, &current_inputs)?;
@@ -1195,6 +1203,11 @@ pub fn dispatch_with_grid_sync_split_into(
             drop(borrowed);
             refresh_named_outputs(segment, &mut segment_outputs, &mut current_inputs)?;
         }
+        let fingerprint = owned_accumulator_fingerprint(&current_inputs);
+        if prev_fingerprint == Some(fingerprint) {
+            break;
+        }
+        prev_fingerprint = Some(fingerprint);
     }
     collect_final_named_outputs(&final_output_names, &mut current_inputs, outputs)?;
     Ok(())
@@ -1284,6 +1297,42 @@ fn borrowed_grid_sync_inputs_by_name<'a>(
         borrowed.push(input.as_slice());
     }
     Ok(borrowed)
+}
+
+/// Order-independent fingerprint of the EVOLVING accumulator state threaded
+/// between grid-sync segments.
+///
+/// Only `Owned` entries are hashed: a `Borrowed` entry is a caller input that
+/// is never written by any segment (constant for the whole split), so it cannot
+/// change between passes and excluding it keeps the fingerprint cheap. Each
+/// owned buffer mixes its NAME and its bytes (FNV-1a) so a value moving between
+/// buffers is observed, and the per-buffer hashes are XOR-combined so map
+/// iteration order does not affect the result. Two consecutive passes with an
+/// identical fingerprint prove the deterministic segment sequence reached a
+/// fixpoint (used to early-exit the outer iteration loop).
+fn owned_accumulator_fingerprint(inputs: &HashMap<Ident, GridSyncInput<'_>>) -> u64 {
+    const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+    let mut combined: u64 = 0;
+    for (name, input) in inputs {
+        let GridSyncInput::Owned(bytes) = input else {
+            continue;
+        };
+        let mut hash = FNV_OFFSET;
+        for byte in name.as_str().as_bytes() {
+            hash ^= u64::from(*byte);
+            hash = hash.wrapping_mul(FNV_PRIME);
+        }
+        // Separator so `name`+`bytes` cannot alias a different split.
+        hash ^= 0xff;
+        hash = hash.wrapping_mul(FNV_PRIME);
+        for byte in bytes.iter() {
+            hash ^= u64::from(*byte);
+            hash = hash.wrapping_mul(FNV_PRIME);
+        }
+        combined ^= hash;
+    }
+    combined
 }
 
 fn grid_sync_segment_error(
@@ -2260,6 +2309,136 @@ mod tests {
             outputs[0][8], 0xBB,
             "the final segment's slot (element 2) is also present"
         );
+    }
+
+    /// Copies its input to its output and bumps byte 0 toward a saturation cap.
+    /// Once the cap is reached the output equals the input, so a full pass over
+    /// the split leaves the carried accumulator unchanged — a fixpoint.
+    struct SaturatingBackend {
+        calls: AtomicUsize,
+        cap: u8,
+    }
+
+    impl crate::backend::private::Sealed for SaturatingBackend {}
+
+    impl VyreBackend for SaturatingBackend {
+        fn id(&self) -> &'static str {
+            "grid-sync-saturating"
+        }
+
+        fn dispatch(
+            &self,
+            _program: &Program,
+            _inputs: &[Vec<u8>],
+            _config: &DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, BackendError> {
+            unreachable!("test uses dispatch_borrowed_into")
+        }
+
+        fn dispatch_borrowed_into(
+            &self,
+            _program: &Program,
+            inputs: &[&[u8]],
+            _config: &DispatchConfig,
+            outputs: &mut OutputBuffers,
+        ) -> Result<(), BackendError> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            if outputs.is_empty() {
+                outputs.push(Vec::new());
+            }
+            outputs[0].clear();
+            outputs[0].extend_from_slice(inputs[0]);
+            if outputs[0][0] < self.cap {
+                outputs[0][0] += 1;
+            }
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn split_outer_loop_early_exits_when_accumulator_reaches_fixpoint() {
+        // Two segments (one GridSync barrier). With a generous iteration budget
+        // of 10, byte 0 saturates at 3, after which a whole pass leaves the
+        // accumulator unchanged. The outer loop must stop once two consecutive
+        // passes match instead of burning all 10 iterations.
+        let program = Program::wrapped(
+            vec![buffer()],
+            [1, 1, 1],
+            vec![
+                region("a", vec![Node::Return]),
+                Node::barrier_with_ordering(MemoryOrdering::GridSync),
+                region("b", vec![Node::Return]),
+            ],
+        );
+        let backend = SaturatingBackend {
+            calls: AtomicUsize::new(0),
+            cap: 3,
+        };
+        let config = DispatchConfig {
+            fixpoint_iterations: Some(10),
+            ..DispatchConfig::default()
+        };
+        let mut outputs = vec![Vec::new()];
+        dispatch_with_grid_sync_split_into(
+            &backend,
+            &program,
+            &[[0u8, 0, 0, 0].as_slice()],
+            &config,
+            &mut outputs,
+        )
+        .expect("converging split dispatch");
+        // pass0 -> 2, pass1 -> 3 (saturates mid-pass), pass2 -> 3 (unchanged) =>
+        // break after pass2. 3 passes x 2 segments = 6 launches, NOT 10x2=20.
+        assert_eq!(
+            backend.calls.load(Ordering::SeqCst),
+            6,
+            "outer loop must early-exit one pass after the accumulator stops changing, not run all 10 iterations"
+        );
+        assert_eq!(
+            outputs,
+            vec![vec![3, 0, 0, 0]],
+            "early-exit must return the converged fixpoint value, identical to running every iteration"
+        );
+    }
+
+    #[test]
+    fn split_non_converging_accumulator_runs_full_iteration_budget() {
+        // The dual of the early-exit test: an accumulator that changes every
+        // pass (never reaches a fixpoint within budget) must run all
+        // iterations — early-exit must not fire on a still-advancing closure.
+        let program = Program::wrapped(
+            vec![buffer()],
+            [1, 1, 1],
+            vec![
+                region("a", vec![Node::Return]),
+                Node::barrier_with_ordering(MemoryOrdering::GridSync),
+                region("b", vec![Node::Return]),
+            ],
+        );
+        // cap=255 so it never saturates within 4 passes (8 increments).
+        let backend = SaturatingBackend {
+            calls: AtomicUsize::new(0),
+            cap: 255,
+        };
+        let config = DispatchConfig {
+            fixpoint_iterations: Some(4),
+            ..DispatchConfig::default()
+        };
+        let mut outputs = vec![Vec::new()];
+        dispatch_with_grid_sync_split_into(
+            &backend,
+            &program,
+            &[[0u8, 0, 0, 0].as_slice()],
+            &config,
+            &mut outputs,
+        )
+        .expect("non-converging split dispatch");
+        assert_eq!(
+            backend.calls.load(Ordering::SeqCst),
+            8,
+            "a still-advancing accumulator must run the full 4 iterations x 2 segments"
+        );
+        assert_eq!(outputs, vec![vec![8, 0, 0, 0]]);
     }
 
     struct ResidentReuseBackend {
