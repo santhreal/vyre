@@ -52,6 +52,17 @@ pub struct PtxEmitOptions {
     pub target: ComputeCapability,
     pub subgroup_size: u32,
     pub ulp_budget: Option<u32>,
+    /// Lower `MemoryOrdering::GridSync` barriers to a native cooperative grid
+    /// barrier (a monotonic-counter spin on a module-scope counter) instead of
+    /// rejecting them. The emitted barrier is correct ONLY under a cooperative
+    /// launch (every CTA co-resident); a non-cooperative launch deadlocks. The
+    /// consumer MUST guarantee a cooperative launch before enabling this — the
+    /// CUDA backend does, by forcing `cuLaunchCooperativeKernel` for any
+    /// grid-sync program and zeroing the counter per launch. Default `false`:
+    /// the emitter rejects GridSync (fail-safe) so a backend that cannot
+    /// guarantee cooperative residency never silently emits a deadlock-prone or
+    /// CTA-scope-downgraded barrier.
+    pub cooperative_grid_sync: bool,
 }
 
 impl PtxEmitOptions {
@@ -60,6 +71,7 @@ impl PtxEmitOptions {
             target,
             subgroup_size: 32,
             ulp_budget: None,
+            cooperative_grid_sync: false,
         }
     }
 }

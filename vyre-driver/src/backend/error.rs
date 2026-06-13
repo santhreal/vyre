@@ -28,6 +28,11 @@ pub enum ErrorCode {
     DispatchFailed,
     /// The program itself is invalid for this backend.
     InvalidProgram,
+    /// A cooperative (whole-grid-sync) launch could not fit every block
+    /// co-resident on the device. This is a routable performance condition,
+    /// not a hard failure: the orchestrator should fall back (loudly) to a
+    /// recall-identical non-cooperative path (resident fixpoint or host split).
+    CooperativeResidencyExceeded,
     /// Unclassified error (produced by [`BackendError::new`]).
     Unknown,
 }
@@ -47,6 +52,7 @@ impl ErrorCode {
             Self::KernelCompileFailed => 1004,
             Self::DispatchFailed => 1005,
             Self::InvalidProgram => 1006,
+            Self::CooperativeResidencyExceeded => 1007,
             Self::Unknown => 1999,
         }
     }
@@ -137,6 +143,22 @@ pub enum BackendError {
     InvalidProgram {
         /// Actionable description, should begin with `Fix: `.
         fix: String,
+    },
+
+    /// A cooperative whole-grid launch could not be made fully resident: the
+    /// grid has more blocks than the device can co-schedule for a grid-sync
+    /// barrier. The orchestrator must fall back (loudly) to a recall-identical
+    /// non-cooperative path rather than launch a kernel that would deadlock.
+    #[error(
+        "cooperative grid-sync launch needs {grid_blocks} co-resident block(s) but the device can fit at most {resident_limit}.          Fix: route this dispatch to the resident-fixpoint or host-split grid-sync path, reduce the grid/workgroup size, or lower kernel register/shared-memory pressure. Detail: {detail}"
+    )]
+    CooperativeResidencyExceeded {
+        /// Blocks the launch geometry requires.
+        grid_blocks: u64,
+        /// Blocks the device can keep co-resident for this kernel.
+        resident_limit: u64,
+        /// Which residency bound tripped (thread vs occupancy) and the geometry.
+        detail: String,
     },
 
     /// Fallback for backends that have not migrated to structured errors.
@@ -232,6 +254,7 @@ impl BackendError {
             Self::KernelCompileFailed { .. } => ErrorCode::KernelCompileFailed,
             Self::DispatchFailed { .. } => ErrorCode::DispatchFailed,
             Self::InvalidProgram { .. } => ErrorCode::InvalidProgram,
+            Self::CooperativeResidencyExceeded { .. } => ErrorCode::CooperativeResidencyExceeded,
             Self::Raw(_) => ErrorCode::Unknown,
         }
     }

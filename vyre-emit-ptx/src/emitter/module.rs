@@ -3,10 +3,24 @@ use std::fmt::Write as _;
 use rustc_hash::FxHashSet;
 use vyre_lower::{KernelDescriptor, MemoryClass, TRAP_SIDECAR_NAME};
 
+use vyre_lower::KernelOpKind;
+
 use super::names::sanitize_param_name;
 use super::sizing::{body_op_count_recursive, estimate_body_text_capacity};
 use super::BodyCtx;
 use crate::{EmitError, PtxEmitOptions};
+
+/// Whether the descriptor contains a `MemoryOrdering::GridSync` barrier, which
+/// the body lowers to a monotonic-counter cooperative barrier
+/// ([`BodyCtx::emit_grid_sync_barrier`]) that reads/writes the module-scope
+/// `_vyre_grid_barrier` counter. The same recursive iterator drives
+/// `requires_full_workgroup_entry`, so detection here and the all-lanes-live
+/// entry stay in lockstep.
+fn descriptor_has_grid_sync_barrier(desc: &KernelDescriptor) -> bool {
+    desc.ops_iter().any(|op| {
+        matches!(op.kind, KernelOpKind::Barrier { ordering } if ordering.requires_grid_sync())
+    })
+}
 
 pub(super) struct ModuleBuilder {
     options: PtxEmitOptions,
@@ -47,6 +61,15 @@ impl ModuleBuilder {
     }
 
     pub(super) fn write_entry_point(&mut self, desc: &KernelDescriptor) -> Result<(), EmitError> {
+        if self.options.cooperative_grid_sync && descriptor_has_grid_sync_barrier(desc) {
+            // Module-scope arrival counter for the cooperative grid barrier. A
+            // single u32, zeroed by the host before each cooperative launch; each
+            // CTA leader bumps it once per barrier and spins until it reaches
+            // (barrier_index + 1) * gridSize. `.global` (not `.const`) because it
+            // is written from the device; `.align 4` matches the u32 atom.
+            self.text
+                .push_str(".global .align 4 .u32 _vyre_grid_barrier[1];\n\n");
+        }
         self.text.push_str(".visible .entry main(\n");
         let mut first = true;
         for binding in &desc.bindings.slots {

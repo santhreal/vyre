@@ -123,7 +123,7 @@ impl CudaBackend {
         })
     }
 
-    fn prepare_launch_plan(
+    pub(crate) fn prepare_launch_plan(
         &self,
         program: &Program,
         bindings: &BindingPlan,
@@ -142,7 +142,7 @@ impl CudaBackend {
         let bindings = BindingPlan::from_borrowed_inputs(program, inputs)?;
         let launch = self.prepare_launch_plan(program, &bindings, config)?;
         self.validate_program_cached(program)?;
-        let cooperative = self.resolve_cooperative_flag(config)?;
+        let cooperative = self.resolve_host_cooperative_flag(program, config)?;
         let output_binding_indices = compute_ordered_output_indices(&bindings)?;
         let fixpoint_iterations = resolve_fixpoint_iterations(config, "CUDA")?;
         Ok(CudaDispatchPlan {
@@ -152,6 +152,37 @@ impl CudaBackend {
             cooperative,
             fixpoint_iterations,
         })
+    }
+
+    /// Cooperative-launch flag for the borrowed-host path, accounting for the
+    /// program's grid-sync content.
+    ///
+    /// A program that still contains `MemoryOrdering::GridSync` barriers when it
+    /// reaches host dispatch has been lowered to PTX with native in-kernel grid
+    /// barriers (the resident-fixpoint and host-split paths split the barriers
+    /// out before lowering, so they never arrive here). Such a kernel MUST be
+    /// launched cooperatively — every CTA co-resident — or the in-kernel grid
+    /// barrier deadlocks. Force cooperative and fail closed when the device
+    /// cannot run cooperative launch, rather than silently launching a kernel
+    /// that would hang.
+    fn resolve_host_cooperative_flag(
+        &self,
+        program: &Program,
+        config: &DispatchConfig,
+    ) -> Result<bool, BackendError> {
+        if vyre_driver::grid_sync::contains_grid_sync(program) {
+            if !self.hardware_supports_grid_sync() {
+                return Err(BackendError::UnsupportedFeature {
+                    name: format!(
+                        "cuda_native_grid_sync (compute_capability={:?}, cooperative_launch={})",
+                        self.caps.compute_capability, self.caps.cooperative_launch
+                    ),
+                    backend: crate::CUDA_BACKEND_ID.to_string(),
+                });
+            }
+            return Ok(true);
+        }
+        self.resolve_cooperative_flag(config)
     }
 
     pub(crate) fn prepare_static_dispatch(
@@ -355,6 +386,17 @@ impl CudaBackend {
     ) -> Result<cudarc::driver::sys::CUfunction, BackendError> {
         self.module_cache
             .function_for_ptx(ptx_src, key, self.ptx_target_sm())
+    }
+
+    /// Device pointer + byte size of the cooperative grid-barrier counter for
+    /// this PTX module, or `None` when the kernel declares no grid barrier.
+    pub(crate) fn grid_barrier_global_with_key(
+        &self,
+        ptx_src: &str,
+        key: ModuleCacheKey,
+    ) -> Result<Option<(u64, usize)>, BackendError> {
+        self.module_cache
+            .grid_barrier_global_for_ptx(ptx_src, key, self.ptx_target_sm())
     }
 
     /// Number of loaded CUDA modules currently held in the warm cache.

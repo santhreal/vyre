@@ -114,9 +114,20 @@ impl CudaBackend {
     }
 
     /// Whether this backend launches grid-sync kernels through the cooperative ABI.
+    ///
+    /// The PTX emitter lowers each `MemoryOrdering::GridSync` barrier to a
+    /// monotonic-counter cooperative grid barrier
+    /// (`vyre_emit_ptx` `emit_grid_sync_barrier`) backed by the module-scope
+    /// `_vyre_grid_barrier` counter, and the host dispatch path launches such
+    /// kernels with `cuLaunchCooperativeKernel`, zeroing the counter before
+    /// each launch. `supports_grid_sync()` additionally gates on
+    /// `hardware_supports_grid_sync()` so non-cooperative-capable devices still
+    /// route to the kernel-split path; when the cooperative grid cannot be made
+    /// fully resident the launch returns `CooperativeResidencyExceeded` and the
+    /// orchestrator falls back to the resident-fixpoint path.
     #[must_use]
     pub fn lowers_grid_sync(&self) -> bool {
-        false
+        true
     }
 
     /// Whether CUDA can execute `MemoryOrdering::GridSync` inside one dispatch.

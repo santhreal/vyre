@@ -485,6 +485,26 @@ impl CudaBackendRegistration {
         Ok(())
     }
 
+    /// Reject `MemoryOrdering::GridSync` on the ahead-of-time compiled-pipeline
+    /// path. Native cooperative grid-sync is delivered through the *dispatch*
+    /// path (`dispatch_borrowed` → host dispatch), which zeroes the module-scope
+    /// `_vyre_grid_barrier` counter before each cooperative launch. The compiled
+    /// pipeline does not reset that counter between launches, so a fixpoint or
+    /// reused compiled cooperative grid-sync pipeline would observe a stale
+    /// barrier count and release a later launch's first barrier early. Until the
+    /// compiled-pipeline path resets the counter, refuse it loudly rather than
+    /// emit a pipeline that could silently desynchronize.
+    fn reject_grid_sync_in_aot_compile(&self, program: &Program) -> Result<(), BackendError> {
+        if vyre_driver::grid_sync::contains_grid_sync(program) {
+            return Err(BackendError::UnsupportedFeature {
+                name: "cuda_native_grid_sync_lowering in AOT compile_native (cooperative grid-sync is supported via dispatch, not the compiled pipeline, which does not reset the per-launch _vyre_grid_barrier counter)"
+                    .to_string(),
+                backend: CUDA_BACKEND_ID.to_string(),
+            });
+        }
+        Ok(())
+    }
+
     fn validate_program_for_dispatch(&self, program: &Program) -> Result<(), BackendError> {
         let required = vyre_foundation::program_caps::scan(program);
         vyre_foundation::program_caps::check_backend_capabilities(
@@ -919,6 +939,7 @@ impl VyreBackend for CudaBackendRegistration {
         config: &DispatchConfig,
     ) -> Result<Option<Arc<dyn vyre_driver::CompiledPipeline>>, BackendError> {
         self.validate_program_for_dispatch(program)?;
+        self.reject_grid_sync_in_aot_compile(program)?;
         self.inner.compile_native(program, config).map(Some)
     }
 
@@ -928,6 +949,7 @@ impl VyreBackend for CudaBackendRegistration {
         config: &DispatchConfig,
     ) -> Result<Option<Arc<dyn vyre_driver::CompiledPipeline>>, BackendError> {
         self.validate_program_for_dispatch(program.as_ref())?;
+        self.reject_grid_sync_in_aot_compile(program.as_ref())?;
         self.inner.compile_native_shared(program, config).map(Some)
     }
 
@@ -1040,6 +1062,16 @@ impl VyreBackend for CudaBackendRegistration {
 
     fn supports_grid_sync(&self) -> bool {
         self.inner.supports_grid_sync()
+    }
+
+    fn cooperative_grid_sync_fits(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<bool, BackendError> {
+        self.inner
+            .cooperative_grid_sync_launch_fits(program, inputs, config)
     }
 
     fn allows_host_grid_sync_split(&self) -> bool {

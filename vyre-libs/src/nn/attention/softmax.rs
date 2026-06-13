@@ -380,6 +380,7 @@ mod tests {
                 target: vyre_emit_ptx::ComputeCapability::SM_80,
                 subgroup_size: 32,
                 ulp_budget: Some(128),
+                cooperative_grid_sync: false,
             },
         )
         .unwrap();

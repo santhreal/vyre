@@ -569,7 +569,43 @@ impl CudaBackend {
             }
             let mut params_ref = params_buf_ptr;
             let mut kernel_args = Self::kernel_args(&mut ptr_values, &mut params_ref)?;
+            // A native grid-sync kernel reads/writes a module-scope arrival
+            // counter (`_vyre_grid_barrier`). Within one cooperative launch the
+            // in-kernel barriers drive it up to N*gridSize for N barriers, so it
+            // MUST start each launch at zero; a stale value would release the
+            // next launch's first barrier before every CTA arrives. Resolve the
+            // counter once, then zero it on the dispatch stream before each
+            // launch (the memset is stream-ordered ahead of the kernel).
+            let grid_barrier_counter = if prepared.cooperative
+                && vyre_driver::grid_sync::contains_grid_sync(program)
+            {
+                match self.grid_barrier_global_with_key(ptx_src, module_key)? {
+                    Some(global) => Some(global),
+                    None => {
+                        return Err(BackendError::InvalidProgram {
+                            fix:
+                                "Fix: CUDA cooperative grid-sync launch found no `_vyre_grid_barrier` counter in the loaded module although the program contains grid-sync barriers. Ensure the PTX emitter declares the module-scope counter for grid-sync kernels."
+                                    .to_string(),
+                        });
+                    }
+                }
+            } else {
+                None
+            };
             for _ in 0..prepared.fixpoint_iterations {
+                if let Some((counter_ptr, counter_len)) = grid_barrier_counter {
+                    // SAFETY: counter_ptr/len come from cuModuleGetGlobal on the
+                    // loaded module; stream_raw is the dispatch stream; the
+                    // memset is enqueued before the launch on the same stream.
+                    unsafe {
+                        super::copy::memset_d8_async_checked(
+                            counter_ptr,
+                            0,
+                            counter_len,
+                            stream_raw,
+                        )?;
+                    }
+                }
                 self.launch_prevalidated_function(
                     func,
                     &mut kernel_args,

@@ -763,6 +763,36 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         false
     }
 
+    /// Whether a native cooperative grid-sync launch of `program` with these
+    /// `inputs` and `config` can be made fully resident on this device.
+    ///
+    /// [`VyreBackend::supports_grid_sync`] reports that native lowering is
+    /// *available*; this reports whether it *fits* for a specific dispatch. A
+    /// cooperative launch requires every block co-resident, so a grid whose
+    /// block count exceeds the device's cooperative residency cannot run
+    /// natively and must route to the resident-fixpoint or host-split path.
+    /// Orchestrators call this to choose the native route only when it fits,
+    /// avoiding a wasted allocate/upload that would otherwise end in
+    /// [`crate::ErrorCode::CooperativeResidencyExceeded`].
+    ///
+    /// Default: `Ok(false)` (no native cooperative launch). Backends that lower
+    /// grid sync override this with the real residency check. Returns `Ok(false)`
+    /// — not an error — when the program carries no grid-sync barrier, since
+    /// there is then nothing to launch cooperatively.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] if the launch geometry cannot be computed for
+    /// the program/inputs (a structurally invalid dispatch).
+    fn cooperative_grid_sync_fits(
+        &self,
+        _program: &Program,
+        _inputs: &[&[u8]],
+        _config: &DispatchConfig,
+    ) -> Result<bool, BackendError> {
+        Ok(false)
+    }
+
     /// Whether the shared registry wrapper may emulate whole-grid
     /// synchronization for this backend by splitting one program into
     /// multiple host-dispatched kernels.

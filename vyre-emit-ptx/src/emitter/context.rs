@@ -51,6 +51,7 @@ impl<'a> BodyCtx<'a> {
             slot_to_length_reg: FxHashMap::with_capacity_and_hasher(slot_count, Default::default()),
             slot_to_binding,
             full_workgroup_entry,
+            grid_barrier_index: 0,
         };
         this.emit_thread_geometry();
         this

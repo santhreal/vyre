@@ -457,13 +457,50 @@ fn load_ptx_from_disk(key: &PtxSourceCacheKey) -> Result<Option<String>, Backend
             )));
         }
     }
-    match std::fs::read_to_string(&path) {
-        Ok(source) => Ok(Some(source)),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(BackendError::new(format!(
-            "failed to read CUDA PTX source cache `{}`: {error}. Fix: repair cache file permissions or remove the corrupt cache entry; do not silently relower around a broken production cache.",
-            path.display()
-        ))),
+    read_ptx_disk_cache_source_bounded(&path)
+}
+
+fn read_ptx_disk_cache_source_bounded(
+    path: &std::path::Path,
+) -> Result<Option<String>, BackendError> {
+    let mut reader = match std::fs::File::open(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(BackendError::new(format!(
+                "failed to read CUDA PTX source cache `{}`: {error}. Fix: repair cache file permissions or remove the corrupt cache entry; do not silently relower around a broken production cache.",
+                path.display()
+            )));
+        }
+    };
+    let mut bytes = Vec::new();
+    let mut total = 0u64;
+    let mut chunk = [0u8; 8192];
+    loop {
+        let read = std::io::Read::read(&mut reader, &mut chunk).map_err(|error| {
+            BackendError::new(format!(
+                "failed to read CUDA PTX source cache `{}`: {error}. Fix: repair cache file permissions or remove the corrupt cache entry; do not silently relower around a broken production cache.",
+                path.display()
+            ))
+        })?;
+        if read == 0 {
+            return String::from_utf8(bytes).map(Some).map_err(|error| {
+                BackendError::new(format!(
+                    "CUDA PTX source cache `{}` is not UTF-8: {error}. Fix: remove the corrupt cache artifact.",
+                    path.display()
+                ))
+            });
+        }
+        let read = read as u64;
+        total = total.saturating_add(read);
+        if total > PTX_SOURCE_CACHE_MAX_ARTIFACT_BYTES {
+            return Err(BackendError::new(format!(
+                "CUDA PTX source cache `{}` exceeds the {} byte safety limit while reading. Fix: remove the corrupt cache artifact or raise the cap deliberately after reviewing compile-cache memory pressure.",
+                path.display(),
+                PTX_SOURCE_CACHE_MAX_ARTIFACT_BYTES
+            )));
+        }
+        bytes.extend_from_slice(&chunk[..read as usize]);
     }
 }
 
@@ -882,6 +919,11 @@ mod tests {
 struct CachedModule {
     module: CUmodule,
     main: CUfunction,
+    /// Device pointer + byte size of the module-scope cooperative grid-barrier
+    /// counter (`_vyre_grid_barrier`). `Some` only when the PTX declares it
+    /// (a grid-sync program); the host zeroes this counter before each
+    /// cooperative launch. `None` for every non-grid-sync kernel.
+    grid_barrier_global: Option<(u64, usize)>,
     access_count: AtomicU32,
 }
 
@@ -974,6 +1016,45 @@ impl CudaModuleCache {
                 let main = loaded.main;
                 entry.insert(loaded);
                 Ok(main)
+            }
+        }
+    }
+
+    /// Device pointer + byte size of this kernel's cooperative grid-barrier
+    /// counter, loading the module if it is not cached. Returns `None` for a
+    /// kernel that declares no grid barrier (the caller must already know,
+    /// from `contains_grid_sync`, whether one is required and treat `None` on
+    /// a grid-sync program as a hard codegen error).
+    pub(crate) fn grid_barrier_global_for_ptx(
+        &self,
+        ptx_src: &str,
+        key: ModuleCacheKey,
+        ptx_target_sm: u32,
+    ) -> Result<Option<(u64, usize)>, BackendError> {
+        if let Some(module) = self.modules.get(&key) {
+            increment_cache_access_u32(&module.access_count, "CUDA module cache access count");
+            increment_cache_counter_u64(&self.hits, "CUDA module cache hits");
+            return Ok(module.grid_barrier_global);
+        }
+        increment_cache_counter_u64(&self.misses, "CUDA module cache misses");
+
+        if self.modules.len() >= MODULE_CACHE_SOFT_CAP {
+            self.evict_submodular();
+        }
+        match self.modules.entry(key) {
+            Entry::Occupied(existing) => {
+                increment_cache_access_u32(
+                    &existing.get().access_count,
+                    "CUDA module cache access count",
+                );
+                increment_cache_counter_u64(&self.hits, "CUDA module cache hits");
+                Ok(existing.get().grid_barrier_global)
+            }
+            Entry::Vacant(entry) => {
+                let loaded = load_module(ptx_src, ptx_target_sm)?;
+                let global = loaded.grid_barrier_global;
+                entry.insert(loaded);
+                Ok(global)
             }
         }
     }
@@ -1136,12 +1217,49 @@ fn load_module(ptx_src: &str, ptx_target_sm: u32) -> Result<CachedModule, Backen
             });
         }
     };
+    // Resolve the cooperative grid-barrier counter when this kernel declares
+    // one. The emitter always names the symbol `_vyre_grid_barrier`, so the
+    // PTX text is an exact, non-lossy signal of its presence (no swallowed
+    // NOT_FOUND on the 99% of kernels that have no grid barrier).
+    let grid_barrier_global = if ptx_src.contains(GRID_BARRIER_SYMBOL_NAME) {
+        let symbol = CStr::from_bytes_with_nul(GRID_BARRIER_SYMBOL_CSTR).map_err(|error| {
+            BackendError::KernelCompileFailed {
+                backend: crate::CUDA_BACKEND_ID.to_string(),
+                compiler_message: format!(
+                    "CUDA grid-barrier symbol literal was invalid: {error}. Fix: restore the `{GRID_BARRIER_SYMBOL_NAME}` module-scope counter declaration in the PTX emitter."
+                ),
+            }
+        })?;
+        match get_cuda_module_global(module, symbol) {
+            Ok(global) => Some(global),
+            Err(res) => {
+                unload_cuda_module_or_log(
+                    module,
+                    "CUDA module cleanup after grid-barrier global lookup failure",
+                );
+                return Err(BackendError::KernelCompileFailed {
+                    backend: crate::CUDA_BACKEND_ID.to_string(),
+                    compiler_message: format!(
+                        "cuModuleGetGlobal({GRID_BARRIER_SYMBOL_NAME}) failed with {res:?} for sm_{ptx_target_sm} even though the PTX text declares it. Fix: ensure the PTX emitter emits `.global .align 4 .u32 {GRID_BARRIER_SYMBOL_NAME}[1];` at module scope for grid-sync kernels."
+                    ),
+                });
+            }
+        }
+    } else {
+        None
+    };
     Ok(CachedModule {
         module,
         main: func,
+        grid_barrier_global,
         access_count: AtomicU32::new(1),
     })
 }
+
+/// Module-scope cooperative grid-barrier counter symbol, emitted by
+/// `vyre-emit-ptx` as `.global .align 4 .u32 _vyre_grid_barrier[1];`.
+pub(crate) const GRID_BARRIER_SYMBOL_NAME: &str = "_vyre_grid_barrier";
+const GRID_BARRIER_SYMBOL_CSTR: &[u8] = b"_vyre_grid_barrier\0";
 
 pub(crate) fn load_cuda_module_data(image_with_nul: &[u8]) -> Result<CUmodule, CUresult> {
     if image_with_nul.last().copied() != Some(0) {
@@ -1182,6 +1300,36 @@ pub(crate) fn get_cuda_module_function(
         return Err(CUresult::CUDA_ERROR_INVALID_VALUE);
     }
     Ok(func)
+}
+
+/// Resolve a `.global` symbol's device pointer and byte size from a loaded
+/// module. Used to locate the cooperative grid-barrier counter
+/// (`_vyre_grid_barrier`) that the PTX emitter declares at module scope; the
+/// host zeroes it before each cooperative launch.
+pub(crate) fn get_cuda_module_global(
+    module: CUmodule,
+    name: &CStr,
+) -> Result<(u64, usize), CUresult> {
+    if module.is_null() {
+        return Err(CUresult::CUDA_ERROR_INVALID_VALUE);
+    }
+    let mut dptr: cudarc::driver::sys::CUdeviceptr = 0;
+    let mut bytes: usize = 0;
+    let result = {
+        // SAFETY: `module` is a loaded CUDA module handle and `name` is a
+        // NUL-terminated symbol for the duration of the FFI call. `dptr`/`bytes`
+        // are local out-params.
+        unsafe {
+            cudarc::driver::sys::cuModuleGetGlobal_v2(&mut dptr, &mut bytes, module, name.as_ptr())
+        }
+    };
+    if result != CUresult::CUDA_SUCCESS {
+        return Err(result);
+    }
+    if dptr == 0 || bytes == 0 {
+        return Err(CUresult::CUDA_ERROR_INVALID_VALUE);
+    }
+    Ok((dptr, bytes))
 }
 
 pub(crate) fn unload_cuda_module(module: CUmodule) -> Result<(), CUresult> {

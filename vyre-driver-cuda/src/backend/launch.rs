@@ -4,8 +4,10 @@ use std::ffi::c_void;
 
 use cudarc::driver::sys::{CUfunction, CUresult, CUstream};
 use smallvec::SmallVec;
+use vyre_driver::binding::BindingPlan;
 use vyre_driver::validation::validate_launch_geometry;
-use vyre_driver::{BackendError, LaunchPlan};
+use vyre_driver::{BackendError, DispatchConfig, LaunchPlan};
+use vyre_foundation::ir::Program;
 
 use super::allocations::cuda_check;
 use super::dispatch::CudaBackend;
@@ -185,10 +187,12 @@ impl CudaBackend {
             cooperative_thread_residency_block_limit(&self.caps, threads_per_block);
         if resident_block_limit == 0 || total_blocks > resident_block_limit {
             let envelope = self.cooperative_residency_diagnostic(launch);
-            return Err(BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: CUDA cooperative launch requires every block to be resident, but grid {:?} has {total_blocks} block(s) and this device can resident-fit at most {resident_block_limit} block(s) at workgroup {:?} by thread residency. Reduce grid size, reduce workgroup size, or split the cooperative phase before launch. Diagnostic: {envelope}",
-                    launch.grid, launch.workgroup
+            return Err(BackendError::CooperativeResidencyExceeded {
+                grid_blocks: total_blocks,
+                resident_limit: resident_block_limit,
+                detail: format!(
+                    "thread-residency bound at workgroup {:?}, grid {:?}. Diagnostic: {envelope}",
+                    launch.workgroup, launch.grid
                 ),
             });
         }
@@ -244,15 +248,49 @@ impl CudaBackend {
         )?;
         if exact_resident_blocks == 0 || total_blocks > exact_resident_blocks {
             let envelope = self.cooperative_residency_diagnostic(launch);
-            return Err(BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: CUDA cooperative launch requires every block to be resident, but grid {:?} has {total_blocks} block(s) and the loaded kernel can resident-fit at most {exact_resident_blocks} block(s) ({active_blocks_per_sm} block(s)/SM across {} SMs) after register/shared-memory occupancy analysis. Reduce grid size, reduce workgroup size, lower register/shared-memory pressure, or split the cooperative phase before launch. Diagnostic: {envelope}",
-                    launch.grid,
-                    self.caps.multi_processor_count_u32()
+            return Err(BackendError::CooperativeResidencyExceeded {
+                grid_blocks: total_blocks,
+                resident_limit: exact_resident_blocks,
+                detail: format!(
+                    "occupancy bound: {active_blocks_per_sm} block(s)/SM across {} SM(s) after register/shared-memory analysis at workgroup {:?}, grid {:?}. Diagnostic: {envelope}",
+                    self.caps.multi_processor_count_u32(),
+                    launch.workgroup,
+                    launch.grid
                 ),
             });
         }
         Ok(())
+    }
+
+    /// Whether a native cooperative grid-sync launch of `program` with these
+    /// `inputs`/`config` fits the device's cooperative thread residency (every
+    /// block co-resident). This is the cheap preflight the orchestrator uses to
+    /// route native-vs-resident: it builds only the binding/launch plan (no
+    /// device allocation, no module load) and compares the grid block count to
+    /// the cooperative thread-residency bound. The stricter per-kernel occupancy
+    /// bound is still enforced at launch via
+    /// [`Self::validate_cooperative_function_residency`]; a grid that clears this
+    /// preflight but not occupancy surfaces `CooperativeResidencyExceeded` at
+    /// launch and the orchestrator falls back then.
+    pub(crate) fn cooperative_grid_sync_launch_fits(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<bool, BackendError> {
+        if !self.supports_grid_sync() || !vyre_driver::grid_sync::contains_grid_sync(program) {
+            return Ok(false);
+        }
+        let bindings = BindingPlan::from_borrowed_inputs(program, inputs)?;
+        let launch = self.prepare_launch_plan(program, &bindings, config)?;
+        let total_blocks = launch_axis_product("grid", launch.grid)?;
+        let threads_per_block = launch_axis_product("workgroup", launch.workgroup)?;
+        let Ok(threads_per_block) = u32::try_from(threads_per_block) else {
+            return Ok(false);
+        };
+        let resident_block_limit =
+            cooperative_thread_residency_block_limit(&self.caps, threads_per_block);
+        Ok(resident_block_limit > 0 && total_blocks <= resident_block_limit)
     }
 
     fn cooperative_residency_diagnostic(&self, launch: &LaunchPlan) -> String {

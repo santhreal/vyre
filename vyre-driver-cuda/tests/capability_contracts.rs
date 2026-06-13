@@ -299,17 +299,27 @@ fn cuda_native_compilation_rejects_grid_sync_before_ptx_emission() {
 }
 
 #[test]
-fn cuda_grid_sync_capability_stays_false_until_native_lowering_exists() {
+fn cuda_grid_sync_capability_reflects_native_cooperative_lowering() {
     let backend = CudaBackend::acquire()
         .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.");
 
+    // Native GridSync lowering now exists: the PTX emitter lowers
+    // MemoryOrdering::GridSync to a monotonic-counter cooperative grid barrier
+    // and the dispatch path launches it cooperatively, zeroing the module-scope
+    // counter before each launch. This is proven byte-identical to the host
+    // split by
+    // cooperative_launch_contracts::native_cooperative_grid_sync_matches_host_split_cross_block.
     assert!(
-        !backend.lowers_grid_sync(),
-        "Fix: CUDA must not report native GridSync lowering until PTX/cooperative-grid lowering handles MemoryOrdering::GridSync without host splitting."
+        backend.lowers_grid_sync(),
+        "Fix: CUDA lowers MemoryOrdering::GridSync to a native cooperative grid barrier; lowers_grid_sync() must report it now that the PTX emitter + cooperative launch path exist."
     );
-    assert!(
-        !backend.supports_grid_sync(),
-        "Fix: CUDA supports_grid_sync must describe executable native GridSync, not merely hardware cooperative-launch capability."
+    // supports_grid_sync() must describe *executable* native GridSync: native
+    // lowering AND a device that can run a cooperative launch. With lowering
+    // present that reduces to the hardware capability.
+    assert_eq!(
+        backend.supports_grid_sync(),
+        backend.hardware_supports_grid_sync(),
+        "Fix: with native cooperative lowering present, supports_grid_sync() must equal hardware_supports_grid_sync() — true exactly when the device can run a resident cooperative grid."
     );
 }
 

@@ -16,10 +16,11 @@
 
 mod common;
 use common::{bytes_u32, u32_bytes};
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_driver::{grid_sync, BackendError, DispatchConfig};
 use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;
-use vyre_driver_cuda::CudaBackend;
+use vyre_driver_cuda::{cuda_factory, CudaBackend};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::memory_model::MemoryOrdering;
 
 fn add_one_program() -> Program {
     Program::wrapped(
@@ -152,14 +153,27 @@ fn cooperative_dispatch_rejects_non_resident_grid_before_driver_launch() {
             "oversized cooperative grid must be rejected before cuLaunchCooperativeKernel; \
              silently launching here would make grid-sync correctness depend on opaque driver failure"
         ),
-        Err(BackendError::InvalidProgram { fix }) => {
+        Err(BackendError::CooperativeResidencyExceeded {
+            grid_blocks,
+            resident_limit,
+            detail,
+        }) => {
+            assert_eq!(
+                grid_blocks,
+                resident_blocks + 1,
+                "residency error must report the requested grid block count (resident_blocks + 1)"
+            );
+            assert_eq!(
+                resident_limit, resident_blocks,
+                "residency error must report the device's thread-residency block limit"
+            );
             assert!(
-                fix.contains("every block to be resident") && fix.contains("split"),
-                "cooperative-grid residency error must explain the resident-grid invariant and the split remedy; got: {fix}"
+                detail.contains("split") || detail.contains("Diagnostic"),
+                "residency error detail must point at the split remedy / diagnostic; got: {detail}"
             );
         }
         Err(other) => panic!(
-            "oversized cooperative grid must return InvalidProgram with an actionable residency fix, not {other:?}"
+            "oversized cooperative grid must return CooperativeResidencyExceeded with an actionable residency fix, not {other:?}"
         ),
     }
     let cache_after = backend.pipeline_cache_snapshot();
@@ -220,6 +234,110 @@ fn cooperative_cuda_graph_recording_is_rejected_explicitly() {
             "cooperative CUDA graph recording must return UnsupportedFeature, not {other:?}"
         ),
     }
+}
+
+/// Two-segment program with a cross-block dependency that ONLY a correct
+/// whole-grid barrier satisfies: in segment 0 every thread writes its own
+/// `scratch` slot; after the grid barrier every thread in every block reads
+/// block 0's `scratch[0]`. Without a real grid-wide barrier a block other than
+/// 0 could observe the pre-barrier `scratch[0]` (its zero init), so a broken
+/// barrier is visible in the output.
+fn cross_block_grid_sync_program(n: u32) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(n),
+            BufferDecl::read_write("scratch", 1, DataType::U32).with_count(n),
+            BufferDecl::output("out", 2, DataType::U32).with_count(n),
+        ],
+        [256, 1, 1],
+        vec![
+            // segment 0: scratch[gid] = input[gid] + 1
+            Node::store(
+                "scratch",
+                Expr::gid_x(),
+                Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(1)),
+            ),
+            // whole-grid barrier: block 0's scratch[0] write must reach all blocks
+            Node::barrier_with_ordering(MemoryOrdering::GridSync),
+            // segment 1: out[gid] = scratch[0] + input[gid]  (cross-block read of block 0)
+            Node::store(
+                "out",
+                Expr::gid_x(),
+                Expr::add(
+                    Expr::load("scratch", Expr::u32(0)),
+                    Expr::load("input", Expr::gid_x()),
+                ),
+            ),
+        ],
+    )
+}
+
+/// The native cooperative grid-sync launch (in-kernel monotonic-counter barrier
+/// + per-launch counter zeroing) must produce output byte-identical to the
+/// proven host-orchestrated split on a residency-fitting cross-block program.
+/// This is the end-to-end oracle for the barrier emission, the module-scope
+/// counter, the cooperative launch ABI, and the per-launch counter reset: a
+/// divergence means a block observed pre-barrier cross-block state.
+#[test]
+fn native_cooperative_grid_sync_matches_host_split_cross_block() {
+    let backend = cuda_factory()
+        .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.");
+    let backend = backend.as_ref();
+    if !backend.supports_grid_sync() {
+        eprintln!(
+            "skip: backend does not lower native grid sync (supports_grid_sync()==false); \
+             host-split parity is covered elsewhere"
+        );
+        return;
+    }
+
+    // 8 blocks of 256 threads — comfortably inside cooperative residency.
+    let n: u32 = 2048;
+    let program = cross_block_grid_sync_program(n);
+    let input: Vec<u32> = (0..n).collect();
+    let scratch_init = vec![0u32; n as usize];
+    let input_bytes = u32_bytes(&input);
+    let scratch_bytes = u32_bytes(&scratch_init);
+    let inputs: [&[u8]; 2] = [input_bytes.as_slice(), scratch_bytes.as_slice()];
+
+    // Native: supports_grid_sync()==true routes the whole (unsplit) grid-sync
+    // program through cuLaunchCooperativeKernel with the in-kernel barrier.
+    let native = backend
+        .dispatch_borrowed(&program, &inputs, &DispatchConfig::default())
+        .expect("native cooperative grid-sync dispatch must succeed for a residency-fitting grid");
+
+    // Baseline: the host-orchestrated split, which always splits at the barrier.
+    let host = grid_sync::dispatch_with_grid_sync_split(
+        backend,
+        &program,
+        &inputs,
+        &DispatchConfig::default(),
+    )
+    .expect("host-split grid-sync dispatch must succeed");
+
+    assert_eq!(
+        native.len(),
+        host.len(),
+        "native and host-split must return the same output buffer count"
+    );
+    for (idx, (native_buf, host_buf)) in native.iter().zip(host.iter()).enumerate() {
+        assert_eq!(
+            bytes_u32(native_buf),
+            bytes_u32(host_buf),
+            "native cooperative grid-sync output buffer {idx} must be byte-identical to the host \
+             split; a divergence means the in-kernel grid barrier let a block read pre-barrier \
+             cross-block state"
+        );
+    }
+
+    // Absolute values: scratch[0] = input[0] + 1 = 1, so out[gid] = 1 + input[gid] = 1 + gid.
+    let out = bytes_u32(native.last().expect("program has an `out` output buffer"));
+    let expected: Vec<u32> = (0..n).map(|gid| 1 + gid).collect();
+    assert_eq!(
+        out, expected,
+        "out[gid] must equal scratch[0] + input[gid] = 1 + gid for every thread across all blocks; \
+         a wrong value at gid>=256 (block != 0) is the signature of a missing grid barrier"
+    );
 }
 
 #[test]

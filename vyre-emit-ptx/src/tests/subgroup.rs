@@ -195,6 +195,7 @@ fn subgroup_size_emits_probed_width_literal() {
             target: ComputeCapability::SM_70,
             subgroup_size: 16,
             ulp_budget: None,
+            cooperative_grid_sync: false,
         },
     )
     .unwrap();

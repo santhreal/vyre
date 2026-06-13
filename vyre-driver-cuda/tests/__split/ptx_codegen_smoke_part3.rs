@@ -214,7 +214,7 @@ fn ptx_is_pure_ascii_for_every_barrier_ordering() {
 }
 
 #[test]
-fn ptx_rejects_grid_sync_instead_of_emitting_cta_barrier() {
+fn ptx_emits_cooperative_grid_barrier_not_cta_downgrade() {
     use vyre::memory_model::MemoryOrdering;
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
@@ -227,18 +227,26 @@ fn ptx_rejects_grid_sync_instead_of_emitting_cta_barrier() {
         ],
     );
 
-    match program_to_ptx(&program, &default_config()) {
-        Err(error) => {
-            let message = error.to_string();
-            assert!(
-                message.contains("GridSync") && message.contains("bar.sync 0"),
-                "Fix: CUDA PTX rejection must name the forbidden GridSync-to-CTA downgrade; got: {message}"
-            );
-        }
-        Ok(ptx) => panic!(
-            "Fix: CUDA PTX smoke accepted GridSync and may have downgraded it to CTA scope. PTX:\n{ptx}"
-        ),
-    }
+    // CUDA lowers GridSync to a NATIVE cooperative grid barrier (it launches such
+    // programs cooperatively). The PTX must contain the whole-grid machinery, NOT
+    // a silent downgrade to a CTA-scope `bar.sync 0`: a module-scope arrival
+    // counter, a global atomic on it, and global memory fences.
+    let ptx = program_to_ptx(&program, &default_config())
+        .unwrap_or_else(|e| panic!("Fix: CUDA must lower GridSync to a cooperative grid barrier: {e}"));
+    assert_ptx_is_ascii("GridSync", &ptx);
+    assert!(
+        ptx.contains(".global .align 4 .u32 _vyre_grid_barrier[1];"),
+        "Fix: GridSync PTX must declare the module-scope cooperative barrier counter; got:\n{ptx}"
+    );
+    assert!(
+        ptx.contains("atom.global.add.u32") && ptx.contains("membar.gl"),
+        "Fix: GridSync PTX must use a global arrival atomic + global memory fence (grid scope), not a bare CTA bar.sync; got:\n{ptx}"
+    );
+    let cta_only_barriers = ptx.matches("bar.sync 0;").count();
+    assert!(
+        cta_only_barriers >= 2,
+        "Fix: the cooperative grid barrier brackets the global phase with two CTA bar.sync converge points; got {cta_only_barriers} in:\n{ptx}"
+    );
 }
 
 #[test]

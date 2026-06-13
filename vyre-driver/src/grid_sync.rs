@@ -1051,7 +1051,13 @@ pub fn dispatch_resident_with_grid_sync_split_timed(
     resources: &[Resource],
     config: &DispatchConfig,
 ) -> Result<TimedDispatchResult, BackendError> {
-    if !contains_grid_sync(program) || backend.supports_grid_sync() {
+    // These are the explicit non-native grid-sync routes (host split /
+    // resident fixpoint). They split unconditionally when the program carries a
+    // grid-sync barrier: native cooperative launch has a residency ceiling, so
+    // `supports_grid_sync()` no longer implies "this program runs natively".
+    // The orchestrator (or the registry's `should_split_grid_sync`) decides
+    // native-vs-split per program; once here, always split.
+    if !contains_grid_sync(program) {
         return backend.dispatch_resident_timed(program, resources, config);
     }
     let segments = try_split_on_grid_sync(program)?;
@@ -1125,7 +1131,13 @@ pub fn dispatch_with_grid_sync_split_into(
     config: &DispatchConfig,
     outputs: &mut OutputBuffers,
 ) -> Result<(), BackendError> {
-    if !contains_grid_sync(program) || backend.supports_grid_sync() {
+    // These are the explicit non-native grid-sync routes (host split /
+    // resident fixpoint). They split unconditionally when the program carries a
+    // grid-sync barrier: native cooperative launch has a residency ceiling, so
+    // `supports_grid_sync()` no longer implies "this program runs natively".
+    // The orchestrator (or the registry's `should_split_grid_sync`) decides
+    // native-vs-split per program; once here, always split.
+    if !contains_grid_sync(program) {
         return backend.dispatch_borrowed_into(program, inputs, config, outputs);
     }
     let segments = plan_host_grid_sync_segments(program)?;
@@ -1275,7 +1287,13 @@ pub fn dispatch_resident_grid_sync_fixpoint_into(
     config: &DispatchConfig,
     outputs: &mut OutputBuffers,
 ) -> Result<(), BackendError> {
-    if !contains_grid_sync(program) || backend.supports_grid_sync() {
+    // These are the explicit non-native grid-sync routes (host split /
+    // resident fixpoint). They split unconditionally when the program carries a
+    // grid-sync barrier: native cooperative launch has a residency ceiling, so
+    // `supports_grid_sync()` no longer implies "this program runs natively".
+    // The orchestrator (or the registry's `should_split_grid_sync`) decides
+    // native-vs-split per program; once here, always split.
+    if !contains_grid_sync(program) {
         return backend.dispatch_borrowed_into(program, inputs, config, outputs);
     }
     let segments = try_split_on_grid_sync(program)?;

@@ -346,6 +346,7 @@ fn unop_reciprocal_emits_strict_or_approx_rcp() {
             target: ComputeCapability::SM_70,
             subgroup_size: 32,
             ulp_budget: Some(4),
+            cooperative_grid_sync: false,
         },
     )
     .unwrap();
@@ -482,8 +483,8 @@ fn add_of_two_single_use_muls_keeps_one_mul_available_for_mad() {
         ],
     );
 
-    let s = emit(&kernel)
-        .expect("Fix: MAD fusion must not defer both Mul operands feeding one Add.");
+    let s =
+        emit(&kernel).expect("Fix: MAD fusion must not defer both Mul operands feeding one Add.");
 
     assert!(
         s.contains("mad.lo.u32") && s.contains("st.global.u32"),

@@ -97,6 +97,12 @@ struct BodyCtx<'a> {
     /// preamble. In this mode memory side effects use per-op bounds
     /// predicates instead of relying on an entry-wide element-count exit.
     full_workgroup_entry: bool,
+    /// Sequential index of the next `MemoryOrdering::GridSync` barrier
+    /// emitted in this kernel. Each whole-grid barrier `i` waits on the
+    /// module-scope counter reaching `(i+1) * gridSize` (see
+    /// [`Self::emit_grid_sync_barrier`]); the indices must be assigned in
+    /// emission order so every CTA agrees on each barrier's release target.
+    grid_barrier_index: u32,
 }
 
 impl BodyCtx<'_> {
@@ -120,12 +126,12 @@ impl BodyCtx<'_> {
         let value_reg = self.coerce_for_store(self.lookup_operand(value_op_id)?, elem_ty);
         let address =
             self.emit_memory_address(binding_slot, index_op_id, &element_type, memory_class)?;
-        let guard =
-            self.store_guard_for_index(binding_slot, index_op_id, memory_class, Some((if negate {
-                "@!"
-            } else {
-                "@"
-            }, pred)))?;
+        let guard = self.store_guard_for_index(
+            binding_slot,
+            index_op_id,
+            memory_class,
+            Some((if negate { "@!" } else { "@" }, pred)),
+        )?;
         self.emit_store_value(guard, address, &element_type, value_reg)?;
         Ok(true)
     }
@@ -165,6 +171,88 @@ impl BodyCtx<'_> {
             "    and.pred    {combined}, {branch_live}, {in_bounds};"
         );
         Ok(Some(("@".to_string(), combined)))
+    }
+
+    /// Emit a whole-grid barrier (`MemoryOrdering::GridSync`) as a
+    /// monotonic-counter cooperative barrier.
+    ///
+    /// The kernel is launched cooperatively (every CTA co-resident), so the
+    /// `i`-th grid barrier releases once the module-scope counter
+    /// `_vyre_grid_barrier` reaches `(i+1) * gridSize` — i.e. every CTA has
+    /// arrived at barrier `i`. The counter only grows within a launch, so the
+    /// strictly increasing per-barrier release targets are race-robust: a CTA
+    /// that races ahead only pushes the counter higher, never below an earlier
+    /// barrier's target, so no CTA is ever falsely released. The host zeroes
+    /// the counter before each cooperative launch (the fixpoint loop re-launches
+    /// the kernel on one serialized stream).
+    ///
+    /// Per-CTA `bar.sync` brackets the global phase: the first publishes the
+    /// CTA's prior global writes (`membar.gl`) and converges all lanes; the
+    /// per-CTA leader records arrival and spins on the counter; the second
+    /// releases the CTA once the leader observes the target, and a trailing
+    /// `membar.gl` acquires the other CTAs' published writes. This is the
+    /// standard sense-free grid barrier and is correct only when every CTA
+    /// executes the same barrier sequence — guaranteed here because GridSync
+    /// barriers are top-level (never under divergent control flow) and the
+    /// full-workgroup entry keeps every lane live through the barrier.
+    fn emit_grid_sync_barrier(&mut self) -> Result<(), EmitError> {
+        let index = self.grid_barrier_index;
+        self.grid_barrier_index = index
+            .checked_add(1)
+            .ok_or_else(|| EmitError::InvalidDescriptor("grid-sync barrier index overflow".into()))?;
+        // Release target multiplier for this barrier: (index + 1).
+        let multiplier = index
+            .checked_add(1)
+            .ok_or_else(|| EmitError::InvalidDescriptor("grid-sync barrier target overflow".into()))?;
+
+        let sum = self.alloc(PtxType::U32);
+        let tmp = self.alloc(PtxType::U32);
+        let grid = self.alloc(PtxType::U32);
+        let dim = self.alloc(PtxType::U32);
+        let target = self.alloc(PtxType::U32);
+        let old = self.alloc(PtxType::U32);
+        let cur = self.alloc(PtxType::U32);
+        let bar_addr = self.alloc(PtxType::U64);
+        let not_leader = self.alloc(PtxType::Bool);
+        let waiting = self.alloc(PtxType::Bool);
+        let spin = self.alloc_label("grid_sync_spin");
+        let skip = self.alloc_label("grid_sync_skip");
+
+        let _ = writeln!(
+            self.text,
+            "    // --- grid.sync barrier #{index} (monotonic counter, release at {multiplier}*gridSize) ---"
+        );
+        // Publish this CTA's prior global writes, then converge every lane so
+        // all writes have flushed before the leader records arrival.
+        let _ = writeln!(self.text, "    membar.gl;");
+        let _ = writeln!(self.text, "    bar.sync 0;");
+        // Per-CTA leader = (tid.x | tid.y | tid.z) == 0.
+        let _ = writeln!(self.text, "    mov.u32 {sum}, %tid.x;");
+        let _ = writeln!(self.text, "    mov.u32 {tmp}, %tid.y;");
+        let _ = writeln!(self.text, "    or.b32 {sum}, {sum}, {tmp};");
+        let _ = writeln!(self.text, "    mov.u32 {tmp}, %tid.z;");
+        let _ = writeln!(self.text, "    or.b32 {sum}, {sum}, {tmp};");
+        let _ = writeln!(self.text, "    setp.ne.u32 {not_leader}, {sum}, 0;");
+        let _ = writeln!(self.text, "    @{not_leader} bra {skip};");
+        // gridSize = nctaid.x * nctaid.y * nctaid.z.
+        let _ = writeln!(self.text, "    mov.u32 {grid}, %nctaid.x;");
+        let _ = writeln!(self.text, "    mov.u32 {dim}, %nctaid.y;");
+        let _ = writeln!(self.text, "    mul.lo.u32 {grid}, {grid}, {dim};");
+        let _ = writeln!(self.text, "    mov.u32 {dim}, %nctaid.z;");
+        let _ = writeln!(self.text, "    mul.lo.u32 {grid}, {grid}, {dim};");
+        let _ = writeln!(self.text, "    mul.lo.u32 {target}, {grid}, {multiplier};");
+        let _ = writeln!(self.text, "    mov.u64 {bar_addr}, _vyre_grid_barrier;");
+        let _ = writeln!(self.text, "    atom.global.add.u32 {old}, [{bar_addr}], 1;");
+        let _ = writeln!(self.text, "{spin}:");
+        let _ = writeln!(self.text, "    ld.volatile.global.u32 {cur}, [{bar_addr}];");
+        let _ = writeln!(self.text, "    setp.lt.u32 {waiting}, {cur}, {target};");
+        let _ = writeln!(self.text, "    @{waiting} bra {spin};");
+        let _ = writeln!(self.text, "{skip}:");
+        // Release the CTA once the leader has seen every CTA arrive, then
+        // acquire the other CTAs' freshly published global writes.
+        let _ = writeln!(self.text, "    bar.sync 0;");
+        let _ = writeln!(self.text, "    membar.gl;");
+        Ok(())
     }
 
     fn emit_op(&mut self, body: &KernelBody, op: &KernelOp) -> Result<(), EmitError> {
@@ -331,12 +419,22 @@ impl BodyCtx<'_> {
             }
             Barrier { ordering } => {
                 if ordering.requires_grid_sync() {
-                    return Err(EmitError::InvalidDescriptor(
-                        "MemoryOrdering::GridSync cannot be emitted as PTX bar.sync 0. Fix: route this Program through native CUDA cooperative-grid lowering or explicit kernel-split orchestration before PTX emission."
-                            .to_string(),
-                    ));
+                    if self.options.cooperative_grid_sync {
+                        self.emit_grid_sync_barrier()?;
+                    } else {
+                        return Err(EmitError::InvalidDescriptor(
+                            "MemoryOrdering::GridSync cannot be lowered to a CTA-scope `bar.sync 0` \
+                             barrier: that would silently downgrade whole-grid synchronization to \
+                             one workgroup and lose cross-block visibility. Enable \
+                             PtxEmitOptions::cooperative_grid_sync (only when the consumer guarantees \
+                             a cooperative launch) to emit a native cooperative grid barrier, or split \
+                             the program at the GridSync barrier."
+                                .to_string(),
+                        ));
+                    }
+                } else {
+                    let _ = writeln!(self.text, "    bar.sync 0;");
                 }
-                let _ = writeln!(self.text, "    bar.sync 0;");
             }
             Region { generator } => {
                 self.emit_region(body, op, generator)?;
@@ -668,12 +766,9 @@ pub(super) fn body_descendants_read_operand(body: &KernelBody, result_id: u32) -
 
 fn body_reads_operand_recursive(body: &KernelBody, result_id: u32) -> bool {
     body.ops.iter().any(|op| {
-        op.operands
-            .iter()
-            .enumerate()
-            .any(|(pos, &operand)| {
-                operand == result_id && classify_operand(&op.kind, pos) == OperandClass::ResultRef
-            })
+        op.operands.iter().enumerate().any(|(pos, &operand)| {
+            operand == result_id && classify_operand(&op.kind, pos) == OperandClass::ResultRef
+        })
     }) || body
         .child_bodies
         .iter()
