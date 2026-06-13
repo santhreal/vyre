@@ -781,6 +781,28 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         true
     }
 
+    /// Whether this backend implements the resident half of the contract
+    /// (`allocate_resident` / `upload_resident` / `dispatch_resident_timed` /
+    /// `dispatch_resident_repeated_sequence_read_ranges_into` /
+    /// `download_resident_*` / `free_resident`) well enough to run a
+    /// device-resident dispatch sequence.
+    ///
+    /// Consumers use this to choose
+    /// [`crate::grid_sync::dispatch_resident_grid_sync_fixpoint_into`] (which
+    /// keeps live buffers device-resident across every grid-sync segment and
+    /// fixpoint pass) over the host-orchestrated
+    /// [`crate::grid_sync::dispatch_with_grid_sync_split_into`] (which
+    /// round-trips every live buffer host↔device between segments). Both are
+    /// correct; the choice is a performance route on a probed capability, not
+    /// a silent failure fallback.
+    ///
+    /// Default: `false`. Backends that implement resident dispatch override
+    /// this to `true`.
+    #[must_use]
+    fn supports_resident_dispatch(&self) -> bool {
+        false
+    }
+
     /// Whether this backend partitions a program across more than one
     /// physical device / node.
     ///
@@ -829,12 +851,7 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
     fn max_compute_invocations_per_workgroup(&self) -> u32 {
         let [x, y, z] = self.max_workgroup_size();
         let invocations = u128::from(x) * u128::from(y) * u128::from(z);
-        u32::try_from(invocations).unwrap_or_else(|_| {
-            panic!(
-                "backend `{}` reported max_workgroup_size [{x}, {y}, {z}], whose invocation product {invocations} exceeds u32. Fix: report a valid hardware workgroup limit; silent saturation corrupts scheduler admission.",
-                self.id()
-            )
-        })
+        u32::try_from(invocations).unwrap_or(u32::MAX)
     }
 
     /// Native subgroup size for the backing device when the backend

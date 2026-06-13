@@ -72,6 +72,8 @@ pub mod optimizer;
 mod pipeline;
 /// CUDA profiler range integration for Nsight/NVTX without mandatory NVTX linkage.
 pub mod profiler;
+/// CUDA regex hardware-comparison evidence.
+pub mod regex_hardware_comparison;
 /// Repeated execution over persistent CUDA-resident graph state.
 pub mod resident_graph_session;
 /// Compact result readback planning.
@@ -83,6 +85,8 @@ pub mod synthetic_device_caps;
 pub mod token_fact_frontier_execution;
 /// Adapter from unified token/fact graph layouts to CUDA resident bytes.
 pub mod token_fact_graph_cuda_adapter;
+/// CUDA warp-word bit-parallel automata layout evidence.
+pub mod warp_word_automata;
 
 pub use backend::{
     CudaBackend, CudaPtxSourceCacheSnapshot, CudaResidentBuffer, CudaTelemetrySnapshot,
@@ -198,6 +202,10 @@ pub use multi_query_execution::{
     CudaMultiQueryGroup,
 };
 pub use optimizer::CudaOptimizerDispatcher;
+pub use regex_hardware_comparison::{
+    cuda_regex_hardware_comparison_evidence, cuda_regex_software_fallback_comparison_evidence,
+    CudaRegexHardwareComparisonEvidence, CUDA_REGEX_HARDWARE_COMPARISON_SCHEMA_VERSION,
+};
 pub use resident_graph_session::{
     format_validated_cuda_resident_graph_session_evidence_csv, plan_cuda_resident_graph_session,
     resident_graph_session_speedup_sample, CudaResidentGraphReadback,
@@ -217,6 +225,11 @@ pub use token_fact_frontier_execution::{
 pub use token_fact_graph_cuda_adapter::{
     adapt_token_fact_graph_to_cuda_layout, CudaTokenFactGraphLayout, CudaTokenFactGraphLayoutError,
     CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS, CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS,
+};
+pub use warp_word_automata::{
+    plan_cuda_warp_word_automata_layout, CudaWarpWordAutomataLayoutError,
+    CudaWarpWordAutomataLayoutEvidence, CudaWarpWordAutomataLayoutRequest,
+    CudaWarpWordInstructionClass, CUDA_WARP_WORD_AUTOMATA_LAYOUT_SCHEMA_VERSION,
 };
 
 use std::sync::Arc;
@@ -1031,6 +1044,10 @@ impl VyreBackend for CudaBackendRegistration {
 
     fn allows_host_grid_sync_split(&self) -> bool {
         false
+    }
+
+    fn supports_resident_dispatch(&self) -> bool {
+        true
     }
 
     fn supports_speculation(&self) -> bool {
