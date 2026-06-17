@@ -43,6 +43,7 @@ use vyre_foundation::match_result::Match;
 use vyre_primitives::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 
 static CACHE_TMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+const MAX_MATCH_ENGINE_CACHE_BYTES: u64 = 64 * 1024 * 1024;
 
 /// Diagnostic-bearing wrapper around a scan result.
 ///
@@ -147,6 +148,12 @@ pub trait MatchEngineCache: Sized {
     /// the canonical "stale cache, recompile" signal.
     const WIRE_VERSION: u32;
 
+    /// Largest on-disk cache blob this engine will read back. A blob exceeding
+    /// it is treated as oversized (dropped, then recompiled). Defaults to
+    /// [`MAX_MATCH_ENGINE_CACHE_BYTES`]; engines whose compiled form is
+    /// genuinely large (e.g. a batched-megakernel DFA catalog, ~GB) override it.
+    const MAX_CACHE_BYTES: u64 = MAX_MATCH_ENGINE_CACHE_BYTES;
+
     /// Encode the compiled engine for on-disk caching.
     ///
     /// # Errors
@@ -178,6 +185,39 @@ fn cache_tmp_path(path: &Path) -> PathBuf {
     path.with_extension(format!("tmp.{}.{}", std::process::id(), sequence))
 }
 
+fn read_match_engine_cache_bounded(
+    path: &Path,
+    max_bytes: u64,
+) -> std::io::Result<Option<Vec<u8>>> {
+    let mut reader = std::fs::File::open(path)?;
+    let mut bytes = Vec::new();
+    let mut total = 0u64;
+    let mut chunk = [0u8; 8192];
+    loop {
+        let read = std::io::Read::read(&mut reader, &mut chunk)?;
+        if read == 0 {
+            return Ok(Some(bytes));
+        }
+        let read = read as u64;
+        total = total.saturating_add(read);
+        if total > max_bytes {
+            return Ok(None);
+        }
+        bytes.extend_from_slice(&chunk[..read as usize]);
+    }
+}
+
+fn remove_match_engine_cache(path: &Path, message: &'static str) {
+    if let Err(error) = std::fs::remove_file(path) {
+        tracing::debug!(
+            path = %path.display(),
+            error = %error,
+            "{}",
+            message
+        );
+    }
+}
+
 /// Generic load-or-compile-and-save for any [`MatchEngineCache`].
 ///
 /// Replaces the per-engine cache wiring every downstream scanner
@@ -202,21 +242,20 @@ where
         return compile();
     };
 
-    if let Ok(bytes) = std::fs::read(&path) {
-        match E::from_bytes(&bytes) {
+    match read_match_engine_cache_bounded(&path, E::MAX_CACHE_BYTES) {
+        Ok(Some(bytes)) => match E::from_bytes(&bytes) {
             Ok(engine) => return engine,
-            Err(_) => {
-                // Stale or corrupt blob: delete and fall through to
-                // recompile. Cache-side errors must be visible because a
-                // permanently broken cache distorts benchmark evidence.
-                if let Err(error) = std::fs::remove_file(&path) {
-                    tracing::debug!(
-                        path = %path.display(),
-                        error = %error,
-                        "failed to remove corrupt matching cache"
-                    );
-                }
-            }
+            Err(_) => remove_match_engine_cache(&path, "failed to remove corrupt matching cache"),
+        },
+        Ok(None) => {
+            remove_match_engine_cache(&path, "failed to remove oversized matching cache");
+        }
+        Err(error) => {
+            tracing::debug!(
+                path = %path.display(),
+                error = %error,
+                "failed to read matching cache"
+            );
         }
     }
 

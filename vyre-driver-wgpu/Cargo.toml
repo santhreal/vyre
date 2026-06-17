@@ -1,6 +1,6 @@
 [package]
 name = "vyre-driver-wgpu"
-version = "0.6.1"
+version = "0.6.2"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -26,6 +26,9 @@ matching-dfa = ["vyre-libs/matching-dfa"]
 matching-nfa = ["vyre-libs/matching-nfa"]
 megakernel-batch = ["vyre-runtime/megakernel-batch"]
 uring-cmd-nvme = ["vyre-runtime/uring-cmd-nvme"]
+# Forwards vyre-runtime's infallible legacy telemetry-decode API so the
+# megakernel long-term edge-case integration tests can opt into it.
+legacy-infallible = ["vyre-runtime/legacy-infallible"]
 
 [dependencies]
 vyre-driver = { workspace = true, features = ["self-substrate-adapters"] }
@@ -63,15 +66,15 @@ stats_alloc.workspace = true
 tokio.workspace = true
 tempfile.workspace = true
 proptest.workspace = true
-vyre = { path = "../vyre-core" }
-vyre-harness = { path = "../vyre-harness" }
-vyre-self-substrate = { path = "../vyre-self-substrate" }
-vyre-libs = { path = "../vyre-libs", features = ["matching", "parsing", "c-parser", "nn-attention", "cpu-parity"] }
-vyre-primitives = { path = "../vyre-primitives", default-features = false, features = ["graph", "predicate", "cpu-parity"] }
-vyre-reference = { path = "../vyre-reference", features = ["subgroup-ops"] }
-vyre-runtime = { path = "../vyre-runtime", features = ["self-substrate-adapters"] }
+vyre = { version = "0.6.1", path = "../vyre-core" }
+vyre-harness = { version = "0.6.1", path = "../vyre-harness" }
+vyre-self-substrate = { version = "0.6.1", path = "../vyre-self-substrate" }
+vyre-libs = { version = "0.6.1", path = "../vyre-libs", features = ["matching", "parsing", "c-parser", "nn-attention", "cpu-parity"] }
+vyre-primitives = { version = "0.6.1", path = "../vyre-primitives", default-features = false, features = ["graph", "predicate", "cpu-parity"] }
+vyre-reference = { version = "0.6.1", path = "../vyre-reference", features = ["subgroup-ops"] }
+vyre-runtime = { version = "0.6.1", path = "../vyre-runtime", features = ["self-substrate-adapters"] }
 vyre-test-harness.workspace = true
-vyre-intrinsics = { path = "../vyre-intrinsics" }
+vyre-intrinsics = { version = "0.6.1", path = "../vyre-intrinsics" }
 tracing-subscriber.workspace = true
 libc.workspace = true
 c-grammar-gen.workspace = true

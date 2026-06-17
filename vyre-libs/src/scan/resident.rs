@@ -214,7 +214,8 @@ impl ResidentRulePipeline {
 
         // The hit buffer is the program's only ReadWrite storage, returned at
         // output index 0 — identical decode to `RulePipeline::scan`.
-        let hit_bytes = dispatch_io::try_output_bytes(&timed.outputs, 0, "ResidentRulePipeline hit buffer")?;
+        let hit_bytes =
+            dispatch_io::try_output_bytes(&timed.outputs, 0, "ResidentRulePipeline hit buffer")?;
         let count = dispatch_io::try_read_u32_prefix(hit_bytes, "ResidentRulePipeline hit buffer")?;
         // Truncation guard: the resident hit buffer is fixed-size, so a batch
         // that overflows `max_matches` would silently drop matches (a false
@@ -463,8 +464,7 @@ mod tests {
             .scan_into(&backend, &[b'a'; 64], &mut matches, &mut scratch)
             .expect_err("64-byte haystack must not fit a 16-byte resident buffer");
         assert!(
-            err.to_string().contains("resident buffer holds")
-                && matches.is_empty(),
+            err.to_string().contains("resident buffer holds") && matches.is_empty(),
             "capacity error must name the limit and expose no stale matches: {err}"
         );
     }

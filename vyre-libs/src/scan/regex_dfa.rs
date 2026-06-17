@@ -332,7 +332,8 @@ mod tests {
     #[test]
     fn unanchored_dfa_matches_at_any_offset_single_pass() {
         let anchored = build_regex_dfa_pipeline(&["abc"], 1024, 1024).expect("anchored compiles");
-        let unanchored = build_regex_dfa_unanchored(&["abc"], 1024, 1024).expect("unanchored compiles");
+        let unanchored =
+            build_regex_dfa_unanchored(&["abc"], 1024, 1024).expect("unanchored compiles");
 
         // Unanchored: one pass over "xxabc" accepts at end=5 (abc at bytes 2..4).
         assert_eq!(
@@ -354,6 +355,85 @@ mod tests {
             vec![3, 7],
             "unanchored DFA must find all occurrences"
         );
+    }
+
+    /// Regression: the GPU parity gate (keyhog) missed a real `ghp_` token whose
+    /// 36-char body contains g/h/p (the prefix chars) — a prefix/body overlap
+    /// under the `.*` self-loop. This CPU single-pass DFA check isolates whether
+    /// the miss is in THIS primitive's construction or downstream on the GPU.
+    #[test]
+    fn unanchored_dfa_finds_overlap_body_token_single_pass() {
+        let dfa = build_regex_dfa_unanchored(&["ghp_[A-Za-z0-9]{36}"], 1024, 16384)
+            .expect("compiles")
+            .dfa;
+        // Exact missed content from the keyhog cpu_parity gate (file 120).
+        let hay = b"at = \"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\"";
+        let ends = single_pass_accept_ends(&dfa, hay);
+        assert_eq!(
+            ends,
+            vec![hay.len() - 1],
+            "unanchored DFA must accept the ghp_ token exactly before the closing quote"
+        );
+    }
+
+    /// Isolation for the 6 GPU parity-gate misses: run the EXACT missed contexts
+    /// through the dense `CompiledDfa` on the CPU with the kernel's single-pass
+    /// semantics. If these all accept here but the GPU drops them, the bug is in
+    /// the megakernel dispatch, not this primitive's DFA construction.
+    #[test]
+    fn unanchored_dfa_finds_all_parity_gate_misses_single_pass() {
+        // (pattern, exact missed match content from the cpu_parity gate run)
+        let cases: &[(&str, &[u8])] = &[
+            (
+                "ghp_[A-Za-z0-9]{36}",
+                b"at = \"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\"",
+            ),
+            (
+                "gho_[A-Za-z0-9]{36}",
+                b"ken: \"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\"",
+            ),
+            (
+                "ghu_[A-Za-z0-9]{36}",
+                b"Key: \"ghu_m7BOv2Uj0AZZK088M7RQJkZX3EgBVV1Xt7i2\"",
+            ),
+            (
+                "ghu_[A-Za-z0-9]{36}",
+                b"OKEN: ghu_4u5ef0rIhtKpPV1F0dPwwhXNMpEXkB0tWWQv",
+            ),
+            (
+                "xox[baprs]-[A-Za-z0-9-]{10,48}",
+                b"Key: \"xoxb-1234567890-1234567890-EXAMPLE-TOKEN\"",
+            ),
+            (
+                "xox[baprs]-[A-Za-z0-9-]{10,48}",
+                b"_KEY=\"xoxb-32790994721-16118213278-q5KLPWcLboh0tchHpJPgWhuC\"",
+            ),
+        ];
+        for (pat, hay) in cases {
+            let dfa = build_regex_dfa_unanchored(&[pat], 1024, 16384)
+                .unwrap_or_else(|e| panic!("pattern {pat:?} must compile: {e:?}"))
+                .dfa;
+            let ends = single_pass_accept_ends(&dfa, hay);
+            let expected_end = if hay.ends_with(b"\"") {
+                hay.len() - 1
+            } else {
+                hay.len()
+            };
+            assert!(
+                ends.contains(&expected_end),
+                "dense CompiledDfa for {pat:?} must accept the full token end {expected_end} \
+                 in {:?} (single-pass); got {ends:?}. state_count={}",
+                String::from_utf8_lossy(hay),
+                dfa.state_count,
+            );
+            assert!(
+                ends.iter().all(|end| *end <= expected_end),
+                "dense CompiledDfa for {pat:?} must not accept past token boundary {expected_end} \
+                 in {:?}; got {ends:?}. state_count={}",
+                String::from_utf8_lossy(hay),
+                dfa.state_count,
+            );
+        }
     }
 
     /// End-to-end: a literal regex set should produce a Program whose

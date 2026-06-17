@@ -1,6 +1,6 @@
 [package]
 name = "vyre-harness"
-version = "0.6.1"
+version = "0.6.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -30,5 +30,5 @@ inventory.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
-vyre-self-substrate = { path = "../vyre-self-substrate" }
-vyre-primitives = { path = "../vyre-primitives" }
+vyre-self-substrate = { version = "0.6.1", path = "../vyre-self-substrate" }
+vyre-primitives = { version = "0.6.1", path = "../vyre-primitives" }

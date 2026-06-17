@@ -1,6 +1,6 @@
 [package]
 name = "vyre-frontend-c"
-version = "0.6.1"
+version = "0.6.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -21,6 +21,7 @@ workspace = true
 [features]
 default = []
 cpu-oracle = []
+legacy-infallible = ["vyre-runtime/legacy-infallible"]
 
 [dependencies]
 vyre.workspace = true

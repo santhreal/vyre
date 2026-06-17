@@ -1,6 +1,6 @@
 [package]
 name = "vyre-bench"
-version = "0.6.1"
+version = "0.6.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -27,9 +27,6 @@ vyre-lower = { workspace = true }
 vyre-emit-ptx = { workspace = true }
 vyre-spec = { workspace = true }
 vyre-frontend-rust = { workspace = true }
-# External dataflow-engine baselines are opt-in cross-crate comparison benches
-# only. The default benchmark surface stays vyre-only.
-external-dataflow-engine = { workspace = true, optional = true }
 vyre-frontend-c = { path = "../vyre-frontend-c" }
 blake3 = { workspace = true }
 
@@ -62,9 +59,6 @@ vyre-driver-cuda = { workspace = true }
 
 [features]
 default = []
-# Opt-in cross-crate comparison benches against an external dataflow engine.
-# Off by default so vyre-bench obeys the LEGO discipline.
-external-baselines = ["dep:external-dataflow-engine"]
 
 [dev-dependencies]
 criterion = { workspace = true }

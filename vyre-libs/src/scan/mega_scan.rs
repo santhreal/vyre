@@ -272,6 +272,11 @@ impl RulePipeline {
             let mut state = [0_u32; NFA_LANES];
             let mut next = [0_u32; NFA_LANES];
             state[0] = 1;
+            // Regex-compiled plans wire the shared entry state to each pattern's start via
+            // ε-edges (and `*`/`?`/alternation add more). Close ε from the seed before the
+            // first byte, mirroring the GPU program's initial ε loop; without this the walk
+            // never leaves the entry state and reports zero matches for any ε-bearing NFA.
+            close_epsilon(&mut state, &self.epsilon_table, self.plan.num_states as usize);
             for (cursor, &byte) in haystack.iter().enumerate().skip(start) {
                 next.fill(0);
                 for (lane, &peer) in state.iter().enumerate() {
@@ -290,6 +295,8 @@ impl RulePipeline {
                     }
                 }
                 std::mem::swap(&mut state, &mut next);
+                // ε-close the post-transition state set (same fixpoint the GPU eps loop runs).
+                close_epsilon(&mut state, &self.epsilon_table, self.plan.num_states as usize);
                 for (&accept_state, &(pattern_id, _pattern_len)) in self
                     .plan
                     .accept_state_ids
@@ -311,6 +318,46 @@ impl RulePipeline {
         }
         results.sort_unstable();
         Ok(())
+    }
+}
+
+/// Epsilon-close an NFA state set in place: repeatedly OR in every state reachable by an
+/// ε-edge until fixpoint. Lane-major `epsilon_table` layout is `[num_states × LANES]`
+/// (`epsilon_table[src * LANES + dst_lane]` holds the destination bits `dst_lane` owns,
+/// reachable from `src`), mirroring the byte `transition_table` minus the 256-byte axis.
+///
+/// No-op when there are no ε-edges (empty or all-zero table), so literal NFAs — whose
+/// matches never depend on ε — are unaffected. Bounded to `num_states` iterations: each
+/// pass advances the ε-frontier by one hop and OR is monotone, so the closure is complete.
+fn close_epsilon(state: &mut [u32; NFA_LANES], epsilon_table: &[u32], num_states: usize) {
+    if epsilon_table.is_empty() || num_states == 0 {
+        return;
+    }
+    for _ in 0..num_states {
+        let snapshot = *state;
+        for (lane, &peer) in snapshot.iter().enumerate() {
+            if peer == 0 {
+                continue;
+            }
+            for bit in 0..32 {
+                if (peer >> bit) & 1 == 0 {
+                    continue;
+                }
+                let src_state = lane * 32 + bit;
+                if src_state >= num_states {
+                    continue;
+                }
+                let base = src_state * NFA_LANES;
+                for (dst_lane, slot) in state.iter_mut().enumerate() {
+                    if let Some(&bits) = epsilon_table.get(base + dst_lane) {
+                        *slot |= bits;
+                    }
+                }
+            }
+        }
+        if *state == snapshot {
+            break; // fixpoint reached
+        }
     }
 }
 

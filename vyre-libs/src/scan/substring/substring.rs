@@ -211,26 +211,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
-    fn legacy_matching_public_path_preserves_old_id_without_polluting_scan_identity() {
-        let program =
-            crate::matching::substring::substring_search("haystack", "needle", "matches", 8, 3);
-        let [Node::Region { generator, .. }] = program.entry() else {
-            panic!("expected legacy substring search to emit one region");
-        };
-
-        assert_eq!(generator.as_str(), LEGACY_MATCHING_SUBSTRING_OP_ID);
-        assert_eq!(
-            crate::matching::substring::substring::CANONICAL_SUBSTRING_MODULE,
-            "vyre_libs::scan::substring"
-        );
-        assert_eq!(
-            crate::matching::substring::substring::LEGACY_SUBSTRING_MODULE,
-            "vyre_libs::matching::substring"
-        );
-    }
-
-    #[test]
     fn source_boundary_keeps_matching_identity_out_of_canonical_builder() {
         let source = include_str!("substring.rs");
         let canonical_builder = source

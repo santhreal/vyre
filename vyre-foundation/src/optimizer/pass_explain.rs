@@ -23,6 +23,17 @@ pub enum CatalogLookupStatus {
     MissingCatalogEntry,
 }
 
+/// Source used to explain pass order and ownership.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PassOrderOrigin {
+    /// The pass matched the live optimizer catalog, whose pass entries are
+    /// derived from registered scheduler metadata.
+    LiveOptimizerCatalog,
+    /// The metric came from a caller-supplied report without a catalog entry;
+    /// order is therefore only the report order.
+    MetricsOnlyReport,
+}
+
 /// Signed before/after deltas for one pass metric row.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct PassMetricDelta {
@@ -110,10 +121,29 @@ pub struct PassExplanation {
     pub changed: bool,
     /// Refusal kind when the pass explicitly refused.
     pub refusal_kind: Option<&'static str>,
+    /// Explicit scheduler stop reason for this pass row.
+    pub scheduler_stop_reason: PassRunDecision,
+    /// Analyses/capability tags required before this pass can run.
+    pub required_analyses: &'static [&'static str],
+    /// Analyses/capability tags preserved by this pass consideration.
+    pub preserved_analyses: &'static [&'static str],
+    /// Analyses/capability tags invalidated by this pass consideration.
+    pub invalidated_analyses: &'static [&'static str],
+    /// Analyses/capability tags the pass declares it may invalidate when it
+    /// lands a rewrite.
+    pub declared_invalidations: &'static [&'static str],
+    /// Whether the scheduler-owned fact substrate was reused.
+    pub fact_substrate_reused: bool,
+    /// Whether the scheduler-owned fact substrate was recomputed.
+    pub fact_substrate_recomputed: bool,
+    /// Whether the scheduler-owned fact substrate was invalidated.
+    pub fact_substrate_invalidated: bool,
     /// Runtime spent in transform, in nanoseconds.
     pub runtime_ns: u128,
     /// Catalog lookup status.
     pub catalog_status: CatalogLookupStatus,
+    /// Source used for pass-order and ownership explanation.
+    pub pass_order_origin: PassOrderOrigin,
     /// Optimization owner from the live catalog.
     pub owner: Option<&'static str>,
     /// Scheduler phase from the live catalog.
@@ -142,6 +172,11 @@ impl PassExplanation {
         } else {
             CatalogLookupStatus::MissingCatalogEntry
         };
+        let pass_order_origin = if catalog_entry.is_some() {
+            PassOrderOrigin::LiveOptimizerCatalog
+        } else {
+            PassOrderOrigin::MetricsOnlyReport
+        };
         Self {
             iteration: metric.iteration,
             pass: metric.pass,
@@ -150,8 +185,25 @@ impl PassExplanation {
             ran: metric.ran,
             changed: metric.changed,
             refusal_kind: metric.refusal_kind,
+            scheduler_stop_reason: metric.decision,
+            required_analyses: metric.required_analyses,
+            preserved_analyses: if metric.changed {
+                &[]
+            } else {
+                metric.required_analyses
+            },
+            invalidated_analyses: if metric.changed {
+                metric.declared_invalidations
+            } else {
+                &[]
+            },
+            declared_invalidations: metric.declared_invalidations,
+            fact_substrate_reused: metric.fact_substrate_reused,
+            fact_substrate_recomputed: metric.fact_substrate_recomputed,
+            fact_substrate_invalidated: metric.fact_substrate_invalidated,
             runtime_ns: metric.runtime_ns,
             catalog_status,
+            pass_order_origin,
             owner: catalog_entry.map(|entry| entry.owner),
             phase: catalog_entry.map(|entry| entry.phase),
             boundary_class: catalog_entry.map(|entry| entry.boundary_class),
@@ -248,6 +300,9 @@ mod tests {
     use super::*;
     use crate::ir::Program;
 
+    const REQUIRED_ANALYSES: &[&str] = &["shape_facts", "use_facts"];
+    const DECLARED_INVALIDATIONS: &[&str] = &["shape_facts", "range_facts"];
+
     fn metric(pass: &'static str, decision: PassRunDecision) -> PassRunMetric {
         PassRunMetric {
             iteration: 2,
@@ -265,6 +320,14 @@ mod tests {
             changed: decision == PassRunDecision::Changed,
             decision,
             refusal_kind: (decision == PassRunDecision::Refused).then_some("cost_increase"),
+            required_analyses: REQUIRED_ANALYSES,
+            declared_invalidations: DECLARED_INVALIDATIONS,
+            fact_substrate_reused: matches!(
+                decision,
+                PassRunDecision::RanUnchanged | PassRunDecision::Changed
+            ),
+            fact_substrate_recomputed: !matches!(decision, PassRunDecision::CleanSkipped),
+            fact_substrate_invalidated: decision == PassRunDecision::Changed,
             effect_bits_before: 0b001,
             effect_bits_after: 0b101,
             linear_type_violations_before: 0,
@@ -290,6 +353,7 @@ mod tests {
             ir_heap_allocations_after: 4,
             ir_heap_bytes_before: 128,
             ir_heap_bytes_after: 80,
+            research_trace: None,
         }
     }
 
@@ -327,12 +391,24 @@ mod tests {
         );
 
         assert_eq!(explanation.catalog_status, CatalogLookupStatus::Cataloged);
+        assert_eq!(
+            explanation.pass_order_origin,
+            PassOrderOrigin::LiveOptimizerCatalog
+        );
         assert_eq!(explanation.owner, Some("vyre-runtime-rules"));
         assert_eq!(explanation.invariant, Some(entry.invariant));
         assert_eq!(
             explanation.benchmark,
             Some("vyre.megakernel.optimizer.rules")
         );
+        assert_eq!(explanation.scheduler_stop_reason, PassRunDecision::Changed);
+        assert_eq!(explanation.required_analyses, REQUIRED_ANALYSES);
+        assert!(explanation.preserved_analyses.is_empty());
+        assert_eq!(explanation.invalidated_analyses, DECLARED_INVALIDATIONS);
+        assert_eq!(explanation.declared_invalidations, DECLARED_INVALIDATIONS);
+        assert!(explanation.fact_substrate_reused);
+        assert!(explanation.fact_substrate_recomputed);
+        assert!(explanation.fact_substrate_invalidated);
         assert_eq!(explanation.delta.nodes, -3);
         assert_eq!(explanation.delta.control_flow_count, 2);
         assert_eq!(explanation.delta.effect_bits, 4);
@@ -360,8 +436,32 @@ mod tests {
             explanations[0].catalog_status,
             CatalogLookupStatus::MissingCatalogEntry
         );
+        assert_eq!(
+            explanations[0].pass_order_origin,
+            PassOrderOrigin::MetricsOnlyReport
+        );
         assert!(explanations[0].owner.is_none());
         assert!(explanations[0].invariant.is_none());
+    }
+
+    #[test]
+    fn unchanged_pass_explanation_preserves_required_analyses_without_invalidating_facts() {
+        let explanation = PassExplanation::from_metric(
+            &metric("external.custom.pass", PassRunDecision::RanUnchanged),
+            None,
+        );
+
+        assert_eq!(
+            explanation.scheduler_stop_reason,
+            PassRunDecision::RanUnchanged
+        );
+        assert_eq!(explanation.required_analyses, REQUIRED_ANALYSES);
+        assert_eq!(explanation.preserved_analyses, REQUIRED_ANALYSES);
+        assert!(explanation.invalidated_analyses.is_empty());
+        assert_eq!(explanation.declared_invalidations, DECLARED_INVALIDATIONS);
+        assert!(explanation.fact_substrate_reused);
+        assert!(explanation.fact_substrate_recomputed);
+        assert!(!explanation.fact_substrate_invalidated);
     }
 
     #[test]

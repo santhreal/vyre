@@ -12,7 +12,7 @@ use super::topo::{
     reserve_hash_map_capacity, reserve_vec_capacity, schedule_pass_metadata_indices,
     schedule_passes,
 };
-use super::{PassScheduler, PassSchedulingError, DEFAULT_MAX_ITERATIONS};
+use super::{PassResearchTrace, PassScheduler, PassSchedulingError, DEFAULT_MAX_ITERATIONS};
 use crate::optimizer::{
     registered_passes, requirements_satisfied, OptimizerError, PassMetadata, ProgramPassKind,
     ProgramPassRegistration,
@@ -75,6 +75,7 @@ impl PassScheduler {
         Ok(Self {
             passes,
             pass_index,
+            research_traces: FxHashMap::default(),
             execution_order,
             requirements_prevalidated,
             max_iterations: DEFAULT_MAX_ITERATIONS,
@@ -93,6 +94,7 @@ impl PassScheduler {
         Self {
             passes: Vec::new(),
             pass_index: FxHashMap::default(),
+            research_traces: FxHashMap::default(),
             execution_order: Vec::new(),
             requirements_prevalidated: true,
             max_iterations: DEFAULT_MAX_ITERATIONS,
@@ -112,6 +114,28 @@ impl PassScheduler {
     pub fn with_max_iterations(mut self, max_iterations: usize) -> Self {
         self.max_iterations = max_iterations;
         self
+    }
+
+    /// Attach reproducibility metadata to pass metrics for one optimizer pass.
+    ///
+    /// This keeps innovation/audit evidence at the scheduler boundary instead
+    /// of hardcoding VX rows or research claims into pass definitions.
+    #[must_use]
+    pub fn with_research_trace(
+        mut self,
+        pass_name: &'static str,
+        trace: PassResearchTrace,
+    ) -> Self {
+        if trace.is_complete() {
+            self.research_traces.insert(pass_name, trace);
+        }
+        self
+    }
+
+    /// Returns the recorded research trace for `pass_name`, if one was registered.
+    #[must_use]
+    pub fn research_trace_for(&self, pass_name: &str) -> Option<PassResearchTrace> {
+        self.research_traces.get(pass_name).copied()
     }
 
     /// Names of every pass that may need to re-run when `pass_name` invalidates

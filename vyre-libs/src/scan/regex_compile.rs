@@ -195,7 +195,7 @@ pub fn compile_regex_set(patterns: &[&str]) -> Result<CompiledRegexSet, RegexCom
         patterns.len(),
         "accept end-anchor flag",
     )?;
-    let entry = builder.fresh_state(); // shared entry state 0
+    let entry = builder.fresh_state()?; // shared entry state 0
 
     // Use the byte-oriented parser configuration: `unicode(false)` +
     // `utf8(false)` makes `\d` / `\w` / `\s` ASCII-only, which is what
@@ -393,14 +393,26 @@ impl NfaBuilder {
         self.state_count
     }
 
-    fn fresh_state(&mut self) -> u32 {
-        let state = u32::try_from(self.state_count)
-            .expect("Fix: regex NFA state ids must be checked before exceeding u32 capacity");
-        self.state_count = self
-            .state_count
-            .checked_add(1)
-            .expect("Fix: regex NFA state count must not overflow host usize");
-        state
+    fn fresh_state(&mut self) -> Result<u32, RegexCompileError> {
+        if self.state_count >= STATE_CAP {
+            return Err(RegexCompileError::TooManyStates {
+                states: self.state_count.saturating_add(1),
+                cap: STATE_CAP,
+            });
+        }
+        let state =
+            u32::try_from(self.state_count).map_err(|_| RegexCompileError::TooManyStates {
+                states: self.state_count,
+                cap: STATE_CAP,
+            })?;
+        self.state_count =
+            self.state_count
+                .checked_add(1)
+                .ok_or(RegexCompileError::TooManyStates {
+                    states: usize::MAX,
+                    cap: STATE_CAP,
+                })?;
+        Ok(state)
     }
 
     fn add_byte_transition(&mut self, src: u32, set: ByteSet, dst: u32) {
@@ -473,13 +485,13 @@ fn reserve_vec<T>(
     })
 }
 
-fn empty_fragment(b: &mut NfaBuilder) -> Fragment {
-    let s = b.fresh_state();
-    Fragment {
+fn empty_fragment(b: &mut NfaBuilder) -> Result<Fragment, RegexCompileError> {
+    let s = b.fresh_state()?;
+    Ok(Fragment {
         start: s,
         end: s,
         match_len: 0,
-    }
+    })
 }
 
 fn build_pattern_hir(
@@ -489,14 +501,14 @@ fn build_pattern_hir(
 ) -> Result<(Fragment, PatternAnchors), RegexCompileError> {
     match hir.kind() {
         HirKind::Look(Look::Start) => Ok((
-            empty_fragment(b),
+            empty_fragment(b)?,
             PatternAnchors {
                 start: true,
                 end: false,
             },
         )),
         HirKind::Look(Look::End) => Ok((
-            empty_fragment(b),
+            empty_fragment(b)?,
             PatternAnchors {
                 start: false,
                 end: true,
@@ -536,7 +548,7 @@ fn build_hir_slice(
     pid: usize,
 ) -> Result<Fragment, RegexCompileError> {
     let Some(first_part) = parts.first() else {
-        return Ok(empty_fragment(b));
+        return empty_fragment(b);
     };
     let mut acc = build_hir(b, first_part, pid)?;
     for child in &parts[1..] {
@@ -553,13 +565,13 @@ fn build_hir_slice(
 
 fn build_hir(b: &mut NfaBuilder, hir: &Hir, pid: usize) -> Result<Fragment, RegexCompileError> {
     match hir.kind() {
-        HirKind::Empty => Ok(empty_fragment(b)),
+        HirKind::Empty => empty_fragment(b),
         HirKind::Literal(lit) => {
             // Each literal byte gets its own state.
-            let start = b.fresh_state();
+            let start = b.fresh_state()?;
             let mut prev = start;
             for &byte in lit.0.iter() {
-                let next = b.fresh_state();
+                let next = b.fresh_state()?;
                 b.add_byte_transition(prev, ByteSet::from_byte(byte), next);
                 prev = next;
             }
@@ -574,8 +586,8 @@ fn build_hir(b: &mut NfaBuilder, hir: &Hir, pid: usize) -> Result<Fragment, Rege
         HirKind::Concat(parts) => build_hir_slice(b, parts, pid),
         HirKind::Alternation(alts) => {
             // Diamond: shared fork → each branch → shared join.
-            let fork = b.fresh_state();
-            let join = b.fresh_state();
+            let fork = b.fresh_state()?;
+            let join = b.fresh_state()?;
             let mut max_len = 0usize;
             for child in alts {
                 let frag = build_hir(b, child, pid)?;
@@ -632,7 +644,7 @@ fn build_repetition(
     // Build by unrolling: emit `min` copies, then either
     //   - a Kleene loop if max is None (`*` / `+`), OR
     //   - `max - min` optional copies if max is bounded.
-    let start = b.fresh_state();
+    let start = b.fresh_state()?;
     let mut tail = start;
     let mut total_len = 0usize;
 
@@ -647,7 +659,7 @@ fn build_repetition(
         None => {
             // Open-ended: insert a Kleene wrapper. tail → frag.start →
             // frag.end → tail (loop back) ; tail → join (skip).
-            let join = b.fresh_state();
+            let join = b.fresh_state()?;
             let frag = build_hir(b, &rep.sub, pid)?;
             b.add_epsilon(tail, frag.start);
             b.add_epsilon(frag.end, frag.start); // loop
@@ -658,7 +670,7 @@ fn build_repetition(
         Some(m) => {
             for _ in min..m {
                 let frag = build_hir(b, &rep.sub, pid)?;
-                let join = b.fresh_state();
+                let join = b.fresh_state()?;
                 b.add_epsilon(tail, frag.start);
                 b.add_epsilon(frag.end, join);
                 b.add_epsilon(tail, join); // skip this optional copy
@@ -695,8 +707,8 @@ fn build_repetition(
 /// well within budget; a class spanning a full CJK block would refuse).
 fn build_class(b: &mut NfaBuilder, cls: &Class, pid: usize) -> Result<Fragment, RegexCompileError> {
     if let Some(set) = try_class_as_ascii_byte_set(cls) {
-        let start = b.fresh_state();
-        let end = b.fresh_state();
+        let start = b.fresh_state()?;
+        let end = b.fresh_state()?;
         b.add_byte_transition(start, set, end);
         return Ok(Fragment {
             start,
@@ -711,8 +723,8 @@ fn build_class(b: &mut NfaBuilder, cls: &Class, pid: usize) -> Result<Fragment, 
             feature: "empty character class after Unicode expansion",
         });
     }
-    let start = b.fresh_state();
-    let end = b.fresh_state();
+    let start = b.fresh_state()?;
+    let end = b.fresh_state()?;
     let mut max_len = 1usize;
     for seq in &sequences {
         if seq.is_empty() {
@@ -720,11 +732,11 @@ fn build_class(b: &mut NfaBuilder, cls: &Class, pid: usize) -> Result<Fragment, 
         }
         // Build a sequential chain start ε→ s0 -b0-> s1 -b1-> ... -bN-> end
         // for this UTF-8 byte sequence.
-        let arm_start = b.fresh_state();
+        let arm_start = b.fresh_state()?;
         b.add_epsilon(start, arm_start);
         let mut prev = arm_start;
         for &byte in seq {
-            let next = b.fresh_state();
+            let next = b.fresh_state()?;
             b.add_byte_transition(prev, ByteSet::from_byte(byte), next);
             prev = next;
         }

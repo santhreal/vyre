@@ -20,6 +20,7 @@ mod dispatch_config;
 mod dispatch_result;
 mod error;
 mod pending_dispatch;
+mod regex_accelerator;
 mod resource;
 mod typed_dispatch;
 mod vyre_backend;
@@ -56,6 +57,11 @@ pub use dispatch_result::{
 };
 pub use error::{BackendError, ErrorCode};
 pub use pending_dispatch::PendingDispatch;
+pub use regex_accelerator::{
+    RegexAcceleratorCapability, RegexAcceleratorClass, RegexAcceleratorEvidence,
+    RegexAcceleratorMatchSchema, RegexAcceleratorStreamMode,
+    REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION,
+};
 pub use resource::Resource;
 pub use typed_dispatch::TypedDispatchExt;
 pub use vyre_backend::{

@@ -110,6 +110,72 @@ pub const MAX_SCAN_BYTES_BUF: &str = "nfa_max_scan_bytes";
 ///
 /// Regex and other grammar frontends produce the same transition/epsilon table
 /// shape as literal compilation, but their state graph is not recoverable from
+/// Emit the per-peer-lane `k` block of a lane-major subgroup gather (transition or
+/// epsilon), with the inner per-bit walk as a RUNTIME `loop_for` bounded by a
+/// compile-time count instead of 32 unrolled `if_then` nodes.
+///
+/// `subgroup_shuffle` still requires a compile-time peer lane, so the caller keeps
+/// `k` unrolled; only the inner bit index `bit` is made dynamic. The emitted block is
+/// O(1) in `num_states`, so the whole scan shader is O(LANES) rather than
+/// O(num_states) — the size the descriptor optimizer (`vyre-lower`) and naga emitter
+/// scale on. A 771-state bare-`xor` NFA previously unrolled into thousands of nodes
+/// and made `verify_then_optimize` run for minutes; this keeps it flat.
+///
+/// Semantics are identical to the unrolled form: for every `src_state = k*32 + bit`
+/// with `src_state < num_states`, when peer bit `bit` is set, OR the `table` row for
+/// `src_state` (this lane's slice) into `accum`. Index is
+/// `src_state * row_stride + byte_term? + lane`. The accumulation is OR (idempotent,
+/// order-independent), so the loop form preserves the unroll's result exactly.
+#[allow(clippy::too_many_arguments)]
+fn push_lane_major_gather(
+    out: &mut Vec<Node>,
+    k: u32,
+    num_states: u32,
+    peer_src: &str,
+    peer_name: &str,
+    accum: &str,
+    table: &str,
+    row_stride: u32,
+    byte_term: Option<&Expr>,
+    lane: &Expr,
+) {
+    out.push(Node::let_bind(
+        peer_name,
+        Expr::subgroup_shuffle(Expr::var(peer_src), Expr::u32(k)),
+    ));
+    let base = k * 32;
+    if base >= num_states {
+        // This peer lane owns no live states — nothing to gather. Matches the
+        // compile-time `if src_state >= num_states { continue }` in the old unroll.
+        return;
+    }
+    let inner_count = (num_states - base).min(32);
+    let bit_var = format!("{peer_name}_bit");
+    let src_state = Expr::add(Expr::u32(base), Expr::var(&bit_var));
+    let row = Expr::mul(src_state, Expr::u32(row_stride));
+    let idx = match byte_term {
+        Some(bt) => Expr::add(Expr::add(row, bt.clone()), lane.clone()),
+        None => Expr::add(row, lane.clone()),
+    };
+    let guard = Expr::ne(
+        Expr::bitand(
+            Expr::shr(Expr::var(peer_name), Expr::var(&bit_var)),
+            Expr::u32(1),
+        ),
+        Expr::u32(0),
+    );
+    let assign = Node::assign(
+        accum,
+        Expr::bitor(Expr::var(accum), Expr::load(table, idx)),
+    );
+    out.push(Node::loop_for(
+        &bit_var,
+        Expr::u32(0),
+        Expr::u32(inner_count),
+        vec![Node::if_then(guard, vec![assign])],
+    ));
+}
+
 /// the source strings. This builder keeps the executable scan program tied to
 /// the actual compiled plan instead of rebuilding a literal-only plan.
 ///
@@ -200,44 +266,20 @@ pub fn nfa_scan_with_plan(
     // target-text subgroup_shuffle requires compile-time peer so we unroll
     // k. We also unroll i (identical pattern to the primitive) so
     // each byte step is a straight-line block the optimiser can fold.
+    let byte_term = Expr::mul(Expr::var("byte"), Expr::u32(LANES_PER_SUBGROUP as u32));
     for k in 0..LANES_PER_SUBGROUP as u32 {
-        let peer_name = format!("peer_{k}");
-        cursor_body.push(Node::let_bind(
-            &peer_name,
-            Expr::subgroup_shuffle(Expr::var("state_word"), Expr::u32(k)),
-        ));
-        for i in 0..32_u32 {
-            let src_state = k * 32 + i;
-            if src_state >= num_states {
-                continue;
-            }
-            let src_row = src_state * 256 * LANES_PER_SUBGROUP as u32;
-            cursor_body.push(Node::if_then(
-                Expr::ne(
-                    Expr::bitand(Expr::shr(Expr::var(&peer_name), Expr::u32(i)), Expr::u32(1)),
-                    Expr::u32(0),
-                ),
-                vec![Node::assign(
-                    "next_state",
-                    Expr::bitor(
-                        Expr::var("next_state"),
-                        Expr::load(
-                            "nfa_transition",
-                            Expr::add(
-                                Expr::add(
-                                    Expr::u32(src_row),
-                                    Expr::mul(
-                                        Expr::var("byte"),
-                                        Expr::u32(LANES_PER_SUBGROUP as u32),
-                                    ),
-                                ),
-                                lane_u32(),
-                            ),
-                        ),
-                    ),
-                )],
-            ));
-        }
+        push_lane_major_gather(
+            &mut cursor_body,
+            k,
+            num_states,
+            "state_word",
+            &format!("peer_{k}"),
+            "next_state",
+            "nfa_transition",
+            256 * LANES_PER_SUBGROUP as u32,
+            Some(&byte_term),
+            &lane,
+        );
     }
 
     // Epsilon closure  -  only when the pattern set has ε edges.
@@ -247,42 +289,18 @@ pub fn nfa_scan_with_plan(
         let eps_iters = num_states.clamp(1, 32);
         let mut eps_body: Vec<Node> = Vec::new();
         for k in 0..LANES_PER_SUBGROUP as u32 {
-            let eps_peer_name = format!("eps_peer_{k}");
-            eps_body.push(Node::let_bind(
-                &eps_peer_name,
-                Expr::subgroup_shuffle(Expr::var("next_state"), Expr::u32(k)),
-            ));
-            for i in 0..32_u32 {
-                let src_state = k * 32 + i;
-                if src_state >= num_states {
-                    continue;
-                }
-                eps_body.push(Node::if_then(
-                    Expr::ne(
-                        Expr::bitand(
-                            Expr::shr(Expr::var(&eps_peer_name), Expr::u32(i)),
-                            Expr::u32(1),
-                        ),
-                        Expr::u32(0),
-                    ),
-                    vec![Node::assign(
-                        "next_state",
-                        Expr::bitor(
-                            Expr::var("next_state"),
-                            Expr::load(
-                                "nfa_epsilon",
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::u32(src_state),
-                                        Expr::u32(LANES_PER_SUBGROUP as u32),
-                                    ),
-                                    lane_u32(),
-                                ),
-                            ),
-                        ),
-                    )],
-                ));
-            }
+            push_lane_major_gather(
+                &mut eps_body,
+                k,
+                num_states,
+                "next_state",
+                &format!("eps_peer_{k}"),
+                "next_state",
+                "nfa_epsilon",
+                LANES_PER_SUBGROUP as u32,
+                None,
+                &lane,
+            );
         }
         cursor_body.push(Node::loop_for(
             "eps_iter",
@@ -385,42 +403,18 @@ pub fn nfa_scan_with_plan(
         let eps_iters = num_states.clamp(1, 32);
         let mut initial_eps_body: Vec<Node> = Vec::new();
         for k in 0..LANES_PER_SUBGROUP as u32 {
-            let eps_peer_name = format!("init_eps_peer_{k}");
-            initial_eps_body.push(Node::let_bind(
-                &eps_peer_name,
-                Expr::subgroup_shuffle(Expr::var("state_word"), Expr::u32(k)),
-            ));
-            for i in 0..32_u32 {
-                let src_state = k * 32 + i;
-                if src_state >= num_states {
-                    continue;
-                }
-                initial_eps_body.push(Node::if_then(
-                    Expr::ne(
-                        Expr::bitand(
-                            Expr::shr(Expr::var(&eps_peer_name), Expr::u32(i)),
-                            Expr::u32(1),
-                        ),
-                        Expr::u32(0),
-                    ),
-                    vec![Node::assign(
-                        "state_word",
-                        Expr::bitor(
-                            Expr::var("state_word"),
-                            Expr::load(
-                                "nfa_epsilon",
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::u32(src_state),
-                                        Expr::u32(LANES_PER_SUBGROUP as u32),
-                                    ),
-                                    lane_u32(),
-                                ),
-                            ),
-                        ),
-                    )],
-                ));
-            }
+            push_lane_major_gather(
+                &mut initial_eps_body,
+                k,
+                num_states,
+                "state_word",
+                &format!("init_eps_peer_{k}"),
+                "state_word",
+                "nfa_epsilon",
+                LANES_PER_SUBGROUP as u32,
+                None,
+                &lane,
+            );
         }
         body.push(Node::loop_for(
             "init_eps_iter",

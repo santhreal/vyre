@@ -1,6 +1,6 @@
 [package]
 name = "vyre-spec"
-version = "0.6.1"
+version = "0.6.2"
 edition.workspace = true
 rust-version.workspace = true
 description = "Frozen data contracts for vyre  -  OpDef, AlgebraicLaw, Category, IntrinsicTable"
@@ -20,8 +20,8 @@ smallvec.workspace = true
 [dev-dependencies]
 proptest.workspace = true
 serde_json.workspace = true
-vyre-foundation = { path = "../vyre-foundation" }
-vyre-primitives = { path = "../vyre-primitives" }
+vyre-foundation = { version = "0.6.1", path = "../vyre-foundation" }
+vyre-primitives = { version = "0.6.1", path = "../vyre-primitives" }
 
 [package.metadata.docs.rs]
 all-features = true

@@ -28,6 +28,7 @@ pub(super) const DEFAULT_MAX_ITERATIONS: usize = 50;
 pub struct PassScheduler {
     passes: Vec<ProgramPassKind>,
     pass_index: FxHashMap<&'static str, usize>,
+    research_traces: FxHashMap<&'static str, PassResearchTrace>,
     execution_order: Vec<usize>,
     /// True when `execution_order` was produced by the topological scheduler.
     /// In that case per-iteration requirement hash-set reconstruction is
@@ -87,6 +88,80 @@ pub struct PassScheduler {
     enforce_shape_predicates: bool,
 }
 
+pub(crate) const PASS_RESEARCH_TRACE_SCHEMA_VERSION: u32 = 1;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PassResearchTrace {
+    pub schema_version: u32,
+    pub research_basis_key: &'static str,
+    pub baseline_id: &'static str,
+    pub proof_artifact_id: &'static str,
+}
+
+impl PassResearchTrace {
+    /// Create optimizer research/proof metadata for a pass run.
+    ///
+    /// The scheduler keeps this metadata outside pass definitions so research
+    /// evidence can be attached by experiment, benchmark, or VX innovation row
+    /// without widening the optimizer pass API.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PassResearchTraceError`] when any required identifier is empty.
+    pub fn try_new(
+        research_basis_key: &'static str,
+        baseline_id: &'static str,
+        proof_artifact_id: &'static str,
+    ) -> Result<Self, PassResearchTraceError> {
+        if research_basis_key.trim().is_empty() {
+            return Err(PassResearchTraceError::MissingResearchBasisKey);
+        }
+        if baseline_id.trim().is_empty() {
+            return Err(PassResearchTraceError::MissingBaselineId);
+        }
+        if proof_artifact_id.trim().is_empty() {
+            return Err(PassResearchTraceError::MissingProofArtifactId);
+        }
+        Ok(Self {
+            schema_version: PASS_RESEARCH_TRACE_SCHEMA_VERSION,
+            research_basis_key,
+            baseline_id,
+            proof_artifact_id,
+        })
+    }
+
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        self.schema_version == PASS_RESEARCH_TRACE_SCHEMA_VERSION
+            && !self.research_basis_key.trim().is_empty()
+            && !self.baseline_id.trim().is_empty()
+            && !self.proof_artifact_id.trim().is_empty()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PassResearchTraceError {
+    MissingResearchBasisKey,
+    MissingBaselineId,
+    MissingProofArtifactId,
+}
+
+impl std::fmt::Display for PassResearchTraceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MissingResearchBasisKey => {
+                f.write_str("pass research trace is missing research_basis_key")
+            }
+            Self::MissingBaselineId => f.write_str("pass research trace is missing baseline_id"),
+            Self::MissingProofArtifactId => {
+                f.write_str("pass research trace is missing proof_artifact_id")
+            }
+        }
+    }
+}
+
+impl std::error::Error for PassResearchTraceError {}
+
 /// Optimized program plus per-pass runtime/size counters.
 #[derive(Debug)]
 pub struct OptimizerRunReport {
@@ -103,6 +178,9 @@ pub struct PassRunMetric {
     pub iteration: usize,
     /// Pass identifier.
     pub pass: &'static str,
+    /// Optional research/proof metadata attached at the scheduler boundary for
+    /// VX innovation rows, benchmark sweeps, and reproducible optimizer audits.
+    pub research_trace: Option<PassResearchTrace>,
     /// Whether transform actually ran.
     pub ran: bool,
     /// Whether transform changed the program.
@@ -111,6 +189,20 @@ pub struct PassRunMetric {
     pub decision: PassRunDecision,
     /// Refusal kind when [`PassRunDecision::Refused`] applies.
     pub refusal_kind: Option<&'static str>,
+    /// Analyses/capability tags required by this pass before it can run.
+    pub required_analyses: &'static [&'static str],
+    /// Analyses/capability tags this pass declares invalid when it lands a
+    /// rewrite.
+    pub declared_invalidations: &'static [&'static str],
+    /// Whether the scheduler-owned fact substrate was reused for this dirty
+    /// pass analysis.
+    pub fact_substrate_reused: bool,
+    /// Whether the scheduler-owned fact substrate was recomputed for this
+    /// dirty pass analysis.
+    pub fact_substrate_recomputed: bool,
+    /// Whether this pass landed a rewrite and invalidated the scheduler-owned
+    /// fact substrate.
+    pub fact_substrate_invalidated: bool,
     /// Program effect-row bits before the pass when effect-handler
     /// enforcement is enabled; otherwise zero.
     pub effect_bits_before: u32,
@@ -395,6 +487,7 @@ impl PassScheduler {
         Ok(Self {
             passes,
             pass_index,
+            research_traces: FxHashMap::default(),
             execution_order,
             requirements_prevalidated: true,
             max_iterations: DEFAULT_MAX_ITERATIONS,
@@ -498,6 +591,49 @@ mod run;
 
 pub(crate) use topo::schedule_pass_metadata_indices;
 pub use topo::{schedule_passes, PassSchedulingError};
+
+#[cfg(test)]
+mod research_trace_contract_tests {
+    use super::{PassResearchTrace, PassResearchTraceError, PASS_RESEARCH_TRACE_SCHEMA_VERSION};
+
+    #[test]
+    fn pass_research_trace_requires_all_identifiers() {
+        assert_eq!(
+            PassResearchTrace::try_new("", "baseline/vyre-default", "artifact/optimizer-proof")
+                .unwrap_err(),
+            PassResearchTraceError::MissingResearchBasisKey
+        );
+        assert_eq!(
+            PassResearchTrace::try_new(
+                "research/mlir-pass-replay",
+                "",
+                "artifact/optimizer-proof"
+            )
+            .unwrap_err(),
+            PassResearchTraceError::MissingBaselineId
+        );
+        assert_eq!(
+            PassResearchTrace::try_new("research/mlir-pass-replay", "baseline/vyre-default", "")
+                .unwrap_err(),
+            PassResearchTraceError::MissingProofArtifactId
+        );
+    }
+
+    #[test]
+    fn scheduler_metric_construction_carries_research_trace() {
+        let trace = PassResearchTrace::try_new(
+            "research/mlir-pass-replay",
+            "baseline/vyre-default",
+            "artifact/vx-336-optimizer-proof",
+        )
+        .unwrap();
+        assert_eq!(trace.schema_version, PASS_RESEARCH_TRACE_SCHEMA_VERSION);
+        assert!(trace.is_complete());
+
+        let run_source = include_str!("run.rs");
+        assert!(run_source.contains("research_trace: self.research_trace_for(metadata.name)"));
+    }
+}
 
 #[cfg(test)]
 mod tests;

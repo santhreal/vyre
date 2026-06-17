@@ -1,6 +1,6 @@
 [package]
 name = "vyre-intrinsics"
-version = "0.6.1"
+version = "0.6.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -32,8 +32,8 @@ inventory.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true
-vyre = { path = "../vyre-core" }
-vyre-reference = { path = "../vyre-reference" }
+vyre = { version = "0.6.1", path = "../vyre-core" }
+vyre-reference = { version = "0.6.1", path = "../vyre-reference" }
 
 [features]
 default = ["all", "subgroup-ops"]

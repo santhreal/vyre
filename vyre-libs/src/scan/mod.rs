@@ -284,8 +284,6 @@ pub use literal_set::{
 };
 #[cfg(feature = "matching-nfa")]
 pub use mega_scan::{build as build_rule_pipeline, PipelineWireError, RulePipeline};
-#[cfg(feature = "matching-nfa")]
-pub use resident::ResidentRulePipeline;
 pub use pipeline::{Pipeline, PostProcessFn};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use post_process::{
@@ -301,6 +299,8 @@ pub use regex_compile::{
 pub use regex_dfa::{
     build_regex_dfa_pipeline, build_regex_dfa_unanchored, RegexDfaError, RegexDfaPipeline,
 };
+#[cfg(feature = "matching-nfa")]
+pub use resident::ResidentRulePipeline;
 #[cfg(feature = "matching-substring")]
 pub use substring::{substring_search, SCAN_SUBSTRING_OP_ID};
 // Re-export the cross-program fusion API at the matching layer so consumers

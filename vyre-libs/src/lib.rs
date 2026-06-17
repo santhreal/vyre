@@ -91,50 +91,35 @@ pub(crate) fn invalid_program(
 }
 
 /// Region builder  -  the shared helper every composition routes through.
-/// Library component.
-/// Library component.
 pub mod region;
 
 /// Domain-neutral byte-range ordering predicates. Previously lived inside
 /// `vyre-libs::security::topology`; hoisted out so non-security callers
 /// (a downstream analyzer's `Before`/`After` predicates, future dialects) do not pull the
 /// security dialect through the import graph. See CRITIQUE_VISION_ALIGNMENT_2026-04-23 V5.
-/// Library component.
-/// Library component.
 pub mod range_ordering;
 
 /// `TensorRef`  -  typed buffer-argument wrapper used by every Cat-A
 /// composition for dtype + shape + name-uniqueness validation.
-/// Library component.
-/// Library component.
 pub mod tensor_ref;
 
-/// Library component.
-/// Library component.
 pub use tensor_ref::{check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError};
 
 /// Shared builder helpers every Cat-A composition reuses.
-/// Library component.
-/// Library component.
 pub mod builder;
 mod substrate_catalog;
 
-/// Library component.
-/// Library component.
 pub use builder::{check_tensors, BuildOptions};
 
-/// Library component.
-/// Library component.
 pub mod buffer_names;
 
 /// `ProgramDescriptor`  -  introspection surface for Cat-A Programs.
-/// Library component.
-/// Library component.
 pub mod descriptor;
 
-/// Library component.
-/// Library component.
 pub use descriptor::{BufferDescriptor, ProgramDescriptor};
+
+/// Compatibility alias metadata for public shim paths.
+pub mod compat_aliases;
 
 #[cfg(feature = "math-linalg")]
 pub use math::{matmul_bias_tiled, matmul_tiled, MatmulBias, MatmulBiasTiled, MatmulTiled};
@@ -151,8 +136,6 @@ pub use math::{matmul_bias_tiled, matmul_tiled, MatmulBias, MatmulBiasTiled, Mat
 /// only. Kept `pub` so `inventory::submit!` can reference `OpEntry`
 /// from per-op source files at crate-root scope.
 #[doc(hidden)]
-/// Library component.
-/// Library component.
 pub mod harness;
 
 /// Math dialect  -  linear algebra, scans, broadcasting.
@@ -161,14 +144,10 @@ pub mod harness;
     feature = "math-scan",
     feature = "math-broadcast"
 ))]
-/// Library component.
-/// Library component.
 pub mod math;
 
 /// Logical dialect  -  element-wise boolean composition.
 #[cfg(feature = "logical")]
-/// Library component.
-/// Library component.
 pub mod logical;
 
 /// Neural-network dialect  -  activation, normalization, attention, linear.
@@ -178,8 +157,6 @@ pub mod logical;
     feature = "nn-norm",
     feature = "nn-attention"
 ))]
-/// Library component.
-/// Library component.
 pub mod nn;
 
 /// Pattern-scanning dialect  -  substring, DFA, Aho-Corasick, rule
@@ -196,9 +173,9 @@ pub mod nn;
 pub mod scan;
 
 /// Backwards-compat alias for [`scan`]. New code should use
-/// `vyre_libs::scan::*`. The alias will be removed in a future
-/// breaking release; until then `vyre_libs::scan::Foo` and
-/// `vyre_libs::scan::Foo` resolve to the same item.
+/// `vyre_libs::scan::*`. Alias metadata lives in
+/// [`compat_aliases::MATCHING_ALIAS`] so internal audits and public docs
+/// agree on the canonical owner.
 #[cfg(any(
     feature = "matching-substring",
     feature = "matching-dfa",
@@ -214,8 +191,6 @@ pub mod matching;
 /// more coming. Pairs with `vyre-libs::matching::dfa` in the fused
 /// decode→scan pipeline (Innovation I.1).
 #[cfg(feature = "decode")]
-/// Library component.
-/// Library component.
 pub mod decode;
 
 /// Hash / checksum dialect  -  FNV-1a-32, FNV-1a-64, CRC-32, Adler-32,
@@ -224,26 +199,18 @@ pub mod decode;
 /// composition over existing IR primitives (no dedicated target builder emitter
 /// arm required, per the intrinsic-vs-library rule).
 #[cfg(feature = "hash")]
-/// Library component.
-/// Library component.
 pub mod hash;
 
 /// Text-processing compositions for the GPU C parser pipeline
 /// (Phase L1+): byte classification, UTF-8 validation, line index.
-/// Library component.
-/// Library component.
 pub mod text;
 
 /// Representation sub-dialect: bit-packing and unpacking.
-/// Library component.
-/// Library component.
 pub mod representation;
 
 /// GPU parser infrastructure (Phase L3+): bracket matching, DFA
 /// lexer driver, LR(1) table walker. Grammar tables are generated
 /// host-side by `downstream analyzer-grammar-gen` and loaded as ReadOnly buffers.
-/// Library component.
-/// Library component.
 pub mod parsing;
 
 /// Front-end-agnostic borrow-check engine: the neutral `BorrowFacts` IR and the
@@ -253,14 +220,10 @@ pub mod parsing;
 pub mod borrowck;
 
 /// Packed AST walks (`ast_walk_*` catalog ops).
-/// Library component.
-/// Library component.
 pub mod graph;
 
 /// GPU-native compiler middle-end (CFG and ELF emission helpers) for the C pipeline.
 #[cfg(feature = "c-parser")]
-/// Library component.
-/// Library component.
 pub mod compiler;
 
 #[cfg(feature = "c-parser")]
@@ -283,8 +246,6 @@ pub mod security;
 /// over `math::conv1d` (Tier 2.5) and bare IR expressions. The
 /// Molten web engine's visual effect substrate.
 #[cfg(feature = "visual")]
-/// Library component.
-/// Library component.
 pub mod visual;
 
 /// Compatibility facade for GPU dataflow compositions.
@@ -312,29 +273,19 @@ pub use dataflow::{Soundness, SoundnessTagged};
 /// Rule-engine dialect  -  typed conditions, formulas, and program builder used
 /// by detection rule compilers.
 #[cfg(feature = "rule")]
-/// Library component.
-/// Library component.
 pub mod rule;
 
 /// Vector-widened string interning. CHD perfect hash
 /// over Tier-B label families  -  60k+ function-name strings reduce
 /// to one subgroup-shuffle + one DRAM load on the GPU.
 #[cfg(feature = "intern")]
-/// Library component.
-/// Library component.
 pub mod intern;
 
 /// Operation contract presets used by catalog entries.
-/// Library component.
-/// Library component.
 pub mod contracts;
 /// Type-signature constants shared across op definitions.
-/// Library component.
-/// Library component.
 pub mod signatures;
 /// Re-exports every type-signature constant at the crate root for convenient access.
-/// Library component.
-/// Library component.
 pub use signatures::{
     BOOL_OUTPUTS, BYTES_TO_BYTES_INPUTS, BYTES_TO_BYTES_OUTPUTS, BYTES_TO_U32_OUTPUTS,
     F32_F32_F32_INPUTS, F32_F32_INPUTS, F32_INPUTS, F32_OUTPUTS, I32_OUTPUTS, U32_INPUTS,
@@ -410,4 +361,32 @@ pub mod prelude {
     pub use crate::scan::substring_search;
     #[cfg(feature = "matching-dfa")]
     pub use crate::scan::{aho_corasick, dfa_compile, CompiledDfa, DfaCompileError};
+}
+
+#[cfg(all(test, feature = "matching-substring"))]
+mod compat_alias_tests {
+    use vyre::ir::Node;
+
+    #[test]
+    #[allow(deprecated)]
+    fn legacy_matching_public_path_preserves_old_id_and_registry_metadata() {
+        let program =
+            crate::matching::substring::substring_search("haystack", "needle", "matches", 8, 3);
+        let [Node::Region { generator, .. }] = program.entry() else {
+            panic!("expected legacy substring search to emit one region");
+        };
+
+        assert_eq!(
+            generator.as_str(),
+            crate::scan::substring::LEGACY_MATCHING_SUBSTRING_OP_ID
+        );
+        assert_eq!(
+            crate::compat_aliases::MATCHING_SUBSTRING_ALIAS.canonical_path,
+            "vyre_libs::scan::substring"
+        );
+        assert_eq!(
+            crate::compat_aliases::MATCHING_SUBSTRING_ALIAS.deprecated_path,
+            "vyre_libs::matching::substring"
+        );
+    }
 }

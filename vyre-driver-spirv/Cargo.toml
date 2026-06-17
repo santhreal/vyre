@@ -1,6 +1,6 @@
 [package]
 name = "vyre-driver-spirv"
-version = "0.6.1"
+version = "0.6.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -33,4 +33,4 @@ smallvec = { workspace = true }
 
 [dev-dependencies]
 tempfile.workspace = true
-vyre-reference = { path = "../vyre-reference" }
+vyre-reference = { version = "0.6.1", path = "../vyre-reference" }
