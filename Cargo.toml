@@ -215,7 +215,7 @@ vyre-debug = { version = "0.6.2", path = "vyre-debug" }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }
 vyre-conform-generate = { path = "conform/vyre-conform-generate" }
 vyre-conform-enforce = { path = "conform/vyre-conform-enforce" }
-c-grammar-gen = { package = "vyre-grammar-gen", version = "0.6.0", path = "vyre-grammar-gen" }
+c-grammar-gen = { package = "vyre-grammar-gen", version = "0.6.2", path = "vyre-grammar-gen" }
 
 # Shared third-party pins; every member agrees on versions.
 serde = { version = "=1.0.228", features = ["derive", "rc"] }
