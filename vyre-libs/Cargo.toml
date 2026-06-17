@@ -112,18 +112,8 @@ bytemuck.workspace = true
 [dev-dependencies]
 proptest.workspace = true
 tempfile.workspace = true
-vyre-reference = { version = "0.6.1", path = "../vyre-reference", features = ["subgroup-ops"] }
-vyre-primitives = { version = "0.6.1", path = "../vyre-primitives", features = ["text", "matching", "decode", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "nfa", "inventory-registry", "geom", "opt", "topology", "visual", "cpu-parity"] }
 criterion.workspace = true
-vyre-driver = { version = "0.6.1", path = "../vyre-driver" }
-vyre-driver-reference = { workspace = true }
-vyre-driver-wgpu = { version = "0.6.1", path = "../vyre-driver-wgpu" }
-vyre-lower = { version = "0.6.1", path = "../vyre-lower" }
-vyre-emit-naga = { version = "0.6.1", path = "../vyre-emit-naga" }
-vyre-emit-ptx = { version = "0.6.1", path = "../vyre-emit-ptx" }
 naga.workspace = true
-vyre-self-substrate = { version = "0.6.1", path = "../vyre-self-substrate" }
-vyre-intrinsics = { version = "0.6.1", path = "../vyre-intrinsics" }
 c-grammar-gen.workspace = true
 tree-sitter = { workspace = true }
 tree-sitter-go = { workspace = true }

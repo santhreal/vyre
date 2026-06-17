@@ -32,7 +32,6 @@ inventory.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true
-vyre = { version = "0.6.1", path = "../vyre-core" }
 vyre-reference = { version = "0.6.1", path = "../vyre-reference" }
 
 [features]

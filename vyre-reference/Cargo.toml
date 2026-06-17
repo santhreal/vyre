@@ -32,7 +32,6 @@ criterion.workspace = true
 regex-automata.workspace = true
 hex.workspace = true
 fnv.workspace = true
-vyre = { version = "0.6.1", path = "../vyre-core" }
 
 [package.metadata.docs.rs]
 all-features = true

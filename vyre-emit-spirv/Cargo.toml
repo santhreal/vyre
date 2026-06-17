@@ -25,5 +25,4 @@ thiserror = { workspace = true }
 vyre-foundation.workspace = true
 
 [dev-dependencies]
-vyre-emit-ptx = { version = "0.6.1", path = "../vyre-emit-ptx" }
 proptest.workspace = true

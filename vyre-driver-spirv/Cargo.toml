@@ -33,4 +33,3 @@ smallvec = { workspace = true }
 
 [dev-dependencies]
 tempfile.workspace = true
-vyre-reference = { version = "0.6.1", path = "../vyre-reference" }
