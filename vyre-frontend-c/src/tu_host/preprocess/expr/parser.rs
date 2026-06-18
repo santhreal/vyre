@@ -156,16 +156,20 @@ pub(super) fn parse_expr_shift(tokens: &[ExprTok], idx: &mut usize, active: bool
                 *idx += 1;
                 let rhs = parse_expr_add(tokens, idx, active);
                 if active {
-                    let amount = shift_amount(rhs);
-                    lhs = lhs.checked_shl(amount).unwrap_or(0);
+                    if rhs < 0 || rhs >= 128 {
+                        panic!("exceeding the i128 evaluator width: left shift by {rhs}");
+                    }
+                    lhs = lhs.checked_shl(rhs as u32).unwrap_or(0);
                 }
             }
             Some(ExprTok::Shr) => {
                 *idx += 1;
                 let rhs = parse_expr_add(tokens, idx, active);
                 if active {
-                    let amount = shift_amount(rhs);
-                    lhs = lhs.checked_shr(amount).unwrap_or(0);
+                    if rhs < 0 || rhs >= 128 {
+                        panic!("exceeding the i128 evaluator width: right shift by {rhs}");
+                    }
+                    lhs = lhs.checked_shr(rhs as u32).unwrap_or(0);
                 }
             }
             _ => return lhs,
@@ -234,15 +238,6 @@ pub(super) fn parse_expr_mul(tokens: &[ExprTok], idx: &mut usize, active: bool) 
     }
 }
 
-pub(super) fn shift_amount(value: i128) -> u32 {
-    if value < 0 {
-        return 0;
-    }
-    if value > 127 {
-        return 127;
-    }
-    value as u32
-}
 
 pub(super) fn parse_expr_unary(tokens: &[ExprTok], idx: &mut usize, active: bool) -> i128 {
     match tokens.get(*idx) {

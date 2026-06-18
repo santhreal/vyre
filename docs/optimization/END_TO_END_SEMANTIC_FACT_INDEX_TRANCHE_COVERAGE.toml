@@ -44,7 +44,7 @@ this_tranche_owns = [
   "base-fact and derived-fact delta evidence",
   "fact index correctness and performance metrics",
 ]
-existing_tranches_own = [
+does_not_own = [
   "file content identity and chunk hashes",
   "language dependency edge extraction and propagation",
   "parser cache object lifecycle",

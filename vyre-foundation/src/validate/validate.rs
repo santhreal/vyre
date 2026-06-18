@@ -413,6 +413,7 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                         var.clone(),
                         Binding {
                             ty: DataType::U32,
+                            ty_known: true,
                             mutable: false,
                             uniform,
                         },
@@ -564,13 +565,16 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         if !duplicate_sibling {
             shadowing::check_local(name, &self.scope, self.options, &mut self.errors);
         }
-        let ty = expr_type(value, &self.buffers, &self.scope).unwrap_or(DataType::U32);
+        let ty_opt = expr_type(value, &self.buffers, &self.scope);
+        let ty = ty_opt.clone().unwrap_or(DataType::U32);
+        let ty_known = ty_opt.is_some();
         let uniform = is_uniform(value, &self.scope);
         nodes::insert_binding(
             &mut self.scope,
             name.clone(),
             Binding {
                 ty,
+                ty_known,
                 mutable: true,
                 uniform,
             },
@@ -599,12 +603,14 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
                     "V011: assignment to loop variable `{name}`. Fix: loop variables are immutable."
                 )));
             }
-            if let Some(value_ty) = expr_type(value, &self.buffers, &self.scope) {
-                if value_ty != binding.ty {
-                    self.errors.push(err(format!(
-                        "V045: assignment to `{name}` has type `{value_ty}` but the binding was declared as `{declared}`. Fix: cast the value to `{declared}` or introduce a new binding with the intended type.",
-                        declared = binding.ty
-                    )));
+            if binding.ty_known {
+                if let Some(value_ty) = expr_type(value, &self.buffers, &self.scope) {
+                    if value_ty != binding.ty {
+                        self.errors.push(err(format!(
+                            "V045: assignment to `{name}` has type `{value_ty}` but the binding was declared as `{declared}`. Fix: cast the value to `{declared}` or introduce a new binding with the intended type.",
+                            declared = binding.ty
+                        )));
+                    }
                 }
             }
         } else if let Some(buffer) = self.buffers.get(name.as_str()) {

@@ -31,7 +31,7 @@ pub(super) fn parse_preproc_char_literal(src: &str, start: usize) -> (i128, usiz
     while i < bytes.len() {
         if bytes[i] == b'\'' {
             if units == 0 {
-                return (0, i + 1);
+                panic!("empty character literal ''");
             }
             return (value, i + 1);
         }

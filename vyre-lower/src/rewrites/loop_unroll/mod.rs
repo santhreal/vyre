@@ -43,26 +43,15 @@ fn unroll_body(body: &KernelBody) -> KernelBody {
         })
         .collect();
 
-    // Compute the next free result-id (highest + 1).
-    let mut next_id: u32 = body
-        .ops
-        .iter()
-        .flat_map(KernelOp::result_ids)
-        .max()
-        .map(|m| m + 1)
-        .unwrap_or(0);
-
-    // Also consider child bodies' result-ids when allocating new ids,
-    // since unrolled bodies may reuse them.
-    for child in &body.child_bodies {
-        for op in &child.ops {
-            for r in op.result_ids() {
-                if r >= next_id {
-                    next_id = r + 1;
-                }
-            }
-        }
-    }
+    // Compute the next free result-id (highest + 1) by walking the
+    // ENTIRE subtree rooted at this body. This must match the depth of
+    // collect_result_renames, which recurses into all child_bodies at
+    // all levels. A shallow scan (only body.ops + one level of
+    // child.ops) misses result-ids in grandchildren and deeper, so the
+    // first renumber_body call could assign a new id that collides with
+    // an id already present in a grandchild — silently producing
+    // duplicate result-ids in the unrolled output.
+    let mut next_id: u32 = max_result_id_in_subtree(body).map(|m| m + 1).unwrap_or(0);
 
     let mut new_ops: Vec<KernelOp> = Vec::with_capacity(body.ops.len());
     let mut new_children = body.child_bodies.clone();
@@ -198,6 +187,27 @@ fn unroll_body(body: &KernelBody) -> KernelBody {
         child_bodies: final_children,
         literals: new_literals,
     }
+}
+
+/// Walk the entire body subtree (ops + child_bodies recursively) and
+/// return the maximum result-id found, or `None` if there are no
+/// result-producing ops. Matches the traversal depth of
+/// `collect_result_renames` so the `next_id` seed never misses an id
+/// that `renumber_body` will encounter.
+fn max_result_id_in_subtree(body: &KernelBody) -> Option<u32> {
+    let mut max: Option<u32> = None;
+    fn walk(b: &KernelBody, max: &mut Option<u32>) {
+        for op in &b.ops {
+            for r in op.result_ids() {
+                *max = Some(max.map_or(r, |m: u32| m.max(r)));
+            }
+        }
+        for child in &b.child_bodies {
+            walk(child, max);
+        }
+    }
+    walk(body, &mut max);
+    max
 }
 
 fn literal_pool_refs_valid(body: &KernelBody) -> bool {
@@ -644,5 +654,107 @@ mod tests {
     #[test]
     fn max_unroll_count_constant_is_documented() {
         assert_eq!(MAX_UNROLL_COUNT, 4);
+    }
+
+    #[test]
+    fn loop_unroll_no_id_collision_with_deeply_nested_grandchild_ids() {
+        // Regression for the shallow next_id seed bug.
+        //
+        // The loop body's direct ops use result-ids up to r10. Inside the
+        // loop body there is a StructuredIfThen whose then-body (a
+        // grandchild) contains r100. The shallow scan only saw the loop
+        // body's direct ops (max=10), missing r100. On the first unroll
+        // renumber_body assigned new ids starting at 11, eventually
+        // assigning 100 to something — colliding with the grandchild's r100.
+        //
+        // The fixed scan uses max_result_id_in_subtree which walks all
+        // descendants, so next_id starts above 100 and no collision occurs.
+        let grandchild = KernelBody {
+            ops: vec![KernelOp {
+                kind: KernelOpKind::Literal,
+                operands: vec![0],
+                result: Some(100),
+            }],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::U32(9)],
+        };
+        let loop_child = KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(10),
+                },
+                // StructuredIfThen: cond=r10 (pos 0), then_body=grandchild at index 0 (pos 1).
+                KernelOp {
+                    kind: KernelOpKind::StructuredIfThen,
+                    operands: vec![10, 0],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![grandchild],
+            literals: vec![LiteralValue::Bool(true)],
+        };
+        let desc = KernelDescriptor {
+            id: "unroll_deep".into(),
+            bindings: BindingLayout { slots: vec![] },
+            dispatch: Dispatch::new(64, 1, 1),
+            body: KernelBody {
+                ops: vec![
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![0],
+                        result: Some(0),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![1],
+                        result: Some(1),
+                    },
+                    KernelOp {
+                        kind: KernelOpKind::StructuredForLoop {
+                            loop_var: "i".into(),
+                        },
+                        // lo=r0 (=0), hi=r1 (=2), body_idx=0
+                        operands: vec![0, 1, 0],
+                        result: None,
+                    },
+                ],
+                child_bodies: vec![loop_child],
+                literals: vec![LiteralValue::U32(0), LiteralValue::U32(2)],
+            },
+        };
+        let out = loop_unroll(&desc);
+        // Collect every result-id in the entire output descriptor tree.
+        fn collect_ids(b: &KernelBody, ids: &mut Vec<u32>) {
+            for op in &b.ops {
+                if let Some(r) = op.result {
+                    ids.push(r);
+                }
+            }
+            for c in &b.child_bodies {
+                collect_ids(c, ids);
+            }
+        }
+        let mut ids: Vec<u32> = Vec::new();
+        collect_ids(&out.body, &mut ids);
+        let total = ids.len();
+        let unique: std::collections::HashSet<u32> = ids.iter().cloned().collect();
+        assert_eq!(
+            total,
+            unique.len(),
+            "duplicate result-ids after unrolling; duplicates: {:?}",
+            {
+                let mut counts = std::collections::HashMap::<u32, usize>::new();
+                for &id in &ids {
+                    *counts.entry(id).or_insert(0) += 1;
+                }
+                counts
+                    .into_iter()
+                    .filter(|(_, c)| *c > 1)
+                    .map(|(id, c)| format!("r{}×{}", id, c))
+                    .collect::<Vec<_>>()
+            }
+        );
     }
 }

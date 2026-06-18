@@ -96,6 +96,19 @@ fn arb_buffer_name() -> BoxedStrategy<String> {
         .boxed()
 }
 
+fn arb_call_op() -> BoxedStrategy<String> {
+    prop::sample::select(
+        &[
+            "test.noop",
+            "test.add.u32",
+            "test.mul.f32",
+            "test.unknown_op",
+        ][..],
+    )
+    .prop_map(str::to_string)
+    .boxed()
+}
+
 fn arb_expr() -> BoxedStrategy<Expr> {
     let leaf = prop_oneof![
         any::<u32>().prop_map(Expr::LitU32),
@@ -103,6 +116,10 @@ fn arb_expr() -> BoxedStrategy<Expr> {
         any::<bool>().prop_map(Expr::LitBool),
         arb_ident().prop_map(Expr::var),
         arb_buffer_name().prop_map(Expr::buf_len),
+        // Expr::Call with no arguments: exercises the validate_call code path
+        // (previously absent, so single_pass_validator_matches_legacy never
+        // covered the silent-fallback defect).
+        arb_call_op().prop_map(|op| Expr::call(op, vec![])),
     ];
 
     leaf.prop_recursive(3, 48, 3, |inner| {
@@ -270,4 +287,62 @@ proptest! {
             "warning mismatch between legacy and single-pass validator"
         );
     }
+}
+
+// ------------------------------------------------------------------
+// F2 regression: let-binding a call result must not fabricate a U32
+// type and fire false V045 on later assignments of a different type.
+// ------------------------------------------------------------------
+
+/// When `expr_type` returns `None` for `Expr::Call` (no dialect lookup provided),
+/// `visit_let` previously recorded `DataType::U32` as the binding type. A later
+/// assignment of `1.0f32` would then trigger a false V045 ("U32 expected, got F32").
+///
+/// After the fix the binding is recorded as `ty_known = false`, and V045 is
+/// skipped — the program must validate without V045.
+#[test]
+fn call_result_binding_unknown_type_does_not_produce_false_v045() {
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::F32).with_count(1)],
+        [1, 1, 1],
+        vec![
+            // let x = some_call() — type is unknown because no lookup is registered.
+            Node::Let {
+                name: "x".into(),
+                value: Expr::Call {
+                    op_id: "unknown.dialect.op".into(),
+                    args: vec![],
+                },
+            },
+            // assign x = 1.0f32 — valid if x is F32, but previously caused a false
+            // V045 because x was recorded as U32 (the fabricated sentinel).
+            Node::Assign {
+                name: "x".into(),
+                value: Expr::LitF32(1.0),
+            },
+            Node::Store {
+                buffer: "out".into(),
+                index: Expr::u32(0),
+                value: Expr::var("x"),
+            },
+        ],
+    );
+    let report = validate_with_options(&program, ValidationOptions::default());
+    // The only error must be V016 (no lookup for the call), NOT V045.
+    let v045: Vec<_> = report
+        .errors
+        .iter()
+        .filter(|e| e.message().contains("V045"))
+        .collect();
+    assert!(
+        v045.is_empty(),
+        "false V045 fired on call-result binding with unknown type: {:?}",
+        v045
+    );
+    // Confirm that V016 IS emitted (the call itself is still rejected).
+    assert!(
+        report.errors.iter().any(|e| e.message().contains("V016")),
+        "expected V016 for call with no lookup, got: {:?}",
+        report.errors
+    );
 }

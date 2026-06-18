@@ -24,11 +24,17 @@ pub fn opt_lower_elf(ssa_nodes: &str, target_object_bytes: &str, num_nodes: Expr
         Expr::LitU32(n) => *n,
         _ => 1,
     };
-    let visible_object_words = TEXT_SECTION_WORD_OFFSET
+    // The output buffer must hold TEXT_SECTION_WORD_OFFSET + node_count + 5
+    // words: the text section starts at TEXT_SECTION_WORD_OFFSET, the five
+    // consecutive .shstrtab stores follow immediately after the last text word.
+    // Using 4096 as the floor keeps small programs from allocating a tiny
+    // buffer; the ceiling is not capped because a caller with node_count >=
+    // 4028 would silently write past index 4095 otherwise.
+    let required_words = TEXT_SECTION_WORD_OFFSET
         .saturating_add(node_count)
-        .saturating_add(5)
-        .min(4096);
-    let visible_object_bytes = (visible_object_words as usize) * 4;
+        .saturating_add(5);
+    let buf_words = required_words.max(4096);
+    let visible_object_bytes = (required_words as usize) * 4;
 
     let loop_body = vec![
         Node::let_bind("encoded_word", Expr::load(ssa_nodes, t.clone())),
@@ -53,7 +59,7 @@ pub fn opt_lower_elf(ssa_nodes: &str, target_object_bytes: &str, num_nodes: Expr
                 BufferAccess::ReadWrite,
                 DataType::U32,
             )
-            .with_count(4096)
+            .with_count(buf_words)
             .with_output_byte_range(0..visible_object_bytes),
         ],
         [256, 1, 1],
@@ -240,6 +246,61 @@ pub fn opt_lower_elf(ssa_nodes: &str, target_object_bytes: &str, num_nodes: Expr
             )],
         )],
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Regression: the five .shstrtab stores are at indices
+    /// TEXT_SECTION_WORD_OFFSET + node_count + {0..4}.  When node_count >= 4028
+    /// the last store would land at or past index 4096 if the buffer were capped
+    /// at 4096 words.  Verify that the declared buffer is always large enough.
+    #[test]
+    fn elf_shstrtab_stores_stay_in_bounds_at_max_node_count() {
+        let node_count = 4028u32;
+        let program = opt_lower_elf("ssa", "obj", Expr::u32(node_count));
+        // The buffer for `obj` must have at least TEXT_SECTION_WORD_OFFSET + node_count + 5
+        // words so none of the five .shstrtab stores write out of bounds.
+        let required = (TEXT_SECTION_WORD_OFFSET + node_count + 5) as usize;
+        let obj_buf_count = program
+            .buffers()
+            .iter()
+            .find(|b| b.name() == "obj")
+            .map(|b| b.count() as usize)
+            .expect("obj buffer must be present in the ELF-lowering program");
+        assert!(
+            obj_buf_count >= required,
+            "obj buffer count {obj_buf_count} < required {required}; \
+             shstrtab stores at TEXT_SECTION_WORD_OFFSET({TEXT_SECTION_WORD_OFFSET}) \
+             + node_count({node_count}) + 4 = {} would write OOB",
+            TEXT_SECTION_WORD_OFFSET + node_count + 4
+        );
+    }
+
+    /// With the fix, a large node_count still declares a strictly larger buffer;
+    /// the visible_object_bytes is exactly required_words * 4, not capped.
+    #[test]
+    fn elf_output_byte_range_covers_shstrtab_tail() {
+        // node_count = 4000 fits in the original 4096-word buffer; check the
+        // output byte range is tight (required_words, not 4096).
+        let node_count = 4000u32;
+        let required_bytes = ((TEXT_SECTION_WORD_OFFSET + node_count + 5) as usize) * 4;
+        let program = opt_lower_elf("ssa", "obj", Expr::u32(node_count));
+        let obj_buf = program
+            .buffers()
+            .iter()
+            .find(|b| b.name() == "obj")
+            .expect("obj buffer must be present");
+        let range = obj_buf
+            .output_byte_range()
+            .expect("obj buffer must have an output_byte_range");
+        assert_eq!(
+            range.end, required_bytes,
+            "output_byte_range end must equal required_words*4 = {required_bytes}, got {}",
+            range.end
+        );
+    }
 }
 
 inventory::submit! {

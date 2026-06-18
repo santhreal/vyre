@@ -5,8 +5,7 @@ owner = "runtime_io"
 status = "planned_contract"
 plan = "ALL_AXES_ACCELERATION_PLAN.md"
 
-[research]
-source_keys = [
+research_sources = [
   "LINUX_INOTIFY",
   "LINUX_FANOTIFY",
   "SQLITE_WAL",
@@ -50,7 +49,7 @@ this_tranche_owns = [
   "content digest and chunk digest reuse policy",
   "watch overflow repair evidence",
 ]
-existing_tranches_own = [
+does_not_own = [
   "initial filesystem enumeration and metadata batching",
   "safe file-handle opening and async read scheduling",
   "path traversal, TOCTOU, archive, and redaction controls",

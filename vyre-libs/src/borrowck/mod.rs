@@ -106,6 +106,29 @@ pub fn analyze(facts: &BorrowFacts) -> Vec<Conflict> {
         return Vec::new();
     }
 
+    // Invariant: all per-loan parallel arrays must have the same length as
+    // loan_place (which defines loan_count).  A mismatch is a bug in the
+    // caller; surface it immediately with a clear message rather than
+    // panicking with a cryptic index-out-of-bounds deep inside the analysis.
+    assert_eq!(
+        facts.loan_kind.len(),
+        loans,
+        "BorrowFacts invariant violated: loan_kind.len()={} != loan_count()={loans}",
+        facts.loan_kind.len()
+    );
+    assert_eq!(
+        facts.loan_issued_at.len(),
+        loans,
+        "BorrowFacts invariant violated: loan_issued_at.len()={} != loan_count()={loans}",
+        facts.loan_issued_at.len()
+    );
+    assert_eq!(
+        facts.loan_offset.len(),
+        loans,
+        "BorrowFacts invariant violated: loan_offset.len()={} != loan_count()={loans}",
+        facts.loan_offset.len()
+    );
+
     let mut succ: Vec<Vec<usize>> = vec![Vec::new(); n];
     let mut pred: Vec<Vec<usize>> = vec![Vec::new(); n];
     for &(a, b) in &facts.cfg_edges {
@@ -175,6 +198,109 @@ pub fn analyze(facts: &BorrowFacts) -> Vec<Conflict> {
         }
     }
     conflicts
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A two-loan BorrowFacts where the loans share a place and the first is
+    /// mutable and issued before the second; the second's use is reachable from
+    /// the first's issue via a direct CFG edge.  Confirms the basic conflict
+    /// detection path returns a conflict rather than returning empty.
+    #[test]
+    fn analyze_detects_simple_mut_mut_conflict() {
+        // Two program points: 0 -> 1 (single edge).
+        // Loan 0: &mut place 0, issued at point 0.
+        // Loan 1: &mut place 0, issued at point 1.
+        // Loan 0 is used at point 1.
+        // Because point 1 is reachable from point 0 via the edge and loan 0's
+        // use at point 1 is reachable from its issue at point 0, loan 0 is live
+        // at loan 1's issue point — conflict.
+        let facts = BorrowFacts {
+            point_count: 2,
+            cfg_edges: vec![(0, 1)],
+            loan_place: vec![0, 0],
+            loan_kind: vec![LoanKind::Mut, LoanKind::Mut],
+            loan_issued_at: vec![0, 1],
+            loan_offset: vec![10, 20],
+            loan_used_at: vec![(0, 1)],
+        };
+        let conflicts = analyze(&facts);
+        assert_eq!(conflicts.len(), 1, "expected one conflict, got {conflicts:?}");
+        let c = conflicts[0];
+        assert_eq!(c.first, 0, "first loan must be 0 (earlier issue)");
+        assert_eq!(c.second, 1, "second loan must be 1");
+        assert_eq!(c.kind, ConflictKind::TwoMutable);
+        assert_eq!(c.offset, 20, "offset must match loan_offset[second=1]");
+    }
+
+    /// Two loans of different places must NOT conflict even if live simultaneously.
+    #[test]
+    fn analyze_no_conflict_different_places() {
+        let facts = BorrowFacts {
+            point_count: 2,
+            cfg_edges: vec![(0, 1)],
+            loan_place: vec![0, 1], // different places
+            loan_kind: vec![LoanKind::Mut, LoanKind::Mut],
+            loan_issued_at: vec![0, 1],
+            loan_offset: vec![0, 0],
+            loan_used_at: vec![(0, 1)],
+        };
+        let conflicts = analyze(&facts);
+        assert_eq!(conflicts, vec![], "different places must not conflict");
+    }
+
+    /// Two shared borrows of the same place must NOT conflict even if live simultaneously.
+    #[test]
+    fn analyze_no_conflict_both_shared() {
+        let facts = BorrowFacts {
+            point_count: 2,
+            cfg_edges: vec![(0, 1)],
+            loan_place: vec![0, 0],
+            loan_kind: vec![LoanKind::Shared, LoanKind::Shared],
+            loan_issued_at: vec![0, 1],
+            loan_offset: vec![0, 0],
+            loan_used_at: vec![(0, 1)],
+        };
+        let conflicts = analyze(&facts);
+        assert_eq!(conflicts, vec![], "shared+shared must not conflict");
+    }
+
+    /// Regression: mismatched parallel arrays (loan_kind shorter than loan_place)
+    /// must produce a clear panic with a diagnostic message, not a cryptic
+    /// index-out-of-bounds deep inside the analysis.  This tests that the
+    /// invariant assertion added to `analyze` fires before any unchecked access.
+    #[test]
+    fn analyze_panics_with_clear_message_on_mismatched_loan_kind() {
+        let facts = BorrowFacts {
+            point_count: 2,
+            cfg_edges: vec![],
+            loan_place: vec![0, 0],       // loan_count() = 2
+            loan_kind: vec![LoanKind::Mut], // length 1: shorter than loan_count
+            loan_issued_at: vec![0, 1],
+            loan_offset: vec![0, 1],
+            loan_used_at: vec![],
+        };
+        let result = std::panic::catch_unwind(|| analyze(&facts));
+        assert!(
+            result.is_err(),
+            "analyze must panic (via assert_eq!) when loan_kind.len() < loan_count()"
+        );
+        // Verify the panic message contains the invariant text so the diagnostic
+        // is actionable, not a raw index-out-of-bounds.
+        if let Err(e) = result {
+            let msg = e
+                .downcast_ref::<String>()
+                .map(|s| s.as_str())
+                .or_else(|| e.downcast_ref::<&str>().copied())
+                .unwrap_or("");
+            assert!(
+                msg.contains("loan_kind"),
+                "panic message must mention 'loan_kind'; got: {msg:?}"
+            );
+        }
+    }
 }
 
 /// Monotone bitset dataflow fixpoint:

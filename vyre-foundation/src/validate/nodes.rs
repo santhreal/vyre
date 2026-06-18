@@ -125,13 +125,16 @@ fn validate_node_inner(
             if !duplicate_sibling {
                 shadowing::check_local(name, scope, options, &mut report.errors);
             }
-            let ty = expr_type(value, buffers, scope).unwrap_or(DataType::U32);
+            let ty_opt = expr_type(value, buffers, scope);
+            let ty = ty_opt.clone().unwrap_or(DataType::U32);
+            let ty_known = ty_opt.is_some();
             let uniform = is_uniform(value, scope);
             insert_binding(
                 scope,
                 name.clone(),
                 Binding {
                     ty,
+                    ty_known,
                     mutable: true,
                     uniform,
                 },
@@ -145,12 +148,14 @@ fn validate_node_inner(
                         "V011: assignment to loop variable `{name}`. Fix: loop variables are immutable."
                     )));
                 }
-                if let Some(value_ty) = expr_type(value, buffers, scope) {
-                    if value_ty != binding.ty {
-                        report.errors.push(err(format!(
-                            "V045: assignment to `{name}` has type `{value_ty}` but the binding was declared as `{declared}`. Fix: cast the value to `{declared}` or introduce a new binding with the intended type.",
-                            declared = binding.ty
-                        )));
+                if binding.ty_known {
+                    if let Some(value_ty) = expr_type(value, buffers, scope) {
+                        if value_ty != binding.ty {
+                            report.errors.push(err(format!(
+                                "V045: assignment to `{name}` has type `{value_ty}` but the binding was declared as `{declared}`. Fix: cast the value to `{declared}` or introduce a new binding with the intended type.",
+                                declared = binding.ty
+                            )));
+                        }
                     }
                 }
             } else if let Some(buf) = buffers.get(name.as_str()) {
@@ -315,6 +320,7 @@ fn validate_node_inner(
                         var.clone(),
                         Binding {
                             ty: DataType::U32,
+                            ty_known: true,
                             mutable: false,
                             uniform: var_uniform,
                         },

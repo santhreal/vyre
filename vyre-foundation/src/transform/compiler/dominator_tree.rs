@@ -293,10 +293,19 @@ pub fn index(value: u32) -> Result<usize, DominatorTreeError> {
 /// This is the standard CHK intersect routine used during fixed-point
 /// iteration.
 ///
+/// On a valid dominator tree of N nodes the algorithm converges in at most N
+/// steps because each inner-loop step strictly decreases the RPO rank of the
+/// advancing pointer. `intersect` enforces this invariant explicitly: when
+/// either pointer fails to advance (e.g. due to a self-referential `idom`
+/// entry from a malformed caller) it returns
+/// [`DominatorTreeError::NodeIndexOverflow`] rather than looping forever.
+///
 /// # Errors
 ///
 /// Returns [`DominatorTreeError::NodeIndexOverflow`] when a node id in the
-/// dominator chain cannot be used as a host index.
+/// dominator chain cannot be used as a host index, or when the chain fails
+/// to converge within `idom.len() * 2 + 2` steps, which indicates a
+/// malformed (cyclic) idom table.
 #[must_use]
 pub fn intersect(
     mut left: u32,
@@ -304,12 +313,24 @@ pub fn intersect(
     idom: &[u32],
     order: &[u32],
 ) -> Result<u32, DominatorTreeError> {
+    // Budget: a valid CHK walk visits every node at most once per side.
+    let mut budget = idom.len().saturating_mul(2).saturating_add(2);
     while left != right {
         while order[index(left)?] > order[index(right)?] {
-            left = idom[index(left)?];
+            let next = idom[index(left)?];
+            if budget == 0 || next == left {
+                return Err(DominatorTreeError::NodeIndexOverflow);
+            }
+            budget -= 1;
+            left = next;
         }
         while order[index(right)?] > order[index(left)?] {
-            right = idom[index(right)?];
+            let next = idom[index(right)?];
+            if budget == 0 || next == right {
+                return Err(DominatorTreeError::NodeIndexOverflow);
+            }
+            budget -= 1;
+            right = next;
         }
     }
     Ok(left)
@@ -449,5 +470,43 @@ mod ir_program_tests {
     #[test]
     fn idom_undefined_is_u32_max() {
         assert_eq!(IDOM_UNDEFINED, u32::MAX);
+    }
+
+    /// A self-loop in `idom` (e.g. `idom[1] == 1`) must not cause `intersect`
+    /// to spin forever. Before the fix the inner `while` would reassign
+    /// `left = idom[left_index] = left` (unchanged), looping infinitely.
+    /// After the fix `intersect` returns `Err(NodeIndexOverflow)`.
+    #[test]
+    fn intersect_self_loop_idom_returns_error_not_infinite_loop() {
+        // idom[0] = 0 (entry; self-dominates), idom[1] = 1 (malformed self-loop)
+        // order[0] = 0 (lower rank), order[1] = 1 (higher rank)
+        // intersect(1, 0) sees order[1]=1 > order[0]=0, tries to advance left:
+        //   idom[1] = 1 — left would not change, must error.
+        let idom = vec![0u32, 1u32];
+        let order = vec![0u32, 1u32];
+        let result = intersect(1, 0, &idom, &order);
+        assert!(
+            result.is_err(),
+            "intersect with a self-loop idom must return Err, not loop forever; got {:?}",
+            result
+        );
+    }
+
+    /// `intersect` must converge normally for a simple two-node valid tree:
+    ///   node 0 is the entry (idom[0]=0), node 1 is dominated by 0 (idom[1]=0).
+    #[test]
+    fn intersect_converges_on_valid_two_node_tree() {
+        // idom = [0, 0]: both nodes dominated by node 0 (the entry).
+        // order = [0, 1]: node 0 has lower RPO rank.
+        // intersect(1, 0): order[1]=1 > order[0]=0 → left advances to idom[1]=0.
+        // Now left==right==0 → converges to 0.
+        let idom = vec![0u32, 0u32];
+        let order = vec![0u32, 1u32];
+        let result = intersect(1, 0, &idom, &order);
+        assert_eq!(
+            result,
+            Ok(0),
+            "intersect must converge to the common dominator (node 0)"
+        );
     }
 }

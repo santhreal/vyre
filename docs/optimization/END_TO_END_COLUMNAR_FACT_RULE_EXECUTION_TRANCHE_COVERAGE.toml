@@ -45,7 +45,7 @@ this_tranche_owns = [
   "fact query cost model and optimizer rewrite evidence",
   "CPU vector, GPU batch, and portable iterator route comparison",
 ]
-existing_tranches_own = [
+does_not_own = [
   "semantic fact meaning and schema compatibility",
   "incremental dataflow reuse truth gates",
   "language dependency edge extraction and propagation",

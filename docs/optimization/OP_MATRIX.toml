@@ -136,7 +136,7 @@ cuda = "not_applicable"
 wgpu = "not_applicable"
 spirv = "not_applicable"
 release_blocking_notes = "Backend rows are not applicable because the original IR should be rewritten before lowering."
-tests = ["vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/tests.rs"]
+tests = ["vyre-foundation/src/optimizer/passes/algebraic/strength_reduce/tests"]
 bench_targets = ["integer_arithmetic_micro"]
 
 [[op]]

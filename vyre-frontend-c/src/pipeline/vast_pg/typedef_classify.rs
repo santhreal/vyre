@@ -300,21 +300,27 @@ fn classify_typedef_vast_fused_or_unfused(
                 }
             }
         }
-        Err(_) => classify_typedef_vast_unfused(
-            backend,
-            path,
-            scoped_vast_blob,
-            decl_context_blob,
-            haystack,
-            haystack_len,
-            vast_count,
-            packed_haystack,
-            true,
-            global_typedef_hashes,
-            cfg,
-            log,
-            scratch,
-        ),
+        Err(e) => {
+            eprintln!(
+                "[vyre] fuse_programs failed for typedef+classify (path={}); running unfused GPU stages: {e}",
+                path.display()
+            );
+            classify_typedef_vast_unfused(
+                backend,
+                path,
+                scoped_vast_blob,
+                decl_context_blob,
+                haystack,
+                haystack_len,
+                vast_count,
+                packed_haystack,
+                true,
+                global_typedef_hashes,
+                cfg,
+                log,
+                scratch,
+            )
+        }
     }
 }
 
@@ -360,4 +366,31 @@ fn classify_program(vast_count: u32) -> vyre::ir::Program {
         Expr::u32(vast_count.max(1)),
         "typed_vast_nodes",
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use vyre_foundation::execution_plan::fusion::{FusionError, FusionOverDispatchError};
+
+    /// The `Err(e)` arm of `classify_typedef_vast_fused_or_unfused` now calls
+    /// `eprintln!(... "{e}" ...)`. This test verifies that every concrete
+    /// `FusionError` variant formats to a non-empty diagnostic string, so the
+    /// `eprintln!` cannot silently produce an empty message.
+    #[test]
+    fn fusion_error_display_is_non_empty_for_all_variants() {
+        let over_dispatch = FusionError::OverDispatch(FusionOverDispatchError {
+            max_arm_threads: 1024,
+            fused_threads: 65536,
+            fix: "split the batch",
+        });
+        let msg = format!("{over_dispatch}");
+        assert!(
+            !msg.is_empty(),
+            "FusionError::OverDispatch must format to a non-empty diagnostic"
+        );
+        assert!(
+            msg.contains("1024") && msg.contains("65536"),
+            "FusionError::OverDispatch message must include thread counts; got: {msg}"
+        );
+    }
 }

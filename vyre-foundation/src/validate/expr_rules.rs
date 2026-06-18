@@ -253,6 +253,11 @@ fn validate_call(
     } else if let Some(lookup) = dialect_lookup() {
         lookup
     } else {
+        errors.push(err(format!(
+            "V016: call references op `{op_id}` but no dialect lookup is registered for this \
+             validation pass. Fix: supply a lookup via \
+             `ValidationOptions::with_dialect_lookup(...)` or inline all calls before validation."
+        )));
         return;
     };
     let interned = lookup.intern_op(op_id);
@@ -647,6 +652,27 @@ mod tests {
                 .iter()
                 .any(|error| error.message().contains("V022")),
             "typed call mismatch must be rejected from supplied lookup: {:?}",
+            report.errors
+        );
+    }
+
+    /// A call with an unknown op_id must be rejected even when no dialect lookup
+    /// is registered. Previously `validate_call` silently returned without emitting
+    /// any error, letting arbitrary `Expr::Call` nodes pass validation.
+    #[test]
+    fn call_with_no_lookup_is_rejected_with_v016() {
+        // ValidationOptions::default() has neither a supplied lookup nor a global
+        // registry entry, so no lookup is resolvable.
+        let report = validate_subgroup_expr(
+            Expr::call("no_such_op_ever_registered", vec![Expr::u32(1), Expr::bool(true)]),
+            ValidationOptions::default(),
+        );
+        assert!(
+            report
+                .errors
+                .iter()
+                .any(|e| e.message().contains("V016")),
+            "call with no lookup must be rejected with V016, got: {:?}",
             report.errors
         );
     }

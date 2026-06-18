@@ -83,8 +83,7 @@ pub(super) fn tokenize_preproc_expr_inner(
                 }
                 let name_start = i;
                 if !bytes.get(i).is_some_and(|b| is_ident_start(*b)) {
-                    out.push(ExprTok::Num(0));
-                    continue;
+                    panic!("malformed preprocessor defined operator: expected identifier");
                 }
                 i += 1;
                 while i < bytes.len() && is_ident_continue(bytes[i]) {
@@ -96,8 +95,7 @@ pub(super) fn tokenize_preproc_expr_inner(
                         i += 1;
                     }
                     if i >= bytes.len() {
-                        out.push(ExprTok::Num(i128::from(macros.contains_key(name))));
-                        break;
+                        panic!("malformed preprocessor defined operator: missing `)`");
                     }
                     i += 1;
                 }
@@ -358,10 +356,18 @@ pub(super) fn substitute_expr_macro_params(
 ) -> String {
     if variadic.is_some() {
         if args.len() < params.len() {
-            return "0".to_string();
+            panic!(
+                "macro `{macro_name}` requires at least {} arguments but received {}",
+                params.len(),
+                args.len()
+            );
         }
     } else if args.len() != params.len() {
-        return "0".to_string();
+        panic!(
+            "macro `{macro_name}` expects {} arguments but received {} arguments",
+            params.len(),
+            args.len()
+        );
     }
     let _ = macro_name;
     let variadic_replacement = variadic.map(|_| args.get(params.len()..).unwrap_or(&[]).join(","));

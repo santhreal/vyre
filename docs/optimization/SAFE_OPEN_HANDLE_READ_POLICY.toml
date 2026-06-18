@@ -35,7 +35,7 @@ identity_recheck = "after open, stat evidence is compared against candidate meta
 unsupported_platform = "platforms without equivalent safe-open semantics must use a stricter existing filesystem boundary and record capability absence"
 
 [read_contract]
-positioning = "reads are submitted with explicit offsets; shared descriptor file position is not used for parallel ingestion"
+positioning = "positioned reads: every read is submitted with an explicit offset (preadv2-style); the shared descriptor file position is never used for parallel ingestion"
 byte_range_identity = "every request records file handle id, offset, length, expected file size snapshot, and destination buffer id"
 retry_policy = "retry handles interruption and short reads within configured budget; repeated identity drift or permission drift fails closed"
 direct_io_policy = "direct I/O is admitted only when offset, length, and buffer alignment satisfy recorded filesystem and device constraints"

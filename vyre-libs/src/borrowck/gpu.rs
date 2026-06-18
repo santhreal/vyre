@@ -202,6 +202,23 @@ fn batch_shard(
         let pbase = point_base[fi];
         let lbase = loan_base[fi];
         for a in 0..f.loan_count() {
+            // Mirror the CPU path: skip loans whose issue point is out of range.
+            // An out-of-range issue point is a malformed BorrowFacts; the CPU
+            // engine silently ignores it (its `if p < n` guard at issue_seed
+            // construction).  Panic or silent bitset corruption here (bit index
+            // >= words*32) would diverge from the CPU contract, so we match the
+            // CPU's skip behaviour and report it via a debug assertion so the
+            // caller can diagnose the bad facts.
+            if f.loan_issued_at[a] >= f.point_count {
+                debug_assert!(
+                    false,
+                    "BorrowFacts invariant violation: loan_issued_at[{a}]={} >= point_count={} \
+                     in function {fi}; loan silently dropped from GPU issue seeds",
+                    f.loan_issued_at[a],
+                    f.point_count,
+                );
+                continue;
+            }
             let g = lbase + a;
             set_bit(
                 &mut issue_seeds[g * words..(g + 1) * words],
@@ -211,6 +228,17 @@ fn batch_shard(
         for &(loan, point) in &f.loan_used_at {
             let a = loan as usize;
             if a < f.loan_count() {
+                // Also guard the use-point against point_count, mirroring the CPU
+                // `if (l as usize) < loans && (p as usize) < n` guard.
+                if point >= f.point_count {
+                    debug_assert!(
+                        false,
+                        "BorrowFacts invariant violation: loan_used_at point={point} >= \
+                         point_count={} in function {fi}; use silently dropped from GPU use seeds",
+                        f.point_count,
+                    );
+                    continue;
+                }
                 let g = lbase + a;
                 set_bit(&mut use_seeds[g * words..(g + 1) * words], pbase + point);
             }

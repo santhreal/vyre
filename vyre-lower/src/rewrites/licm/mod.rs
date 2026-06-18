@@ -23,6 +23,19 @@ use super::memory_address::{
 use crate::operand_semantics::operand_is_result_reference;
 use crate::{BindingVisibility, KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
+/// Returns an iterator over the operand positions that carry child-body
+/// indices for `kind`. This matches the authoritative classification in
+/// `verify::classify_operand` (OperandClass::ChildBodyIdx).
+fn child_body_index_positions(kind: &KernelOpKind) -> &'static [usize] {
+    match kind {
+        KernelOpKind::StructuredIfThen => &[1],
+        KernelOpKind::StructuredIfThenElse => &[1, 2],
+        KernelOpKind::StructuredForLoop { .. } => &[2],
+        KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => &[0],
+        _ => &[],
+    }
+}
+
 /// LICM with a correct cross-body id rewrite.
 ///
 /// For each loop, invariant ops are moved to the parent body before
@@ -144,6 +157,10 @@ fn licm_body(
     // any ops we push AFTER the loop op need this same treatment in
     // the parent  -  that's what `parent_id_map` captures.
     let mut parent_id_map = BTreeMap::<u32, u32>::new();
+    // Track child-body indices that have already been recursed in the
+    // per-op phase, so the final sweep skips them and does not apply
+    // licm_body a second time to the same child.
+    let mut already_recursed: FxHashSet<usize> = FxHashSet::default();
 
     for op in &body.ops {
         if let KernelOpKind::StructuredForLoop { .. } = &op.kind {
@@ -227,6 +244,7 @@ fn licm_body(
                         let remapped = remap_body_ids(&recursed, &id_map);
 
                         new_children[body_idx as usize] = remapped;
+                        already_recursed.insert(body_idx as usize);
                         new_ops.extend(renumbered_hoisted);
                         new_ops.push(op.clone());
                         // Carry the id remap forward so any parent-body
@@ -251,31 +269,33 @@ fn licm_body(
                         reaching_defs,
                     );
                     new_children[body_idx as usize] = recursed;
+                    already_recursed.insert(body_idx as usize);
                     new_ops.push(op.clone());
                     continue;
                 }
             }
         }
         // Recurse into other structured-control-flow children too.
-        match &op.kind {
-            KernelOpKind::StructuredIfThen
-            | KernelOpKind::StructuredIfThenElse
-            | KernelOpKind::StructuredBlock
-            | KernelOpKind::Region { .. } => {
-                for child_id in op.operands.iter() {
-                    if let Some(child) = body.child_bodies.get(*child_id as usize) {
-                        let recursed = licm_body(
-                            child,
-                            next_free_id,
-                            read_only_bindings,
-                            alias_facts,
-                            reaching_defs,
-                        );
-                        new_children[*child_id as usize] = recursed;
-                    }
+        // CORRECTNESS: use child_body_index_positions() to find which
+        // operand positions carry child-body indices. Iterating ALL
+        // operands was wrong for StructuredIfThen/IfThenElse: operand[0]
+        // is the condition result-id, NOT a child-body index. Treating it
+        // as one would corrupt an unrelated child body if the condition
+        // result-id happened to be a valid child-body index.
+        for &pos in child_body_index_positions(&op.kind) {
+            if let Some(&child_id) = op.operands.get(pos) {
+                if let Some(child) = body.child_bodies.get(child_id as usize) {
+                    let recursed = licm_body(
+                        child,
+                        next_free_id,
+                        read_only_bindings,
+                        alias_facts,
+                        reaching_defs,
+                    );
+                    new_children[child_id as usize] = recursed;
+                    already_recursed.insert(child_id as usize);
                 }
             }
-            _ => {}
         }
         // Apply the accumulated parent_id_map to this op's
         // result-reference operands before pushing it. This rewrites
@@ -295,18 +315,26 @@ fn licm_body(
         new_ops.push(rewritten);
     }
 
-    // Recurse into all OTHER children (those not touched above) so
-    // nested loops in non-StructuredForLoop children also get LICM'd.
+    // Recurse into all children NOT already processed in the per-op
+    // phase above. Children that were already processed (StructuredForLoop
+    // bodies and StructuredIfThen/IfThenElse/Block/Region children) must
+    // NOT be recursed again or LICM is applied twice to the same subtree,
+    // causing spurious transformations and potential id collisions.
     let final_children: Vec<KernelBody> = new_children
         .into_iter()
-        .map(|c| {
-            licm_body(
-                &c,
-                next_free_id,
-                read_only_bindings,
-                alias_facts,
-                reaching_defs,
-            )
+        .enumerate()
+        .map(|(idx, c)| {
+            if already_recursed.contains(&idx) {
+                c
+            } else {
+                licm_body(
+                    &c,
+                    next_free_id,
+                    read_only_bindings,
+                    alias_facts,
+                    reaching_defs,
+                )
+            }
         })
         .collect();
 
@@ -1093,6 +1121,82 @@ mod tests {
             out.body.literals.len(),
             desc.body.literals.len() + 1,
             "parent literals grew by one"
+        );
+    }
+
+    #[test]
+    fn licm_does_not_corrupt_sibling_child_body_when_cond_id_aliases_body_index() {
+        // Regression for the bug where LICM iterated ALL operands of
+        // StructuredIfThen as child-body indices. For StructuredIfThen,
+        // operand[0] is the condition result-id, NOT a child-body index.
+        // When cond_result_id == some valid child_bodies index, the old
+        // code would silently recurse into and overwrite that unrelated
+        // child body.
+        //
+        // Layout:
+        //   parent has two child bodies (indices 0 and 1).
+        //   child_bodies[0] = a body containing a sentinel literal  — must NOT be touched.
+        //   child_bodies[1] = the actual if-then body.
+        //   StructuredIfThen: operands = [cond=r0, then_body_idx=1].
+        //   cond r0 has result-id 0, which is also a valid child-body index (0).
+        //   Buggy code: treats operand[0]=0 as a child-body index → recurses into
+        //   child_bodies[0] and overwrites it → sentinel literal lost.
+        //   Fixed code: only operand[1] is a child-body index → child_bodies[0] intact.
+        let sentinel_val = LiteralValue::U32(0xDEAD_BEEF);
+        let desc = KernelDescriptor {
+            id: "licm_cond_alias".into(),
+            bindings: BindingLayout { slots: vec![] },
+            dispatch: Dispatch::new(64, 1, 1),
+            body: KernelBody {
+                ops: vec![
+                    // r0 = Lit(true) — condition; its result-id=0 also == child_bodies[0] index.
+                    KernelOp {
+                        kind: KernelOpKind::Literal,
+                        operands: vec![0],
+                        result: Some(0),
+                    },
+                    // StructuredIfThen: cond=r0 (operand[0]), then_body=child_bodies[1] (operand[1]).
+                    KernelOp {
+                        kind: KernelOpKind::StructuredIfThen,
+                        operands: vec![0, 1],
+                        result: None,
+                    },
+                ],
+                child_bodies: vec![
+                    // child_bodies[0]: the unrelated body with the sentinel.
+                    // Must NOT be touched by the StructuredIfThen LICM arm.
+                    KernelBody {
+                        ops: vec![KernelOp {
+                            kind: KernelOpKind::Literal,
+                            operands: vec![0],
+                            result: Some(10),
+                        }],
+                        child_bodies: vec![],
+                        literals: vec![sentinel_val.clone()],
+                    },
+                    // child_bodies[1]: the actual then-body (empty).
+                    KernelBody {
+                        ops: vec![],
+                        child_bodies: vec![],
+                        literals: vec![],
+                    },
+                ],
+                literals: vec![LiteralValue::Bool(true)],
+            },
+        };
+        let out = licm(&desc);
+        // child_bodies[0]'s literal pool must be UNCHANGED: sentinel value present.
+        assert_eq!(
+            out.body.child_bodies[0].literals.first().cloned(),
+            Some(sentinel_val),
+            "child_bodies[0] must not be corrupted; \
+             LICM must not walk cond_result_id=0 as a child-body index"
+        );
+        // Outer ops stay at 2: no loop to hoist from.
+        assert_eq!(
+            out.body.ops.len(),
+            2,
+            "no loop ops present; outer op count must not change"
         );
     }
 

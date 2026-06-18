@@ -124,12 +124,15 @@ impl Expr {
     /// `saturating_sub(a, b)` for unsigned operands; clamps to zero when
     /// `b > a` instead of underflowing.
     ///
-    /// Compiles to `a - min(a, b)` so static WGSL evaluation never observes a
-    /// literal underflow in an unguarded subtraction.
+    /// Emits `BinOp::SaturatingSub` (wire tag `0x17`) directly so that
+    /// canonical fingerprints, optimizer identity rules, and the reference
+    /// evaluator all see the same opcode regardless of how the expression was
+    /// constructed. The WGSL lowering (`a - min(a, b)`) is the backend's
+    /// concern, not the IR builder's.
     #[must_use]
     #[inline]
     pub fn saturating_sub(left: Expr, right: Expr) -> Expr {
-        binary(BinOp::Sub, left.clone(), binary(BinOp::Min, left, right))
+        binary(BinOp::SaturatingSub, left, right)
     }
 
     /// Construct a wrapping addition node.
@@ -144,5 +147,55 @@ impl Expr {
     #[inline]
     pub fn wrapping_sub(self, other: impl Into<Expr>) -> Self {
         binary(BinOp::WrappingSub, self, other.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir::{BufferDecl, DataType, Node, Program};
+
+    /// `Expr::saturating_sub` must emit `BinOp::SaturatingSub` (wire tag 0x17)
+    /// so that the builder form and the direct-opcode form produce identical
+    /// canonical fingerprints. Before the fix the builder emitted
+    /// `BinOp::Sub(a, BinOp::Min(a, b))` — a two-node tree that serialises to
+    /// a completely different byte sequence, causing cache misses and preventing
+    /// optimizer identity rules from firing.
+    #[test]
+    fn saturating_sub_builder_emits_saturating_sub_opcode() {
+        let a = Expr::var("a");
+        let b = Expr::var("b");
+
+        // Builder form.
+        let via_builder = Expr::saturating_sub(a.clone(), b.clone());
+
+        // Direct opcode form.
+        let via_opcode = Expr::BinOp {
+            op: BinOp::SaturatingSub,
+            left: Box::new(a),
+            right: Box::new(b),
+        };
+
+        // They must be structurally identical so that their canonical fingerprints
+        // (computed by Program::fingerprint via canonical wire bytes) agree.
+        let make_program = |value: Expr| {
+            Program::wrapped(
+                vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+                [1, 1, 1],
+                vec![Node::Store {
+                    buffer: "out".into(),
+                    index: Expr::u32(0),
+                    value,
+                }],
+            )
+        };
+
+        let fp_builder = make_program(via_builder).fingerprint();
+        let fp_opcode = make_program(via_opcode).fingerprint();
+
+        assert_eq!(
+            fp_builder, fp_opcode,
+            "Expr::saturating_sub must emit BinOp::SaturatingSub so fingerprints agree"
+        );
     }
 }

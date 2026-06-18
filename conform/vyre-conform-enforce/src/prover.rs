@@ -6,6 +6,8 @@
 pub enum LawVerdict {
     /// The law held across every witness tuple.
     Holds,
+    /// No witnesses were supplied; the law cannot be certified without at least one sample.
+    NoWitnesses,
     /// The law was violated on the embedded witness.
     CommutativeFails {
         /// Left operand.
@@ -62,9 +64,12 @@ impl Xorshift32 {
 
 impl LawProver {
     /// Verify `f(a, b) == f(b, a)` stochastically over pairs in `witnesses`.
+    ///
+    /// Returns [`LawVerdict::NoWitnesses`] when the slice is empty; a `Holds`
+    /// certificate requires at least one witness to have been exercised.
     pub fn verify_commutative<F: Fn(u32, u32) -> u32>(f: F, witnesses: &[u32]) -> LawVerdict {
         if witnesses.is_empty() {
-            return LawVerdict::Holds;
+            return LawVerdict::NoWitnesses;
         }
         let mut rng = Xorshift32(0x1337_BEEF);
         // Constraint-sliced stochastic generation:
@@ -83,9 +88,12 @@ impl LawProver {
     }
 
     /// Verify `f(f(a,b), c) == f(a, f(b,c))` stochastically over triples.
+    ///
+    /// Returns [`LawVerdict::NoWitnesses`] when the slice is empty; a `Holds`
+    /// certificate requires at least one witness to have been exercised.
     pub fn verify_associative<F: Fn(u32, u32) -> u32>(f: F, witnesses: &[u32]) -> LawVerdict {
         if witnesses.is_empty() {
-            return LawVerdict::Holds;
+            return LawVerdict::NoWitnesses;
         }
         let mut rng = Xorshift32(0xBEEF_1337);
         // Constraint-sliced stochastic generation:
@@ -105,7 +113,13 @@ impl LawProver {
     }
 
     /// Verify `f(a, id) == a` across all witnesses (already O(N)).
+    ///
+    /// Returns [`LawVerdict::NoWitnesses`] when the slice is empty; a `Holds`
+    /// certificate requires at least one witness to have been exercised.
     pub fn verify_identity<F: Fn(u32, u32) -> u32>(f: F, id: u32, witnesses: &[u32]) -> LawVerdict {
+        if witnesses.is_empty() {
+            return LawVerdict::NoWitnesses;
+        }
         for &a in witnesses {
             let got = f(a, id);
             if got != a {
@@ -138,9 +152,36 @@ mod tests {
     }
 
     #[test]
-    fn sub_is_not_commutative() {
+    fn sub_is_not_commutative_reports_correct_counterexample() {
         let w: Vec<u32> = vec![1, 2, 3];
         let verdict = LawProver::verify_commutative(|a, b| a.wrapping_sub(b), &w);
-        assert!(matches!(verdict, LawVerdict::CommutativeFails { .. }));
+        match verdict {
+            LawVerdict::CommutativeFails { a, b, ab, ba } => {
+                assert_ne!(ab, ba, "counterexample must have ab != ba; got a={a} b={b} ab={ab} ba={ba}");
+                assert_eq!(ab, a.wrapping_sub(b), "ab must equal f(a,b)");
+                assert_eq!(ba, b.wrapping_sub(a), "ba must equal f(b,a)");
+            }
+            other => panic!("expected CommutativeFails, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn empty_witnesses_return_no_witnesses_not_holds() {
+        let empty: &[u32] = &[];
+        assert_eq!(
+            LawProver::verify_commutative(|a, b| a.wrapping_sub(b), empty),
+            LawVerdict::NoWitnesses,
+            "verify_commutative with empty witnesses must return NoWitnesses, not Holds"
+        );
+        assert_eq!(
+            LawProver::verify_associative(|a, b| a.wrapping_sub(b), empty),
+            LawVerdict::NoWitnesses,
+            "verify_associative with empty witnesses must return NoWitnesses, not Holds"
+        );
+        assert_eq!(
+            LawProver::verify_identity(|a, b| a ^ b, 0, empty),
+            LawVerdict::NoWitnesses,
+            "verify_identity with empty witnesses must return NoWitnesses, not Holds"
+        );
     }
 }

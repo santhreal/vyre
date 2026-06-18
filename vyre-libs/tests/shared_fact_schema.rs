@@ -15,9 +15,10 @@ fn c_security_fact_maps_to_exact_shared_header() {
         42,
     );
 
+    // object and aux are absent (None) on a source fact: wire token is "-".
     assert_eq!(
         fact.shared_header("c-c11").wire_header(),
-        "schema=v1;producer=c-c11;kind=source;fact_id=1;subject=42;object=0;aux=0;file=7;start=100;end=120;soundness=Exact"
+        "schema=v1;producer=c-c11;kind=source;fact_id=1;subject=42;object=-;aux=-;file=7;start=100;end=120;soundness=Exact"
     );
 }
 
@@ -31,9 +32,10 @@ fn rust_borrow_facts_map_placeholder_subset_to_exact_shared_header() {
     };
     let headers = facts.shared_fact_headers("rustc-nll");
 
+    // aux is absent (None) for a borrow_subset fact: wire token is "-".
     assert_eq!(
         headers[0].wire_header(),
-        "schema=v1;producer=rustc-nll;kind=borrow_subset;fact_id=1;subject=3;object=5;aux=0;file=0;start=0;end=0;soundness=Exact"
+        "schema=v1;producer=rustc-nll;kind=borrow_subset;fact_id=1;subject=3;object=5;aux=-;file=0;start=0;end=0;soundness=Exact"
     );
 }
 

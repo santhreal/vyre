@@ -93,6 +93,7 @@ mod tests {
             crate::ir::Ident::from(name),
             Binding {
                 ty: DataType::U32,
+                ty_known: true,
                 mutable: true,
                 uniform: true,
             },
@@ -106,6 +107,7 @@ mod tests {
             crate::ir::Ident::from(name),
             Binding {
                 ty: DataType::U32,
+                ty_known: true,
                 mutable: true,
                 uniform: false,
             },

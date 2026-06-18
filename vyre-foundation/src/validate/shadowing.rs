@@ -26,6 +26,7 @@ mod tests {
             crate::ir::Ident::from(name),
             Binding {
                 ty: DataType::U32,
+                ty_known: true,
                 mutable: true,
                 uniform: true,
             },

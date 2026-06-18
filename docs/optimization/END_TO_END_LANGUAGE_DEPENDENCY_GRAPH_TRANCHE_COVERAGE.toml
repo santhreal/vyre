@@ -5,8 +5,7 @@ owner = "scanner_frontends"
 status = "planned_contract"
 plan = "ALL_AXES_ACCELERATION_PLAN.md"
 
-[research]
-source_keys = [
+research_sources = [
   "GCC_PREPROCESSOR_DEPENDENCIES",
   "CLANG_DEPENDENCY_SCANNING",
   "PYTHON_IMPORT_SYSTEM",
@@ -49,7 +48,7 @@ this_tranche_owns = [
   "rule-scope aware cross-file invalidation propagation",
   "dependency graph reuse evidence",
 ]
-existing_tranches_own = [
+does_not_own = [
   "file content identity and watcher replay",
   "filesystem enumeration and safe handles",
   "parser cache object lifecycle",

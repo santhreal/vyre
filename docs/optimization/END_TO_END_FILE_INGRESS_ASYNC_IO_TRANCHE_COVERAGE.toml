@@ -5,8 +5,7 @@ owner = "runtime_io"
 status = "planned_contract"
 plan = "ALL_AXES_ACCELERATION_PLAN.md"
 
-[research]
-source_keys = [
+research_sources = [
   "LINUX_IO_URING_SETUP",
   "LINUX_IO_URING_ENTER",
   "LINUX_IO_URING_REGISTER",
@@ -56,7 +55,7 @@ this_tranche_owns = [
   "direct-I/O alignment admission and buffered-read downgrade evidence",
   "read-to-scan handoff backpressure telemetry",
 ]
-existing_tranches_own = [
+does_not_own = [
   "path traversal and canonicalization security",
   "archive extraction and bomb controls",
   "TOCTOU race taxonomy and redaction",

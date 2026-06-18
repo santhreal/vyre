@@ -264,11 +264,20 @@ fn run_cse_kernels_with_scratch_into(
     // Initial state for table_canonical: u32::MAX (empty marker).
     scratch.table_init_words.clear();
     scratch.table_init_words.resize(capacity as usize, u32::MAX);
-    ensure_input_slots(&mut scratch.canonical_inputs, 3);
+    // 7 inputs: hash, canonical (RW scratch), table_canonical (RW dummy),
+    // arena_kinds, arena_arg0, arena_arg1, arena_arg2. The four arena
+    // buffers supply the structural tuple comparison that makes the
+    // hash-equality pre-filter sound; without them a 32-bit hash collision
+    // would silently merge non-equivalent exprs.
+    ensure_input_slots(&mut scratch.canonical_inputs, 7);
     scratch.canonical_inputs[0].clear();
     scratch.canonical_inputs[0].extend_from_slice(&hash_outputs[0]);
     write_zero_bytes(&mut scratch.canonical_inputs[1], state_bytes);
     write_u32_slice_le_bytes(&mut scratch.canonical_inputs[2], &scratch.table_init_words);
+    write_u32_slice_le_bytes(&mut scratch.canonical_inputs[3], &arena.kinds);
+    write_u32_slice_le_bytes(&mut scratch.canonical_inputs[4], &arena.arg0);
+    write_u32_slice_le_bytes(&mut scratch.canonical_inputs[5], &arena.arg1);
+    write_u32_slice_le_bytes(&mut scratch.canonical_inputs[6], &arena.arg2);
     let canonical_outputs = dispatcher.dispatch(
         &canonical_program,
         &scratch.canonical_inputs,
@@ -466,17 +475,27 @@ pub fn build_structural_hash_program(expr_count: u32, max_depth_iter_cap: u32) -
 }
 
 /// Build the canonical-id Program. Single dispatch: each thread `i`
-/// computes `canonical[i]` by linear-probing the direct-map and
-/// committing `min(table[slot], i)` via CAS. Emits `canonical[i] =
-/// table[slot]` after the CAS sequence converges (guaranteed bounded
-/// by `capacity`).
+/// computes `canonical[i]` by brute-force scanning `0..i` for the
+/// smallest `j` that is structurally identical to `i`.
+///
+/// Structural identity requires BOTH the hash pre-filter AND a full
+/// `(kind, arg0, arg1, arg2)` tuple comparison. The hash alone is a
+/// 32-bit FNV value whose collision probability grows with arena size
+/// (birthday bound ~0.3% per 5k-expr arena); relying on hash equality
+/// alone would silently merge non-equivalent exprs (miscompile). The
+/// tuple check is the definitive correctness guard; the hash serves
+/// only as a fast-reject to reduce wasted tuple reads.
 ///
 /// Buffer layout:
-///   0: hash (RO)
-///   1: canonical (RW)
-///   2: table_canonical (RW; init `u32::MAX`)
+///   0: hash          (RO)
+///   1: canonical     (RW)
+///   2: table_canonical (RW; init `u32::MAX`; used as a dummy RW
+///      binding so backends do not prune the buffer slot)
+///   3: arena_kinds   (RO)
+///   4: arena_arg0    (RO)
+///   5: arena_arg1    (RO)
+///   6: arena_arg2    (RO)
 #[must_use]
-
 pub fn build_canonical_id_program(expr_count: u32, capacity: u32) -> Program {
     let buffers = vec![
         BufferDecl::storage("hash", 0, BufferAccess::ReadOnly, DataType::U32)
@@ -485,68 +504,86 @@ pub fn build_canonical_id_program(expr_count: u32, capacity: u32) -> Program {
             .with_count(expr_count.max(1)),
         BufferDecl::storage("table_canonical", 2, BufferAccess::ReadWrite, DataType::U32)
             .with_count(capacity.max(1)),
+        // Structural tuple buffers: hash collision alone must never
+        // declare two exprs equivalent. These four buffers supply the
+        // definitive (kind, arg0, arg1, arg2) tuple comparison.
+        BufferDecl::storage("arena_kinds", 3, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(expr_count.max(1)),
+        BufferDecl::storage("arena_arg0", 4, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(expr_count.max(1)),
+        BufferDecl::storage("arena_arg1", 5, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(expr_count.max(1)),
+        BufferDecl::storage("arena_arg2", 6, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(expr_count.max(1)),
     ];
 
-    // Per-thread body. Two phases:
-    //   1. Insert: linear-probe to find a slot whose key matches our
-    //      hash (or is empty). On empty: try CAS to claim with our id.
-    //      If our id is greater than the existing canonical: CAS
-    //      lower-id wins via atomic_min on the slot.
-    //   2. Lookup: re-scan the same probe sequence, read the winning
-    //      canonical id from the slot whose key matches our hash.
+    // Per-thread body: brute-force scan 0..i.
+    // The post-order encoding ensures children appear before parents,
+    // so structurally-equivalent siblings always have a prior candidate
+    // at a smaller index.
     //
-    // The table is keyed by hash itself (no separate key field): empty
-    // slot = `u32::MAX`. After insert, slot value = smallest expr id
-    // among the colliding-hash exprs. Hash collisions across DIFFERENT
-    // structural hashes are handled by linear probing.
-    //
-    // For simplicity, the insert+lookup use a single combined slot
-    // word: `slot = min(seen_so_far_for_this_hash)`. Empty = MAX.
-    // Probe until we find a slot whose value's hash matches  -  but we
-    // can't store both hash and id in one u32.
-    //
-    // Workaround: index into table by `hash % capacity` directly. For
-    // ≤ 0.5 load factor and well-distributed hash, expected probe
-    // length is ~1.5. We accept hash collisions on the bucket index
-    // (different hashes mapping to same bucket) by keeping a probe
-    // chain  -  to verify "this slot is mine" we'd need to store the
-    // hash too. Simpler V1: store the hash in even slots and the id
-    // in odd slots. Capacity then represents bucket count, real array
-    // size is `2 * capacity`.
-    //
-    // Use a simpler scheme: bucket = hash mod capacity; we trust the
-    // distribution. Collisions across different hashes mapping to the
-    // same bucket cause OVER-merging (different exprs marked as
-    // canonical-equal). Mitigation: capacity is `2 * expr_count`, so
-    // bucket-collision rate is the birthday bound ≈ p² / (2·cap) = N²
-    // / 4N = N/4. That's bad.
-    //
-    // Instead: pair-store. Slots are 2 u32 each: (canonical_id,
-    // canonical_hash). Total table size = 2 * capacity.
-    //
-    // For V1 simplicity AND correctness: skip the table layout and do
-    // a brute-force per-thread scan of `0..i`. O(n²) total work.
-    // Acceptable for n ≤ ~5000 on RTX 5090.
+    // Equivalence predicate: hash pre-filter (fast reject) THEN full
+    // structural tuple check (correctness gate). Both must hold before
+    // `found_canonical` is updated.
     let body = vec![
         Node::let_bind("i", Expr::gid_x()),
         Node::if_then(
             Expr::lt(Expr::var("i"), Expr::u32(expr_count)),
             vec![
                 Node::let_bind("my_hash", Expr::load("hash", Expr::var("i"))),
+                // Load this thread's structural tuple once (avoids
+                // re-reading the same arena row on every inner iteration).
+                Node::let_bind("my_kind", Expr::load("arena_kinds", Expr::var("i"))),
+                Node::let_bind("my_a0", Expr::load("arena_arg0", Expr::var("i"))),
+                Node::let_bind("my_a1", Expr::load("arena_arg1", Expr::var("i"))),
+                Node::let_bind("my_a2", Expr::load("arena_arg2", Expr::var("i"))),
                 Node::let_bind("found_canonical", Expr::var("i")),
-                // Brute-force scan 0..i for the smallest j with the
-                // same hash. The post-order encoding means children
-                // come before parents, so equivalent siblings appear
-                // earlier in the arena.
                 Node::loop_for(
                     "j",
                     Expr::u32(0),
                     Expr::var("i"),
                     vec![
                         Node::let_bind("their_hash", Expr::load("hash", Expr::var("j"))),
+                        // Gate 1: hash pre-filter. Mismatched hashes
+                        // structurally different exprs almost always.
+                        // Gate 2: full tuple comparison. Hash equality
+                        // alone is not structural identity because two
+                        // distinct exprs can share a 32-bit hash value
+                        // (birthday collision). We must confirm all four
+                        // encoding fields match before declaring `j`
+                        // canonical for `i`.
+                        // Gate 3: only take the first (smallest-index)
+                        // match by checking `found_canonical == i`.
                         Node::if_then(
                             Expr::and(
-                                Expr::eq(Expr::var("their_hash"), Expr::var("my_hash")),
+                                Expr::and(
+                                    Expr::and(
+                                        Expr::and(
+                                            Expr::and(
+                                                Expr::eq(
+                                                    Expr::var("their_hash"),
+                                                    Expr::var("my_hash"),
+                                                ),
+                                                Expr::eq(
+                                                    Expr::load("arena_kinds", Expr::var("j")),
+                                                    Expr::var("my_kind"),
+                                                ),
+                                            ),
+                                            Expr::eq(
+                                                Expr::load("arena_arg0", Expr::var("j")),
+                                                Expr::var("my_a0"),
+                                            ),
+                                        ),
+                                        Expr::eq(
+                                            Expr::load("arena_arg1", Expr::var("j")),
+                                            Expr::var("my_a1"),
+                                        ),
+                                    ),
+                                    Expr::eq(
+                                        Expr::load("arena_arg2", Expr::var("j")),
+                                        Expr::var("my_a2"),
+                                    ),
+                                ),
                                 Expr::eq(Expr::var("found_canonical"), Expr::var("i")),
                             ),
                             vec![Node::assign("found_canonical", Expr::var("j"))],
@@ -619,35 +656,22 @@ pub fn build_canonical_delta_compact_program(expr_count: u32) -> Program {
     Program::wrapped(buffers, [WORKGROUP_X, 1, 1], body)
 }
 
-/// Apply `canonical[i]` to rewrite `program`. Replaces every Expr
-/// whose canonical is a different (smaller) expr id with a reference
-/// to the canonical's value. Implemented as a CPU walk in the same
-/// post-order the encoder uses; the lookup table makes this O(n).
+/// Apply `canonical[i]` to rewrite `program`. Replaces every
+/// `Node::Let` whose value-Expr is a CSE duplicate with
+/// `Expr::Var(orig_name)`, where `orig_name` is the first binding in
+/// the same scope that produced the canonical expression.
+///
+/// Delegates to [`apply_cse_let_dedupe_with_lookup`], which implements
+/// the correct let-level rewrite using `arena.node_top_level_exprs` to
+/// correlate node walk order with arena expr ids. The two functions
+/// must produce identical results for the let-level case; use this
+/// entry point when you have a dense `canonical` slice.
 pub fn apply_cse_canonicals(
     program: &Program,
     arena: &ExprArenaEncoding,
     canonical: &[u32],
 ) -> Program {
-    let mut counter = 0u32;
-    let body: Vec<Node> = match program.entry() {
-        [Node::Region { body, .. }] => body.as_ref().clone(),
-        entry => entry.to_vec(),
-    };
-    let _ = arena; // arena fields available if downstream logic needs them
-    let rebuilt = rewrite_scope(&body, canonical, &mut counter);
-    let new_entry = match program.entry() {
-        [Node::Region {
-            generator,
-            source_region,
-            ..
-        }] => vec![Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: Arc::new(rebuilt),
-        }],
-        _ => rebuilt,
-    };
-    program.with_rewritten_entry(new_entry)
+    apply_cse_let_dedupe_with_lookup(program, arena, canonical)
 }
 
 /// Apply a let-level CSE rewrite: when an entire `Node::Let { name,
@@ -798,145 +822,7 @@ impl<C: CanonicalLookup + ?Sized> LetDedupeWalker<'_, C> {
     }
 }
 
-fn rewrite_scope(body: &[Node], canonical: &[u32], counter: &mut u32) -> Vec<Node> {
-    let prefix_len = super::encode::reachable_prefix_len(body);
-    let mut out = Vec::with_capacity(prefix_len);
-    for node in &body[..prefix_len] {
-        out.push(rewrite_node(node, canonical, counter));
-    }
-    out
-}
 
-fn rewrite_node(node: &Node, canonical: &[u32], counter: &mut u32) -> Node {
-    match node {
-        Node::Let { name, value } => {
-            Node::let_bind(name.clone(), rewrite_expr(value, canonical, counter))
-        }
-        Node::Assign { name, value } => {
-            Node::assign(name.clone(), rewrite_expr(value, canonical, counter))
-        }
-        Node::Store {
-            buffer,
-            index,
-            value,
-        } => Node::store(
-            buffer.clone(),
-            rewrite_expr(index, canonical, counter),
-            rewrite_expr(value, canonical, counter),
-        ),
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::if_then_else(
-            rewrite_expr(cond, canonical, counter),
-            rewrite_scope(then, canonical, counter),
-            rewrite_scope(otherwise, canonical, counter),
-        ),
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => Node::loop_for(
-            var.clone(),
-            rewrite_expr(from, canonical, counter),
-            rewrite_expr(to, canonical, counter),
-            rewrite_scope(body, canonical, counter),
-        ),
-        Node::Block(body) => Node::Block(rewrite_scope(body, canonical, counter)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => Node::Region {
-            generator: generator.clone(),
-            source_region: source_region.clone(),
-            body: Arc::new(rewrite_scope(body.as_slice(), canonical, counter)),
-        },
-        // Without arena context the simplest correct rewrite for the
-        // remaining variants is identity. Extending these is a small
-        // mechanical addition mirroring the const-fold rewriter.
-        other => other.clone(),
-    }
-}
-
-fn rewrite_expr(expr: &Expr, canonical: &[u32], counter: &mut u32) -> Expr {
-    // Walk children first to keep the post-order id assignment in sync
-    // with the arena encoder. We don't apply canonical mappings yet  -
-    // V1 ships the analysis, not the rewrite. The id walk is preserved
-    // so future versions can fold canonical id back into the IR.
-    match expr {
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => {
-            *counter += 1;
-            let _ = canonical;
-            expr.clone()
-        }
-        Expr::Load { buffer, index } => {
-            let new_index = rewrite_expr(index, canonical, counter);
-            *counter += 1;
-            Expr::Load {
-                buffer: buffer.clone(),
-                index: Box::new(new_index),
-            }
-        }
-        Expr::BinOp { op, left, right } => {
-            let nl = rewrite_expr(left, canonical, counter);
-            let nr = rewrite_expr(right, canonical, counter);
-            *counter += 1;
-            Expr::BinOp {
-                op: *op,
-                left: Box::new(nl),
-                right: Box::new(nr),
-            }
-        }
-        Expr::UnOp { op, operand } => {
-            let no = rewrite_expr(operand, canonical, counter);
-            *counter += 1;
-            Expr::UnOp {
-                op: op.clone(),
-                operand: Box::new(no),
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            let nc = rewrite_expr(cond, canonical, counter);
-            let nt = rewrite_expr(true_val, canonical, counter);
-            let nf = rewrite_expr(false_val, canonical, counter);
-            *counter += 1;
-            Expr::Select {
-                cond: Box::new(nc),
-                true_val: Box::new(nt),
-                false_val: Box::new(nf),
-            }
-        }
-        Expr::Fma { a, b, c } => {
-            let na = rewrite_expr(a, canonical, counter);
-            let nb = rewrite_expr(b, canonical, counter);
-            let nc = rewrite_expr(c, canonical, counter);
-            *counter += 1;
-            Expr::Fma {
-                a: Box::new(na),
-                b: Box::new(nb),
-                c: Box::new(nc),
-            }
-        }
-        _ => expr.clone(),
-    }
-}
 
 #[cfg(test)]
 
@@ -985,6 +871,24 @@ mod tests {
         let p = build_canonical_id_program(8, 16);
         assert!(p.buffers().iter().any(|b| b.name() == "canonical"));
         assert!(p.buffers().iter().any(|b| b.name() == "table_canonical"));
+        // Structural tuple buffers must be present so the kernel can
+        // confirm hash-equal exprs are actually structurally identical.
+        assert!(
+            p.buffers().iter().any(|b| b.name() == "arena_kinds"),
+            "canonical-id program must declare arena_kinds for structural tuple check"
+        );
+        assert!(
+            p.buffers().iter().any(|b| b.name() == "arena_arg0"),
+            "canonical-id program must declare arena_arg0 for structural tuple check"
+        );
+        assert!(
+            p.buffers().iter().any(|b| b.name() == "arena_arg1"),
+            "canonical-id program must declare arena_arg1 for structural tuple check"
+        );
+        assert!(
+            p.buffers().iter().any(|b| b.name() == "arena_arg2"),
+            "canonical-id program must declare arena_arg2 for structural tuple check"
+        );
     }
 
     #[test]
@@ -1142,5 +1046,98 @@ mod tests {
             !release_path.contains("const FNV_PRIME") && !release_path.contains("const FNV_OFFSET"),
             "Fix: optimizer CSE must not redefine FNV constants."
         );
+    }
+
+    /// P0 regression: the canonical dispatch must receive all 7 input buffers
+    /// (hash + canonical + table_canonical + 4 arena structural buffers).
+    /// Before the fix, only 3 inputs were wired: the structural tuple buffers
+    /// were absent, so the hash-only pre-filter was the sole equivalence
+    /// predicate and a 32-bit collision would silently merge distinct exprs.
+    #[test]
+    fn canonical_dispatch_receives_seven_inputs_including_arena_structural_buffers() {
+        use std::cell::Cell;
+        struct InputCountDispatcher {
+            canonical_input_count: Cell<usize>,
+            call: Cell<usize>,
+        }
+        impl OptimizerDispatcher for InputCountDispatcher {
+            fn dispatch(
+                &self,
+                _program: &Program,
+                inputs: &[Vec<u8>],
+                _grid: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                let call = self.call.get();
+                self.call.set(call + 1);
+                if call == 1 {
+                    // Second dispatch = canonical-id program.
+                    self.canonical_input_count.set(inputs.len());
+                }
+                // Return one zero-word output (expr_count = 1).
+                Ok(vec![u32_slice_to_le_bytes(&[0])])
+            }
+        }
+        let arena = one_expr_arena();
+        let dispatcher = InputCountDispatcher {
+            canonical_input_count: Cell::new(0),
+            call: Cell::new(0),
+        };
+        let mut canonical = Vec::new();
+        run_cse_kernels_into(&arena, &dispatcher, &mut canonical)
+            .expect("Fix: cse kernels dispatch succeeds");
+        assert_eq!(
+            dispatcher.canonical_input_count.get(),
+            7,
+            "canonical-id dispatch must receive 7 inputs: hash, canonical (RW), \
+             table_canonical (RW dummy), arena_kinds, arena_arg0, arena_arg1, arena_arg2; \
+             before the fix only 3 inputs were wired and hash collisions silently merged \
+             non-equivalent exprs"
+        );
+    }
+
+    /// P1 regression: `apply_cse_canonicals` must actually rewrite duplicate
+    /// `Let` bindings. A program with two identical `LitU32(42)` bindings and
+    /// a canonical map that points the second expr to the first should produce
+    /// `let b = Var("a")`, not `let b = LitU32(42)`.
+    #[test]
+    fn apply_cse_canonicals_rewrites_duplicate_let_to_var() {
+        use vyre_foundation::ir::{Expr, Ident, Node, Program};
+        // Program:
+        //   let a = LitU32(42)   // expr 0 in arena  → canonical[0] = 0 (self)
+        //   let b = LitU32(42)   // expr 1 in arena  → canonical[1] = 0 (dup of a)
+        let entry = vec![
+            Node::let_bind("a", Expr::u32(42)),
+            Node::let_bind("b", Expr::u32(42)),
+        ];
+        let prog = Program::wrapped(Vec::new(), [1, 1, 1], entry);
+        let arena = encode_expr_arena(&prog).expect("Fix: simple program encodes");
+        // expr 0 = LitU32(42) for 'a', expr 1 = LitU32(42) for 'b'.
+        // Canonical: b's expr (id=1) is a dup of a's expr (id=0).
+        assert_eq!(arena.expr_count, 2, "expected 2 exprs in arena");
+        let canonical = vec![0u32, 0u32]; // canonical[1] = 0
+        let rewritten = apply_cse_canonicals(&prog, &arena, &canonical);
+        // Expect: let b = Var("a")
+        let entry_nodes: Vec<Node> = match rewritten.entry() {
+            [Node::Region { body, .. }] => body.as_ref().to_vec(),
+            other => other.to_vec(),
+        };
+        assert_eq!(entry_nodes.len(), 2, "program must still have 2 nodes");
+        match &entry_nodes[1] {
+            Node::Let { name, value } => {
+                assert_eq!(
+                    name.as_ref(),
+                    "b",
+                    "second let must remain named 'b'"
+                );
+                assert_eq!(
+                    value,
+                    &Expr::Var(Ident::new(std::sync::Arc::from("a"))),
+                    "apply_cse_canonicals must rewrite let b = LitU32(42) to let b = Var(\"a\") \
+                     when canonical[1] == 0 and the canonical expr is bound to 'a'; \
+                     before the fix the function was a no-op stub that returned the original program"
+                );
+            }
+            other => panic!("expected Node::Let for 'b', got {other:?}"),
+        }
     }
 }

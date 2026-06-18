@@ -140,8 +140,19 @@ impl SharedFactHeader {
     }
 
     /// Render the stable compact header used by schema contract tests.
+    ///
+    /// Absent optional fields use `-` as their sentinel so that `object=None`
+    /// and `object=Some(0)` produce distinct tokens (`object=-` vs `object=0`).
+    /// Since Polonius origin/loan/point ids are dense `u32` starting from 0,
+    /// `Some(0)` is a valid, common value and must not be conflated with absence.
     #[must_use]
     pub fn wire_header(&self) -> String {
+        let object_token = self
+            .object
+            .map_or_else(|| "-".to_string(), |v| v.to_string());
+        let aux_token = self
+            .aux
+            .map_or_else(|| "-".to_string(), |v| v.to_string());
         format!(
             "schema=v{};producer={};kind={};fact_id={};subject={};object={};aux={};file={};start={};end={};soundness={:?}",
             self.schema_version,
@@ -149,8 +160,8 @@ impl SharedFactHeader {
             self.kind.wire_tag(),
             self.fact_id,
             self.subject,
-            self.object.unwrap_or(0),
-            self.aux.unwrap_or(0),
+            object_token,
+            aux_token,
             self.file_id,
             self.start_byte,
             self.end_byte,
@@ -168,9 +179,12 @@ mod tests {
         let header = SharedFactHeader::new("c-c11", SharedFactKind::Source, 1, 42, Soundness::Exact)
             .with_span(7, 100, 120);
 
+        // object and aux are absent (None): wire token is "-", not "0".
+        // "0" is a valid Polonius id (first interned origin/loan) and must not
+        // be conflated with absence.
         assert_eq!(
             header.wire_header(),
-            "schema=v1;producer=c-c11;kind=source;fact_id=1;subject=42;object=0;aux=0;file=7;start=100;end=120;soundness=Exact"
+            "schema=v1;producer=c-c11;kind=source;fact_id=1;subject=42;object=-;aux=-;file=7;start=100;end=120;soundness=Exact"
         );
     }
 
@@ -189,6 +203,57 @@ mod tests {
         assert_eq!(
             header.wire_header(),
             "schema=v1;producer=rustc-nll;kind=borrow_subset;fact_id=9;subject=3;object=5;aux=11;file=0;start=0;end=0;soundness=Exact"
+        );
+    }
+
+    /// Regression: `object=None` and `object=Some(0)` must produce distinct wire
+    /// tokens.  Before the fix both produced `object=0`; now they produce
+    /// `object=-` and `object=0` respectively.
+    #[test]
+    fn wire_header_distinguishes_absent_object_from_zero_object() {
+        let no_object =
+            SharedFactHeader::new("rustc-nll", SharedFactKind::BorrowLoan, 1, 5, Soundness::Exact);
+        let object_zero = no_object.clone().with_object(0);
+
+        // Semantic difference must be preserved on the wire.
+        assert_ne!(
+            no_object.wire_header(),
+            object_zero.wire_header(),
+            "wire_header must distinguish object=None from object=Some(0)"
+        );
+        assert!(
+            no_object.wire_header().contains("object=-"),
+            "absent object must encode as 'object=-', got: {}",
+            no_object.wire_header()
+        );
+        assert!(
+            object_zero.wire_header().contains("object=0"),
+            "object=Some(0) must encode as 'object=0', got: {}",
+            object_zero.wire_header()
+        );
+    }
+
+    /// Same injectivity requirement for the aux field.
+    #[test]
+    fn wire_header_distinguishes_absent_aux_from_zero_aux() {
+        let no_aux =
+            SharedFactHeader::new("rustc-nll", SharedFactKind::BorrowLoan, 2, 7, Soundness::Exact);
+        let aux_zero = no_aux.clone().with_aux(0);
+
+        assert_ne!(
+            no_aux.wire_header(),
+            aux_zero.wire_header(),
+            "wire_header must distinguish aux=None from aux=Some(0)"
+        );
+        assert!(
+            no_aux.wire_header().contains("aux=-"),
+            "absent aux must encode as 'aux=-', got: {}",
+            no_aux.wire_header()
+        );
+        assert!(
+            aux_zero.wire_header().contains("aux=0"),
+            "aux=Some(0) must encode as 'aux=0', got: {}",
+            aux_zero.wire_header()
         );
     }
 

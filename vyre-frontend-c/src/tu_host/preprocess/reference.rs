@@ -62,10 +62,10 @@ pub fn reference_expand_preprocessor_macros(source: &str) -> String {
         }
         if let Some(rest) = trimmed.strip_prefix("#elif") {
             let Some(frame) = conditionals.last_mut() else {
-                continue;
+                panic!("#elif without matching #if");
             };
             if frame.saw_else {
-                continue;
+                panic!("#elif after #else");
             }
             let cond = frame.parent_active
                 && !frame.branch_taken
@@ -76,10 +76,10 @@ pub fn reference_expand_preprocessor_macros(source: &str) -> String {
         }
         if trimmed.starts_with("#else") {
             let Some(frame) = conditionals.last_mut() else {
-                continue;
+                panic!("#else without matching #if");
             };
             if frame.saw_else {
-                continue;
+                panic!("duplicate preprocessor #else");
             }
             let cond = !frame.branch_taken;
             frame.current_active = frame.parent_active && cond;
@@ -88,11 +88,15 @@ pub fn reference_expand_preprocessor_macros(source: &str) -> String {
             continue;
         }
         if trimmed.starts_with("#endif") {
-            let _ = conditionals.pop();
+            if conditionals.pop().is_none() {
+                panic!("#endif without matching #if");
+            }
             continue;
         }
         if let Some(rest) = trimmed.strip_prefix("#error") {
-            let _ = rest;
+            if active {
+                panic!("active preprocessor #error encountered:{rest}");
+            }
             continue;
         }
         if trimmed.starts_with("#pragma") || trimmed.starts_with("#line") {
@@ -103,6 +107,10 @@ pub fn reference_expand_preprocessor_macros(source: &str) -> String {
             out.push_str(&expand_line_macros(raw_line, &macros, 0));
             out.push('\n');
         }
+    }
+
+    if !conditionals.is_empty() {
+        panic!("unterminated conditional: {} unclosed #if/#ifdef/#ifndef block(s)", conditionals.len());
     }
 
     out
