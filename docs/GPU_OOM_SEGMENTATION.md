@@ -347,3 +347,93 @@ where Hyperscan's prefilter is also weak (and very large inputs). Segmentation i
 a necessary, recall-preserving, now-landed foundation a prefilter builds on — not,
 by itself, a Hyperscan-beater on this workload. (See memory
 `gpu-megakernel-prefilter-bound`; keyhog wiring commit `d23e70af`.)
+
+---
+
+## COMBINED-AUTOMATON path (the real lever after segmentation) — design, grounded 2026-06-17
+
+> STATUS CORRECTION (2026-06-17): the combined-automaton lever below is **already
+> implemented in keyhog**, not pending. The 3.15x in the END-TO-END section above
+> is STALE (pre-grouping). keyhog `megakernel.rs` dedups identical literals
+> (3124->1643) then GROUPS the 1643 unique literals into 32 COMBINED multi-pattern
+> DFAs (`GPU_LITERAL_RULE_GROUPS=32`, each `build_regex_dfa_unanchored(&[group
+> literals])`) scanned ONCE: kernel_wall 278ms->7-9ms (~35x), ratio 2.29x->**1.15x**,
+> recall parity 254==254 (keyhog commit fb466fc7). So "walk once, not 3124 times"
+> is DONE. The remaining 1.15x gap is the SHARED phase2 floor (generic/fallback/
+> preprocess, ~252ms, run by BOTH backends), beatable only by keyhog's phase2-skip
+> (fold the GPU-confirmed firings into one anchored extraction pass) — a KEYHOG
+> change, not a vyre kernel change. See memory `gpu-megakernel-prefilter-bound`.
+> The vyre role is the segmented combined-scan PRIMITIVE + the soundness oracle
+> below; the design text that follows documents that primitive (it is what licensed
+> keyhog's grouped scan), NOT an un-started TODO.
+
+The END-TO-END finding above proved segmentation (occupancy 17%->100%) does NOT
+beat Hyperscan on a literal-rich 3124-rule catalog: GPU phase-1 = 489 ms because
+the geometry is `(seg, rule)` — every rule's per-rule DFA is walked over every
+byte, so 8 MiB is scanned ~3124 times (~24 GB of latency-bound transition reads).
+The lever is to walk the input ONCE with a COMBINED automaton, not 3124 times
+(landed in keyhog via literal grouping — see the status correction above).
+
+### What already exists (do NOT rebuild — NO DUPLICATION)
+- `vyre_libs::scan::classic_ac::classic_ac_compile(&[&[u8]]) -> ClassicAcAutomaton`
+  builds ONE multi-pattern Aho-Corasick `CompiledDfa` over a pattern SET:
+  dense `transitions[state*256+byte]`, `output_offsets[state]`, and a flat
+  `output_records` array = the SET of pattern_ids accepting at each state
+  (incl. via failure links). `classic_ac_scan` is the linear CPU oracle emitting
+  every `(pattern_id, end)`; `classic_ac_program` is a vyre GPU-IR program that
+  multi-emits via `output_records`. (`vyre-primitives::matching::dfa_compile`.)
+- The megakernel segmentation geometry, `plan_segments` window tiling, overlap
+  warm-up, and emit-guard are landed + proven (F6 + segmentation.rs proptests).
+
+### What was MISSING, now landed (CPU soundness foundation)
+`vyre-driver-wgpu/src/megakernel/segmentation.rs` test module gains
+`combined_segmented_scan` + `combined_segmented_equals_linear_classic_ac_scan`
+(proptest) + a known-case test: the PRODUCTION combined AC (`classic_ac_compile`,
+dense transitions + `output_records` multi-emit), scanned in `plan_segments`
+windows with `overlap >= max_pattern_len` and the `i >= emit_start` guard,
+produces EXACTLY the linear `classic_ac_scan` `(pattern_id, end)` set, for any
+seg_len. This is the soundness contract the combined kernel mirrors — analogous
+to the existing per-rule `segmented_scan == dense_scan` oracle, but on the real
+`CompiledDfa`/`output_records` automaton the kernel will actually run.
+(`end` = 0-based byte index, classic_ac_scan's convention — NOT the model
+oracle's `i+1`.)
+
+### The build (self-contained in vyre — NO keyhog dependency)
+KEY ARCHITECTURAL FINDING: rules enter the megakernel as PRE-BUILT PER-RULE DFAs
+(`vyre_runtime::megakernel::rule_catalog::pack_rule_catalog(&[BatchRuleProgram])`,
+each carrying `transitions/accept/state_count`). There is NO pattern-level entry.
+A combined automaton CANNOT be reconstructed from minimized per-rule DFAs (the
+patterns are gone; a 3124-way DFA product is astronomically large). So the
+combined path needs the PATTERNS. That is NOT a keyhog blocker: vyre ships a
+self-contained combined-scan capability that takes patterns, builds the combined
+DFA via `classic_ac_compile`, and scans once. keyhog adopts later by handing vyre
+its literal pattern set (or per-rule required-literal factors) instead of, or
+alongside, the per-rule DFAs.
+
+Concrete kernel plan (all in vyre-driver-wgpu — does NOT touch vyre-runtime's
+per-rule `rule_catalog`, so no collision with the cycle-3 swarm):
+1. `CombinedBatch::upload(files, patterns: &[&[u8]], hit_capacity)` — build one
+   `classic_ac_compile(patterns)`; flatten `transitions` (state_count*256),
+   `output_offsets` (state_count+1), `output_records` into device buffers;
+   `overlap = dfa.max_pattern_len`; reuse `plan_segments`/`segment_table`.
+2. Kernel geometry: `(seg)` only — `queue_len = segment_count` (NOT
+   `* rule_count`). The persistent drain loop (F6 `forever` + `claim>=QUEUE_LEN`)
+   is unchanged.
+3. `combined_dfa_byte_scanner`: state=0; for byte_pos in [scan_start, emit_end):
+   `state = transitions[state*256 + byte]`; if `byte_pos >= emit_start`:
+   `for out_idx in output_offsets[state]..output_offsets[state+1]:
+   emit HitRecord{ file_idx, rule_idx = output_records[out_idx], layer_idx,
+   match_offset = byte_pos }`. HitRecord needs NO new field — `rule_idx` carries
+   the pattern_id directly (pattern_id == rule_idx when patterns are the rules;
+   else a pattern_id->rule_idx map applied host-side at readback).
+4. Optional: byte-class compress the combined transitions (the per-rule path's
+   `class_maps` machinery) to shrink the (larger) combined table; dense first.
+5. GPU measurement: extend the throughput oracle with a MANY-pattern catalog
+   (hundreds of literals) comparing `(seg,rule)` per-rule vs `(seg)` combined
+   phase-1 time on the 5090. The per-rule multiplier disappears: combined does
+   ONE transition read per byte regardless of pattern count.
+
+Regex rules (no single required literal) cannot join the literal AC and must
+stay on a per-rule path or a literal-factor prefilter (Hyperscan's design); the
+combined path is the win for the literal-coverable majority. Bound the split and
+log it (Law 10) — never silently drop the regex rules from the combined pass.

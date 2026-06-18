@@ -421,6 +421,7 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
+    use vyre_libs::scan::classic_ac::{classic_ac_compile, classic_ac_scan, ClassicAcAutomaton};
 
     // ---- Model DFA for the dense-vs-segmented scan parity oracle ----
     //
@@ -991,6 +992,114 @@ mod tests {
                     .count();
                 prop_assert_eq!(owners, 1, "offset {} owned by {} windows, expected 1", pos, owners);
             }
+        }
+    }
+
+    // ---- Production-path COMBINED multi-pattern AC segmented oracle ----
+    //
+    // The oracle above (`segmented_scan` over the local `AcDfa`) proves the
+    // offset tiling + emit-guard are sound for a model automaton. This second
+    // oracle proves the SAME tiling is sound for the *production* combined
+    // automaton the GPU megakernel will actually run: ONE `classic_ac_compile`
+    // `CompiledDfa` over ALL patterns (dense `state*256+byte` transitions + the
+    // flat `output_offsets`/`output_records` multi-emit), NOT N per-rule DFAs.
+    //
+    // This is the soundness contract the COMBINED-automaton kernel mirrors: a
+    // single linear pass (`classic_ac_scan`) over the whole buffer must produce
+    // the EXACT same `(pattern_id, end)` set as the union over `plan_segments`
+    // windows, each walked from state 0 over `[scan_start, emit_end)` and
+    // emitting only matches whose end byte index lies in `[emit_start, emit_end)`,
+    // provided `overlap >= max_pattern_len`. Collapsing the geometry from
+    // `(seg, rule)` to `(seg)` + this multi-emit is what removes the per-rule
+    // brute-force multiplier that makes the megakernel lose to Hyperscan on a
+    // literal-rich catalog (docs/GPU_OOM_SEGMENTATION.md END-TO-END finding).
+
+    /// Combined-AC segmented scan over the production `CompiledDfa`. `end` is the
+    /// 0-based byte index where the match ends — the SAME convention as
+    /// [`classic_ac_scan`] (NOT the `i+1` convention of the model `segmented_scan`
+    /// above), so the two are directly comparable.
+    fn combined_segmented_scan(
+        ac: &ClassicAcAutomaton,
+        text: &[u8],
+        seg_len: u32,
+        overlap: u32,
+    ) -> BTreeSet<(u32, u32)> {
+        let dfa = &ac.dfa;
+        let mut hits = BTreeSet::new();
+        for seg in plan_segments(&[text.len() as u32], seg_len, overlap) {
+            let mut state = 0u32;
+            for i in seg.scan_start..seg.emit_end {
+                state = dfa.transitions[(state as usize) * DFA_BYTE_COLUMNS + text[i as usize] as usize];
+                // The loop bound already enforces `i < emit_end`; the window owns
+                // a match ending at byte index `i` iff `i >= emit_start`. Bytes in
+                // the `[scan_start, emit_start)` warm-up prefix advance state but
+                // emit nothing, so windows tile the file with no miss / no dup.
+                if i >= seg.emit_start {
+                    let begin = dfa.output_offsets[state as usize] as usize;
+                    let end = dfa.output_offsets[state as usize + 1] as usize;
+                    for &pattern_id in &dfa.output_records[begin..end] {
+                        hits.insert((pattern_id, i));
+                    }
+                }
+            }
+        }
+        hits
+    }
+
+    #[test]
+    fn combined_segmented_equals_linear_on_overlapping_patterns() {
+        // he/she/his/hers on "ushers" — the canonical multi-emit case (one accept
+        // state emits both "he" and "she" via failure links). A combined segmented
+        // scan with overlap >= max_pattern_len must reproduce the full linear set.
+        let ac = classic_ac_compile(&[b"he", b"she", b"his", b"hers"]);
+        let text = b"ushers";
+        let overlap = ac.dfa.max_pattern_len; // 4 ("hers"/"she")
+        let linear: BTreeSet<(u32, u32)> = classic_ac_scan(&ac, text).into_iter().collect();
+        // Cross-check the linear oracle itself first (guards against a silent
+        // regression in classic_ac_scan). In "ushers" (u0 s1 h2 e3 r4 s5),
+        // classic_ac_scan reports the END byte index: "she"(pid1) and "he"(pid0)
+        // both end at e=index 3; "hers"(pid3) ends at the final s=index 5.
+        assert!(linear.contains(&(1, 3)), "linear must contain she@3: {linear:?}");
+        assert!(linear.contains(&(0, 3)), "linear must contain he@3: {linear:?}");
+        assert!(linear.contains(&(3, 5)), "linear must contain hers@5: {linear:?}");
+        // Every small segment width must reproduce the linear set exactly.
+        for seg_len in 1u32..=8 {
+            let segmented = combined_segmented_scan(&ac, text, seg_len, overlap);
+            assert_eq!(
+                segmented, linear,
+                "combined segmented (seg_len={seg_len}, overlap={overlap}) != linear classic_ac_scan"
+            );
+        }
+    }
+
+    proptest! {
+        /// THE soundness proof for the COMBINED-automaton megakernel path: over a
+        /// random multi-pattern set and random text, the production combined AC
+        /// (`classic_ac_compile`) scanned in `plan_segments` windows with
+        /// `overlap >= max_pattern_len` and the `output_records` multi-emit
+        /// produces EXACTLY the linear `classic_ac_scan` `(pattern_id, end)` set,
+        /// for ANY segment width. This is what licenses collapsing the kernel
+        /// geometry from `(seg, rule)` (N per-rule passes) to `(seg)` (one combined
+        /// pass) without dropping or duplicating a single match.
+        #[test]
+        fn combined_segmented_equals_linear_classic_ac_scan(
+            patterns in proptest::collection::vec(
+                proptest::collection::vec(b'a'..=b'd', 1..=6), 1..=5),
+            text in proptest::collection::vec(b'a'..=b'd', 0..400),
+            seg_len in 1u32..64,
+            extra_overlap in 0u32..8,
+        ) {
+            let pat_refs: Vec<&[u8]> = patterns.iter().map(|p| p.as_slice()).collect();
+            let ac = classic_ac_compile(&pat_refs);
+            // The combined automaton's AC synchronization distance is <= its
+            // longest pattern, so max_pattern_len (+ slack) is a sufficient warm-up.
+            let overlap = ac.dfa.max_pattern_len + extra_overlap;
+            let linear: BTreeSet<(u32, u32)> = classic_ac_scan(&ac, &text).into_iter().collect();
+            let segmented = combined_segmented_scan(&ac, &text, seg_len, overlap);
+            prop_assert_eq!(
+                segmented, linear,
+                "combined segmented (seg_len={}, overlap={}) != linear", seg_len, overlap
+            );
         }
     }
 }
