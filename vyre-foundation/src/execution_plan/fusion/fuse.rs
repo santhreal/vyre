@@ -82,9 +82,9 @@ pub(crate) enum ArmNamespace {
 /// Same hazard analysis, buffer union, binding renumbering, and barrier
 /// insertion as [`fuse_programs`]; the only difference is that arm-local
 /// names and scopes are **shared**, not isolated (see [`ArmNamespace`]).
-/// This is the correct primitive for surgec's intra-rule
-/// `lower_expr`/quantifier/predicate composition, where alpha-renaming would
-/// desync a quantifier-flag readback from its consumer.
+/// This is the correct primitive for shared-scope composition where the merged
+/// arms must reference each other's local names — alpha-renaming would desync a
+/// flag/readback from its in-program consumer.
 ///
 /// # Errors
 ///
