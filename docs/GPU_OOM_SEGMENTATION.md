@@ -289,18 +289,18 @@ The three suite-merge recorders (`record_{required,observed}_metric_percentile`)
 were audited for Law-10: both push a loud blocker on a missing metric — no silent
 default-to-zero. Publish remains user-gated.
 
-### OPEN (coverage note, NOT a confirmed regression) — INT4 100x
+### RESOLVED (was a contention artifact, NOT a regression) — INT4 100x
 A full `xtask release-benchmarks --backend cuda` run observed
-`nn.linear_4bit_affine_grouped.1m` at **96.55x** vs its `cpu_sota_100x` contract.
-This was a SINGLE sample taken while a heavy `cargo` build contended the CPU; the
-ratio is `T_cpu_oracle / T_gpu`, and CPU contention inflates `T_cpu_oracle` → the
-true idle ratio is ≤ 96.55x. So this MIGHT be a real ~3.5% shortfall — but one
-contended data point is weak; it needs a clean isolated measurement
-(`vyre-bench run --suite release --case nn.linear_4bit_affine_grouped.1m
---backend cuda --measured-samples 30` on an idle host) before claiming a
-regression. It does NOT block any of the 4 evidence gates (gate 4 reads the
-committed cuda-release-suite; gate 1 uses the single-case ptx bench). It only
-fails a FULL release-benchmarks run and gates the optimization-manifest emission
-via `should_write_optimization_manifest(workload_failures_empty=…)`. Kernel:
+`nn.linear_4bit_affine_grouped.1m` at **96.55x** vs its `cpu_sota_100x` contract,
+while a heavy `cargo` build contended the host. A clean isolated re-measure on the
+idle host (`vyre-bench run --suite release --case nn.linear_4bit_affine_grouped.1m
+--backend cuda --measured-samples 30`) gives **116.8x** (pass) — GPU p50 6144 ns,
+CPU oracle p50 717312 ns. The kernel is fine; the dip was a measurement artifact:
+the GPU time is tiny (~6 µs), so host-side contention inflated the GPU-side
+measurement far more than the large (~717 µs) CPU oracle, depressing the ratio
+below 100x. (My earlier "contention inflates the ratio" reasoning was wrong — for
+a microsecond-scale GPU kernel, host contention inflates the *denominator* more.)
+Lesson: budget-margin perf cases must be measured on an idle host; a contended
+full-suite run is not authoritative for sub-10 µs GPU kernels. Kernel:
 `vyre-libs/src/nn/linear/inner/linear_4bit.rs` (256-wide grouped INT4, 32
 lanes/output, 8 outputs/workgroup).
