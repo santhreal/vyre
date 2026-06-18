@@ -23,6 +23,14 @@ use vyre_lower::{
 use super::BodyBuilder;
 use crate::EmitError;
 
+/// Backend-owned WGSL identifier for the trap sidecar global. The WGSL name is
+/// internal to the shader — the host binds the sidecar by descriptor slot name
+/// (`vyre_lower::TRAP_SIDECAR_NAME` = `__vyre_descriptor_trap_sidecar`) plus the
+/// numeric `@group/@binding`, never by the WGSL identifier — so the wgpu Naga
+/// backend names its own sidecar global. `trap_nodes_lower_to_backend_sidecar`
+/// pins this contract.
+const WGSL_TRAP_SIDECAR_GLOBAL: &str = "vyre_wgpu_trap_sidecar";
+
 #[derive(Clone, Copy)]
 pub(super) struct TypeHandles {
     pub(super) bool_ty: naga::Handle<Type>,
@@ -215,6 +223,15 @@ impl ModuleBuilder {
 
     fn add_binding(&mut self, binding: &BindingSlot, is_atomic: bool) -> Result<(), EmitError> {
         let scalar_ty = self.scalar_type(&binding.element_type, binding.slot)?;
+        // WGSL identifier for this binding's global (and its derived type
+        // aliases). For the trap sidecar the wgpu backend owns the name; every
+        // other binding keeps its descriptor name. The numeric @group/@binding
+        // (not this string) is what connects the global to the descriptor slot.
+        let wgsl_name = if binding.name == TRAP_SIDECAR_NAME {
+            WGSL_TRAP_SIDECAR_GLOBAL.to_owned()
+        } else {
+            binding.name.clone()
+        };
         let element_ty = if is_atomic {
             let scalar = match &self.module.types[scalar_ty].inner {
                 TypeInner::Scalar(s) => *s,
@@ -227,7 +244,7 @@ impl ModuleBuilder {
             };
             self.module.types.insert(
                 Type {
-                    name: Some(format!("{}_atomic", binding.name)),
+                    name: Some(format!("{wgsl_name}_atomic")),
                     inner: TypeInner::Atomic(scalar),
                 },
                 Span::UNDEFINED,
@@ -255,7 +272,7 @@ impl ModuleBuilder {
         };
         let array_ty = self.module.types.insert(
             Type {
-                name: Some(format!("{}_elements", binding.name)),
+                name: Some(format!("{wgsl_name}_elements")),
                 inner: TypeInner::Array {
                     base: element_ty,
                     size,
@@ -266,7 +283,7 @@ impl ModuleBuilder {
         );
         let global = self.module.global_variables.append(
             GlobalVariable {
-                name: Some(binding.name.clone()),
+                name: Some(wgsl_name),
                 space: address_space(binding),
                 binding: resource_binding(binding),
                 ty: array_ty,
