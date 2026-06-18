@@ -250,6 +250,14 @@ impl BodyBuilder<'_> {
     pub(super) fn emit_body(&mut self, body: &KernelBody) -> Result<(), EmitError> {
         for op in &body.ops {
             self.emit_op(body, op)?;
+            // A `Trap` lowers to an unconditional `Return` for every lane (see
+            // emit_trap), and a `Return` terminates the block. naga rejects any
+            // statement after a `Return` in the same block
+            // (`InstructionsAfterReturn`), so stop emitting this block's
+            // remaining ops — they are unreachable by the trap/return semantics.
+            if matches!(op.kind, KernelOpKind::Trap { .. } | KernelOpKind::Return) {
+                break;
+            }
         }
         Ok(())
     }
