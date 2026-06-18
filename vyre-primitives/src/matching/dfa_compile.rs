@@ -284,12 +284,24 @@ impl CompiledDfa {
                 reason: "output_offsets entries must be within output_records",
             });
         }
-        // Note: max_pattern_len == 0 with non-empty accept states is VALID when the
-        // compiled pattern set contains a zero-length pattern (the empty string matches
-        // at every position; the root state is an accept state). The former guard that
-        // rejected this combination was overly strict and broke round-trips for
-        // dfa_compile(&[b""]). The structural guards above (transitions/accept lengths,
-        // offset monotonicity, bounds) are sufficient to ensure a valid DFA.
+        // max_pattern_len == 0 is consistent ONLY when the sole accepting state is the
+        // root (state 0). The empty pattern matches at the root having consumed no
+        // bytes, so its length is 0 and `dfa_compile(&[b""])` legitimately carries
+        // max_pattern_len == 0 with accept[0] != 0. A *non-root* accept state, however,
+        // is reachable only by consuming >= 1 byte along some pattern, so it spells a
+        // pattern of length == depth(state) >= 1 and forces max_pattern_len >= 1. A blob
+        // that pairs max_pattern_len == 0 with a deeper accept is therefore internally
+        // inconsistent (the classic symptom of a corrupted cache whose length scalar was
+        // zeroed). Reject it: max_pattern_len bounds the per-position replay / segmentation
+        // warm-up window (see the field doc), so handing back an under-sized 0 would
+        // silently drop every match that straddles a segment boundary — an invisible
+        // recall loss. This is the precise form of the former guard, which was over-broad
+        // (it also rejected the genuine empty-pattern round-trip, accept only at the root).
+        if max_pattern_len == 0 && accept.iter().skip(1).any(|&state| state != 0) {
+            return Err(DfaWireError::ShapeMismatch {
+                reason: "max_pattern_len == 0 but a non-root state accepts",
+            });
+        }
 
         Ok(Self {
             transitions,
@@ -749,6 +761,40 @@ mod tests {
         assert_eq!(
             dfa2.max_pattern_len, 0,
             "deserialized DFA must preserve max_pattern_len=0"
+        );
+    }
+
+    #[test]
+    fn from_bytes_rejects_zero_max_pattern_len_with_non_root_accept() {
+        // dfa_compile(&[b"AKIA"]) produces a non-root accept state (the state reached
+        // after consuming A-K-I-A) and max_pattern_len == 4. A blob that claims
+        // max_pattern_len == 0 while still carrying that deeper accept is internally
+        // inconsistent — the canonical symptom of a corrupted cache whose length scalar
+        // was zeroed. Decoding it would yield a DFA whose under-sized replay/segmentation
+        // window silently drops cross-boundary matches, so from_bytes must fail closed.
+        let mut dfa = dfa_compile(&[b"AKIA".as_slice()]);
+        assert!(
+            dfa.max_pattern_len >= 1,
+            "precondition: AKIA must compile to max_pattern_len >= 1, got {}",
+            dfa.max_pattern_len
+        );
+        assert!(
+            dfa.accept.iter().skip(1).any(|&state| state != 0),
+            "precondition: AKIA must have a non-root accept state"
+        );
+        // Forge the corruption by zeroing only the max_pattern_len scalar; every other
+        // table stays consistent, so the rejection is attributable solely to the new check.
+        dfa.max_pattern_len = 0;
+        let bytes = dfa.to_bytes().expect("encode forged DFA wire blob");
+        let err = CompiledDfa::from_bytes(&bytes).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                DfaWireError::ShapeMismatch {
+                    reason: "max_pattern_len == 0 but a non-root state accepts"
+                }
+            ),
+            "expected ShapeMismatch with the non-root-accept reason, got {err:?}"
         );
     }
 
