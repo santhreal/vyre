@@ -284,11 +284,17 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
                     if let (Expr::LitU32(a), Expr::LitU32(b)) =
                         (inner_shift.as_ref(), right.as_ref())
                     {
-                        let fused = a.saturating_add(*b).min(31);
+                        let total = a.saturating_add(*b);
+                        // A u32 shift by >= 32 bits produces 0 for every
+                        // non-zero value of x; clamping to 31 would produce
+                        // x << 31 instead of 0 — a miscompile.
+                        if total > 31 {
+                            return Some(Expr::u32(0));
+                        }
                         return Some(Expr::BinOp {
                             op: *op,
                             left: x.clone(),
-                            right: Box::new(Expr::u32(fused)),
+                            right: Box::new(Expr::u32(total)),
                         });
                     }
                 }

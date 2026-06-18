@@ -261,6 +261,47 @@ impl ReadbackRing {
         })
     }
 
+    /// Ensure slot `idx` is reusable for a fresh readback: either already
+    /// `SLOT_FREE`, or `SLOT_PENDING` that completes to `SLOT_FREE` after one
+    /// device poll. Any other terminal state is a caller contract violation and
+    /// is reported as a distinct, fail-closed error.
+    ///
+    /// VYRE-WGPU-002: earlier code conflated `SLOT_READY` / `SLOT_ERROR` with a
+    /// single misleading wrap-overflow message. We now name each
+    /// state — but we DO NOT silently recycle an uncollected `SLOT_READY` slot.
+    /// Recycling would unmap and discard a completed-but-uncollected readback —
+    /// a silent recall loss (Law 10). The caller MUST collect every readback
+    /// before the ring wraps back to its slot; if it has not, we fail closed so
+    /// the data loss is impossible to miss.
+    fn ensure_slot_reusable(
+        &self,
+        idx: usize,
+        slot: &GpuSlot,
+        device: &wgpu::Device,
+    ) -> Result<(), BackendError> {
+        let mut state = slot.state.load(Ordering::Acquire);
+        if state == SLOT_PENDING {
+            self.stats.record_stall();
+            crate::runtime::device::poll_device_once(device)?;
+            state = slot.state.load(Ordering::Acquire);
+        }
+        match state {
+            SLOT_FREE => Ok(()),
+            SLOT_READY => Err(BackendError::new(format!(
+                "readback ring slot {idx} holds an uncollected completed readback (SLOT_READY). Fix: collect every ReadbackTicket via collect_slot_into before the ring wraps back to this slot — recycling it would silently drop the prior result (a recall loss)."
+            ))),
+            SLOT_ERROR => Err(BackendError::new(format!(
+                "readback ring slot {idx} is in SLOT_ERROR (prior map_async failed) and was not collected before reuse. Fix: collect error slots via collect_slot_into before submitting new readbacks to the same slot."
+            ))),
+            SLOT_PENDING => Err(BackendError::new(format!(
+                "readback ring slot {idx} is still SLOT_PENDING after a device poll — the prior readback has not completed. Fix: increase ring depth (more slots) or collect outstanding readbacks before submitting more."
+            ))),
+            other => Err(BackendError::new(format!(
+                "readback ring slot {idx} has unexpected state {other}. Fix: do not modify readback ring slot state outside the ring API."
+            ))),
+        }
+    }
+
     /// Record a readback copy into the next available ring slot.
     ///
     /// The caller must submit the encoder and then arm the returned ticket with
@@ -271,8 +312,9 @@ impl ReadbackRing {
     /// # Errors
     ///
     /// Returns [`BackendError`] if the byte range cannot be represented, the
-    /// ring slot would wrap before collection, or the requested readback exceeds
-    /// slot capacity.
+    /// ring slot is not reusable (an uncollected `SLOT_READY`/`SLOT_ERROR` slot
+    /// or a still-pending slot after a device poll), or the requested readback
+    /// exceeds slot capacity.
     pub fn record_copy(
         &self,
         device: &wgpu::Device,
@@ -291,15 +333,7 @@ impl ReadbackRing {
             )));
         }
 
-        if slot.state.load(Ordering::Acquire) == SLOT_PENDING {
-            self.stats.record_stall();
-            crate::runtime::device::poll_device_once(device)?;
-        }
-        if slot.state.load(Ordering::Acquire) != SLOT_FREE {
-            return Err(BackendError::new(format!(
-                "readback ring slot {idx} wrapped before collection. Fix: collect ready/error slots before submitting enough readbacks to reuse the same slot."
-            )));
-        }
+        self.ensure_slot_reusable(idx, slot, device)?;
 
         slot.byte_len.store(byte_len, Ordering::Release);
         slot.mapped_len.store(mapped_len, Ordering::Release);
@@ -439,7 +473,13 @@ impl ReadbackRing {
         result
     }
 
-    /// Submit a copy and mark the slot pending.
+    /// Submit a copy from `src_buffer` at `src_offset` and mark the slot pending.
+    ///
+    /// `src_offset` is the byte offset within `src_buffer` to copy from. Pass
+    /// `0` to read from the start of the buffer. This mirrors the `src_offset`
+    /// parameter accepted by `record_copy`; callers that need a sub-range of
+    /// the source buffer must supply a non-zero offset here rather than
+    /// wrapping a slice — the wgpu copy API requires aligned buffer offsets.
     ///
     /// # Errors
     /// Returns [\`BackendError\`] if encoder or queue submission fails.
@@ -448,6 +488,7 @@ impl ReadbackRing {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         src_buffer: &wgpu::Buffer,
+        src_offset: u64,
         byte_len: u64,
     ) -> Result<usize, BackendError> {
         let idx = self.next_slot_index()?;
@@ -460,15 +501,7 @@ impl ReadbackRing {
             )));
         }
 
-        if slot.state.load(Ordering::Acquire) == SLOT_PENDING {
-            self.stats.record_stall();
-            crate::runtime::device::poll_device_once(device)?;
-        }
-        if slot.state.load(Ordering::Acquire) != SLOT_FREE {
-            return Err(BackendError::new(format!(
-                "readback ring slot {idx} wrapped before collection. Fix: collect ready/error slots before submitting enough readbacks to reuse the same slot."
-            )));
-        }
+        self.ensure_slot_reusable(idx, slot, device)?;
 
         let state_clone = Arc::clone(&slot.state);
         slot.byte_len.store(byte_len, Ordering::Release);
@@ -484,7 +517,7 @@ impl ReadbackRing {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("vyre readback ring copy"),
         });
-        encoder.copy_buffer_to_buffer(src_buffer, 0, &slot.buffer, 0, mapped_len);
+        encoder.copy_buffer_to_buffer(src_buffer, src_offset, &slot.buffer, 0, mapped_len);
         queue.submit(std::iter::once(encoder.finish()));
 
         slot.buffer
@@ -749,6 +782,122 @@ mod tests {
         assert!(
             production.contains("reserve_backend_vec(&mut slots, size, \"readback ring slot table\")?"),
             "Fix: readback ring construction should reserve slot tables through the shared WGPU staging helper."
+        );
+    }
+
+    /// VYRE-WGPU-002: the pre-use slot check must distinguish SLOT_READY and
+    /// SLOT_ERROR from a ring overflow with state-specific diagnostics — and it
+    /// must FAIL CLOSED on an uncollected SLOT_READY slot rather than silently
+    /// recycle it. Silently recycling unmaps and discards a completed-but-
+    /// uncollected readback, which is a silent recall loss (Law 10).
+    ///
+    /// Both `record_copy` and `submit_readback` route their pre-use check
+    /// through the single `ensure_slot_reusable` helper, so the contract is
+    /// expressed once. This source-text canary asserts that structural shape
+    /// without a live GPU; the behavioral round-trip lives in the GPU-gated
+    /// `readback_ring_liveness_contracts` integration test.
+    #[test]
+    fn slot_reuse_check_fails_closed_on_uncollected_ready_with_distinct_diagnostics() {
+        let src = include_str!("readback_ring.rs");
+        // Locate production code only (before the first test module).
+        let production = src
+            .split("\n#[cfg(test)]\nmod tests")
+            .next()
+            .expect("Fix: readback_ring.rs should have a test module");
+
+        // Both methods must funnel through the single dedup'd helper.
+        assert!(
+            production.contains("fn ensure_slot_reusable("),
+            "Fix: the slot reuse check must live in one ensure_slot_reusable helper, not be duplicated across record_copy / submit_readback"
+        );
+        assert_eq!(
+            production.matches("self.ensure_slot_reusable(idx, slot, device)?").count(),
+            2,
+            "Fix: both record_copy and submit_readback must call ensure_slot_reusable (one call site each)"
+        );
+
+        // Distinct, named arms for each terminal state.
+        assert!(
+            production.contains("SLOT_READY =>"),
+            "Fix: ensure_slot_reusable must have an explicit SLOT_READY arm"
+        );
+        assert!(
+            production.contains("SLOT_ERROR =>"),
+            "Fix: ensure_slot_reusable must have an explicit SLOT_ERROR arm with a distinct diagnostic"
+        );
+
+        // FAIL CLOSED, never silently recycle: an uncollected SLOT_READY slot
+        // must surface as an Err naming the loss, and the old recycle path
+        // (the "was SLOT_READY ... reused" tracing::warn that unmapped and
+        // reset the slot to FREE) must be gone entirely.
+        assert!(
+            production.contains("holds an uncollected completed readback (SLOT_READY)"),
+            "Fix: the SLOT_READY arm must fail closed with an error naming the uncollected readback, not recycle the slot"
+        );
+        assert!(
+            !production.contains("was SLOT_READY"),
+            "Fix: the silent recycle-on-reuse path (tracing::warn \"was SLOT_READY\" then unmap + store(SLOT_FREE)) is a Law-10 recall loss and must be removed — fail closed instead"
+        );
+        // The slot reuse check must not silently reset a non-FREE slot back to
+        // FREE; the only SLOT_FREE store is the post-submit transition. Count
+        // them: exactly the two PENDING transitions and zero recycle resets.
+        assert!(
+            !production.contains("slot.buffer.unmap();\n                slot.byte_len.store(0"),
+            "Fix: no recycle-and-continue (unmap + zero len + store(SLOT_FREE)) may remain in the reuse check"
+        );
+
+        // The old conflated message must be gone (it described every non-FREE
+        // state, READY and ERROR included, as a wrap).
+        assert!(
+            !production.contains("wrapped before collection"),
+            "Fix: the misleading 'wrapped before collection' message must be replaced by state-specific diagnostics"
+        );
+    }
+
+    /// VYRE-WGPU-003: `submit_readback` must accept a `src_offset` parameter
+    /// matching the `record_copy` signature.  Before the fix, `src_offset` was
+    /// hardcoded to 0, making sub-range reads silently return wrong data.
+    ///
+    /// This test verifies both the signature change and that the offset is
+    /// forwarded to the wgpu copy call — not discarded — without a live GPU.
+    #[test]
+    fn submit_readback_has_src_offset_parameter_matching_record_copy() {
+        let src = include_str!("readback_ring.rs");
+        let production = src
+            .split("\n#[cfg(test)]\nmod tests")
+            .next()
+            .expect("Fix: readback_ring.rs should have a test module");
+
+        // The function signature must include src_offset.
+        assert!(
+            production.contains("pub fn submit_readback(")
+                && production.contains("src_offset: u64"),
+            "Fix: submit_readback must declare src_offset: u64 to match record_copy's signature"
+        );
+
+        // The copy call in submit_readback must forward src_offset, not
+        // hardcode 0.  We verify the copy_buffer_to_buffer call inside
+        // submit_readback uses `src_offset` as the second argument.
+        //
+        // Locate the submit_readback function body and check it does not
+        // contain `copy_buffer_to_buffer(src_buffer, 0,` (the old hardcoded
+        // form that silently read from offset 0).
+        let submit_body_start = production
+            .find("pub fn submit_readback(")
+            .expect("submit_readback must exist");
+        let submit_body = &production[submit_body_start..];
+        // Find the copy call within that body.
+        let copy_call_in_body = submit_body
+            .find("copy_buffer_to_buffer(src_buffer,")
+            .expect("submit_readback must contain a copy_buffer_to_buffer call");
+        let copy_call_text = &submit_body[copy_call_in_body..copy_call_in_body + 80];
+        assert!(
+            !copy_call_text.contains("copy_buffer_to_buffer(src_buffer, 0,"),
+            "Fix: submit_readback must forward src_offset to copy_buffer_to_buffer, not hardcode 0. Found: {copy_call_text:?}"
+        );
+        assert!(
+            copy_call_text.contains("copy_buffer_to_buffer(src_buffer, src_offset,"),
+            "Fix: submit_readback must pass src_offset as the second argument to copy_buffer_to_buffer. Found: {copy_call_text:?}"
         );
     }
 }

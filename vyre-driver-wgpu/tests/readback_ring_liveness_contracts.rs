@@ -71,7 +71,7 @@ fn round_trip_preserves_bytes() {
     let ring = ReadbackRing::new(device, 4, data.len() as u64).unwrap();
 
     let idx = ring
-        .submit_readback(device, queue, &src, data.len() as u64)
+        .submit_readback(device, queue, &src, 0, data.len() as u64)
         .unwrap();
 
     wait_for_device(device);
@@ -96,7 +96,7 @@ fn collect_into_reuses_destination_capacity_and_trims_to_request() {
     let original_capacity = out.capacity();
 
     let idx = ring
-        .submit_readback(device, queue, &src, data.len() as u64)
+        .submit_readback(device, queue, &src, 0, data.len() as u64)
         .unwrap();
 
     wait_for_device(device);
@@ -166,7 +166,7 @@ fn submit_rejects_readback_larger_than_slot_capacity() {
     let ring = ReadbackRing::new(device, 4, 16).unwrap();
 
     let err = ring
-        .submit_readback(device, queue, &src, payload.len() as u64)
+        .submit_readback(device, queue, &src, 0, payload.len() as u64)
         .expect_err("oversized readback must fail before recording invalid GPU copy");
     assert!(
         err.to_string().contains("exceeds ring slot capacity"),
@@ -185,7 +185,7 @@ fn collect_slot_into_reuses_destination_and_preserves_unaligned_len() {
     let src = make_source_buffer(device, queue, &data);
     let ring = ReadbackRing::new(device, 4, data.len() as u64).unwrap();
     let idx = ring
-        .submit_readback(device, queue, &src, data.len() as u64)
+        .submit_readback(device, queue, &src, 0, data.len() as u64)
         .unwrap();
 
     wait_for_device(device);
@@ -222,7 +222,7 @@ fn slot_state_lifecycle() {
     let ring = ReadbackRing::new(device, 4, data.len() as u64).unwrap();
 
     let idx = ring
-        .submit_readback(device, queue, &src, data.len() as u64)
+        .submit_readback(device, queue, &src, 0, data.len() as u64)
         .unwrap();
 
     assert!(
@@ -265,7 +265,7 @@ fn indices_cycle_through_ring_capacity() {
         let payload = vec![i as u8; 16];
         let src = make_source_buffer(device, queue, &payload);
         let idx = ring
-            .submit_readback(device, queue, &src, payload.len() as u64)
+            .submit_readback(device, queue, &src, 0, payload.len() as u64)
             .unwrap();
         indices.push(idx);
     }
@@ -282,7 +282,7 @@ fn indices_cycle_through_ring_capacity() {
     let payload = vec![0xABu8; 16];
     let src = make_source_buffer(device, queue, &payload);
     let idx = ring
-        .submit_readback(device, queue, &src, payload.len() as u64)
+        .submit_readback(device, queue, &src, 0, payload.len() as u64)
         .unwrap();
     assert_eq!(idx, 0, "next submit must reuse the freed slot 0");
 }
@@ -306,8 +306,8 @@ fn minimum_ring_size_is_enforced() {
     let src_a = make_source_buffer(device, queue, &payload_a);
     let src_b = make_source_buffer(device, queue, &payload_b);
 
-    let idx_a = ring.submit_readback(device, queue, &src_a, 16).unwrap();
-    let idx_b = ring.submit_readback(device, queue, &src_b, 16).unwrap();
+    let idx_a = ring.submit_readback(device, queue, &src_a, 0, 16).unwrap();
+    let idx_b = ring.submit_readback(device, queue, &src_b, 0, 16).unwrap();
 
     // If the ring were size 1, idx_b would attempt to reuse slot 0 while it
     // is still mapped, causing a wgpu validation error. The fact that both
@@ -354,7 +354,7 @@ fn concurrent_submits_are_independent() {
     for payload in &payloads {
         let src = make_source_buffer(device, queue, payload);
         let idx = ring
-            .submit_readback(device, queue, &src, payload.len() as u64)
+            .submit_readback(device, queue, &src, 0, payload.len() as u64)
             .unwrap();
         indices.push(idx);
     }
@@ -463,7 +463,7 @@ fn extreme_ring_sizes_are_clamped_and_functional() {
         let payload = vec![0xCDu8; 16];
         let src = make_source_buffer(device, queue, &payload);
         let idx = ring
-            .submit_readback(device, queue, &src, payload.len() as u64)
+            .submit_readback(device, queue, &src, 0, payload.len() as u64)
             .unwrap();
 
         wait_for_device(device);

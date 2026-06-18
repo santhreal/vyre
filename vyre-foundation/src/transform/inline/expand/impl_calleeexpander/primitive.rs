@@ -18,8 +18,18 @@ impl CalleeExpander<'_> {
                 let renamed = self.rename_expr_vars(expr)?;
                 self.ctx.inline_expr(&renamed)
             }
-            Expr::InvocationId { .. } | Expr::WorkgroupId { .. } | Expr::LocalId { .. } | Expr::SubgroupLocalId | Expr::SubgroupSize => {
-                Ok((Vec::new(), Expr::u32(0)))
+            Expr::InvocationId { .. }
+            | Expr::WorkgroupId { .. }
+            | Expr::LocalId { .. }
+            | Expr::SubgroupLocalId
+            | Expr::SubgroupSize => {
+                Err(crate::error::Error::lowering(
+                    "inliner cannot inline a callee that references \
+                     InvocationId / WorkgroupId / LocalId / SubgroupLocalId / SubgroupSize: \
+                     these built-ins are per-invocation and cannot be passed as callee arguments. \
+                     Fix: hoist the built-in read to the call site and pass it as an explicit \
+                     argument before inlining.".to_string(),
+                ))
             }
             Expr::LitU32(_)
             | Expr::LitI32(_)

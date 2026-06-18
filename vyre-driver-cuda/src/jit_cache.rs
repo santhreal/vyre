@@ -61,9 +61,12 @@ pub fn configure_jit_cache_default() -> Result<(), String> {
         .clone()
 }
 
-/// Plumb the JIT cache to an explicit directory. Mostly for tests; in
-/// production the `_default()` entry point picks an XDG path.
-pub fn configure_jit_cache(cache_dir: PathBuf, max_bytes: u64) -> Result<(), String> {
+/// Plumb the JIT cache to an explicit directory. Restricted to `pub(crate)` so
+/// external callers cannot mutate the CUDA JIT cache environment variables after
+/// the backend has already frozen them via [`configure_jit_cache_default`].
+/// Use [`configure_jit_cache_default`] from outside this crate; that path is
+/// idempotent and guarded by [`CONFIGURED`].
+pub(crate) fn configure_jit_cache(cache_dir: PathBuf, max_bytes: u64) -> Result<(), String> {
     #[cfg(test)]
     let _env_guard = lock_test_env();
 

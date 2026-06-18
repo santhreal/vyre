@@ -29,6 +29,9 @@ enum Frame<'a> {
         has_expected: bool,
         ordering: MemoryOrdering,
     },
+    /// Deferred hard error: the `enter_expr_frame` path encountered a
+    /// per-invocation built-in that cannot be substituted in a callee context.
+    PerInvocationBuiltin,
 }
 
 impl CalleeExpander<'_> {
@@ -67,6 +70,15 @@ impl CalleeExpander<'_> {
                     has_expected,
                     ordering,
                 } => push_atomic(op, buffer, has_expected, ordering, &mut values)?,
+                Frame::PerInvocationBuiltin => {
+                    return Err(crate::error::Error::lowering(
+                        "inliner cannot inline a callee that references \
+                         InvocationId / WorkgroupId / LocalId / SubgroupLocalId / SubgroupSize: \
+                         these built-ins are per-invocation and cannot be passed as callee arguments. \
+                         Fix: hoist the built-in read to the call site and pass it as an explicit \
+                         argument before inlining.",
+                    ));
+                }
             }
         }
         values.pop().ok_or_else(|| {
@@ -153,7 +165,10 @@ impl CalleeExpander<'_> {
             | Expr::LocalId { .. }
             | Expr::SubgroupLocalId
             | Expr::SubgroupSize => {
-                values.push(Expr::u32(0));
+                // Cannot substitute a per-invocation built-in inside a callee.
+                // Defer the hard error to the rename_expr_vars frame loop so
+                // the function return type remains `()` here.
+                frames.push(Frame::PerInvocationBuiltin);
             }
             Expr::LitU32(_)
             | Expr::LitI32(_)

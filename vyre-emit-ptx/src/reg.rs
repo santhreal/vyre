@@ -48,6 +48,7 @@ impl PtxType {
             DataType::U8 | DataType::U16 | DataType::U32 | DataType::Bytes => Ok(Self::U32),
             DataType::I8 | DataType::I16 | DataType::I32 => Ok(Self::I32),
             DataType::F16 | DataType::BF16 | DataType::F32 => Ok(Self::F32),
+            DataType::U64 => Ok(Self::U64),
             other => Err(EmitError::UnsupportedDataType(format!("{other:?}"))),
         }
     }

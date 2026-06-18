@@ -153,7 +153,10 @@ pub fn opt_propagate_type_specifiers(
 
     let tok_count = match &num_tokens {
         Expr::LitU32(n) => *n,
-        _ => 1,
+        other => panic!(
+            "opt_propagate_type_specifiers requires a literal num_tokens for buffer sizing, \
+             got {other:?}. Fix: pass Expr::u32(N)."
+        ),
     };
     Program::wrapped(
         vec![
@@ -361,5 +364,64 @@ inventory::submit! {
             vec![vec![out]]
         }),
         category: Some("parsing"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// VL-004: passing a non-literal num_tokens must panic rather than silently
+    /// sizing all three GPU buffers to 1. Before the fix, `_ => 1` produced a
+    /// Program where tok_types, tok_depths, and node_out each had count=1 even
+    /// though the loop guard used the original non-literal expression, causing
+    /// OOB GPU accesses for any input with more than 1 token.
+    #[test]
+    #[should_panic(
+        expected = "opt_propagate_type_specifiers requires a literal num_tokens for buffer sizing"
+    )]
+    fn non_literal_num_tokens_panics_at_build_time() {
+        let non_literal = Expr::InvocationId { axis: 0 };
+        let _ = opt_propagate_type_specifiers("tok_types", "tok_depths", "node_out", non_literal);
+    }
+
+    /// VL-004 negative twin: a literal num_tokens must build without panic and
+    /// produce buffers sized exactly to that count (not 1).
+    #[test]
+    fn literal_num_tokens_builds_with_correct_buffer_size() {
+        let program = opt_propagate_type_specifiers(
+            "tok_types",
+            "tok_depths",
+            "node_out",
+            Expr::u32(128),
+        );
+        let buffers = program.buffers();
+        let tok_types_count = buffers
+            .iter()
+            .find(|b| b.name() == "tok_types")
+            .expect("tok_types buffer must be declared")
+            .count();
+        let tok_depths_count = buffers
+            .iter()
+            .find(|b| b.name() == "tok_depths")
+            .expect("tok_depths buffer must be declared")
+            .count();
+        let node_out_count = buffers
+            .iter()
+            .find(|b| b.name() == "node_out")
+            .expect("node_out buffer must be declared")
+            .count();
+        assert_eq!(
+            tok_types_count, 128,
+            "tok_types must be sized to num_tokens=128; got {tok_types_count}"
+        );
+        assert_eq!(
+            tok_depths_count, 128,
+            "tok_depths must be sized to num_tokens=128; got {tok_depths_count}"
+        );
+        assert_eq!(
+            node_out_count, 128,
+            "node_out must be sized to num_tokens=128; got {node_out_count}"
+        );
     }
 }

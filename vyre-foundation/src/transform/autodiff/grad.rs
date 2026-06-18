@@ -607,9 +607,23 @@ fn emit_adjoint_node(
                     next_pullback_id,
                 )?;
             }
-            // Reverse iteration: for var in (to-1) downto from.
-            // Emit as a forward loop that maps to reversed index.
-            // reversed_var = (to - 1) - (var - from) = to - 1 - var + from
+            // Reverse iteration: for var in from..to, but with the
+            // induction variable remapped to the reversed index so that
+            // adj_body[0] corresponds to the *last* forward iteration.
+            //
+            // reversed_var = (to - 1) - (var - from)
+            //              = to - 1 - var + from
+            //
+            // We keep the loop bounds as from..to (same iteration count)
+            // and substitute every occurrence of the original `var` in
+            // adj_body with the reversed expression so that the body
+            // addresses elements in reverse order at runtime.
+            let reversed_index = Expr::sub(
+                Expr::sub(to.clone(), Expr::u32(1)),
+                Expr::sub(Expr::var(var.as_str()), from.clone()),
+            );
+            let adj_body =
+                crate::transform::subst::substitute_nodes(&adj_body, var, &reversed_index);
             body.push(Node::Loop {
                 var: var.clone(),
                 from: from.clone(),

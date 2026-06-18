@@ -24,6 +24,10 @@ pub mod parallelism;
 /// without recursion, preventing stack overflow on deeply nested programs.
 pub mod visit;
 
+/// Induction-variable substitution shared by the optimizer loop passes and the
+/// autodiff loop arm. One complete `var -> expr` rewrite over the whole IR.
+pub(crate) mod subst;
+
 /// Reverse-mode automatic differentiation via IR transform (RFC 0002).
 ///
 /// Given a forward `Program` + output/input buffer names, emits a backward

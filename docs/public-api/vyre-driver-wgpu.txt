@@ -215,7 +215,7 @@ pub fn stats(&self) -> BufferPoolStats {
 pub fn stats(&self) -> StagingBufferPoolStats {
 pub fn stats(&self) -> WgpuBackendStats {
 pub fn stats(&self, key: u64) -> Option<crate::runtime::cache::AccessStats> {
-pub fn submit_readback(
+pub fn submit_readback(&self, device: &wgpu::Device, queue: &wgpu::Queue, src_buffer: &wgpu::Buffer, src_offset: u64, byte_len: u64) -> Result<usize, BackendError> {
 pub fn touch(&mut self, key: K) {
 pub fn try_new(
 pub fn try_new() -> Result<Self, vyre_driver::BackendError> {

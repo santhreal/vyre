@@ -194,6 +194,17 @@ pub fn nfa_to_dfa(
             });
         }
     }
+    // accept[state] encodes the accepting pattern id as `pid + 1` (0 = no match),
+    // so a pattern id of u32::MAX would wrap to 0 and silently hide the match.
+    // Reject it upfront as a structured error rather than panicking deep in subset
+    // construction (mirrors the accept_state_ids bound check above).
+    for &pid in tables.accept_pattern_ids {
+        if pid == u32::MAX {
+            return Err(NfaToDfaError::ShapeMismatch {
+                reason: "accept_pattern_ids entry u32::MAX cannot be encoded as pid+1; pattern ids must be <= u32::MAX - 1",
+            });
+        }
+    }
 
     // Per-NFA-state ε-closure, precomputed once. Subset construction
     // looks up `epsilon_closure[s]` for every state in every byte step,
@@ -298,20 +309,10 @@ pub fn nfa_to_dfa(
             }
         }
         // accept[state] encodes the first accepting pattern id as `pid + 1` so that 0
-        // means "no match". pid = u32::MAX would wrap to 0, silently marking the state
-        // as non-accepting even though an NFA accept state is in its bitset.
-        // Use checked_add to surface this as a loud error instead of a silent miss.
-        accept[dfa_state_id as usize] = first_accept_pid
-            .map(|pid| {
-                pid.checked_add(1).unwrap_or_else(|| {
-                    panic!(
-                        "accept pattern id u32::MAX cannot be encoded as pid+1 in the accept \
-                         field (would wrap to 0, silently hiding the match). Fix: pattern ids \
-                         must be <= u32::MAX - 1."
-                    )
-                })
-            })
-            .unwrap_or(0);
+        // means "no match". pid == u32::MAX (which would wrap to 0 and silently hide the
+        // match) was already rejected with a structured ShapeMismatch at function entry,
+        // so `pid + 1` cannot overflow here.
+        accept[dfa_state_id as usize] = first_accept_pid.map(|pid| pid + 1).unwrap_or(0);
         // output_records.len() as u32: safe because max_dfa_states <= u32::MAX (guarded at
         // function entry), and each DFA state contributes at most num_states accept records,
         // so output_records.len() <= dfa_state_sets.len() * num_states <= u32::MAX * 1024.
@@ -1400,6 +1401,64 @@ mod tests {
             &dfa.output_records[start..end],
             &[0u32],
             "output_records for the abc-accept state must contain exactly [0] (pid=0)"
+        );
+    }
+
+    /// VL-002 (P0): a caller-supplied accept_pattern_id of u32::MAX cannot be encoded
+    /// as pid+1 (it would wrap to 0, silently hiding the match). nfa_to_dfa must reject
+    /// it with a structured ShapeMismatch at function entry, NOT panic deep in subset
+    /// construction (the prior behaviour) and NOT silently encode 0.
+    #[test]
+    fn accept_pattern_id_u32_max_returns_shape_mismatch_not_panic() {
+        let (transition, epsilon, accepts, _pids) = literal_abc_tables();
+        let pids = vec![u32::MAX; accepts.len()];
+        let tables = NfaTables {
+            num_states: 4,
+            transition_table: &transition,
+            epsilon_table: &epsilon,
+            accept_state_ids: &accepts,
+            accept_pattern_ids: &pids,
+            max_pattern_len: 3,
+        };
+        let result = nfa_to_dfa(&tables, 1024);
+        assert!(
+            matches!(&result, Err(NfaToDfaError::ShapeMismatch { reason }) if reason.contains("u32::MAX")),
+            "accept_pattern_ids=[u32::MAX] must return ShapeMismatch naming u32::MAX, got {result:?}"
+        );
+    }
+
+    /// VL-002 negative twin: pid = u32::MAX - 1 is the largest ENCODABLE pattern id;
+    /// it must lower cleanly and encode as accept = (u32::MAX - 1) + 1 = u32::MAX, with
+    /// the raw pid preserved in output_records.
+    #[test]
+    fn accept_pattern_id_u32_max_minus_one_is_valid() {
+        let (transition, epsilon, accepts, _pids) = literal_abc_tables();
+        let pids = vec![u32::MAX - 1; accepts.len()];
+        let tables = NfaTables {
+            num_states: 4,
+            transition_table: &transition,
+            epsilon_table: &epsilon,
+            accept_state_ids: &accepts,
+            accept_pattern_ids: &pids,
+            max_pattern_len: 3,
+        };
+        let dfa = nfa_to_dfa(&tables, 1024)
+            .expect("Fix: pid=u32::MAX-1 is encodable and must lower cleanly");
+        let s_a = dfa.transitions[b'a' as usize];
+        let s_ab = dfa.transitions[s_a as usize * 256 + b'b' as usize];
+        let s_abc = dfa.transitions[s_ab as usize * 256 + b'c' as usize];
+        assert_eq!(
+            dfa.accept[s_abc as usize],
+            u32::MAX,
+            "pid=u32::MAX-1 must encode as pid+1=u32::MAX in the accept fast-path field, got {}",
+            dfa.accept[s_abc as usize]
+        );
+        let start = dfa.output_offsets[s_abc as usize] as usize;
+        let end = dfa.output_offsets[s_abc as usize + 1] as usize;
+        assert_eq!(
+            &dfa.output_records[start..end],
+            &[u32::MAX - 1],
+            "output_records must carry the raw pid u32::MAX-1, not the encoded value"
         );
     }
 }

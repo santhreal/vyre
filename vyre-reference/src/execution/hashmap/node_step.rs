@@ -490,7 +490,7 @@ fn read_bytes(
     let bytes = buffer
         .bytes
         .read()
-        .unwrap_or_else(|error| error.into_inner());
+        .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"));
     let mut payload = vec![0; byte_count];
     if start < bytes.len() {
         let available = (bytes.len() - start).min(byte_count);
@@ -517,7 +517,7 @@ fn apply_async_transfer(
             let mut bytes = buffer
                 .bytes
                 .write()
-                .unwrap_or_else(|error| error.into_inner());
+                .unwrap_or_else(|_| panic!("reference Buffer byte lock was poisoned"));
             if start >= bytes.len() {
                 return Ok(());
             }
@@ -525,6 +525,99 @@ fn apply_async_transfer(
             bytes[start..start + write_len].copy_from_slice(&payload[..write_len]);
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::super::memory::HashmapMemory;
+    use crate::oob::Buffer;
+    use rustc_hash::FxHashMap;
+    use vyre::ir::DataType;
+
+    /// Poisons the `Arc<RwLock<Vec<u8>>>` inside a `Buffer` by taking the write
+    /// lock in a thread and panicking before releasing it, then confirms that the
+    /// fixed `read_bytes` helper fails closed (panics) instead of silently
+    /// recovering the half-mutated guard via `into_inner()`.
+    ///
+    /// Before the VRH-001 fix this test would NOT panic (the recovery path
+    /// returned a corrupt guard and the function returned `Ok`).  After the fix
+    /// the call to `read_bytes` propagates the poison panic.
+    #[test]
+    fn read_bytes_fails_closed_on_poisoned_buffer_lock() {
+        let buffer = Buffer::new(vec![0xab_u8; 8], DataType::U32);
+        let poisoner = buffer.bytes.clone();
+        let _ = std::thread::spawn(move || {
+            let _guard = poisoner.write().unwrap();
+            panic!("VRH-001: poison read lock mid-write");
+        })
+        .join();
+
+        let mut storage = FxHashMap::default();
+        storage.insert("src".to_string(), buffer);
+        let memory = HashmapMemory::new(storage);
+
+        let result = std::panic::catch_unwind(|| {
+            // `read_bytes` acquires buffer.bytes.read(); it must panic, not recover.
+            super::read_bytes(&memory, "src", 0, 4)
+        });
+        assert!(
+            result.is_err(),
+            "Fix: read_bytes must panic on a poisoned buffer lock, not silently recover with into_inner()"
+        );
+        let payload = result.unwrap_err();
+        let message = payload
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| payload.downcast_ref::<&'static str>().copied())
+            .unwrap_or("<non-string panic>");
+        assert!(
+            message.contains("reference Buffer byte lock was poisoned"),
+            "Fix: panic message must name the poisoned lock contract, got: {message}"
+        );
+    }
+
+    /// Mirrors `read_bytes_fails_closed_on_poisoned_buffer_lock` for the write
+    /// path inside `apply_async_transfer`.
+    #[test]
+    fn apply_async_transfer_fails_closed_on_poisoned_buffer_lock() {
+        use super::super::super::state::HashmapAsyncTransfer;
+        let buffer = Buffer::new(vec![0xcd_u8; 8], DataType::U32);
+        let poisoner = buffer.bytes.clone();
+        let _ = std::thread::spawn(move || {
+            let _guard = poisoner.write().unwrap();
+            panic!("VRH-001: poison write lock mid-async-copy");
+        })
+        .join();
+
+        let mut storage = FxHashMap::default();
+        storage.insert("dst".to_string(), buffer);
+        let mut memory = HashmapMemory::new(storage);
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            super::apply_async_transfer(
+                HashmapAsyncTransfer::Copy {
+                    destination: "dst".to_string(),
+                    start: 0,
+                    payload: vec![0x11, 0x22, 0x33, 0x44],
+                },
+                &mut memory,
+            )
+        }));
+        assert!(
+            result.is_err(),
+            "Fix: apply_async_transfer must panic on a poisoned buffer lock, not silently recover with into_inner()"
+        );
+        let payload = result.unwrap_err();
+        let message = payload
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| payload.downcast_ref::<&'static str>().copied())
+            .unwrap_or("<non-string panic>");
+        assert!(
+            message.contains("reference Buffer byte lock was poisoned"),
+            "Fix: panic message must name the poisoned lock contract, got: {message}"
+        );
     }
 }
 

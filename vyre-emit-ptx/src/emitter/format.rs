@@ -36,7 +36,11 @@ pub(super) fn ptx_binop_suffix(op: BinOp, ty: PtxType) -> &'static str {
         | BinOp::RotateRight
         | BinOp::And
         | BinOp::Or => "b32",
-        BinOp::Shr | BinOp::AbsDiff => "u32",
+        BinOp::Shr => match ty {
+            PtxType::I32 => "s32",
+            _ => "u32",
+        },
+        BinOp::AbsDiff => "u32",
         _ => match ty {
             PtxType::F32 => "f32",
             PtxType::I32 => "s32",

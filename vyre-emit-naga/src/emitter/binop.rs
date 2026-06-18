@@ -130,14 +130,21 @@ impl<'a> BodyBuilder<'a> {
     ) -> naga::Handle<Expression> {
         let target_kind = if target == self.types.bool_ty {
             ScalarKind::Bool
-        } else if target == self.types.u32_ty {
+        } else if target == self.types.u32_ty || target == self.types.u64_ty {
             ScalarKind::Uint
-        } else if target == self.types.i32_ty {
+        } else if target == self.types.i32_ty || target == self.types.i64_ty {
             ScalarKind::Sint
-        } else if target == self.types.f32_ty {
+        } else if target == self.types.f32_ty || target == self.types.f64_ty {
             ScalarKind::Float
         } else {
-            return value; // unknown target  -  pass through
+            // A non-scalar target (atomic<T>, vector, pointer, …) has no scalar
+            // kind to coerce toward, so the value is emitted unchanged. This is
+            // the correct identity — e.g. an atomic result feeding a later
+            // descriptor op (atomic_result_can_feed_later_descriptor_ops) — NOT a
+            // silent miscompile: scalar coercion simply does not apply to these
+            // handles. The bool/u32/u64/i32/i64/f32/f64 arms above cover every
+            // scalar kind vyre coerces between.
+            return value;
         };
         if std::env::var("VYRE_COERCE_TRACE").is_ok() {
             tracing::debug!(
@@ -257,11 +264,11 @@ impl<'a> BodyBuilder<'a> {
                     let local = self.function.local_variables.try_get(handle).ok()?;
                     if local.ty == self.types.bool_ty {
                         return Some(ScalarKind::Bool);
-                    } else if local.ty == self.types.u32_ty {
+                    } else if local.ty == self.types.u32_ty || local.ty == self.types.u64_ty {
                         return Some(ScalarKind::Uint);
-                    } else if local.ty == self.types.i32_ty {
+                    } else if local.ty == self.types.i32_ty || local.ty == self.types.i64_ty {
                         return Some(ScalarKind::Sint);
-                    } else if local.ty == self.types.f32_ty {
+                    } else if local.ty == self.types.f32_ty || local.ty == self.types.f64_ty {
                         return Some(ScalarKind::Float);
                     }
                     return None;
@@ -274,15 +281,15 @@ impl<'a> BodyBuilder<'a> {
 
     fn binding_types_lookup(&self, ty: naga::Handle<naga::Type>) -> Option<naga::ScalarKind> {
         // BodyBuilder doesn't own the type arena directly  -  we read
-        // from `self.types` which holds the four scalar-type handles
-        // vyre creates upfront. Match against those.
+        // from `self.types` which holds all canonical scalar-type handles
+        // vyre creates upfront. Match against all seven.
         if ty == self.types.bool_ty {
             Some(ScalarKind::Bool)
-        } else if ty == self.types.u32_ty {
+        } else if ty == self.types.u32_ty || ty == self.types.u64_ty {
             Some(ScalarKind::Uint)
-        } else if ty == self.types.i32_ty {
+        } else if ty == self.types.i32_ty || ty == self.types.i64_ty {
             Some(ScalarKind::Sint)
-        } else if ty == self.types.f32_ty {
+        } else if ty == self.types.f32_ty || ty == self.types.f64_ty {
             Some(ScalarKind::Float)
         } else {
             None

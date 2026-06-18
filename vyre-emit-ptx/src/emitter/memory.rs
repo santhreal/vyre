@@ -164,10 +164,13 @@ impl BodyCtx<'_> {
                 out
             }
             PtxType::U64 => {
-                let narrowed = self.alloc(PtxType::U32);
                 let out = self.alloc(PtxType::F32);
-                let _ = writeln!(self.text, "    cvt.u32.u64    {narrowed}, {value_reg};");
-                let _ = writeln!(self.text, "    cvt.rn.f32.u32    {out}, {narrowed};");
+                // PTX cvt.rn.f32.u64 converts the full 64-bit value to F32
+                // with round-to-nearest. The previous two-step path
+                // (cvt.u32.u64 + cvt.rn.f32.u32) silently discarded the high
+                // 32 bits before conversion — a silent truncation of any value
+                // > 0xFFFFFFFF.
+                let _ = writeln!(self.text, "    cvt.rn.f32.u64    {out}, {value_reg};");
                 out
             }
         }
@@ -427,24 +430,35 @@ impl BodyCtx<'_> {
             return reg;
         }
         let reg = self.alloc(PtxType::U32);
-        // All valid slots were already registered by `preload_bindings`, which
-        // performs a checked computation and returns Err on overflow. Reaching
-        // this branch with a slot that was NOT registered by preload indicates
-        // a caller bug. The checked_mul/checked_add here is a defence-in-depth
-        // belt: if an overflow would occur we emit `u32::MAX` as an obviously-
-        // wrong sentinel offset (PTX will read at a garbage address and fail
-        // under CUDA validation) rather than silently wrapping to a plausible
-        // address and producing wrong-but-undetectable bounds-check behaviour.
-        debug_assert!(
-            binding_slot.checked_mul(4).and_then(|v| v.checked_add(4)).is_some(),
-            "ensure_buffer_length_reg: slot={binding_slot} byte offset overflows u32; \
-             preload_bindings should have rejected this slot"
-        );
-        let byte_offset = binding_slot.saturating_mul(4).saturating_add(4);
-        let _ = writeln!(
-            self.text,
-            "    ld.global.ca.u32    {reg}, [%rd0 + {byte_offset}];"
-        );
+        // All valid slots must be registered by `preload_bindings`, which
+        // performs checked arithmetic and returns Err on overflow. Reaching
+        // this branch at all indicates a caller bug: a slot that was never
+        // preloaded is being used at emit time.
+        //
+        // Law 10: we must NEVER silently emit a plausible-looking load when
+        // the offset computation would overflow. We emit `trap;` first so the
+        // thread terminates loudly rather than reading a garbage length
+        // register and producing silently wrong bounds-check predicates.
+        match binding_slot.checked_mul(4).and_then(|v| v.checked_add(4)) {
+            None => {
+                // Overflow: the slot cannot produce a valid params-buffer
+                // offset. Emit a hard trap so the kernel fails closed instead
+                // of reading a u32::MAX-offset address and silently using the
+                // garbage as a bounds-check length.
+                let _ = writeln!(
+                    self.text,
+                    "    // BUG: slot={binding_slot} byte offset overflows u32; \
+                     preload_bindings should have rejected this slot — killing thread"
+                );
+                let _ = writeln!(self.text, "    trap;");
+            }
+            Some(byte_offset) => {
+                let _ = writeln!(
+                    self.text,
+                    "    ld.global.ca.u32    {reg}, [%rd0 + {byte_offset}];"
+                );
+            }
+        }
         self.slot_to_length_reg.insert(binding_slot, reg);
         reg
     }

@@ -185,13 +185,17 @@ impl CompiledPipeline for CudaCompiledPipeline {
         if self.materialized_output_cache_hit_with_key_into(inputs, &input_key, &mut outputs)? {
             let wall_ns = CUDA_NUMERIC
                 .elapsed_nanos_u64(started, "cuda graph materialized timed hit wall latency")?;
+            // Materialized output cache hit: no kernel was launched, so no CUDA
+            // event timing is available.  Pass device_ns: None so telemetry
+            // routes this to timed_dispatches_missing_device_time instead of
+            // injecting a fabricated 0-ns measurement.
             self.backend
                 .telemetry
-                .record_timed_dispatch(wall_ns, Some(0), None, None);
+                .record_timed_dispatch(wall_ns, None, None, None);
             return Ok(vyre_driver::TimedDispatchResult {
                 outputs,
                 wall_ns,
-                device_ns: Some(0),
+                device_ns: None,
                 enqueue_ns: None,
                 wait_ns: None,
             });
@@ -228,11 +232,11 @@ impl CompiledPipeline for CudaCompiledPipeline {
         let wall_ns = CUDA_NUMERIC.elapsed_nanos_u64(started, "cuda graph replay wall latency")?;
         self.backend
             .telemetry
-            .record_timed_dispatch(wall_ns, Some(device_ns), None, None);
+            .record_timed_dispatch(wall_ns, device_ns, None, None);
         Ok(vyre_driver::TimedDispatchResult {
             outputs,
             wall_ns,
-            device_ns: Some(device_ns),
+            device_ns,
             enqueue_ns: None,
             wait_ns: None,
         })

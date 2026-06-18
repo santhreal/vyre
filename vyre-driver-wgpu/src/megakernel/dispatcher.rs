@@ -509,8 +509,18 @@ where
     T: TryInto<u64> + Copy + std::fmt::Display,
     T::Error: std::fmt::Display,
 {
-    let _ = label;
-    value.try_into().unwrap_or(u64::MAX)
+    match value.try_into() {
+        Ok(v) => v,
+        Err(error) => {
+            // Fail closed: a constant that cannot fit u64 is a miscompile waiting
+            // to happen. Surface the label and value loudly rather than embedding
+            // u64::MAX and letting downstream checked_mul silently blame
+            // arithmetic overflow instead of the root cause (Law 10).
+            panic!(
+                "dispatcher ABI constant '{label}' value {value} cannot fit u64: {error}. Fix: keep all megakernel ABI constants within u64 range."
+            )
+        }
+    }
 }
 
 fn dispatcher_abi_u32<T>(value: T, label: &'static str) -> u32
@@ -518,8 +528,17 @@ where
     T: TryInto<u32> + Copy + std::fmt::Display,
     T::Error: std::fmt::Display,
 {
-    let _ = label;
-    value.try_into().unwrap_or(u32::MAX)
+    match value.try_into() {
+        Ok(v) => v,
+        Err(error) => {
+            // Fail closed: a constant that cannot fit u32 is a shader miscompile —
+            // u32::MAX embedded as a WGSL literal would corrupt ABI offsets in the
+            // generated GPU program. Surface the label and value loudly (Law 10).
+            panic!(
+                "dispatcher ABI constant '{label}' value {value} cannot fit u32: {error}. Fix: keep all megakernel ABI constants within u32 range."
+            )
+        }
+    }
 }
 
 /// Observability returned from one batched dispatch.
@@ -2104,6 +2123,101 @@ mod scan_batch_segmentation_tests {
         assert!(
             evidence.is_complete(),
             "evidence for a zero-match corpus must satisfy the release completeness gate"
+        );
+    }
+}
+
+#[cfg(test)]
+mod abi_conversion_contracts {
+    use super::{dispatcher_abi_u32, dispatcher_usize_to_u64};
+    use super::{
+        FILE_METADATA_WORDS, HIT_RECORD_WORDS, QUEUE_STATE_WORDS,
+    };
+    use super::super::segmentation::SEGMENT_WORDS;
+    use super::super::batch::queue_state_word;
+    use vyre_runtime::megakernel::rule_catalog::RULE_META_WORDS;
+
+    /// All ABI word-count constants that are embedded as u32 literals in the
+    /// generated WGSL shader must fit in u32 without any conversion failure.
+    /// Before the fix, `dispatcher_abi_u32` silently returned `u32::MAX` on
+    /// failure, which would have corrupted the emitted ABI constants in the GPU
+    /// program without any diagnostic (Law 10 silent miscompile path).
+    #[test]
+    fn all_abi_word_count_constants_fit_u32_without_panic() {
+        // These are the exact callers in build_batch_program /
+        // execute_batch_claim_body / batch_program_buffers.  If any constant
+        // grew beyond u32::MAX the test would panic, surfacing the regression
+        // loudly instead of silently embedding u32::MAX in the shader.
+        let queue_len_word = dispatcher_abi_u32(queue_state_word::QUEUE_LEN, "queue-len word");
+        let head_word = dispatcher_abi_u32(queue_state_word::HEAD, "head word");
+        let rule_count_word = dispatcher_abi_u32(queue_state_word::RULE_COUNT, "rule-count word");
+        let hit_head_word = dispatcher_abi_u32(queue_state_word::HIT_HEAD, "hit-head word");
+        let hit_capacity_word = dispatcher_abi_u32(queue_state_word::HIT_CAPACITY, "hit-capacity word");
+        let done_count_word = dispatcher_abi_u32(queue_state_word::DONE_COUNT, "done-count word");
+        let queue_state_words_val = dispatcher_abi_u32(QUEUE_STATE_WORDS, "queue-state word count");
+        let segment_words_val = dispatcher_abi_u32(SEGMENT_WORDS, "segment table word count");
+        let file_meta_words_val = dispatcher_abi_u32(FILE_METADATA_WORDS, "file metadata word count");
+        let rule_meta_words_val = dispatcher_abi_u32(RULE_META_WORDS, "rule metadata word count");
+
+        // Assert concrete values — the ABI is contractual; changing these
+        // constants without updating GPU code is a silent correctness bug.
+        assert_eq!(queue_state_words_val, 6, "QUEUE_STATE_WORDS ABI must be 6");
+        assert_eq!(segment_words_val, 4, "SEGMENT_WORDS ABI must be 4");
+        assert_eq!(file_meta_words_val, 4, "FILE_METADATA_WORDS ABI must be 4");
+        assert_eq!(rule_meta_words_val, 5, "RULE_META_WORDS ABI must be 5");
+
+        // Smoke-check that the queue-state word indices are in [0, QUEUE_STATE_WORDS).
+        assert!(
+            (queue_len_word as usize) < QUEUE_STATE_WORDS,
+            "QUEUE_LEN word index {queue_len_word} must be < QUEUE_STATE_WORDS ({QUEUE_STATE_WORDS})"
+        );
+        assert!(
+            (head_word as usize) < QUEUE_STATE_WORDS,
+            "HEAD word index {head_word} must be < QUEUE_STATE_WORDS ({QUEUE_STATE_WORDS})"
+        );
+        assert!(
+            (rule_count_word as usize) < QUEUE_STATE_WORDS,
+            "RULE_COUNT word index {rule_count_word} must be < QUEUE_STATE_WORDS ({QUEUE_STATE_WORDS})"
+        );
+        assert!(
+            (hit_head_word as usize) < QUEUE_STATE_WORDS,
+            "HIT_HEAD word index {hit_head_word} must be < QUEUE_STATE_WORDS ({QUEUE_STATE_WORDS})"
+        );
+        assert!(
+            (hit_capacity_word as usize) < QUEUE_STATE_WORDS,
+            "HIT_CAPACITY word index {hit_capacity_word} must be < QUEUE_STATE_WORDS ({QUEUE_STATE_WORDS})"
+        );
+        assert!(
+            (done_count_word as usize) < QUEUE_STATE_WORDS,
+            "DONE_COUNT word index {done_count_word} must be < QUEUE_STATE_WORDS ({QUEUE_STATE_WORDS})"
+        );
+    }
+
+    /// `dispatcher_usize_to_u64` must convert known small constants without
+    /// panic.  Before the fix it returned `u64::MAX` silently on failure,
+    /// causing a downstream `checked_mul` overflow that produced the misleading
+    /// error "hit-ring readback length overflowed u64" with no indication of
+    /// which constant failed (Law 10).
+    #[test]
+    fn all_usize_to_u64_abi_constants_convert_without_panic() {
+        let hit_record_words_u64 =
+            dispatcher_usize_to_u64(HIT_RECORD_WORDS, "hit-record word count");
+        let u32_byte_width_u64 =
+            dispatcher_usize_to_u64(std::mem::size_of::<u32>(), "u32 byte width");
+        let queue_state_words_u64 =
+            dispatcher_usize_to_u64(QUEUE_STATE_WORDS, "queue-state word count");
+
+        assert_eq!(
+            hit_record_words_u64, 4,
+            "HIT_RECORD_WORDS must convert to u64 value 4"
+        );
+        assert_eq!(
+            u32_byte_width_u64, 4,
+            "size_of::<u32>() must convert to u64 value 4"
+        );
+        assert_eq!(
+            queue_state_words_u64, 6,
+            "QUEUE_STATE_WORDS must convert to u64 value 6"
         );
     }
 }

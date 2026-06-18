@@ -67,8 +67,6 @@ struct PreparedCudaGraphReplayLaunch {
     resident_input_replay: bool,
 }
 
-const CUDA_GRAPH_REPLAY_SPIN_QUERY_LIMIT: usize = 4096;
-
 fn launch_cuda_graph_exec(
     graph_exec: &GraphExecGuard,
     stream: &StreamGuard,
@@ -101,18 +99,22 @@ fn launch_cuda_graph_exec(
 }
 
 fn synchronize_cuda_graph_replay_stream(cached: &CachedCudaGraph) -> Result<(), BackendError> {
-    for _ in 0..CUDA_GRAPH_REPLAY_SPIN_QUERY_LIMIT {
-        if crate::stream::query_raw_stream_ready(
-            cached.stream.ptr().as_ptr(),
-            "cuStreamQuery (cuda_graph)",
-        )? {
-            return Ok(());
-        }
-        std::hint::spin_loop();
+    // Single speculative poll: avoids the overhead of `cuStreamSynchronize`
+    // on paths where the kernel has already completed by the time the host
+    // reaches this point (e.g., very short kernels, warm caches).  If not
+    // immediately ready, fall through directly to the blocking synchronize
+    // rather than spinning: an unconditional multi-thousand-iteration spin
+    // burns CPU on every replay regardless of kernel duration, adding host
+    // overhead that outweighs any latency saved for long kernels.
+    if crate::stream::query_raw_stream_ready(
+        cached.stream.ptr().as_ptr(),
+        "cuStreamQuery (cuda_graph)",
+    )? {
+        return Ok(());
     }
     crate::stream::synchronize_raw_stream(
         cached.stream.ptr().as_ptr(),
-        "cuStreamSynchronize (cuda_graph fallback)",
+        "cuStreamSynchronize (cuda_graph)",
     )
 }
 
@@ -299,12 +301,19 @@ impl CudaBackend {
     }
 
     /// Replay a cached CUDA graph with CUDA event timing.
+    ///
+    /// Returns `Some(device_ns)` when a kernel was actually dispatched and CUDA
+    /// event timing measured its device execution time.  Returns `None` when the
+    /// materialized output cache was served directly (no kernel launched, no
+    /// device timing available).  Callers must route `None` to
+    /// `timed_dispatches_missing_device_time` rather than treating it as a
+    /// 0-nanosecond measurement.
     pub(crate) fn dispatch_via_cuda_graph_timed_into(
         &self,
         cached: &mut CachedCudaGraph,
         inputs: &[&[u8]],
         outputs: &mut Vec<Vec<u8>>,
-    ) -> Result<u64, BackendError> {
+    ) -> Result<Option<u64>, BackendError> {
         let input_state = self.prepare_cuda_graph_replay_input_state(cached, inputs)?;
         self.dispatch_via_cuda_graph_timed_with_input_state_into(
             cached,
@@ -320,14 +329,19 @@ impl CudaBackend {
         inputs: &[&[u8]],
         input_state: &CudaGraphReplayInputState,
         outputs: &mut Vec<Vec<u8>>,
-    ) -> Result<u64, BackendError> {
+    ) -> Result<Option<u64>, BackendError> {
         if self.try_cuda_graph_materialized_cache_with_input_state_into(
             cached,
             inputs,
             &input_state,
             outputs,
         )? {
-            return Ok(0);
+            // Materialized output cache hit: outputs were copied from host-side
+            // cache without launching any kernel.  No CUDA event timing was
+            // performed, so there is no device_ns to report.  Return None so
+            // the caller routes this to timed_dispatches_missing_device_time
+            // instead of injecting a fabricated 0-ns measurement.
+            return Ok(None);
         }
         self.warmup()?;
         let prepared = prepare_cuda_graph_replay_launch(cached, inputs, &input_state)?;
@@ -352,7 +366,7 @@ impl CudaBackend {
         self.record_cuda_graph_replay_stats(prepared.stats);
         collect_cuda_graph_outputs(cached, outputs)?;
         cached.host_outputs_initialized = true;
-        Ok(device_ns)
+        Ok(Some(device_ns))
     }
 
     /// Replay a cached CUDA graph with CUDA event timing and allocated outputs.
@@ -370,11 +384,11 @@ impl CudaBackend {
         let wall_ns = crate::numeric::CUDA_NUMERIC
             .elapsed_nanos_u64(started, "timed cuda graph replay wall latency")?;
         self.telemetry
-            .record_timed_dispatch(wall_ns, Some(device_ns), None, None);
+            .record_timed_dispatch(wall_ns, device_ns, None, None);
         Ok(vyre_driver::TimedDispatchResult {
             outputs,
             wall_ns,
-            device_ns: Some(device_ns),
+            device_ns,
             enqueue_ns: None,
             wait_ns: None,
         })
@@ -1130,6 +1144,128 @@ mod source_contract_tests {
                 && lock_position < resize_position
                 && resize_position < hit_copy_position,
             "Fix: compiled materialized batch replay must finish exact-input key and cache-snapshot partitioning before resizing caller-owned output slots, then resize before copying cache hits."
+        );
+    }
+
+    /// VDC-001: timed CUDA graph replay must return `None` on a materialized
+    /// cache hit, not `Ok(0)`.  A `0`-nanosecond device time is physically
+    /// impossible and silently corrupts `timed_device_measurements` by counting
+    /// cache hits as real GPU measurements.
+    #[test]
+    fn timed_graph_replay_returns_none_device_ns_on_materialized_cache_hit() {
+        let source = include_str!("cuda_graph_replay.rs");
+        // The timed inner helper must have `-> Result<Option<u64>, BackendError>`.
+        assert!(
+            source.contains("-> Result<Option<u64>, BackendError>"),
+            "Fix: dispatch_via_cuda_graph_timed_with_input_state_into must return \
+             Result<Option<u64>, BackendError> so a materialized cache hit can be \
+             distinguished from a real 0-ns device measurement."
+        );
+        // On a cache hit the function must return Ok(None), not Ok(0).
+        assert!(
+            source.contains("return Ok(None);"),
+            "Fix: timed CUDA graph replay must return Ok(None) on materialized cache hit; \
+             Ok(0) injects a fabricated 0-ns measurement into timed_device_measurements."
+        );
+        // Ok(0) must not appear anywhere in the timed inner path.
+        let timed_inner = source
+            .split("pub(crate) fn dispatch_via_cuda_graph_timed_with_input_state_into(")
+            .nth(1)
+            .expect("Fix: timed inner replay function must exist in cuda_graph_replay.rs");
+        // The function ends at Ok(Some(device_ns)) — extract that slice.
+        let timed_inner_body = timed_inner
+            .split("Ok(Some(device_ns))")
+            .next()
+            .expect("Fix: timed CUDA graph replay must return Ok(Some(device_ns)) on an actual dispatch.");
+        assert!(
+            !timed_inner_body.contains("Ok(0)"),
+            "Fix: timed CUDA graph replay must not return Ok(0); use Ok(None) for cache hits \
+             so callers route to timed_dispatches_missing_device_time."
+        );
+        // The public timed wrapper must pass device_ns (Option<u64>) directly to
+        // record_timed_dispatch, not wrap it in an extra Some().
+        let wrapper = source
+            .split("pub fn dispatch_via_cuda_graph_timed(")
+            .nth(1)
+            .expect("Fix: public timed wrapper must exist in cuda_graph_replay.rs")
+            .split("/// Convenience wrapper")
+            .next()
+            .expect("Fix: public timed wrapper must precede the convenience wrapper");
+        assert!(
+            wrapper.contains("record_timed_dispatch(wall_ns, device_ns, None, None)"),
+            "Fix: dispatch_via_cuda_graph_timed must pass device_ns: Option<u64> directly \
+             to record_timed_dispatch; wrapping with Some() re-introduces the fabricated \
+             0-ns measurement on cache hits."
+        );
+        assert!(
+            wrapper.contains("device_ns,") && !wrapper.contains("device_ns: Some(device_ns)"),
+            "Fix: dispatch_via_cuda_graph_timed must not wrap device_ns in Some(); \
+             the Option<u64> from the inner function must propagate transparently."
+        );
+    }
+
+    /// VDC-002: the untimed CUDA graph replay sync helper must not contain an
+    /// unconditional multi-iteration spin loop.  A 4096-iteration spin burns CPU
+    /// on every replay regardless of kernel duration; for kernels that outlast
+    /// the spin budget all iterations are wasted before the blocking path that
+    /// should have been taken immediately.
+    #[test]
+    fn graph_replay_stream_sync_does_not_unconditionally_spin_before_blocking_wait() {
+        let source = include_str!("cuda_graph_replay.rs");
+        let sync_fn = source
+            .split("fn synchronize_cuda_graph_replay_stream(")
+            .nth(1)
+            .expect("Fix: synchronize_cuda_graph_replay_stream must exist in cuda_graph_replay.rs")
+            .split("fn cached_input_bytes_match(")
+            .next()
+            .expect("Fix: stream sync helper must precede cached_input_bytes_match");
+        // The fixed implementation retains exactly one speculative poll (no loop).
+        assert!(
+            !sync_fn.contains("for _ in 0.."),
+            "Fix: CUDA graph replay stream sync must not use a fixed-count spin loop; \
+             call cuStreamSynchronize directly after one speculative poll."
+        );
+        assert!(
+            !sync_fn.contains("spin_loop()"),
+            "Fix: CUDA graph replay stream sync must not call std::hint::spin_loop(); \
+             unconditional spinning wastes CPU for every replay dispatch."
+        );
+        // The single speculative poll plus blocking synchronize must both be present.
+        assert!(
+            sync_fn.contains("query_raw_stream_ready(") && sync_fn.contains("synchronize_raw_stream("),
+            "Fix: CUDA graph replay stream sync must retain one speculative poll \
+             (query_raw_stream_ready) followed by a blocking synchronize_raw_stream \
+             when not immediately ready."
+        );
+        // No spin-limit constant should exist anymore. Scope the search to the
+        // production code (everything before the test module) so this assertion's
+        // own identifier text in `source` cannot self-match.
+        let production = source
+            .split("mod source_contract_tests")
+            .next()
+            .expect("Fix: production code must precede the source_contract_tests module");
+        assert!(
+            !production.contains("CUDA_GRAPH_REPLAY_SPIN_QUERY_LIMIT"),
+            "Fix: the spin-limit constant must be removed from production; \
+             the spin loop it governed is no longer present."
+        );
+    }
+
+    /// VDC-003: `configure_jit_cache` must be `pub(crate)` to prevent external
+    /// callers from mutating the CUDA JIT cache env-vars after backend bring-up
+    /// has frozen them via the `CONFIGURED` OnceLock.
+    #[test]
+    fn configure_jit_cache_is_not_pub_to_external_callers() {
+        let source = include_str!("../jit_cache.rs");
+        assert!(
+            source.contains("pub(crate) fn configure_jit_cache("),
+            "Fix: configure_jit_cache must be pub(crate), not pub; external callers must \
+             use configure_jit_cache_default() which is guarded by the CONFIGURED OnceLock."
+        );
+        assert!(
+            !source.contains("\npub fn configure_jit_cache("),
+            "Fix: configure_jit_cache must not be pub; it bypasses the CONFIGURED OnceLock \
+             and can mutate process-wide CUDA env-vars after backend bring-up has frozen them."
         );
     }
 }

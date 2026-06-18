@@ -97,15 +97,24 @@ pub fn c11_build_call_graph(
 
     let call_count = match &num_calls {
         Expr::LitU32(n) => *n,
-        _ => 1,
+        other => panic!(
+            "c11_build_call_graph requires a literal num_calls for buffer sizing, \
+             got a non-literal expression {other:?}. Fix: pass Expr::u32(N)."
+        ),
     };
     let fn_count = match &num_functions {
         Expr::LitU32(n) => *n,
-        _ => 1,
+        other => panic!(
+            "c11_build_call_graph requires a literal num_functions for buffer sizing, \
+             got a non-literal expression {other:?}. Fix: pass Expr::u32(N)."
+        ),
     };
     let token_count = match &num_tokens {
         Expr::LitU32(n) => *n,
-        _ => call_count,
+        other => panic!(
+            "c11_build_call_graph requires a literal num_tokens for buffer sizing, \
+             got a non-literal expression {other:?}. Fix: pass Expr::u32(N)."
+        ),
     };
     Program::wrapped(
         vec![
@@ -135,4 +144,116 @@ pub fn c11_build_call_graph(
     )
     .with_entry_op_id("vyre-libs::parsing::c11_build_call_graph")
     .with_non_composable_with_self(true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// VL-003: passing a non-literal num_tokens must panic with an actionable
+    /// message rather than silently sizing tok_starts/tok_lens to call_count.
+    /// Before the fix, `_ => call_count` produced undersized buffers when
+    /// num_tokens > call_count, causing OOB GPU accesses with no error signal.
+    #[test]
+    #[should_panic(
+        expected = "c11_build_call_graph requires a literal num_tokens for buffer sizing"
+    )]
+    fn non_literal_num_tokens_panics_at_build_time() {
+        // InvocationId is a non-literal expression — must trip the guard.
+        let non_literal = Expr::InvocationId { axis: 0 };
+        let _ = c11_build_call_graph(
+            "calls",
+            "fn_hashes",
+            "tok_starts",
+            "tok_lens",
+            "haystack",
+            Expr::u32(4),
+            Expr::u32(2),
+            non_literal,
+            "out_edges",
+            "out_counts",
+        );
+    }
+
+    /// VL-003: passing a non-literal num_calls must also panic since call_count
+    /// drives the calls/haystack/out_edges buffer sizes.
+    #[test]
+    #[should_panic(
+        expected = "c11_build_call_graph requires a literal num_calls for buffer sizing"
+    )]
+    fn non_literal_num_calls_panics_at_build_time() {
+        let non_literal = Expr::InvocationId { axis: 0 };
+        let _ = c11_build_call_graph(
+            "calls",
+            "fn_hashes",
+            "tok_starts",
+            "tok_lens",
+            "haystack",
+            non_literal,
+            Expr::u32(2),
+            Expr::u32(6),
+            "out_edges",
+            "out_counts",
+        );
+    }
+
+    /// VL-003: passing a non-literal num_functions must also panic.
+    #[test]
+    #[should_panic(
+        expected = "c11_build_call_graph requires a literal num_functions for buffer sizing"
+    )]
+    fn non_literal_num_functions_panics_at_build_time() {
+        let non_literal = Expr::InvocationId { axis: 0 };
+        let _ = c11_build_call_graph(
+            "calls",
+            "fn_hashes",
+            "tok_starts",
+            "tok_lens",
+            "haystack",
+            Expr::u32(4),
+            non_literal,
+            Expr::u32(6),
+            "out_edges",
+            "out_counts",
+        );
+    }
+
+    /// VL-003 negative twin: all three literal counts must build without panic and
+    /// produce the correct buffer count for tok_starts (== num_tokens, not num_calls).
+    #[test]
+    fn literal_counts_build_correctly_with_token_count_for_tok_buffers() {
+        // num_tokens = 8 > num_calls = 4; tok_starts and tok_lens must be sized to 8.
+        let program = c11_build_call_graph(
+            "calls",
+            "fn_hashes",
+            "tok_starts",
+            "tok_lens",
+            "haystack",
+            Expr::u32(4),
+            Expr::u32(2),
+            Expr::u32(8),
+            "out_edges",
+            "out_counts",
+        );
+        let buffers = program.buffers();
+        // Buffer index 2 = tok_starts, index 3 = tok_lens.
+        let tok_starts_count = buffers
+            .iter()
+            .find(|b| b.name() == "tok_starts")
+            .expect("tok_starts buffer must be declared")
+            .count();
+        let tok_lens_count = buffers
+            .iter()
+            .find(|b| b.name() == "tok_lens")
+            .expect("tok_lens buffer must be declared")
+            .count();
+        assert_eq!(
+            tok_starts_count, 8,
+            "tok_starts must be sized to num_tokens=8, not num_calls=4; got {tok_starts_count}"
+        );
+        assert_eq!(
+            tok_lens_count, 8,
+            "tok_lens must be sized to num_tokens=8, not num_calls=4; got {tok_lens_count}"
+        );
+    }
 }

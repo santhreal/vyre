@@ -637,6 +637,24 @@ impl BodyCtx<'_> {
             (PtxType::U32, PtxType::I32) | (PtxType::I32, PtxType::U32) => {
                 let _ = writeln!(self.text, "    mov.b32    {dst}, {src};");
             }
+            (PtxType::U32, PtxType::U64) => {
+                // Zero-extend 32→64.
+                let _ = writeln!(self.text, "    cvt.u64.u32    {dst}, {src};");
+            }
+            (PtxType::I32, PtxType::U64) => {
+                // Sign-extend 32→64; the 64-bit two's-complement bit pattern is
+                // written into the .u64 (`%rd`) register.
+                let _ = writeln!(self.text, "    cvt.s64.s32    {dst}, {src};");
+            }
+            (PtxType::U64, PtxType::U32) => {
+                // Explicit narrowing: keep the low 32 bits.
+                let _ = writeln!(self.text, "    cvt.u32.u64    {dst}, {src};");
+            }
+            (PtxType::U64, PtxType::F32) => {
+                // Full 64-bit → F32 with round-to-nearest. NEVER narrow to u32
+                // first: that silently discards the high 32 bits.
+                let _ = writeln!(self.text, "    cvt.rn.f32.u64    {dst}, {src};");
+            }
             _ => {
                 return Err(EmitError::PtxConstructionFailed(format!(
                     "unsupported PTX cast from {:?} to {:?}. Fix: validate casts before CUDA emission.",

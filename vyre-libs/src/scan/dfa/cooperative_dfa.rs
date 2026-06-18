@@ -177,13 +177,25 @@ pub(crate) fn cpu_ref_cooperative_dfa(
 ) -> Vec<u32> {
     let row_width = alphabet_size as usize;
     let Some(expected_transitions) = (state_count as usize).checked_mul(row_width) else {
-        return vec![0; input.len()];
+        panic!(
+            "cpu_ref_cooperative_dfa: malformed table (state_count={state_count}, \
+             alphabet_size={alphabet_size}, transitions.len()={}, accept_mask.len()={}); \
+             fix the caller before running parity",
+            transitions.len(),
+            accept_mask.len()
+        );
     };
     if row_width == 0
         || transitions.len() != expected_transitions
         || accept_mask.len() < state_count as usize
     {
-        return vec![0; input.len()];
+        panic!(
+            "cpu_ref_cooperative_dfa: malformed table (state_count={state_count}, \
+             alphabet_size={alphabet_size}, transitions.len()={}, accept_mask.len()={}); \
+             fix the caller before running parity",
+            transitions.len(),
+            accept_mask.len()
+        );
     }
 
     let mut state = 0u32;
@@ -293,5 +305,35 @@ mod tests {
             ALPHABET_SIZE
         )
         .is_empty());
+    }
+
+    /// VL-001: cpu_ref_cooperative_dfa must panic (not return silent zeros) on a
+    /// malformed table, so the parity oracle fails loudly rather than masking GPU
+    /// divergences. This test verifies both malformed-length and zero-alphabet_size
+    /// paths reach the panic arm — the oracle must never produce a plausible-looking
+    /// all-zeros vector that silently accepts a GPU bug.
+    #[test]
+    #[should_panic(
+        expected = "cpu_ref_cooperative_dfa: malformed table"
+    )]
+    fn cpu_ref_cooperative_dfa_panics_on_wrong_transition_length() {
+        // Correct table has state_count * alphabet_size entries; trim by 1 to missize.
+        let (transitions, accept_mask, state_count) = compile_patterns(&[b"abc"]);
+        let short = &transitions[..transitions.len() - 1];
+        // Before fix: returns vec![0; input.len()] silently, masking GPU divergences.
+        // After fix: panics with an actionable message.
+        let _ = cpu_ref_cooperative_dfa(&[b'a' as u32], short, &accept_mask, state_count, ALPHABET_SIZE);
+    }
+
+    /// VL-001: zero alphabet_size must also panic rather than silently return zeros,
+    /// because row_width==0 is structurally invalid (no byte transitions can exist).
+    #[test]
+    #[should_panic(
+        expected = "cpu_ref_cooperative_dfa: malformed table"
+    )]
+    fn cpu_ref_cooperative_dfa_panics_on_zero_alphabet_size() {
+        let (transitions, accept_mask, state_count) = compile_patterns(&[b"abc"]);
+        // alphabet_size=0 means row_width=0 which hits the row_width==0 branch.
+        let _ = cpu_ref_cooperative_dfa(&[b'a' as u32], &transitions, &accept_mask, state_count, 0);
     }
 }
