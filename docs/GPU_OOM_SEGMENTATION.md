@@ -304,3 +304,46 @@ Lesson: budget-margin perf cases must be measured on an idle host; a contended
 full-suite run is not authoritative for sub-10 µs GPU kernels. Kernel:
 `vyre-libs/src/nn/linear/inner/linear_4bit.rs` (256-wide grouped INT4, 32
 lanes/output, 8 outputs/workgroup).
+
+---
+
+## END-TO-END RESULT (the thesis MEASURED on the real keyhog catalog)
+
+The segmentation API shipped in **vyre 0.6.3** (`FileBatch::set_segmentation` +
+`segmentation::catalog_sync_overlap`, kernel decode + emit-guard in
+`dispatcher.rs`). keyhog 0.6.3 now drives it from `MegakernelCatalog::scan`:
+compute the catalog sync-distance overlap once (cached; `None` ⇒ an unbounded
+rule ⇒ whole-file, surfaced loudly), pick a device-saturating `seg_len`
+(`choose_seg_len`), `set_segmentation`, dispatch. Measured on an **RTX 5090**,
+`gpu_vs_hs_8mib` (902 detectors → **3124** GPU rules, 8 MiB, sparse real hits):
+
+| backend | wall (median) | notes |
+|---|---|---|
+| SimdCpu (Hyperscan) | **255.95 ms** | literal prefilter phase-1 ~2 ms + shared phase-2 ~254 ms |
+| Gpu (vyre megakernel) | **807.09 ms** | phase-1 dispatch 489 ms + shared phase-2 254 ms + overhead |
+
+**Ratio 3.15× SLOWER (was 4.1×). Recall parity held (254 == 254).**
+
+The thesis was HALF right. Segmentation did exactly what it promised — `overlap`
+came back **Some(42)** on the real catalog (the `BudgetExceeded`/`None` fear was
+unfounded), 21 segments × 3124 rules = 65604 work-items, and **occupancy went
+17% → 100%** (`occupancy_bps=10000`). But that only moved the ratio 4.1× → 3.15×,
+not past 1.0×. **Occupancy was never the gating factor for a literal-rich
+catalog.** Phase-1 telemetry: the GPU brute-forces *every rule over every byte*
+(3124 × 8 MiB ≈ 24 GB of DFA stepping → 489 ms, **memory-latency-bound on the
+per-rule transition tables**; more warps just contend on that bandwidth).
+Hyperscan's phase-1 is ~2 ms because its literal prefilter (FDR/Teddy) runs the
+expensive DFA confirm ONLY at the few candidate offsets a literal hit. The shared
+CPU phase-2 (~254 ms) then dominates both totals.
+
+**Corrected order of attack.** Part B ("fast inner loop") is not enough either —
+the real lever is a **GPU-side multi-pattern literal prefilter** (Teddy/FDR
+equivalent) so per-rule DFA work happens only at candidate positions, OR a single
+combined automaton (one pass over the input, not 3124). Size won't save it: both
+phase-1s are linear in bytes, so the ~244× phase-1 work ratio is roughly
+size-invariant; dispatch overhead amortizes but the brute-force multiplier does
+not. The GPU megakernel's genuine niche is **low-literal / regex-heavy catalogs**
+where Hyperscan's prefilter is also weak (and very large inputs). Segmentation is
+a necessary, recall-preserving, now-landed foundation a prefilter builds on — not,
+by itself, a Hyperscan-beater on this workload. (See memory
+`gpu-megakernel-prefilter-bound`; keyhog wiring commit `d23e70af`.)
