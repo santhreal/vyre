@@ -56,9 +56,18 @@ fn deeply_nested_loop_exceeds_nesting_limit() {
 
 #[test]
 fn huge_node_count_exceeds_limit() {
-    // Build a program with 10,000 sequential Let nodes.
-    let mut body = Vec::new();
-    for i in 0..10_000 {
+    // The statement-node ceiling is deliberately large — 100_000, the value of
+    // vyre-foundation's validate::depth::DEFAULT_MAX_NODE_COUNT, which must admit
+    // a fully fused megakernel bundle AND agree with the substrate's GPU-native
+    // encoded validator. (The test asserts against the vyre-core public boundary,
+    // which does not re-export the const, so the ceiling is pinned as a literal;
+    // the substrate parity evidence guards the two validators against drift.)
+    // Build just past it so the test exercises the real V019 path rather than an
+    // arbitrary smaller threshold the validator would correctly accept.
+    const MAX_NODE_COUNT: usize = 100_000;
+    let node_count = MAX_NODE_COUNT + 1;
+    let mut body = Vec::with_capacity(node_count + 1);
+    for i in 0..node_count {
         body.push(Node::let_bind(format!("v{i}"), Expr::u32(i as u32)));
     }
     body.push(Node::Return);
@@ -67,14 +76,14 @@ fn huge_node_count_exceeds_limit() {
     let errors = validate(&program);
     assert!(
         !errors.is_empty(),
-        "program with 10,000 nodes must exceed node-count limit, got no errors"
+        "program with {node_count} nodes must exceed node-count limit {MAX_NODE_COUNT}, got no errors"
     );
     assert!(
-        errors
-            .iter()
-            .any(|e| e.message().contains("count") || e.message().contains("limit")),
-        "node-count error must mention 'count' or 'limit', got: {:?}",
-        errors
+        errors.iter().any(|e| {
+            let m = e.message();
+            m.contains("V019") && m.contains("node count") && m.contains("limit")
+        }),
+        "node-count error must be V019 naming 'node count' and 'limit', got: {errors:?}"
     );
 }
 
