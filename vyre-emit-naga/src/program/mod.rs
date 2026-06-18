@@ -4,6 +4,7 @@
 //! descriptor emitter. The descriptor path is the only production Naga lowering
 //! truth.
 
+mod async_resume_guard;
 mod atomic_scanner;
 mod entry;
 mod extension_ops;

@@ -68,6 +68,15 @@ pub fn emit_module_with_features(
             format_validation_errors(&fma_violations)
         )));
     }
+    // Reject unresolved async/resume nodes at this Program-compatibility entry.
+    // It does not run the async-resolution pass, and lowering them silently (or
+    // treating `Resume` as a no-op) would drop their semantics — see
+    // `async_resume_guard` for why the descriptor emitter still lowers them.
+    if let Err(kind) = super::async_resume_guard::reject_async_resume(program) {
+        return Err(LoweringError::invalid(format!(
+            "vyre IR `{kind}` node reached the Program-compatibility Naga emit entry, which does not run the async/trap resolution pass that gives it meaning. Fix: resolve {kind} nodes before emit_module (run the async lowering / resolution pass), or build a KernelDescriptor and call the descriptor emitter directly."
+        )));
+    }
     let mut lowered = vyre_lower::lower_for_emit(program).map_err(|error| {
         LoweringError::invalid(format!(
             "canonical pre-emit lowering failed before Naga Program compatibility emission: {error}. Fix: route callers through vyre-lower::lower_for_emit and descriptor emit instead of direct Program emission."
