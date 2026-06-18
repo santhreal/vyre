@@ -116,6 +116,10 @@ rayon.workspace = true
 bytemuck.workspace = true
 
 [dev-dependencies]
+# Parity tests import the vyre-primitives CPU reference oracles, which are gated
+# behind `cpu-parity`. Enabling it here (dev-dep only) turns it on for vyre-libs'
+# own test/bench builds without leaking the oracles into production (resolver 2).
+vyre-primitives = { workspace = true, features = ["cpu-parity"] }
 vyre-emit-naga = { workspace = true }
 vyre-intrinsics = { workspace = true }
 vyre-driver-reference = { workspace = true }

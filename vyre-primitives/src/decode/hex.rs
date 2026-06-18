@@ -134,6 +134,7 @@ pub fn hex_decode(input: &str, output: &str, table: &str, input_len: u32) -> Pro
 ///
 /// Invalid nibbles clamp to zero through the table, matching the GPU body.
 #[must_use]
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn hex_decode_reference_packed(input: &[u8]) -> Vec<u32> {
     assert!(input.len() % 2 == 0, "hex input must contain byte pairs");
     let table = hex_decode_table_ref();

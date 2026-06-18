@@ -236,6 +236,7 @@ pub struct CpuInflateResult {
 
 /// CPU reference: inflate a DEFLATE stored block (BTYPE=0).
 #[must_use]
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn inflate_stored_reference_bytes(input: &[u8]) -> Result<CpuInflateResult, &'static str> {
     if input.len() < 5 {
         return Err(STORED_HEADER_FIX);
@@ -269,6 +270,7 @@ pub fn inflate_stored_reference_bytes(input: &[u8]) -> Result<CpuInflateResult, 
 
 /// CPU reference over one-byte-per-u32 packed lanes.
 #[must_use]
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn inflate_stored_reference_words(input: &[u32]) -> Result<CpuInflateResult, &'static str> {
     let bytes = input
         .iter()

@@ -28,6 +28,10 @@ tracing.workspace = true
 rustc-hash.workspace = true
 
 [dev-dependencies]
+# Parity tests import the vyre-primitives CPU reference oracles (quantized *_cpu),
+# gated behind `cpu-parity`. Enable it for this crate's own test/bench builds only
+# (resolver 2 keeps it out of production builds of dependents).
+vyre-primitives = { workspace = true, features = ["cpu-parity"] }
 vyre-reference = { workspace = true }
 
 [[test]]

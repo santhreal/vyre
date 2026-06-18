@@ -17,6 +17,7 @@ pub use cpu::{
     i4x8_batched_matvec_f32_scaled_cpu, i4x8_dot_f32_scaled_cpu, i4x8_dot_i32_cpu,
     i4x8_matvec_f32_scaled_cpu, try_unpack_i4x8_cpu_into, unpack_i4x8_cpu, unpack_i4x8_cpu_into,
 };
+#[cfg(any(test, feature = "cpu-parity"))]
 pub use cpu::{pack_i4x8_cpu, pack_i4x8_cpu_into, try_pack_i4x8_cpu_into};
 pub use programs::{
     i4x8_batched_matmul_f32_scaled, i4x8_batched_matmul_top1_f32_scaled,

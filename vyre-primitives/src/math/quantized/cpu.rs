@@ -1,8 +1,13 @@
 //! CPU reference oracles and packing helpers for packed INT4 primitives.
 
+// Used only by the CPU-parity oracle fns below, which are all gated behind
+// `cfg(any(test, feature = "cpu-parity"))`; gate the import to match so a
+// production build (cpu-parity off) carries neither the helpers nor a dead import.
+#[cfg(any(test, feature = "cpu-parity"))]
 use super::{i4_packed_words, I4_LANES_PER_WORD};
 
 /// Pack signed INT4 values into u32 words using the CPU reference layout.
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn pack_i4x8_cpu(values: &[i32]) -> Vec<u32> {
     let mut out = Vec::new();
     let _ = try_pack_i4x8_cpu_into(values, &mut out);
@@ -11,6 +16,7 @@ pub fn pack_i4x8_cpu(values: &[i32]) -> Vec<u32> {
 
 /// Pack signed INT4 lanes into caller-owned u32 storage.
 /// Pack signed INT4 values into caller-owned u32 word storage.
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) {
     if try_pack_i4x8_cpu_into(values, out).is_err() {
         out.clear();
@@ -18,6 +24,7 @@ pub fn pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) {
 }
 
 /// Fallible pack of signed INT4 values into caller-owned u32 word storage.
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) -> Result<(), String> {
     let lane_count = u32::try_from(values.len()).map_err(|_| {
         format!(
@@ -47,9 +54,9 @@ pub fn try_pack_i4x8_cpu_into(values: &[i32], out: &mut Vec<u32>) -> Result<(), 
 }
 
 /// Unpack signed INT4 lanes from u32 words.
+/// Unpack signed INT4 values from u32 words using the CPU reference layout.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-/// Unpack signed INT4 values from u32 words using the CPU reference layout.
 pub fn unpack_i4x8_cpu(packed: &[u32], lane_count: u32) -> Vec<i32> {
     let mut out = Vec::new();
     try_unpack_i4x8_cpu_into(packed, lane_count, &mut out)
@@ -58,8 +65,8 @@ pub fn unpack_i4x8_cpu(packed: &[u32], lane_count: u32) -> Vec<i32> {
 }
 
 /// Unpack signed INT4 lanes into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
 /// Unpack signed INT4 values into caller-owned lane storage.
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn unpack_i4x8_cpu_into(packed: &[u32], lane_count: u32, out: &mut Vec<i32>) {
     try_unpack_i4x8_cpu_into(packed, lane_count, out).unwrap_or_else(|error| panic!("{error}"));
 }
@@ -88,9 +95,9 @@ pub fn try_unpack_i4x8_cpu_into(
 }
 
 /// Packed signed INT4 dot-product CPU oracle.
+/// Compute the CPU reference i32 dot product over packed signed INT4 lanes.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-/// Compute the CPU reference i32 dot product over packed signed INT4 lanes.
 pub fn i4x8_dot_i32_cpu(lhs_packed: &[u32], rhs_packed: &[u32], lane_count: u32) -> i32 {
     let mut acc = 0i32;
     for lane in 0..lane_count as usize {
@@ -102,9 +109,9 @@ pub fn i4x8_dot_i32_cpu(lhs_packed: &[u32], rhs_packed: &[u32], lane_count: u32)
 }
 
 /// Packed signed INT4 scaled dot-product CPU oracle.
+/// Compute the CPU reference scaled f32 dot product over packed signed INT4 lanes.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-/// Compute the CPU reference scaled f32 dot product over packed signed INT4 lanes.
 pub fn i4x8_dot_f32_scaled_cpu(
     lhs_packed: &[u32],
     rhs_packed: &[u32],
@@ -122,9 +129,9 @@ pub fn i4x8_dot_f32_scaled_cpu(
 }
 
 /// Packed signed INT4 scaled matrix-vector CPU oracle.
+/// Compute the CPU reference row-scaled packed INT4 matrix-vector product.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-/// Compute the CPU reference row-scaled packed INT4 matrix-vector product.
 pub fn i4x8_matvec_f32_scaled_cpu(
     weights_packed: &[u32],
     x: &[f32],
@@ -147,9 +154,9 @@ pub fn i4x8_matvec_f32_scaled_cpu(
 }
 
 /// Batched packed signed INT4 scaled matrix-vector CPU oracle.
+/// Compute the CPU reference batched row-scaled packed INT4 matrix-vector product.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-/// Compute the CPU reference batched row-scaled packed INT4 matrix-vector product.
 pub fn i4x8_batched_matvec_f32_scaled_cpu(
     weights_packed: &[u32],
     x_batches: &[f32],
@@ -176,9 +183,9 @@ pub fn i4x8_batched_matvec_f32_scaled_cpu(
 }
 
 /// Batched packed signed INT4 scaled matrix-matrix CPU oracle.
+/// Compute the CPU reference batched packed-activation INT4 matrix multiply.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-/// Compute the CPU reference batched packed-activation INT4 matrix multiply.
 pub fn i4x8_batched_matmul_f32_scaled_cpu(
     weights_packed: &[u32],
     activation_batches_packed: &[u32],
@@ -208,9 +215,9 @@ pub fn i4x8_batched_matmul_f32_scaled_cpu(
 }
 
 /// Batched packed signed INT4 scaled matmul top-1 CPU oracle.
+/// Compute CPU reference top-1 scores and indices for packed INT4 batched matmul.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-/// Compute CPU reference top-1 scores and indices for packed INT4 batched matmul.
 pub fn i4x8_batched_matmul_top1_f32_scaled_cpu(
     weights_packed: &[u32],
     activation_batches_packed: &[u32],

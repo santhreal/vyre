@@ -120,6 +120,7 @@ pub fn decoded_capacity(input_len: u32) -> u32 {
 /// padded bytes left as zero in the fixed decoded capacity. Invalid input
 /// characters are clamped to zero, matching [`base64_decode_body`].
 #[must_use]
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn decode_standard_packed_reference(input: &[u8]) -> (Vec<u32>, u32) {
     match try_decode_standard_packed_reference(input) {
         Ok(decoded) => decoded,
@@ -135,6 +136,7 @@ pub fn decode_standard_packed_reference(input: &[u8]) -> (Vec<u32>, u32) {
 /// Returns the decoded logical byte length while `out` holds the fixed-capacity
 /// GPU ABI representation: one decoded byte per `u32` slot, including zeroed
 /// padding slots.
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn decode_standard_packed_reference_into(input: &[u8], out: &mut Vec<u32>) -> u32 {
     match try_decode_standard_packed_reference_into(input, out) {
         Ok(decoded_len) => decoded_len,
@@ -151,6 +153,7 @@ pub fn decode_standard_packed_reference_into(input: &[u8], out: &mut Vec<u32>) -
 /// This variant is suitable for fuzzing and hostile-input parity tests because
 /// malformed lengths and output staging failures are reported as typed errors
 /// instead of panics.
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_decode_standard_packed_reference(
     input: &[u8],
 ) -> Result<(Vec<u32>, u32), Base64DecodeReferenceError> {
@@ -163,6 +166,7 @@ pub fn try_decode_standard_packed_reference(
 ///
 /// On validation or reservation failure, the caller-owned output buffer is left
 /// unchanged so fuzzers can assert transactional decode behavior.
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_decode_standard_packed_reference_into(
     input: &[u8],
     out: &mut Vec<u32>,

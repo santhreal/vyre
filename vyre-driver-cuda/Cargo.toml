@@ -61,4 +61,6 @@ vyre = { workspace = true }
 # vyre_reference::reference_eval) and by differential tests.
 vyre-reference = { workspace = true }
 # Required by several _gpu_parity tests that import vyre_primitives::*.
-vyre-primitives = { workspace = true }
+# `cpu-parity` exposes the CPU reference oracles (hex_decode_reference_packed, …)
+# these parity tests diff the GPU output against; gated out of production builds.
+vyre-primitives = { workspace = true, features = ["cpu-parity"] }

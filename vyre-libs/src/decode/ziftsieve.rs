@@ -8,6 +8,10 @@
 use vyre::ir::Program;
 use vyre_primitives::decode::ziftsieve::ziftsieve_literal_copy_with_op_id;
 
+// CPU parity oracle: re-exported only for parity tests / the `cpu-parity`
+// feature, never as a production decode surface (matches the vyre-primitives
+// gating of the underlying helper).
+#[cfg(any(test, feature = "cpu-parity"))]
 pub use vyre_primitives::decode::ziftsieve::ziftsieve_reference_extract_literals;
 
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decode_output_buffer};

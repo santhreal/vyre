@@ -27,6 +27,7 @@ pub const MAX_SEQUENCES_PER_BLOCK: usize = 100_000;
 ///
 /// Returns an actionable error string on malformed input. Every error message
 /// includes a `Fix:` tag.
+#[cfg(any(test, feature = "cpu-parity"))]
 pub fn ziftsieve_reference_extract_literals(
     compressed: &[u8],
     max_output: usize,
