@@ -118,7 +118,10 @@ proptest.workspace = true
 tempfile.workspace = true
 criterion.workspace = true
 naga.workspace = true
-c-grammar-gen.workspace = true
+# PATH-ONLY (package = vyre-grammar-gen): see vyre-driver-wgpu — vyre-grammar-gen is
+# not in the 0.6.3 train (crates.io has only 0.6.2), so a `^0.6.3` workspace req is
+# unsatisfiable at publish. cargo strips path-only dev-deps; local builds use the path.
+c-grammar-gen = { package = "vyre-grammar-gen", path = "../vyre-grammar-gen" }
 tree-sitter = { workspace = true }
 tree-sitter-go = { workspace = true }
 

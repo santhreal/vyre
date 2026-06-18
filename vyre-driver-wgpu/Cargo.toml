@@ -89,7 +89,12 @@ vyre-reference = { workspace = true }
 vyre-test-harness = { path = "../conform/vyre-test-harness" }
 tracing-subscriber.workspace = true
 libc.workspace = true
-c-grammar-gen.workspace = true
+# PATH-ONLY (package = vyre-grammar-gen): vyre-grammar-gen is NOT in the 0.6.3
+# publish train (it is only ever a dev-dep here + in vyre-libs, and a normal dep of
+# the publish=false vyre-frontend-c), so crates.io has only 0.6.2 — a `^0.6.3`
+# workspace req is unsatisfiable at publish. cargo strips path-only dev-deps from
+# the published manifest; local test builds still link it via the path.
+c-grammar-gen = { package = "vyre-grammar-gen", path = "../vyre-grammar-gen" }
 tree-sitter = { workspace = true }
 tree-sitter-go = { workspace = true }
 
