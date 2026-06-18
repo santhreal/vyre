@@ -30,6 +30,12 @@ blake3 = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
-# integration tests/benches assert against these crates' public APIs
-vyre-libs = { workspace = true }
+# integration tests/benches assert against these crates' public APIs.
+# `c-parser` is required by carrier_scope_regression::dump_c11_lexer_naga, which
+# builds the real `vyre_libs::parsing::c::lex::lexer::c11_lexer` megakernel and
+# drives it through lower_for_emit → vyre_emit_naga::emit to regression-test
+# loop-carrier scope handling on a real-world program. `parsing::c` is gated
+# behind `c-parser` (vyre-libs/Cargo.toml), so without this the test binary
+# fails to compile (E0433: no `c` in `parsing`).
+vyre-libs = { workspace = true, features = ["c-parser"] }
 proptest.workspace = true
