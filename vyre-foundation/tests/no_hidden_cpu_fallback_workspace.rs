@@ -44,6 +44,16 @@ const ALLOWED_FILES: &[&str] = &[
     "vyre-self-substrate/src/c_dialect_matrix.rs",
     "vyre-self-substrate/src/deep_review_gate.rs",
     "vyre-self-substrate/src/lib.rs",
+    // Capability contract: advertises the regex-accelerator class (incl. the
+    // software class) and keeps unsupported devices fail-closed, making the
+    // software path VISIBLE to benchmark evidence — the opposite of a hidden
+    // fallback. Verified: no silent runtime degradation, only a surfaced
+    // capability record.
+    "vyre-driver/src/backend/regex_accelerator.rs",
+    // Benchmark/parity evidence: records hardware-vs-software regex comparison
+    // artifacts ("compare against hardware regex engines without implying CUDA
+    // provides one"). A parity oracle, not a dispatch fallback.
+    "vyre-driver-cuda/src/regex_hardware_comparison.rs",
 ];
 
 const FORBIDDEN_PATTERNS: &[&str] = &[

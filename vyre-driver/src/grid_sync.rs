@@ -600,7 +600,7 @@ fn wrap_split_segment(program: &Program, wrappers: &[EntryWrapper], entry: Vec<N
 }
 
 /// Diagnostics: the host-split segment **programs** (post buffer-rewrite) that
-/// the fallback dispatch path (`dispatch_with_grid_sync_split*`) validates and
+/// the host-split dispatch path (`dispatch_with_grid_sync_split*`) validates and
 /// launches when the backend lacks native grid-sync. Exposed so tooling and
 /// tests can inspect or validate each segment without a live backend — the
 /// raw [`try_split_on_grid_sync`] output omits the per-segment buffer
