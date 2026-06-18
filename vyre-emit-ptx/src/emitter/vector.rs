@@ -370,11 +370,28 @@ fn vector_memory_type(element_type: &DataType, elem_ty: PtxType) -> PtxType {
 }
 
 fn is_vector_load_op(kind: &KernelOpKind) -> bool {
-    // `LoadConstant` is intentionally excluded: constant-memory buffers use the
-    // `.const` address space in PTX (separate cache hierarchy) and require a
-    // different address-operand path. Including them in global-space vector
-    // fusion caused `ld.global.nc.vN` to be emitted for `.const`-space pointers,
-    // which is either a PTX validation error or silently bypasses the constant
-    // cache. Constant loads fall through to the scalar `emit_op` path instead.
-    matches!(kind, KernelOpKind::LoadGlobal)
+    // `LoadConstant` IS fusable here, and must be: this PTX backend has NO
+    // `.const` state-space emission path. `load_space_for` maps
+    // `MemoryClass::Constant` to the `"global"` (or `"global.nc"`) address space,
+    // and the scalar dispatch in `emitter.rs` routes `LoadGlobal` and
+    // `LoadConstant` through the *identical* `emit_memory_address` +
+    // `load_space_for` + `emit_load_value` path (Constant pointers live in
+    // `slot_to_ptr`, same as global). The fusion's address path
+    // (`emit_global_address_operand` + `vector_load_mnemonic_parts`) handles
+    // exactly `"global"`/`"global.nc"`, so a fused `LoadConstant` chain emits a
+    // correct `ld.global[.nc].vN`.
+    //
+    // Excluding it was an active Law-7 pessimization: `const_buffer_promote`
+    // rewrites read-only-global `LoadGlobal` → `LoadConstant` BEFORE emission, so
+    // every promoted read-only buffer fell out of fusion and emitted 4× scalar
+    // `ld.global.u32` instead of one `ld.global.v4.u32`. It also desynced the
+    // emitter from `vec_memory_fusion::MemoryFusionKind::Load::matches`, which
+    // already counts `LoadConstant` as a fusion candidate.
+    //
+    // `LoadShared` stays excluded: shared loads lower via `slot_to_shared_symbol`
+    // (a distinct address-operand path) rather than `emit_global_address_operand`.
+    matches!(
+        kind,
+        KernelOpKind::LoadGlobal | KernelOpKind::LoadConstant
+    )
 }
