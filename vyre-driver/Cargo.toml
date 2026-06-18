@@ -62,4 +62,8 @@ fs2.workspace = true
 workspace = true
 
 [dev-dependencies]
+# integration tests/benches assert against these crates' public APIs
+vyre = { workspace = true }
+vyre-driver-reference = { workspace = true }
+vyre-reference = { workspace = true }
 tempfile.workspace = true

@@ -29,4 +29,7 @@ vyre-foundation.workspace = true
 inventory.workspace = true
 
 [dev-dependencies]
+# integration tests/benches assert against these crates' public APIs
+vyre-primitives = { workspace = true }
+vyre-self-substrate = { workspace = true }
 proptest.workspace = true

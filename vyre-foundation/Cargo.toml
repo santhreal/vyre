@@ -48,6 +48,14 @@ arrayvec.workspace = true
 workspace = true
 
 [dev-dependencies]
+# integration tests/benches assert against these crates' public APIs
+vyre-lower = { workspace = true }
+vyre-reference = { workspace = true }
+# Integration tests under tests/ use the `vyre` umbrella facade (vyre::ir::*)
+# as the public boundary they assert against. `vyre` (the vyre-core package)
+# depends on vyre-foundation, so this is a dev-dependency CYCLE — which cargo
+# permits because dev-deps are excluded from the normal build graph.
+vyre = { workspace = true }
 proptest.workspace = true
 criterion.workspace = true
 

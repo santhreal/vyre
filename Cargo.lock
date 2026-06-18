@@ -3553,8 +3553,11 @@ dependencies = [
  "thiserror 2.0.18",
  "toml",
  "tracing",
+ "vyre",
+ "vyre-driver-reference",
  "vyre-foundation",
  "vyre-macros",
+ "vyre-reference",
  "vyre-self-substrate",
  "vyre-spec",
 ]
@@ -3580,6 +3583,7 @@ dependencies = [
  "vyre-driver",
  "vyre-emit-ptx",
  "vyre-foundation",
+ "vyre-libs",
  "vyre-lower",
  "vyre-primitives",
  "vyre-reference",
@@ -3625,6 +3629,7 @@ dependencies = [
  "vyre-emit-naga",
  "vyre-foundation",
  "vyre-lower",
+ "vyre-reference",
  "vyre-spec",
 ]
 
@@ -3665,6 +3670,7 @@ dependencies = [
  "vyre-emit-naga",
  "vyre-foundation",
  "vyre-grammar-gen",
+ "vyre-harness",
  "vyre-libs",
  "vyre-lower",
  "vyre-primitives",
@@ -3707,6 +3713,7 @@ dependencies = [
  "tracing",
  "vyre-driver",
  "vyre-foundation",
+ "vyre-libs",
  "vyre-lower",
  "vyre-spec",
 ]
@@ -3721,6 +3728,7 @@ dependencies = [
  "serde",
  "smallvec",
  "thiserror 2.0.18",
+ "vyre-emit-naga",
  "vyre-foundation",
  "vyre-lower",
 ]
@@ -3734,6 +3742,7 @@ dependencies = [
  "serde",
  "thiserror 2.0.18",
  "vyre-emit-naga",
+ "vyre-emit-ptx",
  "vyre-foundation",
  "vyre-lower",
  "vyre-primitives",
@@ -3764,7 +3773,10 @@ dependencies = [
  "thiserror 2.0.18",
  "toml",
  "tracing",
+ "vyre",
+ "vyre-lower",
  "vyre-macros",
+ "vyre-reference",
  "vyre-spec",
 ]
 
@@ -3840,6 +3852,8 @@ dependencies = [
  "proptest",
  "vyre",
  "vyre-foundation",
+ "vyre-primitives",
+ "vyre-self-substrate",
 ]
 
 [[package]]
@@ -3886,10 +3900,14 @@ dependencies = [
  "tree-sitter-go",
  "vyre",
  "vyre-driver",
+ "vyre-driver-reference",
+ "vyre-driver-wgpu",
+ "vyre-emit-naga",
  "vyre-emit-ptx",
  "vyre-foundation",
  "vyre-grammar-gen",
  "vyre-harness",
+ "vyre-intrinsics",
  "vyre-lower",
  "vyre-primitives",
  "vyre-reference",
@@ -3908,6 +3926,8 @@ dependencies = [
  "syn 2.0.117",
  "tempfile",
  "toml",
+ "vyre",
+ "vyre-foundation",
  "walkdir",
 ]
 
@@ -3967,6 +3987,7 @@ dependencies = [
  "regex-automata",
  "rustc-hash 2.1.2",
  "smallvec",
+ "vyre",
  "vyre-foundation",
  "vyre-primitives",
  "vyre-spec",
@@ -3989,6 +4010,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tracing",
  "ureq",
+ "vyre",
  "vyre-driver",
  "vyre-foundation",
  "vyre-self-substrate",

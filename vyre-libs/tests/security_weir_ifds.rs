@@ -1,6 +1,14 @@
 //! Security-to-Weir IFDS routing contract tests.
+//!
+//! Gated by the same `weir_ifds_external_engine` feature as the code it
+//! exercises (`vyre_libs::security::weir_ifds`, see security/mod.rs). That
+//! module `use`s the external `external_dataflow_engine` crate, which is not
+//! wired into this workspace, so both the module and these tests stay disabled
+//! until that integration lands. Gating on the broader `security` feature was
+//! wrong: `security` is enabled (e.g. by xtask) while the weir_ifds external
+//! engine is absent, so the test failed to resolve the missing crate.
 
-#![cfg(feature = "security")]
+#![cfg(feature = "weir_ifds_external_engine")]
 
 use std::collections::BTreeMap;
 

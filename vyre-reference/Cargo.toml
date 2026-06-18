@@ -27,6 +27,8 @@ im.workspace = true
 libm.workspace = true
 
 [dev-dependencies]
+# integration tests/benches assert against these crates' public APIs
+vyre = { workspace = true }
 proptest.workspace = true
 criterion.workspace = true
 regex-automata.workspace = true

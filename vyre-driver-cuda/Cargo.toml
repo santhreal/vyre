@@ -46,6 +46,8 @@ dashmap.workspace = true
 libc.workspace = true
 
 [dev-dependencies]
+# integration tests/benches assert against these crates' public APIs
+vyre-libs = { workspace = true }
 tempfile.workspace = true
 serde_json.workspace = true
 pollster.workspace = true

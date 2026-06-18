@@ -35,4 +35,6 @@ thiserror = { workspace = true }
 vyre-foundation.workspace = true
 
 [dev-dependencies]
+# integration tests/benches assert against these crates' public APIs
+vyre-emit-ptx = { workspace = true }
 proptest.workspace = true

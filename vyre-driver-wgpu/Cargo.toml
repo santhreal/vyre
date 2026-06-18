@@ -61,6 +61,7 @@ libm.workspace = true
 bincode = { workspace = true }
 
 [dev-dependencies]
+vyre-harness = { workspace = true }
 criterion.workspace = true
 stats_alloc.workspace = true
 tokio.workspace = true

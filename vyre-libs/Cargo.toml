@@ -85,6 +85,12 @@ rule = ["dep:regex"]
 "python-parser" = []
 "test-fixtures" = []
 security = []
+# Enables the `security::weir_ifds` module + its tests. OFF by default and not
+# enabled anywhere in this workspace: weir_ifds `use`s the external
+# `external_dataflow_engine` crate, which is not vendored here. Turning this on
+# without that crate present is a compile error by design — restore the
+# integration (add the crate to deps) before enabling.
+weir_ifds_external_engine = []
 "self-substrate" = []
 
 [dependencies]
@@ -110,6 +116,11 @@ rayon.workspace = true
 bytemuck.workspace = true
 
 [dev-dependencies]
+vyre-emit-naga = { workspace = true }
+vyre-intrinsics = { workspace = true }
+vyre-driver-reference = { workspace = true }
+# integration tests/benches assert against these crates' public APIs
+vyre-driver-wgpu = { workspace = true }
 vyre-lower = { workspace = true }
 vyre-emit-ptx = { workspace = true }
 vyre-driver = { workspace = true }

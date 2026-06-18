@@ -28,5 +28,6 @@ default = []
 nvrtc = []
 
 [dev-dependencies]
+vyre-emit-naga = { workspace = true }
 cudarc = { workspace = true }
 proptest.workspace = true

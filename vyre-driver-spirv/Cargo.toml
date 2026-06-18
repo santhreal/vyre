@@ -32,4 +32,6 @@ ash.workspace = true
 smallvec = { workspace = true }
 
 [dev-dependencies]
+# integration tests/benches assert against these crates' public APIs
+vyre-reference = { workspace = true }
 tempfile.workspace = true
