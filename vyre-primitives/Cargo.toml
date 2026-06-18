@@ -37,7 +37,12 @@ vyre-foundation = ["dep:vyre-foundation"]
 # Every domain pulls vyre-foundation  -  every primitive ships CPU
 # reference + GPU `fn(...) -> Program` builder together.
 text = ["vyre-foundation", "reduce"]
-matching = ["vyre-foundation"]
+# `hash`: `matching/nfa_to_dfa.rs` imports `crate::hash::fnv1a` UNCONDITIONALLY, so
+# the `matching` domain does not compile standalone without it. Previously omitted
+# (the bug was masked in-workspace by feature unification — another member always
+# enabled `hash`); a consumer enabling ONLY `matching` against the published crate
+# fails with E0433. Self-enable it so `matching` is a complete, standalone feature.
+matching = ["vyre-foundation", "hash"]
 decode = ["vyre-foundation"]
 # Subgroup-cooperative NFA step (G1). Composes bitset + matching.
 nfa = ["vyre-foundation", "bitset", "matching"]

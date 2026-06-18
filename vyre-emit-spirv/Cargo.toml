@@ -21,9 +21,14 @@ vyre-lower = { workspace = true }
 # `matching` enables `vyre_primitives::matching` (AnchorDfaPlan, build_anchor_dfa_plan,
 # …) used UNCONDITIONALLY by `src/anchor_dfa_offload.rs`. The workspace dep is
 # default-features = false, so this must be requested explicitly: it built locally
-# only because another workspace crate unifies `matching` on, but the isolated
-# `cargo publish` verify build of this crate's tarball compiled it out (E0432).
-vyre-primitives = { workspace = true, features = ["matching"] }
+# only because another workspace crate unifies it on; the isolated `cargo publish`
+# verify build compiled it out (E0432).
+# `hash` is required transitively: `vyre_primitives::matching::nfa_to_dfa` imports
+# `crate::hash::fnv1a` UNCONDITIONALLY, but the PUBLISHED vyre-primitives 0.6.3
+# `matching` feature does not self-enable `hash` (a feature-completeness bug fixed
+# locally for 0.6.4). Until that ships, consumers enabling `matching` against the
+# published 0.6.3 must also enable `hash` or the isolated build fails (E0433).
+vyre-primitives = { workspace = true, features = ["matching", "hash"] }
 naga = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
