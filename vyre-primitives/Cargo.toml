@@ -97,9 +97,14 @@ inventory = { workspace = true, optional = true }
 bytemuck.workspace = true
 
 [dev-dependencies]
-vyre-driver = { workspace = true }
-vyre-driver-cuda = { workspace = true }
-vyre-reference = { workspace = true }
+# Pinned to the published floor (not `workspace = true` / 0.6.3) to break the
+# dev-dependency publish cycle: vyre-primitives is published before vyre-driver/
+# vyre-driver-cuda/vyre-reference, so a 0.6.3 req is unresolvable at publish time.
+# `^0.6.1` resolves against the already-published baseline; path keeps local builds
+# on the workspace crates. Matches the pattern used by vyre-spec/vyre-driver-wgpu.
+vyre-driver = { version = "0.6.1", path = "../vyre-driver" }
+vyre-driver-cuda = { version = "0.6.1", path = "../vyre-driver-cuda" }
+vyre-reference = { version = "0.6.1", path = "../vyre-reference" }
 proptest.workspace = true
 criterion.workspace = true
 

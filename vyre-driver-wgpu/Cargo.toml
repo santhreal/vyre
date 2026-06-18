@@ -71,16 +71,22 @@ vyre-libs = { version = "0.6.1", path = "../vyre-libs", features = ["matching", 
 # (vyre::ir, vyre::{DispatchConfig, VyreBackend, validate, ...}) — the ergonomic
 # surface a real consumer uses. The 0.6.2 refactor dropped this dev-dep, which
 # silently RED-ed ~90 test files (use of unlinked crate `vyre`). `default-features
-# = false` (inherited from the workspace dep) keeps the `wgpu` feature OFF, so vyre
-# does NOT pull vyre-driver-wgpu back in — no dependency cycle.
-vyre = { workspace = true }
+# = false` keeps the `wgpu` feature OFF, so vyre does NOT pull vyre-driver-wgpu back
+# in — no dependency cycle.
+# PATH-ONLY (no version): vyre (vyre-core) is published AFTER this crate in the 0.6.3
+# train, so a versioned/workspace dev-dep would be unsatisfiable at publish time.
+# cargo strips path-only dev-deps from the published manifest; the local test build
+# still links it through the path.
+vyre = { path = "../vyre-core", default-features = false }
 # A handful of tests reach `vyre_primitives::wire::pack_u32_iter` directly (the
 # facade doesn't re-export the wire POD helpers). Also dropped in the 0.6.2 refactor.
 vyre-primitives = { workspace = true }
 # A CPU-reference parity test (`c_ast_expression_support`) compares against vyre-reference.
 vyre-reference = { workspace = true }
 # `lens_gpu_parity` (and other GPU parity tests) use the shared conform harness.
-vyre-test-harness = { workspace = true }
+# PATH-ONLY: vyre-test-harness is publish=false (never on crates.io), so a versioned
+# dev-dep is unsatisfiable at publish. cargo strips path-only dev-deps on publish.
+vyre-test-harness = { path = "../conform/vyre-test-harness" }
 tracing-subscriber.workspace = true
 libc.workspace = true
 c-grammar-gen.workspace = true
