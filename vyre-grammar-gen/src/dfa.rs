@@ -130,15 +130,35 @@ impl DfaBuilder {
     }
 
     /// Record `(state, class) -> next_state` with `Action::Continue`.
-    pub fn continue_to(&mut self, state: u32, class: u32, next_state: u32) {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `next_state` exceeds [`u16::MAX`]. The packed
+    /// 16-bit transition encoding cannot represent more than 65535 states;
+    /// callers must keep DFA state counts within that range.
+    pub fn continue_to(
+        &mut self,
+        state: u32,
+        class: u32,
+        next_state: u32,
+    ) -> Result<(), String> {
+        let next_state_u16 = u16::try_from(next_state).map_err(|_| {
+            format!(
+                "Fix: DFA next_state {next_state} exceeds u16::MAX ({}). \
+                 The packed 16-bit transition encoding cannot represent this state index; \
+                 the DFA has too many states.",
+                u16::MAX
+            )
+        })?;
         self.table.set_transition(
             state,
             class,
             Transition {
-                next_state: u16::try_from(next_state).unwrap_or(u16::MAX),
+                next_state: next_state_u16,
                 action: Action::Continue,
             },
         );
+        Ok(())
     }
 
     /// Mark `state` as accepting with token id `token_id`.
@@ -147,8 +167,14 @@ impl DfaBuilder {
     }
 
     /// Finalize with max-munch lexer semantics.
-    #[must_use]
-    pub fn build(self) -> DfaTable {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the regex patterns fail to compile into a DFA or if
+    /// the DFA cannot produce a start state. A failure here means the compiled
+    /// DFA would silently reject all input; the error is surfaced so callers
+    /// can fail loudly rather than upload a zero-recall table.
+    pub fn build(self) -> Result<DfaTable, String> {
         self.build_with_match_kind(MatchKind::LeftmostFirst)
     }
 
@@ -157,10 +183,21 @@ impl DfaBuilder {
     /// Callers that need every overlapping regex match must opt into
     /// [`MatchKind::All`] explicitly; the C lexer path uses leftmost-first
     /// max-munch because each byte position must produce at most one token.
-    #[must_use]
-    pub fn build_with_match_kind(self, kind: MatchKind) -> DfaTable {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The regex patterns fail to compile into a dense DFA (e.g. NFA size
+    ///   limit exceeded, invalid syntax).
+    /// - The DFA cannot return a valid start state.
+    /// - A DFA state index overflows the packed 16-bit transition encoding.
+    ///
+    /// Any failure means the compiled DFA would silently reject all input; the
+    /// error is surfaced so callers can fail loudly rather than upload a
+    /// zero-recall table to the GPU.
+    pub fn build_with_match_kind(self, kind: MatchKind) -> Result<DfaTable, String> {
         if self.patterns.is_empty() {
-            return self.table;
+            return Ok(self.table);
         }
 
         use regex_automata::dfa::{dense, Automaton};
@@ -172,17 +209,23 @@ impl DfaBuilder {
             .map(|(_, p)| format!("^(?:{p})"))
             .collect();
         let regexes: Vec<&str> = anchored_regexes.iter().map(String::as_str).collect();
-        let Ok(dfa) = dense::Builder::new()
+        let dfa = dense::Builder::new()
             .configure(dense::Config::new().match_kind(kind))
             .build_many(&regexes)
-        else {
-            return self.table;
-        };
+            .map_err(|e| {
+                format!(
+                    "Fix: DFA build failed — regex pattern set did not compile: {e:?}. \
+                     The GPU would receive a zero-recall table that rejects all input."
+                )
+            })?;
 
         let input = Input::new("");
-        let Ok(start_id) = dfa.start_state_forward(&input) else {
-            return self.table;
-        };
+        let start_id = dfa.start_state_forward(&input).map_err(|e| {
+            format!(
+                "Fix: DFA start state could not be determined: {e:?}. \
+                 The GPU would receive a zero-recall table that rejects all input."
+            )
+        })?;
 
         let mut state_queue = vec![start_id];
         let mut id_to_idx = std::collections::HashMap::new();
@@ -237,18 +280,27 @@ impl DfaBuilder {
                     Action::Continue
                 };
 
+                let next_state_u16 = u16::try_from(next_idx).map_err(|_| {
+                    format!(
+                        "Fix: DFA state index {next_idx} overflows the packed 16-bit \
+                         transition encoding (max {}). Reduce the number of patterns or \
+                         use a coarser character class map.",
+                        u16::MAX
+                    )
+                })?;
+
                 table.set_transition(
                     state_idx as u32,
                     byte as u32,
                     Transition {
-                        next_state: next_idx as u16,
+                        next_state: next_state_u16,
                         action,
                     },
                 );
             }
         }
 
-        table
+        Ok(table)
     }
 }
 
@@ -279,7 +331,7 @@ mod tests {
     #[test]
     fn builder_default_row_is_error() {
         let b = DfaBuilder::new(4, 8);
-        let table = b.build();
+        let table = b.build().expect("empty pattern set must succeed");
         assert_eq!(table.num_states, 4);
         assert_eq!(table.num_classes, 8);
         for &t in &table.transitions {
@@ -290,8 +342,8 @@ mod tests {
     #[test]
     fn builder_continue_populates_cell() {
         let mut b = DfaBuilder::new(4, 8);
-        b.continue_to(1, 3, 2);
-        let table = b.build();
+        b.continue_to(1, 3, 2).expect("state 2 fits in u16");
+        let table = b.build().expect("empty pattern set must succeed");
         let got = table.transition(1, 3);
         assert_eq!(got.next_state, 2);
         assert_eq!(got.action, Action::Continue);
@@ -301,7 +353,54 @@ mod tests {
     fn builder_accept_sets_token_id() {
         let mut b = DfaBuilder::new(4, 8);
         b.accept(2, 42);
-        let table = b.build();
+        let table = b.build().expect("empty pattern set must succeed");
         assert_eq!(table.token_ids[2], 42);
+    }
+
+    #[test]
+    fn build_with_invalid_regex_returns_err_not_all_error_table() {
+        // A deliberately broken regex must produce Err, not a silent all-Error
+        // DFA that rejects every input with no diagnostic (dfa-build-silent-fallback).
+        let mut b = DfaBuilder::new(0, 0);
+        b.add_pattern(1, "[invalid(unclosed");
+        let result = b.build();
+        let err = result.expect_err(
+            "Fix: DFA builder must return Err on regex compile failure, not a silent zero-recall table",
+        );
+        assert!(
+            err.contains("Fix:"),
+            "Fix: error message must include a 'Fix:' action hint, got: {err}"
+        );
+        assert!(
+            err.contains("did not compile") || err.contains("DFA build failed"),
+            "Fix: error must identify the compile failure, got: {err}"
+        );
+    }
+
+    #[test]
+    fn continue_to_overflow_returns_err_not_clamped_max() {
+        // next_state that overflows u16 must return Err, not silently store u16::MAX
+        // which points to a non-existent state (dfa-next-state-overflow-silent).
+        let mut b = DfaBuilder::new(4, 8);
+        let result = b.continue_to(0, 0, u32::from(u16::MAX) + 1);
+        let err = result.expect_err(
+            "Fix: continue_to must return Err when next_state overflows u16, \
+             not silently clamp to u16::MAX",
+        );
+        assert!(
+            err.contains("Fix:"),
+            "Fix: error must include a 'Fix:' action hint, got: {err}"
+        );
+        assert!(
+            err.contains("exceeds u16::MAX") || err.contains("overflow"),
+            "Fix: error must name the overflow, got: {err}"
+        );
+        // The transition must not have been written — state (0,0) must still be Error.
+        let table = b.build().expect("empty patterns must succeed");
+        assert_eq!(
+            table.transition(0, 0).action,
+            Action::Error,
+            "Fix: failed continue_to must not mutate the transition table"
+        );
     }
 }

@@ -64,7 +64,7 @@ fn decode_dfa_rejects_lr_blob_as_wrong_kind() {
     let mut b = LrBuilder::new(2, 2, 1);
     b.set_action(0, 0, Action::Accept);
     let lr = b.build();
-    let blob = PackedBlob::from_lr(&lr);
+    let blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack");
     // Trying to decode an LR blob as DFA must fail with UnsupportedKind
     let err = decode_dfa_from_bytes(&blob.bytes).unwrap_err();
     assert!(
@@ -75,7 +75,7 @@ fn decode_dfa_rejects_lr_blob_as_wrong_kind() {
 
 #[test]
 fn decode_lr_rejects_dfa_blob_as_wrong_kind() {
-    let dfa = DfaBuilder::new(2, 4).build();
+    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     let err = decode_lr_from_bytes(&blob.bytes).unwrap_err();
     assert!(
@@ -86,7 +86,7 @@ fn decode_lr_rejects_dfa_blob_as_wrong_kind() {
 
 #[test]
 fn decode_dfa_truncated_payload_is_payload_truncated() {
-    let dfa = DfaBuilder::new(2, 4).build();
+    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     // Truncate by removing the last 10 bytes
     let truncated = &blob.bytes[..blob.bytes.len().saturating_sub(10)];
@@ -99,7 +99,7 @@ fn decode_dfa_truncated_payload_is_payload_truncated() {
 
 #[test]
 fn decode_dfa_checksum_mismatch_on_bit_flip() {
-    let dfa = DfaBuilder::new(2, 4).build();
+    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
     let mut blob = PackedBlob::from_dfa(&dfa);
     // Flip a bit in the payload area (byte 25)
     if blob.bytes.len() > 25 {
@@ -114,7 +114,7 @@ fn decode_dfa_checksum_mismatch_on_bit_flip() {
 
 #[test]
 fn decode_dfa_checksum_mismatch_on_last_payload_byte_flip() {
-    let dfa = DfaBuilder::new(4, 8).build();
+    let dfa = DfaBuilder::new(4, 8).build().expect("empty pattern set must succeed");
     let mut blob = PackedBlob::from_dfa(&dfa);
     // Last payload byte is at index len - 17
     let flip_idx = blob.bytes.len() - 17;
@@ -298,7 +298,7 @@ fn preprocess_function_like_macro_is_not_expanded() {
 #[test]
 fn dfa_builder_single_state_single_class() {
     let b = DfaBuilder::new(1, 1);
-    let t = b.build();
+    let t = b.build().expect("empty pattern set must succeed");
     assert_eq!(t.num_states, 1);
     assert_eq!(t.num_classes, 1);
     assert_eq!(t.transitions.len(), 1);
@@ -307,7 +307,7 @@ fn dfa_builder_single_state_single_class() {
 #[test]
 fn dfa_builder_zero_states_zero_classes() {
     let b = DfaBuilder::new(0, 0);
-    let t = b.build();
+    let t = b.build().expect("empty pattern set must succeed");
     assert_eq!(t.transitions.len(), 0);
     assert_eq!(t.token_ids.len(), 0);
 }
@@ -315,9 +315,9 @@ fn dfa_builder_zero_states_zero_classes() {
 #[test]
 fn dfa_builder_many_states_round_trips_through_wire() {
     let mut b = DfaBuilder::new(64, 64);
-    b.continue_to(0, 0, 1);
+    b.continue_to(0, 0, 1).expect("state 1 fits in u16");
     b.accept(1, 7);
-    let dfa = b.build();
+    let dfa = b.build().expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     let got = decode_dfa_from_bytes(&blob.bytes).expect("decode");
     assert_eq!(got.num_states, 64);

@@ -13,7 +13,7 @@ pub struct UncarrieredAssign {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CarrierSummary {
-    pub assigns_observed: usize,
+    pub total_ops_observed: usize,
     pub carrier_reads: BTreeMap<String, usize>,
     pub carrier_writes: BTreeMap<String, usize>,
     pub carrier_finals: BTreeMap<String, usize>,
@@ -58,7 +58,7 @@ pub fn find_uncarriered_assigns(
 pub fn carrier_summary(desc: &KernelDescriptor) -> CarrierSummary {
     let mut carrier_reads = BTreeMap::new();
     let mut carrier_writes = BTreeMap::new();
-    let carrier_finals = BTreeMap::new();
+    let mut carrier_finals = BTreeMap::new();
 
     for op in desc.ops_iter() {
         match &op.kind {
@@ -66,9 +66,11 @@ pub fn carrier_summary(desc: &KernelDescriptor) -> CarrierSummary {
                 *carrier_reads.entry(name.to_string()).or_insert(0) += 1;
             }
             KernelOpKind::LoopCarrierEnd { name } => {
+                *carrier_finals.entry(name.to_string()).or_insert(0) += 1;
+            }
+            KernelOpKind::LoopCarrierInit { name } => {
                 *carrier_writes.entry(name.to_string()).or_insert(0) += 1;
             }
-
             _ => {}
         }
     }
@@ -87,7 +89,7 @@ pub fn carrier_summary(desc: &KernelDescriptor) -> CarrierSummary {
     }
 
     CarrierSummary {
-        assigns_observed: desc.ops_iter().count(),
+        total_ops_observed: desc.ops_iter().count(),
         carrier_reads,
         carrier_writes,
         carrier_finals,

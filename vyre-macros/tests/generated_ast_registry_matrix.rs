@@ -84,11 +84,6 @@ fn type_cases() -> Vec<(GeneratedType, &'static str)> {
     ]
 }
 
-fn variant_hash(name: &str) -> u32 {
-    name.bytes()
-        .fold(0u32, |acc, byte| acc.wrapping_add(u32::from(byte)))
-}
-
 fn decoder_hashes(node: &ir_inner::model::node::Node, out: &mut Vec<u32>) {
     match node {
         ir_inner::model::node::Node::If {
@@ -103,7 +98,13 @@ fn decoder_hashes(node: &ir_inner::model::node::Node, out: &mut Vec<u32>) {
                 decoder_hashes(child, out);
             }
         }
-        ir_inner::model::node::Node::Barrier | ir_inner::model::node::Node::Return => {}
+        // The `then` branch is a single `Node::trap` leaf carrying the same
+        // opcode discriminant as the enclosing `If` cond; it holds no nested
+        // decoder `If`, so collecting from the cond alone counts each variant
+        // exactly once.
+        ir_inner::model::node::Node::Barrier
+        | ir_inner::model::node::Node::Return
+        | ir_inner::model::node::Node::Trap { .. } => {}
     }
 }
 
@@ -170,33 +171,24 @@ fn generated_ast_registry_matrix_pins_op_ids_and_partial_eq() {
 }
 
 #[test]
-fn generated_ast_registry_decoders_cover_every_variant_hash() {
-    let mut expected_expr = ["Const", "Unary", "Pair", "Binary", "Select"]
-        .into_iter()
-        .map(variant_hash)
-        .collect::<Vec<_>>();
-    let mut expected_node = ["Return", "Barrier", "Store", "Branch"]
-        .into_iter()
-        .map(variant_hash)
-        .collect::<Vec<_>>();
-    let mut expected_type = ["U32", "F32", "Ptr", "Tensor"]
-        .into_iter()
-        .map(variant_hash)
-        .collect::<Vec<_>>();
-    expected_expr.sort();
-    expected_node.sort();
-    expected_type.sort();
-
+fn generated_ast_registry_decoders_cover_every_variant_by_index() {
+    // After the hash-collision fix, each variant's decoder opcode discriminant
+    // is its DECLARATION INDEX (0..N), guaranteed unique — NOT the old
+    // collision-prone ASCII byte-sum. So the cascade must carry exactly the
+    // contiguous index set `0..variant_count`, one per variant, no gaps or dups.
+    // GeneratedExpr: Const, Unary, Pair, Binary, Select (5 variants).
     assert_eq!(
         sorted_decoder_hashes(&generate_generatedexpr_gpu_vm_decoder()),
-        expected_expr
+        (0u32..5).collect::<Vec<_>>(),
     );
+    // GeneratedNode: Return, Barrier, Store, Branch (4 variants).
     assert_eq!(
         sorted_decoder_hashes(&generate_generatednode_gpu_vm_decoder()),
-        expected_node
+        (0u32..4).collect::<Vec<_>>(),
     );
+    // GeneratedType: U32, F32, Ptr, Tensor (4 variants).
     assert_eq!(
         sorted_decoder_hashes(&generate_generatedtype_gpu_vm_decoder()),
-        expected_type
+        (0u32..4).collect::<Vec<_>>(),
     );
 }

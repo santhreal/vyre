@@ -56,15 +56,6 @@ fn program_contains_atomic(program: &Program) -> bool {
     program.stats().atomic_op_count > 0
 }
 
-/// Build per-buffer element-count parameter words for a dispatch.
-#[must_use]
-pub fn dispatch_param_words(bindings: &[Binding], element_count: u32) -> Vec<u32> {
-    match try_dispatch_param_words(bindings, element_count) {
-        Ok(words) => words,
-        Err(_error) => Vec::new(),
-    }
-}
-
 /// Build per-buffer element-count parameter words for a dispatch with fallible
 /// host-staging allocation.
 pub fn try_dispatch_param_words(
@@ -77,10 +68,19 @@ pub fn try_dispatch_param_words(
 }
 
 /// Build per-buffer element-count parameter words into caller-owned storage.
-pub fn dispatch_param_words_into(bindings: &[Binding], element_count: u32, words: &mut Vec<u32>) {
-    if try_dispatch_param_words_into(bindings, element_count, words).is_err() {
-        words.clear();
-    }
+///
+/// # Errors
+///
+/// Returns an error when any binding slot overflows `usize`, or when
+/// the host staging allocation fails. The caller-owned `words` buffer is
+/// left in an unspecified but valid state (may be partially written); it
+/// is the caller's responsibility to handle the error before using the buffer.
+pub fn dispatch_param_words_into(
+    bindings: &[Binding],
+    element_count: u32,
+    words: &mut Vec<u32>,
+) -> Result<(), String> {
+    try_dispatch_param_words_into(bindings, element_count, words)
 }
 
 /// Build per-buffer element-count parameter words into caller-owned storage
@@ -275,5 +275,77 @@ mod tests {
                 && !production.contains("panic!("),
             "Fix: dispatch parameter planning must not allocate infallibly, grow repeatedly, or panic in release-path helpers."
         );
+    }
+
+    // Reproducing test for: dispatch-param-words-silent-empty-return
+    // Before fix: `dispatch_param_words` (infallible) existed and returned Vec::new() on error,
+    // silently producing a zero-length param buffer. After fix: function is removed; callers
+    // must use `try_dispatch_param_words` which returns a Result.
+    #[test]
+    fn no_infallible_dispatch_param_words_function_exists_in_public_surface() {
+        // Confirm the fallible API exists and succeeds on valid input.
+        let bindings = [binding(0, 10)];
+        let words = try_dispatch_param_words(&bindings, 10)
+            .expect("Fix: try_dispatch_param_words must succeed for valid bindings");
+        assert_eq!(
+            words,
+            vec![10, 10],
+            "Fix: try_dispatch_param_words must return [element_count, binding_element_count]"
+        );
+        // Confirm the source has no silent empty-vec fallback (the pattern from the bug:
+        // `Err(_) => Vec::new()` / `Err(_error) => Vec::new()`).
+        let source = include_str!("dispatch_params.rs");
+        let production = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("Fix: production section must precede test section");
+        assert!(
+            !production.contains("=> Vec::new()"),
+            "Fix: the infallible dispatch_param_words silent-empty-return fallback must be absent from the production source"
+        );
+    }
+
+    // Reproducing test for: dispatch-param-words-into-silent-clear
+    // Before fix: `dispatch_param_words_into` returned () and silently cleared `words` on error.
+    // After fix: it returns `Result<(), String>` so callers can observe and propagate the error.
+    #[test]
+    fn dispatch_param_words_into_propagates_error_instead_of_silently_clearing() {
+        // Valid path: must succeed and populate correctly.
+        let bindings = [binding(0, 7), binding(2, 3)];
+        let mut words = Vec::new();
+        dispatch_param_words_into(&bindings, 7, &mut words)
+            .expect("Fix: dispatch_param_words_into must succeed for valid bindings");
+        assert_eq!(
+            words,
+            vec![7, 7, 0, 3],
+            "Fix: dispatch_param_words_into must produce [element_count, b0, b1_zero, b2] for valid bindings"
+        );
+
+        // Error path: a binding slot whose `slot + 1` overflows `usize` must return
+        // Err (and surface a `Fix:` hint), not silently clear the buffer. `binding`
+        // is a `u32`, so `usize::try_from` always succeeds and `slot.checked_add(1)`
+        // only overflows when `usize` is 32-bit (binding == u32::MAX => MAX + 1). On a
+        // 64-bit host u32::MAX + 1 fits `usize`, and the only other error source
+        // (a ~17 GB host-staging allocation) is non-deterministic, so the overflow
+        // assertion is gated to 32-bit where it is exact. On all hosts the success
+        // path above proves the function returns `Ok(...)` with the populated buffer
+        // (not the old silent `()`), and `no_infallible_dispatch_param_words_function_exists_in_public_surface`
+        // proves the silent-clear fallback is absent from the source.
+        #[cfg(target_pointer_width = "32")]
+        {
+            let mut overflow_binding = binding(0, 5);
+            overflow_binding.binding = u32::MAX;
+            let mut words2 = vec![0xdead_beef_u32; 4];
+            let err = dispatch_param_words_into(&[overflow_binding], 5, &mut words2);
+            assert!(
+                err.is_err(),
+                "Fix: dispatch_param_words_into must return Err on ABI slot overflow, not silently clear the buffer"
+            );
+            let msg = err.unwrap_err();
+            assert!(
+                msg.contains("Fix:"),
+                "Fix: dispatch_param_words_into error message must include a Fix: hint, got: {msg}"
+            );
+        }
     }
 }

@@ -44,7 +44,17 @@ fn cpu_ref(values: &[u32], lanes: &[u32]) -> Vec<u8> {
     for (i, lane) in lanes.iter().take(n).enumerate() {
         let subgroup_start = (i / SUBGROUP_WIDTH) * SUBGROUP_WIDTH;
         let src = subgroup_start + (*lane as usize);
-        out.push(values.get(src).copied().unwrap_or(0));
+        out.push(
+            values.get(src).copied().unwrap_or_else(|| {
+                panic!(
+                    "Fix: subgroup_shuffle cpu_ref OOB: lane {lane} in subgroup_start \
+                     {subgroup_start} resolves to src index {src} which exceeds values \
+                     len {}; the GPU oracle cannot produce a meaningful reference value \
+                     for an out-of-bounds lane index",
+                    values.len()
+                )
+            }),
+        );
     }
     pack_u32(&out)
 }
@@ -102,11 +112,34 @@ mod tests {
         assert_case(&[7, 9, 11], &[0, 0, 0]);
     }
     #[test]
-    fn nonzero_lane_zeros() {
-        assert_case(&[7, 9, 11], &[1, 2, 3]);
+    fn nonzero_lane_in_bounds() {
+        // All lane indices are in-bounds for the 3-element subgroup window.
+        assert_case(&[7, 9, 11], &[1, 2, 0]);
     }
     #[test]
     fn mixed() {
         assert_case(&[1, 2, 3, 4, 5, 6, 7, 8], &[0, 1, 0, 2, 0, 0, 3, 4]);
+    }
+
+    #[test]
+    fn cpu_ref_oob_lane_panics_with_actionable_message() {
+        // lane index 32 in a 32-wide subgroup resolves to src = 0 + 32 = 32,
+        // which is out-of-bounds for a 4-element values slice.  The oracle
+        // must panic loudly rather than silently substituting 0.
+        let values = vec![10u32, 20u32, 30u32, 40u32];
+        let lanes = vec![32u32]; // OOB: lane 32 >= SUBGROUP_WIDTH(32)
+        let result = std::panic::catch_unwind(|| {
+            cpu_ref(&values, &lanes)
+        });
+        let err = result.expect_err("expected cpu_ref to panic on OOB lane index");
+        let msg = err
+            .downcast_ref::<String>()
+            .map(|s| s.as_str())
+            .or_else(|| err.downcast_ref::<&str>().copied())
+            .unwrap_or("<non-string panic>");
+        assert!(
+            msg.contains("Fix:") && msg.contains("OOB"),
+            "panic message must contain 'Fix:' and 'OOB' to be actionable, got: {msg}"
+        );
     }
 }

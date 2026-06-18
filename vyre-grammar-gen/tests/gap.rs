@@ -265,7 +265,7 @@ fn lr_blob_with_odd_production_words_is_rejected() {
     b.set_action(0, 0, Action::Accept);
     b.add_production(0, 1);
     let lr = b.build();
-    let valid_blob = PackedBlob::from_lr(&lr);
+    let valid_blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack");
 
     // Corrupt the payload_len field (bytes 20..24) to claim 4 extra bytes
     // which adds one extra u32 word (odd residual after action+goto).

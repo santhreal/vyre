@@ -71,11 +71,11 @@ mod tests {
     fn chunk_count_matches_trivial_two_state_dfa() {
         let mut b = DfaBuilder::new(2, 256);
         for c in 0u32..256 {
-            b.continue_to(0, c, 1);
-            b.continue_to(1, c, 1);
+            b.continue_to(0, c, 1).expect("state 1 fits in u16");
+            b.continue_to(1, c, 1).expect("state 1 fits in u16");
         }
         b.accept(1, 42);
-        let dfa = b.build();
+        let dfa = b.build().expect("empty pattern set must succeed");
         let n = count_chunked_valid_tokens(
             &dfa.transitions,
             &dfa.token_ids,

@@ -37,7 +37,8 @@ pub use types::{
 pub struct Megakernel {
     backend: Arc<dyn VyreBackend>,
     pipeline: ArcSwap<PipelineSlot>,
-    pipeline_id: String,
+    /// Pipeline identity string, updated atomically on every `recover_after_device_loss`.
+    pipeline_id: ArcSwap<String>,
     program: Arc<Program>,
     has_grid_sync: bool,
     empty_io_queue_bytes: Arc<[u8]>,
@@ -148,7 +149,7 @@ impl Megakernel {
         Ok(Self {
             backend,
             pipeline: ArcSwap::from(Arc::new(PipelineSlot { inner: pipeline })),
-            pipeline_id,
+            pipeline_id: ArcSwap::from(Arc::new(pipeline_id)),
             program,
             has_grid_sync,
             empty_io_queue_bytes,
@@ -394,15 +395,21 @@ impl Megakernel {
     pub fn recover_after_device_loss(&self) -> Result<MegakernelRecoveryDecision, PipelineError> {
         let config = self.launch_geometry().dispatch_config(None);
         let rebuilt = recover_compiled_pipeline(&self.backend, Arc::clone(&self.program), &config)?;
+        let new_id = rebuilt.id().to_string();
         self.pipeline
             .store(Arc::new(PipelineSlot { inner: rebuilt }));
+        self.pipeline_id.store(Arc::new(new_id));
         Ok(MegakernelRecoveryDecision::RecompiledPipeline)
     }
 
     /// Pipeline id from the backend.
+    ///
+    /// Returns the id of the currently loaded compiled pipeline. After a call
+    /// to [`Megakernel::recover_after_device_loss`] this reflects the rebuilt
+    /// pipeline's id rather than the original one.
     #[must_use]
-    pub fn pipeline_id(&self) -> &str {
-        &self.pipeline_id
+    pub fn pipeline_id(&self) -> String {
+        (**self.pipeline_id.load()).clone()
     }
 
     /// Slot count this kernel was sharded for.

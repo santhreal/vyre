@@ -112,17 +112,13 @@ impl MegakernelResidentBatchScratch {
     }
 
     /// Preallocate scratch for a known hot batch shape.
-    #[must_use]
-    pub fn with_capacity(batch_count: usize, output_slots_per_batch: usize) -> Self {
-        match Self::try_with_capacity(batch_count, output_slots_per_batch) {
-            Ok(scratch) => scratch,
-            Err(_error) => Self::default(),
-        }
-    }
-
-    /// Preallocate scratch for a known hot batch shape with explicit
-    /// allocation failure reporting.
-    pub fn try_with_capacity(
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PipelineError::Backend`] when OOM prevents reserving the
+    /// requested capacity. Callers must handle the error; the old infallible
+    /// wrapper that silently returned empty scratch on failure has been removed.
+    pub fn with_capacity(
         batch_count: usize,
         output_slots_per_batch: usize,
     ) -> Result<Self, PipelineError> {

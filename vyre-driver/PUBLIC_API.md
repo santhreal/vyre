@@ -4290,6 +4290,10 @@ pub fn vyre_driver::fixpoint_iterations::resolve_fixpoint_iterations_usize(confi
 pub mod vyre_driver::fusion
 #[non_exhaustive] pub enum vyre_driver::fusion::FusionDecision
 pub vyre_driver::fusion::FusionDecision::Accept
+pub vyre_driver::fusion::FusionDecision::InvocationBudgetExceeded
+pub vyre_driver::fusion::FusionDecision::InvocationBudgetExceeded::cap: u32
+pub vyre_driver::fusion::FusionDecision::InvocationBudgetExceeded::invocations: u64
+pub vyre_driver::fusion::FusionDecision::InvocationBudgetExceeded::workgroup: [u32; 3]
 pub vyre_driver::fusion::FusionDecision::NoPipelineDependency
 pub vyre_driver::fusion::FusionDecision::OutputConsumedElsewhere
 pub vyre_driver::fusion::FusionDecision::SharedMemoryBudget
@@ -7763,8 +7767,7 @@ pub fn vyre_driver::program_walks::auto_grid(program: &vyre_foundation::ir_inner
 pub fn vyre_driver::program_walks::coerce_to_pow2_with_tail_mask(element_count: u32) -> vyre_driver::TailMaskPolicy
 pub fn vyre_driver::program_walks::dispatch_element_count(bindings: &[vyre_driver::binding::Binding]) -> u32
 pub fn vyre_driver::program_walks::dispatch_element_count_for_program(program: &vyre_foundation::ir_inner::model::program::core::Program, bindings: &[vyre_driver::binding::Binding]) -> u32
-pub fn vyre_driver::program_walks::dispatch_param_words(bindings: &[vyre_driver::binding::Binding], element_count: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_driver::program_walks::dispatch_param_words_into(bindings: &[vyre_driver::binding::Binding], element_count: u32, words: &mut alloc::vec::Vec<u32>)
+pub fn vyre_driver::program_walks::dispatch_param_words_into(bindings: &[vyre_driver::binding::Binding], element_count: u32, words: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::program_walks::element_size_bytes(data_type: &vyre_spec::data_type::DataType) -> core::result::Result<usize, vyre_driver::BackendError>
 pub fn vyre_driver::program_walks::enforce_actual_output_budget(config: &vyre_driver::DispatchConfig, outputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::program_walks::find_indirect_dispatch(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<core::option::Option<vyre_driver::IndirectDispatch>, vyre_driver::BackendError>
@@ -15919,8 +15922,7 @@ pub fn vyre_driver::default_dispatch_with_device_buffers(backend: &dyn vyre_driv
 pub fn vyre_driver::default_validator() -> bool
 pub fn vyre_driver::dispatch_configs_share_launch_shape(compiled: &vyre_driver::DispatchConfig, runtime: &vyre_driver::DispatchConfig) -> bool
 pub fn vyre_driver::dispatch_element_count(bindings: &[vyre_driver::binding::Binding]) -> u32
-pub fn vyre_driver::dispatch_param_words(bindings: &[vyre_driver::binding::Binding], element_count: u32) -> alloc::vec::Vec<u32>
-pub fn vyre_driver::dispatch_param_words_into(bindings: &[vyre_driver::binding::Binding], element_count: u32, words: &mut alloc::vec::Vec<u32>)
+pub fn vyre_driver::dispatch_param_words_into(bindings: &[vyre_driver::binding::Binding], element_count: u32, words: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::element_size_bytes(data_type: &vyre_spec::data_type::DataType) -> core::result::Result<usize, vyre_driver::BackendError>
 pub fn vyre_driver::emit_aot_target(target: &str, program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::BackendError>
 pub fn vyre_driver::enforce_actual_output_budget(config: &vyre_driver::DispatchConfig, outputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>

@@ -49,26 +49,57 @@ fn lowerer_produces_no_uncarriered_assigns_on_smoke_fixture() {
 }
 
 #[test]
-fn carrier_summary_counts_match_descriptor_ops() {
+fn carrier_summary_total_ops_observed_matches_descriptor_op_count() {
     let (_, desc) = lowered_smoke();
     let summary = carrier_summary(&desc);
-    // The summary's totals should be self-consistent: assigns_observed
-    // is the denominator, carrier_uses is one component of "good"
-    // carriers. Whatever the exact numbers, neither field can exceed
-    // the total assign count in the descriptor body itself.
-    let assign_count = count_assign_ops(&desc.body);
-    assert!(
-        summary.assigns_observed <= assign_count + 1024,
-        "summary.assigns_observed {} exceeds body assign count {}",
-        summary.assigns_observed,
-        assign_count
+    // total_ops_observed must equal the exact recursive count of every op
+    // in the descriptor (ops_iter visits all bodies depth-first).
+    let exact_total = count_total_ops(&desc.body);
+    assert_eq!(
+        summary.total_ops_observed,
+        exact_total,
+        "total_ops_observed {} != recursive body op count {}",
+        summary.total_ops_observed,
+        exact_total
     );
 }
 
-fn count_assign_ops(body: &vyre_lower::KernelBody) -> usize {
+#[test]
+fn carrier_summary_finals_populated_for_loop_carry_smoke() {
+    // The smoke fixture lowers a loop with carried variables (cursor,
+    // tok_idx, emit). carrier_finals must be non-empty: every
+    // LoopCarrierEnd op must appear there, not in carrier_writes.
+    let (_, desc) = lowered_smoke();
+    let summary = carrier_summary(&desc);
+    assert!(
+        !summary.carrier_finals.is_empty(),
+        "carrier_finals is empty on a descriptor that has LoopCarrierEnd ops; \
+         was the LoopCarrierEnd arm accidentally routing into carrier_writes?"
+    );
+    // The smoke fixture has at least the 'cursor' and 'tok_idx' carriers.
+    // carrier_finals must contain at least one of them.
+    let has_known_carrier = summary.carrier_finals.contains_key("cursor")
+        || summary.carrier_finals.contains_key("tok_idx")
+        || summary.carrier_finals.contains_key("emit");
+    assert!(
+        has_known_carrier,
+        "carrier_finals {:?} does not contain any expected carrier name \
+         (cursor / tok_idx / emit) from the smoke fixture",
+        summary.carrier_finals
+    );
+    // Each carrier_finals entry must have count >= 1.
+    for (name, count) in &summary.carrier_finals {
+        assert!(
+            *count >= 1,
+            "carrier_finals[{name}] = {count}; expected >= 1"
+        );
+    }
+}
+
+fn count_total_ops(body: &vyre_lower::KernelBody) -> usize {
     let mut n = body.ops.len();
     for c in &body.child_bodies {
-        n += count_assign_ops(c);
+        n += count_total_ops(c);
     }
     n
 }

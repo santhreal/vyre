@@ -261,16 +261,18 @@ pub fn validate_program_graph(
             got: edge_offsets.len(),
         });
     }
-    let expected_edge_len = e.max(1);
-    if edge_targets.len() != expected_edge_len {
+    // CPU validator enforces the documented contract: edge_targets.len() == edge_count.
+    // GPU ABI padding (max(1) minimum buffer size) is a device-buffer concern handled
+    // exclusively in read_only_buffers_with_counts; it must not bleed into CPU validation.
+    if edge_targets.len() != e {
         return Err(GraphValidationError::EdgeTargetsLen {
-            expected: expected_edge_len,
+            expected: e,
             got: edge_targets.len(),
         });
     }
-    if edge_kind_mask.len() != expected_edge_len {
+    if edge_kind_mask.len() != e {
         return Err(GraphValidationError::EdgeKindMaskLen {
-            expected: expected_edge_len,
+            expected: e,
             got: edge_kind_mask.len(),
         });
     }
@@ -426,5 +428,50 @@ mod tests {
             &[0, 0, 0],
         );
         assert_eq!(ok, Ok(()));
+    }
+
+    /// Regression: validate_program_graph enforced edge_targets.len()==max(edge_count,1),
+    /// so a zero-edge graph with edge_targets=&[] (correct per module doc) was incorrectly
+    /// rejected with EdgeTargetsLen { expected: 1, got: 0 }. The CPU validator must enforce
+    /// the documented contract edge_targets.len()==edge_count, not the GPU ABI padding.
+    #[test]
+    fn validate_zero_edge_graph_accepts_empty_edge_slices() {
+        // 2 nodes, 0 edges: both nodes are isolated.
+        // edge_offsets.len() must be node_count + 1 = 3.
+        let ok = validate_program_graph(
+            ProgramGraphShape::new(2, 0),
+            &[0, 0],
+            &[0, 0, 0],
+            &[],
+            &[],
+            &[0, 0],
+        );
+        // Before the fix: Err(EdgeTargetsLen { expected: 1, got: 0 })
+        // After the fix:  Ok(())
+        assert_eq!(
+            ok,
+            Ok(()),
+            "zero-edge graph with empty edge_targets slice must pass validation per module doc"
+        );
+    }
+
+    /// Companion: validate_program_graph must still reject a caller who passes edge_targets
+    /// with the old GPU-padding length (1) when the graph has 0 edges, since that violates
+    /// the documented contract edge_targets.len()==edge_count.
+    #[test]
+    fn validate_zero_edge_graph_rejects_gpu_padding_length() {
+        let err = validate_program_graph(
+            ProgramGraphShape::new(2, 0),
+            &[0, 0],
+            &[0, 0, 0],
+            &[0], // length 1 for zero-edge graph is wrong per docs
+            &[0],
+            &[0, 0],
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, GraphValidationError::EdgeTargetsLen { expected: 0, got: 1 }),
+            "zero-edge graph: expected EdgeTargetsLen {{expected:0, got:1}}, got {err:?}"
+        );
     }
 }

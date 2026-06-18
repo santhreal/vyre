@@ -26,9 +26,10 @@
 //! writes files to disk, but the library itself does not.
 //!
 //! **Filesystem writes:** None by the library. `preprocess_c_host`,
-//! `build_c11_lexer_dfa`, `PackedBlob::from_dfa`, `PackedBlob::from_lr`,
-//! and all decode functions operate purely in memory and return owned values.
-//! Only the `main.rs` binary writes files (via `std::fs::write`).
+//! `build_c11_lexer_dfa`, `PackedBlob::from_dfa`, `PackedBlob::from_lr`
+//! (which returns `Result<Self, String>` and validates table dimensions before
+//! packing), and all decode functions operate purely in memory and return
+//! owned values. Only the `main.rs` binary writes files (via `std::fs::write`).
 //!
 //! **Credential exposure:** None. No credentials, tokens, or secrets are
 //! read, logged, or transmitted. BLAKE3-128 is used solely for payload

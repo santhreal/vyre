@@ -7,6 +7,7 @@ use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_backward_traverse::csr_backward_traverse;
 use crate::graph::csr_forward_traverse::{bitset_words, csr_forward_traverse};
+use crate::graph::csr_frontier_step::csr_frontier_step_dispatch_grid;
 use crate::graph::program_graph::ProgramGraphShape;
 
 /// Canonical op id.
@@ -505,7 +506,7 @@ pub fn plan_csr_bidirectional_step(
         node_words: layout.node_words,
         edge_storage_words: layout.edge_storage_words,
         frontier_words: layout.words,
-        grid: [layout.node_count, 1, 1],
+        grid: csr_frontier_step_dispatch_grid(layout.node_count),
         allow_mask,
         layout,
     })
@@ -592,12 +593,66 @@ mod dispatch_plan_tests {
         )
         .expect("Fix: valid bidirectional CSR step should produce dispatch plan");
 
-        assert_eq!(plan.grid, [4, 1, 1]);
+        // 4 nodes / 256 threads per workgroup = ceil(4/256) = 1 block, not 4.
+        assert_eq!(plan.grid, [1, 1, 1]);
         assert_eq!(plan.node_words, 4);
         assert_eq!(plan.edge_storage_words, 3);
         assert_eq!(plan.frontier_words, 1);
         assert_eq!(plan.allow_mask, 0x55AA_00FF);
         assert_eq!(plan.layout.edge_count, 3);
+    }
+
+    /// Regression: grid X was set to `node_count` instead of
+    /// `ceil(node_count / CSR_FRONTIER_STEP_WORKGROUP_SIZE[0])`.
+    /// For node_count=257 the old code emitted [257,1,1] (257 blocks × 256
+    /// threads = 65,792 invocations) instead of [2,1,1] (2 blocks × 256
+    /// threads = 512 invocations), a 256x over-dispatch.
+    #[test]
+    fn grid_x_is_ceil_node_count_div_workgroup_size_not_node_count() {
+        // 4 nodes: ceil(4/256) == 1
+        let plan_small = plan_csr_bidirectional_step(
+            4,
+            &[0, 1, 2, 3, 3],
+            &[1, 2, 3],
+            &[1, 1, 1],
+            &[0b0010],
+            u32::MAX,
+        )
+        .expect("Fix: valid 4-node bidirectional CSR step should produce dispatch plan");
+        assert_eq!(
+            plan_small.grid,
+            [1, 1, 1],
+            "4 nodes: expected ceil(4/256)=1 block, got {:?}",
+            plan_small.grid
+        );
+
+        // 257 nodes: ceil(257/256) == 2; old buggy code emits [257,1,1].
+        // Build a chain: 0→1→2→…→256 (257 nodes, 256 edges).
+        let mut offsets = Vec::with_capacity(258);
+        offsets.push(0u32);
+        for i in 0..256u32 {
+            offsets.push(i + 1);
+        }
+        offsets.push(256u32); // node 256 has no outgoing edge
+        let targets: Vec<u32> = (1u32..=256).collect();
+        let kinds: Vec<u32> = vec![1u32; 256];
+        let frontier = vec![0u32; crate::bitset::bitset_words(257) as usize];
+
+        let plan_large = plan_csr_bidirectional_step(
+            257,
+            &offsets,
+            &targets,
+            &kinds,
+            &frontier,
+            u32::MAX,
+        )
+        .expect("Fix: valid 257-node bidirectional CSR step should produce dispatch plan");
+        assert_eq!(
+            plan_large.grid,
+            [2, 1, 1],
+            "257 nodes: expected ceil(257/256)=2 blocks, got {:?}",
+            plan_large.grid
+        );
     }
 
     #[test]

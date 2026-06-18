@@ -178,7 +178,8 @@ fn dispatch_param_words_into_reuses_output_buffer() {
     ];
     let mut words = Vec::with_capacity(8);
     let ptr = words.as_ptr();
-    dispatch_param_words_into(&bindings, 11, &mut words);
+    dispatch_param_words_into(&bindings, 11, &mut words)
+        .expect("Fix: dispatch_param_words_into must succeed for valid bindings");
     assert_eq!(words, vec![11, 7, 0, 0, 0, 11]);
     assert_eq!(words.as_ptr(), ptr);
 }

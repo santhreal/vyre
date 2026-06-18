@@ -58,34 +58,48 @@ fn carrier_summary_counts_match_descriptor_walk() {
     let desc = vyre_lower::lower(&p).unwrap();
     let summary = carrier_summary(&desc);
 
+    // Walk the descriptor directly and build the ground-truth maps.
+    // Semantics:
+    //   carrier_reads  <- LoopCarrier       (read of carrier slot)
+    //   carrier_writes <- LoopCarrierInit   (seed write before loop)
+    //   carrier_finals <- LoopCarrierEnd    (commit write at iteration end)
     let mut reads = BTreeMap::new();
     let mut writes = BTreeMap::new();
-    // `LoopCarrierFinal` was consolidated into `LoopCarrier` upstream
-    //  -  the descriptor walk no longer has a "final" variant to count.
-    // `summary.carrier_finals` is preserved as a serde-stable empty
-    // map for backward-compat with any consumer that read the field.
-    let finals: BTreeMap<String, usize> = BTreeMap::new();
+    let mut finals = BTreeMap::new();
     fn walk_body(
         body: &vyre_lower::KernelBody,
         r: &mut BTreeMap<String, usize>,
         w: &mut BTreeMap<String, usize>,
+        f: &mut BTreeMap<String, usize>,
     ) {
         for op in &body.ops {
-            if let vyre_lower::KernelOpKind::LoopCarrier { name, .. } = &op.kind {
-                *r.entry(name.to_string()).or_insert(0) += 1;
-            }
-            if let vyre_lower::KernelOpKind::LoopCarrierEnd { name, .. } = &op.kind {
-                *w.entry(name.to_string()).or_insert(0) += 1;
+            match &op.kind {
+                vyre_lower::KernelOpKind::LoopCarrier { name } => {
+                    *r.entry(name.to_string()).or_insert(0) += 1;
+                }
+                vyre_lower::KernelOpKind::LoopCarrierInit { name } => {
+                    *w.entry(name.to_string()).or_insert(0) += 1;
+                }
+                vyre_lower::KernelOpKind::LoopCarrierEnd { name } => {
+                    *f.entry(name.to_string()).or_insert(0) += 1;
+                }
+                _ => {}
             }
         }
         for child in &body.child_bodies {
-            walk_body(child, r, w);
+            walk_body(child, r, w, f);
         }
     }
-    walk_body(&desc.body, &mut reads, &mut writes);
-    assert_eq!(summary.carrier_reads, reads);
-    assert_eq!(summary.carrier_writes, writes);
-    assert_eq!(summary.carrier_finals, finals);
+    walk_body(&desc.body, &mut reads, &mut writes, &mut finals);
+    assert_eq!(summary.carrier_reads, reads, "carrier_reads mismatch");
+    assert_eq!(summary.carrier_writes, writes, "carrier_writes mismatch");
+    assert_eq!(summary.carrier_finals, finals, "carrier_finals mismatch");
+    // A program with loops must have non-empty finals (LoopCarrierEnd ops exist).
+    assert!(
+        !summary.carrier_finals.is_empty(),
+        "carrier_finals is empty on a descriptor with loop-carried variables; \
+         expected LoopCarrierEnd ops to be counted here"
+    );
 }
 
 #[test]

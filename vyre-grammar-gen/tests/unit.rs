@@ -82,7 +82,7 @@ fn dfa_action_high_bits_parse_as_error() {
 #[test]
 fn dfa_builder_new_allocates_correct_dimensions() {
     let b = DfaBuilder::new(3, 5);
-    let t = b.build();
+    let t = b.build().expect("empty pattern set must succeed");
     assert_eq!(t.num_states, 3);
     assert_eq!(t.num_classes, 5);
     assert_eq!(t.transitions.len(), 15);
@@ -92,7 +92,7 @@ fn dfa_builder_new_allocates_correct_dimensions() {
 #[test]
 fn dfa_builder_all_errors_by_default() {
     let b = DfaBuilder::new(2, 4);
-    let t = b.build();
+    let t = b.build().expect("empty pattern set must succeed");
     for &w in &t.transitions {
         assert_eq!(
             vyre_grammar_gen::dfa::Transition::unpack(w).action,
@@ -104,8 +104,8 @@ fn dfa_builder_all_errors_by_default() {
 #[test]
 fn dfa_builder_continue_to_sets_correct_cell() {
     let mut b = DfaBuilder::new(4, 8);
-    b.continue_to(2, 3, 3);
-    let t = b.build();
+    b.continue_to(2, 3, 3).expect("state 3 fits in u16");
+    let t = b.build().expect("empty pattern set must succeed");
     let tr = t.transition(2, 3);
     assert_eq!(tr.next_state, 3);
     assert_eq!(tr.action, vyre_grammar_gen::dfa::Action::Continue);
@@ -120,7 +120,7 @@ fn dfa_builder_continue_to_sets_correct_cell() {
 fn dfa_builder_accept_sets_token_id() {
     let mut b = DfaBuilder::new(3, 4);
     b.accept(1, 99);
-    let t = b.build();
+    let t = b.build().expect("empty pattern set must succeed");
     assert_eq!(t.token_ids[1], 99);
     assert_eq!(t.token_ids[0], 0);
     assert_eq!(t.token_ids[2], 0);
@@ -295,14 +295,14 @@ fn blob_kind_lr_tables_discriminant() {
 
 #[test]
 fn packed_blob_dfa_has_correct_magic() {
-    let dfa = DfaBuilder::new(2, 4).build();
+    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     assert_eq!(&blob.bytes[0..4], b"SGGC");
 }
 
 #[test]
 fn packed_blob_dfa_has_correct_version() {
-    let dfa = DfaBuilder::new(2, 4).build();
+    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     let ver = u16::from_le_bytes([blob.bytes[4], blob.bytes[5]]);
     assert_eq!(ver, 1);
@@ -310,7 +310,7 @@ fn packed_blob_dfa_has_correct_version() {
 
 #[test]
 fn packed_blob_dfa_has_correct_kind_byte() {
-    let dfa = DfaBuilder::new(2, 4).build();
+    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     let kind = u16::from_le_bytes([blob.bytes[6], blob.bytes[7]]);
     assert_eq!(kind, 0); // LexerDfa
@@ -318,7 +318,7 @@ fn packed_blob_dfa_has_correct_kind_byte() {
 
 #[test]
 fn packed_blob_dfa_kind_field_matches() {
-    let dfa = DfaBuilder::new(2, 4).build();
+    let dfa = DfaBuilder::new(2, 4).build().expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     assert_eq!(blob.kind, BlobKind::LexerDfa);
 }
@@ -328,7 +328,7 @@ fn packed_blob_lr_kind_field_matches() {
     let mut b = LrBuilder::new(2, 2, 1);
     b.set_action(0, 0, Action::Accept);
     let lr = b.build();
-    let blob = PackedBlob::from_lr(&lr);
+    let blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack");
     assert_eq!(blob.kind, BlobKind::LrTables);
 }
 
@@ -338,7 +338,7 @@ fn packed_blob_lr_kind_field_matches() {
 
 #[test]
 fn decode_dfa_roundtrips_zero_transitions() {
-    let dfa = DfaBuilder::new(1, 1).build();
+    let dfa = DfaBuilder::new(1, 1).build().expect("empty pattern set must succeed");
     let blob = PackedBlob::from_dfa(&dfa);
     let got = decode_dfa_from_bytes(&blob.bytes).expect("decode");
     assert_eq!(got.num_states, 1);
@@ -350,7 +350,7 @@ fn decode_lr_roundtrips_minimal() {
     let mut b = LrBuilder::new(2, 2, 1);
     b.set_action(0, 0, Action::Accept);
     let lr = b.build();
-    let blob = PackedBlob::from_lr(&lr);
+    let blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack");
     let got = decode_lr_from_bytes(&blob.bytes).expect("decode");
     assert_eq!(got.num_states, lr.num_states);
     assert_eq!(got.num_tokens, lr.num_tokens);

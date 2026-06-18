@@ -81,7 +81,8 @@ fn persistent_handle_many_scratch_reuses_resource_rows_and_outputs() {
     let row_batch_calls = Arc::clone(&backend.row_batch_calls);
     let kernel = Megakernel::bootstrap_sharded(backend, 1, 1, Vec::new())
         .expect("Fix: persistent-handle backend must bootstrap");
-    let mut scratch = MegakernelResidentBatchScratch::with_capacity(2, 1);
+    let mut scratch = MegakernelResidentBatchScratch::with_capacity(2, 1)
+        .expect("Fix: scratch preallocation must succeed in test environment; reduce batch count or slot count");
 
     let first_stats = kernel
         .dispatch_persistent_handles_many_with_scratch(
@@ -133,7 +134,8 @@ fn persistent_handle_many_scratch_reuses_resource_rows_and_outputs() {
 
 #[test]
 fn resident_batch_scratch_clear_retains_nested_allocations_but_hides_logical_batches() {
-    let mut scratch = MegakernelResidentBatchScratch::with_capacity(2, 1);
+    let mut scratch = MegakernelResidentBatchScratch::with_capacity(2, 1)
+        .expect("Fix: scratch preallocation must succeed in test environment; reduce batch count or slot count");
     scratch.batches[0][0].extend_from_slice(&[1, 2, 3]);
     scratch.batches[1][0].extend_from_slice(&[4, 5, 6]);
     scratch.active_batches = 2;
@@ -152,5 +154,56 @@ fn resident_batch_scratch_clear_retains_nested_allocations_but_hides_logical_bat
     assert_eq!(scratch.batches[0][0].as_ptr() as usize, first_slot_ptr);
     assert_eq!(scratch.batches[1][0].as_ptr() as usize, second_slot_ptr);
     assert!(scratch.batches.iter().flatten().all(Vec::is_empty));
+}
+
+/// Regression: `MegakernelResidentBatchScratch::with_capacity` previously
+/// swallowed allocation failures with `Err(_error) => Self::default()`, returning
+/// empty scratch with no signal. The silent degrade voided the allocation-stability
+/// guarantee that `with_capacity` is supposed to provide.
+///
+/// After the fix, `with_capacity` returns `Result<Self, PipelineError>` so
+/// callers see the error. This test verifies:
+/// 1. A valid call returns `Ok(scratch)` with the correct preallocated shape.
+/// 2. The preallocated scratch has exactly `batch_count` rows each with
+///    `output_slots_per_batch` output slots — NOT an empty default.
+/// 3. `resource_capacity()` and `batch_capacity()` reflect the reservation,
+///    not zero (the shape an empty default would have had).
+#[test]
+fn with_capacity_returns_result_and_preallocates_correct_shape() {
+    let scratch = MegakernelResidentBatchScratch::with_capacity(3, 2)
+        .expect("Fix: with_capacity must succeed for small in-bounds allocation");
+
+    // resource capacity must reflect the 3-row reservation
+    assert_eq!(
+        scratch.resource_capacity(),
+        3,
+        "Fix: with_capacity must reserve resource rows, not return empty default"
+    );
+    // batch capacity must reflect the 3-row reservation
+    assert_eq!(
+        scratch.batch_capacity(),
+        3,
+        "Fix: with_capacity must reserve batch rows, not return empty default"
+    );
+    // each of the 3 rows must have exactly 2 pre-pushed (empty) output slots
+    assert_eq!(
+        scratch.batches.len(),
+        3,
+        "Fix: with_capacity must push batch rows into the Vec; silent default has 0 rows"
+    );
+    assert_eq!(
+        scratch.batches[0].len(),
+        2,
+        "Fix: each batch row must have output_slots_per_batch slots pre-pushed"
+    );
+    assert_eq!(
+        scratch.batches[2].len(),
+        2,
+        "Fix: every batch row must have output_slots_per_batch slots pre-pushed"
+    );
+    assert!(
+        scratch.batches.iter().flatten().all(Vec::is_empty),
+        "Fix: pre-pushed output slots must be empty Vecs, not garbage"
+    );
 }
 

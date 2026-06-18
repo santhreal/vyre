@@ -145,7 +145,7 @@ fn collect_buffer_entries(program: &Program) -> Result<Vec<BufferEntry>, Compile
                 element_count: buf.count(),
                 element_size_bytes: element_size_bytes(buf.name(), buf.element())?,
                 memory_kind: convert_memory_kind(buf.kind()),
-                access: convert_access(buf.access()),
+                access: convert_access(buf.name(), buf.access())?,
             })
         })
         .collect()
@@ -179,13 +179,25 @@ fn convert_memory_kind(k: vyre_foundation::ir::MemoryKind) -> BufferMemoryKind {
     }
 }
 
-fn convert_access(a: vyre_foundation::ir::BufferAccess) -> BufferAccessKind {
+fn convert_access(
+    name: &str,
+    a: vyre_foundation::ir::BufferAccess,
+) -> Result<BufferAccessKind, CompileError> {
     use vyre_foundation::ir::BufferAccess;
     match a {
-        BufferAccess::ReadOnly => BufferAccessKind::ReadOnly,
-        BufferAccess::WriteOnly => BufferAccessKind::WriteOnly,
-        BufferAccess::ReadWrite => BufferAccessKind::ReadWrite,
-        _ => BufferAccessKind::ReadWrite,
+        BufferAccess::ReadOnly => Ok(BufferAccessKind::ReadOnly),
+        BufferAccess::WriteOnly => Ok(BufferAccessKind::WriteOnly),
+        BufferAccess::ReadWrite => Ok(BufferAccessKind::ReadWrite),
+        // Uniform is semantically read-only (small, fast, read-only path).
+        BufferAccess::Uniform => Ok(BufferAccessKind::ReadOnly),
+        // Workgroup-local shared memory is both read and written within a workgroup.
+        BufferAccess::Workgroup => Ok(BufferAccessKind::ReadWrite),
+        other => Err(CompileError::ArtifactLayout(format!(
+            "buffer `{name}` uses unrecognised access kind {other:?}. \
+             Fix: add an explicit mapping for this variant in convert_access \
+             (vyre-aot/src/compile.rs). Silently defaulting to ReadWrite would \
+             miscompile buffers that are not read-write."
+        ))),
     }
 }
 
@@ -242,5 +254,62 @@ mod tests {
             err.to_string().contains("workgroup dimensions must be non-zero"),
             "Fix: zero-workgroup AOT rejection must point at the dispatch shape contract, got {err}."
         );
+    }
+
+    #[test]
+    fn convert_access_uniform_maps_to_read_only_not_read_write() {
+        // Before the fix, BufferAccess::Uniform fell through the wildcard arm
+        // and silently mapped to ReadWrite (convert-access-wildcard-fallback).
+        // Uniform is semantically read-only; mapping it to ReadWrite is a
+        // miscompile that wastes memory bandwidth on restricted-access GPU APIs.
+        use vyre_foundation::ir::BufferAccess;
+        let result = convert_access("my_uniform_buf", BufferAccess::Uniform)
+            .expect("Fix: BufferAccess::Uniform must map to ReadOnly, not Err");
+        assert_eq!(
+            result,
+            BufferAccessKind::ReadOnly,
+            "Fix: BufferAccess::Uniform must map to BufferAccessKind::ReadOnly, \
+             not ReadWrite. Got {result:?}."
+        );
+    }
+
+    #[test]
+    fn convert_access_workgroup_maps_to_read_write_explicitly_not_via_wildcard() {
+        // BufferAccess::Workgroup is workgroup-local shared memory, legitimately
+        // ReadWrite. The old code reached this correct result only via the
+        // silent wildcard fallback — which also maps future unknown variants
+        // silently. This test pins the explicit mapping.
+        use vyre_foundation::ir::BufferAccess;
+        let result = convert_access("scratch", BufferAccess::Workgroup)
+            .expect("Fix: BufferAccess::Workgroup must map to ReadWrite, not Err");
+        assert_eq!(
+            result,
+            BufferAccessKind::ReadWrite,
+            "Fix: BufferAccess::Workgroup must map to BufferAccessKind::ReadWrite. \
+             Got {result:?}."
+        );
+    }
+
+    #[test]
+    fn convert_access_all_known_variants_map_deterministically() {
+        // All known BufferAccess variants must map to the correct access kind.
+        // This test will fail to compile if a new non-exhaustive variant is added
+        // to vyre_foundation::ir::BufferAccess but not handled in convert_access.
+        use vyre_foundation::ir::BufferAccess;
+        let cases = [
+            (BufferAccess::ReadOnly, BufferAccessKind::ReadOnly),
+            (BufferAccess::WriteOnly, BufferAccessKind::WriteOnly),
+            (BufferAccess::ReadWrite, BufferAccessKind::ReadWrite),
+            (BufferAccess::Uniform, BufferAccessKind::ReadOnly),
+            (BufferAccess::Workgroup, BufferAccessKind::ReadWrite),
+        ];
+        for (access, expected) in cases {
+            let got = convert_access("buf", access.clone())
+                .unwrap_or_else(|e| panic!("Fix: convert_access({access:?}) returned Err: {e}"));
+            assert_eq!(
+                got, expected,
+                "Fix: convert_access({access:?}) must map to {expected:?}, got {got:?}."
+            );
+        }
     }
 }

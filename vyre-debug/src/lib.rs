@@ -14,10 +14,7 @@
     clippy::map_entry,
     clippy::only_used_in_recursion,
     clippy::manual_flatten,
-    clippy::explicit_counter_loop,
-    dead_code,
-    unused_variables,
-    unused_mut
+    clippy::explicit_counter_loop
 )]
 pub mod carriers;
 pub mod dangling;
@@ -36,7 +33,9 @@ pub use dangling::{find_dangling_refs, DanglingRef};
 pub use descriptor_diff::{bisect_rewrites, diff_descriptors, DescriptorDiff, RewriteBisectResult};
 pub use descriptor_dump::{dump_descriptor, DescriptorDump, DescriptorDumpOptions};
 pub use naga_dump::{dump_naga_module, NagaDump};
-pub use naga_trace::{failure_trace, failure_trace_wgsl, load_bind_result_log, FailureTrace};
+pub use naga_trace::{
+    failure_trace, failure_trace_wgsl, load_bind_result_log, BindResultLogError, FailureTrace,
+};
 pub use scan_explain::{
     scan_explain_report, ScanExplainEngine, ScanExplainError,
     ScanExplainExactnessClass, ScanExplainFactor, ScanExplainRejectedEngine,

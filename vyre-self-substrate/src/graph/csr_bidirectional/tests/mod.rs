@@ -18,7 +18,11 @@ impl OptimizerDispatcher for BidirDispatcher {
         inputs: &[Vec<u8>],
         grid_override: Option<[u32; 3]>,
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        assert_eq!(grid_override, Some([4, 1, 1]));
+        // 4 nodes dispatched at CSR_FRONTIER_STEP_WORKGROUP_SIZE (256 threads/group):
+        // ceil(4/256) == 1 workgroup, NOT 4. The grid was corrected from a 256x
+        // over-dispatch in plan_csr_bidirectional_step (vyre-primitives
+        // csr-bidir-grid-miscompile); the dispatcher now sees the right block count.
+        assert_eq!(grid_override, Some([1, 1, 1]));
         if inputs.len() != 7 {
             return Err(DispatchError::BadInputs(format!(
                 "Fix: bidirectional test dispatcher expected 7 inputs, got {}.",
@@ -285,7 +289,9 @@ fn via_step_uses_bridge_zero_inputs_for_graph_scratch() {
             inputs: &[Vec<u8>],
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([4, 1, 1]));
+            // 4 nodes / 256 threads-per-group => ceil(4/256) == 1 workgroup (not 4):
+            // the corrected grid from vyre-primitives csr-bidir-grid-miscompile.
+            assert_eq!(grid_override, Some([1, 1, 1]));
             assert_eq!(inputs.len(), 7);
             assert_eq!(inputs[0], u32_slice_to_le_bytes(&[0, 0, 0, 0]));
             assert_eq!(inputs[4], u32_slice_to_le_bytes(&[0, 0, 0, 0]));

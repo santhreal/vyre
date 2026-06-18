@@ -17,11 +17,11 @@ fn preprocess_strips_block_comment_corpus() {
 fn hello_c_chunk_count_is_stable_on_stub_dfa() {
     let mut b = DfaBuilder::new(2, 256);
     for c in 0u32..256 {
-        b.continue_to(0, c, 1);
-        b.continue_to(1, c, 1);
+        b.continue_to(0, c, 1).expect("state 1 fits in u16");
+        b.continue_to(1, c, 1).expect("state 1 fits in u16");
     }
     b.accept(1, 42);
-    let dfa = b.build();
+    let dfa = b.build().expect("empty pattern set must succeed");
     let src = preprocess_c_host(HELLO);
     let bytes = src.as_bytes();
     let len = bytes.len().min(u32::MAX as usize) as u32;

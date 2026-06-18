@@ -198,6 +198,14 @@ pub mod ir_inner {
                     right: Box<Expr>,
                 },
             }
+
+            impl Expr {
+                /// Mirror of the real `vyre_foundation::ir::Expr::u32` constructor
+                /// the `vyre_ast_registry!` decoder cascade emits.
+                pub fn u32(value: u32) -> Self {
+                    Self::LitU32(value)
+                }
+            }
         }
 
         pub mod types {
@@ -217,11 +225,25 @@ pub mod ir_inner {
                 },
                 Barrier,
                 Return,
+                Trap {
+                    address: super::expr::Expr,
+                    tag: super::expr::Ident,
+                },
             }
 
             impl Node {
                 pub fn barrier() -> Self {
                     Self::Barrier
+                }
+
+                /// Mirror of the real `vyre_foundation::ir::Node::trap(address, tag)`
+                /// constructor the `vyre_ast_registry!` decoder cascade emits for
+                /// each not-yet-wired ALU opcode branch.
+                pub fn trap(address: super::expr::Expr, tag: impl Into<super::expr::Ident>) -> Self {
+                    Self::Trap {
+                        address,
+                        tag: tag.into(),
+                    }
                 }
             }
         }

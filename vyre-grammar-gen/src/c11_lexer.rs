@@ -250,17 +250,41 @@ fn add_c11_patterns(b: &mut DfaBuilder) {
 }
 
 /// DFA for GPU / `SGGC` blobs: [`MatchKind::All`], wire-stable with existing paths.
+///
+/// # Panics
+///
+/// Panics if any pattern in [`C11_PATTERNS`] fails to compile. All patterns are
+/// compile-time constants; a failure here is a programmer error (broken pattern
+/// in the source), not a runtime condition. Silent recovery would produce a
+/// zero-recall DFA that rejects all input on the GPU.
+// INTENTIONAL: C11_PATTERNS is a compile-time constant; any build failure is a
+// programmer error that must abort loudly, not silently degrade to an all-Error DFA.
+#[allow(clippy::expect_used)]
 pub fn build_c11_lexer_dfa() -> DfaTable {
     let mut b = DfaBuilder::new(0, 0);
     add_c11_patterns(&mut b);
-    b.build()
+    b.build().expect(
+        "Fix: C11 lexer DFA build failed. A pattern in C11_PATTERNS is invalid. \
+         All patterns are compile-time constants — fix the broken pattern.",
+    )
 }
 
 /// **Host** DFA: [`MatchKind::LeftmostFirst`], for DFA table experiments (not
 /// the regex-based [`crate::lex_c11_max_munch`]).
+///
+/// # Panics
+///
+/// Panics if any pattern in [`C11_PATTERNS`] fails to compile. All patterns are
+/// compile-time constants; a failure here is a programmer error, not a runtime
+/// condition. Silent recovery would produce a zero-recall DFA.
+// INTENTIONAL: same programmer-error contract as build_c11_lexer_dfa.
 #[must_use]
+#[allow(clippy::expect_used)]
 pub fn build_c11_lexer_dfa_for_host() -> DfaTable {
     let mut b = DfaBuilder::new(0, 0);
     add_c11_patterns(&mut b);
-    b.build_with_match_kind(MatchKind::LeftmostFirst)
+    b.build_with_match_kind(MatchKind::LeftmostFirst).expect(
+        "Fix: C11 host DFA build failed. A pattern in C11_PATTERNS is invalid. \
+         All patterns are compile-time constants — fix the broken pattern.",
+    )
 }

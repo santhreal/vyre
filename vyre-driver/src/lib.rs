@@ -239,12 +239,11 @@ pub use pipeline::{
 };
 pub use program_walks::{
     coerce_to_pow2_with_tail_mask, dispatch_element_count, dispatch_element_count_for_program,
-    dispatch_param_words, dispatch_param_words_into, element_size_bytes,
-    enforce_actual_output_budget, find_indirect_dispatch, infer_dispatch_grid,
-    infer_dispatch_grid_for_count, output_binding_layout, output_binding_layouts,
-    output_layout_from_program, try_coerce_to_pow2_with_tail_mask, try_dispatch_param_words,
-    try_dispatch_param_words_into, IndirectDispatch, OutputBindingLayout, OutputLayout,
-    TailMaskPolicy,
+    dispatch_param_words_into, element_size_bytes, enforce_actual_output_budget,
+    find_indirect_dispatch, infer_dispatch_grid, infer_dispatch_grid_for_count,
+    output_binding_layout, output_binding_layouts, output_layout_from_program,
+    try_coerce_to_pow2_with_tail_mask, try_dispatch_param_words, try_dispatch_param_words_into,
+    IndirectDispatch, OutputBindingLayout, OutputLayout, TailMaskPolicy,
 };
 pub use registry::{
     default_validator, intern_string, AttrSchema, AttrType, Category, Chain, Dialect,

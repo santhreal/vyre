@@ -5,7 +5,7 @@ use std::sync::atomic::{fence, Ordering};
 use crate::PipelineError;
 
 use super::super::protocol::slot;
-use super::helpers::queue_word_index;
+use super::helpers::try_queue_word_index;
 use super::{io_op, io_status, io_word, IoCompletion, IO_SLOT_COUNT, IO_SLOT_WORDS};
 
 /// Host-side handle to the megakernel IO queue. Wraps a `Vec<u32>` slot ring
@@ -93,22 +93,22 @@ impl MegakernelIoQueue {
                 fix: "io_queue slot exceeds MegakernelIoQueue::slot_count; enlarge the queue or publish into a valid slot id",
             });
         }
-        let current_status = self.read_word(queue_slot, io_word::STATUS);
+        let current_status = self.read_word(queue_slot, io_word::STATUS)?;
         if current_status != slot::EMPTY {
             return Err(PipelineError::QueueFull {
                 queue: "submission",
                 fix: "io_queue slot still in flight; wait for the GPU to recycle it before publishing again",
             });
         }
-        self.write_word_unfenced(queue_slot, io_word::OP_TYPE, io_op::READ);
-        self.write_word_unfenced(queue_slot, io_word::SRC_HANDLE, 0);
-        self.write_word_unfenced(queue_slot, io_word::DST_HANDLE, mapped_slot);
-        self.write_word_unfenced(queue_slot, io_word::OFFSET_LO, 0);
-        self.write_word_unfenced(queue_slot, io_word::OFFSET_HI, 0);
-        self.write_word_unfenced(queue_slot, io_word::BYTE_COUNT, byte_count);
-        self.write_word_unfenced(queue_slot, io_word::TAG, tag);
+        self.write_word_unfenced(queue_slot, io_word::OP_TYPE, io_op::READ)?;
+        self.write_word_unfenced(queue_slot, io_word::SRC_HANDLE, 0)?;
+        self.write_word_unfenced(queue_slot, io_word::DST_HANDLE, mapped_slot)?;
+        self.write_word_unfenced(queue_slot, io_word::OFFSET_LO, 0)?;
+        self.write_word_unfenced(queue_slot, io_word::OFFSET_HI, 0)?;
+        self.write_word_unfenced(queue_slot, io_word::BYTE_COUNT, byte_count)?;
+        self.write_word_unfenced(queue_slot, io_word::TAG, tag)?;
         fence(Ordering::Release);
-        self.write_word_unfenced(queue_slot, io_word::STATUS, slot::PUBLISHED);
+        self.write_word_unfenced(queue_slot, io_word::STATUS, slot::PUBLISHED)?;
         fence(Ordering::Release);
         Ok(())
     }
@@ -137,22 +137,22 @@ impl MegakernelIoQueue {
                 fix: "io_queue slot exceeds MegakernelIoQueue::slot_count; enlarge the queue or submit into a valid slot id",
             });
         }
-        let current_status = self.read_word(queue_slot, io_word::STATUS);
+        let current_status = self.read_word(queue_slot, io_word::STATUS)?;
         if current_status != slot::EMPTY {
             return Err(PipelineError::QueueFull {
                 queue: "submission",
                 fix: "io_queue slot still in flight; wait for completion before submitting a new request",
             });
         }
-        self.write_word_unfenced(queue_slot, io_word::OP_TYPE, io_op::READ);
-        self.write_word_unfenced(queue_slot, io_word::SRC_HANDLE, src_handle);
-        self.write_word_unfenced(queue_slot, io_word::DST_HANDLE, dst_handle);
-        self.write_word_unfenced(queue_slot, io_word::OFFSET_LO, 0);
-        self.write_word_unfenced(queue_slot, io_word::OFFSET_HI, 0);
-        self.write_word_unfenced(queue_slot, io_word::BYTE_COUNT, byte_count);
-        self.write_word_unfenced(queue_slot, io_word::TAG, tag);
+        self.write_word_unfenced(queue_slot, io_word::OP_TYPE, io_op::READ)?;
+        self.write_word_unfenced(queue_slot, io_word::SRC_HANDLE, src_handle)?;
+        self.write_word_unfenced(queue_slot, io_word::DST_HANDLE, dst_handle)?;
+        self.write_word_unfenced(queue_slot, io_word::OFFSET_LO, 0)?;
+        self.write_word_unfenced(queue_slot, io_word::OFFSET_HI, 0)?;
+        self.write_word_unfenced(queue_slot, io_word::BYTE_COUNT, byte_count)?;
+        self.write_word_unfenced(queue_slot, io_word::TAG, tag)?;
         fence(Ordering::Release);
-        self.write_word_unfenced(queue_slot, io_word::STATUS, slot::PUBLISHED);
+        self.write_word_unfenced(queue_slot, io_word::STATUS, slot::PUBLISHED)?;
         fence(Ordering::Release);
         Ok(())
     }
@@ -163,15 +163,27 @@ impl MegakernelIoQueue {
         if queue_slot >= self.slot_count {
             return None;
         }
-        let status = self.read_word(queue_slot, io_word::STATUS);
+        // INVARIANT: queue_slot < slot_count <= IO_SLOT_COUNT (64) and io_word
+        // constants are all <= 7, so slot_idx * IO_SLOT_WORDS + word <= 511 which
+        // cannot overflow usize on any supported platform. The expect here documents
+        // that invariant loudly rather than silently reading the wrong word.
+        let status = self
+            .read_word(queue_slot, io_word::STATUS)
+            .expect("IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion");
         if status == slot::EMPTY {
             return None;
         }
         Some(IoCompletion {
             slot_idx: queue_slot,
-            mapped_slot: self.read_word_unfenced(queue_slot, io_word::DST_HANDLE),
-            byte_count: self.read_word_unfenced(queue_slot, io_word::BYTE_COUNT),
-            tag: self.read_word_unfenced(queue_slot, io_word::TAG),
+            mapped_slot: self
+                .read_word_unfenced(queue_slot, io_word::DST_HANDLE)
+                .expect("IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion"),
+            byte_count: self
+                .read_word_unfenced(queue_slot, io_word::BYTE_COUNT)
+                .expect("IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion"),
+            tag: self
+                .read_word_unfenced(queue_slot, io_word::TAG)
+                .expect("IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling completion"),
         })
     }
 
@@ -181,7 +193,11 @@ impl MegakernelIoQueue {
         if queue_slot >= self.slot_count {
             return false;
         }
-        let status = self.read_word(queue_slot, io_word::STATUS);
+        // INVARIANT: same as completion — slot_idx * IO_SLOT_WORDS + word fits usize
+        // after the queue_slot < slot_count guard above.
+        let status = self
+            .read_word(queue_slot, io_word::STATUS)
+            .expect("IO queue word index overflow is impossible after slot bounds check; Fix: ensure slot_count <= IO_SLOT_COUNT before calling is_recycled");
         match status {
             slot::EMPTY => true,
             slot::PUBLISHED | slot::CLAIMED | io_status::OK | io_status::ERROR | slot::DONE => {
@@ -191,19 +207,25 @@ impl MegakernelIoQueue {
         }
     }
 
-    fn read_word(&self, slot_idx: u32, word: u32) -> u32 {
-        let idx = queue_word_index(slot_idx, word);
+    fn read_word(&self, slot_idx: u32, word: u32) -> Result<u32, PipelineError> {
+        let idx = try_queue_word_index(slot_idx, word)?;
         fence(Ordering::Acquire);
-        self.words[idx]
+        Ok(self.words[idx])
     }
 
-    fn read_word_unfenced(&self, slot_idx: u32, word: u32) -> u32 {
-        let idx = queue_word_index(slot_idx, word);
-        self.words[idx]
+    fn read_word_unfenced(&self, slot_idx: u32, word: u32) -> Result<u32, PipelineError> {
+        let idx = try_queue_word_index(slot_idx, word)?;
+        Ok(self.words[idx])
     }
 
-    fn write_word_unfenced(&mut self, slot_idx: u32, word: u32, value: u32) {
-        let idx = queue_word_index(slot_idx, word);
+    fn write_word_unfenced(
+        &mut self,
+        slot_idx: u32,
+        word: u32,
+        value: u32,
+    ) -> Result<(), PipelineError> {
+        let idx = try_queue_word_index(slot_idx, word)?;
         self.words[idx] = value;
+        Ok(())
     }
 }

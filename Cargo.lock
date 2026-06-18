@@ -3526,6 +3526,7 @@ dependencies = [
  "predicates",
  "serde",
  "serde_json",
+ "tempfile",
  "vyre",
  "vyre-emit-naga",
  "vyre-foundation",

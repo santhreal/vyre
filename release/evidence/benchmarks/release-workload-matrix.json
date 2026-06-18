@@ -1,5 +1,17 @@
 {
   "schema_version": 1,
+  "benchmark_evidence_schema_version": 1,
+  "required_benchmark_case_fields": [
+    "backend_id",
+    "device_signature",
+    "held_out_corpus_id"
+  ],
+  "required_benchmark_metric_fields": [
+    "cpu_digest",
+    "gpu_digest",
+    "active_time_ns",
+    "transfer_bytes"
+  ],
   "required_closed_families": 13,
   "required_cpu_sota_100x_families": [
     "condition-eval",

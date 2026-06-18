@@ -21,17 +21,36 @@ struct Compiled {
 
 static C11_COMPILED: OnceLock<Compiled> = OnceLock::new();
 
+// INTENTIONAL: C11_PATTERNS is a compile-time constant. Any pattern that fails
+// to compile is a programmer error; we must abort loudly rather than silently
+// drop the failed pattern and produce invisible token-kind recall loss.
+#[allow(clippy::panic, clippy::unwrap_used)]
 fn c11_compiled() -> &'static Compiled {
     C11_COMPILED.get_or_init(|| {
         let mut re = Vec::with_capacity(C11_PATTERNS.len());
         let mut kinds = Vec::with_capacity(C11_PATTERNS.len());
         for &(kind, pat) in C11_PATTERNS {
             let anchored = format!("^({pat})");
-            if let Ok(regex) = Regex::new(&anchored) {
-                re.push(regex);
-                kinds.push(kind);
-            }
+            let regex = Regex::new(&anchored).unwrap_or_else(|e| {
+                panic!(
+                    "Fix: C11 lexer pattern for token kind {kind} failed to compile: {e}. \
+                     C11_PATTERNS is a compile-time constant — fix the broken pattern. \
+                     Silently dropping it would cause that token kind to be unrecognised, \
+                     producing invisible recall loss."
+                )
+            });
+            re.push(regex);
+            kinds.push(kind);
         }
+        // Invariant: every entry in C11_PATTERNS produced exactly one compiled regex.
+        assert_eq!(
+            re.len(),
+            C11_PATTERNS.len(),
+            "Fix: C11 lexer compiled {} patterns but C11_PATTERNS has {}; \
+             one or more token kinds would be silently unrecognised.",
+            re.len(),
+            C11_PATTERNS.len()
+        );
         Compiled { re, kinds }
     })
 }
@@ -104,5 +123,41 @@ mod tests {
     fn hash_after_leading_line_whitespace_is_directive() {
         let v = lex_c11_max_munch_kinds(b"  #define X 1\nx").expect("ok");
         assert_eq!(v, vec![201, 202, 201, 1]);
+    }
+
+    #[test]
+    fn c11_compiled_has_exactly_one_regex_per_pattern_no_silent_drop() {
+        // Verify that c11_compiled() produced exactly one regex per C11_PATTERNS
+        // entry. Before the fix, a failed regex compilation was silently skipped
+        // (c11-regex-silent-drop); the token kind would never be recognised.
+        // This test catches both the silent-drop path AND any future pattern
+        // regression that causes a compile failure at init time.
+        let c = c11_compiled();
+        assert_eq!(
+            c.re.len(),
+            C11_PATTERNS.len(),
+            "Fix: c11_compiled must produce exactly one regex per C11_PATTERNS entry. \
+             Expected {} regexes, got {}; one or more token kinds are silently unrecognised.",
+            C11_PATTERNS.len(),
+            c.re.len()
+        );
+        assert_eq!(
+            c.kinds.len(),
+            C11_PATTERNS.len(),
+            "Fix: c11_compiled kinds vec must have one entry per C11_PATTERNS entry. \
+             Expected {}, got {}.",
+            C11_PATTERNS.len(),
+            c.kinds.len()
+        );
+        // Spot-check: the first entry in C11_PATTERNS maps to the exact token id
+        // stored at position 0 in the compiled kinds vector.
+        let (expected_kind, _) = C11_PATTERNS[0];
+        assert_eq!(
+            c.kinds[0],
+            expected_kind,
+            "Fix: compiled kinds[0] must match C11_PATTERNS[0] token id ({expected_kind}), \
+             got {}. A pattern was dropped or reordered.",
+            c.kinds[0]
+        );
     }
 }

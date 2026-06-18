@@ -473,6 +473,20 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         ("", "rust_frontend_gpu_lexer_batch_token_stride") => {
             Some("rust_frontend_gpu_lexer_batch_token_stride")
         }
+        // SyntheticCountWorkload metric_name values (families.rs) — absent entries cause
+        // collect_custom_metrics to silently discard the record-count each iteration.
+        ("", "condition_records") => Some("condition_records"),
+        ("", "quantified_records") => Some("quantified_records"),
+        ("", "scatter_records") => Some("scatter_records"),
+        ("", "aggregation_records") => Some("aggregation_records"),
+        ("", "entropy_records") => Some("entropy_records"),
+        ("", "alias_records") => Some("alias_records"),
+        ("", "ifds_records") => Some("ifds_records"),
+        ("", "ast_nodes") => Some("ast_nodes"),
+        ("", "queued_records") => Some("queued_records"),
+        ("", "rewrite_records") => Some("rewrite_records"),
+        // CallgraphReachabilityStep case emits this custom point (release_workloads.rs).
+        ("", "callgraph_witness_digest") => Some("callgraph_witness_digest"),
         ("baseline_", "flop_count") => Some("baseline_flop_count"),
         ("baseline_", "megakernel_items_processed") => Some("baseline_megakernel_items_processed"),
         _ => None,
@@ -642,6 +656,38 @@ mod tests {
             "scan_ac_irregular_suffix3_extra_skipped_lanes_x1000",
         ] {
             assert_eq!(custom_metric_key("", name), Some(name));
+        }
+    }
+
+    /// Regression: all ten SyntheticCountWorkload::metric_name values (families.rs) and
+    /// callgraph_witness_digest (release_workloads.rs) were absent from the match table.
+    /// collect_custom_metrics routes every custom point through custom_metric_key and drops
+    /// the value when it returns None, so each iteration's record count was silently
+    /// discarded and the metric never appeared in the JSON artifact.
+    #[test]
+    fn synthetic_count_workload_metric_names_are_collectable() {
+        // These map 1:1 to SyntheticCountWorkload::metric_name in families.rs.
+        let names = [
+            "condition_records",
+            "quantified_records",
+            "scatter_records",
+            "aggregation_records",
+            "entropy_records",
+            "alias_records",
+            "ifds_records",
+            "ast_nodes",
+            "queued_records",
+            "rewrite_records",
+            // CallgraphReachabilityStep emits this in release_workloads.rs.
+            "callgraph_witness_digest",
+        ];
+        for name in names {
+            assert_eq!(
+                custom_metric_key("", name),
+                Some(name),
+                "Fix: custom_metric_key must return Some(\"{name}\") so collect_custom_metrics \
+                 does not silently discard the SyntheticCountWorkload record count."
+            );
         }
     }
 }

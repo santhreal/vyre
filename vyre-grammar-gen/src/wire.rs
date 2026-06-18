@@ -110,9 +110,17 @@ impl PackedBlob {
     }
 
     /// Pack an LR table into a blob.
-    #[must_use]
-    pub fn from_lr(lr: &LrTable) -> Self {
-        let _ = validate_lr_table(lr);
+    ///
+    /// # Errors
+    ///
+    /// Returns the validation error when the table's `action` or `goto` vector
+    /// lengths do not match the declared dimension fields (`num_states`,
+    /// `num_tokens`, `num_nonterminals`). Packing a malformed table would
+    /// produce a structurally valid `SGGC` blob (correct magic + checksum) that
+    /// contains wrong data; the GPU parser would index out-of-bounds or dispatch
+    /// to the wrong state.
+    pub fn from_lr(lr: &LrTable) -> Result<Self, String> {
+        validate_lr_table(lr)?;
         let mut payload = Vec::new();
         for &word in &lr.action {
             payload.extend_from_slice(&word.to_le_bytes());
@@ -133,10 +141,10 @@ impl PackedBlob {
             &payload,
         );
 
-        Self {
+        Ok(Self {
             kind: BlobKind::LrTables,
             bytes,
-        }
+        })
     }
 
     /// Decode a lexer DFA from this blob’s bytes.
@@ -312,7 +320,9 @@ mod tests {
 
     #[test]
     fn lexer_blob_starts_with_magic_and_kind() {
-        let dfa = DfaBuilder::new(4, 8).build();
+        let dfa = DfaBuilder::new(4, 8)
+            .build()
+            .expect("empty pattern set must succeed");
         let blob = PackedBlob::from_dfa(&dfa);
         assert_eq!(&blob.bytes[0..4], &MAGIC);
         let version = u16::from_le_bytes([blob.bytes[4], blob.bytes[5]]);
@@ -324,7 +334,7 @@ mod tests {
     #[test]
     fn lr_blob_starts_with_magic_and_kind() {
         let lr = test_lr_table();
-        let blob = PackedBlob::from_lr(&lr);
+        let blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack without error");
         assert_eq!(&blob.bytes[0..4], &MAGIC);
         let kind = u16::from_le_bytes([blob.bytes[6], blob.bytes[7]]);
         assert_eq!(kind, BlobKind::LrTables as u16);
@@ -332,7 +342,9 @@ mod tests {
 
     #[test]
     fn lexer_blob_payload_length_matches_header() {
-        let dfa = DfaBuilder::new(4, 8).build();
+        let dfa = DfaBuilder::new(4, 8)
+            .build()
+            .expect("empty pattern set must succeed");
         let blob = PackedBlob::from_dfa(&dfa);
         let payload_len = u32::from_le_bytes([
             blob.bytes[20],
@@ -345,7 +357,9 @@ mod tests {
 
     #[test]
     fn lexer_blob_checksum_rejects_corruption() {
-        let dfa = DfaBuilder::new(4, 8).build();
+        let dfa = DfaBuilder::new(4, 8)
+            .build()
+            .expect("empty pattern set must succeed");
         let mut blob = PackedBlob::from_dfa(&dfa);
         let last_payload_byte = blob.bytes.len() - 17;
         blob.bytes[last_payload_byte] ^= 0x80;
@@ -357,7 +371,9 @@ mod tests {
 
     #[test]
     fn lexer_dfa_roundtrips_through_wire() {
-        let dfa = DfaBuilder::new(4, 8).build();
+        let dfa = DfaBuilder::new(4, 8)
+            .build()
+            .expect("empty pattern set must succeed");
         let blob = PackedBlob::from_dfa(&dfa);
         let got = blob.try_as_dfa().expect("decode lexer blob");
         assert_eq!(got, dfa);
@@ -366,8 +382,33 @@ mod tests {
     #[test]
     fn lr_table_roundtrips_through_wire() {
         let lr = test_lr_table();
-        let blob = PackedBlob::from_lr(&lr);
+        let blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack without error");
         let got = blob.try_as_lr().expect("decode LR blob");
         assert_eq!(got, lr);
+    }
+
+    #[test]
+    fn from_lr_rejects_mismatched_action_table_not_packs_malformed_blob() {
+        // A table with num_states=4, num_tokens=3 declares 12 action words,
+        // but if we pop one the dimensions are inconsistent. from_lr must
+        // return Err, not pack a structurally valid blob with wrong data
+        // (wire-lr-validation-discarded).
+        let mut lr = test_lr_table();
+        assert_eq!(lr.num_states, 4);
+        assert_eq!(lr.num_tokens, 3);
+        // Remove one action word to break the num_states * num_tokens == action.len() contract.
+        lr.action.pop();
+        let err = PackedBlob::from_lr(&lr).expect_err(
+            "Fix: from_lr must return Err when action table length does not match \
+             num_states * num_tokens; packing the blob would produce wrong GPU parse tables",
+        );
+        assert!(
+            err.contains("Fix:"),
+            "Fix: validation error must include a 'Fix:' hint, got: {err}"
+        );
+        assert!(
+            err.contains("action") || err.contains("dimension"),
+            "Fix: error must identify the mismatched action table, got: {err}"
+        );
     }
 }

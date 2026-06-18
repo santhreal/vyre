@@ -7,7 +7,7 @@
 use crate::allowlist::Allowlist;
 use crate::{Violation, ViolationKind};
 use anyhow::{Context, Result};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use syn::spanned::Spanned;
 use syn::visit::Visit;
 
@@ -198,7 +198,3 @@ impl<'ast> Visit<'ast> for LegoBlockVisitor {
     }
 }
 
-#[allow(dead_code)]
-fn relative_to_root(_root: &Path, path: &Path) -> PathBuf {
-    path.to_path_buf()
-}

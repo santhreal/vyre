@@ -54,12 +54,21 @@ impl FusionCaps {
 pub enum FusionDecision {
     /// Fusion is legal; the concrete backend may stitch its target modules.
     Accept,
-    /// Workgroup size mismatch or invocation budget violation.
+    /// Upstream and downstream workgroup sizes differ.
     WorkgroupSizeMismatch {
         /// Upstream size.
         upstream: [u32; 3],
         /// Downstream size.
         downstream: [u32; 3],
+    },
+    /// Combined workgroup invocations exceed the adapter cap.
+    InvocationBudgetExceeded {
+        /// Workgroup shape whose product exceeds the cap.
+        workgroup: [u32; 3],
+        /// Computed invocation product (saturated to `u64`).
+        invocations: u64,
+        /// Adapter cap.
+        cap: u32,
     },
     /// Shared-memory budget would exceed adapter caps.
     SharedMemoryBudget {
@@ -96,9 +105,10 @@ impl FusionPass {
             * u128::from(upstream.workgroup_size[1])
             * u128::from(upstream.workgroup_size[2]);
         if invocations > u128::from(caps.max_invocations_per_workgroup) {
-            return FusionDecision::WorkgroupSizeMismatch {
-                upstream: upstream.workgroup_size,
-                downstream: downstream.workgroup_size,
+            return FusionDecision::InvocationBudgetExceeded {
+                workgroup: upstream.workgroup_size,
+                invocations: u64::try_from(invocations).unwrap_or(u64::MAX),
+                cap: caps.max_invocations_per_workgroup,
             };
         }
         let needed =
@@ -174,9 +184,10 @@ mod tests {
         down.workgroup_size = up.workgroup_size;
         assert_eq!(
             FusionPass::decide(&up, &down, FusionCaps::high_end(), &[]),
-            FusionDecision::WorkgroupSizeMismatch {
-                upstream: up.workgroup_size,
-                downstream: down.workgroup_size,
+            FusionDecision::InvocationBudgetExceeded {
+                workgroup: up.workgroup_size,
+                invocations: u64::MAX,
+                cap: FusionCaps::high_end().max_invocations_per_workgroup,
             }
         );
     }
@@ -202,6 +213,62 @@ mod tests {
         assert!(
             !source.contains(concat!(".", "saturating_")),
             "fusion admission must use widened exact arithmetic, not silent clamps"
+        );
+    }
+
+    // Reproducing test for: fusion-invocation-overflow-wrong-variant
+    // Before fix: FusionPass returned WorkgroupSizeMismatch{upstream==downstream} when the
+    // real failure was invocations > cap, misreporting the rejection reason to callers.
+    // After fix: returns InvocationBudgetExceeded{workgroup, invocations, cap} instead.
+    #[test]
+    fn invocation_budget_exceeded_returns_distinct_variant_not_workgroup_size_mismatch() {
+        // Workgroup sizes must match (passing the size-mismatch gate) but product > cap.
+        let caps = FusionCaps {
+            max_shared_memory_bytes: 128 * 1024,
+            max_invocations_per_workgroup: 64,
+        };
+        let mut up = dispatch("overinvoke-a", &["in"], &["stage"]);
+        up.workgroup_size = [32, 4, 1]; // 128 invocations > cap 64
+        let mut down = dispatch("overinvoke-b", &["stage"], &["out"]);
+        down.workgroup_size = up.workgroup_size; // sizes are equal — not a mismatch
+
+        let decision = FusionPass::decide(&up, &down, caps, &[]);
+
+        // Must NOT be WorkgroupSizeMismatch (wrong variant from the old code).
+        assert_ne!(
+            decision,
+            FusionDecision::WorkgroupSizeMismatch {
+                upstream: up.workgroup_size,
+                downstream: down.workgroup_size,
+            },
+            "Fix: when invocations exceed the cap and sizes are equal, the decision must not be WorkgroupSizeMismatch"
+        );
+        // Must be the correct InvocationBudgetExceeded variant with exact fields.
+        assert_eq!(
+            decision,
+            FusionDecision::InvocationBudgetExceeded {
+                workgroup: [32, 4, 1],
+                invocations: 128,
+                cap: 64,
+            },
+            "Fix: FusionPass must return InvocationBudgetExceeded{{workgroup=[32,4,1], invocations=128, cap=64}} when invocations > cap"
+        );
+    }
+
+    #[test]
+    fn workgroup_size_mismatch_variant_is_only_returned_when_sizes_actually_differ() {
+        // Mismatch case — must still work correctly.
+        let mut up = dispatch("mismatch-a", &["in"], &["mid"]);
+        up.workgroup_size = [32, 1, 1];
+        let mut down = dispatch("mismatch-b", &["mid"], &["out"]);
+        down.workgroup_size = [64, 1, 1];
+        assert_eq!(
+            FusionPass::decide(&up, &down, FusionCaps::high_end(), &[]),
+            FusionDecision::WorkgroupSizeMismatch {
+                upstream: [32, 1, 1],
+                downstream: [64, 1, 1],
+            },
+            "Fix: WorkgroupSizeMismatch must carry the actual differing sizes"
         );
     }
 }

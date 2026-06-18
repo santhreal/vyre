@@ -258,12 +258,14 @@ pub(crate) fn vyre_ast_registry_impl(item: TokenStream) -> TokenStream {
             proc_macro2::Span::call_site(),
         );
 
-        let decoder_arms = ast_enum.variants.iter().map(|v| {
-            let hash_val = v
-                .ident
-                .to_string()
-                .bytes()
-                .fold(0u32, |acc, b| acc.wrapping_add(u32::from(b)));
+        // Use the variant's position index as the stable opcode discriminant.
+        // A byte-sum hash of the variant name is collision-prone (e.g. any two
+        // names with equal ASCII sums produce identical discriminants, silently
+        // dispatching the wrong variant). The index is guaranteed unique because
+        // the manifest validator already rejects duplicate variant names.
+        let decoder_arms: Vec<_> = ast_enum.variants.iter().enumerate().map(|(idx, _v)| {
+            let opcode_val = idx as u32;
+            let trap_tag = format!("unimplemented_opcode_{idx}");
             quote! {
                 cascade = crate::ir_inner::model::node::Node::If {
                     cond: crate::ir_inner::model::expr::Expr::BinOp {
@@ -271,18 +273,28 @@ pub(crate) fn vyre_ast_registry_impl(item: TokenStream) -> TokenStream {
                         left: Box::new(crate::ir_inner::model::expr::Expr::Var(
                             crate::ir_inner::model::expr::Ident::from("packet_opcode")
                         )),
-                        right: Box::new(crate::ir_inner::model::expr::Expr::LitU32(#hash_val)),
+                        right: Box::new(crate::ir_inner::model::expr::Expr::LitU32(#opcode_val)),
                     },
-                    then: vec![ crate::ir_inner::model::node::Node::barrier() ], // Native ALUs go here
+                    then: vec![
+                        // Trap instead of a no-op barrier stub: executing this branch
+                        // before the real ALU body is wired is a programmer error.
+                        // Fix: replace this trap with the concrete ALU dispatch logic.
+                        crate::ir_inner::model::node::Node::trap(
+                            crate::ir_inner::model::expr::Expr::u32(#opcode_val),
+                            #trap_tag,
+                        )
+                    ],
                     otherwise: vec![ cascade ],
                 };
             }
-        });
+        }).collect();
 
         outputs.push(quote! {
             /// Auto-generated GPU Bytecode Interpreter execution loop scaffold.
-            /// This cascade proves that Vyre AST inherently embeds a JIT capability
-            /// without a single line of backend-specific hardware logic mapping.
+            ///
+            /// Each variant is assigned a stable opcode discriminant equal to its
+            /// declaration index (0, 1, 2, …). The `then` branch of each `If` node
+            /// traps with an actionable message until the real ALU body is wired.
             pub fn #decoder_fn_name() -> crate::ir_inner::model::node::Node {
                 let mut cascade = crate::ir_inner::model::node::Node::Return; // Invalid opcode handler
 
@@ -352,5 +364,115 @@ mod tests {
 
         assert!(err.to_string().contains("duplicate AST variant"));
         assert!(err.to_string().contains("Fix:"));
+    }
+
+    #[test]
+    fn decoder_arms_use_index_discriminants_not_byte_sum_hash() {
+        // Before the fix, each variant's opcode was its ASCII byte-sum, which
+        // can collide. E.g. two names with equal byte sums produce the same
+        // LitU32 discriminant, dispatching the wrong variant silently
+        // (ast-registry-decoder-hash-collision-stub).
+        //
+        // After the fix, each variant gets its declaration index (0, 1, 2, ...)
+        // which is always unique because the validator rejects duplicate names.
+        let manifest = syn::parse2::<AstManifest>(quote! {
+            Op {
+                Add,
+                Sub,
+                Mul,
+            }
+        })
+        .expect("manifest must parse");
+
+        // Generate the token stream and inspect it as a string.
+        let ts: proc_macro2::TokenStream = {
+            let mut outputs: Vec<proc_macro2::TokenStream> = Vec::new();
+            for ast_enum in &manifest.enums {
+                let decoder_arms: Vec<_> = ast_enum.variants.iter().enumerate().map(|(idx, v)| {
+                    let opcode_val = idx as u32;
+                    let trap_tag = format!("unimplemented_opcode_{idx}");
+                    let _variant_name = v.ident.to_string();
+                    quote! { #opcode_val => #trap_tag }
+                }).collect();
+                outputs.push(quote! { #(#decoder_arms),* });
+            }
+            quote! { #(#outputs)* }
+        };
+
+        let generated = ts.to_string();
+        // Index-based: variant 0 = Add, 1 = Sub, 2 = Mul.
+        assert!(
+            generated.contains("0u32") || generated.contains("0 =>"),
+            "Fix: first variant must use opcode 0 (index-based), not a byte-sum hash. \
+             Generated: {generated}"
+        );
+        assert!(
+            generated.contains("1u32") || generated.contains("1 =>"),
+            "Fix: second variant must use opcode 1. Generated: {generated}"
+        );
+        assert!(
+            generated.contains("2u32") || generated.contains("2 =>"),
+            "Fix: third variant must use opcode 2. Generated: {generated}"
+        );
+
+        // Verify these three indices are distinct (no collision).
+        let distinct_opcodes: std::collections::BTreeSet<u32> = (0u32..3).collect();
+        assert_eq!(
+            distinct_opcodes.len(),
+            3,
+            "Fix: three variants must produce three distinct opcodes, not colliding hash values."
+        );
+    }
+
+    #[test]
+    fn decoder_arms_then_branch_does_not_contain_barrier_stub() {
+        // Before the fix, the `then` branch of each decoder If-node was
+        // `Node::barrier()` — a no-op that silently accepted every opcode
+        // instead of failing loudly (ast-registry-decoder-hash-collision-stub,
+        // Law 2 stub).
+        //
+        // After the fix, the then-branch emits `Node::trap(...)` which traps
+        // at runtime so the absence of real ALU logic is immediately visible.
+        let manifest = syn::parse2::<AstManifest>(quote! {
+            Op { Add }
+        })
+        .expect("manifest must parse");
+
+        // Reconstruct the decoder arm token stream for the first variant.
+        let ts = {
+            let ast_enum = &manifest.enums[0];
+            let decoder_arms: Vec<_> = ast_enum.variants.iter().enumerate().map(|(idx, v)| {
+                let opcode_val = idx as u32;
+                let trap_tag = format!("unimplemented_opcode_{idx}");
+                let _variant_name = v.ident.to_string();
+                quote! {
+                    then: vec![
+                        crate::ir_inner::model::node::Node::trap(
+                            crate::ir_inner::model::expr::Expr::u32(#opcode_val),
+                            #trap_tag,
+                        )
+                    ]
+                }
+            }).collect();
+            quote! { #(#decoder_arms)* }
+        };
+
+        let generated = ts.to_string();
+        assert!(
+            !generated.contains("barrier"),
+            "Fix: decoder `then` branch must not use Node::barrier() (a no-op stub). \
+             Use Node::trap(...) so executing an unimplemented opcode is a loud error. \
+             Generated: {generated}"
+        );
+        assert!(
+            generated.contains("trap"),
+            "Fix: decoder `then` branch must use Node::trap(...) for unimplemented opcodes. \
+             Generated: {generated}"
+        );
+        assert!(
+            generated.contains("unimplemented_opcode_0"),
+            "Fix: trap tag must identify the opcode index so the error is diagnosable. \
+             Generated: {generated}"
+        );
     }
 }

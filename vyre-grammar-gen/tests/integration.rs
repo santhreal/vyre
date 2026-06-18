@@ -106,7 +106,7 @@ fn lr_wire_roundtrip_simple_grammar() {
     b.set_action(2, 0, Action::Reduce(prod));
     b.set_action(2, 2, Action::Reduce(prod));
     let lr = b.build();
-    let blob = PackedBlob::from_lr(&lr);
+    let blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack");
     assert_eq!(blob.kind, BlobKind::LrTables);
     let got = blob.try_as_lr().expect("try_as_lr must succeed");
     assert_eq!(got.num_states, 4);
@@ -123,7 +123,7 @@ fn lr_wire_roundtrip_preserves_goto() {
     b.set_goto(1, 1, 2);
     let lr = b.build();
     validate_lr_table(&lr).expect("valid");
-    let blob = PackedBlob::from_lr(&lr);
+    let blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack");
     let got = decode_lr_from_bytes(&blob.bytes).expect("decode");
     assert_eq!(got.goto_at(0, 0), 1);
     assert_eq!(got.goto_at(1, 1), 2);
@@ -137,7 +137,7 @@ fn lr_wire_roundtrip_preserves_productions() {
     let p0 = b.add_production(0, 3);
     let p1 = b.add_production(1, 1);
     let lr = b.build();
-    let blob = PackedBlob::from_lr(&lr);
+    let blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack");
     let got = decode_lr_from_bytes(&blob.bytes).expect("decode");
     assert_eq!(got.productions.len(), 2);
     assert_eq!(got.productions[p0 as usize].lhs, 0);
@@ -245,7 +245,7 @@ fn builder_pipeline_validate_then_pack_decode() {
 
     validate_lr_table(&lr).expect("table must be valid before serialization");
 
-    let blob = PackedBlob::from_lr(&lr);
+    let blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack");
     let got = decode_lr_from_bytes(&blob.bytes).expect("decode");
     assert_eq!(got.action_at(0, 0), Action::Shift(1));
     assert_eq!(got.action_at(2, 2), Action::Accept);

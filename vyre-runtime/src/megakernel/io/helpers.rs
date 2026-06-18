@@ -12,10 +12,6 @@ pub(super) struct IoQueueView {
     pub(super) slot_count: usize,
 }
 
-pub(super) fn queue_word_index(slot_idx: u32, word: u32) -> usize {
-    try_queue_word_index(slot_idx, word).unwrap_or(0)
-}
-
 pub(super) fn try_queue_word_index(slot_idx: u32, word: u32) -> Result<usize, PipelineError> {
     let slot = usize::try_from(slot_idx).map_err(|error| {
         PipelineError::Backend(format!(

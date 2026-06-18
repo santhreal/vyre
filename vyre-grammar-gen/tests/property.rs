@@ -62,8 +62,8 @@ proptest! {
     ) {
         let mut b = DfaBuilder::new(states, classes);
         // Wire a simple continue on (0,0) -> 0 so the table isn't trivially empty
-        b.continue_to(0, 0, 0);
-        let dfa = b.build();
+        b.continue_to(0, 0, 0).expect("state 0 fits in u16");
+        let dfa = b.build().expect("empty pattern set must succeed");
         let blob = PackedBlob::from_dfa(&dfa);
         let got = decode_dfa_from_bytes(&blob.bytes).expect("decode must succeed");
         prop_assert_eq!(got.num_states, states);
@@ -84,7 +84,7 @@ proptest! {
         let accept_state = accept_state.min(states - 1);
         let mut b = DfaBuilder::new(states, classes);
         b.accept(accept_state, token_id);
-        let dfa = b.build();
+        let dfa = b.build().expect("empty pattern set must succeed");
         let blob = PackedBlob::from_dfa(&dfa);
         let got = decode_dfa_from_bytes(&blob.bytes).expect("decode");
         prop_assert_eq!(got.token_ids[accept_state as usize], token_id);
@@ -105,7 +105,7 @@ proptest! {
         let mut b = LrBuilder::new(states, tokens, nts);
         b.set_action(0, 0, Action::Accept);
         let lr = b.build();
-        let blob = PackedBlob::from_lr(&lr);
+        let blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack");
         let got = decode_lr_from_bytes(&blob.bytes).expect("decode");
         prop_assert_eq!(got.num_states, states);
         prop_assert_eq!(got.num_tokens, tokens);
@@ -126,7 +126,7 @@ proptest! {
         let mut b = LrBuilder::new(states, tokens, nts);
         b.set_action(state, tok, Action::Shift(target.min(states - 1)));
         let lr = b.build();
-        let blob = PackedBlob::from_lr(&lr);
+        let blob = PackedBlob::from_lr(&lr).expect("valid LR table must pack");
         let got = decode_lr_from_bytes(&blob.bytes).expect("decode");
         prop_assert_eq!(
             got.action_at(state, tok),
@@ -145,7 +145,7 @@ proptest! {
         // Drop between 1 and 20 bytes from the end
         drop in 1usize..=20usize,
     ) {
-        let dfa = DfaBuilder::new(4, 8).build();
+        let dfa = DfaBuilder::new(4, 8).build().expect("empty pattern set must succeed");
         let blob = PackedBlob::from_dfa(&dfa);
         let len = blob.bytes.len();
         if drop >= len {
@@ -228,7 +228,7 @@ proptest! {
         let b = DfaBuilder::new(states, classes);
         let action = DfaAction::Continue;
         let t_in = Transition { next_state: next_state_val, action };
-        let mut table = b.build();
+        let mut table = b.build().expect("empty pattern set must succeed");
         table.set_transition(state, class, t_in);
         let t_out = table.transition(state, class);
         prop_assert_eq!(t_out.next_state, next_state_val);

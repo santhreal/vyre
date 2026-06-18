@@ -65,11 +65,13 @@ enum EmitFormat {
     Json,
 }
 
-fn lexer_dfa_table(smoke: bool) -> DfaTable {
+fn lexer_dfa_table(smoke: bool) -> Result<DfaTable, Box<dyn std::error::Error>> {
     if smoke {
-        DfaBuilder::new(4, 32).build()
+        Ok(DfaBuilder::new(4, 32).build().map_err(|e| {
+            format!("Fix: smoke DFA build failed: {e}")
+        })?)
     } else {
-        build_c11_lexer_dfa()
+        Ok(build_c11_lexer_dfa())
     }
 }
 
@@ -88,7 +90,12 @@ fn write_json_sidecar(path: &PathBuf, label: &str, blob: &PackedBlob) {
 fn lr_blob_from_json(path: &PathBuf) -> Result<PackedBlob, Box<dyn std::error::Error>> {
     let bytes = read_file_bounded(path, 64 * 1024 * 1024)?;
     let table: LrTable = serde_json::from_slice(&bytes)?;
-    Ok(PackedBlob::from_lr(&table))
+    Ok(PackedBlob::from_lr(&table).map_err(|e| {
+        format!(
+            "Fix: LR table from '{}' failed validation before packing: {e}",
+            path.display()
+        )
+    })?)
 }
 
 fn read_file_bounded(
@@ -133,7 +140,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             format,
             lr_json,
         } => {
-            let dfa = lexer_dfa_table(smoke_lexer);
+            let dfa = lexer_dfa_table(smoke_lexer)?;
 
             fs::create_dir_all(&out_dir)?;
 
@@ -181,7 +188,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Command::DumpLexer { smoke_lexer } => {
-            let dfa = lexer_dfa_table(smoke_lexer);
+            let dfa = lexer_dfa_table(smoke_lexer)?;
             let blob = PackedBlob::from_dfa(&dfa);
             let stdout = std::io::stdout();
             let mut out = stdout.lock();
