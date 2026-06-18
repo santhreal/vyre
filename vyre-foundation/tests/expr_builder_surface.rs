@@ -52,10 +52,12 @@ fn negate_produces_unop_negate() {
 }
 
 #[test]
-fn saturating_sub_produces_sub_with_min_clamp() {
-    // saturating_sub is implemented as: left - max(right, 0)
+fn saturating_sub_emits_saturating_sub_opcode() {
+    // saturating_sub emits the dedicated BinOp::SaturatingSub opcode (wire tag
+    // 0x17), not a `left - max(right, 0)` lowering to BinOp::Sub — so the wire
+    // fingerprint and the saturating evaluation semantics stay exact.
     let e = Expr::saturating_sub(Expr::u32(5), Expr::u32(10));
-    assert!(matches!(e, Expr::BinOp { op: BinOp::Sub, .. }));
+    assert!(matches!(e, Expr::BinOp { op: BinOp::SaturatingSub, .. }));
 }
 
 #[test]
