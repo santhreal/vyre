@@ -363,7 +363,7 @@ pub fn classify_operand(kind: &KernelOpKind, pos: usize) -> OperandClass {
                 OperandClass::ResultRef
             }
         }
-        SubgroupBallot | SubgroupShuffle | SubgroupAdd => OperandClass::ResultRef,
+        SubgroupBallot | SubgroupShuffle | SubgroupBroadcast | SubgroupAdd => OperandClass::ResultRef,
         StructuredIfThen => {
             if pos == 0 {
                 OperandClass::ResultRef
@@ -448,7 +448,7 @@ fn min_operand_count(kind: &KernelOpKind) -> usize {
         MatrixMma { .. } => 10,
         Select => 3,
         Atomic { .. } => 2,
-        SubgroupBallot | SubgroupShuffle | SubgroupAdd => 1,
+        SubgroupBallot | SubgroupShuffle | SubgroupBroadcast | SubgroupAdd => 1,
         StructuredIfThen => 2,
         StructuredIfThenElse => 3,
         StructuredForLoop { .. } => 3,

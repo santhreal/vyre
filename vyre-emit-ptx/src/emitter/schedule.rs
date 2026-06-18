@@ -45,6 +45,7 @@ pub(super) fn is_schedulable_pure_op(op: &KernelOp) -> bool {
             | KernelOpKind::SubgroupSize
             | KernelOpKind::SubgroupBallot
             | KernelOpKind::SubgroupShuffle
+            | KernelOpKind::SubgroupBroadcast
             | KernelOpKind::SubgroupAdd
     ) && op.result.is_some()
 }

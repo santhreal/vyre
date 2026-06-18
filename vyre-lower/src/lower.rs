@@ -18,7 +18,7 @@ use scope::VarScope;
 use std::sync::Arc;
 use vyre_foundation::ir::model::node::node_op_id;
 use vyre_foundation::ir::{
-    AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Ident, MemoryKind, Node, Program,
+    AtomicOp, BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, MemoryKind, Node, Program,
 };
 
 /// Maximum nested-body depth before lowering refuses with
@@ -721,9 +721,42 @@ impl LowerCtx {
                 self.builtin_axis(body, KernelOpKind::LocalInvocationId, *axis)
             }
             Expr::BinOp { op, left, right } => {
-                let left_id = self.lower_expr(left, body)?;
-                let right_id = self.lower_expr(right, body)?;
-                self.binary(body, KernelOpKind::BinOpKind(*op), left_id, right_id)
+                // Subgroup/wave ops are spelled as binary ops at the Program
+                // level but have dedicated subgroup KernelOps (and emit to
+                // `subgroup*` WGSL statements, not a BinaryOperator). Route them
+                // before the generic `BinOpKind` path, which has no Naga operator
+                // and would fail closed at emit. Operand contract mirrors the
+                // canonical `Expr::Subgroup*` lowering below.
+                match op {
+                    BinOp::Shuffle => {
+                        let value_id = self.lower_expr(left, body)?;
+                        let lane_id = self.lower_expr(right, body)?;
+                        self.binary(body, KernelOpKind::SubgroupShuffle, value_id, lane_id)
+                    }
+                    BinOp::WaveBroadcast => {
+                        let value_id = self.lower_expr(left, body)?;
+                        let lane_id = self.lower_expr(right, body)?;
+                        self.binary(body, KernelOpKind::SubgroupBroadcast, value_id, lane_id)
+                    }
+                    BinOp::Ballot => {
+                        // Ballot is unary (predicate). The binary spelling's
+                        // right operand is unused, so it is not lowered.
+                        let cond_id = self.lower_expr(left, body)?;
+                        self.unary(body, KernelOpKind::SubgroupBallot, cond_id)
+                    }
+                    BinOp::WaveReduce => {
+                        // The only subgroup reduce KernelOp is Add (sum-reduce),
+                        // and the binary spelling carries no reduce-op selector,
+                        // so WaveReduce lowers to a subgroup sum across the wave.
+                        let value_id = self.lower_expr(left, body)?;
+                        self.unary(body, KernelOpKind::SubgroupAdd, value_id)
+                    }
+                    _ => {
+                        let left_id = self.lower_expr(left, body)?;
+                        let right_id = self.lower_expr(right, body)?;
+                        self.binary(body, KernelOpKind::BinOpKind(*op), left_id, right_id)
+                    }
+                }
             }
             Expr::UnOp { op, operand } => {
                 let operand_id = self.lower_expr(operand, body)?;

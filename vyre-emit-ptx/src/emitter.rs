@@ -638,12 +638,17 @@ impl BodyCtx<'_> {
                 );
                 self.bind_result(op, result)?;
             }
-            SubgroupShuffle => {
+            // Shuffle and Broadcast both lower to `shfl.sync.idx.b32` reading
+            // `value` from the lane named by `lane`. They differ only in operand
+            // uniformity (broadcast's lane is uniform across the wave), which is
+            // the caller's contract, not the instruction's — so the PTX is
+            // identical.
+            SubgroupShuffle | SubgroupBroadcast => {
                 let value_id = *op.operands.first().ok_or_else(|| {
-                    EmitError::InvalidDescriptor("SubgroupShuffle missing value".into())
+                    EmitError::InvalidDescriptor("subgroup shuffle/broadcast missing value".into())
                 })?;
                 let lane_id = *op.operands.get(1).ok_or_else(|| {
-                    EmitError::InvalidDescriptor("SubgroupShuffle missing lane".into())
+                    EmitError::InvalidDescriptor("subgroup shuffle/broadcast missing lane".into())
                 })?;
                 let value = self.lookup_operand(value_id)?;
                 let lane = self.lookup_operand(lane_id)?;

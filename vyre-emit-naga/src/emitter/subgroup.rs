@@ -12,11 +12,26 @@ impl BodyBuilder<'_> {
             .operands
             .first()
             .ok_or_else(|| EmitError::InvalidDescriptor("SubgroupBallot missing cond".into()))?;
-        let predicate = self.values.get(&cond_id).copied().ok_or_else(|| {
+        let cond = self.values.get(&cond_id).copied().ok_or_else(|| {
             EmitError::InvalidDescriptor(format!(
                 "SubgroupBallot cond id {cond_id} not yet emitted"
             ))
         })?;
+        // naga's `SubgroupBallot` requires a `bool` predicate, but the IR cond
+        // is commonly an integer mask (e.g. the `BinOp::Ballot` spelling stores
+        // to a u32 and passes a u32 predicate). Coerce non-bool predicates to
+        // bool with `cond != 0`; `append_expr` unifies the literal's type to the
+        // operand, so this is correct for u32/i32 conds and a no-op for bool.
+        let predicate = if self.is_bool_expression(cond) {
+            cond
+        } else {
+            let zero = self.literal_u32(0);
+            self.append_expr(Expression::Binary {
+                op: naga::BinaryOperator::NotEqual,
+                left: cond,
+                right: zero,
+            })
+        };
         let result = self
             .function
             .expressions
@@ -136,6 +151,43 @@ impl BodyBuilder<'_> {
         self.function.body.push(
             Statement::SubgroupGather {
                 mode: naga::GatherMode::Shuffle(lane),
+                argument,
+                result,
+            },
+            Span::UNDEFINED,
+        );
+        let ty = self.value_type_operand(op, 0)?;
+        self.bind_result_typed(op, result, ty)
+    }
+
+    pub(super) fn emit_subgroup_broadcast(&mut self, op: &KernelOp) -> Result<(), EmitError> {
+        let value_id = *op.operands.first().ok_or_else(|| {
+            EmitError::InvalidDescriptor("SubgroupBroadcast missing value".into())
+        })?;
+        let lane_id = *op.operands.get(1).ok_or_else(|| {
+            EmitError::InvalidDescriptor("SubgroupBroadcast missing lane".into())
+        })?;
+        let argument = self.values.get(&value_id).copied().ok_or_else(|| {
+            EmitError::InvalidDescriptor(format!(
+                "SubgroupBroadcast value id {value_id} not yet emitted"
+            ))
+        })?;
+        let lane = self.values.get(&lane_id).copied().ok_or_else(|| {
+            EmitError::InvalidDescriptor(format!(
+                "SubgroupBroadcast lane id {lane_id} not yet emitted"
+            ))
+        })?;
+        let result = self.function.expressions.append(
+            Expression::SubgroupOperationResult {
+                ty: self.value_type_operand(op, 0)?,
+            },
+            Span::UNDEFINED,
+        );
+        // Broadcast = gather from one uniform source lane (vs Shuffle's per-lane
+        // source). naga lowers GatherMode::Broadcast to `subgroupBroadcast`.
+        self.function.body.push(
+            Statement::SubgroupGather {
+                mode: naga::GatherMode::Broadcast(lane),
                 argument,
                 result,
             },

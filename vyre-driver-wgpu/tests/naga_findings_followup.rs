@@ -254,6 +254,81 @@ fn subgroup_binops_are_lowered_as_subgroup_statements() {
     );
 }
 
+/// Each subgroup BinOp must lower to its OWN distinct WGSL intrinsic, not a
+/// catch-all. In particular `WaveBroadcast` must emit `subgroupBroadcast` (gather
+/// from a uniform lane), NOT `subgroupShuffle` — collapsing broadcast into
+/// shuffle would be a silent semantic substitution (broadcast requires a uniform
+/// source lane; shuffle allows per-lane).
+#[test]
+fn subgroup_binops_lower_to_distinct_intrinsics() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::output("subgroup_shuffle", 1, DataType::U32),
+            BufferDecl::output("subgroup_ballot", 2, DataType::U32),
+            BufferDecl::output("subgroup_reduce", 3, DataType::U32),
+            BufferDecl::output("subgroup_broadcast", 4, DataType::U32),
+        ],
+        [1, 1, 1],
+        vec![
+            Node::store(
+                "subgroup_shuffle",
+                Expr::u32(0),
+                Expr::BinOp {
+                    op: BinOp::Shuffle,
+                    left: Box::new(Expr::u32(0x5)),
+                    right: Box::new(Expr::u32(0)),
+                },
+            ),
+            Node::store(
+                "subgroup_ballot",
+                Expr::u32(0),
+                Expr::BinOp {
+                    op: BinOp::Ballot,
+                    left: Box::new(Expr::u32(1)),
+                    right: Box::new(Expr::u32(0)),
+                },
+            ),
+            Node::store(
+                "subgroup_reduce",
+                Expr::u32(0),
+                Expr::BinOp {
+                    op: BinOp::WaveReduce,
+                    left: Box::new(Expr::u32(7)),
+                    right: Box::new(Expr::u32(0)),
+                },
+            ),
+            Node::store(
+                "subgroup_broadcast",
+                Expr::u32(0),
+                Expr::BinOp {
+                    op: BinOp::WaveBroadcast,
+                    left: Box::new(Expr::u32(4)),
+                    right: Box::new(Expr::u32(0)),
+                },
+            ),
+        ],
+    );
+
+    let wgsl = emit_wgsl(&program);
+    for intrinsic in [
+        "subgroupShuffle(",
+        "subgroupBallot(",
+        "subgroupAdd(",
+        "subgroupBroadcast(",
+    ] {
+        assert!(
+            wgsl.contains(intrinsic),
+            "Fix: subgroup BinOp must emit `{intrinsic}`; each spelling maps to its own intrinsic.\n{wgsl}",
+        );
+    }
+    // Ballot's u32 predicate must be coerced to a bool before subgroupBallot
+    // (naga rejects a non-bool predicate), so the comparison must appear.
+    assert!(
+        wgsl.contains("!= 0u") || wgsl.contains("!=0u"),
+        "Fix: integer ballot predicate must be coerced to bool via `!= 0u`.\n{wgsl}",
+    );
+}
+
 #[test]
 fn async_nodes_are_rejected_in_naga_emit() {
     let program = Program::wrapped(

@@ -407,7 +407,8 @@ impl BodyCtx<'_> {
             KernelOpKind::BinOpKind(_)
             | KernelOpKind::Fma
             | KernelOpKind::Select
-            | KernelOpKind::SubgroupShuffle => {
+            | KernelOpKind::SubgroupShuffle
+            | KernelOpKind::SubgroupBroadcast => {
                 self.result_ptx_type(body, facts, *producer.operands.first()?, depth + 1)
             }
             KernelOpKind::UnOpKind(_) => {

@@ -50,6 +50,7 @@ pub(super) enum OpDispatchRoute {
     SubgroupBallot,
     SubgroupAdd,
     SubgroupShuffle,
+    SubgroupBroadcast,
     Atomic,
     IndirectDispatch,
     MatrixMma,
@@ -141,6 +142,7 @@ fn classify_op_dispatch_route(kind: &KernelOpKind) -> OpDispatchRoute {
         KernelOpKind::SubgroupBallot => OpDispatchRoute::SubgroupBallot,
         KernelOpKind::SubgroupAdd => OpDispatchRoute::SubgroupAdd,
         KernelOpKind::SubgroupShuffle => OpDispatchRoute::SubgroupShuffle,
+        KernelOpKind::SubgroupBroadcast => OpDispatchRoute::SubgroupBroadcast,
         KernelOpKind::Atomic { .. } => OpDispatchRoute::Atomic,
         KernelOpKind::IndirectDispatch { .. } => OpDispatchRoute::IndirectDispatch,
         KernelOpKind::MatrixMma { .. } => OpDispatchRoute::MatrixMma,
@@ -603,6 +605,9 @@ impl BodyBuilder<'_> {
             }
             OpDispatchRoute::SubgroupShuffle => {
                 self.emit_subgroup_shuffle(op)
+            }
+            OpDispatchRoute::SubgroupBroadcast => {
+                self.emit_subgroup_broadcast(op)
             }
             OpDispatchRoute::Atomic => with_route_kind!(op, route, KernelOpKind::Atomic {
                 op: atomic_op,

@@ -872,6 +872,11 @@ pub enum KernelOpKind {
     SubgroupBallot,
     /// Operands: [value_op_id, lane_op_id]. Result has the value's dtype.
     SubgroupShuffle,
+    /// Operands: [value_op_id, lane_op_id]. Broadcasts `value` from the lane
+    /// named by `lane` (uniform) to every lane; result has the value's dtype.
+    /// Distinct from `SubgroupShuffle` (per-lane source) — broadcast requires a
+    /// uniform source lane and emits `subgroupBroadcast`.
+    SubgroupBroadcast,
     /// Operand 0 = value_op_id. Sums across the subgroup; result has
     /// the value's dtype.
     SubgroupAdd,
