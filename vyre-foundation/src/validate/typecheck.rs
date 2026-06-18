@@ -275,6 +275,23 @@ pub(crate) fn validate_unop_operand(
                     )));
                 }
             }
+            crate::ir_inner::model::types::UnOp::Unpack4Low
+            | crate::ir_inner::model::types::UnOp::Unpack4High
+            | crate::ir_inner::model::types::UnOp::Unpack8Low
+            | crate::ir_inner::model::types::UnOp::Unpack8High => {
+                // VAL-004: nibble/byte unpack ops extract a masked, shifted lane
+                // from a 32-bit integer word — emit lowers them to
+                // `(v >> shift) & mask` and the reference interpreter mirrors it,
+                // so operand and result are 32-bit integers. These previously
+                // fell through to the `_` catch-all and were rejected as "not
+                // recognized" even though that message LISTS them as valid and
+                // every backend lowers them: a validator rejecting ops it emits.
+                if !matches!(ty, DataType::U32 | DataType::I32) {
+                    errors.push(err(format!(
+                        "unary operation `{op:?}` operand has type `{ty}`; unpack ops require a 32-bit integer (`u32` or `i32`) word. Fix: cast or rewrite the operand to produce U32 or I32."
+                    )));
+                }
+            }
             _ => {
                 errors.push(err(format!(
                     "unary operation `{op:?}` is not recognized. Fix: use a known UnOp variant from this enum (`Negate`, `LogicalNot`, `BitNot`, `Popcount`, `Clz`, `Ctz`, `ReverseBits`, `Sin`, `Cos`, `Exp`, `Log`, `Log2`, `Exp2`, `Tan`, `Acos`, `Asin`, `Atan`, `Tanh`, `Sinh`, `Cosh`, `Abs`, `Sqrt`, `InverseSqrt`, `Reciprocal`, `Floor`, `Ceil`, `Round`, `Trunc`, `Sign`, `IsNan`, `IsInf`, `IsFinite`, `Unpack4Low`, `Unpack4High`, `Unpack8Low`, `Unpack8High`)."

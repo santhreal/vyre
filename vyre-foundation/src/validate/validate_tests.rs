@@ -346,3 +346,148 @@ fn call_result_binding_unknown_type_does_not_produce_false_v045() {
         report.errors
     );
 }
+
+// ------------------------------------------------------------------
+// `fma_f32_violations` — the focused subset emit backends run before
+// lowering. Pins the `V028` filter so a message change cannot silently
+// disable the integer-Fma rejection (which would re-open the Law-10
+// silent `a*b+c` miscompile), and proves the filter excludes unrelated
+// validation errors so emit boundaries don't preempt downstream
+// diagnostics.
+// ------------------------------------------------------------------
+#[test]
+fn fma_f32_violations_flags_integer_fma_with_actionable_message() {
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32)],
+        [1, 1, 1],
+        vec![Node::let_bind(
+            "bad_fma",
+            Expr::Fma {
+                a: Box::new(Expr::u32(1)),
+                b: Box::new(Expr::u32(2)),
+                c: Box::new(Expr::u32(3)),
+            },
+        )],
+    );
+    let violations = fma_f32_violations(&program);
+    assert_eq!(
+        violations.len(),
+        3,
+        "every non-f32 Fma operand (a, b, c) must be reported, got: {violations:?}"
+    );
+    for violation in &violations {
+        assert!(
+            violation.message().starts_with("V028:"),
+            "fma_f32_violations must only return V028 errors, got: {}",
+            violation.message()
+        );
+        assert!(
+            violation.message().contains("Fma requires three f32 operands")
+                && violation.message().contains("must be `f32`")
+                && violation.message().contains("Fix:"),
+            "V028 message must name the f32 contract and a fix, got: {}",
+            violation.message()
+        );
+    }
+}
+
+#[test]
+fn fma_f32_violations_empty_for_all_f32_operands() {
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::F32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::Fma {
+                a: Box::new(Expr::LitF32(2.0)),
+                b: Box::new(Expr::LitF32(3.0)),
+                c: Box::new(Expr::LitF32(4.0)),
+            },
+        )],
+    );
+    assert!(
+        fma_f32_violations(&program).is_empty(),
+        "f32 Fma is valid and must not be flagged"
+    );
+}
+
+#[test]
+fn fma_f32_violations_ignores_unrelated_validation_errors() {
+    // A program with NO Fma but a genuine validation error (zero workgroup
+    // dimension). `validate` reports it; `fma_f32_violations` must NOT, so
+    // emit boundaries calling this never preempt the dedicated diagnostic.
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32)],
+        [0, 1, 1],
+        Vec::new(),
+    );
+    assert!(
+        !validate(&program).is_empty(),
+        "zero workgroup dimension must be a validation error (guards the test premise)"
+    );
+    assert!(
+        fma_f32_violations(&program).is_empty(),
+        "non-Fma validation errors must be filtered out by fma_f32_violations"
+    );
+}
+
+// ------------------------------------------------------------------
+// Unpack UnOp recognition. `Unpack4/8 Low/High` previously fell through
+// `validate_unop_operand`'s `_` catch-all and were rejected as "not
+// recognized" — even though that message lists them as valid and every
+// backend lowers them. Validate must recognize them and check the
+// integer-word operand contract instead.
+// ------------------------------------------------------------------
+#[test]
+fn validate_recognizes_integer_unpack_ops() {
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::UnOp {
+                op: UnOp::Unpack8High,
+                operand: Box::new(Expr::u32(0xDEAD_BEEF)),
+            },
+        )],
+    );
+    let errors = validate(&program);
+    assert!(
+        !errors.iter().any(|e| e.message().contains("is not recognized")),
+        "integer unpack op must be recognized, got: {errors:?}"
+    );
+    assert!(
+        !errors.iter().any(|e| e.message().contains("unpack ops require")),
+        "a u32 operand is valid for unpack ops, got: {errors:?}"
+    );
+}
+
+#[test]
+fn validate_rejects_non_integer_unpack_operand_on_type_not_existence() {
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::UnOp {
+                op: UnOp::Unpack4Low,
+                operand: Box::new(Expr::LitF32(1.5)),
+            },
+        )],
+    );
+    let errors = validate(&program);
+    assert!(
+        errors.iter().any(|e| e
+            .message()
+            .contains("unpack ops require a 32-bit integer")
+            && e.message().contains("Fix:")),
+        "f32 unpack operand must be rejected with the integer-word contract, got: {errors:?}"
+    );
+    assert!(
+        !errors.iter().any(|e| e.message().contains("is not recognized")),
+        "unpack op must be rejected on operand type, not treated as unrecognized, got: {errors:?}"
+    );
+}

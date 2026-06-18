@@ -48,6 +48,26 @@ pub fn emit_module_with_features(
     workgroup_size: [u32; 3],
     _features: ProgramEmitFeatures,
 ) -> Result<Module, LoweringError> {
+    // Fail closed on the ONE IR-validity hazard that otherwise BOTH silently
+    // miscompiles AND emits successfully: an `Fma` node with non-f32 operands
+    // lowers to integer `a*b+c`, not fused-multiply-add (a Law-10 silent
+    // miscompile). `lower_for_emit` runs dead-code elimination, so an unused
+    // such node is stripped before any descriptor-level check could see it —
+    // the original Program node tree is the only stage that observes it. We
+    // deliberately do NOT run full `vyre_foundation::validate` here: every
+    // other validation rule corresponds to a program that either emits
+    // correctly or fails with a dedicated, more-specific downstream diagnostic
+    // (e.g. "Vec4U32 not representable", "rejected at lowering boundary"), so
+    // running the full validator would preempt those precise messages. The Fma
+    // f32 check reuses the foundation validator's scope/type inference, so the
+    // emit boundary and `validate` agree by construction.
+    let fma_violations = vyre_foundation::validate::fma_f32_violations(program);
+    if !fma_violations.is_empty() {
+        return Err(LoweringError::invalid(format!(
+            "vyre IR program rejected before Naga emission: {}. Fix: correct the reported Fma operand types before emitting; emit_module does not silently lower an integer Fma to `a*b+c`.",
+            format_validation_errors(&fma_violations)
+        )));
+    }
     let mut lowered = vyre_lower::lower_for_emit(program).map_err(|error| {
         LoweringError::invalid(format!(
             "canonical pre-emit lowering failed before Naga Program compatibility emission: {error}. Fix: route callers through vyre-lower::lower_for_emit and descriptor emit instead of direct Program emission."
@@ -176,6 +196,23 @@ fn format_verify_errors(errors: &[vyre_lower::verify::VerifyError]) -> String {
             out.push_str("; ");
         }
         out.push_str(&format!("{error:?}"));
+    }
+    if errors.len() > 4 {
+        out.push_str("; ...");
+    }
+    out
+}
+
+/// Render program-validation errors using their `Display` form (the
+/// human-actionable `Fix:` message), not `Debug`, so the surfaced
+/// `LoweringError` preserves each rule's remediation text verbatim.
+fn format_validation_errors(errors: &[vyre_foundation::validate::ValidationError]) -> String {
+    let mut out = String::new();
+    for (index, error) in errors.iter().take(4).enumerate() {
+        if index != 0 {
+            out.push_str("; ");
+        }
+        out.push_str(error.message());
     }
     if errors.len() > 4 {
         out.push_str("; ...");

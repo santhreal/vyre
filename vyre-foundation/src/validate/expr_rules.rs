@@ -92,7 +92,7 @@ pub(crate) fn validate_expr(
                 if let Some(ty) = expr_type(operand, buffers, scope) {
                     if ty != DataType::F32 {
                         report.errors.push(err(format!(
-                            "V028: Fma operand `{slot}` has type `{ty}`, must be `f32`. Fix: cast the operand to F32 before Fma, or use the integer mul/add form explicitly."
+                            "V028: Fma requires three f32 operands. Fma operand `{slot}` has type `{ty}`, must be `f32`. Fix: cast the operand to F32 before Fma, or use the integer mul/add form explicitly."
                         )));
                     }
                 }

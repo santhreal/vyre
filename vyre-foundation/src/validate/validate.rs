@@ -52,6 +52,28 @@ pub fn validate(program: &Program) -> Vec<ValidationError> {
     validate_with_options(program, ValidationOptions::default()).errors
 }
 
+/// Report ONLY the `Fma`-operand f32 violations (rule `V028`) in `program`.
+///
+/// This is the focused subset that emit backends must run before lowering.
+/// An `Fma` node with non-f32 operands is unique among IR-validity hazards in
+/// that it BOTH silently miscompiles (integer operands lower to `a*b+c`, not
+/// fused-multiply-add) AND emits successfully — no downstream stage rejects it.
+/// Every other validation rule corresponds to a program that either emits
+/// correctly or fails with a dedicated, more-specific downstream diagnostic, so
+/// emit boundaries must not run full [`validate`] (it would preempt those
+/// messages and trip rules unrelated to silent miscompilation).
+///
+/// Reuses the full validator so the `Fma` type inference stays single-sourced
+/// with [`validate`]; the `V028` filter is pinned by `fma_f32_violations_*`
+/// tests in this module so a message change cannot silently disable it.
+#[must_use]
+pub fn fma_f32_violations(program: &Program) -> Vec<ValidationError> {
+    validate(program)
+        .into_iter()
+        .filter(|error| error.message().starts_with("V028:"))
+        .collect()
+}
+
 /// Validate a program with explicit backend/shadowing options.
 ///
 /// `ValidationOptions::default()` performs best-effort universal validation:
