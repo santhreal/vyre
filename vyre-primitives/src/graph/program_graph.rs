@@ -261,18 +261,25 @@ pub fn validate_program_graph(
             got: edge_offsets.len(),
         });
     }
-    // CPU validator enforces the documented contract: edge_targets.len() == edge_count.
-    // GPU ABI padding (max(1) minimum buffer size) is a device-buffer concern handled
-    // exclusively in read_only_buffers_with_counts; it must not bleed into CPU validation.
-    if edge_targets.len() != e {
+    // edge_targets / edge_kind_mask are validated at the GPU-buffer shape:
+    // `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder
+    // entry because `read_only_buffers_with_counts` emits `count = edge_count.max(1)`
+    // (GPU minimum buffer size), and validation runs on those padded buffers. This
+    // padding tolerance is the INTENTIONAL contract — the zero_edge/mask/length
+    // adversarial conformance tests assert exactly len == max(edge_count, 1) and
+    // reject an empty slice for a zero-edge graph. (A cycle-3 swarm agent briefly
+    // changed this to `== edge_count` citing the module-doc wording; that inverted
+    // the tested contract and the real padded-buffer flow, so it was reverted.)
+    let expected_edge_len = e.max(1);
+    if edge_targets.len() != expected_edge_len {
         return Err(GraphValidationError::EdgeTargetsLen {
-            expected: e,
+            expected: expected_edge_len,
             got: edge_targets.len(),
         });
     }
-    if edge_kind_mask.len() != e {
+    if edge_kind_mask.len() != expected_edge_len {
         return Err(GraphValidationError::EdgeKindMaskLen {
-            expected: e,
+            expected: expected_edge_len,
             got: edge_kind_mask.len(),
         });
     }
@@ -430,48 +437,37 @@ mod tests {
         assert_eq!(ok, Ok(()));
     }
 
-    /// Regression: validate_program_graph enforced edge_targets.len()==max(edge_count,1),
-    /// so a zero-edge graph with edge_targets=&[] (correct per module doc) was incorrectly
-    /// rejected with EdgeTargetsLen { expected: 1, got: 0 }. The CPU validator must enforce
-    /// the documented contract edge_targets.len()==edge_count, not the GPU ABI padding.
+    /// A zero-edge graph carries a single placeholder edge entry: validation
+    /// runs on the GPU-padded buffers (`read_only_buffers_with_counts` emits
+    /// `count = edge_count.max(1)`), so `edge_targets`/`edge_kind_mask` must be
+    /// length `max(edge_count, 1) == 1`, NOT empty. This is the same contract the
+    /// `zero_edge_contracts` / `mask_contracts` adversarial conformance tests pin.
     #[test]
-    fn validate_zero_edge_graph_accepts_empty_edge_slices() {
-        // 2 nodes, 0 edges: both nodes are isolated.
-        // edge_offsets.len() must be node_count + 1 = 3.
+    fn validate_zero_edge_graph_requires_placeholder_length_one() {
+        // 2 nodes, 0 edges: the single placeholder entry is mandatory.
         let ok = validate_program_graph(
             ProgramGraphShape::new(2, 0),
             &[0, 0],
             &[0, 0, 0],
-            &[],
-            &[],
+            &[0],
+            &[0],
             &[0, 0],
         );
-        // Before the fix: Err(EdgeTargetsLen { expected: 1, got: 0 })
-        // After the fix:  Ok(())
-        assert_eq!(
-            ok,
-            Ok(()),
-            "zero-edge graph with empty edge_targets slice must pass validation per module doc"
-        );
-    }
+        assert_eq!(ok, Ok(()), "zero-edge graph must validate with a length-1 placeholder");
 
-    /// Companion: validate_program_graph must still reject a caller who passes edge_targets
-    /// with the old GPU-padding length (1) when the graph has 0 edges, since that violates
-    /// the documented contract edge_targets.len()==edge_count.
-    #[test]
-    fn validate_zero_edge_graph_rejects_gpu_padding_length() {
+        // Empty edge slices are rejected — they violate the max(1) GPU-buffer shape.
         let err = validate_program_graph(
             ProgramGraphShape::new(2, 0),
             &[0, 0],
             &[0, 0, 0],
-            &[0], // length 1 for zero-edge graph is wrong per docs
-            &[0],
+            &[],
+            &[],
             &[0, 0],
         )
         .unwrap_err();
         assert!(
-            matches!(err, GraphValidationError::EdgeTargetsLen { expected: 0, got: 1 }),
-            "zero-edge graph: expected EdgeTargetsLen {{expected:0, got:1}}, got {err:?}"
+            matches!(err, GraphValidationError::EdgeTargetsLen { expected: 1, got: 0 }),
+            "zero-edge graph with empty edge_targets must fail EdgeTargetsLen {{expected:1, got:0}}, got {err:?}"
         );
     }
 }
