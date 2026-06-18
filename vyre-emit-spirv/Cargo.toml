@@ -18,7 +18,12 @@ path = "src/lib.rs"
 [dependencies]
 vyre-emit-naga = { workspace = true }
 vyre-lower = { workspace = true }
-vyre-primitives.workspace = true
+# `matching` enables `vyre_primitives::matching` (AnchorDfaPlan, build_anchor_dfa_plan,
+# …) used UNCONDITIONALLY by `src/anchor_dfa_offload.rs`. The workspace dep is
+# default-features = false, so this must be requested explicitly: it built locally
+# only because another workspace crate unifies `matching` on, but the isolated
+# `cargo publish` verify build of this crate's tarball compiled it out (E0432).
+vyre-primitives = { workspace = true, features = ["matching"] }
 naga = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
